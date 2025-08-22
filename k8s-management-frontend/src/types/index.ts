@@ -25,26 +25,39 @@ export interface ClusterStats {
 }
 
 // 节点相关类型定义
+export interface NodeAddress {
+  address: string;
+  type: string;
+}
+
 export interface Node {
   id: string;
   name: string;
   clusterId: string;
+  addresses: NodeAddress[];
   status: 'Ready' | 'NotReady' | 'Unknown';
   roles: string[];
   version: string;
   osImage: string;
   kernelVersion: string;
+  kubeletVersion: string;
   containerRuntime: string;
-  cpuCapacity: string;
-  memoryCapacity: string;
+  resources: NodeResource;
   cpuUsage: number;
   memoryUsage: number;
   podCount: number;
   maxPods: number;
   conditions: NodeCondition[];
   taints: NodeTaint[];
-  labels?: Record<string, string>;
-  createdAt: string;
+  labels?: { key: string; value: string }[];
+  creationTimestamp: string;
+  unschedulable: boolean;
+}
+
+export interface NodeResource {
+  cpu: string;
+  memory: string;
+  pods: number;
 }
 
 export interface NodeCondition {

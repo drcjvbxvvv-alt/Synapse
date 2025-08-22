@@ -1,44 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
-  Typography,
-  Row,
-  Col,
+  Table,
+  Button,
+  Space,
+  Tag,
+  Progress,
+  Tooltip,
   Input,
   Select,
-  Button,
-  Table,
-  Tag,
-  Space,
-  Progress,
+  Row,
+  Col,
   Statistic,
-  Divider,
-  Tooltip,
   Badge,
+  Modal,
   Dropdown,
   Menu,
   message,
 } from 'antd';
 import {
+  PlusOutlined,
   ReloadOutlined,
-  DesktopOutlined,
-  SearchOutlined,
   EyeOutlined,
+  BarChartOutlined,
+  MoreOutlined,
+  DatabaseOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   CloseCircleOutlined,
-  PauseCircleOutlined,
+  DesktopOutlined,
   CodeOutlined,
-  MoreOutlined,
-  SettingOutlined,
+  PauseCircleOutlined,
 } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import type { Node, NodeTaint, Cluster } from '../../types';
 import { nodeService, type NodeListParams, type NodeOverview } from '../../services/nodeService';
 import { clusterService } from '../../services/clusterService';
-import type { Node, NodeTaint, Cluster } from '../../types';
-import type { ColumnsType } from 'antd/es/table';
 
-const { Title, Text } = Typography;
+const { Search } = Input;
 const { Option } = Select;
 
 const NodeList: React.FC = () => {
@@ -59,68 +59,57 @@ const NodeList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedNodes, setSelectedNodes] = useState<React.Key[]>([]);
 
-  // 获取集群列表
-  const fetchClusters = async () => {
+  // 获取集群列表 - 使用useCallback优化
+  const fetchClusters = useCallback(async () => {
     try {
       const response = await clusterService.getClusters();
-      setClusters(response.data.items);
+      setClusters(response.data.items || []);
     } catch (error) {
+      message.error('获取集群列表失败');
       console.error('获取集群列表失败:', error);
     }
-  };
+  }, []);
 
-  // 获取节点列表
-  const fetchNodes = async (params: NodeListParams = { clusterId: selectedClusterId }) => {
-    console.log('fetchNodes called with params:', params);
+  // 获取节点列表 - 使用useCallback优化
+  const fetchNodes = useCallback(async (params: NodeListParams = { clusterId: selectedClusterId }) => {
     if (!params.clusterId) {
-      console.log('fetchNodes: no clusterId provided');
       return;
     }
     
     setLoading(true);
     try {
-      console.log('Making request to nodeService.getNodes with params:', {
-        ...params,
-        page: pagination.current,
-        pageSize: pagination.pageSize,
-      });
       const response = await nodeService.getNodes({
         ...params,
-        page: pagination.current,
-        pageSize: pagination.pageSize,
+        page: params.page || pagination.current,
+        pageSize: params.pageSize || pagination.pageSize,
       });
       
-      console.log('nodeService.getNodes response:', response);
-      setNodes(response.data.items);
-      setPagination({
-        ...pagination,
+      setNodes(response.data.items || []);
+      setPagination(prev => ({
+        ...prev,
         total: response.data.total,
-      });
+      }));
     } catch (error) {
       console.error('获取节点列表失败:', error);
       message.error('获取节点列表失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedClusterId, pagination.current, pagination.pageSize]);
 
-  // 获取节点概览
-  const fetchNodeOverview = async () => {
-    console.log('fetchNodeOverview called with clusterId:', selectedClusterId);
+  // 获取节点概览 - 使用useCallback优化
+  const fetchNodeOverview = useCallback(async () => {
     if (!selectedClusterId) {
-      console.log('fetchNodeOverview: clusterId is empty, skipping overview');
       return;
     }
     
     try {
-      console.log('Making request to nodeService.getNodeOverview with clusterId:', selectedClusterId);
       const response = await nodeService.getNodeOverview(selectedClusterId);
-      console.log('nodeService.getNodeOverview response:', response);
       setOverview(response.data);
     } catch (error) {
       console.error('获取节点概览失败:', error);
     }
-  };
+  }, [selectedClusterId]);
 
   // 集群切换
   const handleClusterChange = (clusterId: string) => {
@@ -129,14 +118,6 @@ const NodeList: React.FC = () => {
     // 重置搜索和筛选条件
     setSearchText('');
     setStatusFilter('all');
-  };
-
-  // 刷新数据
-  const handleRefresh = () => {
-    fetchNodes({ clusterId: selectedClusterId });
-    if (selectedClusterId) {
-      fetchNodeOverview();
-    }
   };
 
   // 搜索节点
@@ -232,18 +213,51 @@ const NodeList: React.FC = () => {
   };
 
   const handleDrain = async (name: string) => {
-    try {
-      await nodeService.drainNode(selectedClusterId, name, {
-        ignoreDaemonSets: true,
-        deleteLocalData: true,
-        gracePeriodSeconds: 30,
-      });
-      message.success(`节点 ${name} 驱逐成功`);
-      handleRefresh();
-    } catch (error) {
-      console.error('节点驱逐失败:', error);
-      message.error(`节点 ${name} 驱逐失败`);
-    }
+    Modal.confirm({
+      title: '确认驱逐节点',
+      content: `确定要驱逐节点 ${name} 上的所有 Pod 吗？此操作可能导致服务中断。`,
+      okText: '确认驱逐',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await nodeService.drainNode(selectedClusterId, name, {
+            ignoreDaemonSets: true,
+            deleteLocalData: true,
+            gracePeriodSeconds: 30,
+          });
+          message.success(`节点 ${name} 驱逐成功`);
+          handleRefresh();
+        } catch (error) {
+          console.error('节点驱逐失败:', error);
+          message.error(`节点 ${name} 驱逐失败`);
+        }
+      },
+    });
+  };
+
+  const handleEditLabels = (name: string) => {
+    message.info(`编辑节点 ${name} 的标签`);
+    // TODO: 实现编辑标签逻辑
+  };
+
+  const handleEditTaints = (name: string) => {
+    message.info(`编辑节点 ${name} 的污点`);
+    // TODO: 实现编辑污点逻辑
+  };
+
+  const handleViewEvents = (name: string) => {
+    message.info(`查看节点 ${name} 的事件`);
+    // TODO: 实现查看事件逻辑
+  };
+
+  const handleViewPods = (name: string) => {
+    navigate(`/clusters/${selectedClusterId}/pods?node=${name}`);
+  };
+
+  const handleNodeMetrics = (name: string) => {
+    message.info(`查看节点 ${name} 的监控指标`);
+    // TODO: 实现查看监控指标逻辑
   };
 
   // 获取节点状态标签
@@ -435,25 +449,24 @@ const NodeList: React.FC = () => {
             title="节点终端"
           />
           <Dropdown
-            overlay={
-              <Menu>
-                {record.taints?.some(t => t.effect === 'NoSchedule') ? (
-                  <Menu.Item key="uncordon" onClick={() => handleUncordon(record.name)}>
-                    解除封锁 (Uncordon)
-                  </Menu.Item>
-                ) : (
-                  <Menu.Item key="cordon" onClick={() => handleCordon(record.name)}>
-                    封锁节点 (Cordon)
-                  </Menu.Item>
-                )}
-                <Menu.Item key="drain" onClick={() => handleDrain(record.name)}>
-                  驱逐节点 (Drain)
-                </Menu.Item>
-                <Menu.Item key="labels">编辑标签</Menu.Item>
-                <Menu.Item key="taints">编辑污点</Menu.Item>
-                <Menu.Item key="events">查看事件</Menu.Item>
-              </Menu>
-            }
+            menu={{
+              items: [
+                ...(record.taints?.some(t => t.effect === 'NoSchedule') ? [{
+                  key: 'uncordon',
+                  label: '解除封锁 (Uncordon)',
+                  onClick: () => handleUncordon(record.name)
+                }] : [{
+                  key: 'cordon',
+                  label: '封锁节点 (Cordon)',
+                  onClick: () => handleCordon(record.name)
+                }]),
+                {
+                  key: 'drain',
+                  label: '驱逐节点 (Drain)',
+                  onClick: () => handleDrain(record.name)
+                }
+              ]
+            }}
           >
             <Button type="text" icon={<MoreOutlined />} />
           </Dropdown>
@@ -462,10 +475,19 @@ const NodeList: React.FC = () => {
     },
   ];
 
+  // 刷新节点列表
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchNodes({ clusterId: selectedClusterId });
+    if (selectedClusterId) {
+      fetchNodeOverview();
+    }
+  };
+
   // 初始化加载
   useEffect(() => {
     fetchClusters();
-  }, []);
+  }, [fetchClusters]);
 
   // 当选中的集群ID变化时，重新获取数据
   useEffect(() => {
@@ -474,149 +496,128 @@ const NodeList: React.FC = () => {
       fetchNodes({ clusterId: selectedClusterId });
       fetchNodeOverview();
     }
-  }, [selectedClusterId]);
+  }, [selectedClusterId, fetchNodes, fetchNodeOverview]);
+
+  const filteredNodes = nodes.filter((node) => {
+    const matchesSearch = node.name.toLowerCase().includes(searchText.toLowerCase());
+    // 检查节点是否被封锁（有 NoSchedule 污点）
+    const isCordonedOrMaintenance = node.taints?.some(
+      taint => taint.effect === 'NoSchedule' || taint.effect === 'NoExecute'
+    ) || false;
+    
+    const matchesStatus = statusFilter === 'all' || 
+                         (statusFilter === 'ready' && node.status === 'Ready') ||
+                         (statusFilter === 'notready' && node.status === 'NotReady') ||
+                         (statusFilter === 'cordoned' && isCordonedOrMaintenance) ||
+                         (statusFilter === 'maintenance' && isCordonedOrMaintenance);
+    return matchesSearch && matchesStatus;
+  });
+
+  // 统计数据
+  const totalNodes = overview?.totalNodes || 0;
+  const readyNodes = overview?.readyNodes || 0;
+  const notReadyNodes = overview?.notReadyNodes || 0;
+  const maintenanceNodes = overview?.maintenanceNodes || 0;
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <Title level={2}>节点管理</Title>
-          <Text type="secondary">管理集群中的节点，查看节点状态和资源使用情况</Text>
-        </div>
-        <div style={{ minWidth: 200 }}>
-          <Select
-            value={selectedClusterId}
-            style={{ width: '100%' }}
-            onChange={handleClusterChange}
-            placeholder="选择集群"
-            loading={clusters.length === 0}
-          >
-            {clusters.map(cluster => (
-              <Option key={cluster.id} value={cluster.id.toString()}>
-                {cluster.name}
-              </Option>
-            ))}
-          </Select>
+      {/* 页面头部 */}
+      <div className="page-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>节点管理</h1>
+            <p>管理集群中的节点，查看节点状态和资源使用情况</p>
+          </div>
+          <Space>
+            <Select
+              value={selectedClusterId}
+              style={{ width: 200 }}
+              onChange={handleClusterChange}
+              placeholder="选择集群"
+              loading={clusters.length === 0}
+            >
+              {clusters.map(cluster => (
+                <Option key={cluster.id} value={cluster.id.toString()}>
+                  {cluster.name}
+                </Option>
+              ))}
+            </Select>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={loading}>
+              刷新
+            </Button>
+          </Space>
         </div>
       </div>
 
-      {/* 节点概览 */}
-      {overview && (
-        <Card style={{ marginBottom: 16 }}>
-          <Row gutter={16}>
-            <Col span={6}>
-              <Statistic
-                title="总节点"
-                value={overview.totalNodes || 0}
-                prefix={<DesktopOutlined />}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="就绪节点"
-                value={overview.readyNodes || 0}
-                valueStyle={{ color: '#3f8600' }}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="异常节点"
-                value={overview.notReadyNodes || 0}
-                valueStyle={{ color: '#cf1322' }}
-                prefix={<CloseCircleOutlined />}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="维护节点"
-                value={overview.maintenanceNodes || 0}
-                prefix={<PauseCircleOutlined />}
-              />
-            </Col>
-          </Row>
-          <Divider />
-          <Row gutter={16}>
-            <Col span={8}>
-              <div>CPU使用率</div>
-              <Progress
-                percent={overview.cpuUsage || 0}
-                status={
-                  (overview.cpuUsage || 0) > 80
-                    ? 'exception'
-                    : (overview.cpuUsage || 0) > 60
-                      ? 'active'
-                      : 'success'
-                }
-              />
-            </Col>
-            <Col span={8}>
-              <div>内存使用率</div>
-              <Progress
-                percent={overview.memoryUsage || 0}
-                status={
-                  (overview.memoryUsage || 0) > 80
-                    ? 'exception'
-                    : (overview.memoryUsage || 0) > 60
-                      ? 'active'
-                      : 'success'
-                }
-              />
-            </Col>
-            <Col span={8}>
-              <div>存储使用率</div>
-              <Progress
-                percent={overview.storageUsage || 0}
-                status={
-                  (overview.storageUsage || 0) > 80
-                    ? 'exception'
-                    : (overview.storageUsage || 0) > 60
-                      ? 'active'
-                      : 'success'
-                }
-              />
-            </Col>
-          </Row>
-        </Card>
-      )}
-
-      {/* 工具栏 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
-          <Input.Search
-            placeholder="搜索节点名称、IP、标签..."
-            onSearch={handleSearch}
-            enterButton
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
+      {/* 统计卡片 */}
+      <Row gutter={[20, 20]} className="stats-grid">
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #00d4aa 0%, #00b894 100%)' }}>
+            <Statistic
+              title="总节点"
+              value={totalNodes}
+              prefix={<DesktopOutlined />}
+            />
+          </Card>
         </Col>
-        <Col span={4}>
-          <Select
-            value={statusFilter}
-            style={{ width: '100%' }}
-            onChange={handleStatusChange}
-          >
-            <Option value="all">全部状态</Option>
-            <Option value="ready">就绪</Option>
-            <Option value="notready">未就绪</Option>
-            <Option value="cordoned">已封锁</Option>
-            <Option value="maintenance">维护中</Option>
-          </Select>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #006eff 0%, #1a7aff 100%)' }}>
+            <Statistic
+              title="就绪节点"
+              value={readyNodes}
+              prefix={<CheckCircleOutlined />}
+            />
+          </Card>
         </Col>
-        <Col span={4}>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            loading={loading}
-          >
-            刷新
-          </Button>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #ff9f43 0%, #ff7675 100%)' }}>
+            <Statistic
+              title="异常节点"
+              value={notReadyNodes}
+              prefix={<ExclamationCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #a55eea 0%, #8e44ad 100%)' }}>
+            <Statistic
+              title="维护节点"
+              value={maintenanceNodes}
+              prefix={<Badge status="processing" />}
+            />
+          </Card>
         </Col>
       </Row>
 
       {/* 节点列表 */}
-      <Card title="节点列表">
+      <div className="table-container">
+        <div className="toolbar">
+          <div className="toolbar-left">
+            <h3>节点列表</h3>
+          </div>
+          <div className="toolbar-right">
+            <Select
+              placeholder="筛选状态"
+              style={{ width: 120 }}
+              allowClear
+              value={statusFilter}
+              onChange={setStatusFilter}
+            >
+              <Option value="ready">就绪</Option>
+              <Option value="notready">未就绪</Option>
+              <Option value="cordoned">已封锁</Option>
+              <Option value="maintenance">维护中</Option>
+            </Select>
+            <Search
+              placeholder="搜索节点..."
+              style={{ width: 240 }}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+            />
+          </div>
+        </div>
+        
         <Table
           rowSelection={{
             type: 'checkbox',
@@ -624,21 +625,30 @@ const NodeList: React.FC = () => {
             onChange: handleSelectionChange,
           }}
           columns={columns}
-          dataSource={nodes}
+          dataSource={filteredNodes}
           rowKey="id"
+          loading={loading}
           pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
+            total: filteredNodes.length,
+            pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 个节点`,
+            className: 'tencent-pagination'
           }}
-          loading={loading}
-          onChange={handleTableChange}
-          scroll={{ x: 1200 }}
+          locale={{
+            emptyText: (
+              <div style={{ padding: '48px 0', textAlign: 'center' }}>
+                <DatabaseOutlined style={{ fontSize: 48, color: '#ccc', marginBottom: 16 }} />
+                <div style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>暂无节点数据</div>
+                <div style={{ fontSize: 14, color: '#999', marginBottom: 16 }}>
+                  {searchText || statusFilter ? '没有找到符合条件的节点' : '请先选择集群'}
+                </div>
+              </div>
+            )
+          }}
         />
-      </Card>
+      </div>
 
       {/* 批量操作栏 */}
       {selectedNodes.length > 0 && (

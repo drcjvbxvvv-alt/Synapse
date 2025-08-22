@@ -44,11 +44,14 @@ import {
   InfoCircleOutlined,
   DeleteOutlined,
   PlusOutlined,
+  BarChartOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { nodeService } from '../../services/nodeService';
 import type { Node, NodeTaint, Pod, NodeCondition } from '../../types';
 import type { ColumnsType } from 'antd/es/table';
 import KubectlTerminal from '../../components/KubectlTerminal';
+import SSHTerminal from '../../components/SSHTerminal';
 import MonitoringCharts from '../../components/MonitoringCharts';
 
 const { Title, Text, Paragraph } = Typography;
@@ -399,31 +402,55 @@ const NodeDetail: React.FC = () => {
   return (
     <div>
       {/* 页面头部 */}
-      <div style={{ marginBottom: 16 }}>
-        <Space align="center" style={{ marginBottom: 16 }}>
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
           <Button
             type="text"
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/clusters/${clusterId}/nodes`)}
+            style={{ marginRight: 16 }}
           >
             返回节点列表
           </Button>
-          <Title level={2} style={{ margin: 0 }}>
-            {nodeName}
-          </Title>
-          {node && getStatusTag(node.status)}
-        </Space>
-        <Text type="secondary">节点详细信息和监控数据</Text>
+          <div style={{ flex: 1 }}>
+            <Title level={2} style={{ margin: 0 }}>
+              <DesktopOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+              {nodeName}
+            </Title>
+            <Text type="secondary">节点详细信息和监控数据</Text>
+          </div>
+          <Space>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={refreshAllData}
+              loading={loading}
+            >
+              刷新
+            </Button>
+            <Button 
+              icon={<BarChartOutlined />} 
+              type="primary"
+              onClick={() => setActiveTab('monitoring')}
+            >
+              监控面板
+            </Button>
+          </Space>
+        </div>
       </div>
 
-      {/* 节点基本信息卡片 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Row gutter={16}>
-          <Col span={18}>
-            <Descriptions column={3}>
+      {node && (
+        <>
+          {/* 节点基本信息 */}
+          <Card style={{ marginBottom: 24 }}>
+            <Descriptions title="基本信息" column={3}>
+              <Descriptions.Item label="节点名称">{node.name}</Descriptions.Item>
+              <Descriptions.Item label="版本">{node.kubeletVersion}</Descriptions.Item>
+              <Descriptions.Item label="状态">
+                {getStatusTag(node.status)}
+              </Descriptions.Item>
               <Descriptions.Item label="角色">
                 <Space>
-                  {node?.roles.map(role => {
+                  {node.roles.map(role => {
                     const isMaster = role.toLowerCase().includes('master') || role.toLowerCase().includes('control-plane');
                     return (
                       <Tag key={role} color={isMaster ? 'gold' : 'blue'}>
@@ -433,49 +460,47 @@ const NodeDetail: React.FC = () => {
                   })}
                 </Space>
               </Descriptions.Item>
-              <Descriptions.Item label="版本">{node?.version}</Descriptions.Item>
-              <Descriptions.Item label="状态">{getStatusTag(node?.status || 'Unknown')}</Descriptions.Item>
-              <Descriptions.Item label="操作系统">{node?.osImage}</Descriptions.Item>
-              <Descriptions.Item label="内核版本">{node?.kernelVersion}</Descriptions.Item>
-              <Descriptions.Item label="容器运行时">{node?.containerRuntime}</Descriptions.Item>
+              <Descriptions.Item label="操作系统">{node.osImage}</Descriptions.Item>
+              <Descriptions.Item label="内核版本">{node.kernelVersion}</Descriptions.Item>
+              <Descriptions.Item label="容器运行时">{node.containerRuntime}</Descriptions.Item>
+              <Descriptions.Item label="CPU容量">{node.resources?.cpu}m</Descriptions.Item>
+              <Descriptions.Item label="内存容量">{node.resources?.memory}Mi</Descriptions.Item>
+              <Descriptions.Item label="最大Pod数">{node.resources?.pods}</Descriptions.Item>
               <Descriptions.Item label="创建时间">
-                {node?.createdAt && new Date(node.createdAt).toLocaleString()}
+                {new Date(node.creationTimestamp).toLocaleString()}
               </Descriptions.Item>
             </Descriptions>
-          </Col>
-          <Col span={6}>
-            <div style={{ textAlign: 'right' }}>
-              <Space>
-                <Button 
-                  icon={<CodeOutlined />} 
-                  onClick={() => setActiveTab('terminal')}
-                >
-                  节点终端
-                </Button>
-                <Button 
-                  icon={<EditOutlined />} 
-                  onClick={() => setLabelModalVisible(true)}
-                >
-                  编辑标签
-                </Button>
-                <Dropdown overlay={moreActionsMenu}>
-                  <Button>
-                    更多操作 <DownOutlined />
-                  </Button>
-                </Dropdown>
-              </Space>
-            </div>
-          </Col>
-        </Row>
-      </Card>
+          </Card>
 
-      {/* 标签页内容 */}
+        </>
+      )}
+
+      {/* 详细信息标签页 */}
       <Card>
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="概览" key="overview">
-            <Row gutter={16}>
-              <Col span={8}>
-                <Card title="节点状态" bordered={false}>
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'monitoring',
+              label: (
+                <span>
+                  <BarChartOutlined />
+                  监控概览
+                </span>
+              ),
+              children: <MonitoringCharts clusterId={clusterId} nodeId={nodeName} />,
+            },
+            {
+              key: 'overview',
+              label: (
+                <span>
+                  <DesktopOutlined />
+                  节点状态
+                </span>
+              ),
+              children: (
+                <Card title="节点状态">
                   <Statistic
                     title="状态"
                     value={node?.status || 'Unknown'}
@@ -485,7 +510,7 @@ const NodeDetail: React.FC = () => {
                   <Divider />
                   <div>
                     <Text strong>调度状态: </Text>
-                    {node?.taints?.some(t => t.effect === 'NoSchedule') ? (
+                    {node?.unschedulable || node?.taints?.some(t => t.effect === 'NoSchedule') ? (
                       <Tag icon={<PauseCircleOutlined />} color="warning">已禁用调度</Tag>
                     ) : (
                       <Tag icon={<CheckCircleOutlined />} color="success">可调度</Tag>
@@ -505,194 +530,166 @@ const NodeDetail: React.FC = () => {
                     </div>
                   </div>
                 </Card>
-              </Col>
-              <Col span={8}>
-                <Card title="资源使用" bordered={false}>
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Text>CPU使用率</Text>
-                      <Text>{node?.cpuUsage}%</Text>
-                    </div>
-                    <Progress
-                      percent={node?.cpuUsage || 0}
-                      status={
-                        (node?.cpuUsage || 0) > 80
-                          ? 'exception'
-                          : (node?.cpuUsage || 0) > 60
-                            ? 'active'
-                            : 'success'
-                      }
-                    />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Text>内存使用率</Text>
-                      <Text>{node?.memoryUsage}%</Text>
-                    </div>
-                    <Progress
-                      percent={node?.memoryUsage || 0}
-                      status={
-                        (node?.memoryUsage || 0) > 80
-                          ? 'exception'
-                          : (node?.memoryUsage || 0) > 60
-                            ? 'active'
-                            : 'success'
-                      }
-                    />
-                  </div>
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card title="Pod统计" bordered={false}>
-                  <Statistic
-                    title="Pod数量"
-                    value={`${node?.podCount || 0}/${node?.maxPods || 0}`}
-                    prefix={<DesktopOutlined />}
-                  />
-                  <Divider />
-                  <Progress
-                    percent={node ? Math.round((node.podCount / node.maxPods) * 100) : 0}
-                    status="active"
-                  />
-                </Card>
-              </Col>
-            </Row>
-
-            <Card title="系统信息" style={{ marginTop: 16 }} bordered={false}>
-              <Descriptions column={2}>
-                <Descriptions.Item label="操作系统">{node?.osImage}</Descriptions.Item>
-                <Descriptions.Item label="内核版本">{node?.kernelVersion}</Descriptions.Item>
-                <Descriptions.Item label="容器运行时">{node?.containerRuntime}</Descriptions.Item>
-                <Descriptions.Item label="CPU容量">{node?.cpuCapacity}</Descriptions.Item>
-                <Descriptions.Item label="内存容量">{node?.memoryCapacity}</Descriptions.Item>
-                <Descriptions.Item label="最大Pod数">{node?.maxPods}</Descriptions.Item>
-              </Descriptions>
-            </Card>
-          </TabPane>
-
-          <TabPane tab="Pod" key="pods">
-            <Card title={`运行中的Pod (${pods.length}个)`} bordered={false}>
-              <Table
-                columns={podColumns}
-                dataSource={pods}
-                rowKey="id"
-                pagination={false}
-                loading={loadingPods}
-              />
-            </Card>
-          </TabPane>
-
-          <TabPane tab="标签" key="labels">
-            <Card title="系统标签" bordered={false} style={{ marginBottom: 16 }}>
-              <Space wrap>
-                {node?.labels && Object.entries(node.labels)
-                  .filter(([key]) => key.startsWith('kubernetes.io/') || key.startsWith('node.kubernetes.io/') || key.startsWith('topology.kubernetes.io/'))
-                  .map(([key, value]) => (
-                    <Tag key={key} color="blue">
-                      {key}={value}
-                    </Tag>
-                  ))}
-              </Space>
-            </Card>
-
-            <Card title="自定义标签" bordered={false}>
-              <Space wrap style={{ marginBottom: 16 }}>
-                {node?.labels && Object.entries(node.labels)
-                  .filter(([key]) => !key.startsWith('kubernetes.io/') && !key.startsWith('node.kubernetes.io/') && !key.startsWith('topology.kubernetes.io/'))
-                  .map(([key, value]) => (
-                    <Tag
-                      key={key}
-                      closable
-                      onClose={() => handleRemoveLabel(key)}
-                    >
-                      {key}={value}
-                    </Tag>
-                  ))}
-              </Space>
-
-              <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                onClick={() => setLabelModalVisible(true)}
-              >
-                添加标签
-              </Button>
-            </Card>
-          </TabPane>
-
-          <TabPane tab="污点" key="taints">
-            <Card title="当前污点" bordered={false}>
-              {node?.taints && node.taints.length > 0 ? (
-                node.taints.map((taint, index) => (
-                  <Card
-                    key={index}
-                    type="inner"
-                    style={{ marginBottom: 16 }}
-                    title={`${taint.key}${taint.value ? `=${taint.value}` : ''}:${taint.effect}`}
-                    extra={
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleRemoveTaint(taint)}
-                      >
-                        删除
-                      </Button>
-                    }
-                  >
-                    <Descriptions column={1}>
-                      <Descriptions.Item label="键">{taint.key}</Descriptions.Item>
-                      {taint.value && <Descriptions.Item label="值">{taint.value}</Descriptions.Item>}
-                      <Descriptions.Item label="效果">
-                        <Tag color={
-                          taint.effect === 'NoSchedule' ? 'orange' :
-                          taint.effect === 'PreferNoSchedule' ? 'blue' : 'red'
-                        }>
-                          {taint.effect}
-                        </Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="说明">
-                        {taint.effect === 'NoSchedule' && '不调度新Pod到此节点'}
-                        {taint.effect === 'PreferNoSchedule' && '尽量不调度新Pod到此节点'}
-                        {taint.effect === 'NoExecute' && '驱逐不能容忍此污点的现有Pod'}
-                      </Descriptions.Item>
-                    </Descriptions>
+              ),
+            },
+            {
+              key: 'pods',
+              label: (
+                <span>
+                  <AppstoreOutlined />
+                  Pod ({pods.length})
+                </span>
+              ),
+              children: (
+                <Table
+                  columns={podColumns}
+                  dataSource={pods}
+                  rowKey="id"
+                  pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total) => `共 ${total} 个Pod`,
+                  }}
+                  loading={loadingPods}
+                  locale={{ emptyText: '暂无Pod数据' }}
+                />
+              ),
+            },
+            {
+              key: 'labels',
+              label: (
+                <span>
+                  <EditOutlined />
+                  标签
+                </span>
+              ),
+              children: (
+                <div>
+                  <Card title="系统标签" style={{ marginBottom: 16 }}>
+                    <Space wrap>
+                      {node?.labels && Array.isArray(node.labels) && node.labels
+                        .filter(label => label.key.startsWith('kubernetes.io/') || label.key.startsWith('node.kubernetes.io/') || label.key.startsWith('topology.kubernetes.io/'))
+                        .map((label: { key: string; value: string }, index: number) => (
+                          <Tag key={index} color="blue">
+                            {label.key}={label.value}
+                          </Tag>
+                        ))}
+                    </Space>
                   </Card>
-                ))
-              ) : (
-                <Empty description="暂无污点" />
-              )}
 
-              <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                onClick={() => setTaintModalVisible(true)}
-                style={{ marginTop: 16 }}
-              >
-                添加污点
-              </Button>
-            </Card>
-          </TabPane>
+                  <Card title="自定义标签">
+                    <Space wrap style={{ marginBottom: 16 }}>
+                      {node?.labels && Array.isArray(node.labels) && node.labels
+                        .filter(label => !label.key.startsWith('kubernetes.io/') && !label.key.startsWith('node.kubernetes.io/') && !label.key.startsWith('topology.kubernetes.io/'))
+                        .map((label: { key: string; value: string }, index: number) => (
+                          <Tag
+                            key={index}
+                            closable
+                            onClose={() => handleRemoveLabel(label.key)}
+                          >
+                            {label.key}={label.value}
+                          </Tag>
+                        ))}
+                    </Space>
 
-          <TabPane tab="监控" key="monitoring">
-            <MonitoringCharts clusterId={clusterId} nodeId={nodeName} />
-          </TabPane>
+                    <Button
+                      type="dashed"
+                      icon={<PlusOutlined />}
+                      onClick={() => setLabelModalVisible(true)}
+                    >
+                      添加标签
+                    </Button>
+                  </Card>
+                </div>
+              ),
+            },
+            {
+              key: 'taints',
+              label: (
+                <span>
+                  <SettingOutlined />
+                  污点
+                </span>
+              ),
+              children: (
+                <Card title="当前污点">
+                  {node?.taints && node.taints.length > 0 ? (
+                    node.taints.map((taint, index) => (
+                      <Card
+                        key={index}
+                        type="inner"
+                        style={{ marginBottom: 16 }}
+                        title={`${taint.key}${taint.value ? `=${taint.value}` : ''}:${taint.effect}`}
+                        extra={
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => handleRemoveTaint(taint)}
+                          >
+                            删除
+                          </Button>
+                        }
+                      >
+                        <Descriptions column={1}>
+                          <Descriptions.Item label="键">{taint.key}</Descriptions.Item>
+                          {taint.value && <Descriptions.Item label="值">{taint.value}</Descriptions.Item>}
+                          <Descriptions.Item label="效果">
+                            <Tag color={
+                              taint.effect === 'NoSchedule' ? 'orange' :
+                              taint.effect === 'PreferNoSchedule' ? 'blue' : 'red'
+                            }>
+                              {taint.effect}
+                            </Tag>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="说明">
+                            {taint.effect === 'NoSchedule' && '不调度新Pod到此节点'}
+                            {taint.effect === 'PreferNoSchedule' && '尽量不调度新Pod到此节点'}
+                            {taint.effect === 'NoExecute' && '驱逐不能容忍此污点的现有Pod'}
+                          </Descriptions.Item>
+                        </Descriptions>
+                      </Card>
+                    ))
+                  ) : (
+                    <Empty description="暂无污点" />
+                  )}
 
-          <TabPane tab="终端" key="terminal">
-            <Card bordered={false}>
-              <KubectlTerminal
-                clusterId={clusterId || ''}
-                namespace="default"
-              />
-            </Card>
-          </TabPane>
-        </Tabs>
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => setTaintModalVisible(true)}
+                    style={{ marginTop: 16 }}
+                  >
+                    添加污点
+                  </Button>
+                </Card>
+              ),
+            },
+            {
+              key: 'terminal',
+              label: (
+                <span>
+                  <CodeOutlined />
+                  SSH终端
+                </span>
+              ),
+              children: (
+                <SSHTerminal
+                  nodeIP={node?.addresses?.find(addr => addr.type === 'InternalIP')?.address || ''}
+                  nodeName={nodeName}
+                  clusterId={clusterId}
+                />
+              ),
+            },
+          ]}
+        />
       </Card>
 
       {/* 标签编辑模态框 */}
       <Modal
         title="编辑节点标签"
-        visible={labelModalVisible}
+        open={labelModalVisible}
         onCancel={() => setLabelModalVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setLabelModalVisible(false)}>
@@ -707,11 +704,11 @@ const NodeDetail: React.FC = () => {
           <Text>系统标签 (只读):</Text>
           <div style={{ marginTop: 8 }}>
             <Space wrap>
-              {node?.labels && Object.entries(node.labels)
-                .filter(([key]) => key.startsWith('kubernetes.io/') || key.startsWith('node.kubernetes.io/') || key.startsWith('topology.kubernetes.io/'))
-                .map(([key, value]) => (
-                  <Tag key={key} color="blue">
-                    {key}={value}
+              {node?.labels && Array.isArray(node.labels) && node.labels
+                .filter(label => label.key.startsWith('kubernetes.io/') || label.key.startsWith('node.kubernetes.io/') || label.key.startsWith('topology.kubernetes.io/'))
+                .map((label: { key: string; value: string }, index: number) => (
+                  <Tag key={index} color="blue">
+                    {label.key}={label.value}
                   </Tag>
                 ))}
             </Space>
@@ -722,15 +719,15 @@ const NodeDetail: React.FC = () => {
           <Text>自定义标签:</Text>
           <div style={{ marginTop: 8 }}>
             <Space wrap>
-              {node?.labels && Object.entries(node.labels)
-                .filter(([key]) => !key.startsWith('kubernetes.io/') && !key.startsWith('node.kubernetes.io/') && !key.startsWith('topology.kubernetes.io/'))
-                .map(([key, value]) => (
+              {node?.labels && Array.isArray(node.labels) && node.labels
+                .filter(label => !label.key.startsWith('kubernetes.io/') && !label.key.startsWith('node.kubernetes.io/') && !label.key.startsWith('topology.kubernetes.io/'))
+                .map((label: { key: string; value: string }, index: number) => (
                   <Tag
-                    key={key}
+                    key={index}
                     closable
-                    onClose={() => handleRemoveLabel(key)}
+                    onClose={() => handleRemoveLabel(label.key)}
                   >
-                    {key}={value}
+                    {label.key}={label.value}
                   </Tag>
                 ))}
             </Space>
@@ -761,7 +758,7 @@ const NodeDetail: React.FC = () => {
       {/* 污点编辑模态框 */}
       <Modal
         title="管理节点污点"
-        visible={taintModalVisible}
+        open={taintModalVisible}
         onCancel={() => setTaintModalVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setTaintModalVisible(false)}>
@@ -815,7 +812,7 @@ const NodeDetail: React.FC = () => {
       {/* 驱逐节点模态框 */}
       <Modal
         title="驱逐节点"
-        visible={drainModalVisible}
+        open={drainModalVisible}
         onCancel={() => setDrainModalVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setDrainModalVisible(false)}>
