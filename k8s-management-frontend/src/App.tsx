@@ -30,9 +30,10 @@ const App: React.FC = () => {
             <Route path="clusters/:clusterId/nodes/:nodeName" element={<NodeDetail />} />
             <Route path="nodes" element={<NodeList />} />
             <Route path="nodes/:id" element={<NodeDetail />} />
-            <Route path="nodes/operations" element={<NodeOperations />} />
             <Route path="pods" element={<PodList />} />
             <Route path="pods/:namespace/:name" element={<PodDetail />} />
+            <Route path="clusters/:clusterId/workloads" element={<WorkloadList />} />
+            <Route path="clusters/:clusterId/workloads/:namespace/:name" element={<WorkloadDetail />} />
             <Route path="workloads" element={<WorkloadList />} />
             <Route path="workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
             <Route path="search" element={<GlobalSearch />} />

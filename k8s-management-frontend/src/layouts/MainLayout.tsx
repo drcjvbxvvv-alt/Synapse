@@ -108,7 +108,16 @@ const MainLayout: React.FC = () => {
           key: 'workloads',
           icon: <UnorderedListOutlined />,
           label: '工作负载列表',
-          onClick: () => navigate('/workloads'),
+          onClick: () => {
+            // 如果当前在集群详情页面，导航到该集群的工作负载页面
+            const currentPath = location.pathname;
+            const clusterMatch = currentPath.match(/\/clusters\/([^\/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/workloads`);
+            } else {
+              navigate('/workloads');
+            }
+          },
         },
       ],
     },
