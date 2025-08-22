@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
     "@ant-design/plots": "^2.6.3",
+    "@monaco-editor/react": "^4.7.0",
     "@types/node": "^24.3.0",
     "@xterm/addon-clipboard": "^0.1.0",
     "antd": "^5.27.0",

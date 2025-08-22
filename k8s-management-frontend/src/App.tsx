@@ -13,6 +13,7 @@ import PodList from './pages/pod/PodList';
 import PodDetail from './pages/pod/PodDetail';
 import WorkloadList from './pages/workload/WorkloadList';
 import WorkloadDetail from './pages/workload/WorkloadDetail';
+import YAMLEditor from './pages/yaml/YAMLEditor';
 import GlobalSearch from './pages/search/GlobalSearch';
 import './App.css';
 
@@ -34,6 +35,7 @@ const App: React.FC = () => {
             <Route path="pods/:namespace/:name" element={<PodDetail />} />
             <Route path="clusters/:clusterId/workloads" element={<WorkloadList />} />
             <Route path="clusters/:clusterId/workloads/:namespace/:name" element={<WorkloadDetail />} />
+            <Route path="clusters/:clusterId/yaml/apply" element={<YAMLEditor />} />
             <Route path="workloads" element={<WorkloadList />} />
             <Route path="workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
             <Route path="search" element={<GlobalSearch />} />
