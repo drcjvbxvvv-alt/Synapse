@@ -15,6 +15,8 @@ import {
   Dropdown,
   InputNumber,
   Popconfirm,
+  Checkbox,
+  Alert,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -25,6 +27,7 @@ import {
   ExpandAltOutlined,
   EyeOutlined,
   MoreOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
@@ -131,6 +134,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
   };
 
   // 删除工作负载
+  // 删除工作负载
   const handleDelete = async (workload: WorkloadInfo) => {
     if (!selectedClusterId) return;
     
@@ -152,6 +156,59 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
       console.error('删除失败:', error);
       message.error('删除失败');
     }
+  };
+
+  // 批量删除工作负载
+  const handleBatchDelete = async () => {
+    if (!selectedClusterId || selectedRowKeys.length === 0) return;
+    
+    const selectedWorkloads = workloads.filter(w => 
+      selectedRowKeys.includes(`${w.namespace}-${w.name}-${w.type}`)
+    );
+    
+    try {
+      const deletePromises = selectedWorkloads.map(workload =>
+        WorkloadService.deleteWorkload(
+          selectedClusterId,
+          workload.namespace,
+          workload.name,
+          workload.type
+        )
+      );
+      
+      const results = await Promise.allSettled(deletePromises);
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const failCount = results.length - successCount;
+      
+      if (failCount === 0) {
+        message.success(`成功删除 ${successCount} 个工作负载`);
+      } else {
+        message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+      }
+      
+      setBatchDeleteModalVisible(false);
+      setSelectedRowKeys([]);
+      fetchWorkloads();
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      message.error('批量删除失败');
+    }
+  };
+
+  // 行选择配置
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (keys: React.Key[]) => {
+      setSelectedRowKeys(keys as string[]);
+    },
+    onSelectAll: (selected: boolean, selectedRows: WorkloadInfo[], changeRows: WorkloadInfo[]) => {
+      if (selected) {
+        const allKeys = filteredWorkloads.map(w => `${w.namespace}-${w.name}-${w.type}`);
+        setSelectedRowKeys(allKeys);
+      } else {
+        setSelectedRowKeys([]);
+      }
+    },
   };
 
   // 获取唯一的命名空间列表
@@ -409,12 +466,23 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
             />
             
             <Button
+            <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => navigate(`/clusters/${selectedClusterId}/yaml/apply`)}
             >
               创建工作负载
             </Button>
+            
+            {selectedRowKeys.length > 0 && (
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => setBatchDeleteModalVisible(true)}
+              >
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            )}
           </Space>
         </div>
 
@@ -438,6 +506,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
         />
       </Card>
 
+      {/* 扩缩容模态框 */}
       {/* 扩缩容模态框 */}
       <Modal
         title="扩缩容工作负载"
@@ -464,6 +533,44 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* 批量删除模态框 */}
+      <Modal
+        title="批量删除工作负载"
+        open={batchDeleteModalVisible}
+        onOk={handleBatchDelete}
+        onCancel={() => setBatchDeleteModalVisible(false)}
+        okText="确定删除"
+        cancelText="取消"
+        okButtonProps={{ danger: true }}
+        width={600}
+      >
+        <div>
+          <Alert
+            message="警告"
+            description={`您即将删除 ${selectedRowKeys.length} 个工作负载，此操作不可撤销！`}
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+          
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <h4>将要删除的工作负载：</h4>
+            {workloads
+              .filter(w => selectedRowKeys.includes(`${w.namespace}-${w.name}-${w.type}`))
+              .map(workload => (
+                <div key={`${workload.namespace}-${workload.name}-${workload.type}`} 
+                     style={{ padding: '8px', border: '1px solid #f0f0f0', marginBottom: '4px', borderRadius: '4px' }}>
+                  <Space>
+                    <Tag color="blue">{workload.namespace}</Tag>
+                    <span><strong>{workload.name}</strong></span>
+                    <Tag color="green">{workload.type}</Tag>
+                  </Space>
+                </div>
+              ))}
+          </div>
+        </div>
       </Modal>
     </div>
   );
