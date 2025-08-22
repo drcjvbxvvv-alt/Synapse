@@ -11,6 +11,8 @@ import NodeDetail from './pages/node/NodeDetail';
 import NodeOperations from './pages/node/NodeOperations';
 import PodList from './pages/pod/PodList';
 import PodDetail from './pages/pod/PodDetail';
+import PodLogs from './pages/pod/PodLogs';
+import PodTerminal from './pages/pod/PodTerminal';
 import WorkloadList from './pages/workload/WorkloadList';
 import WorkloadDetail from './pages/workload/WorkloadDetail';
 import YAMLEditor from './pages/yaml/YAMLEditor';
@@ -31,6 +33,10 @@ const App: React.FC = () => {
             <Route path="clusters/:clusterId/nodes/:nodeName" element={<NodeDetail />} />
             <Route path="nodes" element={<NodeList />} />
             <Route path="nodes/:id" element={<NodeDetail />} />
+            <Route path="clusters/:clusterId/pods" element={<PodList />} />
+            <Route path="clusters/:clusterId/pods/:namespace/:name" element={<PodDetail />} />
+            <Route path="clusters/:clusterId/pods/:namespace/:name/logs" element={<PodLogs />} />
+            <Route path="clusters/:clusterId/pods/:namespace/:name/terminal" element={<PodTerminal />} />
             <Route path="pods" element={<PodList />} />
             <Route path="pods/:namespace/:name" element={<PodDetail />} />
             <Route path="clusters/:clusterId/workloads" element={<WorkloadList />} />
