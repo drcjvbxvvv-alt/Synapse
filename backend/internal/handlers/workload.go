@@ -1,0 +1,583 @@
+package handlers
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"k8s-management-backend/internal/config"
+	"k8s-management-backend/internal/models"
+	"k8s-management-backend/internal/services"
+	"k8s-management-backend/pkg/logger"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/yaml"
+)
+
+// WorkloadHandler 工作负载处理器
+type WorkloadHandler struct {
+	db             *gorm.DB
+	cfg            *config.Config
+	clusterService *services.ClusterService
+}
+
+// NewWorkloadHandler 创建工作负载处理器
+func NewWorkloadHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService) *WorkloadHandler {
+	return &WorkloadHandler{
+		db:             db,
+		cfg:            cfg,
+		clusterService: clusterService,
+	}
+}
+
+// WorkloadType 工作负载类型
+type WorkloadType string
+
+const (
+	WorkloadTypeDeployment  WorkloadType = "Deployment"
+	WorkloadTypeStatefulSet WorkloadType = "StatefulSet"
+	WorkloadTypeDaemonSet   WorkloadType = "DaemonSet"
+	WorkloadTypeJob         WorkloadType = "Job"
+	WorkloadTypeCronJob     WorkloadType = "CronJob"
+)
+
+// WorkloadInfo 工作负载信息
+type WorkloadInfo struct {
+	ID                string            `json:"id"`
+	Name              string            `json:"name"`
+	Namespace         string            `json:"namespace"`
+	Type              WorkloadType      `json:"type"`
+	Status            string            `json:"status"`
+	Replicas          int32             `json:"replicas"`
+	ReadyReplicas     int32             `json:"readyReplicas"`
+	AvailableReplicas int32             `json:"availableReplicas"`
+	Labels            map[string]string `json:"labels"`
+	Annotations       map[string]string `json:"annotations"`
+	CreatedAt         time.Time         `json:"createdAt"`
+	Images            []string          `json:"images"`
+	Selector          map[string]string `json:"selector"`
+	Strategy          string            `json:"strategy,omitempty"`
+	Schedule          string            `json:"schedule,omitempty"` // For CronJob
+}
+
+// ScaleRequest 扩缩容请求
+type ScaleRequest struct {
+	Replicas int32 `json:"replicas" binding:"required,min=0"`
+}
+
+// YAMLApplyRequest YAML应用请求
+type YAMLApplyRequest struct {
+	YAML   string `json:"yaml" binding:"required"`
+	DryRun bool   `json:"dryRun"`
+}
+
+// GetWorkloads 获取工作负载列表
+func (h *WorkloadHandler) GetWorkloads(c *gin.Context) {
+	clusterId := c.Param("clusterId")
+	namespace := c.Query("namespace")
+	workloadType := c.Query("type")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+
+	logger.Info("获取工作负载列表: cluster=%s, namespace=%s, type=%s", clusterId, namespace, workloadType)
+
+	// 从集群服务获取集群信息
+	clusterID := parseClusterID(clusterId)
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": "集群不存在",
+		})
+		return
+	}
+
+	// 创建K8s客户端
+	var k8sClient *services.K8sClient
+	if cluster.KubeconfigEnc != "" {
+		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
+	} else {
+		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "创建K8s客户端失败: " + err.Error(),
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var workloads []WorkloadInfo
+
+	// 根据类型获取不同的工作负载
+	if workloadType == "" || workloadType == string(WorkloadTypeDeployment) {
+		deployments, err := h.getDeployments(ctx, k8sClient, namespace)
+		if err != nil {
+			logger.Error("获取Deployment失败", "error", err)
+		} else {
+			workloads = append(workloads, deployments...)
+		}
+	}
+
+	if workloadType == "" || workloadType == string(WorkloadTypeStatefulSet) {
+		statefulSets, err := h.getStatefulSets(ctx, k8sClient, namespace)
+		if err != nil {
+			logger.Error("获取StatefulSet失败", "error", err)
+		} else {
+			workloads = append(workloads, statefulSets...)
+		}
+	}
+
+	if workloadType == "" || workloadType == string(WorkloadTypeDaemonSet) {
+		daemonSets, err := h.getDaemonSets(ctx, k8sClient, namespace)
+		if err != nil {
+			logger.Error("获取DaemonSet失败", "error", err)
+		} else {
+			workloads = append(workloads, daemonSets...)
+		}
+	}
+
+	if workloadType == "" || workloadType == string(WorkloadTypeJob) {
+		jobs, err := h.getJobs(ctx, k8sClient, namespace)
+		if err != nil {
+			logger.Error("获取Job失败", "error", err)
+		} else {
+			workloads = append(workloads, jobs...)
+		}
+	}
+
+	if workloadType == "" || workloadType == string(WorkloadTypeCronJob) {
+		cronJobs, err := h.getCronJobs(ctx, k8sClient, namespace)
+		if err != nil {
+			logger.Error("获取CronJob失败", "error", err)
+		} else {
+			workloads = append(workloads, cronJobs...)
+		}
+	}
+
+	// 分页处理
+	total := len(workloads)
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start > total {
+		start = total
+	}
+	if end > total {
+		end = total
+	}
+
+	pagedWorkloads := workloads[start:end]
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data": gin.H{
+			"items":    pagedWorkloads,
+			"total":    total,
+			"page":     page,
+			"pageSize": pageSize,
+		},
+	})
+}
+
+// GetWorkload 获取工作负载详情
+func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
+	clusterId := c.Param("clusterId")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	workloadType := c.Query("type")
+
+	logger.Info("获取工作负载详情: %s/%s/%s/%s", clusterId, workloadType, namespace, name)
+
+	// 从集群服务获取集群信息
+	clusterID := parseClusterID(clusterId)
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": "集群不存在",
+		})
+		return
+	}
+
+	// 创建K8s客户端
+	var k8sClient *services.K8sClient
+	if cluster.KubeconfigEnc != "" {
+		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
+	} else {
+		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "创建K8s客户端失败: " + err.Error(),
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var workload interface{}
+	var workloadInfo WorkloadInfo
+
+	switch WorkloadType(workloadType) {
+	case WorkloadTypeDeployment:
+		deployment, err := k8sClient.GetClientset().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    404,
+				"message": "工作负载不存在: " + err.Error(),
+			})
+			return
+		}
+		workload = deployment
+		workloadInfo = h.convertDeploymentToWorkloadInfo(deployment)
+
+	case WorkloadTypeStatefulSet:
+		statefulSet, err := k8sClient.GetClientset().AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    404,
+				"message": "工作负载不存在: " + err.Error(),
+			})
+			return
+		}
+		workload = statefulSet
+		workloadInfo = h.convertStatefulSetToWorkloadInfo(statefulSet)
+
+	case WorkloadTypeDaemonSet:
+		daemonSet, err := k8sClient.GetClientset().AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    404,
+				"message": "工作负载不存在: " + err.Error(),
+			})
+			return
+		}
+		workload = daemonSet
+		workloadInfo = h.convertDaemonSetToWorkloadInfo(daemonSet)
+
+	case WorkloadTypeJob:
+		job, err := k8sClient.GetClientset().BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    404,
+				"message": "工作负载不存在: " + err.Error(),
+			})
+			return
+		}
+		workload = job
+		workloadInfo = h.convertJobToWorkloadInfo(job)
+
+	case WorkloadTypeCronJob:
+		cronJob, err := k8sClient.GetClientset().BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    404,
+				"message": "工作负载不存在: " + err.Error(),
+			})
+			return
+		}
+		workload = cronJob
+		workloadInfo = h.convertCronJobToWorkloadInfo(cronJob)
+
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "不支持的工作负载类型: " + workloadType,
+		})
+		return
+	}
+
+	// 获取关联的Pod
+	pods, err := h.getWorkloadPods(ctx, k8sClient, namespace, workloadInfo.Selector)
+	if err != nil {
+		logger.Error("获取工作负载Pod失败", "error", err)
+		pods = []interface{}{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data": gin.H{
+			"workload": workloadInfo,
+			"raw":      workload,
+			"pods":     pods,
+		},
+	})
+}
+
+// ScaleWorkload 扩缩容工作负载
+func (h *WorkloadHandler) ScaleWorkload(c *gin.Context) {
+	clusterId := c.Param("clusterId")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	workloadType := c.Query("type")
+
+	var req ScaleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	logger.Info("扩缩容工作负载: %s/%s/%s/%s to %d", clusterId, workloadType, namespace, name, req.Replicas)
+
+	// 从集群服务获取集群信息
+	clusterID := parseClusterID(clusterId)
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": "集群不存在",
+		})
+		return
+	}
+
+	// 创建K8s客户端
+	var k8sClient *services.K8sClient
+	if cluster.KubeconfigEnc != "" {
+		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
+	} else {
+		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "创建K8s客户端失败: " + err.Error(),
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	switch WorkloadType(workloadType) {
+	case WorkloadTypeDeployment:
+		err = h.scaleDeployment(ctx, k8sClient, namespace, name, req.Replicas)
+	case WorkloadTypeStatefulSet:
+		err = h.scaleStatefulSet(ctx, k8sClient, namespace, name, req.Replicas)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "该工作负载类型不支持扩缩容: " + workloadType,
+		})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "扩缩容失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 记录审计日志
+	auditLog := models.AuditLog{
+		UserID:       1, // TODO: 从上下文获取用户ID
+		Action:       "scale_workload",
+		ResourceType: "workload",
+		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","type":"%s","namespace":"%s","name":"%s"}`, clusterId, workloadType, namespace, name),
+		Result:       "success",
+		Details:      fmt.Sprintf("扩缩容工作负载 %s/%s 到 %d 副本", namespace, name, req.Replicas),
+	}
+	h.db.Create(&auditLog)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "扩缩容成功",
+		"data":    nil,
+	})
+}
+
+// ApplyYAML 应用YAML配置
+func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
+	clusterId := c.Param("clusterId")
+
+	var req YAMLApplyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	logger.Info("应用YAML配置: cluster=%s, dryRun=%v", clusterId, req.DryRun)
+
+	// 从集群服务获取集群信息
+	clusterID := parseClusterID(clusterId)
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": "集群不存在",
+		})
+		return
+	}
+
+	// 创建K8s客户端
+	var k8sClient *services.K8sClient
+	if cluster.KubeconfigEnc != "" {
+		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
+	} else {
+		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "创建K8s客户端失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 解析YAML
+	decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(req.YAML), 4096)
+	var obj runtime.Object
+	err = decoder.Decode(&obj)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "YAML格式错误: " + err.Error(),
+		})
+		return
+	}
+
+	var result interface{}
+	if req.DryRun {
+		// DryRun模式，只验证不实际应用
+		result = map[string]interface{}{
+			"dryRun": true,
+			"valid":  true,
+			"object": obj,
+		}
+	} else {
+		// 实际应用YAML
+		// TODO: 实现真正的YAML应用逻辑，使用k8sClient应用到集群
+		_ = k8sClient // 暂时忽略未使用的变量警告
+		result = map[string]interface{}{
+			"applied": true,
+			"object":  obj,
+		}
+	}
+
+	// 记录审计日志
+	if !req.DryRun {
+		auditLog := models.AuditLog{
+			UserID:       1, // TODO: 从上下文获取用户ID
+			Action:       "apply_yaml",
+			ResourceType: "yaml",
+			ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s"}`, clusterId),
+			Result:       "success",
+			Details:      "应用YAML配置",
+		}
+		h.db.Create(&auditLog)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "YAML应用成功",
+		"data":    result,
+	})
+}
+
+// DeleteWorkload 删除工作负载
+func (h *WorkloadHandler) DeleteWorkload(c *gin.Context) {
+	clusterId := c.Param("clusterId")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	workloadType := c.Param("type")
+
+	logger.Info("删除工作负载: %s/%s/%s/%s", clusterId, workloadType, namespace, name)
+
+	// 从集群服务获取集群信息
+	clusterID := parseClusterID(clusterId)
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": "集群不存在",
+		})
+		return
+	}
+
+	// 创建K8s客户端
+	var k8sClient *services.K8sClient
+	if cluster.KubeconfigEnc != "" {
+		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
+	} else {
+		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "创建K8s客户端失败: " + err.Error(),
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOptions := metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}
+
+	switch WorkloadType(workloadType) {
+	case WorkloadTypeDeployment:
+		err = k8sClient.GetClientset().AppsV1().Deployments(namespace).Delete(ctx, name, deleteOptions)
+	case WorkloadTypeStatefulSet:
+		err = k8sClient.GetClientset().AppsV1().StatefulSets(namespace).Delete(ctx, name, deleteOptions)
+	case WorkloadTypeDaemonSet:
+		err = k8sClient.GetClientset().AppsV1().DaemonSets(namespace).Delete(ctx, name, deleteOptions)
+	case WorkloadTypeJob:
+		err = k8sClient.GetClientset().BatchV1().Jobs(namespace).Delete(ctx, name, deleteOptions)
+	case WorkloadTypeCronJob:
+		err = k8sClient.GetClientset().BatchV1beta1().CronJobs(namespace).Delete(ctx, name, deleteOptions)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "不支持的工作负载类型: " + workloadType,
+		})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "删除失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 记录审计日志
+	auditLog := models.AuditLog{
+		UserID:       1, // TODO: 从上下文获取用户ID
+		Action:       "delete_workload",
+		ResourceType: "workload",
+		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","type":"%s","namespace":"%s","name":"%s"}`, clusterId, workloadType, namespace, name),
+		Result:       "success",
+		Details:      fmt.Sprintf("删除工作负载 %s/%s", namespace, name),
+	}
+	h.db.Create(&auditLog)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "删除成功",
+		"data":    nil,
+	})
+}

@@ -22,7 +22,7 @@ import {
   ReloadOutlined,
   DeleteOutlined,
   FileTextOutlined,
-  TerminalOutlined,
+  ConsoleSqlOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import type { PodInfo, ContainerInfo } from '../../services/podService';
@@ -231,7 +231,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
             </Button>
             
             <Button
-              icon={<TerminalOutlined />}
+              icon={<ConsoleSqlOutlined />}
               onClick={handleTerminal}
               disabled={pod.status !== 'Running'}
             >

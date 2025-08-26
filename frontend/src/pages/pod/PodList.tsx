@@ -22,7 +22,7 @@ import {
   DeleteOutlined,
   EyeOutlined,
   FileTextOutlined,
-  TerminalOutlined,
+  ConsoleSqlOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
@@ -34,7 +34,7 @@ const { Option } = Select;
 interface PodListProps {}
 
 const PodList: React.FC<PodListProps> = () => {
-  const { clusterId } = useParams<{ clusterId: string }>();
+  const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -43,6 +43,7 @@ const PodList: React.FC<PodListProps> = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [selectedClusterId, setSelectedClusterId] = useState<string>(routeClusterId || '1');
   
   // 筛选条件
   const [namespace, setNamespace] = useState(searchParams.get('namespace') || '');
@@ -51,6 +52,7 @@ const PodList: React.FC<PodListProps> = () => {
 
   // 获取Pod列表
   const fetchPods = async () => {
+    const clusterId = selectedClusterId;
     if (!clusterId) return;
     
     setLoading(true);
@@ -81,6 +83,7 @@ const PodList: React.FC<PodListProps> = () => {
 
   // 删除Pod
   const handleDelete = async (pod: PodInfo) => {
+    const clusterId = selectedClusterId;
     if (!clusterId) return;
     
     try {
@@ -100,17 +103,17 @@ const PodList: React.FC<PodListProps> = () => {
 
   // 查看Pod详情
   const handleViewDetail = (pod: PodInfo) => {
-    navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}`);
+    navigate(`/clusters/${selectedClusterId}/pods/${pod.namespace}/${pod.name}`);
   };
 
   // 查看Pod日志
   const handleViewLogs = (pod: PodInfo) => {
-    navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/logs`);
+    navigate(`/clusters/${selectedClusterId}/pods/${pod.namespace}/${pod.name}/logs`);
   };
 
   // 进入Pod终端
   const handleTerminal = (pod: PodInfo) => {
-    navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/terminal`);
+    navigate(`/clusters/${selectedClusterId}/pods/${pod.namespace}/${pod.name}/terminal`);
   };
 
   // 筛选条件变化
@@ -131,7 +134,7 @@ const PodList: React.FC<PodListProps> = () => {
 
   useEffect(() => {
     fetchPods();
-  }, [clusterId, namespace, nodeName, page, pageSize]);
+  }, [selectedClusterId, namespace, nodeName, page, pageSize]);
 
   // 过滤Pod列表（本地搜索）
   const filteredPods = pods.filter(pod => {
@@ -248,7 +251,7 @@ const PodList: React.FC<PodListProps> = () => {
           <Tooltip title="进入终端">
             <Button
               type="text"
-              icon={<TerminalOutlined />}
+              icon={<ConsoleSqlOutlined />}
               onClick={() => handleTerminal(record)}
               disabled={record.status !== 'Running'}
             />

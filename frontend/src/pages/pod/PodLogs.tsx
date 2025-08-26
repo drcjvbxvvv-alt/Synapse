@@ -246,7 +246,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
                 min={1}
                 placeholder="全部"
                 value={sinceSeconds}
-                onChange={setSinceSeconds}
+                onChange={(value) => setSinceSeconds(value ?? undefined)}
                 style={{ width: 100 }}
               />
             </Space>
@@ -306,7 +306,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
       {following && (
         <Alert
           message="正在跟踪日志"
-          description="日志将每5秒自动更新一次，点击"停止跟踪"按钮可停止自动更新。"
+          description="日志将每5秒自动更新一次，点击'停止跟踪'按钮可停止自动更新。"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}

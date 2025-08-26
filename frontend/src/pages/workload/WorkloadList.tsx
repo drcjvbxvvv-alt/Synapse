@@ -158,6 +158,10 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
     }
   };
 
+  // 添加缺失的状态变量
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [batchDeleteModalVisible, setBatchDeleteModalVisible] = useState(false);
+
   // 批量删除工作负载
   const handleBatchDelete = async () => {
     if (!selectedClusterId || selectedRowKeys.length === 0) return;
@@ -466,7 +470,6 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
             />
             
             <Button
-            <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => navigate(`/clusters/${selectedClusterId}/yaml/apply`)}
@@ -490,6 +493,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
           columns={columns}
           dataSource={filteredWorkloads}
           rowKey={(record) => `${record.namespace}-${record.name}-${record.type}`}
+          rowSelection={rowSelection}
           loading={loading}
           pagination={{
             current: currentPage,

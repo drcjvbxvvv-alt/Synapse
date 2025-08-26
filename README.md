@@ -1,197 +1,50 @@
-# Kubernetes 管理平台
+# KubePolaris（北辰）
 
-一个基于 React + Go 的现代化 Kubernetes 集群管理平台，提供直观的 Web 界面来管理和监控 Kubernetes 集群。
+一个基于 **React + Go** 的现代化 Kubernetes 集群管理平台，提供直观的 Web 界面来管理和监控 Kubernetes 集群。
 
-## 🏗️ 系统架构
+## ✨ 特性
 
-### 技术栈
+- 🚀 **多集群管理** - 支持导入和管理多个 Kubernetes 集群
+- 📊 **实时监控** - 集群、节点、Pod 的实时监控和资源使用情况
+- 🖥️ **Web 终端** - 内置 Kubectl、SSH 和 Pod 终端访问
+- 🔍 **全局搜索** - 跨集群、跨资源类型的统一搜索
+- 📝 **YAML 编辑** - 在线 YAML 编辑器，支持语法高亮和校验
+- 🔐 **安全审计** - 完整的操作审计和会话记录
+- 📱 **响应式设计** - 支持桌面和移动设备
 
-**前端 (k8s-management-frontend)**
-- **框架**: React 18 + TypeScript
-- **UI 组件库**: Ant Design 5.x
-- **构建工具**: Vite
-- **状态管理**: React Hooks
-- **HTTP 客户端**: Axios
-- **路由**: React Router
+## 🏗️ 技术架构
 
-**后端 (k8s-management-backend)**
-- **语言**: Go 1.24
-- **Web 框架**: Gin
-- **Kubernetes 客户端**: client-go
-- **配置管理**: Viper
-- **日志**: 自定义日志系统
-- **认证**: JWT (可选)
+### 前端技术栈
+- **React 19.1.1** + **TypeScript 5.8.3**
+- **Vite 7.1.2** - 快速构建工具
+- **Ant Design 5.x** - 企业级 UI 组件库
+- **Monaco Editor** - 代码编辑器
+- **xterm.js** - 终端组件
 
-### 系统架构图
-
-```
-┌─────────────────┐    HTTP/WebSocket    ┌─────────────────┐    Kubernetes API    ┌─────────────────┐
-│                 │ ──────────────────── │                 │ ──────────────────── │                 │
-│   React 前端    │                      │   Go 后端       │                      │  Kubernetes     │
-│                 │                      │                 │                      │  集群           │
-│  - 集群管理     │                      │  - API 服务     │                      │                 │
-│  - 节点监控     │                      │  - K8s 客户端   │                      │  - API Server   │
-│  - Pod 管理     │                      │  - 集群存储     │                      │  - 节点         │
-│  - 工作负载     │                      │  - 实时通信     │                      │  - Pod          │
-│                 │                      │                 │                      │  - 工作负载     │
-└─────────────────┘                      └─────────────────┘                      └─────────────────┘
-```
-
-## 🚀 核心功能
-
-### 1. 集群管理
-- **集群导入**: 支持 kubeconfig 文件和手动配置两种方式
-- **连接测试**: 实时验证集群连接状态
-- **集群列表**: 显示所有已导入集群的状态和基本信息
-- **集群详情**: 查看集群的详细信息和资源统计
-
-### 2. 节点管理
-- **节点列表**: 显示集群中所有节点的状态
-- **节点详情**: 查看节点的详细信息、资源使用情况
-- **节点操作**: 支持节点的封锁(cordon)、解封(uncordon)、驱逐(drain)操作
-
-### 3. Pod 管理
-- **Pod 列表**: 显示所有命名空间中的 Pod
-- **Pod 详情**: 查看 Pod 的详细信息、容器状态
-- **日志查看**: 实时查看 Pod 和容器日志
-- **终端访问**: 通过 WebSocket 连接到 Pod 容器
-
-### 4. 工作负载管理
-- **多类型支持**: Deployment、StatefulSet、DaemonSet 等
-- **工作负载列表**: 显示所有工作负载的状态
-- **扩缩容操作**: 动态调整工作负载的副本数
-- **YAML 应用**: 支持直接应用 YAML 配置
-
-### 5. 全局搜索
-- **跨资源搜索**: 在所有集群中搜索资源
-- **智能过滤**: 支持按类型、命名空间、标签过滤
-- **快速定位**: 快速找到目标资源
-
-### 6. 终端和审计
-- **Web 终端**: 直接在浏览器中访问集群、节点、Pod
-- **操作审计**: 记录所有终端操作和命令历史
-- **会话管理**: 管理和查看终端会话
-
-## 📁 项目结构
-
-```
-k8s-management-platform/
-├── README.md                          # 项目说明文档
-├── plan.md                           # 开发计划
-├── task-list.md                      # 任务清单
-├── prototypes/                       # 原型设计
-│   ├── components/                   # 组件原型
-│   ├── layouts/                      # 布局原型
-│   ├── pages/                        # 页面原型
-│   └── html/                         # HTML 原型
-├── k8s-management-frontend/          # 前端项目
-│   ├── src/
-│   │   ├── components/               # 通用组件
-│   │   ├── layouts/                  # 布局组件
-│   │   ├── pages/                    # 页面组件
-│   │   │   ├── cluster/              # 集群管理页面
-│   │   │   ├── node/                 # 节点管理页面
-│   │   │   ├── pod/                  # Pod 管理页面
-│   │   │   ├── workload/             # 工作负载页面
-│   │   │   └── search/               # 搜索页面
-│   │   ├── services/                 # API 服务
-│   │   ├── types/                    # TypeScript 类型定义
-│   │   └── utils/                    # 工具函数
-│   ├── package.json
-│   └── vite.config.ts
-└── k8s-management-backend/           # 后端项目
-    ├── main.go                       # 程序入口
-    ├── configs/                      # 配置文件
-    ├── internal/
-    │   ├── config/                   # 配置管理
-    │   ├── database/                 # 数据库连接
-    │   ├── handlers/                 # HTTP 处理器
-    │   │   ├── cluster.go            # 集群管理
-    │   │   ├── node.go               # 节点管理
-    │   │   ├── pod.go                # Pod 管理
-    │   │   ├── workload.go           # 工作负载管理
-    │   │   ├── search.go             # 搜索功能
-    │   │   ├── terminal.go           # 终端功能
-    │   │   └── audit.go              # 审计功能
-    │   ├── middleware/               # 中间件
-    │   ├── models/                   # 数据模型
-    │   ├── router/                   # 路由配置
-    │   └── services/                 # 业务服务
-    │       ├── k8s_client.go         # Kubernetes 客户端
-    │       └── cluster_store.go      # 集群存储服务
-    ├── pkg/
-    │   └── logger/                   # 日志系统
-    ├── go.mod
-    └── go.sum
-```
-
-## 🔧 核心服务
-
-### Kubernetes 客户端服务 (k8s_client.go)
-- **多种连接方式**: 支持 kubeconfig 和 Token 两种认证方式
-- **连接测试**: 验证集群连接并获取基本信息
-- **资源操作**: 提供对 Kubernetes 资源的 CRUD 操作
-- **错误处理**: 完善的错误处理和超时机制
-
-### 集群存储服务 (cluster_store.go)
-- **内存存储**: 高性能的内存存储，支持并发访问
-- **状态管理**: 自动更新和维护集群状态
-- **统计信息**: 提供集群统计和健康状态监控
-- **扩展性**: 可轻松扩展为数据库存储
-
-## 🌐 API 接口
-
-### 集群管理 API
-```
-GET    /api/clusters                    # 获取集群列表
-POST   /api/clusters/import             # 导入集群
-GET    /api/clusters/:id                # 获取集群详情
-DELETE /api/clusters/:id                # 删除集群
-GET    /api/clusters/stats              # 获取集群统计
-POST   /api/clusters/test-connection    # 测试集群连接
-GET    /api/clusters/:id/overview       # 获取集群概览
-GET    /api/clusters/:id/metrics        # 获取集群监控数据
-```
-
-### 节点管理 API
-```
-GET    /api/clusters/:id/nodes          # 获取节点列表
-GET    /api/clusters/:id/nodes/:name    # 获取节点详情
-POST   /api/clusters/:id/nodes/:name/cordon    # 封锁节点
-POST   /api/clusters/:id/nodes/:name/uncordon  # 解封节点
-POST   /api/clusters/:id/nodes/:name/drain     # 驱逐节点
-```
-
-### Pod 管理 API
-```
-GET    /api/clusters/:id/pods                      # 获取 Pod 列表
-GET    /api/clusters/:id/pods/:namespace/:name     # 获取 Pod 详情
-GET    /api/clusters/:id/pods/:namespace/:name/logs # 获取 Pod 日志
-```
-
-### WebSocket 终端 API
-```
-GET    /ws/clusters/:id/terminal                           # 集群终端
-GET    /ws/clusters/:id/nodes/:name/terminal               # 节点终端
-GET    /ws/clusters/:id/pods/:namespace/:name/terminal     # Pod 终端
-```
+### 后端技术栈
+- **Go 1.24.0** + **Gin 1.9.1**
+- **GORM 1.30.1** + **MySQL 8.x**
+- **k8s.io/client-go** - Kubernetes 客户端
+- **WebSocket** - 实时通信
+- **JWT** - 身份认证
 
 ## 🚀 快速开始
 
 ### 环境要求
-- Node.js 18+
-- Go 1.24+
-- 有效的 Kubernetes 集群访问权限
+- Node.js >= 16.0.0
+- Go >= 1.24.0
+- MySQL >= 8.0 (可选)
+- 可访问的 Kubernetes 集群
 
-### 启动前端服务
+### 安装和运行
+
+1. **克隆项目**
 ```bash
-cd k8s-management-frontend
-npm install
-npm run dev
-# 访问 http://localhost:5173
+git clone <repository-url>
+cd k8s-management
 ```
 
-### 启动后端服务
+2. **启动后端服务**
 ```bash
 cd k8s-management-backend
 go mod tidy
@@ -199,59 +52,174 @@ go run main.go
 # 服务运行在 http://localhost:8080
 ```
 
-### 使用说明
-1. 打开浏览器访问 `http://localhost:5173`
-2. 点击"导入集群"按钮
-3. 选择连接方式：
-   - **kubeconfig 文件**: 粘贴完整的 kubeconfig 内容
-   - **手动配置**: 填写 API Server 地址和访问令牌
-4. 点击"测试连接"验证集群连接
-5. 连接成功后点击"导入集群"完成导入
-6. 在集群列表中查看和管理已导入的集群
+3. **启动前端服务**
+```bash
+cd k8s-management-frontend
+npm install
+npm run dev
+# 访问 http://localhost:5173
+```
 
-## 🔒 安全特性
+4. **访问应用**
+打开浏览器访问 `http://localhost:5173`
 
-- **认证支持**: 支持 JWT 认证（可选启用）
-- **HTTPS 支持**: 支持 TLS 加密通信
-- **权限控制**: 基于 Kubernetes RBAC 的权限管理
-- **审计日志**: 完整的操作审计和日志记录
+## 📖 功能模块
 
-## 🎯 特色功能
+### 🏢 集群管理
+- 集群导入（支持 kubeconfig 文件和手动配置）
+- 集群列表和详情查看
+- 集群连接状态监控
+- 集群资源统计和概览
 
-### 1. 真实集群连接
-- 不使用模拟数据，直接连接真实的 Kubernetes 集群
-- 实时获取集群状态和资源信息
-- 支持多集群管理
+### 🖥️ 节点管理
+- 节点列表和详细信息
+- 节点资源使用监控
+- 节点操作（Cordon/Uncordon/Drain）
+- 节点终端访问
 
-### 2. 现代化界面
-- 基于 Ant Design 的现代化 UI
-- 响应式设计，支持移动端访问
-- 直观的操作界面和丰富的交互体验
+### 📦 Pod 管理
+- Pod 列表和详情查看
+- 实时日志查看和下载
+- Pod 终端访问
+- Pod 删除和重启操作
 
-### 3. 实时通信
-- WebSocket 支持实时终端访问
-- 实时日志流显示
-- 集群状态实时更新
+### ⚙️ 工作负载管理
+- Deployment、StatefulSet、DaemonSet 等管理
+- 工作负载扩缩容
+- YAML 配置在线编辑
+- 滚动更新和回滚
 
-### 4. 高性能架构
-- Go 语言高性能后端
-- React 前端优化
-- 内存存储提供快速响应
+### 🔍 全局搜索
+- 跨集群资源搜索
+- 按类型、命名空间筛选
+- 快速跳转到资源详情
 
-## 📈 未来规划
+### 🖥️ Web 终端
+- Kubectl 终端（支持命名空间切换）
+- SSH 终端连接
+- Pod 容器终端
+- 终端会话审计
 
-- [ ] 数据库持久化存储
-- [ ] 用户权限管理系统
+## 📊 项目状态
+
+### ✅ 已完成功能
+- [x] 项目基础架构
+- [x] 集群管理完整功能
+- [x] 节点管理完整功能
+- [x] Pod 管理基础功能
+- [x] 工作负载管理
+- [x] 全局搜索功能
+- [x] Kubectl 和 SSH 终端
+
+### 🚧 正在开发
+- [ ] Pod 终端 WebSocket 功能完善
+- [ ] 实时监控图表集成
+- [ ] 用户认证和权限管理
+
+### 📋 计划功能
 - [ ] 集群监控和告警
-- [ ] 资源配额管理
 - [ ] Helm 应用管理
 - [ ] CI/CD 集成
 - [ ] 多租户支持
 
-## 🤝 贡献指南
+## 🔧 配置
 
-欢迎提交 Issue 和 Pull Request 来帮助改进这个项目。
+### 后端配置
+编辑 `k8s-management-backend/configs/config.yaml`：
+
+```yaml
+server:
+  port: 8080
+  mode: debug
+
+database:
+  driver: mysql
+  host: localhost
+  port: 3306
+  username: root
+  password: password
+  database: k8s_management
+
+jwt:
+  secret: your-secret-key
+  expire_time: 24
+```
+
+### 环境变量
+```bash
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_USERNAME=root
+export DB_PASSWORD=password
+export JWT_SECRET=your-secret-key
+```
+
+## 🐳 Docker 部署
+
+### 使用 Docker Compose
+```bash
+docker-compose up -d
+```
+
+### 手动构建
+```bash
+# 构建后端
+cd k8s-management-backend
+docker build -t k8s-management-backend .
+
+# 构建前端
+cd k8s-management-frontend
+docker build -t k8s-management-frontend .
+```
+
+## 🤝 贡献
+
+欢迎贡献代码！请遵循以下步骤：
+
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
+
+## 📝 开发规范
+
+### 前端
+- 使用 TypeScript 进行类型检查
+- 遵循 React Hooks 模式
+- 组件使用 PascalCase 命名
+- 使用 ESLint 和 Prettier 格式化代码
+
+### 后端
+- 遵循 Go 标准项目结构
+- 使用 GORM 进行数据库操作
+- API 使用 RESTful 设计
+- 统一错误处理和日志记录
+
+## 🔒 安全
+
+- 所有敏感数据加密存储
+- JWT Token 安全传输
+- RBAC 权限控制
+- 操作审计日志
+- HTTPS 强制使用
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证。
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 🆘 支持
+
+如果您遇到问题或有疑问：
+
+1. 查看 [Issues](../../issues) 页面
+2. 创建新的 Issue
+3. 联系维护者
+
+## 🙏 致谢
+
+感谢所有为这个项目做出贡献的开发者！
+
+---
+
+**注意**: 这是一个正在积极开发的项目，某些功能可能还在完善中。生产环境使用前请进行充分测试。

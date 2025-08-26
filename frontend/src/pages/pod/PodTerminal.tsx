@@ -79,7 +79,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
     
     // 构建WebSocket URL
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/clusters/${clusterId}/pods/${namespace}/${name}/terminal?container=${selectedContainer}`;
+    const wsUrl = `${protocol}//${window.location.hostname}:8080/api/clusters/${clusterId}/pods/${namespace}/${name}/terminal?container=${selectedContainer}`;
     
     try {
       const ws = new WebSocket(wsUrl);
