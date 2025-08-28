@@ -1,111 +1,126 @@
 package router
 
 import (
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/internal/handlers"
-	"k8s-management-backend/internal/middleware"
-	"k8s-management-backend/internal/services"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
+	"kubepolaris/internal/config"
+	"kubepolaris/internal/handlers"
+	"kubepolaris/internal/middleware"
+	"kubepolaris/internal/services"
 )
 
-// Setup 设置路由
 func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	r := gin.New()
 
-	// 全局中间件
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
-	r.Use(middleware.CORS())
+	// 根据环境设置 gin 模式（可选）
+	// if cfg.Server.Mode == "release" {
+	// 	gin.SetMode(gin.ReleaseMode)
+	// }
 
-	// 健康检查
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"message": "K8s Management Backend is running",
-		})
+	// 全局中间件：建议引入 RequestID + 结构化日志 + 统一恢复
+	r.Use(
+		// middleware.RequestID(), // TODO: 注入 traceId/requestId
+		gin.Recovery(),    // 可替换为自定义 Recovery 统一错误响应
+		gin.Logger(),      // 可替换为 zap/logrus 结构化日志中间件
+		middleware.CORS(), // TODO: 从 cfg 读取允许的 Origin/Methods/Headers
+		// middleware.Gzip(),     // TODO: 如需压缩
+		// middleware.RateLimit() // TODO: 关键接口限流
+	)
+
+	// Health endpoints：liveness 与 readiness
+	r.GET("/healthz", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+	r.GET("/readyz", func(c *gin.Context) {
+		// TODO: 检查 db/k8s 可用性
+		c.JSON(200, gin.H{"ready": true})
 	})
 
-	// API 路由组
-	api := r.Group("/api")
+	// 统一的 Service 实例，避免重复创建
+	clusterSvc := services.NewClusterService(db)
+
+	// /api/v1
+	api := r.Group("/api/v1")
+
+	// Auth 仅开放登录与登出，其余走受保护分组
+	auth := api.Group("/auth")
 	{
-		// 认证相关路由
-		auth := api.Group("/auth")
-		{
-			authHandler := handlers.NewAuthHandler(db, cfg)
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/logout", authHandler.Logout)
-			auth.GET("/me", middleware.AuthRequired(cfg.JWT.Secret), authHandler.GetProfile)
-		}
+		authHandler := handlers.NewAuthHandler(db, cfg)
+		auth.POST("/login", authHandler.Login)
+		auth.POST("/logout", authHandler.Logout)
+		// /me 必须带 Auth
+		auth.GET("/me", middleware.AuthRequired(cfg.JWT.Secret), authHandler.GetProfile)
+	}
 
-		// 暂时移除认证，方便开发测试
-		// protected := api.Group("")
-		// protected.Use(middleware.AuthRequired(cfg.JWT.Secret))
-
-		// 集群管理路由
-		clusters := api.Group("/clusters")
+	// 受保护的业务路由
+	protected := api.Group("")
+	// protected.Use(middleware.AuthRequired(cfg.JWT.Secret))
+	{
+		// clusters 根分组
+		clusters := protected.Group("/clusters")
 		{
 			clusterHandler := handlers.NewClusterHandler(db, cfg)
-			clusters.GET("", clusterHandler.GetClusters)
-			clusters.POST("/import", clusterHandler.ImportCluster)
-			clusters.GET("/:clusterId", clusterHandler.GetCluster)
-			clusters.GET("/:clusterId/status", clusterHandler.GetClusterStatus)
-			clusters.GET("/:clusterId/overview", clusterHandler.GetClusterOverview)
-			clusters.GET("/:clusterId/metrics", clusterHandler.GetClusterMetrics)
-			clusters.DELETE("/:clusterId", clusterHandler.DeleteCluster)
+
+			// 静态路由优先
 			clusters.GET("/stats", clusterHandler.GetClusterStats)
+			clusters.POST("/import", clusterHandler.ImportCluster)
 			clusters.POST("/test-connection", clusterHandler.TestConnection)
+			clusters.GET("", clusterHandler.GetClusters)
+
+			// 动态 cluster 子分组
+			cluster := clusters.Group("/:clusterID")
+			{
+				cluster.GET("", clusterHandler.GetCluster)
+				cluster.GET("/status", clusterHandler.GetClusterStatus)
+				cluster.GET("/overview", clusterHandler.GetClusterOverview)
+				cluster.GET("/metrics", clusterHandler.GetClusterMetrics)
+				cluster.DELETE("", clusterHandler.DeleteCluster)
+
+				// nodes 子分组
+				nodeHandler := handlers.NewNodeHandler(db, cfg, clusterSvc)
+				nodes := cluster.Group("/nodes")
+				{
+					nodes.GET("", nodeHandler.GetNodes)
+					nodes.GET("/overview", nodeHandler.GetNodeOverview)
+					nodes.GET("/:name", nodeHandler.GetNode)
+					nodes.POST("/:name/cordon", nodeHandler.CordonNode)
+					nodes.POST("/:name/uncordon", nodeHandler.UncordonNode)
+					nodes.POST("/:name/drain", nodeHandler.DrainNode)
+				}
+
+				// pods 子分组
+				podHandler := handlers.NewPodHandler(db, cfg, clusterSvc)
+				pods := cluster.Group("/pods")
+				{
+					pods.GET("", podHandler.GetPods) // 可考虑使用 query 过滤 namespace/name
+					pods.GET("/:namespace/:name", podHandler.GetPod)
+					pods.DELETE("/:namespace/:name", podHandler.DeletePod)
+					pods.GET("/:namespace/:name/logs", podHandler.GetPodLogs)
+				}
+
+				// workloads 子分组
+				workloadHandler := handlers.NewWorkloadHandler(db, cfg, clusterSvc)
+				workloads := cluster.Group("/workloads")
+				{
+					workloads.GET("", workloadHandler.GetWorkloads)
+					workloads.GET("/:namespace/:name", workloadHandler.GetWorkload)
+					workloads.POST("/:namespace/:name/scale", workloadHandler.ScaleWorkload)
+					// YAML apply 可以考虑放 /apply 到 cluster 级别或 workloads 级别均可
+					workloads.POST("/yaml/apply", workloadHandler.ApplyYAML)
+				}
+			}
 		}
 
-		// kubectl终端WebSocket路由
-		v1 := api.Group("/v1")
-		{
-			clusterService := services.NewClusterService(db)
-			kubectlTerminalHandler := handlers.NewKubectlTerminalHandler(clusterService)
-			v1.GET("/clusters/:clusterId/kubectl-terminal", kubectlTerminalHandler.HandleKubectlTerminal)
-		}
-
-		// SSH终端WebSocket路由
-		ssh := api.Group("/ssh")
-		{
-			sshHandler := handlers.NewSSHHandler()
-			ssh.GET("/connect", sshHandler.SSHConnect)
-		}
-
-		// 节点管理路由
-		clusterService := services.NewClusterService(db)
-		nodeHandler := handlers.NewNodeHandler(db, cfg, clusterService)
-		api.GET("/clusters/:clusterId/nodes", nodeHandler.GetNodes)
-		api.GET("/clusters/:clusterId/nodes/overview", nodeHandler.GetNodeOverview)
-		api.GET("/clusters/:clusterId/nodes/:name", nodeHandler.GetNode)
-		api.POST("/clusters/:clusterId/nodes/:name/cordon", nodeHandler.CordonNode)
-		api.POST("/clusters/:clusterId/nodes/:name/uncordon", nodeHandler.UncordonNode)
-		api.POST("/clusters/:clusterId/nodes/:name/drain", nodeHandler.DrainNode)
-
-		// Pod管理路由
-		podHandler := handlers.NewPodHandler(db, cfg, clusterService)
-		api.GET("/clusters/:clusterId/pods", podHandler.GetPods)
-		api.GET("/clusters/:clusterId/pods/:namespace/:name", podHandler.GetPod)
-		api.DELETE("/clusters/:clusterId/pods/:namespace/:name", podHandler.DeletePod)
-		api.GET("/clusters/:clusterId/pods/:namespace/:name/logs", podHandler.GetPodLogs)
-
-		// 工作负载管理路由
-		workloadHandler := handlers.NewWorkloadHandler(db, cfg, clusterService)
-		api.GET("/clusters/:clusterId/workloads", workloadHandler.GetWorkloads)
-		api.GET("/clusters/:clusterId/workloads/:namespace/:name", workloadHandler.GetWorkload)
-		api.POST("/clusters/:clusterId/workloads/:namespace/:name/scale", workloadHandler.ScaleWorkload)
-		api.POST("/clusters/:clusterId/yaml/apply", workloadHandler.ApplyYAML)
-
-		// 全局搜索路由
-		search := api.Group("/search")
+		// search
+		search := protected.Group("/search")
 		{
 			searchHandler := handlers.NewSearchHandler(db, cfg)
 			search.GET("", searchHandler.GlobalSearch)
 		}
 
-		// 审计路由
-		audit := api.Group("/audit")
+		// audit
+		audit := protected.Group("/audit")
 		{
 			auditHandler := handlers.NewAuditHandler(db, cfg)
 			audit.GET("/terminal/sessions", auditHandler.GetTerminalSessions)
@@ -114,15 +129,27 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		}
 	}
 
-	// WebSocket 路由
+	// WebSocket：建议也加认证
 	ws := r.Group("/ws")
-	ws.Use(middleware.AuthRequired(cfg.JWT.Secret))
+	// ws.Use(middleware.AuthRequired(cfg.JWT.Secret))
 	{
-		terminalHandler := handlers.NewTerminalHandler(db, cfg)
-		ws.GET("/clusters/:clusterId/terminal", terminalHandler.ClusterTerminal)
-		ws.GET("/clusters/:clusterId/nodes/:name/terminal", terminalHandler.NodeTerminal)
-		ws.GET("/clusters/:clusterId/pods/:namespace/:name/terminal", terminalHandler.PodTerminal)
+		kctl := handlers.NewKubectlTerminalHandler(clusterSvc)
+		ssh := handlers.NewSSHHandler()
+
+		// 集群级 kubectl 终端
+		ws.GET("/clusters/:clusterID/terminal", kctl.HandleKubectlTerminal)
+
+		// 节点 SSH 终端
+		ws.GET("/ssh/terminal", ssh.SSHConnect)
+
+		// Pod 终端：建议使用 kubectl 而非 SSH
+		// 需要在 handlers 中提供相应方法（如 HandlePodTerminal）
+		ws.GET("/clusters/:clusterID/pods/:namespace/:name/terminal", ssh.SSHConnect)
 	}
 
+	// TODO:
+	// - 统一错误处理/响应格式中间件
+	// - OpenAPI/Swagger 文档路由（/swagger/*any）
+	// - 404/405 兜底处理
 	return r
 }

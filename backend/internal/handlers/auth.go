@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/internal/models"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/internal/models"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -136,7 +136,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 // GetProfile 获取用户信息
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	
+
 	var user models.User
 	if err := h.db.Preload("Roles").First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{

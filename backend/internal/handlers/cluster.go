@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/internal/models"
-	"k8s-management-backend/internal/services"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/internal/models"
+	"kubepolaris/internal/services"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -216,7 +216,7 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 
 // GetCluster 获取集群详情
 func (h *ClusterHandler) GetCluster(c *gin.Context) {
-	idStr := c.Param("clusterId")
+	idStr := c.Param("clusterID")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -260,7 +260,7 @@ func (h *ClusterHandler) GetCluster(c *gin.Context) {
 
 // DeleteCluster 删除集群
 func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
-	idStr := c.Param("clusterId")
+	idStr := c.Param("clusterID")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -312,7 +312,7 @@ func (h *ClusterHandler) GetClusterStats(c *gin.Context) {
 
 // GetClusterStatus 获取集群实时状态
 func (h *ClusterHandler) GetClusterStatus(c *gin.Context) {
-	idStr := c.Param("clusterId")
+	idStr := c.Param("clusterID")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -354,7 +354,7 @@ func (h *ClusterHandler) GetClusterStatus(c *gin.Context) {
 
 // GetClusterOverview 获取集群概览信息
 func (h *ClusterHandler) GetClusterOverview(c *gin.Context) {
-	clusterID := c.Param("clusterId")
+	clusterID := c.Param("clusterID")
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -517,7 +517,7 @@ func (h *ClusterHandler) GetClusterOverview(c *gin.Context) {
 
 // GetClusterMetrics 获取集群监控数据
 func (h *ClusterHandler) GetClusterMetrics(c *gin.Context) {
-	id := c.Param("clusterId")
+	id := c.Param("clusterID")
 	logger.Info("获取集群监控数据: %s", id)
 
 	// 获取请求参数

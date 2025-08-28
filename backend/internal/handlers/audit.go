@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

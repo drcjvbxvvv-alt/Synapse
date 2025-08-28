@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/internal/database"
-	"k8s-management-backend/internal/router"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/internal/database"
+	"kubepolaris/internal/router"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

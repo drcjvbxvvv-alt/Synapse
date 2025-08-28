@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/internal/models"
-	"k8s-management-backend/internal/services"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/internal/models"
+	"kubepolaris/internal/services"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -45,7 +45,7 @@ func parseClusterID(clusterIDStr string) uint {
 
 // GetNodes 获取节点列表
 func (h *NodeHandler) GetNodes(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	logger.Info("获取节点列表: %s", clusterId)
 
 	// 从集群服务获取集群信息
@@ -184,7 +184,7 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 
 // GetNodeOverview 获取节点概览信息
 func (h *NodeHandler) GetNodeOverview(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	logger.Info("获取节点概览: %s", clusterId)
 
 	// 从集群服务获取集群信息
@@ -276,7 +276,7 @@ func (h *NodeHandler) GetNodeOverview(c *gin.Context) {
 
 // GetNode 获取节点详情
 func (h *NodeHandler) GetNode(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	name := c.Param("name")
 	logger.Info("获取节点详情: %s/%s", clusterId, name)
 
@@ -429,7 +429,7 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 
 // CordonNode 封锁节点
 func (h *NodeHandler) CordonNode(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	name := c.Param("name")
 	logger.Info("封锁节点: %s/%s", clusterId, name)
 
@@ -489,7 +489,7 @@ func (h *NodeHandler) CordonNode(c *gin.Context) {
 
 // UncordonNode 解封节点
 func (h *NodeHandler) UncordonNode(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	name := c.Param("name")
 	logger.Info("解封节点: %s/%s", clusterId, name)
 
@@ -549,7 +549,7 @@ func (h *NodeHandler) UncordonNode(c *gin.Context) {
 
 // DrainNode 驱逐节点
 func (h *NodeHandler) DrainNode(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	name := c.Param("name")
 	logger.Info("驱逐节点: %s/%s", clusterId, name)
 

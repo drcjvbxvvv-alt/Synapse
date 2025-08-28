@@ -128,7 +128,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
     try {
       // 创建WebSocket连接到后端SSH代理
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/api/ssh/connect`;
+      const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws/ssh/terminal`;
       
       websocket.current = new WebSocket(wsUrl);
 

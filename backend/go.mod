@@ -1,4 +1,4 @@
-module k8s-management-backend
+module kubepolaris
 
 go 1.24.0
 

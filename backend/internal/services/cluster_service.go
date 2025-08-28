@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"k8s-management-backend/internal/models"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/models"
+	"kubepolaris/pkg/logger"
 
 	"gorm.io/gorm"
 )

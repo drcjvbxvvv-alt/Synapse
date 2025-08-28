@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -35,12 +35,12 @@ type SSHConfig struct {
 
 // SSHMessage WebSocket消息
 type SSHMessage struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data,omitempty"`
-	Cols int         `json:"cols,omitempty"`
-	Rows int         `json:"rows,omitempty"`
-	Config *SSHConfig `json:"config,omitempty"`
-	Error string     `json:"error,omitempty"`
+	Type   string      `json:"type"`
+	Data   interface{} `json:"data,omitempty"`
+	Cols   int         `json:"cols,omitempty"`
+	Rows   int         `json:"rows,omitempty"`
+	Config *SSHConfig  `json:"config,omitempty"`
+	Error  string      `json:"error,omitempty"`
 }
 
 // WebSocket升级器
@@ -155,13 +155,13 @@ func (h *SSHHandler) createSSHConnection(config *SSHConfig) (*ssh.Client, *ssh.S
 		if config.PrivateKey == "" {
 			return nil, nil, nil, nil, nil, fmt.Errorf("私钥不能为空")
 		}
-		
+
 		// 解析私钥
 		signer, err := ssh.ParsePrivateKey([]byte(config.PrivateKey))
 		if err != nil {
 			return nil, nil, nil, nil, nil, fmt.Errorf("解析私钥失败: %v", err)
 		}
-		
+
 		sshConfig.Auth = []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		}
@@ -245,7 +245,7 @@ func (h *SSHHandler) readSSHOutput(conn *websocket.Conn, stdout, stderr io.Reade
 				}
 				break
 			}
-			
+
 			if n > 0 {
 				err = conn.WriteJSON(SSHMessage{
 					Type: "data",
@@ -270,7 +270,7 @@ func (h *SSHHandler) readSSHOutput(conn *websocket.Conn, stdout, stderr io.Reade
 				}
 				break
 			}
-			
+
 			if n > 0 {
 				err = conn.WriteJSON(SSHMessage{
 					Type: "data",

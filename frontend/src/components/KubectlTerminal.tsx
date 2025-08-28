@@ -171,7 +171,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // 修复 WebSocket URL，确保与后端路由匹配
-    const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/api/v1/clusters/${clusterId}/kubectl-terminal`;
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws/clusters/${clusterId}/terminal`;
     const params = new URLSearchParams({
       namespace: selectedNamespace,
     });

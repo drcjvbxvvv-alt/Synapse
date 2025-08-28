@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/internal/models"
-	"k8s-management-backend/internal/services"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/internal/models"
+	"kubepolaris/internal/services"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -79,7 +79,7 @@ type YAMLApplyRequest struct {
 
 // GetWorkloads 获取工作负载列表
 func (h *WorkloadHandler) GetWorkloads(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Query("namespace")
 	workloadType := c.Query("type")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -191,7 +191,7 @@ func (h *WorkloadHandler) GetWorkloads(c *gin.Context) {
 
 // GetWorkload 获取工作负载详情
 func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	workloadType := c.Query("type")
@@ -319,7 +319,7 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 
 // ScaleWorkload 扩缩容工作负载
 func (h *WorkloadHandler) ScaleWorkload(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	workloadType := c.Query("type")
@@ -405,7 +405,7 @@ func (h *WorkloadHandler) ScaleWorkload(c *gin.Context) {
 
 // ApplyYAML 应用YAML配置
 func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 
 	var req YAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -496,7 +496,7 @@ func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
 
 // DeleteWorkload 删除工作负载
 func (h *WorkloadHandler) DeleteWorkload(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	workloadType := c.Param("type")

@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -26,7 +26,7 @@ func NewTerminalHandler(db *gorm.DB, cfg *config.Config) *TerminalHandler {
 
 // ClusterTerminal 集群终端WebSocket连接
 func (h *TerminalHandler) ClusterTerminal(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	logger.Info("建立集群终端连接: %s", clusterId)
 
 	// TODO: 实现WebSocket终端连接逻辑
@@ -39,7 +39,7 @@ func (h *TerminalHandler) ClusterTerminal(c *gin.Context) {
 
 // NodeTerminal 节点终端WebSocket连接
 func (h *TerminalHandler) NodeTerminal(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	name := c.Param("name")
 	logger.Info("建立节点终端连接: %s/%s", clusterId, name)
 
@@ -53,7 +53,7 @@ func (h *TerminalHandler) NodeTerminal(c *gin.Context) {
 
 // PodTerminal Pod终端WebSocket连接
 func (h *TerminalHandler) PodTerminal(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	logger.Info("建立Pod终端连接: %s/%s/%s", clusterId, namespace, name)

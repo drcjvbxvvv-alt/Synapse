@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/internal/models"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/internal/models"
+	"kubepolaris/pkg/logger"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

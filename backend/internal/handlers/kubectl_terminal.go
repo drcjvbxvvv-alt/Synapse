@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"k8s-management-backend/internal/models"
-	"k8s-management-backend/internal/services"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/models"
+	"kubepolaris/internal/services"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -69,7 +69,7 @@ func NewKubectlTerminalHandler(clusterService *services.ClusterService) *Kubectl
 
 // HandleKubectlTerminal 处理kubectl终端WebSocket连接
 func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
-	clusterID := c.Param("clusterId")
+	clusterID := c.Param("clusterID")
 	namespace := c.DefaultQuery("namespace", "default")
 
 	// 获取集群信息

@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"k8s-management-backend/internal/config"
-	"k8s-management-backend/internal/models"
-	"k8s-management-backend/internal/services"
-	"k8s-management-backend/pkg/logger"
+	"kubepolaris/internal/config"
+	"kubepolaris/internal/models"
+	"kubepolaris/internal/services"
+	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -101,7 +101,7 @@ type PodCondition struct {
 
 // GetPods 获取Pod列表
 func (h *PodHandler) GetPods(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Query("namespace")
 	nodeName := c.Query("nodeName")
 	labelSelector := c.Query("labelSelector")
@@ -209,7 +209,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 
 // GetPod 获取Pod详情
 func (h *PodHandler) GetPod(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -268,7 +268,7 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 
 // DeletePod 删除Pod
 func (h *PodHandler) DeletePod(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -338,7 +338,7 @@ func (h *PodHandler) DeletePod(c *gin.Context) {
 
 // GetPodLogs 获取Pod日志
 func (h *PodHandler) GetPodLogs(c *gin.Context) {
-	clusterId := c.Param("clusterId")
+	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	container := c.Query("container")
