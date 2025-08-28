@@ -1,12 +1,13 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // PodTerminalHandler Pod终端WebSocket处理器
@@ -35,11 +41,17 @@ type PodTerminalSession struct {
 	PodName   string
 	Container string
 	Conn      *websocket.Conn
-	Cmd       *exec.Cmd
-	StdinPipe io.WriteCloser
 	Context   context.Context
 	Cancel    context.CancelFunc
 	Mutex     sync.Mutex
+
+	// Kubernetes连接相关
+	stdinReader  io.ReadCloser
+	stdinWriter  io.WriteCloser
+	stdoutReader io.ReadCloser
+	stdoutWriter io.WriteCloser
+	winSizeChan  chan *remotecommand.TerminalSize
+	done         chan struct{}
 }
 
 // PodTerminalMessage Pod终端消息
@@ -74,7 +86,13 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 	container := c.DefaultQuery("container", "")
 
 	// 获取集群信息
-	cluster, err := h.clusterService.GetCluster(uint(mustParseUint(clusterID)))
+	clusterIDUint, err := strconv.ParseUint(clusterID, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的集群ID"})
+		return
+	}
+
+	cluster, err := h.clusterService.GetCluster(uint(clusterIDUint))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "集群不存在"})
 		return
@@ -83,7 +101,6 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 	// 升级到WebSocket连接
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		logger.Error("升级WebSocket连接失败", "error", err)
 		return
 	}
 	defer conn.Close()
@@ -114,180 +131,182 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		delete(h.sessions, sessionID)
 		h.sessionsMutex.Unlock()
 		cancel()
-		if session.Cmd != nil && session.Cmd.Process != nil {
-			session.Cmd.Process.Kill()
-		}
-		if session.StdinPipe != nil {
-			session.StdinPipe.Close()
-		}
+		h.closeSession(session)
 	}()
 
-	// 创建临时kubeconfig文件
-	kubeconfigPath, err := h.createTempKubeconfig(cluster)
+	// 创建Kubernetes配置
+	k8sConfig, err := h.createK8sConfig(cluster)
 	if err != nil {
-		h.sendMessage(conn, "error", fmt.Sprintf("创建kubeconfig失败: %v", err))
+		h.sendMessage(conn, "error", fmt.Sprintf("创建Kubernetes配置失败: %v", err))
 		return
 	}
-	defer os.Remove(kubeconfigPath)
+
+	// 创建Kubernetes客户端
+	client, err := kubernetes.NewForConfig(k8sConfig)
+	if err != nil {
+		h.sendMessage(conn, "error", fmt.Sprintf("创建Kubernetes客户端失败: %v", err))
+		return
+	}
+
+	// 查找可用的shell
+	shell, err := h.findAvailableShell(client, k8sConfig, session)
+	if err != nil {
+		h.sendMessage(conn, "error", fmt.Sprintf("未找到可用的shell: %v", err))
+		return
+	}
 
 	// 启动Pod终端连接
-	if err := h.startPodTerminal(session, kubeconfigPath); err != nil {
+	if err := h.startPodTerminal(client, k8sConfig, session, shell); err != nil {
 		h.sendMessage(conn, "error", fmt.Sprintf("启动Pod终端失败: %v", err))
 		return
 	}
 
 	// 发送连接成功消息
-	h.sendMessage(conn, "connected", fmt.Sprintf("Connected to pod %s/%s", namespace, podName))
+	containerInfo := ""
+	if container != "" {
+		containerInfo = fmt.Sprintf(" (container: %s)", container)
+	}
+	h.sendMessage(conn, "connected", fmt.Sprintf("Connected to pod %s/%s%s using %s", namespace, podName, containerInfo, shell))
 
 	// 处理WebSocket消息
 	for {
-		var msg PodTerminalMessage
-		err := conn.ReadJSON(&msg)
+		mt, data, err := conn.ReadMessage()
 		if err != nil {
-			logger.Error("读取WebSocket消息失败", "error", err)
 			break
 		}
+		if mt != websocket.TextMessage && mt != websocket.BinaryMessage {
+			continue
+		}
 
-		switch msg.Type {
-		case "input":
-			h.handleInput(session, msg.Data)
-		case "resize":
-			h.handleResize(session, msg.Cols, msg.Rows)
+		// 优先尝试按JSON解析
+		var msg PodTerminalMessage
+		if err := json.Unmarshal(data, &msg); err == nil && msg.Type != "" {
+			switch msg.Type {
+			case "input":
+				h.handleInput(session, msg.Data)
+			case "resize":
+				h.handleResize(session, msg.Cols, msg.Rows)
+			}
+			continue
+		}
+
+		// 兼容纯文本：直接作为输入
+		h.handleInput(session, string(data))
+	}
+}
+
+// findAvailableShell 查找可用的shell
+func (h *PodTerminalHandler) findAvailableShell(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession) (string, error) {
+	shells := []string{"bash", "sh", "ash", "dash", "zsh", "ksh"}
+
+	for _, shell := range shells {
+		if h.hasShellInContainer(client, k8sConfig, session, shell) {
+			return shell, nil
 		}
 	}
+
+	return "", fmt.Errorf("未找到任何可用的shell")
+}
+
+// hasShellInContainer 检查容器中是否有指定的shell
+func (h *PodTerminalHandler) hasShellInContainer(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession, shell string) bool {
+	testScript := fmt.Sprintf("command -v %s", shell)
+	command := []string{"sh", "-c", testScript}
+
+	req := client.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(session.PodName).
+		Namespace(session.Namespace).SubResource("exec")
+
+	req.VersionedParams(&v1.PodExecOptions{
+		Container: session.Container,
+		Command:   command,
+		Stdout:    true,
+	}, scheme.ParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(k8sConfig, "POST", req.URL())
+	if err != nil {
+		return false
+	}
+
+	var buf bytes.Buffer
+	err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
+		Stdout: &buf,
+		Tty:    false,
+	})
+	if err != nil {
+		return false
+	}
+
+	result := strings.TrimSpace(buf.String())
+	return strings.HasSuffix(result, shell)
 }
 
 // startPodTerminal 启动Pod终端连接
-func (h *PodTerminalHandler) startPodTerminal(session *PodTerminalSession, kubeconfigPath string) error {
-	// 构建kubectl exec命令
-	args := []string{
-		"--kubeconfig", kubeconfigPath,
-		"exec", "-it",
-		"-n", session.Namespace,
-	}
-
-	// 如果指定了容器，添加容器参数
-	if session.Container != "" {
-		args = append(args, "-c", session.Container)
-	}
-
-	// 添加Pod名称和shell命令
-	args = append(args, session.PodName, "--", "/bin/bash")
-
-	// 如果bash不存在，尝试sh
-	cmd := exec.CommandContext(session.Context, "kubectl", args...)
-
-	// 设置环境变量
-	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("KUBECONFIG=%s", kubeconfigPath),
-		"TERM=xterm-256color",
-	)
-
+func (h *PodTerminalHandler) startPodTerminal(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession, shell string) error {
 	// 创建管道
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("创建stdin管道失败: %v", err)
-	}
-	session.StdinPipe = stdin
+	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter := io.Pipe()
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("创建stdout管道失败: %v", err)
-	}
+	session.stdinReader = stdinReader
+	session.stdinWriter = stdinWriter
+	session.stdoutReader = stdoutReader
+	session.stdoutWriter = stdoutWriter
+	session.winSizeChan = make(chan *remotecommand.TerminalSize, 10)
+	session.done = make(chan struct{})
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("创建stderr管道失败: %v", err)
+	// 设置默认终端大小
+	session.winSizeChan <- &remotecommand.TerminalSize{
+		Width:  120,
+		Height: 30,
 	}
-
-	// 启动命令
-	if err := cmd.Start(); err != nil {
-		// 如果bash失败，尝试sh
-		if strings.Contains(err.Error(), "executable file not found") ||
-			strings.Contains(err.Error(), "not found") {
-			return h.startPodTerminalWithSh(session, kubeconfigPath)
-		}
-		return fmt.Errorf("启动kubectl exec失败: %v", err)
-	}
-
-	session.Cmd = cmd
 
 	// 启动输出读取协程
-	go h.readOutput(session, stdout, "stdout")
-	go h.readOutput(session, stderr, "stderr")
+	go h.readOutput(session)
 
-	// 监控命令状态
+	// 启动Kubernetes exec
 	go func() {
-		err := cmd.Wait()
-		if err != nil && session.Context.Err() != context.Canceled {
-			h.sendMessage(session.Conn, "error", fmt.Sprintf("Pod终端连接断开: %v", err))
+		defer func() {
+			select {
+			case <-session.done:
+			default:
+				close(session.done)
+			}
+			h.sendMessage(session.Conn, "disconnected", "Pod终端连接已断开")
+		}()
+
+		req := client.CoreV1().RESTClient().Post().
+			Resource("pods").
+			Name(session.PodName).
+			Namespace(session.Namespace).
+			SubResource("exec")
+
+		req.VersionedParams(&v1.PodExecOptions{
+			Container: session.Container,
+			Command:   []string{shell},
+			Stdin:     true,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       true,
+		}, scheme.ParameterCodec)
+
+		exec, err := remotecommand.NewSPDYExecutor(k8sConfig, "POST", req.URL())
+		if err != nil {
+			h.sendMessage(session.Conn, "error", fmt.Sprintf("创建执行器失败: %v", err))
+			return
 		}
-		h.sendMessage(session.Conn, "disconnected", "Pod终端连接已断开")
-	}()
 
-	return nil
-}
-
-// startPodTerminalWithSh 使用sh启动Pod终端
-func (h *PodTerminalHandler) startPodTerminalWithSh(session *PodTerminalSession, kubeconfigPath string) error {
-	// 构建kubectl exec命令，使用sh
-	args := []string{
-		"--kubeconfig", kubeconfigPath,
-		"exec", "-it",
-		"-n", session.Namespace,
-	}
-
-	// 如果指定了容器，添加容器参数
-	if session.Container != "" {
-		args = append(args, "-c", session.Container)
-	}
-
-	// 添加Pod名称和shell命令
-	args = append(args, session.PodName, "--", "/bin/sh")
-
-	cmd := exec.CommandContext(session.Context, "kubectl", args...)
-
-	// 设置环境变量
-	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("KUBECONFIG=%s", kubeconfigPath),
-		"TERM=xterm-256color",
-	)
-
-	// 创建管道
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("创建stdin管道失败: %v", err)
-	}
-	session.StdinPipe = stdin
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("创建stdout管道失败: %v", err)
-	}
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("创建stderr管道失败: %v", err)
-	}
-
-	// 启动命令
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("启动kubectl exec (sh)失败: %v", err)
-	}
-
-	session.Cmd = cmd
-
-	// 启动输出读取协程
-	go h.readOutput(session, stdout, "stdout")
-	go h.readOutput(session, stderr, "stderr")
-
-	// 监控命令状态
-	go func() {
-		err := cmd.Wait()
-		if err != nil && session.Context.Err() != context.Canceled {
-			h.sendMessage(session.Conn, "error", fmt.Sprintf("Pod终端连接断开: %v", err))
+		streamOption := remotecommand.StreamOptions{
+			Stdin:             &terminalStream{session: session},
+			Stdout:            session.stdoutWriter,
+			Stderr:            session.stdoutWriter,
+			TerminalSizeQueue: &terminalSizeQueue{session: session},
+			Tty:               true,
 		}
-		h.sendMessage(session.Conn, "disconnected", "Pod终端连接已断开")
+
+		if err := exec.StreamWithContext(session.Context, streamOption); err != nil {
+			h.sendMessage(session.Conn, "error", fmt.Sprintf("执行失败: %v", err))
+		}
 	}()
 
 	return nil
@@ -298,10 +317,9 @@ func (h *PodTerminalHandler) handleInput(session *PodTerminalSession, input stri
 	session.Mutex.Lock()
 	defer session.Mutex.Unlock()
 
-	if session.StdinPipe != nil {
-		_, err := session.StdinPipe.Write([]byte(input))
+	if session.stdinWriter != nil {
+		_, err := session.stdinWriter.Write([]byte(input))
 		if err != nil {
-			logger.Error("写入Pod终端输入失败", "error", err)
 			h.sendMessage(session.Conn, "error", "写入输入失败")
 		}
 	}
@@ -309,67 +327,67 @@ func (h *PodTerminalHandler) handleInput(session *PodTerminalSession, input stri
 
 // handleResize 处理终端大小调整
 func (h *PodTerminalHandler) handleResize(session *PodTerminalSession, cols, rows int) {
-	// kubectl exec 不直接支持动态调整终端大小
-	// 这里可以记录日志或者尝试其他方法
-	logger.Info("Pod终端大小调整请求", "cols", cols, "rows", rows)
+	if session.winSizeChan != nil {
+		size := &remotecommand.TerminalSize{
+			Width:  uint16(cols),
+			Height: uint16(rows),
+		}
+		select {
+		case session.winSizeChan <- size:
+		case <-session.done:
+		}
+	}
 }
 
 // readOutput 读取命令输出
-func (h *PodTerminalHandler) readOutput(session *PodTerminalSession, reader io.Reader, outputType string) {
+func (h *PodTerminalHandler) readOutput(session *PodTerminalSession) {
 	buffer := make([]byte, 1024)
 	for {
-		n, err := reader.Read(buffer)
+		n, err := session.stdoutReader.Read(buffer)
 		if err != nil {
-			if err != io.EOF {
-				logger.Error("读取Pod终端输出失败", "type", outputType, "error", err)
-			}
 			break
 		}
 
 		if n > 0 {
-			var msgType string
-			if outputType == "stderr" {
-				msgType = "error"
-			} else {
-				msgType = "data"
-			}
-
-			h.sendMessage(session.Conn, msgType, string(buffer[:n]))
+			h.sendMessage(session.Conn, "data", string(buffer[:n]))
 		}
 	}
 }
 
-// createTempKubeconfig 创建临时kubeconfig文件
-func (h *PodTerminalHandler) createTempKubeconfig(cluster *models.Cluster) (string, error) {
-	// 创建临时文件
-	tmpFile, err := os.CreateTemp("", "kubeconfig-*.yaml")
-	if err != nil {
-		return "", fmt.Errorf("创建临时文件失败: %v", err)
+// closeSession 关闭会话
+func (h *PodTerminalHandler) closeSession(session *PodTerminalSession) {
+	if session.stdinWriter != nil {
+		session.stdinWriter.Close()
 	}
-	defer tmpFile.Close()
+	if session.stdoutReader != nil {
+		session.stdoutReader.Close()
+	}
+	if session.done != nil {
+		select {
+		case <-session.done:
+		default:
+			close(session.done)
+		}
+	}
+}
 
-	// 写入kubeconfig内容
-	var kubeconfigContent string
-	if cluster.KubeconfigEnc != "" {
-		kubeconfigContent = cluster.KubeconfigEnc
-	} else if cluster.SATokenEnc != "" {
-		// 从Token创建kubeconfig
-		kubeconfigContent = services.CreateKubeconfigFromToken(
-			cluster.Name,
-			cluster.APIServer,
-			cluster.SATokenEnc,
-			cluster.CAEnc,
-		)
+// createK8sConfig 创建Kubernetes配置
+func (h *PodTerminalHandler) createK8sConfig(cluster *models.Cluster) (*rest.Config, error) {
+	config := &rest.Config{
+		Host: cluster.APIServer,
+	}
+
+	if cluster.SATokenEnc != "" {
+		config.BearerToken = cluster.SATokenEnc
+	}
+
+	if cluster.CAEnc != "" {
+		config.CAData = []byte(cluster.CAEnc)
 	} else {
-		return "", fmt.Errorf("集群缺少认证信息")
+		config.Insecure = true
 	}
 
-	_, err = tmpFile.WriteString(kubeconfigContent)
-	if err != nil {
-		return "", fmt.Errorf("写入kubeconfig失败: %v", err)
-	}
-
-	return tmpFile.Name(), nil
+	return config, nil
 }
 
 // sendMessage 发送WebSocket消息
@@ -381,5 +399,32 @@ func (h *PodTerminalHandler) sendMessage(conn *websocket.Conn, msgType, data str
 
 	if err := conn.WriteJSON(msg); err != nil {
 		logger.Error("发送WebSocket消息失败", "error", err)
+	}
+}
+
+// terminalStream 实现io.Reader和io.Writer接口
+type terminalStream struct {
+	session *PodTerminalSession
+}
+
+func (t *terminalStream) Read(p []byte) (int, error) {
+	return t.session.stdinReader.Read(p)
+}
+
+func (t *terminalStream) Write(p []byte) (int, error) {
+	return len(p), nil // 不需要写入
+}
+
+// terminalSizeQueue 实现remotecommand.TerminalSizeQueue接口
+type terminalSizeQueue struct {
+	session *PodTerminalSession
+}
+
+func (t *terminalSizeQueue) Next() *remotecommand.TerminalSize {
+	select {
+	case size := <-t.session.winSizeChan:
+		return size
+	case <-t.session.done:
+		return nil
 	}
 }
