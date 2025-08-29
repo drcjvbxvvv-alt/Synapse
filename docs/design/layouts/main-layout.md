@@ -143,58 +143,49 @@
 
 ## Sidebar 侧边导航栏
 
+### 主页面导航结构（默认状态）
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Sidebar (宽度: 200px, 可折叠至80px)                          │
 │                                                             │
 │ ┌─────────────────────────────────────────────────────────┐ │
-│ │ 🏠 仪表盘                                                │ │
+│ │ 📊 总览 (Overview)                                       │ │
 │ │                                                         │ │
-│ │ 📊 集群管理                                              │ │
-│ │ ├─ 📋 集群列表                                           │ │
-│ │ ├─ ➕ 导入集群                                           │ │
-│ │ └─ 📈 集群监控                                           │ │
+│ │ 🏢 集群管理 (Cluster Management)                         │ │
 │ │                                                         │ │
-│ │ 🖥️ 节点管理                                              │ │
-│ │ ├─ 📋 节点列表                                           │ │
-│ │ ├─ 📊 节点监控                                           │ │
-│ │ └─ ⚙️ 节点操作                                           │ │
+│ │ 🔑 权限管理 (Permission Management)                      │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 集群详情页导航结构（进入集群后）
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Sidebar (宽度: 200px, 可折叠至80px)                          │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 📊 概览 (Overview)                                       │ │
 │ │                                                         │ │
-│ │ 🚀 工作负载                                              │ │
-│ │ ├─ 📦 Deployment                                        │ │
-│ │ ├─ 🔄 StatefulSet                                       │ │
-│ │ ├─ 👥 DaemonSet                                         │ │
-│ │ ├─ ⚡ Job                                               │ │
-│ │ └─ ⏰ CronJob                                           │ │
+│ │ ⚡ Kubernetes 资源                                       │ │
+│ │ │ 🚀 工作负载 (Workloads)                               │ │
+│ │ │ 🌐 服务 (Services)                                    │ │
+│ │ │ 💾 存储 (Storage)                                     │ │
+│ │ │ ⚙️ 配置与密钥 (Config & Secrets)                      │ │
+│ │ │ 🏷️ 命名空间 (Namespaces)                              │ │
 │ │                                                         │ │
-│ │ 🔵 Pod管理                                               │ │
-│ │ ├─ 📋 Pod列表                                           │ │
-│ │ ├─ 📊 Pod监控                                           │ │
-│ │ └─ 🖥️ Pod终端                                           │ │
+│ │ 🏢 集群                                                  │ │
+│ │ │ 🖥️ 节点管理 (Node Management)                         │ │
+│ │ │ 🔧 配置中心 (Config Center)                           │ │
+│ │ │ ⬆️ 集群升级 (Cluster Upgrade)                         │ │
+│ │ │ 🧩 插件中心 (Plugin Center)                           │ │
 │ │                                                         │ │
-│ │ 🌐 网络服务                                              │ │
-│ │ ├─ 🔗 Service                                           │ │
-│ │ ├─ 🌍 Ingress                                           │ │
-│ │ └─ 🔒 NetworkPolicy                                     │ │
+│ │ 📈 云原生观测                                            │ │
+│ │ │ 📊 监控中心 (Monitoring Center)                       │ │
+│ │ │ 📋 日志中心 (Log Center)                              │ │
+│ │ │ 🚨 告警中心 (Alert Center)                            │ │
 │ │                                                         │ │
-│ │ 💾 存储管理                                              │ │
-│ │ ├─ 📀 PersistentVolume                                  │ │
-│ │ ├─ 📋 PersistentVolumeClaim                             │ │
-│ │ └─ 🗂️ StorageClass                                      │ │
-│ │                                                         │ │
-│ │ ⚙️ 配置管理                                              │ │
-│ │ ├─ 📄 ConfigMap                                         │ │
-│ │ ├─ 🔐 Secret                                            │ │
-│ │ └─ 🏷️ 标签管理                                           │ │
-│ │                                                         │ │
-│ │ 🔍 全局搜索                                              │ │
-│ │                                                         │ │
-│ │ 📜 审计日志                                              │ │
-│ │                                                         │ │
-│ │ ⚙️ 系统设置                                              │ │
-│ │ ├─ 👥 用户管理                                           │ │
-│ │ ├─ 🔑 权限管理                                           │ │
-│ │ └─ 🔧 系统配置                                           │ │
+│ │ 💰 云原生成本治理                                        │ │
+│ │ │ 💡 成本洞察 (Cost Insights)                           │ │
 │ └─────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -612,103 +603,75 @@ interface BreadcrumbItem {
   icon?: React.ReactNode;
 }
 
-const menuItems: MenuItem[] = [
+// 主页面菜单项（默认状态）
+const mainMenuItems: MenuItem[] = [
   {
-    key: 'dashboard',
-    icon: <HomeOutlined />,
-    label: '仪表盘',
-    path: '/dashboard'
+    key: 'overview',
+    icon: <DashboardOutlined />,
+    label: '总览',
+    path: '/overview'
+  },
+  {
+    key: 'cluster-management',
+    icon: <ClusterOutlined />,
+    label: '集群管理',
+    path: '/cluster-management'
+  },
+  {
+    key: 'permission-management',
+    icon: <SafetyOutlined />,
+    label: '权限管理',
+    path: '/permission-management'
+  }
+];
+
+// 集群详情页菜单项（进入集群后）
+const clusterMenuItems: MenuItem[] = [
+  {
+    key: 'cluster-overview',
+    icon: <DashboardOutlined />,
+    label: '概览',
+    path: '/cluster/:clusterId/overview'
+  },
+  {
+    key: 'k8s-resources',
+    icon: <AppstoreOutlined />,
+    label: 'Kubernetes 资源',
+    children: [
+      { key: 'workloads', label: '工作负载', path: '/cluster/:clusterId/workloads', icon: <RocketOutlined /> },
+      { key: 'services', label: '服务', path: '/cluster/:clusterId/services', icon: <GlobalOutlined /> },
+      { key: 'storage', label: '存储', path: '/cluster/:clusterId/storage', icon: <DatabaseOutlined /> },
+      { key: 'config-secrets', label: '配置与密钥', path: '/cluster/:clusterId/config-secrets', icon: <SettingOutlined /> },
+      { key: 'namespaces', label: '命名空间', path: '/cluster/:clusterId/namespaces', icon: <FolderOutlined /> }
+    ]
   },
   {
     key: 'cluster',
     icon: <ClusterOutlined />,
-    label: '集群管理',
+    label: '集群',
     children: [
-      { key: 'cluster-list', label: '集群列表', path: '/cluster/list' },
-      { key: 'cluster-import', label: '导入集群', path: '/cluster/import' },
-      { key: 'cluster-monitor', label: '集群监控', path: '/cluster/monitor' }
+      { key: 'node-management', label: '节点管理', path: '/cluster/:clusterId/nodes', icon: <DesktopOutlined /> },
+      { key: 'config-center', label: '配置中心', path: '/cluster/:clusterId/config', icon: <ControlOutlined /> },
+      { key: 'cluster-upgrade', label: '集群升级', path: '/cluster/:clusterId/upgrade', icon: <UpOutlined /> },
+      { key: 'plugin-center', label: '插件中心', path: '/cluster/:clusterId/plugins', icon: <ApiOutlined /> }
     ]
   },
   {
-    key: 'node',
-    icon: <DesktopOutlined />,
-    label: '节点管理',
+    key: 'observability',
+    icon: <LineChartOutlined />,
+    label: '云原生观测',
     children: [
-      { key: 'node-list', label: '节点列表', path: '/node/list' },
-      { key: 'node-monitor', label: '节点监控', path: '/node/monitor' }
+      { key: 'monitoring', label: '监控中心', path: '/cluster/:clusterId/monitoring', icon: <AreaChartOutlined /> },
+      { key: 'logging', label: '日志中心', path: '/cluster/:clusterId/logging', icon: <FileTextOutlined /> },
+      { key: 'alerting', label: '告警中心', path: '/cluster/:clusterId/alerting', icon: <BellOutlined /> }
     ]
   },
   {
-    key: 'workload',
-    icon: <AppstoreOutlined />,
-    label: '工作负载',
+    key: 'cost-management',
+    icon: <DollarOutlined />,
+    label: '云原生成本治理',
     children: [
-      { key: 'deployment', label: 'Deployment', path: '/workload/deployment' },
-      { key: 'statefulset', label: 'StatefulSet', path: '/workload/statefulset' },
-      { key: 'daemonset', label: 'DaemonSet', path: '/workload/daemonset' },
-      { key: 'job', label: 'Job', path: '/workload/job' },
-      { key: 'cronjob', label: 'CronJob', path: '/workload/cronjob' }
-    ]
-  },
-  {
-    key: 'pod',
-    icon: <ContainerOutlined />,
-    label: 'Pod管理',
-    children: [
-      { key: 'pod-list', label: 'Pod列表', path: '/pod/list' },
-      { key: 'pod-monitor', label: 'Pod监控', path: '/pod/monitor' }
-    ]
-  },
-  {
-    key: 'network',
-    icon: <GlobalOutlined />,
-    label: '网络服务',
-    children: [
-      { key: 'service', label: 'Service', path: '/network/service' },
-      { key: 'ingress', label: 'Ingress', path: '/network/ingress' },
-      { key: 'networkpolicy', label: 'NetworkPolicy', path: '/network/policy' }
-    ]
-  },
-  {
-    key: 'storage',
-    icon: <DatabaseOutlined />,
-    label: '存储管理',
-    children: [
-      { key: 'pv', label: 'PersistentVolume', path: '/storage/pv' },
-      { key: 'pvc', label: 'PersistentVolumeClaim', path: '/storage/pvc' },
-      { key: 'storageclass', label: 'StorageClass', path: '/storage/class' }
-    ]
-  },
-  {
-    key: 'config',
-    icon: <SettingOutlined />,
-    label: '配置管理',
-    children: [
-      { key: 'configmap', label: 'ConfigMap', path: '/config/configmap' },
-      { key: 'secret', label: 'Secret', path: '/config/secret' },
-      { key: 'labels', label: '标签管理', path: '/config/labels' }
-    ]
-  },
-  {
-    key: 'search',
-    icon: <SearchOutlined />,
-    label: '全局搜索',
-    path: '/search'
-  },
-  {
-    key: 'audit',
-    icon: <FileTextOutlined />,
-    label: '审计日志',
-    path: '/audit'
-  },
-  {
-    key: 'system',
-    icon: <ToolOutlined />,
-    label: '系统设置',
-    children: [
-      { key: 'users', label: '用户管理', path: '/system/users' },
-      { key: 'roles', label: '权限管理', path: '/system/roles' },
-      { key: 'settings', label: '系统配置', path: '/system/settings' }
+      { key: 'cost-insights', label: '成本洞察', path: '/cluster/:clusterId/cost-insights', icon: <FundOutlined /> }
     ]
   }
 ];
