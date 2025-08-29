@@ -204,9 +204,7 @@ docker build -t k8s-management-frontend .
 - 操作审计日志
 - HTTPS 强制使用
 
-## 📄 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
 ## 🆘 支持
 
