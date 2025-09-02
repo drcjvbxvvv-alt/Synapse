@@ -402,6 +402,7 @@ const MainLayout: React.FC = () => {
           top: 0,
           zIndex: 1000,
           width: '100%',
+          height: '48px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -421,7 +422,7 @@ const MainLayout: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ flex: 1, maxWidth: 600, margin: '0 24px' }}>
+        <div style={{ flex: 1, maxWidth: 600, margin: '0 24px',display: 'flex', alignItems: 'center' }}>
           <Search
             placeholder="搜索Pod、Deployment、Service..."
             allowClear
@@ -433,7 +434,7 @@ const MainLayout: React.FC = () => {
         </div>
 
         <Space size="middle">
-          <Badge count={3} size="small">
+          <Badge count={3} size="small" offset={[-8, 10]}>
             <Button type="text" icon={<BellOutlined />} size="large" />
           </Badge>
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
@@ -445,13 +446,13 @@ const MainLayout: React.FC = () => {
         </Space>
       </Header>
 
-      <Layout style={{ marginTop: 64 }}>
+      <Layout style={{ marginTop: 52 }}>
         <Sider
           width={192}
           style={{
             position: 'fixed',
             left: 0,
-            top: 64,
+            top: 52,
             bottom: 0,
             zIndex: 999,
             background: '#fafafa',
@@ -491,9 +492,9 @@ const MainLayout: React.FC = () => {
         <Layout style={{ marginLeft: 192 }}>
           <Content
             style={{
-              margin: '24px 24px',
-              padding: 24,
-              minHeight: 'calc(100vh - 112px)',
+              margin: '0px 4px',
+              padding: 16,
+              minHeight: 'calc(100vh - 96px)',
               background: '#ffffff',
               borderRadius: '8px',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
