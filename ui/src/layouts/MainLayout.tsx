@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   Layout,
@@ -11,6 +11,7 @@ import {
   Space,
   Select,
   Tag,
+  message,
 } from 'antd';
 import {
   MenuFoldOutlined,
@@ -41,10 +42,14 @@ import {
   HddOutlined,
   KeyOutlined,
   TagsOutlined,
+  ArrowLeftOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import type { MenuProps as AntMenuProps } from 'antd';
 import KubernetesIcon from '../components/KubernetesIcon';
 import type {  Cluster } from '../types';
+import { clusterService } from '../services/clusterService';
+
 
 const { Header, Sider, Content } = Layout;
 
@@ -400,13 +405,44 @@ const MainLayout: React.FC = () => {
   const ClusterSelector = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { Option } = Select;
     const [clusters, setClusters] = useState<Cluster[]>([]);
     const [currentCluster, setCurrentCluster] = useState(null);
+    const openTerminal = () => {
+      if (id) {
+        window.open(`/clusters/${id}/terminal`);
+      } else {
+        message.error('无法获取集群ID');
+      }
+    };
 
+
+      // 获取集群列表 - 使用useCallback优化
+    const fetchClusters = useCallback(async () => {
+      try {
+        const response = await clusterService.getClusters();
+        setClusters(response.data.items || []);
+      } catch (error) {
+        console.error('获取集群列表失败:', error);
+      }
+    }, []);
+    useEffect(() => {
+      fetchClusters();    
+    }, [fetchClusters]);
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', justifyContent: 'space-between', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate('/clusters')}
+          style={{ marginRight: 16 }}
+        >
+          返回集群列表
+        </Button>
         <ClusterOutlined style={{ color: '#1890ff' }} />
         <span>当前集群：</span>
+
         <Select
           value={id}
           style={{ minWidth: 200 }}
@@ -417,22 +453,30 @@ const MainLayout: React.FC = () => {
             navigate(newPath);
           }}
         >
+
           {clusters.map(cluster => (
-            <Select key={cluster.id} value={cluster.id.toString()}>
+            <Option key={cluster.id} value={cluster.id.toString()}>
               {cluster.name}
-            </Select>
+            </Option>
           ))}
         </Select>
-        {/* <Tag color={currentCluster?.status === 'healthy' ? 'success' : 'error'}>
-          {currentCluster?.status === 'healthy' ? '健康' : '异常'}
-        </Tag> */}
+        </div>
+        <Space size="middle">
+          <Button 
+            type="text" 
+            icon={<CodeOutlined />}
+            onClick={() => openTerminal()}  // 调用已有的终端功能
+          >
+              kubectl终端
+          </Button>
+        </Space>
       </div>
     );
 };
 
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh', background: '#fafbfc' }}>
       <Header
         style={{
           position: 'fixed',
@@ -444,7 +488,7 @@ const MainLayout: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 16px',
-          background: '#fff',
+          background: '#1f2937',
           borderBottom: '1px solid #f0f0f0',
         }}
       >
@@ -455,7 +499,7 @@ const MainLayout: React.FC = () => {
               alt="Kubernetes" 
               style={{ width: '32px', height: '32px', marginRight: 8 }} 
             />
-            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>KubePolaris</span>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff' }}>KubePolaris</span>
           </div>
         </div>
 
@@ -472,12 +516,12 @@ const MainLayout: React.FC = () => {
 
         <Space size="middle">
           <Badge count={3} size="small" offset={[-8, 10]}>
-            <Button type="text" icon={<BellOutlined />} size="large" />
+            <Button type="text" icon={<BellOutlined />} size="large" style={{ color: '#ffffff' }} />
           </Badge>
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
               <Avatar icon={<UserOutlined />} />
-              <span>Admin</span>
+              <span style={{ color: '#ffffff' }}>Admin</span>
             </Space>
           </Dropdown>
         </Space>
@@ -487,12 +531,13 @@ const MainLayout: React.FC = () => {
       {isClusterDetailPage() && (
         <div style={{
           position: 'fixed',
-          top: '64px',
+          top: '48px',
           left: '0',
           right: '0',
+          width: '100%',
           height: '48px',
-          background: '#f5f5f5',
-          borderBottom: '1px solid #d9d9d9',
+          background: '#f8fafc',
+          borderBottom: '1px solid #f0f0f0',
           zIndex: 999,
           display: 'flex',
           alignItems: 'center',
@@ -513,7 +558,7 @@ const MainLayout: React.FC = () => {
             top: isClusterDetailPage() ? 112 : 52,
             bottom: 0,
             zIndex: 999,
-            background: '#ffffff',
+            background: '#f8fafc',
             boxShadow: '2px 0 12px 0 rgba(0, 0, 0, 0.08)',
             borderRight: '1px solid #e0e0e0',
             overflow: 'hidden',

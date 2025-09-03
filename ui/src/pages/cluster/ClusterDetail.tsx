@@ -430,51 +430,6 @@ const ClusterDetail: React.FC = () => {
 
   return (
     <div>
-      {/* 页面头部 */}
-      <div className="page-header"
-        // style={{
-        //   position: 'fixed',
-        //   top: '64px',        // 顶部导航栏高度
-        //   left: '192px',      // 侧边栏宽度
-        //   right: 0,
-        //   zIndex: 100,
-        //   background: '#fff',
-        //   borderBottom: '1px solid #f0f0f0',
-        //   padding: '16px 24px',
-        // }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/clusters')}
-            style={{ marginRight: 16 }}
-          >
-            返回集群列表
-          </Button>
-          <div style={{ flex: 1 }}>
-            <Title level={2} style={{ margin: 0 }}>
-              <ClusterOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-              {cluster?.name || 'Loading...'}
-            </Title>
-          </div>
-          <Space>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={() => {
-                refreshAllData();
-              }}
-              loading={loading}
-            >
-              刷新
-            </Button>
-            <Button icon={<BarChartOutlined />} type="primary">
-              监控面板
-            </Button>
-          </Space>
-        </div>
-      </div>
-
       {cluster && (
         <>
           {/* 集群基本信息 */}

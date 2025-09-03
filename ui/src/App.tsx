@@ -17,6 +17,7 @@ import WorkloadList from './pages/workload/WorkloadList';
 import WorkloadDetail from './pages/workload/WorkloadDetail';
 import YAMLEditor from './pages/yaml/YAMLEditor';
 import GlobalSearch from './pages/search/GlobalSearch';
+import KubectlTerminalPage from './pages/terminal/kubectlTerminal';
 import './App.css';
 
 const App: React.FC = () => {
@@ -29,6 +30,7 @@ const App: React.FC = () => {
             <Route path="clusters" element={<ClusterList />} />
             <Route path="clusters/:id/overview" element={<ClusterDetail />} />
             <Route path="clusters/import" element={<ClusterImport />} />
+            <Route path="clusters/:id/terminal" element={<KubectlTerminalPage  />} />
             <Route path="clusters/:clusterId/nodes" element={<NodeList />} />
             <Route path="clusters/:clusterId/nodes/:nodeName" element={<NodeDetail />} />
             <Route path="nodes" element={<NodeList />} />

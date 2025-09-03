@@ -209,8 +209,11 @@ const ClusterList: React.FC = () => {
 
   // 打开终端
   const openTerminal = (cluster: Cluster) => {
-    setSelectedCluster(cluster);
-    setTerminalVisible(true);
+    if (cluster.id) {
+      window.open(`/clusters/${cluster.id}/terminal`);
+    } else {
+      message.error('无法获取集群ID');
+    }
   };
 
   // 关闭终端
