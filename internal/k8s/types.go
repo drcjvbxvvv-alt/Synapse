@@ -18,7 +18,9 @@ type OverviewSnapshot struct {
 		Unknown   int `json:"unknown"`
 	} `json:"pods"`
 
-	Namespaces int `json:"namespaces"`
-	Services   int `json:"services"`
-	Deploys    int `json:"deployments"`
+	Deployments  int `json:"deployments"`
+	StatefulSets int `json:"statefulsets"`
+	DaemonSets   int `json:"daemonsets"`
+	Jobs         int `json:"jobs"`
+	Rollouts     int `json:"rollouts"`
 }

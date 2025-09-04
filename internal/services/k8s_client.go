@@ -318,6 +318,11 @@ func (c *K8sClient) GetClientset() *kubernetes.Clientset {
 	return c.clientset
 }
 
+// GetRestConfig 返回底层 REST 配置（供动态客户端/Informer 使用）
+func (c *K8sClient) GetRestConfig() *rest.Config {
+	return c.config
+}
+
 // GetClusterMetrics 获取集群监控数据
 func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

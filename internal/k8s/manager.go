@@ -11,6 +11,9 @@ import (
 	"kubepolaris/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	dynamic "k8s.io/client-go/dynamic"
+	dynamicinformer "k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
@@ -29,6 +32,14 @@ type ClusterRuntime struct {
 	synced    bool
 
 	stopCh chan struct{}
+
+	// Argo Rollouts dynamic informer (optional if CRD present)
+	rolloutEnabled  bool
+	dynamicClient   dynamic.Interface
+	dynamicFactory  dynamicinformer.DynamicSharedInformerFactory
+	rolloutInformer cache.SharedIndexInformer
+	rolloutLister   cache.GenericLister
+	rolloutGVR      schema.GroupVersionResource
 }
 
 // ClusterInformerManager 统一管理各集群的 Informer 生命周期与缓存访问
@@ -85,9 +96,32 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	_ = factory.Batch().V1().Jobs().Informer()
 	_ = factory.Batch().V1beta1().CronJobs().Informer()
 
+	// Detect and setup Argo Rollouts dynamic informer if CRD exists
+	if gv, found := hasArgoRollouts(clientset); found {
+		// 重用与 clientset 同源的 REST 配置
+		cfg := kc.GetRestConfig()
+		if cfg != nil {
+			if dyn, err := dynamic.NewForConfig(cfg); err != nil {
+				logger.Error("创建动态客户端失败", "error", err)
+			} else {
+				rt.dynamicClient = dyn
+				rt.dynamicFactory = dynamicinformer.NewDynamicSharedInformerFactory(dyn, 0)
+				gvr := schema.GroupVersionResource{Group: gv.Group, Version: gv.Version, Resource: "rollouts"}
+				dinf := rt.dynamicFactory.ForResource(gvr)
+				rt.rolloutInformer = dinf.Informer()
+				rt.rolloutLister = dinf.Lister()
+				rt.rolloutGVR = gvr
+				rt.rolloutEnabled = true
+			}
+		}
+	}
+
 	// 启动
 	rt.startOnce.Do(func() {
 		factory.Start(rt.stopCh)
+		if rt.dynamicFactory != nil {
+			rt.dynamicFactory.Start(rt.stopCh)
+		}
 		rt.started = true
 	})
 
@@ -103,8 +137,7 @@ func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRun
 	syncCh := make(chan struct{})
 	go func() {
 		// 等待需要的 Informer 同步
-		ok := cache.WaitForCacheSync(
-			rt.stopCh,
+		syncedFuncs := []cache.InformerSynced{
 			rt.factory.Core().V1().Pods().Informer().HasSynced,
 			rt.factory.Core().V1().Nodes().Informer().HasSynced,
 			rt.factory.Core().V1().Namespaces().Informer().HasSynced,
@@ -114,7 +147,11 @@ func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRun
 			rt.factory.Apps().V1().DaemonSets().Informer().HasSynced,
 			rt.factory.Batch().V1().Jobs().Informer().HasSynced,
 			rt.factory.Batch().V1beta1().CronJobs().Informer().HasSynced,
-		)
+		}
+		if rt.rolloutEnabled && rt.rolloutInformer != nil {
+			syncedFuncs = append(syncedFuncs, rt.rolloutInformer.HasSynced)
+		}
+		ok := cache.WaitForCacheSync(rt.stopCh, syncedFuncs...)
 		if ok {
 			rt.synced = true
 		}
@@ -182,28 +219,46 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 		}
 	}
 
-	// Namespaces
-	nss, err := rt.factory.Core().V1().Namespaces().Lister().List(labels.Everything())
-	if err != nil {
-		logger.Error("读取缓存 namespaces 失败", "error", err)
-	} else {
-		snap.Namespaces = len(nss)
-	}
-
-	// Services
-	svcs, err := rt.factory.Core().V1().Services().Lister().List(labels.Everything())
-	if err != nil {
-		logger.Error("读取缓存 services 失败", "error", err)
-	} else {
-		snap.Services = len(svcs)
-	}
-
 	// Deployments
 	deploys, err := rt.factory.Apps().V1().Deployments().Lister().List(labels.Everything())
 	if err != nil {
 		logger.Error("读取缓存 deployments 失败", "error", err)
 	} else {
-		snap.Deploys = len(deploys)
+		snap.Deployments = len(deploys)
+	}
+
+	// StatefulSets
+	statefulsets, err := rt.factory.Apps().V1().StatefulSets().Lister().List(labels.Everything())
+	if err != nil {
+		logger.Error("读取缓存 statefulsets 失败", "error", err)
+	} else {
+		snap.StatefulSets = len(statefulsets)
+	}
+
+	// DaemonSets
+	daemonsets, err := rt.factory.Apps().V1().DaemonSets().Lister().List(labels.Everything())
+	if err != nil {
+		logger.Error("读取缓存 daemonsets 失败", "error", err)
+	} else {
+		snap.DaemonSets = len(daemonsets)
+	}
+
+	// Jobs
+	jobs, err := rt.factory.Batch().V1().Jobs().Lister().List(labels.Everything())
+	if err != nil {
+		logger.Error("读取缓存 jobs 失败", "error", err)
+	} else {
+		snap.Jobs = len(jobs)
+	}
+
+	// Rollouts
+	if rt.rolloutEnabled {
+		rollouts, err := rt.rolloutLister.List(labels.Everything())
+		if err != nil {
+			logger.Error("读取缓存 rollouts 失败", "error", err)
+		} else {
+			snap.Rollouts = len(rollouts)
+		}
 	}
 
 	return snap, nil
@@ -309,6 +364,39 @@ func (m *ClusterInformerManager) CronJobsLister(clusterID uint) batchv1beta1list
 	defer m.mu.RUnlock()
 	if rt, ok := m.clusters[clusterID]; ok {
 		return rt.factory.Batch().V1beta1().CronJobs().Lister()
+	}
+	return nil
+}
+
+// hasArgoRollouts 探测是否存在 argoproj.io 的 rollouts 资源，返回其 GroupVersion
+func hasArgoRollouts(cs *kubernetes.Clientset) (schema.GroupVersion, bool) {
+	groups, resources, err := cs.Discovery().ServerGroupsAndResources()
+	_ = groups // 未直接使用
+	if err != nil && len(resources) == 0 {
+		return schema.GroupVersion{}, false
+	}
+	for _, rl := range resources {
+		gv, err := schema.ParseGroupVersion(rl.GroupVersion)
+		if err != nil {
+			continue
+		}
+		if gv.Group == "argoproj.io" {
+			for _, r := range rl.APIResources {
+				if r.Name == "rollouts" {
+					return gv, true
+				}
+			}
+		}
+	}
+	return schema.GroupVersion{}, false
+}
+
+// RolloutsLister 返回 Argo Rollouts 的 GenericLister（若 CRD 存在）
+func (m *ClusterInformerManager) RolloutsLister(clusterID uint) cache.GenericLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok && rt.rolloutEnabled && rt.rolloutLister != nil {
+		return rt.rolloutLister
 	}
 	return nil
 }

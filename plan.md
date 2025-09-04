@@ -299,6 +299,7 @@ audit_logs(id, user_id, action, resource_type, resource_ref_json, ts, result, ip
 - [ ] 表名/字段名规范化
 - [ ] 表结构优化
 - [ ] 代码风格优化
+- [ ] 加上 Pod 总数/用量， calico 可以从 Prometheus获取，云上要再看
 ---
 
 ## 🔒 权限与安全
