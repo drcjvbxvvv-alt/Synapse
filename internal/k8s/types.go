@@ -4,19 +4,11 @@ package k8s
 type OverviewSnapshot struct {
 	ClusterID uint `json:"clusterID"`
 
-	Nodes struct {
-		Total int `json:"total"`
-		Ready int `json:"ready"`
-	} `json:"nodes"`
+	Nodes int `json:"nodes"`
 
-	Pods struct {
-		Total     int `json:"total"`
-		Running   int `json:"running"`
-		Pending   int `json:"pending"`
-		Failed    int `json:"failed"`
-		Succeeded int `json:"succeeded"`
-		Unknown   int `json:"unknown"`
-	} `json:"pods"`
+	Namespace int `json:"namespace"`
+
+	Pods int `json:"pods"`
 
 	Deployments  int `json:"deployments"`
 	StatefulSets int `json:"statefulsets"`

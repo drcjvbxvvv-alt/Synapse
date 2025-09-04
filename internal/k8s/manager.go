@@ -188,36 +188,21 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 	if err != nil {
 		return nil, fmt.Errorf("读取缓存 pods 失败: %w", err)
 	}
-	for _, p := range pods {
-		snap.Pods.Total++
-		switch string(p.Status.Phase) {
-		case "Running":
-			snap.Pods.Running++
-		case "Pending":
-			snap.Pods.Pending++
-		case "Failed":
-			snap.Pods.Failed++
-		case "Succeeded":
-			snap.Pods.Succeeded++
-		default:
-			snap.Pods.Unknown++
-		}
-	}
+	snap.Pods = len(pods)
 
 	// Nodes
 	nodes, err := rt.factory.Core().V1().Nodes().Lister().List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("读取缓存 nodes 失败: %w", err)
 	}
-	snap.Nodes.Total = len(nodes)
-	for _, n := range nodes {
-		for _, c := range n.Status.Conditions {
-			if c.Type == "Ready" && c.Status == "True" {
-				snap.Nodes.Ready++
-				break
-			}
-		}
+	snap.Nodes = len(nodes)
+
+	// Namespaces
+	namespaces, err := rt.factory.Core().V1().Namespaces().Lister().List(labels.Everything())
+	if err != nil {
+		return nil, fmt.Errorf("读取缓存 namespaces 失败: %w", err)
 	}
+	snap.Namespace = len(namespaces)
 
 	// Deployments
 	deploys, err := rt.factory.Apps().V1().Deployments().Lister().List(labels.Everything())
