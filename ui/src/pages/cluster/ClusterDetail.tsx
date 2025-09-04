@@ -331,16 +331,16 @@ const ClusterDetail: React.FC = () => {
 
   // Tabs配置
   const tabItems = [
-    {
-      key: 'overview',
-      label: (
-        <span>
-          <BarChartOutlined />
-          监控概览
-        </span>
-      ),
-      children: <ClusterMonitoring />,
-    },
+    // {
+    //   key: 'overview',
+    //   label: (
+    //     <span>
+    //       <BarChartOutlined />
+    //       监控概览
+    //     </span>
+    //   ),
+    //   children: <ClusterMonitoring />,
+    // },
     {
       key: 'nodes',
       label: (

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"kubepolaris/internal/config"
+	"kubepolaris/internal/k8s"
 	"kubepolaris/internal/models"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
@@ -25,14 +26,16 @@ type WorkloadHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
+	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewWorkloadHandler 创建工作负载处理器
-func NewWorkloadHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService) *WorkloadHandler {
+func NewWorkloadHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *WorkloadHandler {
 	return &WorkloadHandler{
 		db:             db,
 		cfg:            cfg,
 		clusterService: clusterService,
+		k8sMgr:         k8sMgr,
 	}
 }
 

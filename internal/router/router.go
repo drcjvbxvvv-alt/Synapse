@@ -41,7 +41,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 	// 统一的 Service 实例，避免重复创建
 	clusterSvc := services.NewClusterService(db)
-	// K8s Informer 管理器（方案C）
+	// K8s Informer 管理器
 	k8sMgr := k8s.NewClusterInformerManager()
 	// 预热所有已存在集群的 Informer（后台执行，不阻塞启动）
 	go func() {
@@ -95,7 +95,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				cluster.DELETE("", clusterHandler.DeleteCluster)
 
 				// nodes 子分组
-				nodeHandler := handlers.NewNodeHandler(db, cfg, clusterSvc)
+				nodeHandler := handlers.NewNodeHandler(db, cfg, clusterSvc, k8sMgr)
 				nodes := cluster.Group("/nodes")
 				{
 					nodes.GET("", nodeHandler.GetNodes)
@@ -107,7 +107,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				}
 
 				// pods 子分组
-				podHandler := handlers.NewPodHandler(db, cfg, clusterSvc)
+				podHandler := handlers.NewPodHandler(db, cfg, clusterSvc, k8sMgr)
 				pods := cluster.Group("/pods")
 				{
 					pods.GET("", podHandler.GetPods) // 可考虑使用 query 过滤 namespace/name
@@ -117,7 +117,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				}
 
 				// workloads 子分组
-				workloadHandler := handlers.NewWorkloadHandler(db, cfg, clusterSvc)
+				workloadHandler := handlers.NewWorkloadHandler(db, cfg, clusterSvc, k8sMgr)
 				workloads := cluster.Group("/workloads")
 				{
 					workloads.GET("", workloadHandler.GetWorkloads)

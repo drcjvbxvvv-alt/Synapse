@@ -13,6 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	appsv1listers "k8s.io/client-go/listers/apps/v1"
+	batchv1listers "k8s.io/client-go/listers/batch/v1"
+	batchv1beta1listers "k8s.io/client-go/listers/batch/v1beta1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -76,6 +80,8 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	_ = factory.Core().V1().Namespaces().Informer()
 	_ = factory.Core().V1().Services().Informer()
 	_ = factory.Apps().V1().Deployments().Informer()
+	_ = factory.Batch().V1().Jobs().Informer()
+	_ = factory.Batch().V1beta1().CronJobs().Informer()
 
 	// 启动
 	rt.startOnce.Do(func() {
@@ -102,6 +108,8 @@ func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRun
 			rt.factory.Core().V1().Namespaces().Informer().HasSynced,
 			rt.factory.Core().V1().Services().Informer().HasSynced,
 			rt.factory.Apps().V1().Deployments().Informer().HasSynced,
+			rt.factory.Batch().V1().Jobs().Informer().HasSynced,
+			rt.factory.Batch().V1beta1().CronJobs().Informer().HasSynced,
 		)
 		if ok {
 			rt.synced = true
@@ -195,6 +203,90 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 	}
 
 	return snap, nil
+}
+
+// EnsureAndWait 确保指定集群的 informer 启动并等待缓存同步
+func (m *ClusterInformerManager) EnsureAndWait(ctx context.Context, cluster *models.Cluster, timeout time.Duration) (*ClusterRuntime, error) {
+	rt, err := m.EnsureForCluster(cluster)
+	if err != nil {
+		return nil, err
+	}
+	wctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	if !m.waitForSync(wctx, rt) {
+		return nil, fmt.Errorf("informer 缓存尚未就绪")
+	}
+	return rt, nil
+}
+
+// PodsLister 返回 Pods 的 Lister
+func (m *ClusterInformerManager) PodsLister(clusterID uint) corev1listers.PodLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Core().V1().Pods().Lister()
+	}
+	return nil
+}
+
+// NodesLister 返回 Nodes 的 Lister
+func (m *ClusterInformerManager) NodesLister(clusterID uint) corev1listers.NodeLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Core().V1().Nodes().Lister()
+	}
+	return nil
+}
+
+// NamespacesLister 返回 Namespaces 的 Lister
+func (m *ClusterInformerManager) NamespacesLister(clusterID uint) corev1listers.NamespaceLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Core().V1().Namespaces().Lister()
+	}
+	return nil
+}
+
+// ServicesLister 返回 Services 的 Lister
+func (m *ClusterInformerManager) ServicesLister(clusterID uint) corev1listers.ServiceLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Core().V1().Services().Lister()
+	}
+	return nil
+}
+
+// DeploymentsLister 返回 Deployments 的 Lister
+func (m *ClusterInformerManager) DeploymentsLister(clusterID uint) appsv1listers.DeploymentLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Apps().V1().Deployments().Lister()
+	}
+	return nil
+}
+
+// JobsLister 返回 Jobs 的 Lister
+func (m *ClusterInformerManager) JobsLister(clusterID uint) batchv1listers.JobLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Batch().V1().Jobs().Lister()
+	}
+	return nil
+}
+
+// CronJobsLister 返回 CronJobs 的 Lister
+func (m *ClusterInformerManager) CronJobsLister(clusterID uint) batchv1beta1listers.CronJobLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Batch().V1beta1().CronJobs().Lister()
+	}
+	return nil
 }
 
 // Stop 关闭所有集群的 informer（应用退出时调用）

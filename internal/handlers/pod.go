@@ -8,14 +8,18 @@ import (
 	"time"
 
 	"kubepolaris/internal/config"
+	"kubepolaris/internal/k8s"
 	"kubepolaris/internal/models"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
+
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // PodHandler Pod处理器
@@ -23,14 +27,16 @@ type PodHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
+	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewPodHandler 创建Pod处理器
-func NewPodHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService) *PodHandler {
+func NewPodHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *PodHandler {
 	return &PodHandler{
 		db:             db,
 		cfg:            cfg,
 		clusterService: clusterService,
+		k8sMgr:         k8sMgr,
 	}
 }
 
@@ -122,64 +128,56 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
-		})
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 构建查询选项
-	listOptions := metav1.ListOptions{}
+	// 确保 informer 缓存就绪
+	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
+		return
+	}
+	// label 选择器
+	sel := labels.Everything()
 	if labelSelector != "" {
-		listOptions.LabelSelector = labelSelector
-	}
-	if fieldSelector != "" {
-		listOptions.FieldSelector = fieldSelector
-	}
-	if nodeName != "" {
-		if listOptions.FieldSelector != "" {
-			listOptions.FieldSelector += ",spec.nodeName=" + nodeName
-		} else {
-			listOptions.FieldSelector = "spec.nodeName=" + nodeName
+		if s, err := labels.Parse(labelSelector); err == nil {
+			sel = s
 		}
+	}
+	// 节点过滤（支持 nodeName 或 fieldSelector=spec.nodeName=xxx）
+	nodeFilter := ""
+	if nodeName != "" {
+		nodeFilter = nodeName
+	} else if fieldSelector != "" && strings.HasPrefix(fieldSelector, "spec.nodeName=") {
+		nodeFilter = strings.TrimPrefix(fieldSelector, "spec.nodeName=")
 	}
 
 	var pods []PodInfo
-
 	if namespace != "" {
-		// 获取指定命名空间的Pod
-		podList, err := k8sClient.GetClientset().CoreV1().Pods(namespace).List(ctx, listOptions)
+		podObjs, err := h.k8sMgr.PodsLister(cluster.ID).Pods(namespace).List(sel)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code":    500,
-				"message": "获取Pod列表失败: " + err.Error(),
-			})
+			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "读取Pod缓存失败: " + err.Error()})
 			return
 		}
-		pods = h.convertPodsToInfo(podList.Items)
+		filtered := make([]corev1.Pod, 0, len(podObjs))
+		for _, p := range podObjs {
+			if nodeFilter == "" || p.Spec.NodeName == nodeFilter {
+				filtered = append(filtered, *p)
+			}
+		}
+		pods = h.convertPodsToInfo(filtered)
 	} else {
-		// 获取所有命名空间的Pod
-		podList, err := k8sClient.GetClientset().CoreV1().Pods("").List(ctx, listOptions)
+		podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(sel)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"code":    500,
-				"message": "获取Pod列表失败: " + err.Error(),
-			})
+			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "读取Pod缓存失败: " + err.Error()})
 			return
 		}
-		pods = h.convertPodsToInfo(podList.Items)
+		filtered := make([]corev1.Pod, 0, len(podObjs))
+		for _, p := range podObjs {
+			if nodeFilter == "" || p.Spec.NodeName == nodeFilter {
+				filtered = append(filtered, *p)
+			}
+		}
+		pods = h.convertPodsToInfo(filtered)
 	}
 
 	// 分页处理
@@ -226,31 +224,17 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
-		})
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取Pod详情
-	pod, err := k8sClient.GetClientset().CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+	// 使用 informer+lister 获取Pod详情
+	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
+		return
+	}
+	pod, err := h.k8sMgr.PodsLister(cluster.ID).Pods(namespace).Get(name)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"code":    404,
-			"message": "Pod不存在: " + err.Error(),
-		})
+		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "Pod不存在: " + err.Error()})
 		return
 	}
 

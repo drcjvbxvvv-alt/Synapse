@@ -40,9 +40,9 @@ func Init(level string) {
 	// 配置 klog
 	klog.InitFlags(nil)
 	klog.SetOutput(os.Stdout)
-	
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	
+
 	Info("日志系统初始化完成，级别: %s", level)
 }
 
@@ -60,7 +60,6 @@ func Info(format string, args ...interface{}) {
 	if currentLevel <= INFO {
 		message := fmt.Sprintf("[INFO] "+format, args...)
 		log.Output(2, message)
-		klog.Info(message)
 	}
 }
 

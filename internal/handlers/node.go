@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"kubepolaris/internal/config"
+	"kubepolaris/internal/k8s"
 	"kubepolaris/internal/models"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
@@ -16,7 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // NodeHandler 节点处理器
@@ -24,14 +25,16 @@ type NodeHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
+	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewNodeHandler 创建节点处理器
-func NewNodeHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService) *NodeHandler {
+func NewNodeHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *NodeHandler {
 	return &NodeHandler{
 		db:             db,
 		cfg:            cfg,
 		clusterService: clusterService,
+		k8sMgr:         k8sMgr,
 	}
 }
 
@@ -59,23 +62,21 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
-		})
+	// 使用 informer+lister 获取节点列表
+	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
 		return
 	}
-
-	// 获取节点列表
-	nodes, err := k8sClient.GetClientset().CoreV1().Nodes().List(c, metav1.ListOptions{})
+	nodeObjs, err := h.k8sMgr.NodesLister(cluster.ID).List(labels.Everything())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "读取节点缓存失败: " + err.Error()})
+		return
+	}
+	// 转为值类型以复用原有处理逻辑
+	items := make([]corev1.Node, 0, len(nodeObjs))
+	for _, n := range nodeObjs {
+		items = append(items, *n)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -85,8 +86,8 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 	}
 
 	// 转换为API响应格式
-	result := make([]map[string]interface{}, 0, len(nodes.Items))
-	for _, node := range nodes.Items {
+	result := make([]map[string]interface{}, 0, len(items))
+	for _, node := range items {
 		// 获取节点状态
 		status := "NotReady"
 		for _, condition := range node.Status.Conditions {
@@ -153,23 +154,6 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 		})
 	}
 
-	// 批量获取所有节点的资源使用情况
-	nodeMetrics, err := k8sClient.GetAllNodesMetrics()
-	if err != nil {
-		logger.Info("获取节点资源使用情况失败: %v", err)
-		// 如果获取失败，使用默认值，不影响主要功能
-	} else {
-		// 更新节点的资源使用情况
-		for i, nodeData := range result {
-			nodeName := nodeData["name"].(string)
-			if metrics, exists := nodeMetrics[nodeName]; exists {
-				result[i]["cpuUsage"] = metrics["cpuUsage"]
-				result[i]["memoryUsage"] = metrics["memoryUsage"]
-				result[i]["podCount"] = metrics["podCount"]
-			}
-		}
-	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "获取成功",
@@ -199,46 +183,24 @@ func (h *NodeHandler) GetNodeOverview(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
-
-	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "获取节点概览失败: " + err.Error(),
-			"data":    nil,
-		})
+	// 使用 informer+lister 读取节点并统计
+	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
+		logger.Error("informer 未就绪", "error", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error(), "data": nil})
 		return
 	}
-
-	// 获取节点列表
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	nodes, err := k8sClient.GetClientset().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodeObjs, err := h.k8sMgr.NodesLister(cluster.ID).List(labels.Everything())
 	if err != nil {
-		logger.Error("获取节点列表失败", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "获取节点列表失败: " + err.Error(),
-			"data":    nil,
-		})
+		logger.Error("读取节点缓存失败", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "读取节点缓存失败: " + err.Error(), "data": nil})
 		return
 	}
-
-	// 统计节点状态
-	totalNodes := len(nodes.Items)
+	totalNodes := len(nodeObjs)
 	readyNodes := 0
 	notReadyNodes := 0
 	maintenanceNodes := 0
 
-	for _, node := range nodes.Items {
+	for _, node := range nodeObjs {
 		for _, condition := range node.Status.Conditions {
 			if condition.Type == "Ready" {
 				if condition.Status == "True" {
@@ -291,28 +253,14 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
-		})
+	// 使用 informer+lister 获取节点详情
+	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
 		return
 	}
-
-	// 获取节点详情
-	node, err := k8sClient.GetClientset().CoreV1().Nodes().Get(c, name, metav1.GetOptions{})
+	node, err := h.k8sMgr.NodesLister(cluster.ID).Get(name)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "获取节点详情失败: " + err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "读取节点缓存失败: " + err.Error()})
 		return
 	}
 
@@ -381,19 +329,10 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 		})
 	}
 
-	// 获取节点的实际资源使用情况
-	nodeMetrics, err := k8sClient.GetNodeMetrics(name)
+	// 获取节点的实际资源使用情况（通过缓存读取路径暂不直连 API，保留默认值）
 	cpuUsage := 0.0
 	memoryUsage := 0.0
 	podCount := 0
-	if err != nil {
-		logger.Info("获取节点资源使用情况失败: %v", err)
-		// 如果获取失败，使用默认值，不影响主要功能
-	} else {
-		cpuUsage = nodeMetrics["cpuUsage"].(float64)
-		memoryUsage = nodeMetrics["memoryUsage"].(float64)
-		podCount = nodeMetrics["podCount"].(int)
-	}
 
 	result := map[string]interface{}{
 		"name":              node.Name,
