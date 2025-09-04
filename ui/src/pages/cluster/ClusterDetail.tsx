@@ -190,9 +190,7 @@ const ClusterDetail: React.FC = () => {
             <Title level={4} style={{ marginBottom: 16 }}>资源概览</Title>
             <Row gutter={[16, 16]}>
               {/* 节点概览 */}
-              <Col xs={24} sm={24} md={12} lg={12} xl={12}>
-                  <Row gutter={[12, 12]}>
-                    <Col xs={24} sm={12}>
+                     <Col xs={24} sm={12} lg={6}>
                       <div
                         role="button"
                         tabIndex={0}
@@ -202,29 +200,29 @@ const ClusterDetail: React.FC = () => {
                         <div style={{ opacity: 0.9, marginBottom: 4 }}>总节点</div>
                         <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                           <DesktopOutlined />
-                          {clusterOverview?.nodes?.total || 0}
+                          {clusterOverview?.nodes || 0}
                         </div>
                       </div>
                     </Col>
-                    <Col xs={24} sm={12}>
+                    <Col xs={24} sm={12} lg={6}>
                       <div
                         role="button"
                         tabIndex={0}
-                        onClick={() => navigate(`/clusters/${id}/pods`)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/pods`); }}
-                        style={{ background: 'linear-gradient(135deg,#2d6bff,#1b74f9)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                        <div style={{ opacity: 0.9, marginBottom: 4 }}>Pod总数</div>
+                        onClick={() => navigate(`/clusters/${id}/namespaces`)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/namespaces`); }}
+                        style={{ background: 'linear-gradient(135deg,#ff8a00,#e52e71)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
+                        <div style={{ opacity: 0.9, marginBottom: 4 }}>命名空间总数</div>
                         <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                          <AppstoreOutlined />
-                          {clusterOverview?.pods?.total || 0}
+                          <FolderFilled />
+                          {clusterOverview?.namespace || 0}
                         </div>
                       </div>
                     </Col>
-                  </Row>
-              </Col>
+
+
 
               {/* 工作负载概览（仅总数，渐变数字卡） */}
-              <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+               <Col xs={24} sm={12} lg={6}>
                 <div
                   role="button"
                   tabIndex={0}
@@ -241,6 +239,20 @@ const ClusterDetail: React.FC = () => {
                       (clusterOverview?.jobs || 0) +
                       (clusterOverview?.rollouts || 0)
                     }
+                  </div>
+                </div>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/clusters/${id}/pods`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/pods`); }}
+                  style={{ background: 'linear-gradient(135deg,#36d1dc,#5b86e5)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
+                  <div style={{ opacity: 0.9, marginBottom: 4 }}>Pod总数</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <CloudServerOutlined />
+                    {clusterOverview?.pods || 0}
                   </div>
                 </div>
               </Col>
