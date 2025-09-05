@@ -135,6 +135,7 @@ export class WorkloadService {
   static getWorkloadTypes(): Array<{ value: string; label: string; icon: string }> {
     return [
       { value: 'deployment', label: 'Deployment', icon: '🚀' },
+      { value: 'argo-rollout', label: 'Argo Rollout', icon: '🌀' },
       { value: 'statefulset', label: 'StatefulSet', icon: '💾' },
       { value: 'daemonset', label: 'DaemonSet', icon: '👥' },
       { value: 'job', label: 'Job', icon: '⚡' },

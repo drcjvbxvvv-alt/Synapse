@@ -17,6 +17,7 @@ import {
   Popconfirm,
   Checkbox,
   Alert,
+  Segmented,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -50,6 +51,8 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
   const [pageSize, setPageSize] = useState(20);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('');
+  // 新增：分类（无状态/有状态/守护进程集/普通任务/定时任务）
+  const [category, setCategory] = useState<'stateless' | 'stateful' | 'daemonset' | 'job' | 'cronjob' | 'all'>('stateless');
   const [searchText, setSearchText] = useState('');
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleWorkload, setScaleWorkload] = useState<WorkloadInfo | null>(null);
@@ -221,8 +224,21 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
     return namespaces.sort();
   };
 
-  // 过滤工作负载
+  // 过滤工作负载（按分类 + 名称）
   const filteredWorkloads = workloads.filter(workload => {
+    const type = (workload.type || '').toLowerCase();
+    // 分类规则
+    const inCategory =
+      category === 'all' ? true
+      : category === 'stateless' ? (type === 'deployment' || type === 'argo-rollout' || type === 'rollout' || type === 'rollouts')
+      : category === 'stateful' ? (type === 'statefulset')
+      : category === 'daemonset' ? (type === 'daemonset')
+      : category === 'job' ? (type === 'job')
+      : category === 'cronjob' ? (type === 'cronjob')
+      : true;
+
+    if (!inCategory) return false;
+
     if (searchText && !workload.name.toLowerCase().includes(searchText.toLowerCase())) {
       return false;
     }
@@ -240,6 +256,16 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
       fetchWorkloads();
     }
   }, [selectedClusterId, fetchWorkloads]);
+
+  // 分类切换时清空已选类型，避免分类与类型冲突导致无数据
+  useEffect(() => {
+    setSelectedType('');
+  }, [category]);
+
+  // 当分类变更时，清空已选具体类型，避免分类与类型冲突导致无数据
+  useEffect(() => {
+    setSelectedType('');
+  }, [category]);
 
   const columns = [
     {
@@ -367,7 +393,8 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
       width: 180,
       fixed: 'right' as const,
       render: (record: WorkloadInfo) => {
-        const canScale = ['deployment', 'statefulset', 'Deployment', 'StatefulSet'].includes(record.type);
+        const t = (record.type || '').toLowerCase();
+        const canScale = ['deployment', 'statefulset', 'argo-rollout', 'rollout', 'rollouts'].includes(t);
         
         const menuItems = [
           {
@@ -459,43 +486,8 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
 
   return (
     <div style={{ padding: '16px 24px' }}>
-      {/* 页面头部 */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}>
-          <div style={{ flex: 1, minWidth: '300px' }}>
-            <h1 style={{ margin: '0 0 8px 0', fontSize: '24px' }}>工作负载管理</h1>
-            <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
-              管理集群中的工作负载，包括 Deployment、StatefulSet、DaemonSet 等
-            </p>
-          </div>
-          <Space wrap>
-            <Select
-              value={selectedClusterId}
-              style={{ width: 200, minWidth: 150 }}
-              onChange={handleClusterChange}
-              placeholder="选择集群"
-              loading={clusters.length === 0}
-            >
-              {clusters.map(cluster => (
-                <Option key={cluster.id} value={cluster.id.toString()}>
-                  {cluster.name}
-                </Option>
-              ))}
-            </Select>
-            <Button icon={<ReloadOutlined />} onClick={fetchWorkloads} loading={loading}>
-              刷新
-            </Button>
-          </Space>
-        </div>
-      </div>
 
-      <Card>
+
         <div style={{ marginBottom: 16 }}>
           <div style={{ 
             display: 'flex', 
@@ -504,41 +496,18 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
             alignItems: 'center',
             justifyContent: 'space-between'
           }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', flex: 1 }}>
-              <Select
-                placeholder="选择命名空间"
-                style={{ width: 180, minWidth: 120 }}
-                value={selectedNamespace}
-                onChange={setSelectedNamespace}
-                allowClear
-              >
-                {getNamespaces().map(ns => (
-                  <Option key={ns} value={ns}>{ns}</Option>
-                ))}
-              </Select>
-              
-              <Select
-                placeholder="选择工作负载类型"
-                style={{ width: 180, minWidth: 120 }}
-                value={selectedType}
-                onChange={setSelectedType}
-                allowClear
-              >
-                {WorkloadService.getWorkloadTypes().map(type => (
-                  <Option key={type.value} value={type.value}>
-                    {type.icon} {type.label}
-                  </Option>
-                ))}
-              </Select>
-              
-              <Search
-                placeholder="搜索工作负载名称"
-                style={{ width: 250, minWidth: 200, maxWidth: 300 }}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                allowClear
-              />
-            </div>
+            {/* 分类分段控件 */}
+            <Segmented
+              options={[
+                { label: '无状态负载', value: 'stateless' },
+                { label: '有状态负载', value: 'stateful' },
+                { label: '守护进程集', value: 'daemonset' },
+                { label: '普通任务', value: 'job' },
+                { label: '定时任务', value: 'cronjob' },
+              ]}
+              value={category}
+              onChange={(v) => setCategory(v as any)}
+            />
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               <Button
@@ -561,10 +530,48 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
             </div>
           </div>
         </div>
+       <Card>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '12px',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', flex: 1 }}>
+              <Select
+                placeholder="选择命名空间"
+                style={{ width: 180, minWidth: 120 }}
+                value={selectedNamespace}
+                onChange={setSelectedNamespace}
+                allowClear
+              >
+                {getNamespaces().map(ns => (
+                  <Option key={ns} value={ns}>{ns}</Option>
+                ))}
+              </Select>
+              
+              
+              <Search
+                placeholder="搜索工作负载名称"
+                style={{ width: 250, minWidth: 200, maxWidth: 300 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+              />
+            </div>
+          </div>
+        </div>
 
         <Table
           columns={columns}
-          dataSource={filteredWorkloads}
+          dataSource={
+            // 若用户选择了具体类型，则在分类过滤后再按类型过滤
+            selectedType
+              ? filteredWorkloads.filter(w => (w.type || '').toLowerCase() === selectedType.toLowerCase())
+              : filteredWorkloads
+          }
           rowKey={(record) => `${record.namespace}-${record.name}-${record.type}`}
           rowSelection={rowSelection}
           loading={loading}
@@ -584,7 +591,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
             pageSizeOptions: ['10', '20', '50', '100'],
           }}
         />
-      </Card>
+        </Card>
 
       {/* 扩缩容模态框 */}
       {/* 扩缩容模态框 */}
