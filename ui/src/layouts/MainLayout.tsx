@@ -44,6 +44,7 @@ import {
   TagsOutlined,
   ArrowLeftOutlined,
   CodeOutlined,
+  ContainerOutlined,
 } from '@ant-design/icons';
 import type { MenuProps as AntMenuProps } from 'antd';
 import KubernetesIcon from '../components/KubernetesIcon';
@@ -162,6 +163,7 @@ const MainLayout: React.FC = () => {
     // 集群详情页面的路由匹配
     if (path.match(/\/clusters\/[^\/]+\/overview/)) return ['cluster-overview'];
     if (path.match(/\/clusters\/[^\/]+\/workloads/)) return ['k8s-workloads'];
+    if (path.match(/\/clusters\/[^\/]+\/pods/)) return ['k8s-pods'];
     if (path.match(/\/clusters\/[^\/]+\/services/)) return ['k8s-services'];
     if (path.match(/\/clusters\/[^\/]+\/storage/)) return ['k8s-storage'];
     if (path.match(/\/clusters\/[^\/]+\/configs/)) return ['k8s-configs'];
@@ -225,6 +227,17 @@ const MainLayout: React.FC = () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^\/]+)/);
             if (clusterMatch) {
               navigate(`/clusters/${clusterMatch[1]}/workloads`);
+            }
+          },
+        },
+        {
+          key: 'k8s-pods',
+          icon: <ContainerOutlined />,
+          label: '容器组',
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^\/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/pods`);
             }
           },
         },

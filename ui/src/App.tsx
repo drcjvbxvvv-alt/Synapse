@@ -39,8 +39,8 @@ const App: React.FC = () => {
             <Route path="clusters/:clusterId/pods/:namespace/:name" element={<PodDetail />} />
             <Route path="clusters/:clusterId/pods/:namespace/:name/logs" element={<PodLogs />} />
             <Route path="clusters/:clusterId/pods/:namespace/:name/terminal" element={<PodTerminal />} />
-            <Route path="pods" element={<PodList />} />
-            <Route path="pods/:namespace/:name" element={<PodDetail />} />
+            <Route path="clusters/:clusterId/pods" element={<PodList />} />
+            <Route path="clusters/:clusterId/pods/:namespace/:name" element={<PodDetail />} />
             <Route path="clusters/:clusterId/workloads" element={<WorkloadList />} />
             <Route path="clusters/:clusterId/workloads/:namespace/:name" element={<WorkloadDetail />} />
             <Route path="clusters/:clusterId/yaml/apply" element={<YAMLEditor />} />
