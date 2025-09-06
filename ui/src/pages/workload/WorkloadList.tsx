@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -56,7 +56,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
   const [category, setCategory] = useState<'stateless' | 'stateful' | 'daemonset' | 'job' | 'cronjob'>('stateless');
 
   // 基于分类动态生成的类型标签列表
-  const getCategoryTypes = (): Array<{ label: string; value: string }> => {
+  const getCategoryTypes = useCallback((): Array<{ label: string; value: string }> => {
     switch (category) {
       case 'stateless':
         return [
@@ -74,7 +74,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
       default:
         return [];
     }
-  };
+  }, [category]);
   const [searchText, setSearchText] = useState('');
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleWorkload, setScaleWorkload] = useState<WorkloadInfo | null>(null);
@@ -110,7 +110,6 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
       if (response.code === 200) {
         // 后端返回的数据结构是 { items: [], total: number }
         setWorkloads(response.data.items || []);
-        console.log(response.data.items);
         setTotal(response.data.total || response.data.items?.length || 0);
       } else {
         message.error(response.message || '获取工作负载列表失败');
@@ -280,7 +279,24 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
     }
   }, [selectedClusterId, fetchWorkloads]);
 
-
+  const typeTags = useMemo(() => {
+    return getCategoryTypes().map(t => {
+      const active = selectedType === t.value;
+      return (
+        <Tag
+          key={t.value}
+          color={active ? 'processing' : 'default'}
+          style={{ cursor: 'pointer', userSelect: 'none' }}
+          onClick={() => {
+            setCurrentPage(1);
+            setSelectedType(active ? '' : t.value);
+          }}
+        >
+          {t.label}
+        </Tag>
+      );
+    });
+  }, [category, selectedType]);
 
 
 
@@ -527,7 +543,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
                 const next = v as 'stateless' | 'stateful' | 'daemonset' | 'job' | 'cronjob';
                 setCategory(next);
                 if (next === 'stateless') {
-                  setSelectedType('Stateless');
+                  setSelectedType('');
                 } else if (next === 'stateful') {
                   setSelectedType('StatefulSet');
                 } else if (next === 'daemonset') {
@@ -537,7 +553,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
                 } else if (next === 'cronjob') {
                   setSelectedType('CronJob');
                 } else {
-                  setSelectedType('Stateless');
+                  setSelectedType('');
                 }
                 setCurrentPage(1);
               }}
@@ -588,24 +604,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
 
               {/* 类型标签筛选：随分类动态变化 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {getCategoryTypes().map(t => {
-                  console.log("selectedType: 1" + selectedType, selectedType.toLowerCase(), "t.value: " + t.value);
-                  const active = selectedType === t.value;
-                  return (
-                    <Tag
-                      key={t.value}
-                      color={active ? 'processing' : 'default'}
-                      style={{ cursor: 'pointer', userSelect: 'none' }}
-                      onClick={() => {
-                        setCurrentPage(1);
-                        console.log("active: " + active, t.value);
-                        setSelectedType(active ? '' : t.value);
-                      }}
-                    >
-                      {t.label}
-                    </Tag>
-                  );
-                })}
+                {typeTags}
               </div>
 
               <Search
