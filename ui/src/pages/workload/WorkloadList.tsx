@@ -60,17 +60,17 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
     switch (category) {
       case 'stateless':
         return [
-          { label: 'Deployment', value: 'deployment' },
-          { label: 'Argo Rollout', value: 'argo-rollout' },
+          { label: 'Deployment', value: 'Deployment' },
+          { label: 'Argo Rollout', value: 'Rollout' },
         ];
       case 'stateful':
-        return [{ label: 'StatefulSet', value: 'statefulset' }];
+        return [{ label: 'StatefulSet', value: 'StatefulSet' }];
       case 'daemonset':
-        return [{ label: 'DaemonSet', value: 'daemonset' }];
+        return [{ label: 'DaemonSet', value: 'DaemonSet' }];
       case 'job':
-        return [{ label: 'Job', value: 'job' }];
+        return [{ label: 'Job', value: 'Job' }];
       case 'cronjob':
-        return [{ label: 'CronJob', value: 'cronjob' }];
+        return [{ label: 'CronJob', value: 'CronJob' }];
       default:
         return [];
     }
@@ -83,15 +83,15 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
   const [selectedClusterId, setSelectedClusterId] = useState<string>(routeClusterId || '1');
 
   // 获取集群列表
-  const fetchClusters = useCallback(async () => {
-    try {
-      const response = await clusterService.getClusters();
-      setClusters(response.data.items || []);
-    } catch (error) {
-      message.error('获取集群列表失败');
-      console.error('获取集群列表失败:', error);
-    }
-  }, []);
+  // const fetchClusters = useCallback(async () => {
+  //   try {
+  //     const response = await clusterService.getClusters();
+  //     setClusters(response.data.items || []);
+  //   } catch (error) {
+  //     message.error('获取集群列表失败');
+  //     console.error('获取集群列表失败:', error);
+  //   }
+  // }, []);
 
   // 获取工作负载列表
   const fetchWorkloads = useCallback(async () => {
@@ -110,6 +110,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
       if (response.code === 200) {
         // 后端返回的数据结构是 { items: [], total: number }
         setWorkloads(response.data.items || []);
+        console.log(response.data.items);
         setTotal(response.data.total || response.data.items?.length || 0);
       } else {
         message.error(response.message || '获取工作负载列表失败');
@@ -249,9 +250,10 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
   // 过滤工作负载（按分类 + 名称）
   const filteredWorkloads = workloads.filter(workload => {
     const type = (workload.type || '').toLowerCase();
+    const category = (selectedType || '').toLowerCase();
     // 分类规则
     const inCategory =
-       category === 'stateless' ? (type === 'deployment' || type === 'argo-rollout')
+       category === 'stateless' ? (type === 'deployment' || type === 'rollout')
       : category === 'stateful' ? (type === 'statefulset')
       : category === 'daemonset' ? (type === 'daemonset')
       : category === 'job' ? (type === 'job')
@@ -267,9 +269,9 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
   });
 
   // 初始化加载
-  useEffect(() => {
-    fetchClusters();
-  }, [fetchClusters]);
+  // useEffect(() => {
+  //   fetchClusters();
+  // }, [fetchClusters]);
 
   // 当选中的集群ID变化时，重新获取数据
   useEffect(() => {
@@ -524,8 +526,19 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
               onChange={(v) => {
                 const next = v as 'stateless' | 'stateful' | 'daemonset' | 'job' | 'cronjob';
                 setCategory(next);
-                // 切换分类时清空具体类型筛选，避免与分类不一致导致列表为空
-                setSelectedType('');
+                if (next === 'stateless') {
+                  setSelectedType('Stateless');
+                } else if (next === 'stateful') {
+                  setSelectedType('StatefulSet');
+                } else if (next === 'daemonset') {
+                  setSelectedType('DaemonSet');
+                } else if (next === 'job') {
+                  setSelectedType('Job');
+                } else if (next === 'cronjob') {
+                  setSelectedType('CronJob');
+                } else {
+                  setSelectedType('Stateless');
+                }
                 setCurrentPage(1);
               }}
             />
@@ -576,7 +589,8 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
               {/* 类型标签筛选：随分类动态变化 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {getCategoryTypes().map(t => {
-                  const active = selectedType.toLowerCase() === t.value;
+                  console.log("selectedType: 1" + selectedType, selectedType.toLowerCase(), "t.value: " + t.value);
+                  const active = selectedType === t.value;
                   return (
                     <Tag
                       key={t.value}
@@ -584,6 +598,7 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
                       style={{ cursor: 'pointer', userSelect: 'none' }}
                       onClick={() => {
                         setCurrentPage(1);
+                        console.log("active: " + active, t.value);
                         setSelectedType(active ? '' : t.value);
                       }}
                     >
@@ -606,12 +621,13 @@ const WorkloadList: React.FC<WorkloadListProps> = () => {
 
         <Table
           columns={columns}
-          dataSource={
-            // 若用户选择了具体类型，则在分类过滤后再按类型过滤
-            selectedType
-              ? filteredWorkloads.filter(w => (w.type || '').toLowerCase() === selectedType.toLowerCase())
-              : filteredWorkloads
-          }
+          // dataSource={
+          //   // 若用户选择了具体类型，则在分类过滤后再按类型过滤
+          //   selectedType
+          //     ? filteredWorkloads.filter(w => (w.type || '').toLowerCase() === selectedType.toLowerCase())
+          //     : filteredWorkloads
+          // }
+          dataSource={workloads}
           rowKey={(record) => `${record.namespace}-${record.name}-${record.type}`}
           rowSelection={rowSelection}
           loading={loading}
