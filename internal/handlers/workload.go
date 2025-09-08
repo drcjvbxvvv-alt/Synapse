@@ -237,27 +237,27 @@ func (h *WorkloadHandler) GetWorkloads(c *gin.Context) {
 	}
 
 	// CronJobs
-	if workloadType == string(WorkloadTypeCronJob) {
-		if namespace != "" {
-			items, err := h.k8sMgr.CronJobsLister(cluster.ID).CronJobs(namespace).List(sel)
-			if err != nil {
-				logger.Error("读取CronJob缓存失败", "error", err)
-			} else {
-				for _, it := range items {
-					workloads = append(workloads, h.convertCronJobToWorkloadInfo(it))
-				}
-			}
-		} else {
-			items, err := h.k8sMgr.CronJobsLister(cluster.ID).List(sel)
-			if err != nil {
-				logger.Error("读取CronJob缓存失败", "error", err)
-			} else {
-				for _, it := range items {
-					workloads = append(workloads, h.convertCronJobToWorkloadInfo(it))
-				}
-			}
-		}
-	}
+	// if workloadType == string(WorkloadTypeCronJob) {
+	// 	if namespace != "" {
+	// 		items, err := h.k8sMgr.CronJobsLister(cluster.ID).CronJobs(namespace).List(sel)
+	// 		if err != nil {
+	// 			logger.Error("读取CronJob缓存失败", "error", err)
+	// 		} else {
+	// 			for _, it := range items {
+	// 				workloads = append(workloads, h.convertCronJobToWorkloadInfo(it))
+	// 			}
+	// 		}
+	// 	} else {
+	// 		items, err := h.k8sMgr.CronJobsLister(cluster.ID).List(sel)
+	// 		if err != nil {
+	// 			logger.Error("读取CronJob缓存失败", "error", err)
+	// 		} else {
+	// 			for _, it := range items {
+	// 				workloads = append(workloads, h.convertCronJobToWorkloadInfo(it))
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	// 分页处理
 	total := len(workloads)

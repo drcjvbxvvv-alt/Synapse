@@ -7,11 +7,11 @@ server:
 database:
   driver: mysql
   dsn: ""
-  host: 172.28.117.30
-  port: 3307
-  username: root
-  password: 123456
-  database: k8s_management
+  host: 127.0.0.1
+  port: 3306
+  username: kubepolaris
+  password: kubepolaris!@#
+  database: kubepolaris
   charset: utf8mb4
 
 # JWT配置

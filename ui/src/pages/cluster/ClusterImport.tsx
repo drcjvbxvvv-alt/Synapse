@@ -75,9 +75,10 @@ const ClusterImport: React.FC = () => {
       const values = await form.validateFields();
       setLoading(true);
 
-      const importData = {
+      const importData: ImportFormData = {
         name: values.name,
         description: values.description,
+        connectionType: values.connectionType,
         apiServer: values.apiServer,
         kubeconfig: connectionType === 'kubeconfig' ? values.kubeconfig : undefined,
         token: connectionType === 'token' ? values.token : undefined,
@@ -161,175 +162,167 @@ const ClusterImport: React.FC = () => {
           }}
         >
           {/* 步骤1: 基本信息 */}
-          {currentStep === 0 && (
-            <div>
-              <Title level={4}>集群基本信息</Title>
-              <Form.Item
-                name="name"
-                label="集群名称"
-                rules={[
-                  { required: true, message: '请输入集群名称' },
-                  { min: 2, max: 50, message: '集群名称长度为2-50个字符' },
-                ]}
-              >
-                <Input placeholder="请输入集群名称，如：production-cluster" />
-              </Form.Item>
+          <div style={{ display: currentStep === 0 ? 'block' : 'none' }}>
+            <Title level={4}>集群基本信息</Title>
+            <Form.Item
+              name="name"
+              label="集群名称"
+              rules={[
+                { required: true, message: '请输入集群名称' },
+                { min: 2, max: 50, message: '集群名称长度为2-50个字符' },
+              ]}
+            >
+              <Input placeholder="请输入集群名称，如：production-cluster" />
+            </Form.Item>
 
-              <Form.Item name="description" label="集群描述">
-                <TextArea
-                  rows={3}
-                  placeholder="请输入集群描述信息（可选）"
-                  maxLength={200}
-                />
-              </Form.Item>
+            <Form.Item name="description" label="集群描述">
+              <TextArea
+                rows={3}
+                placeholder="请输入集群描述信息（可选）"
+                maxLength={200}
+              />
+            </Form.Item>
 
-              <div style={{ textAlign: 'right' }}>
-                <Button type="primary" onClick={() => setCurrentStep(1)}>
-                  下一步
-                </Button>
-              </div>
+            <div style={{ textAlign: 'right' }}>
+              <Button type="primary" onClick={() => setCurrentStep(1)}>
+                下一步
+              </Button>
             </div>
-          )}
+          </div>
 
           {/* 步骤2: 连接配置 */}
-          {currentStep === 1 && (
-            <div>
-              <Title level={4}>连接配置</Title>
-              <Form.Item name="connectionType" label="连接方式">
-                <Radio.Group
-                  value={connectionType}
-                  onChange={(e) => setConnectionType(e.target.value)}
-                >
-                  <Radio.Button value="kubeconfig">Kubeconfig文件</Radio.Button>
-                  <Radio.Button value="token">Token认证</Radio.Button>
-                </Radio.Group>
-              </Form.Item>
+          <div style={{ display: currentStep === 1 ? 'block' : 'none' }}>
+            <Title level={4}>连接配置</Title>
+            <Form.Item name="connectionType" label="连接方式">
+              <Radio.Group
+                value={connectionType}
+                onChange={(e) => setConnectionType(e.target.value)}
+              >
+                <Radio.Button value="kubeconfig">Kubeconfig文件</Radio.Button>
+                <Radio.Button value="token">Token认证</Radio.Button>
+              </Radio.Group>
+            </Form.Item>
 
-              {connectionType === 'kubeconfig' && (
+            {connectionType === 'kubeconfig' && (
+              <Form.Item
+                name="kubeconfig"
+                label="Kubeconfig内容"
+                rules={[{ required: true, message: '请输入kubeconfig内容' }]}
+              >
+                <TextArea
+                  rows={12}
+                  placeholder="请粘贴完整的kubeconfig文件内容..."
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </Form.Item>
+            )}
+
+            {connectionType === 'token' && (
+              <>
                 <Form.Item
-                  name="kubeconfig"
-                  label="Kubeconfig内容"
-                  rules={[{ required: true, message: '请输入kubeconfig内容' }]}
+                  name="apiServer"
+                  label="API Server地址"
+                  rules={[
+                    { required: true, message: '请输入API Server地址' },
+                    { type: 'url', message: '请输入有效的URL地址' },
+                  ]}
+                >
+                  <Input placeholder="https://your-cluster-api-server:6443" />
+                </Form.Item>
+
+                <Form.Item
+                  name="token"
+                  label="访问令牌"
+                  rules={[{ required: true, message: '请输入访问令牌' }]}
                 >
                   <TextArea
-                    rows={12}
-                    placeholder="请粘贴完整的kubeconfig文件内容..."
+                    rows={4}
+                    placeholder="请输入ServiceAccount Token或其他访问令牌..."
                     style={{ fontFamily: 'monospace' }}
                   />
                 </Form.Item>
-              )}
 
-              {connectionType === 'token' && (
-                <>
-                  <Form.Item
-                    name="apiServer"
-                    label="API Server地址"
-                    rules={[
-                      { required: true, message: '请输入API Server地址' },
-                      { type: 'url', message: '请输入有效的URL地址' },
-                    ]}
-                  >
-                    <Input placeholder="https://your-cluster-api-server:6443" />
-                  </Form.Item>
+                <Form.Item name="caCert" label="CA证书（可选）">
+                  <TextArea
+                    rows={6}
+                    placeholder="请输入CA证书内容（PEM格式），如果集群使用自签名证书则必填..."
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </Form.Item>
+              </>
+            )}
 
-                  <Form.Item
-                    name="token"
-                    label="访问令牌"
-                    rules={[{ required: true, message: '请输入访问令牌' }]}
-                  >
-                    <TextArea
-                      rows={4}
-                      placeholder="请输入ServiceAccount Token或其他访问令牌..."
-                      style={{ fontFamily: 'monospace' }}
-                    />
-                  </Form.Item>
-
-                  <Form.Item name="caCert" label="CA证书（可选）">
-                    <TextArea
-                      rows={6}
-                      placeholder="请输入CA证书内容（PEM格式），如果集群使用自签名证书则必填..."
-                      style={{ fontFamily: 'monospace' }}
-                    />
-                  </Form.Item>
-                </>
-              )}
-
-              <div style={{ textAlign: 'right' }}>
-                <Space>
-                  <Button onClick={() => setCurrentStep(0)}>上一步</Button>
-                  <Button type="primary" onClick={handleTestConnection} loading={testLoading}>
-                    测试连接
-                  </Button>
-                </Space>
-              </div>
+            <div style={{ textAlign: 'right' }}>
+              <Space>
+                <Button onClick={() => setCurrentStep(0)}>上一步</Button>
+                <Button type="primary" onClick={handleTestConnection} loading={testLoading}>
+                  测试连接
+                </Button>
+              </Space>
             </div>
-          )}
+          </div>
 
           {/* 步骤3: 测试连接 */}
-          {currentStep === 2 && (
-            <div>
-              <Title level={4}>连接测试结果</Title>
-              {testResult && (
-                <Alert
-                  message="连接测试成功"
-                  description={
-                    <div>
-                      <p><strong>集群版本:</strong> {testResult.version}</p>
-                      <p><strong>节点数量:</strong> {testResult.readyNodes}/{testResult.nodeCount}</p>
-                      <p><strong>集群状态:</strong> {testResult.status}</p>
-                    </div>
-                  }
-                  type="success"
-                  showIcon
-                  style={{ marginBottom: 24 }}
-                />
-              )}
-
-              <div style={{ textAlign: 'right' }}>
-                <Space>
-                  <Button onClick={() => setCurrentStep(1)}>重新配置</Button>
-                  <Button type="primary" onClick={() => setCurrentStep(3)}>
-                    确认导入
-                  </Button>
-                </Space>
-              </div>
-            </div>
-          )}
-
-          {/* 步骤4: 完成导入 */}
-          {currentStep === 3 && (
-            <div>
-              <Title level={4}>确认导入</Title>
+          <div style={{ display: currentStep === 2 ? 'block' : 'none' }}>
+            <Title level={4}>连接测试结果</Title>
+            {testResult && (
               <Alert
-                message="请确认以下信息无误后点击导入"
-                type="info"
+                message="连接测试成功"
+                description={
+                  <div>
+                    <p><strong>集群版本:</strong> {testResult.version}</p>
+                    <p><strong>节点数量:</strong> {testResult.readyNodes}/{testResult.nodeCount}</p>
+                    <p><strong>集群状态:</strong> {testResult.status}</p>
+                  </div>
+                }
+                type="success"
+                showIcon
                 style={{ marginBottom: 24 }}
               />
+            )}
 
-              <div style={{ background: '#fafafa', padding: 16, borderRadius: 6, marginBottom: 24 }}>
-                <p><strong>集群名称:</strong> {form.getFieldValue('name')}</p>
-                <p><strong>连接方式:</strong> {connectionType === 'kubeconfig' ? 'Kubeconfig文件' : 'Token认证'}</p>
-                {connectionType === 'token' && (
-                  <p><strong>API Server:</strong> {form.getFieldValue('apiServer')}</p>
-                )}
-                {testResult && (
-                  <>
-                    <p><strong>集群版本:</strong> {testResult.version}</p>
-                    <p><strong>节点状态:</strong> {testResult.readyNodes}/{testResult.nodeCount} 就绪</p>
-                  </>
-                )}
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
-                <Space>
-                  <Button onClick={() => setCurrentStep(2)}>上一步</Button>
-                  <Button type="primary" onClick={handleImport} loading={loading}>
-                    导入集群
-                  </Button>
-                </Space>
-              </div>
+            <div style={{ textAlign: 'right' }}>
+              <Space>
+                <Button onClick={() => setCurrentStep(1)}>重新配置</Button>
+                <Button type="primary" onClick={() => setCurrentStep(3)}>
+                  确认导入
+                </Button>
+              </Space>
             </div>
-          )}
+          </div>
+
+          {/* 步骤4: 完成导入 */}
+          <div style={{ display: currentStep === 3 ? 'block' : 'none' }}>
+            <Title level={4}>确认导入</Title>
+            <Alert
+              message="请确认以下信息无误后点击导入"
+              type="info"
+              style={{ marginBottom: 24 }}
+            />
+
+            <div style={{ background: '#fafafa', padding: 16, borderRadius: 6, marginBottom: 24 }}>
+              <p><strong>集群名称:</strong> {form.getFieldValue('name')}</p>
+              <p><strong>连接方式:</strong> {connectionType === 'kubeconfig' ? 'Kubeconfig文件' : 'Token认证'}</p>
+              {connectionType === 'token' && (
+                <p><strong>API Server:</strong> {form.getFieldValue('apiServer')}</p>
+              )}
+              {testResult && (
+                <>
+                  <p><strong>集群版本:</strong> {testResult.version}</p>
+                  <p><strong>节点状态:</strong> {testResult.readyNodes}/{testResult.nodeCount} 就绪</p>
+                </>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <Space>
+                <Button onClick={() => setCurrentStep(2)}>上一步</Button>
+                <Button type="primary" onClick={handleImport} loading={loading}>
+                  导入集群
+                </Button>
+              </Space>
+            </div>
+          </div>
         </Form>
       </Card>
     </div>

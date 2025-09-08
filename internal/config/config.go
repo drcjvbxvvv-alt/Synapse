@@ -90,7 +90,7 @@ func setDefaults() {
 	viper.SetDefault("database.port", 3306)
 	viper.SetDefault("database.username", "root")
 	viper.SetDefault("database.password", "")
-	viper.SetDefault("database.database", "k8s_management")
+	viper.SetDefault("database.database", "kubepolaris")
 	viper.SetDefault("database.charset", "utf8mb4")
 
 	// JWT默认配置
