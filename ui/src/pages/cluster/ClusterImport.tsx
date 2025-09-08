@@ -75,11 +75,11 @@ const ClusterImport: React.FC = () => {
       const values = await form.validateFields();
       setLoading(true);
 
-      const importData: ImportFormData = {
+      const importData = {
         name: values.name,
         description: values.description,
         connectionType: values.connectionType,
-        apiServer: values.apiServer,
+        apiServer: values.apiServer || '',
         kubeconfig: connectionType === 'kubeconfig' ? values.kubeconfig : undefined,
         token: connectionType === 'token' ? values.token : undefined,
         caCert: connectionType === 'token' ? values.caCert : undefined,

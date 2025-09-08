@@ -75,16 +75,16 @@ func (h *ClusterHandler) GetClusters(c *gin.Context) {
 		clusterData["readyNodes"] = readyNodes
 
 		// 获取集群指标（CPU、内存使用率等）
-		if metrics, err := h.clusterService.GetClusterMetrics(cluster.ID); err == nil && metrics != nil {
-			clusterData["cpuUsage"] = metrics.CPUUsage
-			clusterData["memoryUsage"] = metrics.MemoryUsage
-			clusterData["storageUsage"] = metrics.StorageUsage
-		} else {
-			// 如果没有指标数据，设置默认值
-			clusterData["cpuUsage"] = 0.0
-			clusterData["memoryUsage"] = 0.0
-			clusterData["storageUsage"] = 0.0
-		}
+		// if metrics, err := h.clusterService.GetClusterMetrics(cluster.ID); err == nil && metrics != nil {
+		// 	clusterData["cpuUsage"] = metrics.CPUUsage
+		// 	clusterData["memoryUsage"] = metrics.MemoryUsage
+		// 	clusterData["storageUsage"] = metrics.StorageUsage
+		// } else {
+		// 	// 如果没有指标数据，设置默认值
+		// 	clusterData["cpuUsage"] = 0.0
+		// 	clusterData["memoryUsage"] = 0.0
+		// 	clusterData["storageUsage"] = 0.0
+		// }
 
 		clusterList = append(clusterList, clusterData)
 	}
