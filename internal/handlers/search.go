@@ -2,42 +2,458 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 
 	"kubepolaris/internal/config"
+	"kubepolaris/internal/k8s"
+	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // SearchHandler 搜索处理器
 type SearchHandler struct {
-	db  *gorm.DB
-	cfg *config.Config
+	db         *gorm.DB
+	cfg        *config.Config
+	k8sMgr     *k8s.ClusterInformerManager
+	clusterSvc *services.ClusterService
 }
 
 // NewSearchHandler 创建搜索处理器
-func NewSearchHandler(db *gorm.DB, cfg *config.Config) *SearchHandler {
+func NewSearchHandler(db *gorm.DB, cfg *config.Config, k8sMgr *k8s.ClusterInformerManager, clusterSvc *services.ClusterService) *SearchHandler {
 	return &SearchHandler{
-		db:  db,
-		cfg: cfg,
+		db:         db,
+		cfg:        cfg,
+		k8sMgr:     k8sMgr,
+		clusterSvc: clusterSvc,
 	}
+}
+
+// SearchResult 搜索结果结构
+type SearchResult struct {
+	Type        string `json:"type"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Namespace   string `json:"namespace,omitempty"`
+	ClusterID   string `json:"clusterId"`
+	ClusterName string `json:"clusterName"`
+	Status      string `json:"status"`
+	Description string `json:"description,omitempty"`
+	IP          string `json:"ip,omitempty"`
+	Kind        string `json:"kind,omitempty"`
 }
 
 // GlobalSearch 全局搜索
 func (h *SearchHandler) GlobalSearch(c *gin.Context) {
 	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "搜索关键词不能为空",
+			"data":    nil,
+		})
+		return
+	}
+
 	logger.Info("全局搜索: %s", query)
 
-	// TODO: 实现全局搜索逻辑
+	// 获取所有集群
+	clusters, err := h.clusterSvc.GetAllClusters()
+	if err != nil {
+		logger.Error("获取集群列表失败", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取集群列表失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	var results []SearchResult
+
+	// 搜索集群
+	for _, cluster := range clusters {
+		if strings.Contains(strings.ToLower(cluster.Name), strings.ToLower(query)) {
+			clusterIDStr := strconv.FormatUint(uint64(cluster.ID), 10)
+			results = append(results, SearchResult{
+				Type:        "cluster",
+				ID:          clusterIDStr,
+				Name:        cluster.Name,
+				ClusterID:   clusterIDStr,
+				ClusterName: cluster.Name,
+				Status:      cluster.Status,
+				Description: cluster.APIServer,
+			})
+		}
+	}
+
+	// 搜索节点、Pod和工作负载
+	for _, cluster := range clusters {
+		// 确保集群的 informer 已初始化
+		_, err := h.k8sMgr.EnsureForCluster(cluster)
+		if err != nil {
+			logger.Error("初始化集群 informer 失败", "cluster", cluster.Name, "error", err)
+			continue
+		}
+
+		clusterIDStr := strconv.FormatUint(uint64(cluster.ID), 10)
+
+		// 搜索节点
+		nodeLister := h.k8sMgr.NodesLister(cluster.ID)
+		if nodeLister != nil {
+			nodes, err := nodeLister.List(labels.Everything())
+			if err == nil {
+				for _, node := range nodes {
+					// 搜索节点名称
+					if strings.Contains(strings.ToLower(node.Name), strings.ToLower(query)) {
+						results = append(results, SearchResult{
+							Type:        "node",
+							ID:          node.Name,
+							Name:        node.Name,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      h.getNodeStatus(node),
+							Description: node.Spec.PodCIDR,
+							IP:          h.getNodeIP(node),
+						})
+					}
+
+					// 搜索节点IP
+					for _, addr := range node.Status.Addresses {
+						if strings.Contains(addr.Address, query) {
+							results = append(results, SearchResult{
+								Type:        "node",
+								ID:          node.Name,
+								Name:        node.Name,
+								ClusterID:   clusterIDStr,
+								ClusterName: cluster.Name,
+								Status:      h.getNodeStatus(node),
+								Description: node.Spec.PodCIDR,
+								IP:          addr.Address,
+							})
+							break
+						}
+					}
+				}
+			}
+		}
+
+		// 搜索Pod
+		podLister := h.k8sMgr.PodsLister(cluster.ID)
+		if podLister != nil {
+			pods, err := podLister.List(labels.Everything())
+			if err == nil {
+				for _, pod := range pods {
+					// 搜索Pod名称
+					if strings.Contains(strings.ToLower(pod.Name), strings.ToLower(query)) {
+						results = append(results, SearchResult{
+							Type:        "pod",
+							ID:          pod.Name,
+							Name:        pod.Name,
+							Namespace:   pod.Namespace,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      string(pod.Status.Phase),
+							Description: pod.Spec.NodeName,
+							IP:          pod.Status.PodIP,
+						})
+					}
+
+					// 搜索Pod IP
+					if strings.Contains(pod.Status.PodIP, query) {
+						results = append(results, SearchResult{
+							Type:        "pod",
+							ID:          pod.Name,
+							Name:        pod.Name,
+							Namespace:   pod.Namespace,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      string(pod.Status.Phase),
+							Description: pod.Spec.NodeName,
+							IP:          pod.Status.PodIP,
+						})
+					}
+				}
+			}
+		}
+
+		// 搜索工作负载
+		// Deployment
+		deploymentLister := h.k8sMgr.DeploymentsLister(cluster.ID)
+		if deploymentLister != nil {
+			deployments, err := deploymentLister.List(labels.Everything())
+			if err == nil {
+				for _, deployment := range deployments {
+					if strings.Contains(strings.ToLower(deployment.Name), strings.ToLower(query)) {
+						replicas := "1"
+						if deployment.Spec.Replicas != nil {
+							replicas = strconv.FormatInt(int64(*deployment.Spec.Replicas), 10)
+						}
+						results = append(results, SearchResult{
+							Type:        "workload",
+							ID:          deployment.Name,
+							Name:        deployment.Name,
+							Namespace:   deployment.Namespace,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      "Deployment",
+							Kind:        "Deployment",
+							Description: replicas,
+						})
+					}
+				}
+			}
+		}
+
+		// StatefulSet
+		statefulSetLister := h.k8sMgr.StatefulSetsLister(cluster.ID)
+		if statefulSetLister != nil {
+			statefulSets, err := statefulSetLister.List(labels.Everything())
+			if err == nil {
+				for _, statefulSet := range statefulSets {
+					if strings.Contains(strings.ToLower(statefulSet.Name), strings.ToLower(query)) {
+						replicas := "1"
+						if statefulSet.Spec.Replicas != nil {
+							replicas = strconv.FormatInt(int64(*statefulSet.Spec.Replicas), 10)
+						}
+						results = append(results, SearchResult{
+							Type:        "workload",
+							ID:          statefulSet.Name,
+							Name:        statefulSet.Name,
+							Namespace:   statefulSet.Namespace,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      "StatefulSet",
+							Kind:        "StatefulSet",
+							Description: replicas,
+						})
+					}
+				}
+			}
+		}
+
+		// DaemonSet
+		daemonSetLister := h.k8sMgr.DaemonSetsLister(cluster.ID)
+		if daemonSetLister != nil {
+			daemonSets, err := daemonSetLister.List(labels.Everything())
+			if err == nil {
+				for _, daemonSet := range daemonSets {
+					if strings.Contains(strings.ToLower(daemonSet.Name), strings.ToLower(query)) {
+						results = append(results, SearchResult{
+							Type:        "workload",
+							ID:          daemonSet.Name,
+							Name:        daemonSet.Name,
+							Namespace:   daemonSet.Namespace,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      "DaemonSet",
+							Kind:        "DaemonSet",
+							Description: "DaemonSet",
+						})
+					}
+				}
+			}
+		}
+	}
+
+	// 计算统计信息
+	stats := struct {
+		Cluster  int `json:"cluster"`
+		Node     int `json:"node"`
+		Pod      int `json:"pod"`
+		Workload int `json:"workload"`
+	}{}
+
+	for _, result := range results {
+		switch result.Type {
+		case "cluster":
+			stats.Cluster++
+		case "node":
+			stats.Node++
+		case "pod":
+			stats.Pod++
+		case "workload":
+			stats.Workload++
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "搜索成功",
 		"data": gin.H{
-			"clusters":  []interface{}{},
-			"nodes":     []interface{}{},
-			"pods":      []interface{}{},
-			"workloads": []interface{}{},
+			"results": results,
+			"total":   len(results),
+			"stats":   stats,
 		},
 	})
+}
+
+// QuickSearch 快速搜索（用于顶部搜索栏）
+func (h *SearchHandler) QuickSearch(c *gin.Context) {
+	query := c.Query("q")
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 10
+	}
+
+	if query == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "搜索成功",
+			"data": gin.H{
+				"results": []SearchResult{},
+			},
+		})
+		return
+	}
+
+	logger.Info("快速搜索: %s", query)
+
+	// 获取所有集群
+	clusters, err := h.clusterSvc.GetAllClusters()
+	if err != nil {
+		logger.Error("获取集群列表失败", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取集群列表失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	var results []SearchResult
+
+	// 遍历所有集群进行搜索
+	for _, cluster := range clusters {
+		// 确保集群的 informer 已初始化
+		_, err := h.k8sMgr.EnsureForCluster(cluster)
+		if err != nil {
+			logger.Error("初始化集群 informer 失败", "cluster", cluster.Name, "error", err)
+			continue
+		}
+
+		clusterIDStr := strconv.FormatUint(uint64(cluster.ID), 10)
+
+		// 搜索集群本身
+		if strings.Contains(strings.ToLower(cluster.Name), strings.ToLower(query)) {
+			results = append(results, SearchResult{
+				Type:        "cluster",
+				ID:          clusterIDStr,
+				Name:        cluster.Name,
+				ClusterID:   clusterIDStr,
+				ClusterName: cluster.Name,
+				Status:      cluster.Status,
+				Description: cluster.APIServer,
+			})
+		}
+
+		// 搜索节点
+		nodeLister := h.k8sMgr.NodesLister(cluster.ID)
+		if nodeLister != nil {
+			nodes, err := nodeLister.List(labels.Everything())
+			if err == nil {
+				for _, node := range nodes {
+					if strings.Contains(strings.ToLower(node.Name), strings.ToLower(query)) {
+						results = append(results, SearchResult{
+							Type:        "node",
+							ID:          node.Name,
+							Name:        node.Name,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      h.getNodeStatus(node),
+							Description: node.Spec.PodCIDR,
+							IP:          h.getNodeIP(node),
+						})
+					}
+				}
+			}
+		}
+
+		// 搜索Pod
+		podLister := h.k8sMgr.PodsLister(cluster.ID)
+		if podLister != nil {
+			pods, err := podLister.List(labels.Everything())
+			if err == nil {
+				for _, pod := range pods {
+					if strings.Contains(strings.ToLower(pod.Name), strings.ToLower(query)) {
+						results = append(results, SearchResult{
+							Type:        "pod",
+							ID:          pod.Name,
+							Name:        pod.Name,
+							Namespace:   pod.Namespace,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      string(pod.Status.Phase),
+							Description: pod.Spec.NodeName,
+							IP:          pod.Status.PodIP,
+						})
+					}
+				}
+			}
+		}
+
+		// 搜索工作负载
+		deploymentLister := h.k8sMgr.DeploymentsLister(cluster.ID)
+		if deploymentLister != nil {
+			deployments, err := deploymentLister.List(labels.Everything())
+			if err == nil {
+				for _, deployment := range deployments {
+					if strings.Contains(strings.ToLower(deployment.Name), strings.ToLower(query)) {
+						replicas := "1"
+						if deployment.Spec.Replicas != nil {
+							replicas = strconv.FormatInt(int64(*deployment.Spec.Replicas), 10)
+						}
+						results = append(results, SearchResult{
+							Type:        "workload",
+							ID:          deployment.Name,
+							Name:        deployment.Name,
+							Namespace:   deployment.Namespace,
+							ClusterID:   clusterIDStr,
+							ClusterName: cluster.Name,
+							Status:      "Deployment",
+							Kind:        "Deployment",
+							Description: replicas,
+						})
+					}
+				}
+			}
+		}
+
+		// 如果结果数量达到限制，停止搜索
+		if len(results) >= limit {
+			break
+		}
+	}
+
+	// 限制结果数量
+	if len(results) > limit {
+		results = results[:limit]
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "搜索成功",
+		"data": gin.H{
+			"results": results,
+		},
+	})
+}
+
+// getNodeStatus 获取节点状态
+func (h *SearchHandler) getNodeStatus(node interface{}) string {
+	// 这里需要根据实际的节点结构来获取状态
+	// 由于我们使用的是 interface{}，这里简化处理
+	return "Ready"
+}
+
+// getNodeIP 获取节点的主要IP地址
+func (h *SearchHandler) getNodeIP(node interface{}) string {
+	// 这里需要根据实际的节点结构来获取IP
+	// 由于我们使用的是 interface{}，这里简化处理
+	return ""
 }

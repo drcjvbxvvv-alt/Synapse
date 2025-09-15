@@ -136,8 +136,9 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		// search
 		search := protected.Group("/search")
 		{
-			searchHandler := handlers.NewSearchHandler(db, cfg)
+			searchHandler := handlers.NewSearchHandler(db, cfg, k8sMgr, clusterSvc)
 			search.GET("", searchHandler.GlobalSearch)
+			search.GET("/quick", searchHandler.QuickSearch)
 		}
 
 		// audit

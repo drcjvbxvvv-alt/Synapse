@@ -4,7 +4,6 @@ import {
   Layout,
   Menu,
   Button,
-  Input,
   Badge,
   Dropdown,
   Avatar,
@@ -17,7 +16,6 @@ import {
   DesktopOutlined,
   RocketOutlined,
   AppstoreOutlined,
-  SearchOutlined,
   BellOutlined,
   UserOutlined,
   BarChartOutlined,
@@ -37,6 +35,7 @@ import {
 import type { MenuProps as AntMenuProps } from 'antd';
 import type {  Cluster } from '../types';
 import { clusterService } from '../services/clusterService';
+import SearchDropdown from '../components/SearchDropdown';
 
 
 const { Header, Sider, Content } = Layout;
@@ -123,7 +122,6 @@ if (typeof document !== 'undefined') {
     document.head.appendChild(styleElement);
   }
 }
-const { Search } = Input;
 
 type MenuItem = Required<AntMenuProps>['items'][number];
 
@@ -494,7 +492,22 @@ const MainLayout: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginLeft: 16 }}>
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginLeft: 16, 
+              cursor: 'pointer',
+              transition: 'opacity 0.2s'
+            }}
+            onClick={() => navigate('/')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.8';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
             <img 
               src="/src/assets/kubernetes.png" 
               alt="Kubernetes" 
@@ -505,14 +518,7 @@ const MainLayout: React.FC = () => {
         </div>
 
         <div style={{ flex: 1, maxWidth: 600, margin: '0 24px',display: 'flex', alignItems: 'center' }}>
-          <Search
-            placeholder="搜索Pod、Deployment、Service..."
-            allowClear
-            enterButton={<SearchOutlined />}
-            size="middle"
-            onSearch={handleSearch}
-            style={{ width: '100%' }}
-          />
+          <SearchDropdown onSearch={handleSearch} />
         </div>
 
         <Space size="middle">
