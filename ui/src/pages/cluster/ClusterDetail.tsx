@@ -36,6 +36,7 @@ import {
 } from '@ant-design/icons';
 import KubectlTerminal from '../../components/KubectlTerminal';
 import MonitoringCharts from '../../components/MonitoringCharts';
+import MonitoringConfigForm from '../../components/MonitoringConfigForm';
 import type { ColumnsType } from 'antd/es/table';
 import type { Cluster, Node, Pod, K8sEvent } from '../../types';
 import { clusterService } from '../../services/clusterService';
@@ -212,21 +213,42 @@ const ClusterDetail: React.FC = () => {
 
   // 使用监控图表组件
   const ClusterMonitoring = () => (
-    <MonitoringCharts clusterId={id} />
+    <MonitoringCharts 
+      clusterId={id} 
+      clusterName={cluster?.name}
+      type="cluster"
+    />
   );
 
   // Tabs配置
   const tabItems = [
-    // {
-    //   key: 'overview',
-    //   label: (
-    //     <span>
-    //       <BarChartOutlined />
-    //       监控概览
-    //     </span>
-    //   ),
-    //   children: <ClusterMonitoring />,
-    // },
+    {
+      key: 'monitoring',
+      label: (
+        <span>
+          <BarChartOutlined />
+          监控概览
+        </span>
+      ),
+      children: <ClusterMonitoring />,
+    },
+    {
+      key: 'config',
+      label: (
+        <span>
+          <CodeOutlined />
+          监控配置
+        </span>
+      ),
+      children: (
+        <MonitoringConfigForm 
+          clusterId={id} 
+          onConfigChange={() => {
+            message.success('监控配置已更新');
+          }}
+        />
+      ),
+    },
     {
       key: 'events',
       label: 'K8S 事件',

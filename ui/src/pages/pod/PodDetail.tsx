@@ -23,8 +23,10 @@ import {
   DeleteOutlined,
   FileTextOutlined,
   ConsoleSqlOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
+import MonitoringCharts from '../../components/MonitoringCharts';
 import type { PodInfo, ContainerInfo } from '../../services/podService';
 
 const { Title, Text } = Typography;
@@ -255,6 +257,23 @@ const PodDetail: React.FC<PodDetailProps> = () => {
 
       {/* 详情内容 */}
       <Tabs defaultActiveKey="overview">
+        <TabPane 
+          tab={
+            <span>
+              <BarChartOutlined />
+              监控
+            </span>
+          } 
+          key="monitoring"
+        >
+          <MonitoringCharts 
+            clusterId={clusterId} 
+            namespace={namespace}
+            podName={name}
+            type="pod"
+          />
+        </TabPane>
+
         <TabPane tab="概览" key="overview">
           <Row gutter={[16, 16]}>
             <Col span={12}>

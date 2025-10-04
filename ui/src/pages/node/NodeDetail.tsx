@@ -489,7 +489,13 @@ const NodeDetail: React.FC = () => {
                   监控概览
                 </span>
               ),
-              children: <MonitoringCharts clusterId={clusterId} nodeId={nodeName} />,
+              children: (
+                <MonitoringCharts 
+                  clusterId={clusterId} 
+                  nodeName={nodeName}
+                  type="node"
+                />
+              ),
             },
             {
               key: 'overview',

@@ -41,6 +41,8 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 	// 统一的 Service 实例，避免重复创建
 	clusterSvc := services.NewClusterService(db)
+	monitoringConfigSvc := services.NewMonitoringConfigService(db)
+	prometheusSvc := services.NewPrometheusService()
 	// K8s Informer 管理器
 	k8sMgr := k8s.NewClusterInformerManager()
 	// 预热所有已存在集群的 Informer（后台执行，不阻塞启动）
@@ -95,6 +97,16 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				cluster.GET("/events", clusterHandler.GetClusterEvents)
 				cluster.DELETE("", clusterHandler.DeleteCluster)
 
+				// monitoring 子分组
+				monitoringHandler := handlers.NewMonitoringHandler(monitoringConfigSvc, prometheusSvc)
+				monitoring := cluster.Group("/monitoring")
+				{
+					monitoring.GET("/config", monitoringHandler.GetMonitoringConfig)
+					monitoring.PUT("/config", monitoringHandler.UpdateMonitoringConfig)
+					monitoring.POST("/test-connection", monitoringHandler.TestMonitoringConnection)
+					monitoring.GET("/metrics", monitoringHandler.GetClusterMetrics)
+				}
+
 				// nodes 子分组
 				nodeHandler := handlers.NewNodeHandler(db, cfg, clusterSvc, k8sMgr)
 				nodes := cluster.Group("/nodes")
@@ -105,6 +117,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					nodes.POST("/:name/cordon", nodeHandler.CordonNode)
 					nodes.POST("/:name/uncordon", nodeHandler.UncordonNode)
 					nodes.POST("/:name/drain", nodeHandler.DrainNode)
+					nodes.GET("/:name/metrics", monitoringHandler.GetNodeMetrics)
 				}
 
 				// pods 子分组
@@ -117,6 +130,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					pods.GET("/:namespace/:name", podHandler.GetPod)
 					pods.DELETE("/:namespace/:name", podHandler.DeletePod)
 					pods.GET("/:namespace/:name/logs", podHandler.GetPodLogs)
+					pods.GET("/:namespace/:name/metrics", monitoringHandler.GetPodMetrics)
 				}
 
 				// workloads 子分组
@@ -149,6 +163,10 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			audit.GET("/terminal/sessions/:sessionId", auditHandler.GetTerminalSession)
 			audit.GET("/terminal/sessions/:sessionId/commands", auditHandler.GetTerminalCommands)
 		}
+
+		// monitoring templates
+		monitoringHandler := handlers.NewMonitoringHandler(monitoringConfigSvc, prometheusSvc)
+		protected.GET("/monitoring/templates", monitoringHandler.GetMonitoringTemplates)
 	}
 
 	// WebSocket：建议也加认证

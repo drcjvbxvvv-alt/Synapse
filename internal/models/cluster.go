@@ -24,6 +24,9 @@ type Cluster struct {
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
 
+	// 监控配置
+	MonitoringConfig string `json:"monitoring_config" gorm:"type:json"` // JSON 格式存储监控配置
+
 	// 关联关系
 	Creator         User              `json:"creator" gorm:"foreignKey:CreatedBy"`
 	TerminalSession []TerminalSession `json:"terminal_sessions" gorm:"foreignKey:ClusterID"`
@@ -54,4 +57,88 @@ type ClusterMetrics struct {
 
 	// 关联关系
 	Cluster Cluster `json:"cluster" gorm:"foreignKey:ClusterID"`
+}
+
+// MonitoringConfig 监控配置
+type MonitoringConfig struct {
+	Type     string                 `json:"type"`     // prometheus, victoriametrics, disabled
+	Endpoint string                 `json:"endpoint"` // 监控数据源地址
+	Auth     *MonitoringAuth        `json:"auth,omitempty"`
+	Labels   map[string]string      `json:"labels,omitempty"` // 用于统一数据源的集群标签
+	Options  map[string]interface{} `json:"options,omitempty"`
+}
+
+// MonitoringAuth 监控认证配置
+type MonitoringAuth struct {
+	Type     string `json:"type"` // none, basic, bearer, mtls
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"`
+	CertFile string `json:"cert_file,omitempty"`
+	KeyFile  string `json:"key_file,omitempty"`
+	CAFile   string `json:"ca_file,omitempty"`
+}
+
+// MetricsQuery 监控查询参数
+type MetricsQuery struct {
+	Query   string            `json:"query"`
+	Start   int64             `json:"start"`
+	End     int64             `json:"end"`
+	Step    string            `json:"step"`
+	Timeout string            `json:"timeout,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
+}
+
+// MetricsResponse 监控查询响应
+type MetricsResponse struct {
+	Status string      `json:"status"`
+	Data   MetricsData `json:"data"`
+}
+
+// MetricsData 监控数据
+type MetricsData struct {
+	ResultType string          `json:"resultType"`
+	Result     []MetricsResult `json:"result"`
+}
+
+// MetricsResult 监控结果
+type MetricsResult struct {
+	Metric map[string]string `json:"metric"`
+	Values [][]interface{}   `json:"values,omitempty"`
+	Value  []interface{}     `json:"value,omitempty"`
+}
+
+// ClusterMetricsData 集群监控数据
+type ClusterMetricsData struct {
+	CPU     *MetricSeries   `json:"cpu,omitempty"`
+	Memory  *MetricSeries   `json:"memory,omitempty"`
+	Network *NetworkMetrics `json:"network,omitempty"`
+	Storage *MetricSeries   `json:"storage,omitempty"`
+	Pods    *PodMetrics     `json:"pods,omitempty"`
+}
+
+// MetricSeries 指标时间序列
+type MetricSeries struct {
+	Current float64     `json:"current"`
+	Series  []DataPoint `json:"series"`
+}
+
+// DataPoint 数据点
+type DataPoint struct {
+	Timestamp int64   `json:"timestamp"`
+	Value     float64 `json:"value"`
+}
+
+// NetworkMetrics 网络指标
+type NetworkMetrics struct {
+	In  *MetricSeries `json:"in"`
+	Out *MetricSeries `json:"out"`
+}
+
+// PodMetrics Pod指标
+type PodMetrics struct {
+	Total   int `json:"total"`
+	Running int `json:"running"`
+	Pending int `json:"pending"`
+	Failed  int `json:"failed"`
 }
