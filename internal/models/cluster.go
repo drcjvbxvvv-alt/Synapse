@@ -142,3 +142,10 @@ type PodMetrics struct {
 	Pending int `json:"pending"`
 	Failed  int `json:"failed"`
 }
+
+// ContainerSubnetIPs 容器子网IP信息
+type ContainerSubnetIPs struct {
+	TotalIPs     int `json:"total_ips"`
+	UsedIPs      int `json:"used_ips"`
+	AvailableIPs int `json:"available_ips"`
+}

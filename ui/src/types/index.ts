@@ -14,6 +14,27 @@ export interface Cluster {
   labels?: Record<string, string>;
 }
 
+// 容器子网IP信息
+export interface ContainerSubnetIPs {
+  total_ips: number;
+  used_ips: number;
+  available_ips: number;
+}
+
+// 集群概览信息
+export interface ClusterOverview {
+  clusterID: number;
+  nodes: number;
+  namespace: number;
+  pods: number;
+  deployments: number;
+  statefulsets: number;
+  daemonsets: number;
+  jobs: number;
+  rollouts: number;
+  containerSubnetIPs?: ContainerSubnetIPs;
+}
+
 export interface ClusterStats {
   totalClusters: number;
   healthyClusters: number;

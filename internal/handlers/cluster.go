@@ -384,6 +384,20 @@ func (h *ClusterHandler) GetClusterOverview(c *gin.Context) {
 	// 确保本集群的 informer 已初始化并启动
 	if _, err := h.k8sMgr.EnsureForCluster(cluster); err == nil {
 		if snap, err := h.k8sMgr.GetOverviewSnapshot(c.Request.Context(), cluster.ID); err == nil {
+			// 获取容器子网IP信息
+			containerSubnetIPs, err := h.getContainerSubnetIPs(c.Request.Context(), cluster)
+			if err != nil {
+				logger.Error("获取容器子网IP信息失败", "error", err)
+				// 不返回错误，只是不显示容器子网信息
+			} else {
+				// 转换类型
+				snap.ContainerSubnetIPs = &k8s.ContainerSubnetIPs{
+					TotalIPs:     containerSubnetIPs.TotalIPs,
+					UsedIPs:      containerSubnetIPs.UsedIPs,
+					AvailableIPs: containerSubnetIPs.AvailableIPs,
+				}
+			}
+
 			c.JSON(http.StatusOK, gin.H{
 				"code":    200,
 				"message": "获取成功",
@@ -392,6 +406,32 @@ func (h *ClusterHandler) GetClusterOverview(c *gin.Context) {
 			return
 		}
 	}
+
+	// 如果 informer 方式失败，返回错误
+	c.JSON(http.StatusServiceUnavailable, gin.H{
+		"code":    503,
+		"message": "集群信息获取失败",
+		"data":    nil,
+	})
+}
+
+// getContainerSubnetIPs 获取容器子网IP信息
+func (h *ClusterHandler) getContainerSubnetIPs(ctx context.Context, cluster *models.Cluster) (*models.ContainerSubnetIPs, error) {
+	// 获取监控配置
+	monitoringConfigService := services.NewMonitoringConfigService(h.db)
+	config, err := monitoringConfigService.GetMonitoringConfig(cluster.ID)
+	if err != nil {
+		return nil, fmt.Errorf("获取监控配置失败: %w", err)
+	}
+
+	// 如果监控功能被禁用，返回空信息
+	if config.Type == "disabled" {
+		return nil, fmt.Errorf("监控功能已禁用")
+	}
+
+	// 查询容器子网IP信息
+	prometheusService := services.NewPrometheusService()
+	return prometheusService.QueryContainerSubnetIPs(ctx, config)
 }
 
 /*

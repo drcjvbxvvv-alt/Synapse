@@ -49,7 +49,6 @@ func (s *PrometheusService) QueryPrometheus(ctx context.Context, config *models.
 
 	// 创建请求
 	req, err := http.NewRequestWithContext(ctx, "GET", queryURL.String(), nil)
-	logger.Info("queryURL", "queryURL", queryURL.String())
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %w", err)
 	}
@@ -99,6 +98,9 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 	// 构建集群标签选择器
 	clusterSelector := s.buildClusterSelector(config.Labels, clusterName)
 
+	// 如果是 prometheus ，标签不用过来
+	clusterSelector = ""
+
 	// 查询 CPU 使用率
 	// todo prometheus 不加集群标签，victoriametrics 需要加集群标签
 	if cpuSeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m]))) * 100"), start, end, step); err == nil {
@@ -115,10 +117,10 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 		metrics.Network = networkMetrics
 	}
 
-	// 查询存储指标
-	if storageSeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(node_filesystem_size_bytes{%s}) - sum(node_filesystem_avail_bytes{%s})", clusterSelector, clusterSelector), start, end, step); err == nil {
-		metrics.Storage = storageSeries
-	}
+	// // 查询存储指标
+	// if storageSeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(node_filesystem_size_bytes{%s}) - sum(node_filesystem_avail_bytes{%s})", clusterSelector, clusterSelector), start, end, step); err == nil {
+	// 	metrics.Storage = storageSeries
+	// }
 
 	// 查询 Pod 指标
 	if podMetrics, err := s.queryPodMetrics(ctx, config, clusterSelector); err == nil {
@@ -482,10 +484,9 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 		logger.Error("查询Pod总数失败", "error", err)
 		return &models.PodMetrics{}, nil
 	}
-
 	total := 0
-	if len(totalResp.Data.Result) > 0 && len(totalResp.Data.Result[0].Value) >= 2 {
-		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", totalResp.Data.Result[0].Value[1]), 64); err == nil {
+	if len(totalResp.Data.Result) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", totalResp.Data.Result[0].Values[0][1]), 64); err == nil {
 			total = int(val)
 		}
 	}
@@ -504,8 +505,8 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 	}
 
 	running := 0
-	if len(runningResp.Data.Result) > 0 && len(runningResp.Data.Result[0].Value) >= 2 {
-		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", runningResp.Data.Result[0].Value[1]), 64); err == nil {
+	if len(runningResp.Data.Result) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", runningResp.Data.Result[0].Values[0][1]), 64); err == nil {
 			running = int(val)
 		}
 	}
@@ -524,8 +525,8 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 	}
 
 	pending := 0
-	if len(pendingResp.Data.Result) > 0 && len(pendingResp.Data.Result[0].Value) >= 2 {
-		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", pendingResp.Data.Result[0].Value[1]), 64); err == nil {
+	if len(pendingResp.Data.Result) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", pendingResp.Data.Result[0].Values[0][1]), 64); err == nil {
 			pending = int(val)
 		}
 	}
@@ -544,8 +545,8 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 	}
 
 	failed := 0
-	if len(failedResp.Data.Result) > 0 && len(failedResp.Data.Result[0].Value) >= 2 {
-		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", failedResp.Data.Result[0].Value[1]), 64); err == nil {
+	if len(failedResp.Data.Result) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", failedResp.Data.Result[0].Values[0][1]), 64); err == nil {
 			failed = int(val)
 		}
 	}
@@ -555,6 +556,65 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 		Running: running,
 		Pending: pending,
 		Failed:  failed,
+	}, nil
+}
+
+// QueryContainerSubnetIPs 查询容器子网IP信息
+func (s *PrometheusService) QueryContainerSubnetIPs(ctx context.Context, config *models.MonitoringConfig) (*models.ContainerSubnetIPs, error) {
+	if config.Type == "disabled" {
+		return nil, fmt.Errorf("监控功能已禁用")
+	}
+
+	// 查询总IP数
+	totalIPsQuery := "sum(ipam_ippool_size)"
+	totalResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: totalIPsQuery,
+		Start: time.Now().Unix(),
+		End:   time.Now().Unix(),
+		Step:  "1m",
+	})
+	if err != nil {
+		logger.Error("查询总IP数失败", "error", err)
+		return &models.ContainerSubnetIPs{}, nil
+	}
+
+	totalIPs := 0
+	if len(totalResp.Data.Result) > 0 && len(totalResp.Data.Result[0].Values) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", totalResp.Data.Result[0].Values[0][1]), 64); err == nil {
+			totalIPs = int(val)
+		}
+	}
+
+	// 查询已使用IP数
+	usedIPsQuery := "sum(ipam_allocations_in_use)"
+	usedResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: usedIPsQuery,
+		Start: time.Now().Unix(),
+		End:   time.Now().Unix(),
+		Step:  "1m",
+	})
+	if err != nil {
+		logger.Error("查询已使用IP数失败", "error", err)
+		return &models.ContainerSubnetIPs{TotalIPs: totalIPs}, nil
+	}
+
+	usedIPs := 0
+	if len(usedResp.Data.Result) > 0 && len(usedResp.Data.Result[0].Values) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", usedResp.Data.Result[0].Values[0][1]), 64); err == nil {
+			usedIPs = int(val)
+		}
+	}
+
+	// 计算可用IP数
+	availableIPs := totalIPs - usedIPs
+	if availableIPs < 0 {
+		availableIPs = 0
+	}
+
+	return &models.ContainerSubnetIPs{
+		TotalIPs:     totalIPs,
+		UsedIPs:      usedIPs,
+		AvailableIPs: availableIPs,
 	}, nil
 }
 

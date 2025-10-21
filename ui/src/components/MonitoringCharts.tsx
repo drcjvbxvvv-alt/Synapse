@@ -299,20 +299,24 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               <Card size="small" title="网络流量">
                 <Row gutter={16}>
                   <Col span={12}>
+                    {/* genAI_main_start */}
                     <Statistic
                       title="入站流量"
-                      value={metrics.network.in.current}
-                      suffix="B/s"
+                      value={formatValue(metrics.network.in.current, 'bytes')}
+                      suffix="/s"
                       precision={2}
                     />
+                    {/* genAI_main_end */}
                   </Col>
                   <Col span={12}>
+                    {/* genAI_main_start */}
                     <Statistic
                       title="出站流量"
-                      value={metrics.network.out.current}
-                      suffix="B/s"
+                      value={formatValue(metrics.network.out.current, 'bytes')}
+                      suffix="/s"
                       precision={2}
                     />
+                    {/* genAI_main_end */}
                   </Col>
                 </Row>
                 {renderNetworkChart(metrics.network.in.series, metrics.network.out.series)}

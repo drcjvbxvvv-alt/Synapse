@@ -38,7 +38,7 @@ import KubectlTerminal from '../../components/KubectlTerminal';
 import MonitoringCharts from '../../components/MonitoringCharts';
 import MonitoringConfigForm from '../../components/MonitoringConfigForm';
 import type { ColumnsType } from 'antd/es/table';
-import type { Cluster, Node, Pod, K8sEvent } from '../../types';
+import type { Cluster, Node, Pod, K8sEvent, ClusterOverview } from '../../types';
 import { clusterService } from '../../services/clusterService';
 
 const { Title, Text } = Typography;
@@ -50,7 +50,7 @@ const ClusterDetail: React.FC = () => {
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [pods, setPods] = useState<Pod[]>([]);
-  const [clusterOverview, setClusterOverview] = useState<any>(null);
+  const [clusterOverview, setClusterOverview] = useState<ClusterOverview | null>(null);
   const [activeTab, setActiveTab] = useState('events');
   const [loadingNodes, setLoadingNodes] = useState(false);
   const [loadingPods, setLoadingPods] = useState(false);
@@ -79,7 +79,7 @@ const ClusterDetail: React.FC = () => {
     setLoadingOverview(true);
     try {
       const response = await clusterService.getClusterOverview(id);
-      setClusterOverview(response.data);
+      setClusterOverview(response.data as ClusterOverview);
     } catch (error) {
       message.error('获取集群概览信息失败');
       console.error('获取集群概览信息失败:', error);
@@ -214,8 +214,8 @@ const ClusterDetail: React.FC = () => {
   // 使用监控图表组件
   const ClusterMonitoring = () => (
     <MonitoringCharts 
-      clusterId={id} 
-      clusterName={cluster?.name}
+      clusterId={id || ''} 
+      clusterName={cluster?.name || ''}
       type="cluster"
     />
   );
@@ -242,7 +242,7 @@ const ClusterDetail: React.FC = () => {
       ),
       children: (
         <MonitoringConfigForm 
-          clusterId={id} 
+          clusterId={id || ''} 
           onConfigChange={() => {
             message.success('监控配置已更新');
           }}
@@ -328,7 +328,17 @@ const ClusterDetail: React.FC = () => {
                   {new Date(cluster.createdAt).toLocaleString()}
                 </Space>
               </Descriptions.Item>
-              <Descriptions.Item label="容器子网">todo cidr（可用/总IP数：1024/4096）</Descriptions.Item>
+              <Descriptions.Item label="容器子网">
+                {/* genAI_main_start */}
+                {clusterOverview?.containerSubnetIPs ? (
+                  <span>
+                    CIDR（可用/总IP数：{clusterOverview.containerSubnetIPs.available_ips}/{clusterOverview.containerSubnetIPs.total_ips}）
+                  </span>
+                ) : (
+                  <span>CIDR（IP信息不可用）</span>
+                )}
+                {/* genAI_main_end */}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
 
