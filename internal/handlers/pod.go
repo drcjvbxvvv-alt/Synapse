@@ -1,8 +1,11 @@
+/** genAI_main_start */
 package handlers
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -17,18 +20,24 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/kubernetes"
 )
 
+/** genAI_main_end */
+
+/** genAI_main_start */
 // PodHandler Pod处理器
 type PodHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
+	upgrader       websocket.Upgrader
 }
 
 // NewPodHandler 创建Pod处理器
@@ -38,8 +47,17 @@ func NewPodHandler(db *gorm.DB, cfg *config.Config, clusterService *services.Clu
 		cfg:            cfg,
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,
+		upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true // 在生产环境中应该检查Origin
+			},
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+		},
 	}
 }
+
+/** genAI_main_end */
 
 // PodInfo Pod信息
 type PodInfo struct {
@@ -417,15 +435,16 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	}
 	defer logs.Close()
 
-	// 如果是follow模式，使用WebSocket流式传输
+	/** genAI_main_start */
+	// 如果是follow模式，返回错误提示使用WebSocket
 	if follow {
-		// TODO: 实现WebSocket流式日志传输
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"code":    501,
-			"message": "流式日志功能待实现",
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "流式日志请使用WebSocket连接: /ws/clusters/:clusterID/pods/:namespace/:name/logs",
 		})
 		return
 	}
+	/** genAI_main_end */
 
 	// 读取日志内容
 	buf := make([]byte, 4096)
@@ -753,3 +772,213 @@ func (h *PodHandler) GetPodNodes(c *gin.Context) {
 		"data":    nodes,
 	})
 }
+
+/** genAI_main_start */
+// StreamPodLogs WebSocket流式传输Pod日志
+func (h *PodHandler) StreamPodLogs(c *gin.Context) {
+	clusterId := c.Param("clusterID")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	container := c.Query("container")
+	previous := c.Query("previous") == "true"
+	tailLines := c.Query("tailLines")
+	sinceSeconds := c.Query("sinceSeconds")
+
+	logger.Info("WebSocket流式获取Pod日志: %s/%s/%s, container=%s", clusterId, namespace, name, container)
+
+	// 从集群服务获取集群信息
+	clusterID := parseClusterID(clusterId)
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": "集群不存在",
+		})
+		return
+	}
+
+	// 升级到WebSocket连接
+	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		logger.Error("升级WebSocket连接失败", "error", err)
+		return
+	}
+	defer conn.Close()
+
+	// 发送连接成功消息
+	err = conn.WriteJSON(map[string]interface{}{
+		"type":    "connected",
+		"message": "WebSocket连接已建立",
+	})
+	if err != nil {
+		logger.Error("发送连接消息失败", "error", err)
+		return
+	}
+
+	// 创建K8s客户端
+	var k8sClient *services.K8sClient
+	if cluster.KubeconfigEnc != "" {
+		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
+	} else {
+		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
+	}
+	if err != nil {
+		conn.WriteJSON(map[string]interface{}{
+			"type":    "error",
+			"message": "创建K8s客户端失败: " + err.Error(),
+		})
+		return
+	}
+
+	/** genAI_main_start */
+	// 创建上下文 - 使用WithCancel而不是WithTimeout，因为WebSocket需要长时间运行
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// 构建日志选项
+	logOptions := &corev1.PodLogOptions{
+		Follow:   true, // 流式模式
+		Previous: previous,
+	}
+	/** genAI_main_end */
+
+	if container != "" {
+		logOptions.Container = container
+	}
+
+	if tailLines != "" {
+		if lines, err := strconv.ParseInt(tailLines, 10, 64); err == nil {
+			logOptions.TailLines = &lines
+		}
+	}
+
+	if sinceSeconds != "" {
+		if seconds, err := strconv.ParseInt(sinceSeconds, 10, 64); err == nil {
+			logOptions.SinceSeconds = &seconds
+		}
+	}
+
+	/** genAI_main_start */
+	// 为日志流创建无超时的专用REST config
+	// 克隆原有config并移除超时限制
+	logStreamConfig := *k8sClient.GetRestConfig()
+	logStreamConfig.Timeout = 0 // 移除超时限制
+
+	// 使用无超时config创建临时clientset
+	logClientset, err := kubernetes.NewForConfig(&logStreamConfig)
+	if err != nil {
+		conn.WriteJSON(map[string]interface{}{
+			"type":    "error",
+			"message": "创建日志客户端失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 获取日志流
+	req := logClientset.CoreV1().Pods(namespace).GetLogs(name, logOptions)
+	logStream, err := req.Stream(context.Background())
+	if err != nil {
+		conn.WriteJSON(map[string]interface{}{
+			"type":    "error",
+			"message": "获取日志流失败: " + err.Error(),
+		})
+		return
+	}
+	defer logStream.Close()
+	/** genAI_main_end */
+
+	// 创建读取器
+	reader := bufio.NewReader(logStream)
+
+	// 启动goroutine读取客户端消息（用于处理关闭连接）
+	go func() {
+		for {
+			_, _, err := conn.ReadMessage()
+			if err != nil {
+				logger.Info("WebSocket连接关闭", "error", err)
+				cancel()
+				logStream.Close() // 主动关闭日志流
+				return
+			}
+		}
+	}()
+
+	/** genAI_main_start */
+	// 发送日志开始消息
+	err = conn.WriteJSON(map[string]interface{}{
+		"type":    "start",
+		"message": "开始接收日志流",
+	})
+	if err != nil {
+		logger.Error("发送开始消息失败", "error", err)
+		return
+	}
+
+	// 流式读取并发送日志
+	for {
+		/** genAI_main_end */
+		select {
+		case <-ctx.Done():
+			// 连接被关闭
+			conn.WriteJSON(map[string]interface{}{
+				"type":    "closed",
+				"message": "日志流已关闭",
+			})
+			return
+		default:
+			/** genAI_main_start */
+			// 读取一行日志
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				if err == io.EOF {
+					// 日志流正常结束
+					conn.WriteJSON(map[string]interface{}{
+						"type":    "end",
+						"message": "日志流已结束",
+					})
+					return
+				}
+
+				// 检查是否是因为stream被关闭（客户端断开连接）
+				// 包含 "closed"、"canceled" 或 "cancel" 的错误都是正常的断开
+				errStr := err.Error()
+				if strings.Contains(errStr, "closed") ||
+					strings.Contains(errStr, "canceled") ||
+					strings.Contains(errStr, "cancel") {
+					logger.Info("日志流停止: 连接已关闭或取消")
+					return
+				}
+
+				// 检查是否是context取消
+				if ctx.Err() != nil {
+					logger.Info("日志流停止: context取消")
+					return
+				}
+
+				// 其他错误才记录ERROR
+				logger.Error("读取日志失败", "error", err)
+				conn.WriteJSON(map[string]interface{}{
+					"type":    "error",
+					"message": "读取日志失败: " + err.Error(),
+				})
+				return
+			}
+			/** genAI_main_end */
+
+			/** genAI_main_start */
+			// 发送日志内容
+			err = conn.WriteJSON(map[string]interface{}{
+				"type": "log",
+				"data": line,
+			})
+			if err != nil {
+				// WebSocket发送失败，客户端可能已断开
+				logger.Info("发送日志失败，客户端可能已断开", "error", err)
+				return
+			}
+			/** genAI_main_end */
+		}
+	}
+}
+
+/** genAI_main_end */

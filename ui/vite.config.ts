@@ -1,3 +1,4 @@
+/** genAI_main_start */
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -19,16 +20,24 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    include: ['monaco-editor'],
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,
+    commonjsOptions: {
+      include: [/monaco-editor/, /node_modules/],
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
           antd: ['antd', '@ant-design/icons'],
+          monaco: ['@monaco-editor/react', 'monaco-editor'],
         },
       },
     },
   },
 })
+/** genAI_main_end */

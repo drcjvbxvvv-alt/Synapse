@@ -20,7 +20,6 @@ import (
 	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -345,6 +344,7 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 	var workload interface{}
 	var workloadInfo WorkloadInfo
 
+	// genAI_main_start
 	switch WorkloadType(workloadType) {
 	case WorkloadTypeDeployment:
 		deployment, err := k8sClient.GetClientset().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -355,6 +355,9 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 			})
 			return
 		}
+		// 确保设置 APIVersion 和 Kind
+		deployment.APIVersion = "apps/v1"
+		deployment.Kind = "Deployment"
 		workload = deployment
 		workloadInfo = h.convertDeploymentToWorkloadInfo(deployment)
 
@@ -375,6 +378,9 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 			})
 			return
 		}
+		// 确保设置 APIVersion 和 Kind
+		rollout.APIVersion = "argoproj.io/v1alpha1"
+		rollout.Kind = "Rollout"
 		workload = rollout
 		workloadInfo = h.convertRolloutToWorkloadInfo(rollout)
 
@@ -387,6 +393,9 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 			})
 			return
 		}
+		// 确保设置 APIVersion 和 Kind
+		statefulSet.APIVersion = "apps/v1"
+		statefulSet.Kind = "StatefulSet"
 		workload = statefulSet
 		workloadInfo = h.convertStatefulSetToWorkloadInfo(statefulSet)
 
@@ -399,6 +408,9 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 			})
 			return
 		}
+		// 确保设置 APIVersion 和 Kind
+		daemonSet.APIVersion = "apps/v1"
+		daemonSet.Kind = "DaemonSet"
 		workload = daemonSet
 		workloadInfo = h.convertDaemonSetToWorkloadInfo(daemonSet)
 
@@ -411,6 +423,9 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 			})
 			return
 		}
+		// 确保设置 APIVersion 和 Kind
+		job.APIVersion = "batch/v1"
+		job.Kind = "Job"
 		workload = job
 		workloadInfo = h.convertJobToWorkloadInfo(job)
 
@@ -423,6 +438,9 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 			})
 			return
 		}
+		// 确保设置 APIVersion 和 Kind
+		cronJob.APIVersion = "batch/v1beta1"
+		cronJob.Kind = "CronJob"
 		workload = cronJob
 		workloadInfo = h.convertCronJobToWorkloadInfo(cronJob)
 
@@ -433,6 +451,7 @@ func (h *WorkloadHandler) GetWorkload(c *gin.Context) {
 		})
 		return
 	}
+	// genAI_main_end
 
 	// 获取关联的Pod
 	pods, err := h.getWorkloadPods(ctx, k8sClient, namespace, workloadInfo.Selector)
@@ -538,6 +557,7 @@ func (h *WorkloadHandler) ScaleWorkload(c *gin.Context) {
 	})
 }
 
+// genAI_main_start
 // ApplyYAML 应用YAML配置
 func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
 	clusterId := c.Param("clusterID")
@@ -551,7 +571,7 @@ func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	logger.Info("应用YAML配置: cluster=%s, dryRun=%v", clusterId, req.DryRun)
+	logger.Info("应用YAML配置: cluster=%s, dryRun=%v, yaml长度=%d", clusterId, req.DryRun, len(req.YAML))
 
 	// 从集群服务获取集群信息
 	clusterID := parseClusterID(clusterId)
@@ -579,11 +599,12 @@ func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	// 解析YAML
-	decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(req.YAML), 4096)
-	var obj runtime.Object
-	err = decoder.Decode(&obj)
-	if err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// 解析YAML到map[string]interface{}
+	var objMap map[string]interface{}
+	if err := yaml.Unmarshal([]byte(req.YAML), &objMap); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
 			"message": "YAML格式错误: " + err.Error(),
@@ -591,21 +612,77 @@ func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
+	// 验证必要字段
+	if objMap["apiVersion"] == nil || objMap["kind"] == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "YAML缺少必要字段: apiVersion 或 kind",
+		})
+		return
+	}
+
+	kind := objMap["kind"].(string)
+	apiVersion := objMap["apiVersion"].(string)
+
+	// 获取metadata
+	metadata, ok := objMap["metadata"].(map[string]interface{})
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "YAML缺少 metadata 字段",
+		})
+		return
+	}
+
+	name, _ := metadata["name"].(string)
+	namespace, _ := metadata["namespace"].(string)
+	if namespace == "" {
+		namespace = "default"
+	}
+
+	logger.Info("解析YAML: kind=%s, apiVersion=%s, namespace=%s, name=%s", kind, apiVersion, namespace, name)
+
 	var result interface{}
+	var applyErr error
+
 	if req.DryRun {
 		// DryRun模式，只验证不实际应用
+		applyErr = h.applyYAMLToCluster(ctx, k8sClient, req.YAML, namespace, true)
+		if applyErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    400,
+				"message": "YAML验证失败: " + applyErr.Error(),
+			})
+			return
+		}
+
 		result = map[string]interface{}{
-			"dryRun": true,
-			"valid":  true,
-			"object": obj,
+			"dryRun":     true,
+			"valid":      true,
+			"kind":       kind,
+			"apiVersion": apiVersion,
+			"namespace":  namespace,
+			"name":       name,
+			"message":    "YAML格式正确，可以安全应用",
 		}
 	} else {
 		// 实际应用YAML
-		// TODO: 实现真正的YAML应用逻辑，使用k8sClient应用到集群
-		_ = k8sClient // 暂时忽略未使用的变量警告
+		applyErr = h.applyYAMLToCluster(ctx, k8sClient, req.YAML, namespace, false)
+		if applyErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code":    500,
+				"message": "YAML应用失败: " + applyErr.Error(),
+			})
+			return
+		}
+
 		result = map[string]interface{}{
-			"applied": true,
-			"object":  obj,
+			"applied":    true,
+			"kind":       kind,
+			"apiVersion": apiVersion,
+			"namespace":  namespace,
+			"name":       name,
+			"message":    fmt.Sprintf("成功应用 %s/%s", kind, name),
 		}
 	}
 
@@ -615,9 +692,9 @@ func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
 			UserID:       1, // TODO: 从上下文获取用户ID
 			Action:       "apply_yaml",
 			ResourceType: "yaml",
-			ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s"}`, clusterId),
+			ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","kind":"%s","namespace":"%s","name":"%s"}`, clusterId, kind, namespace, name),
 			Result:       "success",
-			Details:      "应用YAML配置",
+			Details:      fmt.Sprintf("应用YAML配置: %s/%s in %s", kind, name, namespace),
 		}
 		h.db.Create(&auditLog)
 	}
@@ -628,6 +705,8 @@ func (h *WorkloadHandler) ApplyYAML(c *gin.Context) {
 		"data":    result,
 	})
 }
+
+// genAI_main_end
 
 // DeleteWorkload 删除工作负载
 func (h *WorkloadHandler) DeleteWorkload(c *gin.Context) {

@@ -107,6 +107,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
 
   const { status, color } = PodService.formatStatus(pod);
 
+  /** genAI_main_start */
   // 容器表格列
   const containerColumns = [
     {
@@ -150,17 +151,23 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       title: '端口',
       dataIndex: 'ports',
       key: 'ports',
-      render: (ports: any[]) => (
-        <Space wrap>
-          {ports.map((port, index) => (
-            <Tag key={index} color="blue">
-              {port.containerPort}/{port.protocol}
-            </Tag>
-          ))}
-        </Space>
-      ),
+      render: (ports: any[]) => {
+        if (!ports || ports.length === 0) {
+          return <Text type="secondary">-</Text>;
+        }
+        return (
+          <Space wrap>
+            {ports.map((port, index) => (
+              <Tag key={index} color="blue">
+                {port.containerPort}/{port.protocol}
+              </Tag>
+            ))}
+          </Space>
+        );
+      },
     },
   ];
+  /** genAI_main_end */
 
   // 条件表格列
   const conditionColumns = [
@@ -255,6 +262,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
         </div>
       </div>
 
+      {/* genAI_main_start */}
       {/* 详情内容 */}
       <Tabs defaultActiveKey="overview">
         <TabPane 
@@ -266,13 +274,16 @@ const PodDetail: React.FC<PodDetailProps> = () => {
           } 
           key="monitoring"
         >
-          <MonitoringCharts 
-            clusterId={clusterId} 
-            namespace={namespace}
-            podName={name}
-            type="pod"
-          />
+          {clusterId && namespace && name && (
+            <MonitoringCharts 
+              clusterId={clusterId} 
+              namespace={namespace}
+              podName={name}
+              type="pod"
+            />
+          )}
         </TabPane>
+        {/* genAI_main_end */}
 
         <TabPane tab="概览" key="overview">
           <Row gutter={[16, 16]}>

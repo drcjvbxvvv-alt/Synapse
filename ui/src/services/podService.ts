@@ -276,4 +276,41 @@ export class PodService {
   static async getPodNodes(clusterId: string): Promise<{ code: number; message: string; data: string[] }> {
     return request.get(`/clusters/${clusterId}/pods/nodes`);
   }
+
+  /** genAI_main_start */
+  // 创建WebSocket连接获取实时日志流
+  static createLogStream(
+    clusterId: string,
+    namespace: string,
+    name: string,
+    options: {
+      container?: string;
+      previous?: boolean;
+      tailLines?: number;
+      sinceSeconds?: number;
+    } = {}
+  ): WebSocket {
+    // 构建WebSocket URL
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host.replace(':5173', ':8080'); // 开发环境端口映射
+    
+    const params = new URLSearchParams();
+    if (options.container) {
+      params.append('container', options.container);
+    }
+    if (options.previous) {
+      params.append('previous', 'true');
+    }
+    if (options.tailLines) {
+      params.append('tailLines', options.tailLines.toString());
+    }
+    if (options.sinceSeconds) {
+      params.append('sinceSeconds', options.sinceSeconds.toString());
+    }
+
+    const url = `${protocol}//${host}/ws/clusters/${clusterId}/pods/${namespace}/${name}/logs?${params}`;
+    
+    return new WebSocket(url);
+  }
+  /** genAI_main_end */
 }

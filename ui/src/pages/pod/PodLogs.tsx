@@ -1,3 +1,4 @@
+/** genAI_main_start */
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -28,6 +29,14 @@ import type { PodInfo } from '../../services/podService';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+// WebSocket消息类型
+interface LogMessage {
+  type: 'connected' | 'start' | 'log' | 'end' | 'error' | 'closed';
+  data?: string;
+  message?: string;
+}
+/** genAI_main_end */
+
 interface PodLogsProps {}
 
 const PodLogs: React.FC<PodLogsProps> = () => {
@@ -38,10 +47,12 @@ const PodLogs: React.FC<PodLogsProps> = () => {
   }>();
   const navigate = useNavigate();
   
+  /** genAI_main_start */
   const [pod, setPod] = useState<PodInfo | null>(null);
   const [logs, setLogs] = useState('');
   const [loading, setLoading] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [connected, setConnected] = useState(false);
   
   // 日志选项
   const [selectedContainer, setSelectedContainer] = useState<string>('');
@@ -50,7 +61,8 @@ const PodLogs: React.FC<PodLogsProps> = () => {
   const [sinceSeconds, setSinceSeconds] = useState<number | undefined>(undefined);
   
   const logsRef = useRef<HTMLPreElement>(null);
-  const followIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  /** genAI_main_end */
 
   // 获取Pod详情
   const fetchPodDetail = async () => {
@@ -117,26 +129,117 @@ const PodLogs: React.FC<PodLogsProps> = () => {
     }
   };
 
+  /** genAI_main_start */
   // 开始/停止跟踪日志
   const toggleFollow = () => {
     if (following) {
-      // 停止跟踪
-      if (followIntervalRef.current) {
-        clearInterval(followIntervalRef.current);
-        followIntervalRef.current = null;
+      // 停止跟踪 - 关闭WebSocket连接
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
       }
       setFollowing(false);
+      setConnected(false);
     } else {
-      // 开始跟踪
-      setFollowing(true);
-      fetchLogs(false); // 先获取一次完整日志
+      // 开始跟踪 - 建立WebSocket连接
+      if (!clusterId || !namespace || !name) {
+        message.error('缺少必要参数');
+        return;
+      }
       
-      // 每5秒获取新日志
-      followIntervalRef.current = setInterval(() => {
-        fetchLogs(true);
-      }, 5000);
+      setFollowing(true);
+      setLoading(true);
+      
+      try {
+        // 创建WebSocket连接
+        const ws = PodService.createLogStream(clusterId, namespace, name, {
+          container: selectedContainer || undefined,
+          previous,
+          tailLines,
+          sinceSeconds,
+        });
+        
+        wsRef.current = ws;
+        
+        // WebSocket事件处理
+        ws.onopen = () => {
+          console.log('WebSocket连接已建立');
+          setConnected(true);
+          setLoading(false);
+        };
+        
+        /** genAI_main_start */
+        ws.onmessage = (event) => {
+          try {
+            const msg: LogMessage = JSON.parse(event.data);
+            
+            switch (msg.type) {
+              case 'connected':
+                message.success('已连接到日志流');
+                break;
+                
+              case 'start':
+                break;
+                
+              case 'log':
+                // 追加日志内容
+                if (msg.data) {
+                  setLogs((prev) => prev + msg.data);
+                  
+                  // 自动滚动到底部
+                  setTimeout(() => {
+                    if (logsRef.current) {
+                      logsRef.current.scrollTop = logsRef.current.scrollHeight;
+                    }
+                  }, 0);
+                }
+                break;
+        /** genAI_main_end */
+                
+              case 'end':
+                message.info('日志流已结束');
+                setFollowing(false);
+                setConnected(false);
+                break;
+                
+              case 'error':
+                message.error(msg.message || '日志流错误');
+                setFollowing(false);
+                setConnected(false);
+                break;
+                
+              case 'closed':
+                setFollowing(false);
+                setConnected(false);
+                break;
+            }
+          } catch (error) {
+            console.error('解析WebSocket消息失败:', error);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('WebSocket错误:', error);
+          message.error('WebSocket连接错误');
+          setFollowing(false);
+          setConnected(false);
+          setLoading(false);
+        };
+        
+        ws.onclose = () => {
+          setFollowing(false);
+          setConnected(false);
+          setLoading(false);
+        };
+      } catch (error) {
+        console.error('创建WebSocket连接失败:', error);
+        message.error('创建连接失败');
+        setFollowing(false);
+        setLoading(false);
+      }
     }
   };
+  /** genAI_main_end */
 
   // 清空日志
   const clearLogs = () => {
@@ -178,14 +281,17 @@ const PodLogs: React.FC<PodLogsProps> = () => {
     }
   }, [selectedContainer, previous, tailLines, sinceSeconds]);
 
-  // 组件卸载时清理定时器
+  /** genAI_main_start */
+  // 组件卸载时清理WebSocket连接
   useEffect(() => {
     return () => {
-      if (followIntervalRef.current) {
-        clearInterval(followIntervalRef.current);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, []);
+  /** genAI_main_end */
 
   if (!pod) {
     return <div>加载中...</div>;
@@ -303,10 +409,20 @@ const PodLogs: React.FC<PodLogsProps> = () => {
       </div>
 
       {/* 状态提示 */}
-      {following && (
+      {following && connected && (
         <Alert
-          message="正在跟踪日志"
-          description="日志将每5秒自动更新一次，点击'停止跟踪'按钮可停止自动更新。"
+          message="正在实时跟踪日志"
+          description="通过WebSocket实时接收日志流，点击'停止跟踪'按钮可停止接收。"
+          type="success"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      
+      {following && !connected && (
+        <Alert
+          message="正在连接..."
+          description="正在建立WebSocket连接，请稍候..."
           type="info"
           showIcon
           style={{ marginBottom: 16 }}

@@ -1,3 +1,4 @@
+// genAI_main_start
 package handlers
 
 import (
@@ -12,7 +13,11 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes/scheme"
 )
+
+// genAI_main_end
 
 // getDeployments 获取Deployment列表
 func (h *WorkloadHandler) getDeployments(ctx context.Context, k8sClient *services.K8sClient, namespace string) ([]WorkloadInfo, error) {
@@ -411,3 +416,105 @@ func (h *WorkloadHandler) scaleStatefulSet(ctx context.Context, k8sClient *servi
 	_, err = k8sClient.GetClientset().AppsV1().StatefulSets(namespace).Update(ctx, statefulSet, metav1.UpdateOptions{})
 	return err
 }
+
+// genAI_main_start
+// applyYAMLToCluster 应用YAML到集群
+func (h *WorkloadHandler) applyYAMLToCluster(ctx context.Context, k8sClient *services.K8sClient, yamlContent string, namespace string, dryRun bool) error {
+	// 创建解码器 - 使用Kubernetes的序列化框架
+	decode := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer().Decode
+
+	// 解析YAML到runtime.Object
+	obj, gvk, err := decode([]byte(yamlContent), nil, nil)
+	if err != nil {
+		return fmt.Errorf("解析YAML失败: %w", err)
+	}
+
+	// 根据 Kind 使用对应的客户端
+	clientset := k8sClient.GetClientset()
+
+	// 设置 DryRun 选项
+	var dryRunOpt []string
+	if dryRun {
+		dryRunOpt = []string{metav1.DryRunAll}
+	}
+
+	switch gvk.Kind {
+	case "Deployment":
+		deployment, ok := obj.(*appsv1.Deployment)
+		if !ok {
+			return fmt.Errorf("无法转换为Deployment类型")
+		}
+		// 尝试获取现有资源
+		existing, err := clientset.AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+		if err == nil {
+			// 资源存在，执行更新
+			deployment.ResourceVersion = existing.ResourceVersion
+			_, err = clientset.AppsV1().Deployments(deployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{DryRun: dryRunOpt})
+			return err
+		}
+		// 资源不存在，执行创建
+		_, err = clientset.AppsV1().Deployments(deployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{DryRun: dryRunOpt})
+		return err
+
+	case "StatefulSet":
+		statefulSet, ok := obj.(*appsv1.StatefulSet)
+		if !ok {
+			return fmt.Errorf("无法转换为StatefulSet类型")
+		}
+		existing, err := clientset.AppsV1().StatefulSets(statefulSet.Namespace).Get(ctx, statefulSet.Name, metav1.GetOptions{})
+		if err == nil {
+			statefulSet.ResourceVersion = existing.ResourceVersion
+			_, err = clientset.AppsV1().StatefulSets(statefulSet.Namespace).Update(ctx, statefulSet, metav1.UpdateOptions{DryRun: dryRunOpt})
+			return err
+		}
+		_, err = clientset.AppsV1().StatefulSets(statefulSet.Namespace).Create(ctx, statefulSet, metav1.CreateOptions{DryRun: dryRunOpt})
+		return err
+
+	case "DaemonSet":
+		daemonSet, ok := obj.(*appsv1.DaemonSet)
+		if !ok {
+			return fmt.Errorf("无法转换为DaemonSet类型")
+		}
+		existing, err := clientset.AppsV1().DaemonSets(daemonSet.Namespace).Get(ctx, daemonSet.Name, metav1.GetOptions{})
+		if err == nil {
+			daemonSet.ResourceVersion = existing.ResourceVersion
+			_, err = clientset.AppsV1().DaemonSets(daemonSet.Namespace).Update(ctx, daemonSet, metav1.UpdateOptions{DryRun: dryRunOpt})
+			return err
+		}
+		_, err = clientset.AppsV1().DaemonSets(daemonSet.Namespace).Create(ctx, daemonSet, metav1.CreateOptions{DryRun: dryRunOpt})
+		return err
+
+	case "Job":
+		job, ok := obj.(*batchv1.Job)
+		if !ok {
+			return fmt.Errorf("无法转换为Job类型")
+		}
+		existing, err := clientset.BatchV1().Jobs(job.Namespace).Get(ctx, job.Name, metav1.GetOptions{})
+		if err == nil {
+			job.ResourceVersion = existing.ResourceVersion
+			_, err = clientset.BatchV1().Jobs(job.Namespace).Update(ctx, job, metav1.UpdateOptions{DryRun: dryRunOpt})
+			return err
+		}
+		_, err = clientset.BatchV1().Jobs(job.Namespace).Create(ctx, job, metav1.CreateOptions{DryRun: dryRunOpt})
+		return err
+
+	case "CronJob":
+		cronJob, ok := obj.(*batchv1beta1.CronJob)
+		if !ok {
+			return fmt.Errorf("无法转换为CronJob类型")
+		}
+		existing, err := clientset.BatchV1beta1().CronJobs(cronJob.Namespace).Get(ctx, cronJob.Name, metav1.GetOptions{})
+		if err == nil {
+			cronJob.ResourceVersion = existing.ResourceVersion
+			_, err = clientset.BatchV1beta1().CronJobs(cronJob.Namespace).Update(ctx, cronJob, metav1.UpdateOptions{DryRun: dryRunOpt})
+			return err
+		}
+		_, err = clientset.BatchV1beta1().CronJobs(cronJob.Namespace).Create(ctx, cronJob, metav1.CreateOptions{DryRun: dryRunOpt})
+		return err
+
+	default:
+		return fmt.Errorf("不支持的资源类型: %s (GVK: %v)", gvk.Kind, gvk)
+	}
+}
+
+// genAI_main_end

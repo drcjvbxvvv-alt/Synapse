@@ -145,7 +145,7 @@ export class WorkloadService {
     yaml: string,
     dryRun = false
   ): Promise<any> {
-    return request.post(`/clusters/${clusterId}/yaml/apply`, {
+    return request.post(`/clusters/${clusterId}/workloads/yaml/apply`, {
       yaml,
       dryRun,
     });

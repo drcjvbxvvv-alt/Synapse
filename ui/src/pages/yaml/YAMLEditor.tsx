@@ -1,33 +1,39 @@
-import React, { useState, useEffect } from 'react';
+/** genAI_main_start */
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Button,
   Space,
   message,
-  Modal,
   Typography,
   Alert,
   Spin,
-  Row,
-  Col,
   Switch,
+  Modal,
+  App,
 } from 'antd';
 import {
   ArrowLeftOutlined,
   SaveOutlined,
-  PlayCircleOutlined,
   EyeOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { Editor } from '@monaco-editor/react';
+import { Editor, loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
 import { WorkloadService } from '../../services/workloadService';
+import * as YAML from 'yaml';
+
+// 配置Monaco Editor使用本地资源
+loader.config({ monaco });
+/** genAI_main_end */
 
 const { Title, Text } = Typography;
 
-interface YAMLEditorProps {}
-
-const YAMLEditor: React.FC<YAMLEditorProps> = () => {
+const YAMLEditor: React.FC = () => {
+  /** genAI_main_start */
+  const { modal } = App.useApp();
+  /** genAI_main_end */
   const { clusterId } = useParams<{ clusterId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -42,16 +48,42 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
   const [applying, setApplying] = useState(false);
   const [dryRun, setDryRun] = useState(true);
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewResult, setPreviewResult] = useState<any>(null);
+  const [previewResult, setPreviewResult] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  /** genAI_main_start */
+  const [editorLoading, setEditorLoading] = useState(true);
+  /** genAI_main_end */
+
+  /** genAI_main_start */
+  // 检查是否有未保存的更改
+  const hasUnsavedChanges = yaml !== originalYaml;
+
+  // Monaco Editor加载处理
+  const handleEditorWillMount = () => {
+    setEditorLoading(true);
+  };
+
+  const handleEditorDidMount = () => {
+    setEditorLoading(false);
+  };
+
+  const handleEditorValidation = (markers: unknown[]) => {
+    // 处理编辑器验证错误
+    if (markers && markers.length > 0) {
+      console.warn('Editor validation markers:', markers);
+    }
+  };
+  /** genAI_main_end */
 
   // 加载现有工作负载的YAML
-  const loadWorkloadYAML = async () => {
+  const loadWorkloadYAML = useCallback(async () => {
     if (!clusterId || !workloadRef || !workloadType) return;
     
     const [namespace, name] = workloadRef.split('/');
     if (!namespace || !name) return;
     
     setLoading(true);
+    setError(null);
     try {
       const response = await WorkloadService.getWorkloadDetail(
         clusterId,
@@ -61,19 +93,24 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
       );
       
       if (response.code === 200) {
-        const yamlContent = JSON.stringify(response.data.raw, null, 2);
+        // 使用yaml库将JSON转换为YAML格式
+        const yamlContent = YAML.stringify(response.data.raw);
         setYaml(yamlContent);
         setOriginalYaml(yamlContent);
       } else {
-        message.error(response.message || '加载YAML失败');
+        const errorMsg = response.message || '加载YAML失败';
+        setError(errorMsg);
+        message.error(errorMsg);
       }
     } catch (error) {
       console.error('加载YAML失败:', error);
-      message.error('加载YAML失败');
+      const errorMsg = '加载YAML失败: ' + (error instanceof Error ? error.message : '未知错误');
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, workloadRef, workloadType]);
 
   // 应用YAML
   const handleApply = async (isDryRun = false) => {
@@ -112,9 +149,10 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
     handleApply(true);
   };
 
+  /** genAI_main_start */
   // 保存并应用YAML
   const handleSave = () => {
-    Modal.confirm({
+    modal.confirm({
       title: '确认应用YAML',
       content: '确定要应用这些YAML配置吗？这将更新集群中的资源。',
       okText: '确定',
@@ -122,27 +160,32 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
       onOk: () => handleApply(false),
     });
   };
+  /** genAI_main_end */
 
+  /** genAI_main_start */
   // 重置YAML
   const handleReset = () => {
-    Modal.confirm({
+    modal.confirm({
       title: '确认重置',
       content: '确定要重置YAML内容吗？未保存的更改将丢失。',
       okText: '确定',
       cancelText: '取消',
+      centered: true,
       onOk: () => {
         setYaml(originalYaml);
         message.success('已重置YAML内容');
       },
     });
   };
-
-  // 检查是否有未保存的更改
-  const hasUnsavedChanges = yaml !== originalYaml;
+  /** genAI_main_end */
 
   useEffect(() => {
-    loadWorkloadYAML();
-  }, [clusterId, workloadRef, workloadType]);
+    if (clusterId && workloadRef && workloadType) {
+      loadWorkloadYAML();
+    } else {
+      setError('缺少必要参数：集群ID、工作负载引用或工作负载类型');
+    }
+  }, [clusterId, workloadRef, workloadType, loadWorkloadYAML]);
 
   // 页面离开前提醒
   useEffect(() => {
@@ -162,11 +205,12 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
       {/* 页面头部 */}
       <div style={{ marginBottom: 16 }}>
         <Space>
+          {/* genAI_main_start */}
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => {
               if (hasUnsavedChanges) {
-                Modal.confirm({
+                modal.confirm({
                   title: '确认离开',
                   content: '您有未保存的更改，确定要离开吗？',
                   okText: '确定',
@@ -180,6 +224,7 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
           >
             返回
           </Button>
+          {/* genAI_main_end */}
           <Title level={3} style={{ margin: 0 }}>
             YAML 编辑器
           </Title>
@@ -213,6 +258,7 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
               预览
             </Button>
             
+            {/* genAI_main_start */}
             <Button
               icon={<ReloadOutlined />}
               onClick={handleReset}
@@ -220,6 +266,7 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
             >
               重置
             </Button>
+            {/* genAI_main_end */}
             
             <div style={{ marginLeft: 16 }}>
               <Space>
@@ -237,7 +284,22 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
       </div>
 
       {/* 提示信息 */}
-      {hasUnsavedChanges && (
+      {error && (
+        <Alert
+          message="加载失败"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+          action={
+            <Button size="small" onClick={loadWorkloadYAML}>
+              重试
+            </Button>
+          }
+        />
+      )}
+      
+      {hasUnsavedChanges && !error && (
         <Alert
           message="您有未保存的更改"
           description="请记得保存您的更改，或点击重置按钮恢复原始内容。"
@@ -247,35 +309,55 @@ const YAMLEditor: React.FC<YAMLEditorProps> = () => {
         />
       )}
 
+      {/* genAI_main_start */}
       {/* YAML编辑器 */}
-      <Card style={{ height: 'calc(100% - 120px)' }}>
-        <Spin spinning={loading} tip="加载YAML中...">
-          <div style={{ height: '100%' }}>
-            <Editor
-              height="100%"
-              defaultLanguage="yaml"
-              value={yaml}
-              onChange={(value) => setYaml(value || '')}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: true },
-                fontSize: 14,
-                lineNumbers: 'on',
-                roundedSelection: false,
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                insertSpaces: true,
-                wordWrap: 'on',
-                folding: true,
-                foldingStrategy: 'indentation',
-                showFoldingControls: 'always',
-                bracketPairColorization: { enabled: true },
-              }}
-            />
+      <Card style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
+        <Spin spinning={loading || editorLoading} tip={loading ? "加载YAML中..." : "初始化编辑器..."}>
+          <div style={{ height: '500px', width: '100%' }}>
+            {yaml ? (
+              <Editor
+                height="500px"
+                width="100%"
+                defaultLanguage="yaml"
+                value={yaml}
+                onChange={(value) => setYaml(value || '')}
+                theme="vs-dark"
+                loading={<div style={{ padding: '20px', textAlign: 'center' }}>编辑器加载中...</div>}
+                beforeMount={handleEditorWillMount}
+                onMount={handleEditorDidMount}
+                onValidate={handleEditorValidation}
+                options={{
+                  minimap: { enabled: true },
+                  fontSize: 14,
+                  lineNumbers: 'on',
+                  roundedSelection: false,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 2,
+                  insertSpaces: true,
+                  wordWrap: 'on',
+                  folding: true,
+                  foldingStrategy: 'indentation',
+                  showFoldingControls: 'always',
+                  bracketPairColorization: { enabled: true },
+                }}
+              />
+            ) : (
+              <div style={{ 
+                height: '500px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: '#666',
+                fontSize: '16px'
+              }}>
+                {loading ? '加载中...' : '暂无YAML内容'}
+              </div>
+            )}
           </div>
         </Spin>
       </Card>
+      {/* genAI_main_end */}
 
       {/* 预览模态框 */}
       <Modal

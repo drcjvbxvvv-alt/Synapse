@@ -169,6 +169,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		protected.GET("/monitoring/templates", monitoringHandler.GetMonitoringTemplates)
 	}
 
+	/** genAI_main_start */
 	// WebSocket：建议也加认证
 	ws := r.Group("/ws")
 	// ws.Use(middleware.AuthRequired(cfg.JWT.Secret))
@@ -176,6 +177,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		kctl := handlers.NewKubectlTerminalHandler(clusterSvc)
 		ssh := handlers.NewSSHHandler()
 		podTerminal := handlers.NewPodTerminalHandler(clusterSvc)
+		podHandler := handlers.NewPodHandler(db, cfg, clusterSvc, k8sMgr)
 
 		// 集群级 kubectl 终端
 		ws.GET("/clusters/:clusterID/terminal", kctl.HandleKubectlTerminal)
@@ -185,7 +187,11 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 		// Pod 终端：使用 kubectl exec 连接到 Pod
 		ws.GET("/clusters/:clusterID/pods/:namespace/:name/terminal", podTerminal.HandlePodTerminal)
+
+		// Pod 日志流式传输
+		ws.GET("/clusters/:clusterID/pods/:namespace/:name/logs", podHandler.StreamPodLogs)
 	}
+	/** genAI_main_end */
 
 	// TODO:
 	// - 统一错误处理/响应格式中间件
