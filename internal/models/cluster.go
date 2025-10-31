@@ -133,6 +133,10 @@ type ClusterMetricsData struct {
 	CPUUsageAbsolute  *MetricSeries   `json:"cpu_usage_absolute,omitempty"`  // CPU 实际使用量（cores）
 	MemoryUsageBytes  *MetricSeries   `json:"memory_usage_bytes,omitempty"`  // 内存实际使用量（bytes）
 	OOMKills          *MetricSeries   `json:"oom_kills,omitempty"`           // OOM Kill 次数
+
+	// 集群级别监控指标
+	ClusterOverview *ClusterOverview `json:"cluster_overview,omitempty"` // 集群概览
+	NodeList        []NodeMetricItem `json:"node_list,omitempty"`        // Node列表指标
 	/** genAI_main_end */
 }
 
@@ -192,6 +196,46 @@ type DiskIOPS struct {
 type DiskThroughput struct {
 	Read  *MetricSeries `json:"read"`  // 读吞吐量（bytes/s）
 	Write *MetricSeries `json:"write"` // 写吞吐量（bytes/s）
+}
+
+// ClusterOverview 集群概览监控指标
+type ClusterOverview struct {
+	// 资源总量
+	TotalCPUCores float64 `json:"total_cpu_cores"` // CPU 总核数
+	TotalMemory   float64 `json:"total_memory"`    // 内存总数（bytes）
+
+	// 资源使用
+	CPUUsageRate    *MetricSeries `json:"cpu_usage_rate,omitempty"`    // CPU 使用率
+	MemoryUsageRate *MetricSeries `json:"memory_usage_rate,omitempty"` // 内存使用率
+
+	// Pod 相关
+	MaxPods       int     `json:"max_pods"`       // Pod 最大可创建数
+	CreatedPods   int     `json:"created_pods"`   // Pod 已创建数
+	AvailablePods int     `json:"available_pods"` // Pod 可创建数
+	PodUsageRate  float64 `json:"pod_usage_rate"` // Pod 使用率
+
+	// 集群状态
+	EtcdHasLeader         bool    `json:"etcd_has_leader"`        // Etcd 是否有 leader
+	ApiServerAvailability float64 `json:"apiserver_availability"` // ApiServer 近30天可用率
+
+	// 资源配额
+	CPURequestRatio *MetricSeries `json:"cpu_request_ratio,omitempty"` // CPU Request 比值
+	CPULimitRatio   *MetricSeries `json:"cpu_limit_ratio,omitempty"`   // CPU Limit 比值
+	MemRequestRatio *MetricSeries `json:"mem_request_ratio,omitempty"` // 内存 Request 比值
+	MemLimitRatio   *MetricSeries `json:"mem_limit_ratio,omitempty"`   // 内存 Limit 比值
+
+	// ApiServer 请求量
+	ApiServerRequestRate *MetricSeries `json:"apiserver_request_rate,omitempty"` // ApiServer 总请求量
+}
+
+// NodeMetricItem Node 监控指标项
+type NodeMetricItem struct {
+	NodeName        string  `json:"node_name"`         // 节点名称
+	CPUUsageRate    float64 `json:"cpu_usage_rate"`    // CPU 使用率
+	MemoryUsageRate float64 `json:"memory_usage_rate"` // 内存使用率
+	CPUCores        float64 `json:"cpu_cores"`         // CPU 核数
+	TotalMemory     float64 `json:"total_memory"`      // 总内存（bytes）
+	Status          string  `json:"status"`            // 节点状态
 }
 
 /** genAI_main_end */

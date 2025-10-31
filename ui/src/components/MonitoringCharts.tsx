@@ -51,6 +51,34 @@ interface DiskThroughput {
   write: MetricSeries;
 }
 
+interface ClusterOverview {
+  total_cpu_cores: number;
+  total_memory: number;
+  worker_nodes: number;
+  cpu_usage_rate?: MetricSeries;
+  memory_usage_rate?: MetricSeries;
+  max_pods: number;
+  created_pods: number;
+  available_pods: number;
+  pod_usage_rate: number;
+  etcd_has_leader: boolean;
+  apiserver_availability: number;
+  cpu_request_ratio?: MetricSeries;
+  cpu_limit_ratio?: MetricSeries;
+  mem_request_ratio?: MetricSeries;
+  mem_limit_ratio?: MetricSeries;
+  apiserver_request_rate?: MetricSeries;
+}
+
+interface NodeMetricItem {
+  node_name: string;
+  cpu_usage_rate: number;
+  memory_usage_rate: number;
+  cpu_cores: number;
+  total_memory: number;
+  status: string;
+}
+
 interface ClusterMetricsData {
   cpu?: MetricSeries;
   memory?: MetricSeries;
@@ -74,6 +102,9 @@ interface ClusterMetricsData {
   cpu_usage_absolute?: MetricSeries;
   memory_usage_bytes?: MetricSeries;
   oom_kills?: MetricSeries;
+  // 集群级别监控指标
+  cluster_overview?: ClusterOverview;
+  node_list?: NodeMetricItem[];
 }
 /* genAI_main_end */
 
@@ -383,6 +414,266 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
       >
         
         <Row gutter={[16, 16]}>
+          {/* genAI_main_start */}
+          {/* 集群概览（仅在集群类型时显示） */}
+          {type === 'cluster' && metrics.cluster_overview && (
+            <>
+              {/* 资源总量 */}
+              <Col span={24}>
+                <Card size="small" title="集群资源总量">
+                  <Row gutter={16}>
+                    <Col span={6}>
+                      <Statistic
+                        title="CPU 总核数"
+                        value={metrics.cluster_overview.total_cpu_cores}
+                        suffix="cores"
+                        valueStyle={{ color: '#52c41a' }}
+                      />
+                    </Col>
+                    <Col span={6}>
+                      <Statistic
+                        title="内存总数"
+                        value={formatValue(metrics.cluster_overview.total_memory, 'bytes')}
+                        valueStyle={{ color: '#fa8c16' }}
+                      />
+                    </Col>
+                    <Col span={6}>
+                      <Statistic
+                        title="Pod 最大可创建数"
+                        value={metrics.cluster_overview.max_pods}
+                        valueStyle={{ color: '#722ed1' }}
+                      />
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* Pod 状态 */}
+              <Col span={24}>
+                <Card size="small" title="Pod 状态">
+                  <Row gutter={16}>
+                    <Col span={6}>
+                      <Statistic
+                        title="Pod 已创建数"
+                        value={metrics.cluster_overview.created_pods}
+                        valueStyle={{ color: '#1890ff' }}
+                      />
+                    </Col>
+                    <Col span={6}>
+                      <Statistic
+                        title="Pod 可创建数"
+                        value={metrics.cluster_overview.available_pods}
+                        valueStyle={{ color: '#52c41a' }}
+                      />
+                    </Col>
+                    <Col span={6}>
+                      <Statistic
+                        title="Pod 使用率"
+                        value={metrics.cluster_overview.pod_usage_rate.toFixed(2)}
+                        suffix="%"
+                        valueStyle={{ 
+                          color: metrics.cluster_overview.pod_usage_rate > 80 ? '#cf1322' : '#3f8600' 
+                        }}
+                      />
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* 集群状态 */}
+              <Col span={24}>
+                <Card size="small" title="集群状态">
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Statistic
+                        title="Etcd Leader 状态"
+                        value={metrics.cluster_overview.etcd_has_leader ? 'YES' : 'NO'}
+                        valueStyle={{ 
+                          color: metrics.cluster_overview.etcd_has_leader ? '#52c41a' : '#cf1322' 
+                        }}
+                      />
+                    </Col>
+                    <Col span={8}>
+                      <Statistic
+                        title="ApiServer 近30天可用率"
+                        value={metrics.cluster_overview.apiserver_availability.toFixed(4)}
+                        suffix="%"
+                        precision={4}
+                        valueStyle={{ color: '#1890ff' }}
+                      />
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* 资源配额比率 */}
+              <Col span={24}>
+                <Card size="small" title="资源配额比率">
+                  <Row gutter={16}>
+                    {metrics.cluster_overview.cpu_request_ratio && (
+                      <Col span={12}>
+                        <Card size="small" title="CPU Request 比率">
+                          <Statistic
+                            value={metrics.cluster_overview.cpu_request_ratio.current}
+                            suffix="%"
+                            precision={2}
+                            valueStyle={{ color: '#1890ff' }}
+                          />
+                          {renderChart(metrics.cluster_overview.cpu_request_ratio.series, '#1890ff', '%')}
+                        </Card>
+                      </Col>
+                    )}
+                    {metrics.cluster_overview.cpu_limit_ratio && (
+                      <Col span={12}>
+                        <Card size="small" title="CPU Limit 比率">
+                          <Statistic
+                            value={metrics.cluster_overview.cpu_limit_ratio.current}
+                            suffix="%"
+                            precision={2}
+                            valueStyle={{ 
+                              color: metrics.cluster_overview.cpu_limit_ratio.current > 100 ? '#cf1322' : '#52c41a' 
+                            }}
+                          />
+                          {renderChart(metrics.cluster_overview.cpu_limit_ratio.series, '#52c41a', '%')}
+                        </Card>
+                      </Col>
+                    )}
+                    {metrics.cluster_overview.mem_request_ratio && (
+                      <Col span={12}>
+                        <Card size="small" title="内存 Request 比率">
+                          <Statistic
+                            value={metrics.cluster_overview.mem_request_ratio.current}
+                            suffix="%"
+                            precision={2}
+                            valueStyle={{ color: '#fa8c16' }}
+                          />
+                          {renderChart(metrics.cluster_overview.mem_request_ratio.series, '#fa8c16', '%')}
+                        </Card>
+                      </Col>
+                    )}
+                    {metrics.cluster_overview.mem_limit_ratio && (
+                      <Col span={12}>
+                        <Card size="small" title="内存 Limit 比率">
+                          <Statistic
+                            value={metrics.cluster_overview.mem_limit_ratio.current}
+                            suffix="%"
+                            precision={2}
+                            valueStyle={{ 
+                              color: metrics.cluster_overview.mem_limit_ratio.current > 100 ? '#cf1322' : '#52c41a' 
+                            }}
+                          />
+                          {renderChart(metrics.cluster_overview.mem_limit_ratio.series, '#722ed1', '%')}
+                        </Card>
+                      </Col>
+                    )}
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* ApiServer 请求量 */}
+              {metrics.cluster_overview.apiserver_request_rate && (
+                <Col span={24}>
+                  <Card size="small" title="ApiServer 总请求量">
+                    <Statistic
+                      value={metrics.cluster_overview.apiserver_request_rate.current.toFixed(2)}
+                      suffix="req/s"
+                      valueStyle={{ color: '#1890ff' }}
+                    />
+                    {renderChart(metrics.cluster_overview.apiserver_request_rate.series, '#1890ff', '')}
+                  </Card>
+                </Col>
+              )}
+
+              {/* 集群 CPU/内存使用率趋势图 */}
+              {metrics.cluster_overview.cpu_usage_rate && (
+                <Col span={12}>
+                  <Card size="small" title="集群 CPU 使用率">
+                    <Statistic
+                      value={metrics.cluster_overview.cpu_usage_rate.current}
+                      suffix="%"
+                      precision={2}
+                      valueStyle={{ 
+                        color: metrics.cluster_overview.cpu_usage_rate.current > 80 ? '#cf1322' : '#3f8600' 
+                      }}
+                    />
+                    {renderChart(metrics.cluster_overview.cpu_usage_rate.series, '#1890ff', '%')}
+                  </Card>
+                </Col>
+              )}
+              
+              {metrics.cluster_overview.memory_usage_rate && (
+                <Col span={12}>
+                  <Card size="small" title="集群内存使用率">
+                    <Statistic
+                      value={metrics.cluster_overview.memory_usage_rate.current}
+                      suffix="%"
+                      precision={2}
+                      valueStyle={{ 
+                        color: metrics.cluster_overview.memory_usage_rate.current > 80 ? '#cf1322' : '#3f8600' 
+                      }}
+                    />
+                    {renderChart(metrics.cluster_overview.memory_usage_rate.series, '#52c41a', '%')}
+                  </Card>
+                </Col>
+              )}
+            </>
+          )}
+
+          {/* Node 列表监控（仅在集群类型时显示） */}
+          {type === 'cluster' && metrics.node_list && metrics.node_list.length > 0 && (
+            <Col span={24}>
+              <Card size="small" title="Node 资源使用情况">
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>节点名称</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>CPU 核数</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>CPU 使用率</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>总内存</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>内存使用率</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>状态</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {metrics.node_list.map((node, index) => (
+                        <tr key={index} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                          <td style={{ padding: '12px' }}>{node.node_name}</td>
+                          <td style={{ padding: '12px' }}>{node.cpu_cores} cores</td>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{ 
+                              color: node.cpu_usage_rate > 80 ? '#cf1322' : '#3f8600',
+                              fontWeight: 'bold'
+                            }}>
+                              {node.cpu_usage_rate.toFixed(2)}%
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px' }}>{formatValue(node.total_memory, 'bytes')}</td>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{ 
+                              color: node.memory_usage_rate > 80 ? '#cf1322' : '#3f8600',
+                              fontWeight: 'bold'
+                            }}>
+                              {node.memory_usage_rate.toFixed(2)}%
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{ 
+                              color: node.status === 'Ready' ? '#52c41a' : '#cf1322' 
+                            }}>
+                              {node.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </Col>
+          )}
+          {/* genAI_main_end */}
+
                     {/* genAI_main_start */}
           {/* Pod 资源规格（仅在 Pod 类型时显示） */}
           {type === 'pod' && (metrics.cpu_request || metrics.cpu_limit || metrics.memory_request || metrics.memory_limit) && (
@@ -434,7 +725,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
 
 
           {/* CPU 使用率 */}
-          {metrics.cpu && (
+          {type === 'pod' && metrics.cpu && (
             <Col span={12}>
               <Card size="small" title="CPU 使用">
                 <Row gutter={16}>
@@ -465,7 +756,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
           )}
 
           {/* 内存使用率 */}
-          {metrics.memory && (
+          {type === 'pod' && metrics.memory && (
             <Col span={12}>
               <Card size="small" title="内存使用">
                 <Row gutter={16}>

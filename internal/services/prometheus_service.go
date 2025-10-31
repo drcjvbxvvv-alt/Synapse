@@ -85,6 +85,7 @@ func (s *PrometheusService) QueryPrometheus(ctx context.Context, config *models.
 	return &result, nil
 }
 
+/** genAI_main_start */
 // QueryClusterMetrics 查询集群监控指标
 func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName string, timeRange string, step string) (*models.ClusterMetricsData, error) {
 	// 解析时间范围
@@ -127,8 +128,20 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 		metrics.Pods = podMetrics
 	}
 
+	// 查询集群概览指标
+	if clusterOverview, err := s.queryClusterOverview(ctx, config, clusterName, start, end, step); err == nil {
+		metrics.ClusterOverview = clusterOverview
+	}
+
+	// 查询节点列表指标
+	if nodeList, err := s.queryNodeListMetrics(ctx, config, clusterName); err == nil {
+		metrics.NodeList = nodeList
+	}
+
 	return metrics, nil
 }
+
+/** genAI_main_end */
 
 // QueryNodeMetrics 查询节点监控指标
 func (s *PrometheusService) QueryNodeMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName, nodeName string, timeRange string, step string) (*models.ClusterMetricsData, error) {
@@ -837,6 +850,294 @@ func (s *PrometheusService) queryPodDiskThroughput(ctx context.Context, config *
 		Read:  readSeries,
 		Write: writeSeries,
 	}, nil
+}
+
+// queryClusterOverview 查询集群概览指标
+func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *models.MonitoringConfig, clusterName string, start, end int64, step string) (*models.ClusterOverview, error) {
+	overview := &models.ClusterOverview{}
+
+	// 查询 CPU 总核数
+	totalCPUQuery := "sum(machine_cpu_cores)"
+	if cpuResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: totalCPUQuery,
+		Start: end,
+		End:   end,
+		Step:  "1m",
+	}); err == nil && len(cpuResp.Data.Result) > 0 && len(cpuResp.Data.Result[0].Values) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", cpuResp.Data.Result[0].Values[0][1]), 64); err == nil {
+			overview.TotalCPUCores = val
+		}
+	}
+
+	// 查询内存总数
+	totalMemQuery := "sum(machine_memory_bytes)"
+	if memResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: totalMemQuery,
+		Start: end,
+		End:   end,
+		Step:  "1m",
+	}); err == nil && len(memResp.Data.Result) > 0 && len(memResp.Data.Result[0].Values) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", memResp.Data.Result[0].Values[0][1]), 64); err == nil {
+			overview.TotalMemory = val
+		}
+	}
+
+	// 查询集群 CPU 使用率
+	cpuUsageQuery := "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m]))) * 100"
+	if cpuUsageSeries, err := s.queryMetricSeries(ctx, config, cpuUsageQuery, start, end, step); err == nil {
+		overview.CPUUsageRate = cpuUsageSeries
+	}
+
+	// 查询集群内存使用率
+	memUsageQuery := "(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100"
+	if memUsageSeries, err := s.queryMetricSeries(ctx, config, memUsageQuery, start, end, step); err == nil {
+		overview.MemoryUsageRate = memUsageSeries
+	}
+
+	// 查询 Pod 最大可创建数
+	maxPodsQuery := "sum(kube_node_status_capacity{resource=\"pods\"} unless on(node) kube_node_role)"
+	if maxPodsResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: maxPodsQuery,
+		Start: end,
+		End:   end,
+		Step:  "1m",
+	}); err == nil && len(maxPodsResp.Data.Result) > 0 && len(maxPodsResp.Data.Result[0].Values) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", maxPodsResp.Data.Result[0].Values[0][1]), 64); err == nil {
+			overview.MaxPods = int(val)
+		}
+	}
+
+	// 查询 Pod 已创建数
+	createdPodsQuery := "sum(kube_pod_info)"
+	if createdPodsResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: createdPodsQuery,
+		Start: end,
+		End:   end,
+		Step:  "1m",
+	}); err == nil && len(createdPodsResp.Data.Result) > 0 && len(createdPodsResp.Data.Result[0].Values) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", createdPodsResp.Data.Result[0].Values[0][1]), 64); err == nil {
+			overview.CreatedPods = int(val)
+		}
+	}
+
+	// 计算 Pod 可创建数和使用率
+	overview.AvailablePods = overview.MaxPods - overview.CreatedPods
+	if overview.MaxPods > 0 {
+		overview.PodUsageRate = float64(overview.CreatedPods) / float64(overview.MaxPods) * 100
+	}
+
+	// 查询 Etcd 是否有 Leader
+	etcdLeaderQuery := "etcd_server_has_leader"
+	if etcdResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: etcdLeaderQuery,
+		Start: end,
+		End:   end,
+		Step:  "1m",
+	}); err == nil && len(etcdResp.Data.Result) > 0 && len(etcdResp.Data.Result[0].Values) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", etcdResp.Data.Result[0].Values[0][1]), 64); err == nil {
+			overview.EtcdHasLeader = val == 1
+		}
+	}
+
+	// 查询 ApiServer 近30天可用率
+	apiAvailabilityQuery := "apiserver_request:availability30d{verb=\"all\"}"
+	if apiResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: apiAvailabilityQuery,
+		Start: end,
+		End:   end,
+		Step:  "1m",
+	}); err == nil && len(apiResp.Data.Result) > 0 && len(apiResp.Data.Result[0].Values) > 0 {
+		if val, err := strconv.ParseFloat(fmt.Sprintf("%v", apiResp.Data.Result[0].Values[0][1]), 64); err == nil {
+			overview.ApiServerAvailability = val * 100
+		}
+	}
+
+	// 查询 CPU Request 比值
+	cpuRequestQuery := "sum(namespace_cpu:kube_pod_container_resource_requests:sum) / sum(kube_node_status_allocatable{resource=\"cpu\"} unless on(node) kube_node_role) * 100"
+	if cpuReqSeries, err := s.queryMetricSeries(ctx, config, cpuRequestQuery, start, end, step); err == nil {
+		overview.CPURequestRatio = cpuReqSeries
+	}
+
+	// 查询 CPU Limit 比值
+	cpuLimitQuery := "sum(namespace_cpu:kube_pod_container_resource_limits:sum) / sum(kube_node_status_allocatable{resource=\"cpu\"} unless on(node) kube_node_role) * 100"
+	if cpuLimitSeries, err := s.queryMetricSeries(ctx, config, cpuLimitQuery, start, end, step); err == nil {
+		overview.CPULimitRatio = cpuLimitSeries
+	}
+
+	// 查询内存 Request 比值
+	memRequestQuery := "sum(namespace_memory:kube_pod_container_resource_requests:sum) / sum(kube_node_status_allocatable{resource=\"memory\"} unless on(node) kube_node_role) * 100"
+	if memReqSeries, err := s.queryMetricSeries(ctx, config, memRequestQuery, start, end, step); err == nil {
+		overview.MemRequestRatio = memReqSeries
+	}
+
+	// 查询内存 Limit 比值
+	memLimitQuery := "sum(namespace_memory:kube_pod_container_resource_limits:sum) / sum(kube_node_status_allocatable{resource=\"memory\"} unless on(node) kube_node_role) * 100"
+	if memLimitSeries, err := s.queryMetricSeries(ctx, config, memLimitQuery, start, end, step); err == nil {
+		overview.MemLimitRatio = memLimitSeries
+	}
+
+	// 查询 ApiServer 总请求量
+	apiRequestQuery := "sum(rate(apiserver_request_total[5m]))"
+	if apiReqSeries, err := s.queryMetricSeries(ctx, config, apiRequestQuery, start, end, step); err == nil {
+		overview.ApiServerRequestRate = apiReqSeries
+	}
+
+	return overview, nil
+}
+
+// queryNodeListMetrics 查询节点列表监控指标
+func (s *PrometheusService) queryNodeListMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName string) ([]models.NodeMetricItem, error) {
+	nodeList := []models.NodeMetricItem{}
+	now := time.Now().Unix()
+
+	// 查询节点 CPU 使用率
+	cpuQuery := "(1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[1m]))) * 100"
+	cpuResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: cpuQuery,
+		Start: now,
+		End:   now,
+		Step:  "1m",
+	})
+	if err != nil {
+		logger.Error("查询节点CPU使用率失败", "error", err)
+	}
+
+	// 查询节点内存使用率
+	memQuery := "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100"
+	memResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: memQuery,
+		Start: now,
+		End:   now,
+		Step:  "1m",
+	})
+	if err != nil {
+		logger.Error("查询节点内存使用率失败", "error", err)
+	}
+
+	// 查询节点CPU核数
+	cpuCoresQuery := "machine_cpu_cores"
+	cpuCoresResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: cpuCoresQuery,
+		Start: now,
+		End:   now,
+		Step:  "1m",
+	})
+	if err != nil {
+		logger.Error("查询节点CPU核数失败", "error", err)
+	}
+
+	// 查询节点总内存
+	totalMemQuery := "machine_memory_bytes"
+	totalMemResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
+		Query: totalMemQuery,
+		Start: now,
+		End:   now,
+		Step:  "1m",
+	})
+	if err != nil {
+		logger.Error("查询节点总内存失败", "error", err)
+	}
+
+	// 构建节点映射
+	nodeMap := make(map[string]*models.NodeMetricItem)
+
+	// 处理 CPU 使用率数据
+	if cpuResp != nil && len(cpuResp.Data.Result) > 0 {
+		for _, result := range cpuResp.Data.Result {
+			if instance, ok := result.Metric["instance"]; ok {
+				nodeName := s.extractNodeName(instance)
+				if _, exists := nodeMap[nodeName]; !exists {
+					nodeMap[nodeName] = &models.NodeMetricItem{
+						NodeName: nodeName,
+						Status:   "Ready",
+					}
+				}
+				if len(result.Values) > 0 {
+					if val, err := strconv.ParseFloat(fmt.Sprintf("%v", result.Values[0][1]), 64); err == nil {
+						nodeMap[nodeName].CPUUsageRate = val
+					}
+				}
+			}
+		}
+	}
+
+	// 处理内存使用率数据
+	if memResp != nil && len(memResp.Data.Result) > 0 {
+		for _, result := range memResp.Data.Result {
+			if instance, ok := result.Metric["instance"]; ok {
+				nodeName := s.extractNodeName(instance)
+				if _, exists := nodeMap[nodeName]; !exists {
+					nodeMap[nodeName] = &models.NodeMetricItem{
+						NodeName: nodeName,
+						Status:   "Ready",
+					}
+				}
+				if len(result.Values) > 0 {
+					if val, err := strconv.ParseFloat(fmt.Sprintf("%v", result.Values[0][1]), 64); err == nil {
+						nodeMap[nodeName].MemoryUsageRate = val
+					}
+				}
+			}
+		}
+	}
+
+	// 处理 CPU 核数数据
+	if cpuCoresResp != nil && len(cpuCoresResp.Data.Result) > 0 {
+		for _, result := range cpuCoresResp.Data.Result {
+			if instance, ok := result.Metric["instance"]; ok {
+				nodeName := s.extractNodeName(instance)
+				if _, exists := nodeMap[nodeName]; !exists {
+					nodeMap[nodeName] = &models.NodeMetricItem{
+						NodeName: nodeName,
+						Status:   "Ready",
+					}
+				}
+				if len(result.Values) > 0 {
+					if val, err := strconv.ParseFloat(fmt.Sprintf("%v", result.Values[0][1]), 64); err == nil {
+						nodeMap[nodeName].CPUCores = val
+					}
+				}
+			}
+		}
+	}
+
+	// 处理总内存数据
+	if totalMemResp != nil && len(totalMemResp.Data.Result) > 0 {
+		for _, result := range totalMemResp.Data.Result {
+			if instance, ok := result.Metric["instance"]; ok {
+				nodeName := s.extractNodeName(instance)
+				if _, exists := nodeMap[nodeName]; !exists {
+					nodeMap[nodeName] = &models.NodeMetricItem{
+						NodeName: nodeName,
+						Status:   "Ready",
+					}
+				}
+				if len(result.Values) > 0 {
+					if val, err := strconv.ParseFloat(fmt.Sprintf("%v", result.Values[0][1]), 64); err == nil {
+						nodeMap[nodeName].TotalMemory = val
+					}
+				}
+			}
+		}
+	}
+
+	// 转换为列表
+	for _, node := range nodeMap {
+		nodeList = append(nodeList, *node)
+	}
+
+	return nodeList, nil
+}
+
+// extractNodeName 从 instance 标签中提取节点名称
+func (s *PrometheusService) extractNodeName(instance string) string {
+	// instance 格式可能是 "node-name:9100" 或 "192.168.1.1:9100"
+	// 简单处理：去除端口号
+	parts := strings.Split(instance, ":")
+	if len(parts) > 0 {
+		return parts[0]
+	}
+	return instance
 }
 
 /** genAI_main_end */
