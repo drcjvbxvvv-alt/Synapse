@@ -141,6 +141,9 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					workloads.GET("/namespaces", workloadHandler.GetWorkloadNamespaces)
 					workloads.GET("/:namespace/:name", workloadHandler.GetWorkload)
 					workloads.POST("/:namespace/:name/scale", workloadHandler.ScaleWorkload)
+					/** genAI_main_start */
+					workloads.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
+					/** genAI_main_end */
 					// YAML apply 可以考虑放 /apply 到 cluster 级别或 workloads 级别均可
 					workloads.POST("/yaml/apply", workloadHandler.ApplyYAML)
 				}

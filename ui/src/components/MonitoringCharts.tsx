@@ -51,6 +51,15 @@ interface DiskThroughput {
   write: MetricSeries;
 }
 
+interface MultiSeriesDataPoint {
+  timestamp: number;
+  values: { [podName: string]: number };
+}
+
+interface MultiSeriesMetric {
+  series: MultiSeriesDataPoint[];
+}
+
 interface ClusterOverview {
   total_cpu_cores: number;
   total_memory: number;
@@ -105,26 +114,45 @@ interface ClusterMetricsData {
   // 集群级别监控指标
   cluster_overview?: ClusterOverview;
   node_list?: NodeMetricItem[];
+  // 工作负载多Pod监控指标（显示多条曲线）
+  cpu_multi?: MultiSeriesMetric;
+  memory_multi?: MultiSeriesMetric;
+  container_restarts_multi?: MultiSeriesMetric;
+  oom_kills_multi?: MultiSeriesMetric;
+  probe_failures_multi?: MultiSeriesMetric;
+  network_pps_multi?: MultiSeriesMetric;
+  threads_multi?: MultiSeriesMetric;
+  network_drops_multi?: MultiSeriesMetric;
+  cpu_throttling_multi?: MultiSeriesMetric;
+  cpu_throttling_time_multi?: MultiSeriesMetric;
+  disk_iops_multi?: MultiSeriesMetric;
+  disk_throughput_multi?: MultiSeriesMetric;
 }
 /* genAI_main_end */
 
+/** genAI_main_start */
 interface MonitoringChartsProps {
   clusterId: string;
   clusterName?: string;
   nodeName?: string;
   namespace?: string;
   podName?: string;
-  type: 'cluster' | 'node' | 'pod';
+  workloadName?: string;
+  type: 'cluster' | 'node' | 'pod' | 'workload';
 }
+/** genAI_main_end */
 
+/** genAI_main_start */
 const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
   clusterId,
   clusterName,
   nodeName,
   namespace,
   podName,
+  workloadName,
   type,
 }) => {
+/** genAI_main_end */
   const [metrics, setMetrics] = useState<ClusterMetricsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState('1h');
@@ -134,6 +162,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
   /* genAI_main_end */
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  /** genAI_main_start */
   const fetchMetrics = useCallback(async () => {
     try {
       setLoading(true);
@@ -157,6 +186,9 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
         case 'pod':
           url = `/clusters/${clusterId}/pods/${namespace}/${podName}/metrics`;
           break;
+        case 'workload':
+          url = `/clusters/${clusterId}/workloads/${namespace}/${workloadName}/metrics`;
+          break;
       }
 
       const response = await api.get(`${url}?${params.toString()}`);
@@ -166,7 +198,8 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [clusterId, timeRange, step, clusterName, nodeName, namespace, podName, type]);
+  }, [clusterId, timeRange, step, clusterName, nodeName, namespace, podName, workloadName, type]);
+  /** genAI_main_end */
 
   /* genAI_main_start */
   useEffect(() => {
@@ -242,6 +275,55 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
 
     return <Line {...config} />;
   };
+
+  /** genAI_main_start */
+  // 渲染多时间序列图表（多个Pod的曲线）
+  const renderMultiSeriesChart = (data: MultiSeriesDataPoint[], unit: string = '') => {
+    if (!data || data.length === 0) {
+      return <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>暂无数据</div>;
+    }
+
+    // 转换数据格式：将 {timestamp, values: {pod1: val1, pod2: val2}} 转为 [{time, pod, value}, ...]
+    const chartData: Array<{ time: string; pod: string; value: number }> = [];
+    data.forEach(point => {
+      const time = formatTimestamp(point.timestamp);
+      Object.entries(point.values).forEach(([podName, value]) => {
+        // 只添加有效的数值数据点
+        if (value != null && typeof value === 'number' && !isNaN(value) && isFinite(value)) {
+          chartData.push({
+            time,
+            pod: podName,
+            value,
+          });
+        }
+      });
+    });
+
+    const config = {
+      data: chartData,
+      xField: 'time',
+      yField: 'value',
+      colorField: 'pod',
+      height: 300,
+      smooth: true,
+      point: {
+        size: 0,
+      },
+      legend: {
+        position: 'top' as const,
+        maxRow: 3,
+        layout: 'horizontal' as const,
+      },
+      yAxis: {
+        label: {
+          formatter: (value: string) => formatValue(parseFloat(value), unit),
+        },
+      },
+    };
+
+    return <Line {...config} />;
+  };
+  /** genAI_main_end */
 
   // Helper function to convert bytes to appropriate unit
   const convertBytesToUnit = (bytes: number): { value: number; unit: string } => {
@@ -675,8 +757,8 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
           {/* genAI_main_end */}
 
                     {/* genAI_main_start */}
-          {/* Pod 资源规格（仅在 Pod 类型时显示） */}
-          {type === 'pod' && (metrics.cpu_request || metrics.cpu_limit || metrics.memory_request || metrics.memory_limit) && (
+          {/* Pod/工作负载 资源规格 */}
+          {(type === 'pod' || type === 'workload') && (metrics.cpu_request || metrics.cpu_limit || metrics.memory_request || metrics.memory_limit) && (
             <Col span={24}>
               <Card size="small" title="资源规格">
                 <Row gutter={16}>
@@ -724,8 +806,9 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
           )}
 
 
+          {/* genAI_main_start */}
           {/* CPU 使用率 */}
-          {type === 'pod' && metrics.cpu && (
+          {(type === 'pod' || type === 'workload') && metrics.cpu && (
             <Col span={12}>
               <Card size="small" title="CPU 使用">
                 <Row gutter={16}>
@@ -738,7 +821,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                       valueStyle={{ color: metrics.cpu.current > 80 ? '#cf1322' : '#3f8600' }}
                     />
                   </Col>
-                  {type === 'pod' && metrics.cpu_usage_absolute && (
+                  {(type === 'pod' || type === 'workload') && metrics.cpu_usage_absolute && (
                     <Col span={12}>
                       <Statistic
                         title="实际使用"
@@ -750,13 +833,20 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                     </Col>
                   )}
                 </Row>
-                {renderChart(metrics.cpu.series, '#1890ff', '%')}
+                {/* 工作负载类型显示多Pod曲线，Pod类型显示单条曲线 */}
+                {type === 'workload' && metrics.cpu_multi ? (
+                  renderMultiSeriesChart(metrics.cpu_multi.series, '%')
+                ) : (
+                  renderChart(metrics.cpu.series, '#1890ff', '%')
+                )}
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* 内存使用率 */}
-          {type === 'pod' && metrics.memory && (
+          {(type === 'pod' || type === 'workload') && metrics.memory && (
             <Col span={12}>
               <Card size="small" title="内存使用">
                 <Row gutter={16}>
@@ -769,7 +859,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                       valueStyle={{ color: metrics.memory.current > 80 ? '#cf1322' : '#3f8600' }}
                     />
                   </Col>
-                  {type === 'pod' && metrics.memory_usage_bytes && (
+                  {(type === 'pod' || type === 'workload') && metrics.memory_usage_bytes && (
                     <Col span={12}>
                       <Statistic
                         title="实际使用"
@@ -779,13 +869,20 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                     </Col>
                   )}
                 </Row>
-                {renderChart(metrics.memory.series, '#52c41a', '%')}
+                {/* 工作负载类型显示多Pod曲线，Pod类型显示单条曲线 */}
+                {type === 'workload' && metrics.memory_multi ? (
+                  renderMultiSeriesChart(metrics.memory_multi.series, '%')
+                ) : (
+                  renderChart(metrics.memory.series, '#52c41a', '%')
+                )}
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* 容器重启次数 */}
-          {type === 'pod' && metrics.container_restarts && (
+          {(type === 'pod' || type === 'workload') && metrics.container_restarts && (
             <Col span={12}>
               <Card size="small" title="容器重启次数">
                 <Statistic
@@ -794,13 +891,19 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   suffix="次"
                   valueStyle={{ color: metrics.container_restarts.current > 0 ? '#cf1322' : '#3f8600' }}
                 />
-                {renderChart(metrics.container_restarts.series, '#ff4d4f', '')}
+                {type === 'workload' && metrics.container_restarts_multi ? (
+                  renderMultiSeriesChart(metrics.container_restarts_multi.series, '次')
+                ) : (
+                  renderChart(metrics.container_restarts.series, '#ff4d4f', '次 ')
+                )}
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* OOM Kill 次数 */}
-          {type === 'pod' && metrics.oom_kills && (
+          {(type === 'pod' || type === 'workload') && metrics.oom_kills && (
             <Col span={12}>
               <Card size="small" title="OOM Kill 次数">
                 <Statistic
@@ -809,13 +912,19 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   suffix="次"
                   valueStyle={{ color: metrics.oom_kills.current > 0 ? '#cf1322' : '#3f8600' }}
                 />
-                {renderChart(metrics.oom_kills.series, '#ff4d4f', '')}
+                {type === 'workload' && metrics.oom_kills_multi ? (
+                  renderMultiSeriesChart(metrics.oom_kills_multi.series, '次')
+                ) : (
+                  renderChart(metrics.oom_kills.series, '#ff4d4f', '次 ')
+                )}
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* 健康检查失败次数 */}
-          {type === 'pod' && metrics.probe_failures && (
+          {(type === 'pod' || type === 'workload') && metrics.probe_failures && (
             <Col span={12}>
               <Card size="small" title="健康检查失败次数">
                 <Statistic
@@ -824,10 +933,15 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   suffix="次/分钟"
                   valueStyle={{ color: metrics.probe_failures.current > 0 ? '#cf1322' : '#3f8600' }}
                 />
-                {renderChart(metrics.probe_failures.series, '#faad14', '')}
+                {type === 'workload' && metrics.probe_failures_multi ? (
+                  renderMultiSeriesChart(metrics.probe_failures_multi.series, '次')
+                ) : (
+                  renderChart(metrics.probe_failures.series, '#faad14', '次 ')
+                )}
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
           {/* 网络流量 */}
           {metrics.network && (
@@ -913,8 +1027,9 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
+          {/* genAI_main_start */}
           {/* 网络 PPS */}
-          {type === 'pod' && metrics.network_pps && (
+          {(type === 'pod' || type === 'workload') && metrics.network_pps && (
             <Col span={24}>
               <Card size="small" title="网络 PPS（包/秒）">
                 <Row gutter={16}>
@@ -937,9 +1052,11 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* 磁盘 IOPS */}
-          {type === 'pod' && metrics.disk_iops && (
+          {(type === 'pod' || type === 'workload') && metrics.disk_iops && (
             <Col span={24}>
               <Card size="small" title="磁盘 IOPS">
                 <Row gutter={16}>
@@ -962,9 +1079,11 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* 磁盘吞吐量 */}
-          {type === 'pod' && metrics.disk_throughput && (
+          {(type === 'pod' || type === 'workload') && metrics.disk_throughput && (
             <Col span={24}>
               <Card size="small" title="磁盘吞吐量">
                 <Row gutter={16}>
@@ -987,9 +1106,11 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* 线程数 */}
-          {type === 'pod' && metrics.threads && (
+          {(type === 'pod' || type === 'workload') && metrics.threads && (
             <Col span={12}>
               <Card size="small" title="线程数">
                 <Statistic
@@ -997,13 +1118,19 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   precision={0}
                   valueStyle={{ color: '#722ed1' }}
                 />
-                {renderChart(metrics.threads.series, '#722ed1', '')}
+                {type === 'workload' && metrics.threads_multi ? (
+                  renderMultiSeriesChart(metrics.threads_multi.series, '次')
+                ) : (
+                  renderChart(metrics.threads.series, '#722ed1', '次 ')
+                )}
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* CPU 限流情况 */}
-          {type === 'pod' && (metrics.cpu_throttling || metrics.cpu_throttling_time) && (
+          {(type === 'pod' || type === 'workload') && (metrics.cpu_throttling || metrics.cpu_throttling_time) && (
             <Col span={24}>
               <Card size="small" title="CPU 限流情况">
                 <Row gutter={16}>
@@ -1016,7 +1143,11 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                           precision={2}
                           valueStyle={{ color: metrics.cpu_throttling.current > 10 ? '#cf1322' : '#3f8600' }}
                         />
-                        {renderChart(metrics.cpu_throttling.series, '#ff7a45', '%')}
+                        {type === 'workload' && metrics.cpu_throttling_multi ? (
+                          renderMultiSeriesChart(metrics.cpu_throttling_multi.series, '%')
+                        ) : (
+                          renderChart(metrics.cpu_throttling.series, '#ff7a45', '%')
+                        )}
                       </Card>
                     </Col>
                   )}
@@ -1029,7 +1160,11 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                           precision={2}
                           valueStyle={{ color: metrics.cpu_throttling_time.current > 1 ? '#cf1322' : '#3f8600' }}
                         />
-                        {renderChart(metrics.cpu_throttling_time.series, '#ff4d4f', '')}
+                        {type === 'workload' && metrics.cpu_throttling_time_multi ? (
+                          renderMultiSeriesChart(metrics.cpu_throttling_time_multi.series, '秒')
+                        ) : (
+                          renderChart(metrics.cpu_throttling_time.series, '#ff4d4f', '秒 ')
+                        )}
                       </Card>
                     </Col>
                   )}
@@ -1037,9 +1172,11 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               </Card>
             </Col>
           )}
+          {/* genAI_main_end */}
 
+          {/* genAI_main_start */}
           {/* 网卡丢包情况 */}
-          {type === 'pod' && metrics.network_drops && (
+          {(type === 'pod' || type === 'workload') && metrics.network_drops && (
             <Col span={24}>
               <Card size="small" title="网卡丢包情况">
                 <Row gutter={16}>
@@ -1060,11 +1197,14 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                     />
                   </Col>
                 </Row>
-                {renderNetworkChart(metrics.network_drops.receive.series, metrics.network_drops.transmit.series, '', '接收', '发送')}
+                {type === 'workload' && metrics.network_drops_multi ? (
+                  renderMultiSeriesChart(metrics.network_drops_multi.series, '包/秒')
+                ) : (
+                  renderNetworkChart(metrics.network_drops.receive.series, metrics.network_drops.transmit.series, '', '接收', '发送')
+                )}
               </Card>
             </Col>
           )}
-
           {/* genAI_main_end */}
         </Row>
       </Card>

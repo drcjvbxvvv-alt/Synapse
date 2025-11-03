@@ -137,6 +137,20 @@ type ClusterMetricsData struct {
 	// 集群级别监控指标
 	ClusterOverview *ClusterOverview `json:"cluster_overview,omitempty"` // 集群概览
 	NodeList        []NodeMetricItem `json:"node_list,omitempty"`        // Node列表指标
+
+	// 工作负载多Pod监控指标（显示多条曲线）
+	CPUMulti               *MultiSeriesMetric `json:"cpu_multi,omitempty"`                 // CPU使用率（多Pod）
+	MemoryMulti            *MultiSeriesMetric `json:"memory_multi,omitempty"`              // 内存使用率（多Pod）
+	ContainerRestartsMulti *MultiSeriesMetric `json:"container_restarts_multi,omitempty"`  // 容器重启次数（多Pod）
+	OOMKillsMulti          *MultiSeriesMetric `json:"oom_kills_multi,omitempty"`           // OOM Kill 次数（多Pod）
+	ProbeFailuresMulti     *MultiSeriesMetric `json:"probe_failures_multi,omitempty"`      // 健康检查失败次数（多Pod）
+	NetworkPPSMulti        *MultiSeriesMetric `json:"network_pps_multi,omitempty"`         // 网络PPS（多Pod）
+	ThreadsMulti           *MultiSeriesMetric `json:"threads_multi,omitempty"`             // 线程数（多Pod）
+	NetworkDropsMulti      *MultiSeriesMetric `json:"network_drops_multi,omitempty"`       // 网卡丢包情况（多Pod）
+	CPUThrottlingMulti     *MultiSeriesMetric `json:"cpu_throttling_multi,omitempty"`      // CPU 限流比例（多Pod）
+	CPUThrottlingTimeMulti *MultiSeriesMetric `json:"cpu_throttling_time_multi,omitempty"` // CPU 限流时间（多Pod）
+	DiskIOPSMulti          *MultiSeriesMetric `json:"disk_iops_multi,omitempty"`           // 磁盘 IOPS（多Pod）
+	DiskThroughputMulti    *MultiSeriesMetric `json:"disk_throughput_multi,omitempty"`     // 磁盘吞吐量（多Pod）
 	/** genAI_main_end */
 }
 
@@ -196,6 +210,17 @@ type DiskIOPS struct {
 type DiskThroughput struct {
 	Read  *MetricSeries `json:"read"`  // 读吞吐量（bytes/s）
 	Write *MetricSeries `json:"write"` // 写吞吐量（bytes/s）
+}
+
+// MultiSeriesDataPoint 多时间序列数据点（支持多个Pod/实例）
+type MultiSeriesDataPoint struct {
+	Timestamp int64              `json:"timestamp"`
+	Values    map[string]float64 `json:"values"` // key为pod名称，value为对应值
+}
+
+// MultiSeriesMetric 多时间序列指标（用于展示多个Pod的数据）
+type MultiSeriesMetric struct {
+	Series []MultiSeriesDataPoint `json:"series"` // 时间序列数据
 }
 
 // ClusterOverview 集群概览监控指标

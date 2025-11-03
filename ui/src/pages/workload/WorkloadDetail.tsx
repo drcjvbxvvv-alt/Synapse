@@ -1,3 +1,4 @@
+/** genAI_main_start */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -24,9 +25,12 @@ import {
   EditOutlined,
   DeleteOutlined,
   ExpandAltOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
+import MonitoringCharts from '../../components/MonitoringCharts';
+/** genAI_main_end */
 
 
 const { Title, Text } = Typography;
@@ -239,8 +243,29 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
         </div>
       </div>
 
+      {/* genAI_main_start */}
       {/* 详情内容 */}
       <Tabs defaultActiveKey="overview">
+        <TabPane 
+          tab={
+            <span>
+              <BarChartOutlined />
+              监控
+            </span>
+          } 
+          key="monitoring"
+        >
+          {clusterId && namespace && name && (
+            <MonitoringCharts 
+              clusterId={clusterId} 
+              namespace={namespace}
+              workloadName={name}
+              type="workload"
+            />
+          )}
+        </TabPane>
+        {/* genAI_main_end */}
+
         <TabPane tab="概览" key="overview">
           <Row gutter={[16, 16]}>
             <Col span={12}>
