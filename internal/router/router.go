@@ -96,6 +96,9 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				cluster.GET("/metrics", clusterHandler.GetClusterMetrics)
 				cluster.GET("/events", clusterHandler.GetClusterEvents)
 				cluster.DELETE("", clusterHandler.DeleteCluster)
+				/** genAI_main_start */
+				cluster.GET("/namespaces", clusterHandler.GetNamespaces)
+				/** genAI_main_end */
 
 				// monitoring 子分组
 				monitoringHandler := handlers.NewMonitoringHandler(monitoringConfigSvc, prometheusSvc)

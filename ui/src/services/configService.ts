@@ -56,6 +56,23 @@ export interface ListResponse<T> {
   pageSize: number;
 }
 
+/** genAI_main_start */
+// 获取命名空间列表（通用）
+export const getNamespaces = async (clusterId: number): Promise<string[]> => {
+  try {
+    // 直接使用集群的命名空间接口
+    const response = await request.get<string[]>(
+      `/clusters/${clusterId}/namespaces`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('获取命名空间列表失败:', error);
+    // 返回默认命名空间
+    return ['default', 'kube-system', 'kube-public', 'kube-node-lease'];
+  }
+};
+/** genAI_main_end */
+
 // ConfigMap API
 export const configMapService = {
   // 获取ConfigMap列表

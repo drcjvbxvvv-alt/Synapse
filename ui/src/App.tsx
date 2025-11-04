@@ -18,8 +18,14 @@ import WorkloadDetail from './pages/workload/WorkloadDetail';
 import YAMLEditor from './pages/yaml/YAMLEditor';
 import GlobalSearch from './pages/search/GlobalSearch';
 import KubectlTerminalPage from './pages/terminal/kubectlTerminal';
+/** genAI_main_start */
 import { ConfigSecretManagement, ConfigMapDetail, SecretDetail } from './pages/config';
+import ConfigMapEdit from './pages/config/ConfigMapEdit';
+import SecretEdit from './pages/config/SecretEdit';
+import ConfigMapCreate from './pages/config/ConfigMapCreate';
+import SecretCreate from './pages/config/SecretCreate';
 import './App.css';
+/** genAI_main_end */
 
 const App: React.FC = () => {
   return (
@@ -51,8 +57,20 @@ const App: React.FC = () => {
               <Route path="search" element={<GlobalSearch />} />
               {/* 配置与密钥路由 */}
               <Route path="clusters/:clusterId/configs" element={<ConfigSecretManagement />} />
+              {/* genAI_main_start */}
+              <Route path="clusters/:clusterId/configs/configmap/create" element={<ConfigMapCreate />} />
+              {/* genAI_main_end */}
               <Route path="clusters/:clusterId/configs/configmap/:namespace/:name" element={<ConfigMapDetail />} />
+              {/* genAI_main_start */}
+              <Route path="clusters/:clusterId/configs/configmap/:namespace/:name/edit" element={<ConfigMapEdit />} />
+              {/* genAI_main_end */}
+              {/* genAI_main_start */}
+              <Route path="clusters/:clusterId/configs/secret/create" element={<SecretCreate />} />
+              {/* genAI_main_end */}
               <Route path="clusters/:clusterId/configs/secret/:namespace/:name" element={<SecretDetail />} />
+              {/* genAI_main_start */}
+              <Route path="clusters/:clusterId/configs/secret/:namespace/:name/edit" element={<SecretEdit />} />
+              {/* genAI_main_end */}
             </Route>
           </Routes>
         </Router>
