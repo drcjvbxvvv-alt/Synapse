@@ -60,6 +60,7 @@ export interface YAMLApplyRequest {
 }
 
 export class WorkloadService {
+  /** genAI_main_start */
   // 获取工作负载列表
   static async getWorkloads(
     clusterId: string,
@@ -67,7 +68,7 @@ export class WorkloadService {
     workloadType?: string,
     page = 1,
     pageSize = 20,
-    search?: string // 新增搜索参数
+    search?: string
   ): Promise<WorkloadListResponse> {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -78,31 +79,89 @@ export class WorkloadService {
       params.append('namespace', namespace);
     }
     
-    if (workloadType) {
-      params.append('type', workloadType);
-    }
-    
     if (search) {
       params.append('search', search);
     }
     
-    return request.get(`/clusters/${clusterId}/workloads?${params}`);
+    // 根据workloadType路由到不同的后端API端点
+    let endpoint = `/clusters/${clusterId}/`;
+    switch (workloadType) {
+      case 'Deployment':
+        endpoint += 'deployments';
+        break;
+      case 'Rollout':
+        endpoint += 'rollouts';
+        break;
+      case 'StatefulSet':
+        endpoint += 'statefulsets';
+        break;
+      case 'DaemonSet':
+        endpoint += 'daemonsets';
+        params.append('type', 'DaemonSet'); // 临时保留
+        break;
+      case 'Job':
+        endpoint += 'jobs';
+        params.append('type', 'Job'); // 临时保留
+        break;
+      case 'CronJob':
+        endpoint += 'cronjobs';
+        params.append('type', 'CronJob'); // 临时保留
+        break;
+      default:
+        endpoint += 'workloads';
+        if (workloadType) {
+          params.append('type', workloadType);
+        }
+    }
+    
+    return request.get(`${endpoint}?${params}`);
   }
+  /** genAI_main_end */
 
+  /** genAI_main_start */
   // 获取工作负载命名空间列表
   static async getWorkloadNamespaces(
     clusterId: string,
     workloadType?: string
-  ): Promise<{ code: number; message: string; data: string[] }> {
+  ): Promise<{ code: number; message: string; data: Array<{ name: string; count: number }> }> {
+    // 根据workloadType路由到不同的后端API端点
+    let endpoint = `/clusters/${clusterId}/`;
     const params = new URLSearchParams();
     
-    if (workloadType) {
-      params.append('type', workloadType);
+    switch (workloadType) {
+      case 'Deployment':
+        endpoint += 'deployments/namespaces';
+        break;
+      case 'Rollout':
+        endpoint += 'rollouts/namespaces';
+        break;
+      case 'StatefulSet':
+        endpoint += 'statefulsets/namespaces';
+        break;
+      case 'DaemonSet':
+        endpoint += 'daemonsets/namespaces';
+        params.append('type', 'DaemonSet');
+        break;
+      case 'Job':
+        endpoint += 'jobs/namespaces';
+        params.append('type', 'Job');
+        break;
+      case 'CronJob':
+        endpoint += 'cronjobs/namespaces';
+        params.append('type', 'CronJob');
+        break;
+      default:
+        endpoint += 'workloads/namespaces';
+        if (workloadType) {
+          params.append('type', workloadType);
+        }
     }
     
-    return request.get(`/clusters/${clusterId}/workloads/namespaces?${params}`);
+    return request.get(`${endpoint}?${params}`);
   }
+  /** genAI_main_end */
 
+  /** genAI_main_start */
   // 获取工作负载详情
   static async getWorkloadDetail(
     clusterId: string,
@@ -110,7 +169,30 @@ export class WorkloadService {
     name: string,
     type: string
   ): Promise<WorkloadDetailResponse> {
-    return request.get(`/clusters/${clusterId}/workloads/${namespace}/${name}?type=${type}`);
+    let endpoint = `/clusters/${clusterId}/`;
+    switch (type) {
+      case 'Deployment':
+        endpoint += `deployments/${namespace}/${name}`;
+        break;
+      case 'Rollout':
+        endpoint += `rollouts/${namespace}/${name}`;
+        break;
+      case 'StatefulSet':
+        endpoint += `statefulsets/${namespace}/${name}`;
+        break;
+      case 'DaemonSet':
+        endpoint += `daemonsets/${namespace}/${name}?type=${type}`;
+        break;
+      case 'Job':
+        endpoint += `jobs/${namespace}/${name}?type=${type}`;
+        break;
+      case 'CronJob':
+        endpoint += `cronjobs/${namespace}/${name}?type=${type}`;
+        break;
+      default:
+        endpoint += `workloads/${namespace}/${name}?type=${type}`;
+    }
+    return request.get(endpoint);
   }
 
   // 扩缩容工作负载
@@ -121,10 +203,21 @@ export class WorkloadService {
     type: string,
     replicas: number
   ): Promise<any> {
-    return request.post(
-      `/clusters/${clusterId}/workloads/${namespace}/${name}/scale?type=${type}`,
-      { replicas }
-    );
+    let endpoint = `/clusters/${clusterId}/`;
+    switch (type) {
+      case 'Deployment':
+        endpoint += `deployments/${namespace}/${name}/scale`;
+        break;
+      case 'Rollout':
+        endpoint += `rollouts/${namespace}/${name}/scale`;
+        break;
+      case 'StatefulSet':
+        endpoint += `statefulsets/${namespace}/${name}/scale`;
+        break;
+      default:
+        endpoint += `workloads/${namespace}/${name}/scale?type=${type}`;
+    }
+    return request.post(endpoint, { replicas });
   }
 
   // 删除工作负载
@@ -134,9 +227,30 @@ export class WorkloadService {
     name: string,
     type: string
   ): Promise<any> {
-    return request.delete(
-      `/clusters/${clusterId}/workloads/${namespace}/${name}?type=${type}`
-    );
+    let endpoint = `/clusters/${clusterId}/`;
+    switch (type) {
+      case 'Deployment':
+        endpoint += `deployments/${namespace}/${name}`;
+        break;
+      case 'Rollout':
+        endpoint += `rollouts/${namespace}/${name}`;
+        break;
+      case 'StatefulSet':
+        endpoint += `statefulsets/${namespace}/${name}`;
+        break;
+      case 'DaemonSet':
+        endpoint += `daemonsets/${namespace}/${name}`;
+        break;
+      case 'Job':
+        endpoint += `jobs/${namespace}/${name}`;
+        break;
+      case 'CronJob':
+        endpoint += `cronjobs/${namespace}/${name}`;
+        break;
+      default:
+        endpoint += `workloads/${namespace}/${name}?type=${type}`;
+    }
+    return request.delete(endpoint);
   }
 
   // 应用YAML
@@ -145,11 +259,45 @@ export class WorkloadService {
     yaml: string,
     dryRun = false
   ): Promise<any> {
+    // 解析YAML中的kind来确定使用哪个endpoint
+    try {
+      const kindMatch = yaml.match(/kind:\s*(\w+)/);
+      if (kindMatch) {
+        const kind = kindMatch[1];
+        let endpoint = `/clusters/${clusterId}/`;
+        switch (kind) {
+          case 'Deployment':
+            endpoint += 'deployments/yaml/apply';
+            break;
+          case 'Rollout':
+            endpoint += 'rollouts/yaml/apply';
+            break;
+          case 'StatefulSet':
+            endpoint += 'statefulsets/yaml/apply';
+            break;
+          case 'DaemonSet':
+            endpoint += 'daemonsets/yaml/apply';
+            break;
+          case 'Job':
+            endpoint += 'jobs/yaml/apply';
+            break;
+          case 'CronJob':
+            endpoint += 'cronjobs/yaml/apply';
+            break;
+          default:
+            endpoint += 'workloads/yaml/apply';
+        }
+        return request.post(endpoint, { yaml, dryRun });
+      }
+    } catch (e) {
+      // fallback to default
+    }
     return request.post(`/clusters/${clusterId}/workloads/yaml/apply`, {
       yaml,
       dryRun,
     });
   }
+  /** genAI_main_end */
 
   // 获取工作负载类型列表
   static getWorkloadTypes(): Array<{ value: string; label: string; icon: string }> {

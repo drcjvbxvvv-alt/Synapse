@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -321,6 +322,15 @@ func (c *K8sClient) GetClientset() *kubernetes.Clientset {
 // GetRestConfig 返回底层 REST 配置（供动态客户端/Informer 使用）
 func (c *K8sClient) GetRestConfig() *rest.Config {
 	return c.config
+}
+
+// GetRolloutClient 获取Argo Rollouts客户端
+func (c *K8sClient) GetRolloutClient() (*rolloutsclientset.Clientset, error) {
+	rolloutClient, err := rolloutsclientset.NewForConfig(c.config)
+	if err != nil {
+		return nil, fmt.Errorf("创建Argo Rollouts客户端失败: %w", err)
+	}
+	return rolloutClient, nil
 }
 
 // GetClusterMetrics 获取集群监控数据

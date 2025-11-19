@@ -179,13 +179,165 @@ const YAMLEditor: React.FC = () => {
   };
   /** genAI_main_end */
 
+  /** genAI_main_start */
+  // 生成默认YAML模板
+  const generateDefaultYAML = useCallback((type: string) => {
+    const templates: Record<string, string> = {
+      'Deployment': `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+`,
+      'Rollout': `apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: my-rollout
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {}
+      - setWeight: 50
+      - pause: {duration: 10}
+      - setWeight: 80
+      - pause: {duration: 10}
+`,
+      'StatefulSet': `apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-statefulset
+  namespace: default
+spec:
+  serviceName: my-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+`,
+      'DaemonSet': `apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: my-daemonset
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+`,
+      'Job': `apiVersion: batch/v1
+kind: Job
+metadata:
+  name: my-job
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: my-container
+        image: busybox
+        command: ['sh', '-c', 'echo Hello Kubernetes! && sleep 30']
+      restartPolicy: Never
+  backoffLimit: 4
+`,
+      'CronJob': `apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: my-cronjob
+  namespace: default
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: my-container
+            image: busybox
+            command: ['sh', '-c', 'echo Hello Kubernetes! && date']
+          restartPolicy: Never
+`
+    };
+    
+    return templates[type] || `apiVersion: v1
+kind: ${type}
+metadata:
+  name: my-resource
+  namespace: default
+spec: {}
+`;
+  }, []);
+  
   useEffect(() => {
-    if (clusterId && workloadRef && workloadType) {
+    // 检查必要参数
+    if (!clusterId || !workloadType) {
+      setError('缺少必要参数：集群ID或工作负载类型');
+      return;
+    }
+    
+    // 如果有workloadRef，则是编辑模式，加载现有YAML
+    if (workloadRef) {
       loadWorkloadYAML();
     } else {
-      setError('缺少必要参数：集群ID、工作负载引用或工作负载类型');
+      // 否则是创建模式，生成默认YAML模板
+      const defaultYAML = generateDefaultYAML(workloadType);
+      setYaml(defaultYAML);
+      setOriginalYaml(defaultYAML);
+      setError(null);
     }
-  }, [clusterId, workloadRef, workloadType, loadWorkloadYAML]);
+  }, [clusterId, workloadRef, workloadType, loadWorkloadYAML, generateDefaultYAML]);
+  /** genAI_main_end */
 
   // 页面离开前提醒
   useEffect(() => {

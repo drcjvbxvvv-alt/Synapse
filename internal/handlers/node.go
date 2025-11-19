@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -36,14 +35,6 @@ func NewNodeHandler(db *gorm.DB, cfg *config.Config, clusterService *services.Cl
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,
 	}
-}
-
-// parseClusterID 解析集群ID字符串为uint
-func parseClusterID(clusterIDStr string) uint {
-	if id, err := strconv.ParseUint(clusterIDStr, 10, 32); err == nil {
-		return uint(id)
-	}
-	return 0
 }
 
 // GetNodes 获取节点列表

@@ -145,20 +145,82 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					pods.GET("/:namespace/:name/metrics", monitoringHandler.GetPodMetrics)
 				}
 
-				// workloads 子分组
-				workloadHandler := handlers.NewWorkloadHandler(db, cfg, clusterSvc, k8sMgr)
-				workloads := cluster.Group("/workloads")
+				/** genAI_main_start */
+				// Deployment 子分组
+				deploymentHandler := handlers.NewDeploymentHandler(db, cfg, clusterSvc, k8sMgr)
+				deployments := cluster.Group("/deployments")
 				{
-					workloads.GET("", workloadHandler.GetWorkloads)
-					workloads.GET("/namespaces", workloadHandler.GetWorkloadNamespaces)
-					workloads.GET("/:namespace/:name", workloadHandler.GetWorkload)
-					workloads.POST("/:namespace/:name/scale", workloadHandler.ScaleWorkload)
-					/** genAI_main_start */
-					workloads.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
-					/** genAI_main_end */
-					// YAML apply 可以考虑放 /apply 到 cluster 级别或 workloads 级别均可
-					workloads.POST("/yaml/apply", workloadHandler.ApplyYAML)
+					deployments.GET("", deploymentHandler.ListDeployments)
+					deployments.GET("/namespaces", deploymentHandler.GetDeploymentNamespaces)
+					deployments.GET("/:namespace/:name", deploymentHandler.GetDeployment)
+					deployments.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
+					deployments.POST("/yaml/apply", deploymentHandler.ApplyYAML)
+					deployments.POST("/:namespace/:name/scale", deploymentHandler.ScaleDeployment)
+					deployments.DELETE("/:namespace/:name", deploymentHandler.DeleteDeployment)
 				}
+
+				// Rollout 子分组
+				rolloutHandler := handlers.NewRolloutHandler(db, cfg, clusterSvc, k8sMgr)
+				rollouts := cluster.Group("/rollouts")
+				{
+					rollouts.GET("", rolloutHandler.ListRollouts)
+					rollouts.GET("/namespaces", rolloutHandler.GetRolloutNamespaces)
+					rollouts.GET("/:namespace/:name", rolloutHandler.GetRollout)
+					rollouts.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
+					rollouts.POST("/yaml/apply", rolloutHandler.ApplyYAML)
+					rollouts.POST("/:namespace/:name/scale", rolloutHandler.ScaleRollout)
+					rollouts.DELETE("/:namespace/:name", rolloutHandler.DeleteRollout)
+				}
+
+				// StatefulSet 子分组
+				statefulSetHandler := handlers.NewStatefulSetHandler(db, cfg, clusterSvc, k8sMgr)
+				statefulSets := cluster.Group("/statefulsets")
+				{
+					statefulSets.GET("", statefulSetHandler.ListStatefulSets)
+					statefulSets.GET("/namespaces", statefulSetHandler.GetStatefulSetNamespaces)
+					statefulSets.GET("/:namespace/:name", statefulSetHandler.GetStatefulSet)
+					statefulSets.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
+					statefulSets.POST("/yaml/apply", statefulSetHandler.ApplyYAML)
+					statefulSets.POST("/:namespace/:name/scale", statefulSetHandler.ScaleStatefulSet)
+					statefulSets.DELETE("/:namespace/:name", statefulSetHandler.DeleteStatefulSet)
+				}
+
+				// DaemonSet 子分组
+				daemonSetHandler := handlers.NewDaemonSetHandler(db, cfg, clusterSvc, k8sMgr)
+				daemonsets := cluster.Group("/daemonsets")
+				{
+					daemonsets.GET("", daemonSetHandler.ListDaemonSets)
+					daemonsets.GET("/namespaces", daemonSetHandler.GetDaemonSetNamespaces)
+					daemonsets.GET("/:namespace/:name", daemonSetHandler.GetDaemonSet)
+					daemonsets.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
+					daemonsets.POST("/yaml/apply", daemonSetHandler.ApplyYAML)
+					daemonsets.DELETE("/:namespace/:name", daemonSetHandler.DeleteDaemonSet)
+				}
+
+				// Job 子分组
+				jobHandler := handlers.NewJobHandler(db, cfg, clusterSvc, k8sMgr)
+				jobs := cluster.Group("/jobs")
+				{
+					jobs.GET("", jobHandler.ListJobs)
+					jobs.GET("/namespaces", jobHandler.GetJobNamespaces)
+					jobs.GET("/:namespace/:name", jobHandler.GetJob)
+					jobs.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
+					jobs.POST("/yaml/apply", jobHandler.ApplyYAML)
+					jobs.DELETE("/:namespace/:name", jobHandler.DeleteJob)
+				}
+
+				// CronJob 子分组
+				cronJobHandler := handlers.NewCronJobHandler(db, cfg, clusterSvc, k8sMgr)
+				cronjobs := cluster.Group("/cronjobs")
+				{
+					cronjobs.GET("", cronJobHandler.ListCronJobs)
+					cronjobs.GET("/namespaces", cronJobHandler.GetCronJobNamespaces)
+					cronjobs.GET("/:namespace/:name", cronJobHandler.GetCronJob)
+					cronjobs.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
+					cronjobs.POST("/yaml/apply", cronJobHandler.ApplyYAML)
+					cronjobs.DELETE("/:namespace/:name", cronJobHandler.DeleteCronJob)
+				}
+				/** genAI_main_end */
 
 				/** genAI_main_start */
 				// configmaps 子分组
