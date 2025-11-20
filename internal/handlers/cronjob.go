@@ -37,17 +37,18 @@ func NewCronJobHandler(db *gorm.DB, cfg *config.Config, clusterService *services
 }
 
 type CronJobInfo struct {
-	ID              string            `json:"id"`
-	Name            string            `json:"name"`
-	Namespace       string            `json:"namespace"`
-	Status          string            `json:"status"`
-	Schedule        string            `json:"schedule"`
-	Suspend         bool              `json:"suspend"`
-	Active          int               `json:"active"`
-	LastScheduleTime *time.Time       `json:"lastScheduleTime"`
-	Labels          map[string]string `json:"labels"`
-	Annotations     map[string]string `json:"annotations"`
-	CreatedAt       time.Time         `json:"createdAt"`
+	ID               string            `json:"id"`
+	Name             string            `json:"name"`
+	Namespace        string            `json:"namespace"`
+	Type             string            `json:"type"`
+	Status           string            `json:"status"`
+	Schedule         string            `json:"schedule"`
+	Suspend          bool              `json:"suspend"`
+	Active           int               `json:"active"`
+	LastScheduleTime *time.Time        `json:"lastScheduleTime"`
+	Labels           map[string]string `json:"labels"`
+	Annotations      map[string]string `json:"annotations"`
+	CreatedAt        time.Time         `json:"createdAt"`
 }
 
 func (h *CronJobHandler) ListCronJobs(c *gin.Context) {
@@ -179,8 +180,13 @@ func (h *CronJobHandler) GetCronJob(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200, "message": "success",
-		"data": gin.H{"cronJob": h.convertToCronJobInfo(cronJob), "raw": cronJob, "jobs": jobs},
+		"code":    200,
+		"message": "success",
+		"data": gin.H{
+			"workload": h.convertToCronJobInfo(cronJob),
+			"raw":      cronJob,
+			"jobs":     jobs,
+		},
 	})
 }
 
@@ -386,6 +392,7 @@ func (h *CronJobHandler) convertToCronJobInfo(cj *batchv1.CronJob) CronJobInfo {
 		ID:               fmt.Sprintf("%s/%s", cj.Namespace, cj.Name),
 		Name:             cj.Name,
 		Namespace:        cj.Namespace,
+		Type:             "CronJob",
 		Status:           status,
 		Schedule:         cj.Spec.Schedule,
 		Suspend:          suspend,

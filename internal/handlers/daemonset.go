@@ -49,6 +49,7 @@ type DaemonSetInfo struct {
 	ID                     string            `json:"id"`
 	Name                   string            `json:"name"`
 	Namespace              string            `json:"namespace"`
+	Type                   string            `json:"type"`
 	Status                 string            `json:"status"`
 	DesiredNumberScheduled int32             `json:"desiredNumberScheduled"`
 	CurrentNumberScheduled int32             `json:"currentNumberScheduled"`
@@ -209,9 +210,9 @@ func (h *DaemonSetHandler) GetDaemonSet(c *gin.Context) {
 		"code":    200,
 		"message": "success",
 		"data": gin.H{
-			"daemonSet": h.convertToDaemonSetInfo(daemonSet),
-			"raw":       daemonSet,
-			"pods":      pods,
+			"workload": h.convertToDaemonSetInfo(daemonSet),
+			"raw":      daemonSet,
+			"pods":     pods,
 		},
 	})
 }
@@ -470,6 +471,7 @@ func (h *DaemonSetHandler) convertToDaemonSetInfo(ds *appsv1.DaemonSet) DaemonSe
 		ID:                     fmt.Sprintf("%s/%s", ds.Namespace, ds.Name),
 		Name:                   ds.Name,
 		Namespace:              ds.Namespace,
+		Type:                   "DaemonSet",
 		Status:                 status,
 		DesiredNumberScheduled: ds.Status.DesiredNumberScheduled,
 		CurrentNumberScheduled: ds.Status.CurrentNumberScheduled,

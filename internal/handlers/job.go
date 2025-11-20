@@ -38,21 +38,22 @@ func NewJobHandler(db *gorm.DB, cfg *config.Config, clusterService *services.Clu
 }
 
 type JobInfo struct {
-	ID              string            `json:"id"`
-	Name            string            `json:"name"`
-	Namespace       string            `json:"namespace"`
-	Status          string            `json:"status"`
-	Completions     int32             `json:"completions"`
-	Parallelism     int32             `json:"parallelism"`
-	Succeeded       int32             `json:"succeeded"`
-	Failed          int32             `json:"failed"`
-	Active          int32             `json:"active"`
-	StartTime       *time.Time        `json:"startTime"`
-	CompletionTime  *time.Time        `json:"completionTime"`
-	Labels          map[string]string `json:"labels"`
-	Annotations     map[string]string `json:"annotations"`
-	CreatedAt       time.Time         `json:"createdAt"`
-	Images          []string          `json:"images"`
+	ID             string            `json:"id"`
+	Name           string            `json:"name"`
+	Namespace      string            `json:"namespace"`
+	Type           string            `json:"type"`
+	Status         string            `json:"status"`
+	Completions    int32             `json:"completions"`
+	Parallelism    int32             `json:"parallelism"`
+	Succeeded      int32             `json:"succeeded"`
+	Failed         int32             `json:"failed"`
+	Active         int32             `json:"active"`
+	StartTime      *time.Time        `json:"startTime"`
+	CompletionTime *time.Time        `json:"completionTime"`
+	Labels         map[string]string `json:"labels"`
+	Annotations    map[string]string `json:"annotations"`
+	CreatedAt      time.Time         `json:"createdAt"`
+	Images         []string          `json:"images"`
 }
 
 func (h *JobHandler) ListJobs(c *gin.Context) {
@@ -183,8 +184,13 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 200, "message": "success",
-		"data": gin.H{"job": h.convertToJobInfo(job), "raw": job, "pods": pods},
+		"code":    200,
+		"message": "success",
+		"data": gin.H{
+			"workload": h.convertToJobInfo(job),
+			"raw":      job,
+			"pods":     pods,
+		},
 	})
 }
 
@@ -402,6 +408,7 @@ func (h *JobHandler) convertToJobInfo(j *batchv1.Job) JobInfo {
 		ID:             fmt.Sprintf("%s/%s", j.Namespace, j.Name),
 		Name:           j.Name,
 		Namespace:      j.Namespace,
+		Type:           "Job",
 		Status:         status,
 		Completions:    completions,
 		Parallelism:    parallelism,

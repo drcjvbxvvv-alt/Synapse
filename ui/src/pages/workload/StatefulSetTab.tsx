@@ -11,17 +11,17 @@ import {
   Modal,
   Tooltip,
   Badge,
-  Dropdown,
   InputNumber,
   App,
+  Popconfirm,
 } from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
   ExpandAltOutlined,
   EyeOutlined,
-  MoreOutlined,
   ReloadOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
@@ -351,19 +351,27 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
     {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 200,
       fixed: 'right' as const,
       render: (record: WorkloadInfo) => (
         <Space size="small">
+          <Tooltip title="查看详情">
           <Button
             type="link"
             size="small"
             icon={<EyeOutlined />}
             onClick={() => navigate(`/clusters/${clusterId}/workloads/${record.namespace}/${record.name}?type=${record.type}`)}
-            style={{ padding: '0 4px' }}
-          >
-            详情
-          </Button>
+            />
+          </Tooltip>
+          <Tooltip title="编辑">
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=StatefulSet&namespace=${record.namespace}&name=${record.name}`)}
+            />
+          </Tooltip>
+          <Tooltip title="扩缩容">
           <Button
             type="link"
             size="small"
@@ -373,40 +381,24 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
               setScaleReplicas(record.replicas || 1);
               setScaleModalVisible(true);
             }}
-            style={{ padding: '0 4px' }}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="确定要删除这个StatefulSet吗？"
+            description={`确定要删除 ${record.name} 吗？`}
+            onConfirm={() => handleDelete(record)}
+            okText="确定"
+            cancelText="取消"
           >
-            扩缩容
-          </Button>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'delete',
-                  icon: <DeleteOutlined />,
-                  label: '删除',
-                  danger: true,
-                  onClick: () => {
-                    Modal.confirm({
-                      title: '确认删除',
-                      content: `确定要删除StatefulSet ${record.name} 吗？`,
-                      okText: '确定',
-                      cancelText: '取消',
-                      okType: 'danger',
-                      onOk: () => handleDelete(record),
-                    });
-                  },
-                },
-              ],
-            }}
-            trigger={['click']}
-          >
+            <Tooltip title="删除">
             <Button
               type="link"
               size="small"
-              icon={<MoreOutlined />}
-              style={{ padding: '0 4px' }}
+                danger
+                icon={<DeleteOutlined />}
             />
-          </Dropdown>
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -480,7 +472,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => navigate(`/clusters/${clusterId}/yaml/apply?type=StatefulSet`)}
+            onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=StatefulSet`)}
           >
             创建StatefulSet
           </Button>
@@ -552,4 +544,3 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
 
 export default StatefulSetTab;
 /** genAI_main_end */
-

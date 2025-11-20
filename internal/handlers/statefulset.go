@@ -49,6 +49,7 @@ type StatefulSetInfo struct {
 	ID              string            `json:"id"`
 	Name            string            `json:"name"`
 	Namespace       string            `json:"namespace"`
+	Type            string            `json:"type"`
 	Status          string            `json:"status"`
 	Replicas        int32             `json:"replicas"`
 	ReadyReplicas   int32             `json:"readyReplicas"`
@@ -210,9 +211,9 @@ func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 		"code":    200,
 		"message": "success",
 		"data": gin.H{
-			"statefulSet": h.convertToStatefulSetInfo(statefulSet),
-			"raw":         statefulSet,
-			"pods":        pods,
+			"workload": h.convertToStatefulSetInfo(statefulSet),
+			"raw":      statefulSet,
+			"pods":     pods,
 		},
 	})
 }
@@ -551,6 +552,7 @@ func (h *StatefulSetHandler) convertToStatefulSetInfo(ss *appsv1.StatefulSet) St
 		ID:              fmt.Sprintf("%s/%s", ss.Namespace, ss.Name),
 		Name:            ss.Name,
 		Namespace:       ss.Namespace,
+		Type:            "StatefulSet",
 		Status:          status,
 		Replicas:        *ss.Spec.Replicas,
 		ReadyReplicas:   ss.Status.ReadyReplicas,

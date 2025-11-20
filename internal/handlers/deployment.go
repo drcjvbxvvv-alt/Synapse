@@ -49,6 +49,7 @@ type DeploymentInfo struct {
 	ID                string            `json:"id"`
 	Name              string            `json:"name"`
 	Namespace         string            `json:"namespace"`
+	Type              string            `json:"type"`
 	Status            string            `json:"status"`
 	Replicas          int32             `json:"replicas"`
 	ReadyReplicas     int32             `json:"readyReplicas"`
@@ -60,6 +61,10 @@ type DeploymentInfo struct {
 	Images            []string          `json:"images"`
 	Selector          map[string]string `json:"selector"`
 	Strategy          string            `json:"strategy"`
+	CPULimit          string            `json:"cpuLimit"`
+	CPURequest        string            `json:"cpuRequest"`
+	MemoryLimit       string            `json:"memoryLimit"`
+	MemoryRequest     string            `json:"memoryRequest"`
 }
 
 // ListDeployments 获取Deployment列表
@@ -218,9 +223,9 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 		"code":    200,
 		"message": "success",
 		"data": gin.H{
-			"deployment": h.convertToDeploymentInfo(deployment),
-			"raw":        deployment,
-			"pods":       pods,
+			"workload": h.convertToDeploymentInfo(deployment),
+			"raw":      deployment,
+			"pods":     pods,
 		},
 	})
 }
@@ -565,19 +570,64 @@ func (h *DeploymentHandler) convertToDeploymentInfo(d *appsv1.Deployment) Deploy
 		status = "Degraded"
 	}
 
-	// 提取镜像列表
+	// 提取镜像列表和资源信息
 	var images []string
+	var cpuLimits, cpuRequests []string
+	var memoryLimits, memoryRequests []string
+
 	for _, container := range d.Spec.Template.Spec.Containers {
 		images = append(images, container.Image)
+
+		// CPU 限制
+		if cpu := container.Resources.Limits.Cpu(); cpu != nil && !cpu.IsZero() {
+			cpuLimits = append(cpuLimits, cpu.String())
+		}
+
+		// CPU 申请
+		if cpu := container.Resources.Requests.Cpu(); cpu != nil && !cpu.IsZero() {
+			cpuRequests = append(cpuRequests, cpu.String())
+		}
+
+		// 内存 限制
+		if memory := container.Resources.Limits.Memory(); memory != nil && !memory.IsZero() {
+			memoryLimits = append(memoryLimits, memory.String())
+		}
+
+		// 内存 申请
+		if memory := container.Resources.Requests.Memory(); memory != nil && !memory.IsZero() {
+			memoryRequests = append(memoryRequests, memory.String())
+		}
 	}
 
 	// 策略
 	strategy := string(d.Spec.Strategy.Type)
 
+	// 格式化资源值
+	cpuLimit := "-"
+	if len(cpuLimits) > 0 {
+		cpuLimit = strings.Join(cpuLimits, " + ")
+	}
+
+	cpuRequest := "-"
+	if len(cpuRequests) > 0 {
+		cpuRequest = strings.Join(cpuRequests, " + ")
+	}
+
+	memoryLimit := "-"
+	if len(memoryLimits) > 0 {
+		memoryLimit = strings.Join(memoryLimits, " + ")
+	}
+
+	memoryRequest := "-"
+	if len(memoryRequests) > 0 {
+		memoryRequest = strings.Join(memoryRequests, " + ")
+	}
+
 	return DeploymentInfo{
 		ID:                fmt.Sprintf("%s/%s", d.Namespace, d.Name),
 		Name:              d.Name,
 		Namespace:         d.Namespace,
+		Type:              "Deployment",
 		Status:            status,
 		Replicas:          *d.Spec.Replicas,
 		ReadyReplicas:     d.Status.ReadyReplicas,
@@ -589,6 +639,10 @@ func (h *DeploymentHandler) convertToDeploymentInfo(d *appsv1.Deployment) Deploy
 		Images:            images,
 		Selector:          d.Spec.Selector.MatchLabels,
 		Strategy:          strategy,
+		CPULimit:          cpuLimit,
+		CPURequest:        cpuRequest,
+		MemoryLimit:       memoryLimit,
+		MemoryRequest:     memoryRequest,
 	}
 }
 

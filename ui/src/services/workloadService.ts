@@ -21,6 +21,10 @@ export interface WorkloadInfo {
   updatedReplicas?: number;
   availableReplicas?: number;
   strategy?: string;
+  cpuLimit?: string;
+  cpuRequest?: string;
+  memoryLimit?: string;
+  memoryRequest?: string;
   conditions?: Array<{
     type: string;
     status: string;
@@ -253,6 +257,33 @@ export class WorkloadService {
     return request.delete(endpoint);
   }
 
+  // 重新部署工作负载（重启）
+  static async restartWorkload(
+    clusterId: string,
+    namespace: string,
+    name: string,
+    type: string
+  ): Promise<any> {
+    let endpoint = `/clusters/${clusterId}/`;
+    switch (type) {
+      case 'Deployment':
+        endpoint += `deployments/${namespace}/${name}/restart`;
+        break;
+      case 'Rollout':
+        endpoint += `rollouts/${namespace}/${name}/restart`;
+        break;
+      case 'StatefulSet':
+        endpoint += `statefulsets/${namespace}/${name}/restart`;
+        break;
+      case 'DaemonSet':
+        endpoint += `daemonsets/${namespace}/${name}/restart`;
+        break;
+      default:
+        endpoint += `workloads/${namespace}/${name}/restart?type=${type}`;
+    }
+    return request.post(endpoint);
+  }
+
   // 应用YAML
   static async applyYAML(
     clusterId: string,
@@ -349,4 +380,267 @@ export class WorkloadService {
     
     return { status: statusText, color };
   }
+
+  /** genAI_main_start */
+  // 表单数据转YAML
+  static formDataToYAML(
+    workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob',
+    formData: any
+  ): string {
+    // 解析labels和annotations
+    const parseKeyValue = (str: string): Record<string, string> => {
+      if (!str) return {};
+      const result: Record<string, string> = {};
+      str.split(',').forEach((item) => {
+        const [key, value] = item.split('=');
+        if (key && value) {
+          result[key.trim()] = value.trim();
+        }
+      });
+      return result;
+    };
+
+    const labels = typeof formData.labels === 'string' 
+      ? parseKeyValue(formData.labels) 
+      : formData.labels || {};
+    const annotations = typeof formData.annotations === 'string'
+      ? parseKeyValue(formData.annotations)
+      : formData.annotations || {};
+
+    // 基础metadata
+    const metadata = {
+      name: formData.name,
+      namespace: formData.namespace || 'default',
+      labels: Object.keys(labels).length > 0 ? labels : { app: formData.name },
+      ...(Object.keys(annotations).length > 0 && { annotations }),
+    };
+
+    // 容器定义
+    const container = {
+      name: formData.containerName || 'main',
+      image: formData.image,
+      ...(formData.containerPort && {
+        ports: [{ containerPort: formData.containerPort }],
+      }),
+      ...(formData.env && formData.env.length > 0 && {
+        env: formData.env.map((e: any) => ({ name: e.name, value: e.value })),
+      }),
+      ...(formData.resources && {
+        resources: {
+          ...(formData.resources.requests && { requests: formData.resources.requests }),
+          ...(formData.resources.limits && { limits: formData.resources.limits }),
+        },
+      }),
+    };
+
+    // PodSpec
+    const podSpec = {
+      containers: [container],
+    };
+
+    let yaml = '';
+
+    switch (workloadType) {
+      case 'Deployment':
+        yaml = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${metadata.name}
+  namespace: ${metadata.namespace}
+  labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `    ${k}: ${v}`)
+  .join('\n')}
+${metadata.annotations ? `  annotations:\n${Object.entries(metadata.annotations).map(([k, v]) => `    ${k}: ${v}`).join('\n')}` : ''}
+spec:
+  replicas: ${formData.replicas || 1}
+  selector:
+    matchLabels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `      ${k}: ${v}`)
+  .join('\n')}
+  template:
+    metadata:
+      labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `        ${k}: ${v}`)
+  .join('\n')}
+    spec:
+      containers:
+      - name: ${container.name}
+        image: ${container.image}
+${container.ports ? `        ports:\n${container.ports.map((p: any) => `        - containerPort: ${p.containerPort}`).join('\n')}` : ''}
+${container.env ? `        env:\n${container.env.map((e: any) => `        - name: ${e.name}\n          value: "${e.value}"`).join('\n')}` : ''}
+${container.resources ? `        resources:\n${container.resources.requests ? `          requests:\n            cpu: ${container.resources.requests.cpu}\n            memory: ${container.resources.requests.memory}` : ''}${container.resources.limits ? `\n          limits:\n            cpu: ${container.resources.limits.cpu}\n            memory: ${container.resources.limits.memory}` : ''}` : ''}`;
+        break;
+
+      case 'StatefulSet':
+        yaml = `apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ${metadata.name}
+  namespace: ${metadata.namespace}
+  labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `    ${k}: ${v}`)
+  .join('\n')}
+spec:
+  serviceName: ${formData.serviceName || metadata.name}
+  replicas: ${formData.replicas || 1}
+  selector:
+    matchLabels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `      ${k}: ${v}`)
+  .join('\n')}
+  template:
+    metadata:
+      labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `        ${k}: ${v}`)
+  .join('\n')}
+    spec:
+      containers:
+      - name: ${container.name}
+        image: ${container.image}
+${container.ports ? `        ports:\n${container.ports.map((p: any) => `        - containerPort: ${p.containerPort}`).join('\n')}` : ''}
+${container.env ? `        env:\n${container.env.map((e: any) => `        - name: ${e.name}\n          value: "${e.value}"`).join('\n')}` : ''}
+${container.resources ? `        resources:\n${container.resources.requests ? `          requests:\n            cpu: ${container.resources.requests.cpu}\n            memory: ${container.resources.requests.memory}` : ''}${container.resources.limits ? `\n          limits:\n            cpu: ${container.resources.limits.cpu}\n            memory: ${container.resources.limits.memory}` : ''}` : ''}`;
+        break;
+
+      case 'DaemonSet':
+        yaml = `apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ${metadata.name}
+  namespace: ${metadata.namespace}
+  labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `    ${k}: ${v}`)
+  .join('\n')}
+spec:
+  selector:
+    matchLabels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `      ${k}: ${v}`)
+  .join('\n')}
+  template:
+    metadata:
+      labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `        ${k}: ${v}`)
+  .join('\n')}
+    spec:
+      containers:
+      - name: ${container.name}
+        image: ${container.image}
+${container.ports ? `        ports:\n${container.ports.map((p: any) => `        - containerPort: ${p.containerPort}`).join('\n')}` : ''}
+${container.env ? `        env:\n${container.env.map((e: any) => `        - name: ${e.name}\n          value: "${e.value}"`).join('\n')}` : ''}
+${container.resources ? `        resources:\n${container.resources.requests ? `          requests:\n            cpu: ${container.resources.requests.cpu}\n            memory: ${container.resources.requests.memory}` : ''}${container.resources.limits ? `\n          limits:\n            cpu: ${container.resources.limits.cpu}\n            memory: ${container.resources.limits.memory}` : ''}` : ''}`;
+        break;
+
+      case 'Rollout':
+        yaml = `apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: ${metadata.name}
+  namespace: ${metadata.namespace}
+  labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `    ${k}: ${v}`)
+  .join('\n')}
+spec:
+  replicas: ${formData.replicas || 1}
+  selector:
+    matchLabels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `      ${k}: ${v}`)
+  .join('\n')}
+  template:
+    metadata:
+      labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `        ${k}: ${v}`)
+  .join('\n')}
+    spec:
+      containers:
+      - name: ${container.name}
+        image: ${container.image}
+${container.ports ? `        ports:\n${container.ports.map((p: any) => `        - containerPort: ${p.containerPort}`).join('\n')}` : ''}
+${container.env ? `        env:\n${container.env.map((e: any) => `        - name: ${e.name}\n          value: "${e.value}"`).join('\n')}` : ''}
+${container.resources ? `        resources:\n${container.resources.requests ? `          requests:\n            cpu: ${container.resources.requests.cpu}\n            memory: ${container.resources.requests.memory}` : ''}${container.resources.limits ? `\n          limits:\n            cpu: ${container.resources.limits.cpu}\n            memory: ${container.resources.limits.memory}` : ''}` : ''}
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {duration: 10s}
+      - setWeight: 50
+      - pause: {duration: 10s}`;
+        break;
+
+      case 'Job':
+        yaml = `apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${metadata.name}
+  namespace: ${metadata.namespace}
+  labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `    ${k}: ${v}`)
+  .join('\n')}
+spec:
+${formData.completions ? `  completions: ${formData.completions}` : ''}
+${formData.parallelism ? `  parallelism: ${formData.parallelism}` : ''}
+${formData.backoffLimit !== undefined ? `  backoffLimit: ${formData.backoffLimit}` : ''}
+  template:
+    metadata:
+      labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `        ${k}: ${v}`)
+  .join('\n')}
+    spec:
+      containers:
+      - name: ${container.name}
+        image: ${container.image}
+${container.env ? `        env:\n${container.env.map((e: any) => `        - name: ${e.name}\n          value: "${e.value}"`).join('\n')}` : ''}
+${container.resources ? `        resources:\n${container.resources.requests ? `          requests:\n            cpu: ${container.resources.requests.cpu}\n            memory: ${container.resources.requests.memory}` : ''}${container.resources.limits ? `\n          limits:\n            cpu: ${container.resources.limits.cpu}\n            memory: ${container.resources.limits.memory}` : ''}` : ''}
+      restartPolicy: Never`;
+        break;
+
+      case 'CronJob':
+        yaml = `apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ${metadata.name}
+  namespace: ${metadata.namespace}
+  labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `    ${k}: ${v}`)
+  .join('\n')}
+spec:
+  schedule: "${formData.schedule || '0 0 * * *'}"
+${formData.suspend !== undefined ? `  suspend: ${formData.suspend}` : ''}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+${Object.entries(metadata.labels)
+  .map(([k, v]) => `            ${k}: ${v}`)
+  .join('\n')}
+        spec:
+          containers:
+          - name: ${container.name}
+            image: ${container.image}
+${container.env ? `            env:\n${container.env.map((e: any) => `            - name: ${e.name}\n              value: "${e.value}"`).join('\n')}` : ''}
+${container.resources ? `            resources:\n${container.resources.requests ? `              requests:\n                cpu: ${container.resources.requests.cpu}\n                memory: ${container.resources.requests.memory}` : ''}${container.resources.limits ? `\n              limits:\n                cpu: ${container.resources.limits.cpu}\n                memory: ${container.resources.limits.memory}` : ''}` : ''}
+          restartPolicy: OnFailure`;
+        break;
+
+      default:
+        throw new Error(`不支持的工作负载类型: ${workloadType}`);
+    }
+
+    return yaml;
+  }
+  /** genAI_main_end */
 }

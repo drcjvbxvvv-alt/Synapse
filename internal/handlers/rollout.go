@@ -54,6 +54,7 @@ type RolloutInfo struct {
 	ID                string            `json:"id"`
 	Name              string            `json:"name"`
 	Namespace         string            `json:"namespace"`
+	Type              string            `json:"type"`
 	Status            string            `json:"status"`
 	Replicas          int32             `json:"replicas"`
 	ReadyReplicas     int32             `json:"readyReplicas"`
@@ -232,9 +233,9 @@ func (h *RolloutHandler) GetRollout(c *gin.Context) {
 		"code":    200,
 		"message": "success",
 		"data": gin.H{
-			"rollout": h.convertToRolloutInfo(rollout),
-			"raw":     rollout,
-			"pods":    pods,
+			"workload": h.convertToRolloutInfo(rollout),
+			"raw":      rollout,
+			"pods":     pods,
 		},
 	})
 }
@@ -618,6 +619,7 @@ func (h *RolloutHandler) convertToRolloutInfo(r *rollouts.Rollout) RolloutInfo {
 		ID:                fmt.Sprintf("%s/%s", r.Namespace, r.Name),
 		Name:              r.Name,
 		Namespace:         r.Namespace,
+		Type:              "Rollout",
 		Status:            status,
 		Replicas:          replicas,
 		ReadyReplicas:     r.Status.ReadyReplicas,

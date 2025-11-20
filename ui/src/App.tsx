@@ -15,6 +15,7 @@ import PodLogs from './pages/pod/PodLogs';
 import PodTerminal from './pages/pod/PodTerminal';
 import WorkloadList from './pages/workload/WorkloadList';
 import WorkloadDetail from './pages/workload/WorkloadDetail';
+import DeploymentCreate from './pages/workload/DeploymentCreate';
 import YAMLEditor from './pages/yaml/YAMLEditor';
 import GlobalSearch from './pages/search/GlobalSearch';
 import KubectlTerminalPage from './pages/terminal/kubectlTerminal';
@@ -52,6 +53,7 @@ const App: React.FC = () => {
               <Route path="clusters/:clusterId/pods" element={<PodList />} />
               <Route path="clusters/:clusterId/pods/:namespace/:name" element={<PodDetail />} />
               <Route path="clusters/:clusterId/workloads" element={<WorkloadList />} />
+              <Route path="clusters/:clusterId/workloads/create" element={<DeploymentCreate />} />
               <Route path="clusters/:clusterId/workloads/:namespace/:name" element={<WorkloadDetail />} />
               <Route path="clusters/:clusterId/yaml/apply" element={<YAMLEditor />} />
               <Route path="workloads" element={<WorkloadList />} />
