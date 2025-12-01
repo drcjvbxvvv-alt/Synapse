@@ -41,6 +41,21 @@ func (s *ClusterService) CreateCluster(cluster *models.Cluster) error {
 	cluster.UpdatedAt = time.Now()
 	cluster.LastHeartbeat = &cluster.CreatedAt
 
+	/** genAI_main_start */
+	// 确保 MonitoringConfig 是有效的 JSON，避免 MySQL JSON 字段报错
+	if cluster.MonitoringConfig == "" {
+		cluster.MonitoringConfig = "{}"
+	}
+	// 验证 MonitoringConfig 是否为有效的 JSON
+	if cluster.MonitoringConfig != "" {
+		var testJSON interface{}
+		if err := json.Unmarshal([]byte(cluster.MonitoringConfig), &testJSON); err != nil {
+			// 如果不是有效的 JSON，设置为空对象
+			cluster.MonitoringConfig = "{}"
+		}
+	}
+	/** genAI_main_end */
+
 	// 保存到数据库
 	if err := s.db.Create(cluster).Error; err != nil {
 		logger.Error("创建集群失败", "error", err)

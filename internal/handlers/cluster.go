@@ -186,7 +186,10 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 		Version:       clusterInfo.Version,
 		Status:        clusterInfo.Status,
 		Labels:        "{}",
-		CreatedBy:     1, // 临时设置为1，后续需要从JWT中获取用户ID
+		/** genAI_main_start */
+		MonitoringConfig: "{}", // 初始化为空 JSON 对象，避免 MySQL JSON 字段报错
+		/** genAI_main_end */
+		CreatedBy: 1, // 临时设置为1，后续需要从JWT中获取用户ID
 	}
 
 	// 保存到数据库
@@ -275,7 +278,14 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 		return
 	}
 
-	err = h.clusterService.DeleteCluster(uint(id))
+	clusterID := uint(id)
+
+	/** genAI_main_start */
+	// 先停止集群的 informer/watch，避免删除后继续 watch 导致错误
+	h.k8sMgr.StopForCluster(clusterID)
+	/** genAI_main_end */
+
+	err = h.clusterService.DeleteCluster(clusterID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,

@@ -14,7 +14,10 @@ import {
   Col,
   Statistic,
   Badge,
-  Modal,
+  /** genAI_main_start */
+  Dropdown,
+  App,
+  /** genAI_main_end */
 } from 'antd';
 import {
   PlusOutlined,
@@ -27,6 +30,9 @@ import {
   ExclamationCircleOutlined,
   ClusterOutlined,
   CodeOutlined,
+  /** genAI_main_start */
+  DeleteOutlined,
+  /** genAI_main_end */
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Cluster } from '../../types';
@@ -38,6 +44,9 @@ const { Option } = Select;
 
 const ClusterList: React.FC = () => {
   const navigate = useNavigate();
+  /** genAI_main_start */
+  const { modal } = App.useApp();
+  /** genAI_main_end */
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -199,9 +208,26 @@ const ClusterList: React.FC = () => {
               onClick={() => openTerminal(record)}  // 调用已有的终端功能
             />
           </Tooltip>
-          <Tooltip title="更多">
-            <Button type="text" icon={<MoreOutlined />} />
-          </Tooltip>
+          {/* genAI_main_start */}
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'delete',
+                  label: '删除集群',
+                  icon: <DeleteOutlined />,
+                  danger: true,
+                  onClick: () => {
+                    handleDelete(record);
+                  },
+                },
+              ],
+            }}
+            trigger={['click']}
+          >
+            <Button type="text" icon={<MoreOutlined />} title="更多" />
+          </Dropdown>
+          {/* genAI_main_end */}
         </Space>
       ),
     },
@@ -227,6 +253,36 @@ const ClusterList: React.FC = () => {
     setLoading(true);
     fetchClusters();
   };
+
+  /** genAI_main_start */
+  // 删除集群
+  const handleDelete = (cluster: Cluster) => {
+    if (!cluster.id) {
+      message.error('无法获取集群ID');
+      return;
+    }
+
+    modal.confirm({
+      title: '确定要删除这个集群吗？',
+      content: `删除集群 "${cluster.name}" 后，将无法恢复。此操作将删除集群的所有配置信息。`,
+      okText: '确定',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await clusterService.deleteCluster(cluster.id!.toString());
+          message.success('删除成功');
+          // 刷新列表
+          fetchClusters();
+        } catch (error: unknown) {
+          const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '删除失败';
+          message.error(errorMessage);
+          console.error('删除集群失败:', error);
+        }
+      },
+    });
+  };
+  /** genAI_main_end */
 
   const filteredClusters = clusters.filter((cluster) => {
     const matchesSearch = cluster.name.toLowerCase().includes(searchText.toLowerCase()) ||

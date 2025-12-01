@@ -33,7 +33,8 @@ type ClusterRuntime struct {
 	started   bool
 	synced    bool
 
-	stopCh chan struct{}
+	stopCh   chan struct{}
+	stopOnce sync.Once
 
 	// Argo Rollouts typed informer (if CRD present)
 	rolloutEnabled      bool
@@ -385,6 +386,28 @@ func (m *ClusterInformerManager) RolloutsLister(clusterID uint) rolloutslisters.
 	}
 	return nil
 }
+
+/** genAI_main_start */
+// StopForCluster 停止指定集群的 informer（删除集群时调用）
+func (m *ClusterInformerManager) StopForCluster(clusterID uint) {
+	m.mu.Lock()
+	rt, ok := m.clusters[clusterID]
+	if ok {
+		delete(m.clusters, clusterID)
+	}
+	m.mu.Unlock()
+
+	if ok && rt != nil {
+		logger.Info("停止集群 informer", "clusterID", clusterID)
+		// 使用 sync.Once 确保只关闭一次，避免重复关闭导致 panic
+		rt.stopOnce.Do(func() {
+			close(rt.stopCh)
+		})
+		logger.Info("集群 informer 已停止", "clusterID", clusterID)
+	}
+}
+
+/** genAI_main_end */
 
 // Stop 关闭所有集群的 informer（应用退出时调用）
 func (m *ClusterInformerManager) Stop() {
