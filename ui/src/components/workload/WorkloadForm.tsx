@@ -27,7 +27,7 @@ const { TextArea } = Input;
 const { Panel } = Collapse;
 const { Text } = Typography;
 
-interface WorkloadFormV2Props {
+interface WorkloadFormProps {
   workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob';
   initialData?: Partial<WorkloadFormData>;
   namespaces: string[];
@@ -40,7 +40,7 @@ interface WorkloadFormV2Props {
   isEdit?: boolean;
 }
 
-const WorkloadFormV2: React.FC<WorkloadFormV2Props> = ({
+const WorkloadForm: React.FC<WorkloadFormProps> = ({
   workloadType,
   initialData,
   namespaces,
@@ -1036,7 +1036,6 @@ const WorkloadFormV2: React.FC<WorkloadFormV2Props> = ({
   );
 };
 
-export default WorkloadFormV2;
-export type { WorkloadFormV2Props };
+export default WorkloadForm;
+export type { WorkloadFormProps };
 /** genAI_main_end */
-

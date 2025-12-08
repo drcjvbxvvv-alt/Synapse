@@ -24,7 +24,7 @@ import {
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { WorkloadService } from '../../services/workloadService';
 import { getNamespaces } from '../../services/namespaceService';
-import WorkloadFormV2 from '../../components/workload/WorkloadFormV2';
+import WorkloadForm from '../../components/workload/WorkloadForm';
 import { WorkloadYamlService } from '../../services/workloadYamlService';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
@@ -35,7 +35,7 @@ const { Text } = Typography;
 
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob';
 
-const DeploymentCreateV2: React.FC = () => {
+const DeploymentCreate: React.FC = () => {
   const navigate = useNavigate();
   const { clusterId } = useParams<{ clusterId: string }>();
   const [searchParams] = useSearchParams();
@@ -179,7 +179,7 @@ const DeploymentCreateV2: React.FC = () => {
           // 解析为表单数据
           const parsedData = WorkloadYamlService.yamlToFormData(yaml);
           if (parsedData) {
-            // 先设置 formData state，这会触发 WorkloadFormV2 的 useEffect
+            // 先设置 formData state，这会触发 WorkloadForm 的 useEffect
             setFormData(parsedData);
             // 延迟设置表单值，确保组件已挂载
             setTimeout(() => {
@@ -499,7 +499,7 @@ const DeploymentCreateV2: React.FC = () => {
       
       {/* 内容区域 */}
       {editMode === 'form' ? (
-        <WorkloadFormV2
+        <WorkloadForm
           workloadType={workloadType}
           namespaces={namespaces}
           imagePullSecretsList={imagePullSecretsList}
@@ -582,6 +582,5 @@ const DeploymentCreateV2: React.FC = () => {
   );
 };
 
-export default DeploymentCreateV2;
+export default DeploymentCreate;
 /** genAI_main_end */
-
