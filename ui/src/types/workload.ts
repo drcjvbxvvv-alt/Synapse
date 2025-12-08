@@ -46,18 +46,22 @@ export interface LifecycleConfig {
   };
 }
 
-// 容器资源配置
+/** genAI_main_start */
+// 容器资源配置（支持 cpu、memory、ephemeral-storage、nvidia.com/gpu）
 export interface ResourceConfig {
   limits?: {
     cpu?: string;
     memory?: string;
+    'ephemeral-storage'?: string;  // 临时存储限制
     'nvidia.com/gpu'?: string;
   };
   requests?: {
     cpu?: string;
     memory?: string;
+    'ephemeral-storage'?: string;  // 临时存储请求
   };
 }
+/** genAI_main_end */
 
 // 数据卷挂载配置
 export interface VolumeMount {

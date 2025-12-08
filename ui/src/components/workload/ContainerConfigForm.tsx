@@ -235,18 +235,24 @@ const ContainerConfigForm: React.FC<ContainerConfigFormProps> = ({
                   <Text type="secondary">资源配置</Text>
                 </Divider>
                 
+                {/** genAI_main_start */}
                 <Row gutter={16}>
                   <Col span={12}>
                     <Card size="small" title="请求资源 (Requests)">
-                      <Row gutter={16}>
-                        <Col span={12}>
+                      <Row gutter={8}>
+                        <Col span={8}>
                           <Form.Item name={[field.name, 'resources', 'requests', 'cpu']} label="CPU">
                             <Input placeholder="例如: 100m" />
                           </Form.Item>
                         </Col>
-                        <Col span={12}>
+                        <Col span={8}>
                           <Form.Item name={[field.name, 'resources', 'requests', 'memory']} label="内存">
                             <Input placeholder="例如: 128Mi" />
+                          </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                          <Form.Item name={[field.name, 'resources', 'requests', 'ephemeral-storage']} label="临时存储">
+                            <Input placeholder="例如: 1Gi" />
                           </Form.Item>
                         </Col>
                       </Row>
@@ -254,21 +260,27 @@ const ContainerConfigForm: React.FC<ContainerConfigFormProps> = ({
                   </Col>
                   <Col span={12}>
                     <Card size="small" title="限制资源 (Limits)">
-                      <Row gutter={16}>
-                        <Col span={12}>
+                      <Row gutter={8}>
+                        <Col span={8}>
                           <Form.Item name={[field.name, 'resources', 'limits', 'cpu']} label="CPU">
                             <Input placeholder="例如: 500m" />
                           </Form.Item>
                         </Col>
-                        <Col span={12}>
+                        <Col span={8}>
                           <Form.Item name={[field.name, 'resources', 'limits', 'memory']} label="内存">
                             <Input placeholder="例如: 512Mi" />
+                          </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                          <Form.Item name={[field.name, 'resources', 'limits', 'ephemeral-storage']} label="临时存储">
+                            <Input placeholder="例如: 2Gi" />
                           </Form.Item>
                         </Col>
                       </Row>
                     </Card>
                   </Col>
                 </Row>
+                {/** genAI_main_end */}
                 
                 <Divider orientation="left" plain>
                   <Text type="secondary">端口配置</Text>

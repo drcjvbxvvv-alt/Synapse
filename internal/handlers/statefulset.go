@@ -209,19 +209,9 @@ func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 	}
 
 	/** genAI_main_start */
-	// 清理对象以生成更干净的 YAML
+	// 清理 managed fields 以生成更干净的 YAML
 	cleanStatefulSet := statefulSet.DeepCopy()
-	// 设置 TypeMeta（client-go 获取的对象默认不包含这些字段）
-	cleanStatefulSet.APIVersion = "apps/v1"
-	cleanStatefulSet.Kind = "StatefulSet"
-	// 清理不需要的字段
 	cleanStatefulSet.ManagedFields = nil
-	cleanStatefulSet.Status = appsv1.StatefulSetStatus{} // 清理 status 字段
-	// 清理 metadata 中的运行时字段
-	cleanStatefulSet.ResourceVersion = ""
-	cleanStatefulSet.UID = ""
-	cleanStatefulSet.Generation = 0
-	cleanStatefulSet.CreationTimestamp = metav1.Time{}
 	// 将 StatefulSet 对象转换为 YAML 字符串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanStatefulSet)
 	var yamlString string

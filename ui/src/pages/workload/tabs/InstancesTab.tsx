@@ -129,23 +129,32 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
     }).replace(/\//g, '-');
   };
 
+  /** genAI_main_start */
   const columns: ColumnsType<PodInfo> = [
     {
       title: '实例名称',
       dataIndex: 'name',
       key: 'name',
-      width: 250,
+      width: 280,
       fixed: 'left',
       render: (text: string, record: PodInfo) => (
         <Button
           type="link"
           onClick={() => navigate(`/clusters/${clusterId}/pods/${record.namespace}/${record.name}`)}
-          style={{ padding: 0, height: 'auto' }}
+          style={{ 
+            padding: 0, 
+            height: 'auto',
+            whiteSpace: 'normal',
+            wordBreak: 'break-all',
+            textAlign: 'left',
+            lineHeight: '1.4'
+          }}
         >
           {text}
         </Button>
       ),
     },
+    /** genAI_main_end */
     {
       title: '状态',
       dataIndex: 'phase',

@@ -46,7 +46,10 @@ const DeploymentCreateV2: React.FC = () => {
   const editName = searchParams.get('name');
   const isEdit = !!(editNamespace && editName);
   
-  const [editMode, setEditMode] = useState<'form' | 'yaml'>('form');
+  /** genAI_main_start */
+  // 编辑模式默认使用 YAML 编辑器（避免表单格式化导致字段丢失）
+  const [editMode, setEditMode] = useState<'form' | 'yaml'>(isEdit ? 'yaml' : 'form');
+  /** genAI_main_end */
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dryRunning, setDryRunning] = useState(false);
@@ -435,14 +438,26 @@ const DeploymentCreateV2: React.FC = () => {
           <h2 style={{ margin: 0 }}>
             {isEdit ? '编辑' : '创建'} {workloadType}
           </h2>
-          <Segmented
-            value={editMode}
-            onChange={handleModeChange}
-            options={[
-              { value: 'form', icon: <FormOutlined />, label: '表单模式' },
-              { value: 'yaml', icon: <CodeOutlined />, label: 'YAML模式' },
-            ]}
-          />
+          {/** genAI_main_start */}
+          {/* 编辑模式只支持 YAML 编辑，避免表单格式化导致复杂字段丢失 */}
+          {isEdit ? (
+            <Tooltip title="编辑模式仅支持 YAML 编辑，以保留原始配置格式">
+              <Space>
+                <CodeOutlined />
+                <span>YAML模式</span>
+              </Space>
+            </Tooltip>
+          ) : (
+            <Segmented
+              value={editMode}
+              onChange={handleModeChange}
+              options={[
+                { value: 'form', icon: <FormOutlined />, label: '表单模式' },
+                { value: 'yaml', icon: <CodeOutlined />, label: 'YAML模式' },
+              ]}
+            />
+          )}
+          {/** genAI_main_end */}
         </Space>
         
         <Space>

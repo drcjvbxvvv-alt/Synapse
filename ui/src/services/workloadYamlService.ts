@@ -107,22 +107,31 @@ const buildContainerSpec = (container: ContainerConfig): Record<string, unknown>
     });
   }
   
-  // 资源
+  /** genAI_main_start */
+  // 资源（支持 cpu、memory、ephemeral-storage、nvidia.com/gpu）
   if (container.resources) {
     const resources: Record<string, Record<string, string>> = {};
     if (container.resources.requests) {
       resources.requests = {};
       if (container.resources.requests.cpu) resources.requests.cpu = container.resources.requests.cpu;
       if (container.resources.requests.memory) resources.requests.memory = container.resources.requests.memory;
+      if (container.resources.requests['ephemeral-storage']) {
+        resources.requests['ephemeral-storage'] = container.resources.requests['ephemeral-storage'];
+      }
     }
     if (container.resources.limits) {
       resources.limits = {};
       if (container.resources.limits.cpu) resources.limits.cpu = container.resources.limits.cpu;
       if (container.resources.limits.memory) resources.limits.memory = container.resources.limits.memory;
+      // 临时存储限制
+      if (container.resources.limits['ephemeral-storage']) {
+        resources.limits['ephemeral-storage'] = container.resources.limits['ephemeral-storage'];
+      }
       if (container.resources.limits['nvidia.com/gpu']) resources.limits['nvidia.com/gpu'] = container.resources.limits['nvidia.com/gpu'];
     }
     if (Object.keys(resources).length > 0) spec.resources = resources;
   }
+  /** genAI_main_end */
   
   // 数据卷挂载
   if (container.volumeMounts && container.volumeMounts.length > 0) {
@@ -207,7 +216,7 @@ const buildVolumeSpec = (volume: VolumeConfig): Record<string, unknown> => {
 };
 
 // 构建调度配置
-const buildSchedulingSpec = (scheduling: SchedulingConfig | undefined, formData: WorkloadFormData): Record<string, unknown> | undefined => {
+const buildSchedulingSpec = (scheduling: SchedulingConfig | undefined): Record<string, unknown> | undefined => {
   if (!scheduling) return undefined;
   
   const affinity: Record<string, unknown> = {};
@@ -868,7 +877,7 @@ export const formDataToYAML = (
   
   // 构建调度配置
   const scheduling = buildSchedulingFromForm(formData as unknown as Record<string, unknown>);
-  const affinity = buildSchedulingSpec(scheduling, formData);
+  const affinity = buildSchedulingSpec(scheduling);
   
   // 构建 PodSpec
   const podSpec: Record<string, unknown> = {

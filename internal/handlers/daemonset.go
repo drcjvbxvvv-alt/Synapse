@@ -208,19 +208,9 @@ func (h *DaemonSetHandler) GetDaemonSet(c *gin.Context) {
 	}
 
 	/** genAI_main_start */
-	// 清理对象以生成更干净的 YAML
+	// 清理 managed fields 以生成更干净的 YAML
 	cleanDaemonSet := daemonSet.DeepCopy()
-	// 设置 TypeMeta（client-go 获取的对象默认不包含这些字段）
-	cleanDaemonSet.APIVersion = "apps/v1"
-	cleanDaemonSet.Kind = "DaemonSet"
-	// 清理不需要的字段
 	cleanDaemonSet.ManagedFields = nil
-	cleanDaemonSet.Status = appsv1.DaemonSetStatus{} // 清理 status 字段
-	// 清理 metadata 中的运行时字段
-	cleanDaemonSet.ResourceVersion = ""
-	cleanDaemonSet.UID = ""
-	cleanDaemonSet.Generation = 0
-	cleanDaemonSet.CreationTimestamp = metav1.Time{}
 	// 将 DaemonSet 对象转换为 YAML 字符串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanDaemonSet)
 	var yamlString string

@@ -221,19 +221,9 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 	}
 
 	/** genAI_main_start */
-	// 清理对象以生成更干净的 YAML
+	// 清理 managed fields 以生成更干净的 YAML
 	cleanDeployment := deployment.DeepCopy()
-	// 设置 TypeMeta（client-go 获取的对象默认不包含这些字段）
-	cleanDeployment.APIVersion = "apps/v1"
-	cleanDeployment.Kind = "Deployment"
-	// 清理不需要的字段
 	cleanDeployment.ManagedFields = nil
-	cleanDeployment.Status = appsv1.DeploymentStatus{} // 清理 status 字段
-	// 清理 metadata 中的运行时字段
-	cleanDeployment.ResourceVersion = ""
-	cleanDeployment.UID = ""
-	cleanDeployment.Generation = 0
-	cleanDeployment.CreationTimestamp = metav1.Time{}
 	// 将 Deployment 对象转换为 YAML 字符串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanDeployment)
 	var yamlString string
