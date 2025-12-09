@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+/** genAI_main_start */
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
   Table,
@@ -8,72 +9,274 @@ import {
   Tag,
   Input,
   Select,
-  message,
-  Popconfirm,
-  Badge,
-  Typography,
+  Modal,
   Tooltip,
+  Badge,
+  App,
+  Checkbox,
+  Drawer,
+  Dropdown,
+  Tabs,
+  Spin,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
+  ReloadOutlined,
+  SettingOutlined,
+  SearchOutlined,
+  ExportOutlined,
   DeleteOutlined,
-  EyeOutlined,
+  MoreOutlined,
+  CodeOutlined,
   FileTextOutlined,
-  ConsoleSqlOutlined,
+  DashboardOutlined,
+  AlertOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
+import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 
-const { Title } = Typography;
-const { Search } = Input;
+const { Option } = Select;
 
 const PodList: React.FC = () => {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { message } = App.useApp();
   
-  const [pods, setPods] = useState<PodInfo[]>([]);
+  const clusterId = routeClusterId || '1';
+  
+  // 数据状态
+  const [allPods, setAllPods] = useState<PodInfo[]>([]); // 所有原始数据
+  const [pods, setPods] = useState<PodInfo[]>([]); // 当前页显示的数据
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [selectedClusterId, setSelectedClusterId] = useState<string>(routeClusterId || '1');
   
-  // 筛选条件
-  const [namespace, setNamespace] = useState(searchParams.get('namespace') || '');
-  const [nodeName, setNodeName] = useState(searchParams.get('nodeName') || '');
-  const [searchText, setSearchText] = useState('');
+  // 操作状态
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   
-  // 下拉框选项
-  const [namespaceOptions, setNamespaceOptions] = useState<string[]>([]);
-  const [nodeOptions, setNodeOptions] = useState<string[]>([]);
-  const [loadingNamespaces, setLoadingNamespaces] = useState(false);
-  const [loadingNodes, setLoadingNodes] = useState(false);
-  
-  // 用于存储最新的searchText，避免useEffect依赖问题
-  const searchTextRef = useRef(searchText);
+  // 多条件搜索状态
+  interface SearchCondition {
+    field: 'name' | 'namespace' | 'status' | 'podIP' | 'nodeName' | 'cpuRequest' | 'cpuLimit' | 'memoryRequest' | 'memoryLimit';
+    value: string;
+  }
+  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
+  const [currentSearchField, setCurrentSearchField] = useState<SearchCondition['field']>('name');
+  const [currentSearchValue, setCurrentSearchValue] = useState('');
 
-  // 获取Pod列表
-  const fetchPods = useCallback(async (search?: string) => {
-    const clusterId = selectedClusterId;
+  // 列设置状态
+  const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'name', 'status', 'namespace', 'podIP', 'nodeName', 'restartCount', 'createdAt', 'age'
+  ]);
+  
+  // 排序状态
+  const [sortField, setSortField] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
+
+  // 添加搜索条件
+  const addSearchCondition = () => {
+    if (!currentSearchValue.trim()) return;
+    
+    const newCondition: SearchCondition = {
+      field: currentSearchField,
+      value: currentSearchValue.trim(),
+    };
+    
+    setSearchConditions([...searchConditions, newCondition]);
+    setCurrentSearchValue('');
+  };
+
+  // 删除搜索条件
+  const removeSearchCondition = (index: number) => {
+    setSearchConditions(searchConditions.filter((_, i) => i !== index));
+  };
+
+  // 清空所有搜索条件
+  const clearAllConditions = () => {
+    setSearchConditions([]);
+    setCurrentSearchValue('');
+  };
+
+  // 获取搜索字段的显示名称
+  const getFieldLabel = (field: string): string => {
+    const labels: Record<string, string> = {
+      name: '实例名称',
+      namespace: '命名空间',
+      status: '状态',
+      podIP: '实例IP',
+      nodeName: '所在节点',
+      cpuRequest: 'CPU Request',
+      cpuLimit: 'CPU Limit',
+      memoryRequest: 'MEM Request',
+      memoryLimit: 'MEM Limit',
+    };
+    return labels[field] || field;
+  };
+
+  // 获取Pod的CPU和Memory资源
+  const getPodResources = (pod: PodInfo) => {
+    let cpuRequest = 0;
+    let cpuLimit = 0;
+    let memoryRequest = 0;
+    let memoryLimit = 0;
+
+    pod.containers?.forEach(container => {
+      // CPU Request
+      if (container.resources?.requests?.cpu) {
+        cpuRequest += parseCpuValue(container.resources.requests.cpu);
+      }
+      // CPU Limit
+      if (container.resources?.limits?.cpu) {
+        cpuLimit += parseCpuValue(container.resources.limits.cpu);
+      }
+      // Memory Request
+      if (container.resources?.requests?.memory) {
+        memoryRequest += parseMemoryValue(container.resources.requests.memory);
+      }
+      // Memory Limit
+      if (container.resources?.limits?.memory) {
+        memoryLimit += parseMemoryValue(container.resources.limits.memory);
+      }
+    });
+
+    return {
+      cpuRequest: cpuRequest > 0 ? formatCpuValue(cpuRequest) : '-',
+      cpuLimit: cpuLimit > 0 ? formatCpuValue(cpuLimit) : '-',
+      memoryRequest: memoryRequest > 0 ? formatMemoryValue(memoryRequest) : '-',
+      memoryLimit: memoryLimit > 0 ? formatMemoryValue(memoryLimit) : '-',
+    };
+  };
+
+  // 解析CPU值（转换为毫核）
+  const parseCpuValue = (value: string): number => {
+    if (!value) return 0;
+    if (value.endsWith('m')) {
+      return parseInt(value.slice(0, -1), 10);
+    }
+    return parseFloat(value) * 1000;
+  };
+
+  // 格式化CPU值
+  const formatCpuValue = (milliCores: number): string => {
+    if (milliCores >= 1000) {
+      return `${(milliCores / 1000).toFixed(1)}`;
+    }
+    return `${milliCores}m`;
+  };
+
+  // 解析内存值（转换为字节）
+  const parseMemoryValue = (value: string): number => {
+    if (!value) return 0;
+    const units: Record<string, number> = {
+      'Ki': 1024,
+      'Mi': 1024 * 1024,
+      'Gi': 1024 * 1024 * 1024,
+      'Ti': 1024 * 1024 * 1024 * 1024,
+      'K': 1000,
+      'M': 1000 * 1000,
+      'G': 1000 * 1000 * 1000,
+      'T': 1000 * 1000 * 1000 * 1000,
+    };
+    
+    for (const [unit, multiplier] of Object.entries(units)) {
+      if (value.endsWith(unit)) {
+        return parseFloat(value.slice(0, -unit.length)) * multiplier;
+      }
+    }
+    return parseFloat(value);
+  };
+
+  // 格式化内存值
+  const formatMemoryValue = (bytes: number): string => {
+    if (bytes >= 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}Gi`;
+    }
+    if (bytes >= 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(0)}Mi`;
+    }
+    if (bytes >= 1024) {
+      return `${(bytes / 1024).toFixed(0)}Ki`;
+    }
+    return `${bytes}`;
+  };
+
+  // 客户端过滤Pod列表
+  const filterPods = useCallback((items: PodInfo[]): PodInfo[] => {
+    if (searchConditions.length === 0) return items;
+
+    return items.filter(pod => {
+      const resources = getPodResources(pod);
+      
+      // 按字段分组条件
+      const conditionsByField = searchConditions.reduce((acc, condition) => {
+        if (!acc[condition.field]) {
+          acc[condition.field] = [];
+        }
+        acc[condition.field].push(condition.value.toLowerCase());
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      // 不同字段之间是 AND 关系
+      // 相同字段之间是 OR 关系
+      return Object.entries(conditionsByField).every(([field, values]) => {
+        let podValue: string;
+        
+        switch (field) {
+          case 'cpuRequest':
+            podValue = resources.cpuRequest;
+            break;
+          case 'cpuLimit':
+            podValue = resources.cpuLimit;
+            break;
+          case 'memoryRequest':
+            podValue = resources.memoryRequest;
+            break;
+          case 'memoryLimit':
+            podValue = resources.memoryLimit;
+            break;
+          default:
+            podValue = String(pod[field as keyof PodInfo] || '');
+        }
+        
+        // CPU和内存字段使用精确匹配
+        const resourceFields = ['cpuRequest', 'cpuLimit', 'memoryRequest', 'memoryLimit'];
+        if (resourceFields.includes(field)) {
+          return values.some(searchValue => podValue.toLowerCase() === searchValue);
+        }
+        
+        // 对于其他字符串类型，使用模糊匹配
+        return values.some(searchValue => podValue.toLowerCase().includes(searchValue));
+      });
+    });
+  }, [searchConditions]);
+
+  // 加载Pod列表（获取所有数据，不分页）
+  const loadPods = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
     try {
+      // 获取所有数据（设置一个很大的pageSize）
       const response = await PodService.getPods(
         clusterId,
-        namespace || undefined,
-        nodeName || undefined,
-        undefined, // labelSelector
-        undefined, // fieldSelector
-        search || undefined, // search
-        page,
-        pageSize
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        1,
+        10000 // 获取所有数据
       );
       
-      
       if (response.code === 200) {
-        setPods(response.data.items);
-        setTotal(response.data.total);
+        const items = response.data.items || [];
+        // 保存原始数据，筛选和分页会在useEffect中自动处理
+        setAllPods(items);
       } else {
         message.error(response.message || '获取Pod列表失败');
       }
@@ -83,53 +286,10 @@ const PodList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedClusterId, namespace, nodeName, page, pageSize]);
-
-  // 获取命名空间列表
-  const fetchNamespaces = useCallback(async () => {
-    const clusterId = selectedClusterId;
-    if (!clusterId) return;
-    
-    setLoadingNamespaces(true);
-    try {
-      const response = await PodService.getPodNamespaces(clusterId);
-      if (response.code === 200) {
-        setNamespaceOptions(response.data);
-      } else {
-        message.error(response.message || '获取命名空间列表失败');
-      }
-    } catch (error) {
-      console.error('获取命名空间列表失败:', error);
-      message.error('获取命名空间列表失败');
-    } finally {
-      setLoadingNamespaces(false);
-    }
-  }, [selectedClusterId]);
-
-  // 获取节点列表
-  const fetchNodes = useCallback(async () => {
-    const clusterId = selectedClusterId;
-    if (!clusterId) return;
-    
-    setLoadingNodes(true);
-    try {
-      const response = await PodService.getPodNodes(clusterId);
-      if (response.code === 200) {
-        setNodeOptions(response.data);
-      } else {
-        message.error(response.message || '获取节点列表失败');
-      }
-    } catch (error) {
-      console.error('获取节点列表失败:', error);
-      message.error('获取节点列表失败');
-    } finally {
-      setLoadingNodes(false);
-    }
-  }, [selectedClusterId]);
+  }, [clusterId, message]);
 
   // 删除Pod
   const handleDelete = async (pod: PodInfo) => {
-    const clusterId = selectedClusterId;
     if (!clusterId) return;
     
     try {
@@ -137,7 +297,7 @@ const PodList: React.FC = () => {
       
       if (response.code === 200) {
         message.success('删除成功');
-        fetchPods(searchText);
+        loadPods();
       } else {
         message.error(response.message || '删除失败');
       }
@@ -147,88 +307,263 @@ const PodList: React.FC = () => {
     }
   };
 
-  // 查看Pod详情
-  const handleViewDetail = (pod: PodInfo) => {
-    navigate(`/clusters/${selectedClusterId}/pods/${pod.namespace}/${pod.name}`);
+  // 批量删除
+  const handleBatchDelete = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的Pod');
+      return;
+    }
+
+    Modal.confirm({
+      title: '确认批量删除',
+      content: `确定要删除选中的 ${selectedRowKeys.length} 个Pod吗？此操作不可恢复。`,
+      okText: '确定',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const podsToDelete = selectedRowKeys.map(key => {
+            const [namespace, name] = key.split('/');
+            return { namespace, name };
+          });
+          
+          const results = await PodService.batchDeletePods(clusterId, podsToDelete);
+          const successCount = results.filter(r => r.success).length;
+          const failCount = results.length - successCount;
+          
+          if (failCount === 0) {
+            message.success(`成功删除 ${successCount} 个Pod`);
+          } else {
+            message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+          }
+          
+          setSelectedRowKeys([]);
+          loadPods();
+        } catch (error) {
+          console.error('批量删除失败:', error);
+          message.error('批量删除失败');
+        }
+      }
+    });
+  };
+
+  // 导出功能（导出所有筛选后的数据，包含所有列）
+  const handleExport = () => {
+    try {
+      // 获取所有筛选后的数据（不限于当前页）
+      const filteredData = filterPods(allPods);
+      
+      if (filteredData.length === 0) {
+        message.warning('没有数据可导出');
+        return;
+      }
+
+      // 导出筛选后的所有数据（包含所有列）
+      const dataToExport = filteredData.map(pod => {
+        const resources = getPodResources(pod);
+        return {
+          '实例名称': pod.name,
+          '状态': pod.status,
+          '命名空间': pod.namespace,
+          '实例IP': pod.podIP || '-',
+          '所在节点': pod.nodeName || '-',
+          '重启次数': pod.restartCount,
+          'CPU Request': resources.cpuRequest,
+          'CPU Limit': resources.cpuLimit,
+          'MEM Request': resources.memoryRequest,
+          'MEM Limit': resources.memoryLimit,
+          '创建时间': pod.createdAt ? new Date(pod.createdAt).toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).replace(/\//g, '-') : '-',
+          '创建时长': PodService.getAge(pod.createdAt),
+        };
+      });
+
+      // 导出为CSV
+      const headers = Object.keys(dataToExport[0]);
+      const csvContent = [
+        headers.join(','),
+        ...dataToExport.map(row => 
+          headers.map(header => {
+            const value = row[header as keyof typeof row];
+            return `"${value}"`;
+          }).join(',')
+        )
+      ].join('\n');
+      
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `pod-list-${Date.now()}.csv`;
+      link.click();
+      message.success(`成功导出 ${filteredData.length} 条数据`);
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败');
+    }
+  };
+
+  // 列设置保存
+  const handleColumnSettingsSave = () => {
+    setColumnSettingsVisible(false);
+    message.success('列设置已保存');
   };
 
   // 查看Pod日志
   const handleViewLogs = (pod: PodInfo) => {
-    navigate(`/clusters/${selectedClusterId}/pods/${pod.namespace}/${pod.name}/logs`);
+    navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/logs`);
   };
 
   // 进入Pod终端
   const handleTerminal = (pod: PodInfo) => {
-    navigate(`/clusters/${selectedClusterId}/pods/${pod.namespace}/${pod.name}/terminal`);
+    navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/terminal`);
   };
 
-  // 搜索
-  const handleSearch = (value: string) => {
-    setSearchText(value);
+  // 查看Pod详情（监控）
+  const handleViewDetail = (pod: PodInfo) => {
+    navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}`);
   };
 
-  // 搜索文本变化
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchText(value);
-    searchTextRef.current = value; // 更新ref
+  // 查看Pod事件
+  const handleViewEvents = (pod: PodInfo) => {
+    navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}?tab=events`);
   };
 
-  // 集群切换 - 监听路由参数变化
+  // 当搜索条件改变时重置到第一页
   useEffect(() => {
-    if (routeClusterId && routeClusterId !== selectedClusterId) {
-      setSelectedClusterId(routeClusterId);
-      setPage(1);
-      // 重置搜索和筛选条件
-      setSearchText('');
-      setNamespace('');
-      setNodeName('');
-    }
-  }, [routeClusterId, selectedClusterId]);
+    setCurrentPage(1);
+  }, [searchConditions]);
 
-  // 初始加载命名空间和节点列表
+  // 当allPods、搜索条件、分页参数、排序参数改变时，重新计算显示数据
   useEffect(() => {
-    fetchNamespaces();
-    fetchNodes();
-  }, [fetchNamespaces, fetchNodes]);
-
-  // 筛选条件变化时重新加载（不包括搜索）
-  useEffect(() => {
-    fetchPods(searchTextRef.current);
-  }, [selectedClusterId, namespace, nodeName, page, pageSize, fetchPods]);
-
-  // 搜索文本变化处理
-  useEffect(() => {
-    
-    // 如果搜索文本为空，立即重新加载所有数据
-    if (!searchText || searchText.trim().length === 0) {
-      setPage(1);
-      fetchPods('');
+    if (allPods.length === 0) {
+      setPods([]);
+      setTotal(0);
       return;
     }
     
-    // 如果搜索文本长度小于等于2，不触发搜索
-    if (searchText.trim().length <= 2) {
-      return;
+    // 1. 应用客户端过滤
+    let filteredItems = filterPods(allPods);
+    
+    // 2. 应用排序
+    if (sortField && sortOrder) {
+      filteredItems = [...filteredItems].sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+        
+        // 处理资源字段
+        if (['cpuRequest', 'cpuLimit', 'memoryRequest', 'memoryLimit'].includes(sortField)) {
+          const aResources = getPodResources(a);
+          const bResources = getPodResources(b);
+          aValue = aResources[sortField as keyof typeof aResources] || '';
+          bValue = bResources[sortField as keyof typeof bResources] || '';
+        } else {
+          aValue = a[sortField as keyof PodInfo] as string | number;
+          bValue = b[sortField as keyof PodInfo] as string | number;
+        }
+        
+        // 处理 undefined 值
+        if (aValue === undefined && bValue === undefined) return 0;
+        if (aValue === undefined) return sortOrder === 'ascend' ? 1 : -1;
+        if (bValue === undefined) return sortOrder === 'ascend' ? -1 : 1;
+        
+        // 数字类型比较
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortOrder === 'ascend' ? aValue - bValue : bValue - aValue;
+        }
+        
+        // 字符串类型比较
+        const aStr = String(aValue);
+        const bStr = String(bValue);
+        
+        if (sortOrder === 'ascend') {
+          return aStr > bStr ? 1 : aStr < bStr ? -1 : 0;
+        } else {
+          return bStr > aStr ? 1 : bStr < aStr ? -1 : 0;
+        }
+      });
     }
     
-    const timer = setTimeout(() => {
-      setPage(1); // 搜索时重置到第一页
-      fetchPods(searchText);
-    }, 500); // 500ms 防抖
+    // 3. 计算分页
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedItems = filteredItems.slice(startIndex, endIndex);
+    
+    setPods(paginatedItems);
+    setTotal(filteredItems.length);
+  }, [allPods, filterPods, currentPage, pageSize, sortField, sortOrder]);
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchText, fetchPods]);
+  // 初始加载数据
+  useEffect(() => {
+    loadPods();
+  }, [loadPods]);
 
-  const columns = [
+  // 集群切换时重新加载
+  useEffect(() => {
+    if (routeClusterId) {
+      setCurrentPage(1);
+      setSearchConditions([]);
+      setSelectedRowKeys([]);
+      loadPods();
+    }
+  }, [routeClusterId]);
+
+  // 行选择配置
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (keys: React.Key[]) => {
+      setSelectedRowKeys(keys as string[]);
+    },
+  };
+
+  // 操作菜单
+  const getActionMenuItems = (record: PodInfo): MenuProps['items'] => [
     {
-      title: '名称',
+      key: 'monitor',
+      label: '监控',
+      onClick: () => handleViewDetail(record),
+    },
+    {
+      key: 'events',
+      label: '事件',
+      onClick: () => handleViewEvents(record),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'delete',
+      label: '删除',
+      danger: true,
+      onClick: () => {
+        Modal.confirm({
+          title: '确认删除',
+          content: `确定要删除Pod ${record.name} 吗？`,
+          okText: '确定',
+          cancelText: '取消',
+          okButtonProps: { danger: true },
+          onOk: () => handleDelete(record),
+        });
+      },
+    },
+  ];
+
+  // 定义所有可用列
+  const allColumns: ColumnsType<PodInfo> = [
+    {
+      title: '实例名称',
       dataIndex: 'name',
       key: 'name',
       width: 220,
       fixed: 'left' as const,
+      sorter: true,
+      sortOrder: sortField === 'name' ? sortOrder : null,
       render: (text: string, record: PodInfo) => (
         <Button
           type="link"
@@ -241,231 +576,373 @@ const PodList: React.FC = () => {
             textAlign: 'left'
           }}
         >
-          <div style={{
-            whiteSpace: 'normal',
-            wordBreak: 'break-all',
-            lineHeight: '1.4'
-          }}>
-            {text}
-          </div>
+          {text}
         </Button>
       ),
-    },
-    {
-      title: '命名空间',
-      dataIndex: 'namespace',
-      key: 'namespace',
-      width: 120,
-      render: (text: string) => <Tag color="blue">{text}</Tag>,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 120,
-      render: (text: string, record: PodInfo) => {
+      sorter: true,
+      sortOrder: sortField === 'status' ? sortOrder : null,
+      render: (_: unknown, record: PodInfo) => {
         const { status, color } = PodService.formatStatus(record);
         return <Badge status={color as 'success' | 'error' | 'default' | 'processing' | 'warning'} text={status} />;
       },
     },
     {
-      title: '节点',
-      dataIndex: 'nodeName',
-      key: 'nodeName',
-      width: 150,
-      responsive: ['md'] as ('xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl')[],
+      title: '命名空间',
+      dataIndex: 'namespace',
+      key: 'namespace',
+      width: 130,
+      sorter: true,
+      sortOrder: sortField === 'namespace' ? sortOrder : null,
+      render: (text: string) => <Tag color="blue">{text}</Tag>,
+    },
+    {
+      title: '实例IP',
+      dataIndex: 'podIP',
+      key: 'podIP',
+      width: 130,
       render: (text: string) => text || '-',
     },
     {
-      title: 'Pod IP',
-      dataIndex: 'podIP',
-      key: 'podIP',
-      width: 120,
-      responsive: ['lg'] as ('xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl')[],
+      title: '所在节点',
+      dataIndex: 'nodeName',
+      key: 'nodeName',
+      width: 150,
+      sorter: true,
+      sortOrder: sortField === 'nodeName' ? sortOrder : null,
       render: (text: string) => text || '-',
     },
     {
       title: '重启次数',
       dataIndex: 'restartCount',
       key: 'restartCount',
-      width: 100,
-      responsive: ['md'] as ('xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl')[],
+      width: 80,
+      sorter: true,
+      sortOrder: sortField === 'restartCount' ? sortOrder : null,
       render: (count: number) => (
         <Tag color={count > 0 ? 'orange' : 'green'}>{count}</Tag>
       ),
     },
     {
-      title: '容器',
-      key: 'containers',
-      width: 200,
-      responsive: ['lg'] as ('xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl')[],
-      render: (record: PodInfo) => (
-        <Space wrap>
-          {record.containers.map((container, index) => (
-            <Tooltip
-              key={index}
-              title={`${container.name}: ${PodService.formatContainerStatus(container)}`}
-            >
-              <Tag color={PodService.getContainerStatusColor(container)}>
-                {container.name}
-              </Tag>
-            </Tooltip>
-          ))}
-        </Space>
-      ),
+      title: 'CPU Request',
+      key: 'cpuRequest',
+      width: 110,
+      render: (_: unknown, record: PodInfo) => {
+        const resources = getPodResources(record);
+        return <span>{resources.cpuRequest}</span>;
+      },
     },
     {
-      title: '年龄',
+      title: 'CPU Limit',
+      key: 'cpuLimit',
+      width: 100,
+      render: (_: unknown, record: PodInfo) => {
+        const resources = getPodResources(record);
+        return <span>{resources.cpuLimit}</span>;
+      },
+    },
+    {
+      title: 'MEM Request',
+      key: 'memoryRequest',
+      width: 120,
+      render: (_: unknown, record: PodInfo) => {
+        const resources = getPodResources(record);
+        return <span>{resources.memoryRequest}</span>;
+      },
+    },
+    {
+      title: 'MEM Limit',
+      key: 'memoryLimit',
+      width: 110,
+      render: (_: unknown, record: PodInfo) => {
+        const resources = getPodResources(record);
+        return <span>{resources.memoryLimit}</span>;
+      },
+    },
+    {
+      title: '创建时间',
       dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 150,
+      sorter: true,
+      sortOrder: sortField === 'createdAt' ? sortOrder : null,
+      render: (text: string) => {
+        if (!text) return '-';
+        const date = new Date(text);
+        // 格式化为：YYYY-MM-DD HH:mm:ss
+        const formatted = date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).replace(/\//g, '-');
+        return <span>{formatted}</span>;
+      },
+    },
+    {
+      title: '创建时长',
       key: 'age',
       width: 100,
-      responsive: ['xl'] as ('xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl')[],
-      render: (createdAt: string) => PodService.getAge(createdAt),
+      render: (_: unknown, record: PodInfo) => PodService.getAge(record.createdAt),
     },
     {
       title: '操作',
       key: 'actions',
-      width: 200,
+      width: 180,
       fixed: 'right' as const,
-      render: (record: PodInfo) => (
-        <Space>
-          <Tooltip title="查看详情">
+      render: (_: unknown, record: PodInfo) => (
+        <Space size="small">
+          <Tooltip title="登录终端">
             <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
-          
-          <Tooltip title="查看日志">
-            <Button
-              type="text"
-              icon={<FileTextOutlined />}
-              onClick={() => handleViewLogs(record)}
-            />
-          </Tooltip>
-          
-          <Tooltip title="进入终端">
-            <Button
-              type="text"
-              icon={<ConsoleSqlOutlined />}
+              type="link"
+              size="small"
               onClick={() => handleTerminal(record)}
               disabled={record.status !== 'Running'}
-            />
+            >
+              登录
+            </Button>
           </Tooltip>
-          
-          <Popconfirm
-            title="确认删除"
-            description={`确定要删除Pod ${record.name} 吗？`}
-            onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
+          <Tooltip title="查看日志">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleViewLogs(record)}
+            >
+              日志
+            </Button>
+          </Tooltip>
+          <Dropdown
+            menu={{ items: getActionMenuItems(record) }}
+            trigger={['click']}
           >
-            <Tooltip title="删除">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
+            <Button type="link" size="small">
+              更多
+            </Button>
+          </Dropdown>
         </Space>
       ),
     },
   ];
 
-  return (
-    <div style={{ padding: '16px 24px' }}>
-      {/* 页面头部 */}
-      <div style={{ marginBottom: 16 }}>
-        <Title level={3}>Pod 管理</Title>
-      </div>
+  // 根据可见性过滤列
+  const columns = allColumns.filter(col => {
+    if (col.key === 'actions') return true; // 操作列始终显示
+    return visibleColumns.includes(col.key as string);
+  });
 
-      {/* Pod列表 */}
-      <Card>
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: '12px',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', flex: 1 }}>
-              <Select
-                placeholder="选择命名空间"
-                style={{ width: 180, minWidth: 120 }}
-                value={namespace || undefined}
-                onChange={(value) => setNamespace(value || '')}
-                allowClear
-                loading={loadingNamespaces}
-                showSearch
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                options={namespaceOptions.map(ns => ({ label: ns, value: ns }))}
-              />
+  // 表格排序处理（只更新排序状态，实际排序在useEffect中处理）
+  const handleTableChange = (
+    _pagination: TablePaginationConfig,
+    _filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<PodInfo> | SorterResult<PodInfo>[]
+  ) => {
+    // 处理单个排序器
+    const singleSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+    
+    if (singleSorter && singleSorter.field) {
+      const fieldName = String(singleSorter.field);
+      setSortField(fieldName);
+      setSortOrder(singleSorter.order || null);
+    } else {
+      // 清除排序
+      setSortField('');
+      setSortOrder(null);
+    }
+  };
 
-              <Select
-                placeholder="选择节点"
-                style={{ width: 180, minWidth: 120 }}
-                value={nodeName || undefined}
-                onChange={(value) => setNodeName(value || '')}
-                allowClear
-                loading={loadingNodes}
-                showSearch
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                options={nodeOptions.map(node => ({ label: node, value: node }))}
-              />
+  // 列设置选项
+  const columnOptions = [
+    { key: 'name', label: '实例名称' },
+    { key: 'status', label: '状态' },
+    { key: 'namespace', label: '命名空间' },
+    { key: 'podIP', label: '实例IP' },
+    { key: 'nodeName', label: '所在节点' },
+    { key: 'restartCount', label: '重启次数' },
+    { key: 'cpuRequest', label: 'CPU Request' },
+    { key: 'cpuLimit', label: 'CPU Limit' },
+    { key: 'memoryRequest', label: 'MEM Request' },
+    { key: 'memoryLimit', label: 'MEM Limit' },
+    { key: 'createdAt', label: '创建时间' },
+    { key: 'age', label: '创建时长' },
+  ];
 
-            <Search
-              placeholder="搜索Pod名称、命名空间、节点"
-                style={{ width: 300, minWidth: 250, maxWidth: 400 }}
-              value={searchText}
-                onChange={handleSearchChange}
-              onSearch={handleSearch}
-                allowClear
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {/* <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                onClick={() => fetchPods(searchText)}
-                loading={loading}
+  // Tab项配置
+  const tabItems = [
+    {
+      key: 'pod',
+      label: '容器组（Pod）',
+      children: (
+        <div>
+          {/* 操作按钮栏 */}
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Space>
+              <Button
+                danger
+                disabled={selectedRowKeys.length === 0}
+                onClick={handleBatchDelete}
               >
-                刷新
-              </Button> */}
-            </div>
+                批量删除
+              </Button>
+              <Button onClick={handleExport}>
+                导出
+              </Button>
+            </Space>
           </div>
-      </div>
 
-        <Table
-          columns={columns}
-          dataSource={pods}
-          rowKey={(record) => `${record.namespace}/${record.name}`}
-          loading={loading}
-          pagination={{
-            current: page,
-            pageSize: pageSize,
-            total: total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-            onChange: (page, size) => {
-              setPage(page);
-              setPageSize(size || 20);
-            },
-          }}
-          scroll={{ x: 1400 }}
-          size="small"
-        />
+          {/* 多条件搜索栏 */}
+          <div style={{ marginBottom: 16 }}>
+            {/* 搜索输入框 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
+              <Input
+                prefix={<SearchOutlined />}
+                placeholder="选择属性筛选，或输入关键字搜索"
+                style={{ flex: 1 }}
+                value={currentSearchValue}
+                onChange={(e) => setCurrentSearchValue(e.target.value)}
+                onPressEnter={addSearchCondition}
+                allowClear
+                addonBefore={
+                  <Select 
+                    value={currentSearchField} 
+                    onChange={setCurrentSearchField} 
+                    style={{ width: 130 }}
+                  >
+                    <Option value="name">实例名称</Option>
+                    <Option value="namespace">命名空间</Option>
+                    <Option value="status">状态</Option>
+                    <Option value="podIP">实例IP</Option>
+                    <Option value="nodeName">所在节点</Option>
+                    <Option value="cpuRequest">CPU Request</Option>
+                    <Option value="cpuLimit">CPU Limit</Option>
+                    <Option value="memoryRequest">MEM Request</Option>
+                    <Option value="memoryLimit">MEM Limit</Option>
+                  </Select>
+                }
+              />
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  loadPods();
+                }}
+              >
+              </Button>
+              <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
+            </div>
+
+            {/* 搜索条件标签 */}
+            {searchConditions.length > 0 && (
+              <div>
+                <Space size="small" wrap>
+                  {searchConditions.map((condition, index) => (
+                    <Tag
+                      key={index}
+                      closable
+                      onClose={() => removeSearchCondition(index)}
+                      color="blue"
+                    >
+                      {getFieldLabel(condition.field)}: {condition.value}
+                    </Tag>
+                  ))}
+                  <Button
+                    size="small"
+                    type="link"
+                    onClick={clearAllConditions}
+                    style={{ padding: 0 }}
+                  >
+                    清空全部
+                  </Button>
+                </Space>
+              </div>
+            )}
+          </div>
+
+          <Table
+            columns={columns}
+            dataSource={pods}
+            rowKey={(record) => `${record.namespace}/${record.name}`}
+            rowSelection={rowSelection}
+            loading={loading}
+            scroll={{ x: 1400 }}
+            size="middle"
+            onChange={handleTableChange}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: total,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total) => `共 ${total} 个Pod`,
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size || 20);
+              },
+              pageSizeOptions: ['10', '20', '50', '100'],
+            }}
+          />
+
+          {/* 列设置抽屉 */}
+          <Drawer
+            title="列设置"
+            placement="right"
+            width={400}
+            open={columnSettingsVisible}
+            onClose={() => setColumnSettingsVisible(false)}
+            footer={
+              <div style={{ textAlign: 'right' }}>
+                <Space>
+                  <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
+                  <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+                </Space>
+              </div>
+            }
+          >
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                {columnOptions.map(option => (
+                  <Checkbox
+                    key={option.key}
+                    checked={visibleColumns.includes(option.key)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setVisibleColumns([...visibleColumns, option.key]);
+                      } else {
+                        setVisibleColumns(visibleColumns.filter(c => c !== option.key));
+                      }
+                    }}
+                  >
+                    {option.label}
+                  </Checkbox>
+                ))}
+              </Space>
+            </div>
+          </Drawer>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: '24px' }}>
+      <Card bordered={false}>
+        <Spin spinning={loading && allPods.length === 0}>
+          <Tabs
+            activeKey="pod"
+            items={tabItems}
+          />
+        </Spin>
       </Card>
     </div>
   );
 };
 
 export default PodList;
+/** genAI_main_end */

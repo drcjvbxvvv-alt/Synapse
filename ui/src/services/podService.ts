@@ -135,6 +135,7 @@ export class PodService {
     return request.get(`/clusters/${clusterId}/pods/${namespace}/${name}`);
   }
 
+  /** genAI_main_start */
   // 删除Pod
   static async deletePod(
     clusterId: string,
@@ -143,6 +144,24 @@ export class PodService {
   ): Promise<any> {
     return request.delete(`/clusters/${clusterId}/pods/${namespace}/${name}`);
   }
+
+  // 批量删除Pod
+  static async batchDeletePods(
+    clusterId: string,
+    pods: Array<{ namespace: string; name: string }>
+  ): Promise<Array<{ namespace: string; name: string; success: boolean; error?: string }>> {
+    const results = await Promise.allSettled(
+      pods.map(pod => this.deletePod(clusterId, pod.namespace, pod.name))
+    );
+    
+    return results.map((result, index) => ({
+      namespace: pods[index].namespace,
+      name: pods[index].name,
+      success: result.status === 'fulfilled',
+      error: result.status === 'rejected' ? String(result.reason) : undefined,
+    }));
+  }
+  /** genAI_main_end */
 
   // 获取Pod日志
   static async getPodLogs(
