@@ -135,7 +135,6 @@ export class PodService {
     return request.get(`/clusters/${clusterId}/pods/${namespace}/${name}`);
   }
 
-  /** genAI_main_start */
   // 删除Pod
   static async deletePod(
     clusterId: string,
@@ -161,7 +160,6 @@ export class PodService {
       error: result.status === 'rejected' ? String(result.reason) : undefined,
     }));
   }
-  /** genAI_main_end */
 
   // 获取Pod日志
   static async getPodLogs(

@@ -3,14 +3,10 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Tabs,
-  Space,
-  Typography,
   Spin,
 } from 'antd';
 import ServiceTab from './ServiceTab';
 import IngressTab from './IngressTab';
-
-const { Title } = Typography;
 
 const NetworkList: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
@@ -58,7 +54,6 @@ const NetworkList: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <Card bordered={false}>
-
         <Spin spinning={loading}>
           <Tabs
             activeKey={activeTab}
@@ -72,4 +67,3 @@ const NetworkList: React.FC = () => {
 };
 
 export default NetworkList;
-

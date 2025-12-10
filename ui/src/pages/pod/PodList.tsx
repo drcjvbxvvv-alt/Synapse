@@ -1,4 +1,3 @@
-/** genAI_main_start */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -589,7 +588,22 @@ const PodList: React.FC = () => {
       sortOrder: sortField === 'status' ? sortOrder : null,
       render: (_: unknown, record: PodInfo) => {
         const { status, color } = PodService.formatStatus(record);
-        return <Badge status={color as 'success' | 'error' | 'default' | 'processing' | 'warning'} text={status} />;
+        // 将颜色值映射为Badge组件的status值
+        const getBadgeStatus = (color: string): 'success' | 'error' | 'default' | 'processing' | 'warning' => {
+          switch (color) {
+            case 'green':
+              return 'success';
+            case 'orange':
+              return 'warning';
+            case 'red':
+              return 'error';
+            case 'blue':
+              return 'processing';
+            default:
+              return 'default';
+          }
+        };
+        return <Badge status={getBadgeStatus(color)} text={status} />;
       },
     },
     {
@@ -945,4 +959,3 @@ const PodList: React.FC = () => {
 };
 
 export default PodList;
-/** genAI_main_end */

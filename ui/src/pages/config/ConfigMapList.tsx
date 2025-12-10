@@ -1,46 +1,139 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Table,
   Button,
   Input,
   Space,
   Tag,
-  message,
   Modal,
   Select,
   Tooltip,
   Popconfirm,
+  Drawer,
+  Checkbox,
+  App,
 } from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
   DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { configMapService, type ConfigMapListItem, type NamespaceItem } from '../../services/configService';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
+import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 
-const { Search } = Input;
 const { Option } = Select;
 
-const ConfigMapList: React.FC = () => {
+interface ConfigMapListProps {
+  clusterId: string;
+  onCountChange?: (count: number) => void;
+}
+
+const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
-  const { clusterId } = useParams<{ clusterId: string }>();
-  const [loading, setLoading] = useState(false);
+  const { message } = App.useApp();
+  
+  // 数据状态
+  const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
   const [configMaps, setConfigMaps] = useState<ConfigMapListItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchName, setSearchName] = useState('');
-  const [selectedNamespace, setSelectedNamespace] = useState<string>('_all_');
+  
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  
+  // 命名空间
   const [namespaces, setNamespaces] = useState<NamespaceItem[]>([]);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+
+  // 多条件搜索状态
+  interface SearchCondition {
+    field: 'name' | 'namespace' | 'label';
+    value: string;
+  }
+  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
+  const [currentSearchField, setCurrentSearchField] = useState<'name' | 'namespace' | 'label'>('name');
+  const [currentSearchValue, setCurrentSearchValue] = useState('');
+
+  // 列设置状态
+  const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'name', 'namespace', 'labels', 'dataCount', 'creationTimestamp', 'age'
+  ]);
+
+  // 排序状态
+  const [sortField, setSortField] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
+
+  // 添加搜索条件
+  const addSearchCondition = () => {
+    if (!currentSearchValue.trim()) return;
+    
+    const newCondition: SearchCondition = {
+      field: currentSearchField,
+      value: currentSearchValue.trim(),
+    };
+    
+    setSearchConditions([...searchConditions, newCondition]);
+    setCurrentSearchValue('');
+  };
+
+  // 删除搜索条件
+  const removeSearchCondition = (index: number) => {
+    setSearchConditions(searchConditions.filter((_, i) => i !== index));
+  };
+
+  // 清空所有搜索条件
+  const clearAllConditions = () => {
+    setSearchConditions([]);
+    setCurrentSearchValue('');
+  };
+
+  // 获取搜索字段的显示名称
+  const getFieldLabel = (field: string): string => {
+    const labels: Record<string, string> = {
+      name: '名称',
+      namespace: '命名空间',
+      label: '标签',
+    };
+    return labels[field] || field;
+  };
+
+  // 客户端过滤ConfigMap列表
+  const filterConfigMaps = useCallback((items: ConfigMapListItem[]): ConfigMapListItem[] => {
+    if (searchConditions.length === 0) return items;
+
+    return items.filter(item => {
+      const conditionsByField = searchConditions.reduce((acc, condition) => {
+        if (!acc[condition.field]) {
+          acc[condition.field] = [];
+        }
+        acc[condition.field].push(condition.value.toLowerCase());
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      return Object.entries(conditionsByField).every(([field, values]) => {
+        if (field === 'label') {
+          const labelsStr = Object.entries(item.labels || {})
+            .map(([k, v]) => `${k}=${v}`)
+            .join(' ')
+            .toLowerCase();
+          return values.some(searchValue => labelsStr.includes(searchValue));
+        }
+        
+        const itemValue = item[field as keyof ConfigMapListItem];
+        const itemStr = String(itemValue || '').toLowerCase();
+        return values.some(searchValue => itemStr.includes(searchValue));
+      });
+    });
+  }, [searchConditions]);
 
   // 加载命名空间列表
-  const loadNamespaces = React.useCallback(async () => {
+  const loadNamespaces = useCallback(async () => {
     if (!clusterId) return;
     try {
       const data = await configMapService.getConfigMapNamespaces(Number(clusterId));
@@ -50,56 +143,36 @@ const ConfigMapList: React.FC = () => {
     }
   }, [clusterId]);
 
-  // 加载ConfigMap列表
-  const loadConfigMaps = React.useCallback(async () => {
+  // 加载ConfigMap列表（获取所有数据）
+  const loadConfigMaps = useCallback(async () => {
     if (!clusterId) return;
+    
     setLoading(true);
     try {
-      const params: {
-        page: number;
-        pageSize: number;
-        namespace?: string;
-        name?: string;
-      } = {
-        page,
-        pageSize,
-      };
-      if (selectedNamespace && selectedNamespace !== '_all_') {
-        params.namespace = selectedNamespace;
-      }
-      if (searchName) {
-        params.name = searchName;
-      }
-
-      const data = await configMapService.getConfigMaps(Number(clusterId), params);
-      setConfigMaps(data.items || []);
-      setTotal(data.total || 0);
+      const response = await configMapService.getConfigMaps(Number(clusterId), {
+        page: 1,
+        pageSize: 10000, // 获取所有数据
+      });
+      
+      setAllConfigMaps(response.items || []);
     } catch (error) {
-      const err = error as { response?: { data?: { error?: string } } };
-      message.error(err.response?.data?.error || '加载ConfigMap列表失败');
+      console.error('获取ConfigMap列表失败:', error);
+      message.error('获取ConfigMap列表失败');
     } finally {
       setLoading(false);
     }
-  }, [clusterId, page, pageSize, selectedNamespace, searchName]);
-
-  useEffect(() => {
-    loadNamespaces();
-  }, [loadNamespaces]);
-
-  useEffect(() => {
-    loadConfigMaps();
-  }, [loadConfigMaps]);
+  }, [clusterId, message]);
 
   // 删除ConfigMap
   const handleDelete = async (namespace: string, name: string) => {
     if (!clusterId) return;
     try {
       await configMapService.deleteConfigMap(Number(clusterId), namespace, name);
-      message.success('ConfigMap删除成功');
+      message.success('删除成功');
       loadConfigMaps();
     } catch (error) {
-      const err = error as { response?: { data?: { error?: string } } };
-      message.error(err.response?.data?.error || '删除ConfigMap失败');
+      console.error('删除失败:', error);
+      message.error('删除失败');
     }
   };
 
@@ -113,45 +186,171 @@ const ConfigMapList: React.FC = () => {
     Modal.confirm({
       title: '确认删除',
       content: `确定要删除选中的 ${selectedRowKeys.length} 个ConfigMap吗？`,
+      okText: '确定',
+      cancelText: '取消',
       onOk: async () => {
         try {
           for (const key of selectedRowKeys) {
-            const [namespace, name] = (key as string).split('/');
+            const [namespace, name] = key.split('/');
             await configMapService.deleteConfigMap(Number(clusterId), namespace, name);
           }
           message.success('批量删除成功');
           setSelectedRowKeys([]);
           loadConfigMaps();
         } catch (error) {
-          const err = error as { response?: { data?: { error?: string } } };
-          message.error(err.response?.data?.error || '批量删除失败');
+          console.error('批量删除失败:', error);
+          message.error('批量删除失败');
         }
       },
     });
   };
 
-  // 查看详情
-  const handleViewDetail = (namespace: string, name: string) => {
-    navigate(`/clusters/${clusterId}/configs/configmap/${namespace}/${name}`);
+  // 导出功能
+  const handleExport = () => {
+    try {
+      const filteredData = filterConfigMaps(allConfigMaps);
+      
+      if (filteredData.length === 0) {
+        message.warning('没有数据可导出');
+        return;
+      }
+
+      const dataToExport = filteredData.map(item => ({
+        '名称': item.name,
+        '命名空间': item.namespace,
+        '标签': Object.entries(item.labels || {}).map(([k, v]) => `${k}=${v}`).join(', ') || '-',
+        '数据项数量': item.dataCount,
+        '创建时间': item.creationTimestamp ? new Date(item.creationTimestamp).toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).replace(/\//g, '-') : '-',
+        '存在时间': item.age || '-',
+      }));
+
+      const headers = Object.keys(dataToExport[0]);
+      const csvContent = [
+        headers.join(','),
+        ...dataToExport.map(row => 
+          headers.map(header => {
+            const value = row[header as keyof typeof row];
+            return `"${value}"`;
+          }).join(',')
+        )
+      ].join('\n');
+      
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `configmap-list-${Date.now()}.csv`;
+      link.click();
+      message.success(`成功导出 ${filteredData.length} 条数据`);
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败');
+    }
   };
 
-  // 搜索
-  const handleSearch = () => {
-    setPage(1);
+  // 列设置保存
+  const handleColumnSettingsSave = () => {
+    setColumnSettingsVisible(false);
+    message.success('列设置已保存');
+  };
+
+  // 当搜索条件改变时重置到第一页
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchConditions]);
+
+  // 当allConfigMaps、搜索条件、分页参数、排序参数改变时，重新计算显示数据
+  useEffect(() => {
+    if (allConfigMaps.length === 0) {
+      setConfigMaps([]);
+      setTotal(0);
+      onCountChange?.(0);
+      return;
+    }
+    
+    // 1. 应用客户端过滤
+    let filteredItems = filterConfigMaps(allConfigMaps);
+    
+    // 2. 应用排序
+    if (sortField && sortOrder) {
+      filteredItems = [...filteredItems].sort((a, b) => {
+        const aValue = a[sortField as keyof ConfigMapListItem];
+        const bValue = b[sortField as keyof ConfigMapListItem];
+        
+        if (aValue === undefined && bValue === undefined) return 0;
+        if (aValue === undefined) return sortOrder === 'ascend' ? 1 : -1;
+        if (bValue === undefined) return sortOrder === 'ascend' ? -1 : 1;
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortOrder === 'ascend' ? aValue - bValue : bValue - aValue;
+        }
+        
+        const aStr = String(aValue);
+        const bStr = String(bValue);
+        
+        if (sortOrder === 'ascend') {
+          return aStr > bStr ? 1 : aStr < bStr ? -1 : 0;
+        } else {
+          return bStr > aStr ? 1 : bStr < aStr ? -1 : 0;
+        }
+      });
+    }
+    
+    // 3. 计算分页
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedItems = filteredItems.slice(startIndex, endIndex);
+    
+    setConfigMaps(paginatedItems);
+    setTotal(filteredItems.length);
+    onCountChange?.(filteredItems.length);
+  }, [allConfigMaps, filterConfigMaps, currentPage, pageSize, sortField, sortOrder, onCountChange]);
+
+  // 初始加载数据
+  useEffect(() => {
+    loadNamespaces();
     loadConfigMaps();
+  }, [loadNamespaces, loadConfigMaps]);
+
+  // 行选择配置
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (keys: React.Key[]) => {
+      setSelectedRowKeys(keys as string[]);
+    },
   };
 
-  // 表格列定义
-  const columns: ColumnsType<ConfigMapListItem> = [
+  // 定义所有可用列
+  const allColumns: ColumnsType<ConfigMapListItem> = [
     {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
       width: 250,
+      fixed: 'left' as const,
+      sorter: true,
+      sortOrder: sortField === 'name' ? sortOrder : null,
       render: (text: string, record: ConfigMapListItem) => (
-        <a onClick={() => handleViewDetail(record.namespace, text)}>
+        <Button
+          type="link"
+          onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${text}`)}
+          style={{ 
+            padding: 0, 
+            height: 'auto',
+            whiteSpace: 'normal',
+            wordBreak: 'break-all',
+            textAlign: 'left'
+          }}
+        >
           {text}
-        </a>
+        </Button>
       ),
     },
     {
@@ -159,20 +358,28 @@ const ConfigMapList: React.FC = () => {
       dataIndex: 'namespace',
       key: 'namespace',
       width: 150,
+      sorter: true,
+      sortOrder: sortField === 'namespace' ? sortOrder : null,
       render: (text: string) => <Tag color="blue">{text}</Tag>,
     },
     {
       title: '标签',
       dataIndex: 'labels',
       key: 'labels',
-      width: 200,
+      width: 250,
       render: (labels: Record<string, string>) => (
         <Space size={[0, 4]} wrap>
           {Object.entries(labels || {}).slice(0, 3).map(([key, value]) => (
-            <Tag key={key}>{`${key}=${value}`}</Tag>
+            <Tooltip key={key} title={`${key}=${value}`}>
+              <Tag style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {`${key}=${value}`}
+              </Tag>
+            </Tooltip>
           ))}
           {Object.keys(labels || {}).length > 3 && (
-            <Tag>+{Object.keys(labels).length - 3}</Tag>
+            <Tooltip title={Object.entries(labels).slice(3).map(([k, v]) => `${k}=${v}`).join('\n')}>
+              <Tag>+{Object.keys(labels).length - 3}</Tag>
+            </Tooltip>
           )}
         </Space>
       ),
@@ -183,6 +390,8 @@ const ConfigMapList: React.FC = () => {
       key: 'dataCount',
       width: 120,
       align: 'center',
+      sorter: true,
+      sortOrder: sortField === 'dataCount' ? sortOrder : null,
       render: (count: number) => <Tag color="green">{count}</Tag>,
     },
     {
@@ -190,7 +399,21 @@ const ConfigMapList: React.FC = () => {
       dataIndex: 'creationTimestamp',
       key: 'creationTimestamp',
       width: 180,
-      render: (time: string) => new Date(time).toLocaleString('zh-CN'),
+      sorter: true,
+      sortOrder: sortField === 'creationTimestamp' ? sortOrder : null,
+      render: (time: string) => {
+        if (!time) return '-';
+        const date = new Date(time);
+        return date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).replace(/\//g, '-');
+      },
     },
     {
       title: '存在时间',
@@ -200,142 +423,275 @@ const ConfigMapList: React.FC = () => {
     },
     {
       title: '操作',
-      key: 'action',
+      key: 'actions',
       width: 150,
-      fixed: 'right',
+      fixed: 'right' as const,
       render: (_: unknown, record: ConfigMapListItem) => (
-        <Space>
-          <Tooltip title="查看详情">
-            <Button
-              type="link"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record.namespace, record.name)}
-            />
-          </Tooltip>
-          <Tooltip title="编辑">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() =>
-                navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}/edit`)
-              }
-            />
-          </Tooltip>
+        <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}`)}
+          >
+            查看
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}/edit`)}
+          >
+            编辑
+          </Button>
           <Popconfirm
             title="确定要删除这个ConfigMap吗？"
+            description={`确定要删除 ${record.name} 吗？`}
             onConfirm={() => handleDelete(record.namespace, record.name)}
             okText="确定"
             cancelText="取消"
           >
-            <Tooltip title="删除">
-              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-            </Tooltip>
+            <Button
+              type="link"
+              size="small"
+              danger
+            >
+              删除
+            </Button>
           </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  // 行选择
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (selectedKeys: React.Key[]) => {
-      setSelectedRowKeys(selectedKeys);
-    },
+  // 根据可见性过滤列
+  const columns = allColumns.filter(col => {
+    if (col.key === 'actions') return true;
+    return visibleColumns.includes(col.key as string);
+  });
+
+  // 表格排序处理
+  const handleTableChange = (
+    _pagination: TablePaginationConfig,
+    _filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<ConfigMapListItem> | SorterResult<ConfigMapListItem>[]
+  ) => {
+    const singleSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+    
+    if (singleSorter && singleSorter.field) {
+      const fieldName = String(singleSorter.field);
+      setSortField(fieldName);
+      setSortOrder(singleSorter.order || null);
+    } else {
+      setSortField('');
+      setSortOrder(null);
+    }
   };
 
   return (
     <div>
-      {/* 筛选和搜索栏 */}
-      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
-        <Space>
-          <Select
-            placeholder="选择命名空间"
-            style={{ width: 180 }}
-            value={selectedNamespace}
-            onChange={setSelectedNamespace}
-            showSearch
-            filterOption={(input, option) => {
-              const text = String(option?.children || '');
-              return text.toLowerCase().includes(input.toLowerCase());
-            }}
-            allowClear
-            onClear={() => setSelectedNamespace('_all_')}
-            popupClassName="namespace-select-dropdown"
-          >
-            <Option value="_all_">所有命名空间</Option>
-            {namespaces.map((ns) => (
-              <Option key={ns.name} value={ns.name}>
-                {ns.name} ({ns.count})
-              </Option>
-            ))}
-          </Select>
-          <style>{`
-            .namespace-select-dropdown .ant-select-item-option-content {
-              white-space: normal;
-              word-break: break-word;
-            }
-          `}</style>
-
-          <Search
-            placeholder="搜索ConfigMap名称..."
-            allowClear
-            style={{ width: 250 }}
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            onSearch={handleSearch}
-            enterButton={<SearchOutlined />}
-          />
-
-          {selectedRowKeys.length > 0 && (
-            <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
-              批量删除 ({selectedRowKeys.length})
-            </Button>
-          )}
-        </Space>
-
+      {/* 操作按钮栏 */}
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
           <Button
-            type="primary"
-            onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/create`)}
+            disabled={selectedRowKeys.length === 0}
+            danger
+            icon={<DeleteOutlined />}
+            onClick={handleBatchDelete}
           >
-            创建ConfigMap
+            批量删除 {selectedRowKeys.length > 0 && `(${selectedRowKeys.length})`}
           </Button>
+          <Button onClick={handleExport}>
+            导出
+          </Button>
+        </Space>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/create`)}
+        >
+          创建ConfigMap
+        </Button>
+      </div>
+
+      {/* 多条件搜索栏 */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
+          <Input
+            prefix={<SearchOutlined />}
+            placeholder="选择属性筛选，或输入关键字搜索"
+            style={{ flex: 1 }}
+            value={currentSearchValue}
+            onChange={(e) => setCurrentSearchValue(e.target.value)}
+            onPressEnter={addSearchCondition}
+            allowClear
+            addonBefore={
+              <Select 
+                value={currentSearchField} 
+                onChange={setCurrentSearchField} 
+                style={{ width: 120 }}
+              >
+                <Option value="name">名称</Option>
+                <Option value="namespace">命名空间</Option>
+                <Option value="label">标签</Option>
+              </Select>
+            }
+          />
           <Button
             icon={<ReloadOutlined />}
-            onClick={loadConfigMaps}
+            onClick={() => {
+              loadConfigMaps();
+            }}
           >
-            刷新
           </Button>
-        </Space>
-      </Space>
+          <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
+        </div>
 
-      {/* 表格 */}
+        {/* 搜索条件标签 */}
+        {searchConditions.length > 0 && (
+          <div>
+            <Space size="small" wrap>
+              {searchConditions.map((condition, index) => (
+                <Tag
+                  key={index}
+                  closable
+                  onClose={() => removeSearchCondition(index)}
+                  color="blue"
+                >
+                  {getFieldLabel(condition.field)}: {condition.value}
+                </Tag>
+              ))}
+              <Button
+                size="small"
+                type="link"
+                onClick={clearAllConditions}
+                style={{ padding: 0 }}
+              >
+                清空全部
+              </Button>
+            </Space>
+          </div>
+        )}
+      </div>
+
       <Table
-        rowSelection={rowSelection}
         columns={columns}
         dataSource={configMaps}
-        loading={loading}
         rowKey={(record) => `${record.namespace}/${record.name}`}
+        rowSelection={rowSelection}
+        loading={loading}
+        scroll={{ x: 1200 }}
+        size="middle"
+        onChange={handleTableChange}
         pagination={{
-          current: page,
+          current: currentPage,
           pageSize: pageSize,
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 个配置项`,
-          onChange: (page, pageSize) => {
-            setPage(page);
-            setPageSize(pageSize);
+          showTotal: (total) => `共 ${total} 个ConfigMap`,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            setPageSize(size || 20);
           },
+          pageSizeOptions: ['10', '20', '50', '100'],
         }}
-        scroll={{ x: 1200 }}
       />
+
+      {/* 列设置抽屉 */}
+      <Drawer
+        title="列设置"
+        placement="right"
+        width={400}
+        open={columnSettingsVisible}
+        onClose={() => setColumnSettingsVisible(false)}
+        footer={
+          <div style={{ textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+            </Space>
+          </div>
+        }
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Checkbox
+              checked={visibleColumns.includes('name')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setVisibleColumns([...visibleColumns, 'name']);
+                } else {
+                  setVisibleColumns(visibleColumns.filter(c => c !== 'name'));
+                }
+              }}
+            >
+              名称
+            </Checkbox>
+            <Checkbox
+              checked={visibleColumns.includes('namespace')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setVisibleColumns([...visibleColumns, 'namespace']);
+                } else {
+                  setVisibleColumns(visibleColumns.filter(c => c !== 'namespace'));
+                }
+              }}
+            >
+              命名空间
+            </Checkbox>
+            <Checkbox
+              checked={visibleColumns.includes('labels')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setVisibleColumns([...visibleColumns, 'labels']);
+                } else {
+                  setVisibleColumns(visibleColumns.filter(c => c !== 'labels'));
+                }
+              }}
+            >
+              标签
+            </Checkbox>
+            <Checkbox
+              checked={visibleColumns.includes('dataCount')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setVisibleColumns([...visibleColumns, 'dataCount']);
+                } else {
+                  setVisibleColumns(visibleColumns.filter(c => c !== 'dataCount'));
+                }
+              }}
+            >
+              数据项数量
+            </Checkbox>
+            <Checkbox
+              checked={visibleColumns.includes('creationTimestamp')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setVisibleColumns([...visibleColumns, 'creationTimestamp']);
+                } else {
+                  setVisibleColumns(visibleColumns.filter(c => c !== 'creationTimestamp'));
+                }
+              }}
+            >
+              创建时间
+            </Checkbox>
+            <Checkbox
+              checked={visibleColumns.includes('age')}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setVisibleColumns([...visibleColumns, 'age']);
+                } else {
+                  setVisibleColumns(visibleColumns.filter(c => c !== 'age'));
+                }
+              }}
+            >
+              存在时间
+            </Checkbox>
+          </Space>
+        </div>
+      </Drawer>
     </div>
   );
 };
 
 export default ConfigMapList;
-
