@@ -1121,7 +1121,6 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
               language="yaml"
               value={editYaml}
               onChange={(value) => setEditYaml(value || '')}
-              theme="vs-dark"
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,

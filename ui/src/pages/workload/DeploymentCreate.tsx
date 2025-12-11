@@ -505,7 +505,6 @@ const DeploymentCreate: React.FC = () => {
               setYamlContent(value || '');
               setDryRunResult(null);
             }}
-            theme="vs-dark"
             options={{
               minimap: { enabled: false },
               fontSize: 14,
@@ -548,7 +547,6 @@ const DeploymentCreate: React.FC = () => {
             language="yaml"
             original={originalYaml}
             modified={pendingYaml}
-            theme="vs-dark"
             options={{
               readOnly: true,
               minimap: { enabled: false },

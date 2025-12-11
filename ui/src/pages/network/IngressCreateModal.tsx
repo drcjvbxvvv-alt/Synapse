@@ -467,7 +467,6 @@ spec:
       language="yaml"
       value={yamlContent}
       onChange={(value) => setYamlContent(value || '')}
-      theme="vs-dark"
       options={{
         minimap: { enabled: false },
         fontSize: 14,
