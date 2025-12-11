@@ -28,6 +28,7 @@ import ConfigMapCreate from './pages/config/ConfigMapCreate';
 import SecretCreate from './pages/config/SecretCreate';
 import { NamespaceList, NamespaceDetail } from './pages/namespace';
 import NetworkList from './pages/network/NetworkList';
+import StorageList from './pages/storage/StorageList';
 import './App.css';
 
 const App: React.FC = () => {
@@ -75,6 +76,8 @@ const App: React.FC = () => {
               <Route path="clusters/:clusterId/configs/secret/:namespace/:name/edit" element={<SecretEdit />} />
               {/* 网络管理路由（Service和Ingress） */}
               <Route path="clusters/:clusterId/network" element={<NetworkList />} />
+              {/* 存储管理路由（PVC、PV、StorageClass） */}
+              <Route path="clusters/:clusterId/storage" element={<StorageList />} />
             </Route>
           </Routes>
         </Router>

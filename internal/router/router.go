@@ -283,6 +283,37 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					ingresses.GET("/:namespace/:name/yaml", ingressHandler.GetIngressYAML)
 					ingresses.DELETE("/:namespace/:name", ingressHandler.DeleteIngress)
 				}
+
+				// storage 子分组 - PVC, PV, StorageClass
+				storageHandler := handlers.NewStorageHandler(db, cfg, clusterSvc, k8sMgr)
+
+				// PVCs 子分组
+				pvcs := cluster.Group("/pvcs")
+				{
+					pvcs.GET("", storageHandler.ListPVCs)
+					pvcs.GET("/namespaces", storageHandler.GetPVCNamespaces)
+					pvcs.GET("/:namespace/:name", storageHandler.GetPVC)
+					pvcs.GET("/:namespace/:name/yaml", storageHandler.GetPVCYAML)
+					pvcs.DELETE("/:namespace/:name", storageHandler.DeletePVC)
+				}
+
+				// PVs 子分组
+				pvs := cluster.Group("/pvs")
+				{
+					pvs.GET("", storageHandler.ListPVs)
+					pvs.GET("/:name", storageHandler.GetPV)
+					pvs.GET("/:name/yaml", storageHandler.GetPVYAML)
+					pvs.DELETE("/:name", storageHandler.DeletePV)
+				}
+
+				// StorageClasses 子分组
+				storageclasses := cluster.Group("/storageclasses")
+				{
+					storageclasses.GET("", storageHandler.ListStorageClasses)
+					storageclasses.GET("/:name", storageHandler.GetStorageClass)
+					storageclasses.GET("/:name/yaml", storageHandler.GetStorageClassYAML)
+					storageclasses.DELETE("/:name", storageHandler.DeleteStorageClass)
+				}
 			}
 		}
 

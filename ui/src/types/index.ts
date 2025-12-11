@@ -331,3 +331,56 @@ export interface Endpoints {
   namespace: string;
   subsets: EndpointSubset[];
 }
+
+// 存储相关类型定义 - PVC
+export interface PVC {
+  name: string;
+  namespace: string;
+  status: string;
+  volumeName: string;
+  storageClassName: string;
+  accessModes: string[];
+  capacity: string;
+  volumeMode: string;
+  createdAt: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+}
+
+// 存储相关类型定义 - PV
+export interface PVClaimRef {
+  namespace: string;
+  name: string;
+}
+
+export interface PV {
+  name: string;
+  status: string;
+  capacity: string;
+  accessModes: string[];
+  reclaimPolicy: string;
+  storageClassName: string;
+  volumeMode: string;
+  claimRef?: PVClaimRef;
+  persistentVolumeSource: string;
+  mountOptions?: string[];
+  nodeAffinity?: string;
+  createdAt: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+}
+
+// 存储相关类型定义 - StorageClass
+export interface StorageClass {
+  name: string;
+  provisioner: string;
+  reclaimPolicy: string;
+  volumeBindingMode: string;
+  allowVolumeExpansion: boolean;
+  parameters?: Record<string, string>;
+  mountOptions?: string[];
+  isDefault: boolean;
+  createdAt: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+}
