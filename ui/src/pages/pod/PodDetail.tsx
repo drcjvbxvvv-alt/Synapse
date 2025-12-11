@@ -92,9 +92,9 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     navigate(`/clusters/${clusterId}/pods/${namespace}/${name}/logs`);
   };
 
-  // 进入终端
+  // 进入终端 - 新窗口打开
   const handleTerminal = () => {
-    navigate(`/clusters/${clusterId}/pods/${namespace}/${name}/terminal`);
+    window.open(`/clusters/${clusterId}/pods/${namespace}/${name}/terminal`, '_blank');
   };
 
   useEffect(() => {

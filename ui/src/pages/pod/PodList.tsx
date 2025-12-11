@@ -419,9 +419,9 @@ const PodList: React.FC = () => {
     navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/logs`);
   };
 
-  // 进入Pod终端
+  // 进入Pod终端 - 新窗口打开
   const handleTerminal = (pod: PodInfo) => {
-    navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/terminal`);
+    window.open(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/terminal`, '_blank');
   };
 
   // 查看Pod详情（监控）

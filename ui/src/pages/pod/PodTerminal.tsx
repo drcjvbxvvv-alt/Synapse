@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Card,
   Button,
@@ -12,7 +12,6 @@ import {
   Col,
 } from 'antd';
 import {
-  ArrowLeftOutlined,
   PlayCircleOutlined,
   StopOutlined,
   ClearOutlined,
@@ -37,7 +36,6 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
     namespace: string;
     name: string;
   }>();
-  const navigate = useNavigate();
   
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
@@ -388,12 +386,6 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
       {/* 页面头部 */}
       <div style={{ marginBottom: 16, flexShrink: 0 }}>
         <Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(`/clusters/${clusterId}/pods/${namespace}/${name}`)}
-          >
-            返回
-          </Button>
           <Title level={3} style={{ margin: 0 }}>
             Pod 终端
           </Title>
