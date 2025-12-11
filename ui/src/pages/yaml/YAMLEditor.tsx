@@ -79,14 +79,14 @@ const YAMLEditor: React.FC = () => {
     try {
       const response = await WorkloadService.getWorkloadDetail(
         clusterId,
+        workloadType,
         namespace,
-        name,
-        workloadType
+        name
       );
       
       if (response.code === 200) {
-        // 使用yaml库将JSON转换为YAML格式
-        const yamlContent = YAML.stringify(response.data.raw);
+        // 优先使用后端返回的yaml字段（包含apiVersion和kind），否则使用raw转换
+        const yamlContent = response.data.yaml || YAML.stringify(response.data.raw);
         setYaml(yamlContent);
         setOriginalYaml(yamlContent);
       } else {
@@ -454,7 +454,6 @@ spec: {}
                 defaultLanguage="yaml"
                 value={yaml}
                 onChange={(value) => setYaml(value || '')}
-                theme="vs-dark"
                 loading={<div style={{ padding: '20px', textAlign: 'center' }}>编辑器加载中...</div>}
                 beforeMount={handleEditorWillMount}
                 onMount={handleEditorDidMount}

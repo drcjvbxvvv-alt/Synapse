@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
+	sigsyaml "sigs.k8s.io/yaml"
 )
 
 func init() {
@@ -286,12 +287,29 @@ func (h *RolloutHandler) GetRollout(c *gin.Context) {
 		logger.Error("获取Rollout关联Pods失败", "error", err)
 	}
 
+	// 清理 managed fields 以生成更干净的 YAML
+	cleanRollout := rollout.DeepCopy()
+	cleanRollout.ManagedFields = nil
+	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	cleanRollout.APIVersion = "argoproj.io/v1alpha1"
+	cleanRollout.Kind = "Rollout"
+	// 将 Rollout 对象转换为 YAML 字符串
+	yamlBytes, yamlErr := sigsyaml.Marshal(cleanRollout)
+	var yamlString string
+	if yamlErr == nil {
+		yamlString = string(yamlBytes)
+	} else {
+		logger.Error("转换Rollout为YAML失败", "error", yamlErr)
+		yamlString = ""
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "success",
 		"data": gin.H{
 			"workload": h.convertToRolloutInfo(rollout),
-			"raw":      rollout,
+			"raw":      cleanRollout,
+			"yaml":     yamlString,
 			"pods":     pods,
 		},
 	})

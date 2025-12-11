@@ -222,6 +222,9 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 	// 清理 managed fields 以生成更干净的 YAML
 	cleanDeployment := deployment.DeepCopy()
 	cleanDeployment.ManagedFields = nil
+	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	cleanDeployment.APIVersion = "apps/v1"
+	cleanDeployment.Kind = "Deployment"
 	// 将 Deployment 对象转换为 YAML 字符串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanDeployment)
 	var yamlString string
@@ -1306,5 +1309,3 @@ func (h *DeploymentHandler) GetDeploymentEvents(c *gin.Context) {
 		},
 	})
 }
-
-

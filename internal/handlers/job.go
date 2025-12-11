@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
+	sigsyaml "sigs.k8s.io/yaml"
 )
 
 type JobHandler struct {
@@ -182,12 +183,29 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 		logger.Error("获取Job关联Pods失败", "error", err)
 	}
 
+	// 清理 managed fields 以生成更干净的 YAML
+	cleanJob := job.DeepCopy()
+	cleanJob.ManagedFields = nil
+	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	cleanJob.APIVersion = "batch/v1"
+	cleanJob.Kind = "Job"
+	// 将 Job 对象转换为 YAML 字符串
+	yamlBytes, yamlErr := sigsyaml.Marshal(cleanJob)
+	var yamlString string
+	if yamlErr == nil {
+		yamlString = string(yamlBytes)
+	} else {
+		logger.Error("转换Job为YAML失败", "error", yamlErr)
+		yamlString = ""
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "success",
 		"data": gin.H{
 			"workload": h.convertToJobInfo(job),
 			"raw":      job,
+			"yaml":     yamlString,
 			"pods":     pods,
 		},
 	})
@@ -457,4 +475,3 @@ func (h *JobHandler) applyYAML(ctx context.Context, k8sClient *services.K8sClien
 	}
 	return result, nil
 }
-

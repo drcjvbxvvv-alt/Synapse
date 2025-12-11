@@ -210,6 +210,9 @@ func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 	// 清理 managed fields 以生成更干净的 YAML
 	cleanStatefulSet := statefulSet.DeepCopy()
 	cleanStatefulSet.ManagedFields = nil
+	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	cleanStatefulSet.APIVersion = "apps/v1"
+	cleanStatefulSet.Kind = "StatefulSet"
 	// 将 StatefulSet 对象转换为 YAML 字符串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanStatefulSet)
 	var yamlString string
@@ -615,4 +618,3 @@ func (h *StatefulSetHandler) applyYAML(ctx context.Context, k8sClient *services.
 	}
 	return result, nil
 }
-

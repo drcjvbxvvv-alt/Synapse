@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
+	sigsyaml "sigs.k8s.io/yaml"
 )
 
 type CronJobHandler struct {
@@ -178,12 +179,29 @@ func (h *CronJobHandler) GetCronJob(c *gin.Context) {
 		logger.Error("获取CronJob关联Jobs失败", "error", err)
 	}
 
+	// 清理 managed fields 以生成更干净的 YAML
+	cleanCronJob := cronJob.DeepCopy()
+	cleanCronJob.ManagedFields = nil
+	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	cleanCronJob.APIVersion = "batch/v1"
+	cleanCronJob.Kind = "CronJob"
+	// 将 CronJob 对象转换为 YAML 字符串
+	yamlBytes, yamlErr := sigsyaml.Marshal(cleanCronJob)
+	var yamlString string
+	if yamlErr == nil {
+		yamlString = string(yamlBytes)
+	} else {
+		logger.Error("转换CronJob为YAML失败", "error", yamlErr)
+		yamlString = ""
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "success",
 		"data": gin.H{
 			"workload": h.convertToCronJobInfo(cronJob),
 			"raw":      cronJob,
+			"yaml":     yamlString,
 			"jobs":     jobs,
 		},
 	})
@@ -437,4 +455,3 @@ func (h *CronJobHandler) applyYAML(ctx context.Context, k8sClient *services.K8sC
 	}
 	return result, nil
 }
-

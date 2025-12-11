@@ -209,6 +209,9 @@ func (h *DaemonSetHandler) GetDaemonSet(c *gin.Context) {
 	// 清理 managed fields 以生成更干净的 YAML
 	cleanDaemonSet := daemonSet.DeepCopy()
 	cleanDaemonSet.ManagedFields = nil
+	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	cleanDaemonSet.APIVersion = "apps/v1"
+	cleanDaemonSet.Kind = "DaemonSet"
 	// 将 DaemonSet 对象转换为 YAML 字符串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanDaemonSet)
 	var yamlString string
@@ -533,4 +536,3 @@ func (h *DaemonSetHandler) applyYAML(ctx context.Context, k8sClient *services.K8
 	}
 	return result, nil
 }
-
