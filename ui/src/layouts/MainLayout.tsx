@@ -31,11 +31,13 @@ import {
   ArrowLeftOutlined,
   CodeOutlined,
   ContainerOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
 import type { MenuProps as AntMenuProps } from 'antd';
 import type {  Cluster } from '../types';
 import { clusterService } from '../services/clusterService';
 import SearchDropdown from '../components/SearchDropdown';
+import { tokenManager } from '../services/authService';
 
 
 const { Header, Sider, Content } = Layout;
@@ -166,6 +168,7 @@ const MainLayout: React.FC = () => {
     // 主页面的路由匹配
     if (path.startsWith('/clusters') && !path.match(/\/clusters\/[^/]+\//)) return ['cluster-management'];
     if (path.startsWith('/permissions')) return ['permission-management'];
+    if (path.startsWith('/settings')) return ['system-settings'];
     
     return ['overview'];
   };
@@ -186,6 +189,12 @@ const MainLayout: React.FC = () => {
       key: 'permission-management',
       label: '权限管理',
       onClick: () => navigate('/permissions'),
+    },
+    {
+      key: 'system-settings',
+      icon: <SettingOutlined />,
+      label: '系统设置',
+      onClick: () => navigate('/settings'),
     },
   ];
 
@@ -384,14 +393,42 @@ const MainLayout: React.FC = () => {
   // 根据当前页面选择对应的菜单
   const menuItems = isClusterDetailPage() ? clusterDetailMenuItems : mainMenuItems;
 
+  // 获取当前用户信息
+  const currentUser = tokenManager.getUser();
+  
+  // 处理用户菜单点击
+  const handleUserMenuClick: AntMenuProps['onClick'] = ({ key }) => {
+    if (key === 'logout') {
+      tokenManager.clear();
+      message.success('已退出登录');
+      navigate('/login');
+    } else if (key === 'settings') {
+      navigate('/settings');
+    } else if (key === 'profile') {
+      // TODO: 导航到个人资料页面
+      message.info('个人资料功能开发中');
+    }
+  };
+
   const userMenuItems: AntMenuProps['items'] = [
     {
       key: 'profile',
-      label: '个人设置',
+      icon: <UserOutlined />,
+      label: '个人资料',
+    },
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: '系统设置',
+    },
+    {
+      type: 'divider',
     },
     {
       key: 'logout',
+      icon: <LogoutOutlined />,
       label: '退出登录',
+      danger: true,
     },
   ];
 
@@ -526,10 +563,10 @@ const MainLayout: React.FC = () => {
           <Badge count={3} size="small" offset={[-8, 10]}>
             <Button type="text" icon={<BellOutlined />} size="large" style={{ color: '#ffffff' }} />
           </Badge>
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+          <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} />
-              <span style={{ color: '#ffffff' }}>Admin</span>
+              <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#667eea' }} />
+              <span style={{ color: '#ffffff' }}>{currentUser?.display_name || currentUser?.username || 'User'}</span>
             </Space>
           </Dropdown>
         </Space>

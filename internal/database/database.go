@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"kubepolaris/internal/models"
 	"kubepolaris/pkg/logger"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -99,15 +101,17 @@ func autoMigrate(db *gorm.DB) error {
 		&models.TerminalSession{},
 		&models.TerminalCommand{},
 		&models.AuditLog{},
+		&models.SystemSetting{}, // 系统设置表
 	)
 
 	// 重新启用外键约束检查
 	db.Exec("SET FOREIGN_KEY_CHECKS = 1")
 
-	// 创建默认管理员用户（如果不存在）
+	// 创建默认管理员用户和系统设置（如果不存在）
 	if err == nil {
 		createDefaultUser(db)
 		createTestClusters(db)
+		createDefaultSystemSettings(db)
 	}
 
 	return err
@@ -115,22 +119,71 @@ func autoMigrate(db *gorm.DB) error {
 
 // createDefaultUser 创建默认管理员用户
 func createDefaultUser(db *gorm.DB) {
-	var count int64
-	db.Model(&models.User{}).Count(&count)
-	if count == 0 {
-		// 创建默认管理员用户，使用简单的密码哈希
-		user := &models.User{
+	// 使用 bcrypt 生成密码哈希
+	salt := "kubepolaris_salt"
+	password := "KubePolaris@2025" + salt
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		logger.Error("生成密码哈希失败: %v", err)
+		return
+	}
+
+	// 查找是否存在admin用户
+	var user models.User
+	result := db.Where("username = ?", "admin").First(&user)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		// 创建新的默认管理员用户
+		user = models.User{
 			Username:     "admin",
-			PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMye.IjPeGvGzjYwSY7f6zzOOOOOOOOOOOOO", // admin123的bcrypt哈希
-			Salt:         "default_salt",
-			Email:        "admin@example.com",
+			PasswordHash: string(hashedPassword),
+			Salt:         salt,
+			Email:        "admin@kubepolaris.io",
+			DisplayName:  "管理员",
+			AuthType:     "local",
 			Status:       "active",
 		}
 
-		if err := db.Create(user).Error; err != nil {
+		if err := db.Create(&user).Error; err != nil {
 			logger.Error("创建默认用户失败: %v", err)
 		} else {
 			logger.Info("默认管理员用户创建成功: admin/admin123")
+		}
+	} else if result.Error == nil {
+		// 用户已存在，更新密码（确保密码哈希逻辑一致）
+		user.PasswordHash = string(hashedPassword)
+		user.Salt = salt
+		user.Status = "active"
+
+		if err := db.Save(&user).Error; err != nil {
+			logger.Error("更新默认用户密码失败: %v", err)
+		} else {
+			logger.Info("默认管理员用户密码已更新: admin/admin123")
+		}
+	} else {
+		logger.Error("查询默认用户失败: %v", result.Error)
+	}
+}
+
+// createDefaultSystemSettings 创建默认系统设置
+func createDefaultSystemSettings(db *gorm.DB) {
+	var count int64
+	db.Model(&models.SystemSetting{}).Where("config_key = ?", "ldap_config").Count(&count)
+	if count == 0 {
+		// 创建默认LDAP配置
+		defaultLDAPConfig := models.GetDefaultLDAPConfig()
+		ldapConfigJSON, _ := json.Marshal(defaultLDAPConfig)
+
+		setting := &models.SystemSetting{
+			ConfigKey: "ldap_config",
+			Value:     string(ldapConfigJSON),
+			Type:      "ldap",
+		}
+
+		if err := db.Create(setting).Error; err != nil {
+			logger.Error("创建默认LDAP配置失败: %v", err)
+		} else {
+			logger.Info("默认LDAP配置创建成功")
 		}
 	}
 }

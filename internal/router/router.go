@@ -68,8 +68,10 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		authHandler := handlers.NewAuthHandler(db, cfg)
 		auth.POST("/login", authHandler.Login)
 		auth.POST("/logout", authHandler.Logout)
+		auth.GET("/status", authHandler.GetAuthStatus) // 获取认证状态（无需登录）
 		// /me 必须带 Auth
 		auth.GET("/me", middleware.AuthRequired(cfg.JWT.Secret), authHandler.GetProfile)
+		auth.POST("/change-password", middleware.AuthRequired(cfg.JWT.Secret), authHandler.ChangePassword)
 	}
 
 	// 受保护的业务路由
@@ -337,6 +339,16 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		// monitoring templates
 		monitoringHandler := handlers.NewMonitoringHandler(monitoringConfigSvc, prometheusSvc)
 		protected.GET("/monitoring/templates", monitoringHandler.GetMonitoringTemplates)
+
+		// system settings - 系统设置（LDAP等）
+		systemSettings := protected.Group("/system")
+		{
+			systemSettingHandler := handlers.NewSystemSettingHandler(db)
+			systemSettings.GET("/ldap/config", systemSettingHandler.GetLDAPConfig)
+			systemSettings.PUT("/ldap/config", systemSettingHandler.UpdateLDAPConfig)
+			systemSettings.POST("/ldap/test-connection", systemSettingHandler.TestLDAPConnection)
+			systemSettings.POST("/ldap/test-auth", systemSettingHandler.TestLDAPAuth)
+		}
 	}
 
 	// WebSocket：建议也加认证

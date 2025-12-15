@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import MainLayout from './layouts/MainLayout';
@@ -29,7 +29,26 @@ import SecretCreate from './pages/config/SecretCreate';
 import { NamespaceList, NamespaceDetail } from './pages/namespace';
 import NetworkList from './pages/network/NetworkList';
 import StorageList from './pages/storage/StorageList';
+import Login from './pages/auth/Login';
+import SystemSettings from './pages/settings/SystemSettings';
+import { tokenManager } from './services/authService';
 import './App.css';
+
+// 认证保护组件
+interface RequireAuthProps {
+  children: React.ReactNode;
+}
+
+const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
+  const location = useLocation();
+  
+  if (!tokenManager.isLoggedIn()) {
+    // 重定向到登录页，保存当前位置
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
 
 const App: React.FC = () => {
   return (
@@ -37,7 +56,15 @@ const App: React.FC = () => {
       <AntdApp>
         <Router>
           <Routes>
-            <Route path="/" element={<MainLayout />}>
+            {/* 登录页面 - 不需要认证 */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* 受保护的路由 */}
+            <Route path="/" element={
+              <RequireAuth>
+                <MainLayout />
+              </RequireAuth>
+            }>
               <Route index element={<Navigate to="/clusters" replace />} />
               <Route path="clusters" element={<ClusterList />} />
               <Route path="clusters/:id/overview" element={<ClusterDetail />} />
@@ -78,6 +105,8 @@ const App: React.FC = () => {
               <Route path="clusters/:clusterId/network" element={<NetworkList />} />
               {/* 存储管理路由（PVC、PV、StorageClass） */}
               <Route path="clusters/:clusterId/storage" element={<StorageList />} />
+              {/* 系统设置路由 */}
+              <Route path="settings" element={<SystemSettings />} />
             </Route>
           </Routes>
         </Router>

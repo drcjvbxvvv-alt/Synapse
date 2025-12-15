@@ -384,3 +384,54 @@ export interface StorageClass {
   labels: Record<string, string>;
   annotations: Record<string, string>;
 }
+
+// 用户相关类型定义
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  display_name: string;
+  auth_type: 'local' | 'ldap';
+  status: 'active' | 'inactive' | 'locked';
+  last_login_at?: string;
+  last_login_ip?: string;
+  created_at: string;
+  updated_at: string;
+  roles?: Role[];
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+  permissions?: Permission[];
+}
+
+export interface Permission {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// LDAP配置类型
+export interface LDAPConfig {
+  enabled: boolean;
+  server: string;
+  port: number;
+  use_tls: boolean;
+  skip_tls_verify: boolean;
+  bind_dn: string;
+  bind_password: string;
+  base_dn: string;
+  user_filter: string;
+  username_attr: string;
+  email_attr: string;
+  display_name_attr: string;
+  group_filter: string;
+  group_attr: string;
+}

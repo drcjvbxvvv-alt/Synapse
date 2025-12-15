@@ -11,14 +11,13 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-// 请求拦截器 - 暂时移除认证
+// 请求拦截器 - 添加认证Token
 api.interceptors.request.use(
   (config) => {
-    // 暂时不添加认证token，方便开发测试
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -26,17 +25,23 @@ api.interceptors.request.use(
   }
 );
 
-// 响应拦截器 - 暂时移除401跳转
+// 响应拦截器 - 处理401错误
 api.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
   (error) => {
-    // 暂时不处理401错误，方便开发测试
-    // if (error.response?.status === 401) {
-    //   localStorage.removeItem('token');
-    //   window.location.href = '/login';
-    // }
+    if (error.response?.status === 401) {
+      // 清除认证信息
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token_expires_at');
+      
+      // 如果不是登录页面，则跳转到登录页
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
     console.error('API请求错误:', error);
     return Promise.reject(error);
   }
