@@ -30,6 +30,19 @@ export interface ChangePasswordRequest {
 export interface TestLDAPAuthRequest {
   username: string;
   password: string;
+  server?: string;
+  port?: number;
+  use_tls?: boolean;
+  skip_tls_verify?: boolean;
+  bind_dn?: string;
+  bind_password?: string;
+  base_dn?: string;
+  user_filter?: string;
+  username_attr?: string;
+  email_attr?: string;
+  display_name_attr?: string;
+  group_filter?: string;
+  group_attr?: string;
 }
 
 // LDAP测试认证响应

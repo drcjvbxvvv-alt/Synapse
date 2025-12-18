@@ -396,6 +396,13 @@ const MainLayout: React.FC = () => {
   // 获取当前用户信息
   const currentUser = tokenManager.getUser();
   
+  // 处理用户名显示，去掉末尾的数字
+  const getDisplayName = () => {
+    const name = currentUser?.display_name || currentUser?.username || 'User';
+    // 去掉末尾的数字，例如 "王植4" -> "王植"
+    return name.replace(/\d+$/, '');
+  };
+  
   // 处理用户菜单点击
   const handleUserMenuClick: AntMenuProps['onClick'] = ({ key }) => {
     if (key === 'logout') {
@@ -565,7 +572,7 @@ const MainLayout: React.FC = () => {
           <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
               <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#667eea' }} />
-              <span style={{ color: '#ffffff' }}>{currentUser?.display_name || currentUser?.username || 'User'}</span>
+              <span style={{ color: '#ffffff' }}>{getDisplayName()}</span>
             </Space>
           </Dropdown>
         </Space>

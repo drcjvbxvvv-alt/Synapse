@@ -89,6 +89,11 @@ func (s *LDAPService) Authenticate(username, password string) (*LDAPUser, error)
 		return nil, errors.New("LDAP未启用")
 	}
 
+	return s.AuthenticateWithConfig(username, password, config)
+}
+
+// AuthenticateWithConfig 使用指定的LDAP配置认证用户（用于测试）
+func (s *LDAPService) AuthenticateWithConfig(username, password string, config *models.LDAPConfig) (*LDAPUser, error) {
 	// 连接LDAP服务器
 	conn, err := s.connect(config)
 	if err != nil {

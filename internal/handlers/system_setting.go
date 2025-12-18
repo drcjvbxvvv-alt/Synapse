@@ -203,8 +203,21 @@ func (h *SystemSettingHandler) TestLDAPConnection(c *gin.Context) {
 
 // TestLDAPAuthRequest LDAP认证测试请求
 type TestLDAPAuthRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username        string `json:"username" binding:"required"`
+	Password        string `json:"password" binding:"required"`
+	Server          string `json:"server"`
+	Port            int    `json:"port"`
+	UseTLS          bool   `json:"use_tls"`
+	SkipTLSVerify   bool   `json:"skip_tls_verify"`
+	BindDN          string `json:"bind_dn"`
+	BindPassword    string `json:"bind_password"`
+	BaseDN          string `json:"base_dn"`
+	UserFilter      string `json:"user_filter"`
+	UsernameAttr    string `json:"username_attr"`
+	EmailAttr       string `json:"email_attr"`
+	DisplayNameAttr string `json:"display_name_attr"`
+	GroupFilter     string `json:"group_filter"`
+	GroupAttr       string `json:"group_attr"`
 }
 
 // TestLDAPAuth 测试LDAP用户认证
@@ -219,8 +232,35 @@ func (h *SystemSettingHandler) TestLDAPAuth(c *gin.Context) {
 		return
 	}
 
+	// 获取现有配置以获取可能未更新的密码
+	existingConfig, _ := h.ldapService.GetLDAPConfig()
+
+	// 构建测试配置
+	config := &models.LDAPConfig{
+		Enabled:         true, // 测试时始终启用
+		Server:          req.Server,
+		Port:            req.Port,
+		UseTLS:          req.UseTLS,
+		SkipTLSVerify:   req.SkipTLSVerify,
+		BindDN:          req.BindDN,
+		BaseDN:          req.BaseDN,
+		UserFilter:      req.UserFilter,
+		UsernameAttr:    req.UsernameAttr,
+		EmailAttr:       req.EmailAttr,
+		DisplayNameAttr: req.DisplayNameAttr,
+		GroupFilter:     req.GroupFilter,
+		GroupAttr:       req.GroupAttr,
+	}
+
+	// 处理绑定密码
+	if req.BindPassword != "" && req.BindPassword != "******" {
+		config.BindPassword = req.BindPassword
+	} else if existingConfig != nil {
+		config.BindPassword = existingConfig.BindPassword
+	}
+
 	// 尝试认证
-	ldapUser, err := h.ldapService.Authenticate(req.Username, req.Password)
+	ldapUser, err := h.ldapService.AuthenticateWithConfig(req.Username, req.Password, config)
 	if err != nil {
 		logger.Warn("LDAP用户认证测试失败: %v", err)
 		c.JSON(http.StatusOK, gin.H{

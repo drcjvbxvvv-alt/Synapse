@@ -9,7 +9,7 @@ import {
   Space,
   Typography,
   Divider,
-  message,
+  App,
   Modal,
   Alert,
   Spin,
@@ -46,6 +46,7 @@ const LDAPSettings: React.FC = () => {
     groups?: string[];
   } | null>(null);
   const [testAuthForm] = Form.useForm();
+  const { message } = App.useApp();
 
   // 加载LDAP配置
   useEffect(() => {
@@ -93,14 +94,18 @@ const LDAPSettings: React.FC = () => {
       setTesting(true);
       
       const response = await systemSettingService.testLDAPConnection(values as LDAPConfig);
-      if (response.code === 200 && response.data.success) {
+      console.log('测试连接响应:', response);
+      
+      if (response.code === 200 && response.data?.success) {
         message.success('LDAP连接测试成功');
       } else {
-        message.error(response.data.error || response.message || '连接测试失败');
+        const errorMsg = response.data?.error || response.message || '连接测试失败';
+        message.error(errorMsg);
       }
-    } catch (error) {
-      message.error('LDAP连接测试失败');
-      console.error(error);
+    } catch (error: any) {
+      console.error('测试连接错误:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'LDAP连接测试失败';
+      message.error(errorMsg);
     } finally {
       setTesting(false);
     }
@@ -110,28 +115,44 @@ const LDAPSettings: React.FC = () => {
   const handleTestAuth = async () => {
     try {
       const values = await testAuthForm.validateFields();
+      const ldapConfig = form.getFieldsValue();
       setTestingAuth(true);
       setTestAuthResult(null);
       
       const response = await systemSettingService.testLDAPAuth({
         username: values.username,
         password: values.password,
+        server: ldapConfig.server,
+        port: ldapConfig.port,
+        use_tls: ldapConfig.use_tls,
+        skip_tls_verify: ldapConfig.skip_tls_verify,
+        bind_dn: ldapConfig.bind_dn,
+        bind_password: ldapConfig.bind_password,
+        base_dn: ldapConfig.base_dn,
+        user_filter: ldapConfig.user_filter,
+        username_attr: ldapConfig.username_attr,
+        email_attr: ldapConfig.email_attr,
+        display_name_attr: ldapConfig.display_name_attr,
+        group_filter: ldapConfig.group_filter,
+        group_attr: ldapConfig.group_attr,
       });
       
-      if (response.code === 200) {
+      console.log('测试认证响应:', response);
+      
+      if (response.code === 200 && response.data) {
         setTestAuthResult(response.data);
       } else {
         setTestAuthResult({
           success: false,
-          error: response.message,
+          error: response.message || '认证测试失败',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('测试认证错误:', error);
       setTestAuthResult({
         success: false,
-        error: '认证测试失败',
+        error: error.response?.data?.message || error.message || '认证测试失败',
       });
-      console.error(error);
     } finally {
       setTestingAuth(false);
     }
