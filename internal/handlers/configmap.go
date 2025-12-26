@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"kubepolaris/internal/config"
 	"kubepolaris/internal/k8s"
@@ -88,39 +89,46 @@ func (h *ConfigMapHandler) GetConfigMaps(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("创建K8s客户端失败: %v", err)})
+	// 确保 informer 已启动并同步
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"code":    503,
+			"message": "informer 未就绪: " + err.Error(),
+		})
 		return
 	}
 
-	clientset := k8sClient.GetClientset()
-
-	// 获取ConfigMap列表
+	// 从 informer 缓存获取 ConfigMap 列表
 	var configMaps []corev1.ConfigMap
+	sel := labels.Everything()
+
 	if namespace != "" && namespace != "_all_" {
-		list, err := clientset.CoreV1().ConfigMaps(namespace).List(context.Background(), metav1.ListOptions{})
+		// 获取指定命名空间的 ConfigMaps
+		cms, err := h.k8sMgr.ConfigMapsLister(cluster.ID).ConfigMaps(namespace).List(sel)
 		if err != nil {
-			logger.Error("获取ConfigMap列表失败", "cluster", cluster.Name, "namespace", namespace, "error", err)
+			logger.Error("读取ConfigMap缓存失败", "cluster", cluster.Name, "namespace", namespace, "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("获取ConfigMap列表失败: %v", err)})
 			return
 		}
-		configMaps = list.Items
+		// 转换为 []corev1.ConfigMap
+		for _, cm := range cms {
+			configMaps = append(configMaps, *cm)
+		}
 	} else {
-		// 获取所有命名空间的ConfigMaps
-		list, err := clientset.CoreV1().ConfigMaps("").List(context.Background(), metav1.ListOptions{})
+		// 获取所有命名空间的 ConfigMaps
+		cms, err := h.k8sMgr.ConfigMapsLister(cluster.ID).List(sel)
 		if err != nil {
-			logger.Error("获取ConfigMap列表失败", "cluster", cluster.Name, "error", err)
+			logger.Error("读取ConfigMap缓存失败", "cluster", cluster.Name, "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("获取ConfigMap列表失败: %v", err)})
 			return
 		}
-		configMaps = list.Items
+		// 转换为 []corev1.ConfigMap
+		for _, cm := range cms {
+			configMaps = append(configMaps, *cm)
+		}
 	}
 
 	// 过滤和转换
@@ -499,4 +507,3 @@ func formatAge(d time.Duration) string {
 	}
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
-

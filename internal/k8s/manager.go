@@ -93,6 +93,8 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	_ = factory.Core().V1().Nodes().Informer()
 	_ = factory.Core().V1().Namespaces().Informer()
 	_ = factory.Core().V1().Services().Informer()
+	_ = factory.Core().V1().ConfigMaps().Informer()
+	_ = factory.Core().V1().Secrets().Informer()
 	_ = factory.Apps().V1().Deployments().Informer()
 	_ = factory.Apps().V1().StatefulSets().Informer()
 	_ = factory.Apps().V1().DaemonSets().Informer()
@@ -143,6 +145,8 @@ func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRun
 			rt.factory.Core().V1().Nodes().Informer().HasSynced,
 			rt.factory.Core().V1().Namespaces().Informer().HasSynced,
 			rt.factory.Core().V1().Services().Informer().HasSynced,
+			rt.factory.Core().V1().ConfigMaps().Informer().HasSynced,
+			rt.factory.Core().V1().Secrets().Informer().HasSynced,
 			rt.factory.Apps().V1().Deployments().Informer().HasSynced,
 			rt.factory.Apps().V1().StatefulSets().Informer().HasSynced,
 			rt.factory.Apps().V1().DaemonSets().Informer().HasSynced,
@@ -304,6 +308,26 @@ func (m *ClusterInformerManager) ServicesLister(clusterID uint) corev1listers.Se
 	return nil
 }
 
+// ConfigMapsLister 返回 ConfigMaps 的 Lister
+func (m *ClusterInformerManager) ConfigMapsLister(clusterID uint) corev1listers.ConfigMapLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Core().V1().ConfigMaps().Lister()
+	}
+	return nil
+}
+
+// SecretsLister 返回 Secrets 的 Lister
+func (m *ClusterInformerManager) SecretsLister(clusterID uint) corev1listers.SecretLister {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Core().V1().Secrets().Lister()
+	}
+	return nil
+}
+
 // DeploymentsLister 返回 Deployments 的 Lister
 func (m *ClusterInformerManager) DeploymentsLister(clusterID uint) appsv1listers.DeploymentLister {
 	m.mu.RLock()
@@ -405,7 +429,6 @@ func (m *ClusterInformerManager) StopForCluster(clusterID uint) {
 		logger.Info("集群 informer 已停止", "clusterID", clusterID)
 	}
 }
-
 
 // Stop 关闭所有集群的 informer（应用退出时调用）
 func (m *ClusterInformerManager) Stop() {

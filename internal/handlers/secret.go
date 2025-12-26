@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"kubepolaris/internal/config"
 	"kubepolaris/internal/k8s"
@@ -90,39 +91,46 @@ func (h *SecretHandler) GetSecrets(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("创建K8s客户端失败: %v", err)})
+	// 确保 informer 已启动并同步
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"code":    503,
+			"message": "informer 未就绪: " + err.Error(),
+		})
 		return
 	}
 
-	clientset := k8sClient.GetClientset()
-
-	// 获取Secret列表
+	// 从 informer 缓存获取 Secret 列表
 	var secrets []corev1.Secret
+	sel := labels.Everything()
+
 	if namespace != "" && namespace != "_all_" {
-		list, err := clientset.CoreV1().Secrets(namespace).List(context.Background(), metav1.ListOptions{})
+		// 获取指定命名空间的 Secrets
+		secs, err := h.k8sMgr.SecretsLister(cluster.ID).Secrets(namespace).List(sel)
 		if err != nil {
-			logger.Error("获取Secret列表失败", "cluster", cluster.Name, "namespace", namespace, "error", err)
+			logger.Error("读取Secret缓存失败", "cluster", cluster.Name, "namespace", namespace, "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("获取Secret列表失败: %v", err)})
 			return
 		}
-		secrets = list.Items
+		// 转换为 []corev1.Secret
+		for _, sec := range secs {
+			secrets = append(secrets, *sec)
+		}
 	} else {
-		// 获取所有命名空间的Secrets
-		list, err := clientset.CoreV1().Secrets("").List(context.Background(), metav1.ListOptions{})
+		// 获取所有命名空间的 Secrets
+		secs, err := h.k8sMgr.SecretsLister(cluster.ID).List(sel)
 		if err != nil {
-			logger.Error("获取Secret列表失败", "cluster", cluster.Name, "error", err)
+			logger.Error("读取Secret缓存失败", "cluster", cluster.Name, "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("获取Secret列表失败: %v", err)})
 			return
 		}
-		secrets = list.Items
+		// 转换为 []corev1.Secret
+		for _, sec := range secs {
+			secrets = append(secrets, *sec)
+		}
 	}
 
 	// 过滤和转换
@@ -521,4 +529,3 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 		},
 	})
 }
-
