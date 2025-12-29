@@ -55,6 +55,26 @@ func GetDefaultLDAPConfig() LDAPConfig {
 	}
 }
 
+// SSHConfig 全局SSH配置结构
+type SSHConfig struct {
+	Enabled    bool   `json:"enabled"`     // 是否启用全局SSH配置
+	Username   string `json:"username"`    // SSH用户名，默认 root
+	Port       int    `json:"port"`        // SSH端口，默认 22
+	AuthType   string `json:"auth_type"`   // 认证方式: password 或 key
+	Password   string `json:"password"`    // 密码（加密存储）
+	PrivateKey string `json:"private_key"` // 私钥内容
+}
+
+// GetDefaultSSHConfig 获取默认SSH配置
+func GetDefaultSSHConfig() SSHConfig {
+	return SSHConfig{
+		Enabled:  false,
+		Username: "root",
+		Port:     22,
+		AuthType: "password",
+	}
+}
+
 // TableName 指定表名
 func (SystemSetting) TableName() string {
 	return "system_settings"

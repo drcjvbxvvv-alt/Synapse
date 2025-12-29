@@ -5,16 +5,28 @@ import {
   CloudServerOutlined,
   SafetyCertificateOutlined,
   BellOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import LDAPSettings from './LDAPSettings';
+import SSHSettings from './SSHSettings';
 
 const { Title } = Typography;
 
 const SystemSettings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('ldap');
+  const [activeTab, setActiveTab] = useState('ssh');
 
   const tabItems = [
+    {
+      key: 'ssh',
+      label: (
+        <span>
+          <KeyOutlined />
+          SSH 凭据
+        </span>
+      ),
+      children: <SSHSettings />,
+    },
     {
       key: 'ldap',
       label: (

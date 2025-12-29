@@ -435,3 +435,13 @@ export interface LDAPConfig {
   group_filter: string;
   group_attr: string;
 }
+
+// SSH配置类型
+export interface SSHConfig {
+  enabled: boolean;
+  username: string;
+  port: number;
+  auth_type: 'password' | 'key';
+  password?: string;
+  private_key?: string;
+}

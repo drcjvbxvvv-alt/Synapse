@@ -4,13 +4,11 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { Card, Button, Space, Input, Modal, Form, message, Select, Spin } from 'antd';
 import { 
-  PlayCircleOutlined, 
-  StopOutlined, 
   ReloadOutlined, 
-  SettingOutlined,
   DisconnectOutlined,
   LinkOutlined
 } from '@ant-design/icons';
+import { systemSettingService } from '../services/authService';
 import 'xterm/css/xterm.css';
 
 interface SSHTerminalProps {
@@ -28,7 +26,7 @@ interface SSHConnection {
   authType: 'password' | 'key';
 }
 
-const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }) => {
+const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
@@ -84,8 +82,8 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
     fitAddon.current.fit();
 
     // 显示欢迎信息
-    terminal.current.writeln('\x1b[1;32m欢迎使用SSH终端\x1b[0m');
-    terminal.current.writeln('\x1b[1;33m请点击"连接"按钮配置SSH连接\x1b[0m');
+    terminal.current.writeln('\x1b[1;32m欢迎使用 SSH 终端\x1b[0m');
+    terminal.current.writeln('\x1b[1;33m请点击"连接"按钮连接到服务器\x1b[0m');
     terminal.current.writeln('');
 
     // 监听终端输入
@@ -149,9 +147,9 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
       };
 
       websocket.current.onmessage = (event) => {
-        const message = JSON.parse(event.data);
+        const msg = JSON.parse(event.data);
         
-        switch (message.type) {
+        switch (msg.type) {
           case 'connected':
             setIsConnected(true);
             setIsConnecting(false);
@@ -163,14 +161,14 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
             break;
             
           case 'data':
-            terminal.current!.write(message.data);
+            terminal.current!.write(msg.data);
             break;
             
           case 'error':
             setIsConnecting(false);
             setIsConnected(false);
-            terminal.current!.writeln(`\x1b[1;31m✗ 连接失败: ${message.error}\x1b[0m`);
-            message.error(`SSH连接失败: ${message.error}`);
+            terminal.current!.writeln(`\x1b[1;31m✗ 连接失败: ${msg.error}\x1b[0m`);
+            message.error(`SSH连接失败: ${msg.error}`);
             break;
             
           case 'disconnected':
@@ -180,7 +178,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
         }
       };
 
-      websocket.current.onerror = (error) => {
+      websocket.current.onerror = () => {
         setIsConnecting(false);
         setIsConnected(false);
         terminal.current!.writeln('\x1b[1;31m✗ WebSocket连接失败\x1b[0m');
@@ -219,15 +217,63 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
     }
   };
 
-  // 处理连接表单提交
-  const handleConnect = async (values: any) => {
+  // 点击连接按钮 - 优先使用全局配置，否则弹出表单
+  const handleConnectClick = async () => {
+    if (!nodeIP) {
+      message.error('节点 IP 未知');
+      return;
+    }
+
+    setIsConnecting(true);
+    terminal.current?.clear();
+    terminal.current?.writeln('\x1b[1;36m正在检查全局 SSH 配置...\x1b[0m');
+
+    try {
+      // 获取全局 SSH 凭据
+      const response = await systemSettingService.getSSHCredentials();
+      
+      if (response.code === 200 && response.data?.enabled) {
+        const sshConfig = response.data;
+        
+        terminal.current?.writeln('\x1b[1;32m✓ 已启用全局 SSH 配置，正在连接...\x1b[0m');
+        
+        // 使用全局配置连接
+        const connection: SSHConnection = {
+          host: nodeIP,
+          port: sshConfig.port || 22,
+          username: sshConfig.username || 'root',
+          authType: sshConfig.auth_type as 'password' | 'key',
+          password: sshConfig.auth_type === 'password' ? sshConfig.password : undefined,
+          privateKey: sshConfig.auth_type === 'key' ? sshConfig.private_key : undefined,
+        };
+        
+        // 连接
+        await connectSSH(connection);
+      } else {
+        // 全局配置未启用，弹出表单让用户手动配置
+        setIsConnecting(false);
+        terminal.current?.writeln('\x1b[1;33m全局 SSH 配置未启用，请手动配置连接信息\x1b[0m');
+        terminal.current?.writeln('');
+        setConnectionModalVisible(true);
+      }
+    } catch (error) {
+      console.error('获取全局SSH配置失败:', error);
+      setIsConnecting(false);
+      terminal.current?.writeln('\x1b[1;33m获取全局 SSH 配置失败，请手动配置连接信息\x1b[0m');
+      terminal.current?.writeln('');
+      setConnectionModalVisible(true);
+    }
+  };
+
+  // 处理手动连接表单提交
+  const handleManualConnect = async (values: Record<string, unknown>) => {
     const connection: SSHConnection = {
-      host: values.host || nodeIP || '',
-      port: values.port || 22,
-      username: values.username,
-      authType: values.authType,
-      password: values.authType === 'password' ? values.password : undefined,
-      privateKey: values.authType === 'key' ? values.privateKey : undefined,
+      host: (values.host as string) || nodeIP || '',
+      port: (values.port as number) || 22,
+      username: values.username as string,
+      authType: values.authType as 'password' | 'key',
+      password: values.authType === 'password' ? (values.password as string) : undefined,
+      privateKey: values.authType === 'key' ? (values.privateKey as string) : undefined,
     };
 
     await connectSSH(connection);
@@ -269,7 +315,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
           <Button
             type="primary"
             icon={<LinkOutlined />}
-            onClick={() => setConnectionModalVisible(true)}
+            onClick={handleConnectClick}
             disabled={isConnecting}
           >
             {isConnected ? '重新连接' : '连接'}
@@ -313,10 +359,12 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
           padding: 0,
           backgroundColor: '#1e1e1e'
         }}
-        bodyStyle={{ 
-          padding: 8, 
-          height: '100%',
-          backgroundColor: '#1e1e1e'
+        styles={{
+          body: { 
+            padding: 8, 
+            height: '100%',
+            backgroundColor: '#1e1e1e'
+          }
         }}
       >
         <div
@@ -328,7 +376,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
         />
       </Card>
 
-      {/* SSH连接配置模态框 */}
+      {/* SSH连接配置模态框（仅在全局配置未启用时使用） */}
       <Modal
         title="SSH连接配置"
         open={connectionModalVisible}
@@ -339,7 +387,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
         <Form
           form={form}
           layout="vertical"
-          onFinish={handleConnect}
+          onFinish={handleManualConnect}
           initialValues={{
             host: nodeIP,
             port: 22,

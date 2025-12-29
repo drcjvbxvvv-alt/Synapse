@@ -352,14 +352,19 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		monitoringHandler := handlers.NewMonitoringHandler(monitoringConfigSvc, prometheusSvc)
 		protected.GET("/monitoring/templates", monitoringHandler.GetMonitoringTemplates)
 
-		// system settings - 系统设置（LDAP等）
+		// system settings - 系统设置（LDAP、SSH等）
 		systemSettings := protected.Group("/system")
 		{
 			systemSettingHandler := handlers.NewSystemSettingHandler(db)
+			// LDAP 配置
 			systemSettings.GET("/ldap/config", systemSettingHandler.GetLDAPConfig)
 			systemSettings.PUT("/ldap/config", systemSettingHandler.UpdateLDAPConfig)
 			systemSettings.POST("/ldap/test-connection", systemSettingHandler.TestLDAPConnection)
 			systemSettings.POST("/ldap/test-auth", systemSettingHandler.TestLDAPAuth)
+			// SSH 配置
+			systemSettings.GET("/ssh/config", systemSettingHandler.GetSSHConfig)
+			systemSettings.PUT("/ssh/config", systemSettingHandler.UpdateSSHConfig)
+			systemSettings.GET("/ssh/credentials", systemSettingHandler.GetSSHCredentials)
 		}
 	}
 

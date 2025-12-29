@@ -13,15 +13,17 @@ import (
 
 // SystemSettingHandler 系统设置处理器
 type SystemSettingHandler struct {
-	db          *gorm.DB
-	ldapService *services.LDAPService
+	db                *gorm.DB
+	ldapService       *services.LDAPService
+	sshSettingService *services.SSHSettingService
 }
 
 // NewSystemSettingHandler 创建系统设置处理器
 func NewSystemSettingHandler(db *gorm.DB) *SystemSettingHandler {
 	return &SystemSettingHandler{
-		db:          db,
-		ldapService: services.NewLDAPService(db),
+		db:                db,
+		ldapService:       services.NewLDAPService(db),
+		sshSettingService: services.NewSSHSettingService(db),
 	}
 }
 
@@ -286,5 +288,156 @@ func (h *SystemSettingHandler) TestLDAPAuth(c *gin.Context) {
 			"display_name": ldapUser.DisplayName,
 			"groups":       ldapUser.Groups,
 		},
+	})
+}
+
+// ==================== SSH 配置相关接口 ====================
+
+// GetSSHConfig 获取SSH配置
+func (h *SystemSettingHandler) GetSSHConfig(c *gin.Context) {
+	config, err := h.sshSettingService.GetSSHConfig()
+	if err != nil {
+		logger.Error("获取SSH配置失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取SSH配置失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 返回配置时隐藏敏感信息
+	safeConfig := *config
+	if safeConfig.Password != "" {
+		safeConfig.Password = "******"
+	}
+	if safeConfig.PrivateKey != "" {
+		safeConfig.PrivateKey = "******"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data":    safeConfig,
+	})
+}
+
+// UpdateSSHConfigRequest SSH配置更新请求
+type UpdateSSHConfigRequest struct {
+	Enabled    bool   `json:"enabled"`
+	Username   string `json:"username"`
+	Port       int    `json:"port"`
+	AuthType   string `json:"auth_type"`
+	Password   string `json:"password"`
+	PrivateKey string `json:"private_key"`
+}
+
+// UpdateSSHConfig 更新SSH配置
+func (h *SystemSettingHandler) UpdateSSHConfig(c *gin.Context) {
+	var req UpdateSSHConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数错误",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 获取现有配置
+	existingConfig, err := h.sshSettingService.GetSSHConfig()
+	if err != nil {
+		logger.Error("获取现有SSH配置失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "更新SSH配置失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 构建新配置
+	config := &models.SSHConfig{
+		Enabled:  req.Enabled,
+		Username: req.Username,
+		Port:     req.Port,
+		AuthType: req.AuthType,
+	}
+
+	// 设置默认值
+	if config.Username == "" {
+		config.Username = "root"
+	}
+	if config.Port == 0 {
+		config.Port = 22
+	}
+	if config.AuthType == "" {
+		config.AuthType = "password"
+	}
+
+	// 如果密码是占位符或空，保留原密码
+	if req.Password != "" && req.Password != "******" {
+		config.Password = req.Password
+	} else {
+		config.Password = existingConfig.Password
+	}
+
+	// 如果私钥是占位符或空，保留原私钥
+	if req.PrivateKey != "" && req.PrivateKey != "******" {
+		config.PrivateKey = req.PrivateKey
+	} else {
+		config.PrivateKey = existingConfig.PrivateKey
+	}
+
+	// 保存配置
+	if err := h.sshSettingService.SaveSSHConfig(config); err != nil {
+		logger.Error("保存SSH配置失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "保存SSH配置失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	logger.Info("SSH配置更新成功")
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "SSH配置更新成功",
+		"data":    nil,
+	})
+}
+
+// GetSSHCredentials 获取SSH凭据（用于自动连接，返回完整凭据）
+func (h *SystemSettingHandler) GetSSHCredentials(c *gin.Context) {
+	config, err := h.sshSettingService.GetSSHConfig()
+	if err != nil {
+		logger.Error("获取SSH凭据失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取SSH凭据失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 检查是否启用
+	if !config.Enabled {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "SSH全局配置未启用",
+			"data": gin.H{
+				"enabled": false,
+			},
+		})
+		return
+	}
+
+	// 返回完整凭据（用于自动连接）
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data":    config,
 	})
 }

@@ -1,5 +1,5 @@
 import { request } from '../utils/api';
-import type { ApiResponse, User, LDAPConfig } from '../types';
+import type { ApiResponse, User, LDAPConfig, SSHConfig } from '../types';
 
 // 登录请求参数
 export interface LoginRequest {
@@ -103,6 +103,21 @@ export const systemSettingService = {
   // 测试LDAP用户认证
   testLDAPAuth: (data: TestLDAPAuthRequest): Promise<ApiResponse<TestLDAPAuthResponse>> => {
     return request.post<TestLDAPAuthResponse>('/system/ldap/test-auth', data);
+  },
+
+  // 获取SSH配置
+  getSSHConfig: (): Promise<ApiResponse<SSHConfig>> => {
+    return request.get<SSHConfig>('/system/ssh/config');
+  },
+
+  // 更新SSH配置
+  updateSSHConfig: (config: SSHConfig): Promise<ApiResponse<null>> => {
+    return request.put<null>('/system/ssh/config', config);
+  },
+
+  // 获取SSH凭据（用于自动连接）
+  getSSHCredentials: (): Promise<ApiResponse<SSHConfig>> => {
+    return request.get<SSHConfig>('/system/ssh/credentials');
   },
 };
 
