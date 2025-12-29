@@ -121,6 +121,13 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
   const connectSSH = async (connection: SSHConnection) => {
     if (!terminal.current) return;
 
+    // 获取认证 token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      message.error('未登录，请先登录');
+      return;
+    }
+
     setIsConnecting(true);
     terminal.current.clear();
     terminal.current.writeln('\x1b[1;33m正在连接SSH服务器...\x1b[0m');
@@ -128,7 +135,8 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, nodeName, clusterId }
     try {
       // 创建WebSocket连接到后端SSH代理
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws/ssh/terminal`;
+      // 在 URL 中添加 token 参数用于 WebSocket 认证
+      const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws/ssh/terminal?token=${encodeURIComponent(token)}`;
       
       websocket.current = new WebSocket(wsUrl);
 

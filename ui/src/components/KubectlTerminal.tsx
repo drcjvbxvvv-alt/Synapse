@@ -167,13 +167,22 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
 
   // 连接到后端 WebSocket
   const connectWebSocket = () => {
+    // 获取认证 token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      message.error('未登录，请先登录');
+      return;
+    }
+    
     setConnecting(true);
     
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // 修复 WebSocket URL，确保与后端路由匹配
     const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws/clusters/${clusterId}/terminal`;
+    // 在 URL 中添加 token 参数用于 WebSocket 认证
     const params = new URLSearchParams({
       namespace: selectedNamespace,
+      token: token,
     });
 
     console.log('Connecting to WebSocket:', `${wsUrl}?${params}`);

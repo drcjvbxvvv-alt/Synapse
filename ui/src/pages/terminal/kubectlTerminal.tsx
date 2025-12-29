@@ -295,6 +295,13 @@ const KubectlTerminalPage: React.FC = () => {
       return;
     }
     
+    // 获取认证 token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      message.error('未登录，请先登录');
+      return;
+    }
+    
     setConnecting(true);
     
     if (terminal.current) {
@@ -303,7 +310,8 @@ const KubectlTerminalPage: React.FC = () => {
     }
     
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:8080/ws/clusters/${clusterId}/terminal?namespace=${selectedNamespace}`;
+    // 在 URL 中添加 token 参数用于 WebSocket 认证
+    const wsUrl = `${protocol}//${window.location.hostname}:8080/ws/clusters/${clusterId}/terminal?namespace=${selectedNamespace}&token=${encodeURIComponent(token)}`;
     
     try {
       const ws = new WebSocket(wsUrl);

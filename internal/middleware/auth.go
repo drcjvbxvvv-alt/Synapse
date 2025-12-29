@@ -11,23 +11,30 @@ import (
 // AuthRequired JWT认证中间件
 func AuthRequired(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从请求头获取token
+		var tokenString string
+
+		// 优先从请求头获取token
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			// 检查Bearer前缀
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString == authHeader {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"code":    401,
+					"message": "认证令牌格式错误",
+				})
+				c.Abort()
+				return
+			}
+		} else {
+			// 如果请求头没有token，尝试从URL查询参数获取（用于WebSocket）
+			tokenString = c.Query("token")
+		}
+
+		if tokenString == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    401,
 				"message": "缺少认证令牌",
-			})
-			c.Abort()
-			return
-		}
-
-		// 检查Bearer前缀
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "认证令牌格式错误",
 			})
 			c.Abort()
 			return
