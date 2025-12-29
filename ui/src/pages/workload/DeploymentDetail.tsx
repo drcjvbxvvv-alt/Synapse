@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Card, 
   Tabs, 
@@ -20,6 +20,7 @@ import {
   FileTextOutlined
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
+import { clusterService } from '../../services/clusterService';
 import InstancesTab from './tabs/InstancesTab';
 import AccessTab from './tabs/AccessTab';
 import ContainerTab from './tabs/ContainerTab';
@@ -27,6 +28,7 @@ import ScalingTab from './tabs/ScalingTab';
 import SchedulingTab from './tabs/SchedulingTab';
 import HistoryTab from './tabs/HistoryTab';
 import EventsTab from './tabs/EventsTab';
+import MonitoringTab from './tabs/MonitoringTab';
 
 const { Title, Text } = Typography;
 
@@ -61,10 +63,13 @@ const DeploymentDetail: React.FC = () => {
     name: string;
   }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const [loading, setLoading] = useState(false);
   const [deployment, setDeployment] = useState<DeploymentDetailData | null>(null);
-  const [activeTab, setActiveTab] = useState('instances');
+  // 从 URL 参数获取默认 Tab，支持通过 ?tab=monitoring 直接跳转到监控页
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'instances');
+  const [clusterName, setClusterName] = useState<string>('');
 
   // 加载Deployment详情
   const loadDeploymentDetail = async () => {
@@ -96,6 +101,22 @@ const DeploymentDetail: React.FC = () => {
     loadDeploymentDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId, namespace, name]);
+
+  // 加载集群信息获取集群名称（用于 Grafana 数据源）
+  useEffect(() => {
+    const loadClusterInfo = async () => {
+      if (!clusterId) return;
+      try {
+        const response = await clusterService.getCluster(clusterId);
+        if (response.code === 200 && response.data) {
+          setClusterName(response.data.name);
+        }
+      } catch (error) {
+        console.error('获取集群信息失败:', error);
+      }
+    };
+    loadClusterInfo();
+  }, [clusterId]);
 
   // 返回列表
   const handleBack = () => {
@@ -229,6 +250,24 @@ const DeploymentDetail: React.FC = () => {
         />
       ),
     },
+    {
+      key: 'monitoring',
+      label: (
+        <span>
+          <LineChartOutlined style={{ marginRight: 4 }} />
+          监控
+        </span>
+      ),
+      children: (
+        <MonitoringTab
+          clusterId={clusterId!}
+          clusterName={clusterName || ''}
+          namespace={deployment.namespace}
+          workloadName={deployment.name}
+          workloadType="Deployment"
+        />
+      ),
+    },
   ];
 
   return (
@@ -265,7 +304,13 @@ const DeploymentDetail: React.FC = () => {
           </Space>
         </div>
         <Space>
-          <Button icon={<LineChartOutlined />}>监控</Button>
+          <Button 
+            icon={<LineChartOutlined />} 
+            onClick={() => setActiveTab('monitoring')}
+            type={activeTab === 'monitoring' ? 'primary' : 'default'}
+          >
+            监控
+          </Button>
           <Button icon={<FileTextOutlined />}>日志</Button>
           <Button icon={<SyncOutlined />} onClick={handleRefresh}>
             刷新

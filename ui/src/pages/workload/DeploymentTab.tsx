@@ -559,10 +559,17 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
     {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 220,
       fixed: 'right' as const,
       render: (record: WorkloadInfo) => (
         <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            onClick={() => navigate(`/clusters/${clusterId}/workloads/deployment/${record.namespace}/${record.name}?tab=monitoring`)}
+          >
+            监控
+          </Button>
           <Button
             type="link"
             size="small"

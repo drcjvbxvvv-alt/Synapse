@@ -402,10 +402,17 @@ const RolloutTab: React.FC<RolloutTabProps> = ({ clusterId, onCountChange }) => 
     {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 220,
       fixed: 'right' as const,
       render: (_: unknown, record: WorkloadInfo) => (
         <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            onClick={() => navigate(`/clusters/${clusterId}/workloads/rollout/${record.namespace}/${record.name}?tab=monitoring`)}
+          >
+            监控
+          </Button>
           <Button
             type="link"
             size="small"

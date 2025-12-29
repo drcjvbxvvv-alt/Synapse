@@ -49,6 +49,36 @@ export const GRAFANA_CONFIG = {
       restartCount: 10,
     },
   },
+  // 工作负载详情监控 Dashboard 配置
+  workloadDetail: {
+    dashboardUid: 'kubepolaris-workload-detail',
+    panels: {
+      // 资源使用
+      cpuUsage: 2,              // CPU 使用率
+      memoryUsage: 6,           // Memory 使用率
+      ioReadQps: 18,            // IO Read QPS
+      ioWriteQps: 19,           // IO Write QPS
+      // 容器状态
+      cpuLimit: 28,             // CPU 核限制
+      memoryLimit: 30,          // 内存限制
+      availability: 34,         // 容器整体可用率
+      healthCheckFailed: 36,    // 健康检查失败次数
+      containerRestarts: 38,    // 容器重启情况
+      // 网络流量
+      networkIncoming: 4,       // Network Incoming
+      networkOutgoing: 14,      // Network Outgoing
+      networkInputPps: 15,      // Network Input PPS
+      networkOutputPps: 16,     // Network Output PPS
+      // 系统资源
+      fileDescriptors: 22,      // 文件句柄打开数
+      runningThreads: 23,       // Running Threads
+      networkInputDropped: 12,  // Network Input Dropped
+      networkOutputDropped: 20, // Network Output Dropped
+      // CPU 限流
+      cpuThrottleRate: 46,      // CPU限流比例
+      cpuThrottleTime: 32,      // CPU节流时间
+    },
+  },
 };
 
 // 时间范围映射
