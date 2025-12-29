@@ -35,6 +35,7 @@ import {
 } from '@ant-design/icons';
 import KubectlTerminal from '../../components/KubectlTerminal';
 import MonitoringCharts from '../../components/MonitoringCharts';
+import ClusterMonitoringPanels from '../../components/ClusterMonitoringPanels';
 import type { ColumnsType } from 'antd/es/table';
 import type { Cluster, Node, Pod, K8sEvent, ClusterOverview } from '../../types';
 import { clusterService } from '../../services/clusterService';
@@ -209,13 +210,11 @@ const ClusterDetail: React.FC = () => {
     },
   ];
 
-  // 使用监控图表组件（启用懒加载）
+  // 使用 Grafana Panel 嵌入的集群监控组件
   const ClusterMonitoring = () => (
-    <MonitoringCharts 
-      clusterId={id || ''} 
+    <ClusterMonitoringPanels
+      clusterId={id || ''}
       clusterName={cluster?.name || ''}
-      type="cluster"
-      lazyLoad={true}
     />
   );
 
