@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Descriptions,
@@ -24,9 +24,11 @@ import {
   FileTextOutlined,
   ConsoleSqlOutlined,
   BarChartOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
-import MonitoringCharts from '../../components/MonitoringCharts';
+import { clusterService } from '../../services/clusterService';
+import PodMonitoringTab from './tabs/PodMonitoringTab';
 import type { PodInfo, ContainerInfo } from '../../services/podService';
 
 const { Title, Text } = Typography;
@@ -41,10 +43,13 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     name: string;
   }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'overview';
   
   const [pod, setPod] = useState<PodInfo | null>(null);
   const [rawPod, setRawPod] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [clusterName, setClusterName] = useState<string>('');
 
   // 获取Pod详情
   const fetchPodDetail = async () => {
@@ -100,6 +105,22 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   useEffect(() => {
     fetchPodDetail();
   }, [clusterId, namespace, name]);
+
+  // 获取集群名用于 Grafana 数据源
+  useEffect(() => {
+    const fetchClusterName = async () => {
+      if (!clusterId) return;
+      try {
+        const response = await clusterService.getCluster(parseInt(clusterId));
+        if (response.code === 200 && response.data) {
+          setClusterName(response.data.name);
+        }
+      } catch (error) {
+        console.error('获取集群信息失败:', error);
+      }
+    };
+    fetchClusterName();
+  }, [clusterId]);
 
   if (!pod) {
     return <div>加载中...</div>;
@@ -261,26 +282,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       </div>
 
       {/* 详情内容 */}
-      <Tabs defaultActiveKey="overview">
-        <TabPane 
-          tab={
-            <span>
-              <BarChartOutlined />
-              监控
-            </span>
-          } 
-          key="monitoring"
-        >
-          {clusterId && namespace && name && (
-            <MonitoringCharts 
-              clusterId={clusterId} 
-              namespace={namespace}
-              podName={name}
-              type="pod"
-            />
-          )}
-        </TabPane>
-
+      <Tabs defaultActiveKey={initialTab}>
         <TabPane tab="概览" key="overview">
           <Row gutter={[16, 16]}>
             <Col span={12}>
@@ -404,6 +406,25 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               {JSON.stringify(rawPod, null, 2)}
             </pre>
           </Card>
+        </TabPane>
+
+        <TabPane 
+          tab={
+            <span>
+              <LineChartOutlined style={{ marginRight: 4 }} />
+              监控
+            </span>
+          } 
+          key="monitoring"
+        >
+          {clusterId && namespace && name && (
+            <PodMonitoringTab 
+              clusterId={clusterId} 
+              clusterName={clusterName}
+              namespace={namespace}
+              podName={name}
+            />
+          )}
         </TabPane>
       </Tabs>
     </div>
