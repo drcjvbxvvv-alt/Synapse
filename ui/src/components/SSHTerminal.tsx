@@ -24,9 +24,10 @@ interface SSHConnection {
   password?: string;
   privateKey?: string;
   authType: 'password' | 'key';
+  clusterId?: number;
 }
 
-const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP }) => {
+const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
@@ -245,6 +246,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP }) => {
           authType: sshConfig.auth_type as 'password' | 'key',
           password: sshConfig.auth_type === 'password' ? sshConfig.password : undefined,
           privateKey: sshConfig.auth_type === 'key' ? sshConfig.private_key : undefined,
+          clusterId: clusterId ? parseInt(clusterId, 10) : undefined,
         };
         
         // 连接
@@ -274,6 +276,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP }) => {
       authType: values.authType as 'password' | 'key',
       password: values.authType === 'password' ? (values.password as string) : undefined,
       privateKey: values.authType === 'key' ? (values.privateKey as string) : undefined,
+      clusterId: clusterId ? parseInt(clusterId, 10) : undefined,
     };
 
     await connectSSH(connection);

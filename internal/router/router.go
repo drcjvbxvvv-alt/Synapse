@@ -42,6 +42,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// 统一的 Service 实例，避免重复创建
 	clusterSvc := services.NewClusterService(db)
 	prometheusSvc := services.NewPrometheusService()
+	auditSvc := services.NewAuditService(db) // 审计服务
 
 	// 初始化 Grafana 服务（用于自动同步数据源）
 	var grafanaSvc *services.GrafanaService
@@ -129,6 +130,41 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					monitoring.PUT("/config", monitoringHandler.UpdateMonitoringConfig)
 					monitoring.POST("/test-connection", monitoringHandler.TestMonitoringConnection)
 					monitoring.GET("/metrics", monitoringHandler.GetClusterMetrics)
+				}
+
+				// alertmanager 子分组
+				alertManagerConfigSvc := services.NewAlertManagerConfigService(db)
+				alertManagerSvc := services.NewAlertManagerService()
+				alertHandler := handlers.NewAlertHandler(alertManagerConfigSvc, alertManagerSvc)
+				alertmanager := cluster.Group("/alertmanager")
+				{
+					alertmanager.GET("/config", alertHandler.GetAlertManagerConfig)
+					alertmanager.PUT("/config", alertHandler.UpdateAlertManagerConfig)
+					alertmanager.POST("/test-connection", alertHandler.TestAlertManagerConnection)
+					alertmanager.GET("/status", alertHandler.GetAlertManagerStatus)
+					alertmanager.GET("/template", alertHandler.GetAlertManagerConfigTemplate)
+				}
+
+				// alerts 子分组
+				alerts := cluster.Group("/alerts")
+				{
+					alerts.GET("", alertHandler.GetAlerts)
+					alerts.GET("/groups", alertHandler.GetAlertGroups)
+					alerts.GET("/stats", alertHandler.GetAlertStats)
+				}
+
+				// silences 子分组
+				silences := cluster.Group("/silences")
+				{
+					silences.GET("", alertHandler.GetSilences)
+					silences.POST("", alertHandler.CreateSilence)
+					silences.DELETE("/:silenceId", alertHandler.DeleteSilence)
+				}
+
+				// receivers 子分组
+				receivers := cluster.Group("/receivers")
+				{
+					receivers.GET("", alertHandler.GetReceivers)
 				}
 
 				// nodes 子分组
@@ -350,13 +386,14 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			search.GET("/quick", searchHandler.QuickSearch)
 		}
 
-		// audit
+		// audit - 审计管理
 		audit := protected.Group("/audit")
 		{
 			auditHandler := handlers.NewAuditHandler(db, cfg)
 			audit.GET("/terminal/sessions", auditHandler.GetTerminalSessions)
 			audit.GET("/terminal/sessions/:sessionId", auditHandler.GetTerminalSession)
 			audit.GET("/terminal/sessions/:sessionId/commands", auditHandler.GetTerminalCommands)
+			audit.GET("/terminal/stats", auditHandler.GetTerminalStats)
 		}
 
 		// monitoring templates
@@ -383,10 +420,11 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	ws := r.Group("/ws")
 	ws.Use(middleware.AuthRequired(cfg.JWT.Secret))
 	{
-		kctl := handlers.NewKubectlTerminalHandler(clusterSvc)
-		ssh := handlers.NewSSHHandler()
-		podTerminal := handlers.NewPodTerminalHandler(clusterSvc)
-		kubectlPod := handlers.NewKubectlPodTerminalHandler(clusterSvc) // 新增：kubectl Pod 终端
+		// 终端处理器（注入审计服务）
+		kctl := handlers.NewKubectlTerminalHandler(clusterSvc, auditSvc)
+		ssh := handlers.NewSSHHandler(auditSvc)
+		podTerminal := handlers.NewPodTerminalHandler(clusterSvc, auditSvc)
+		kubectlPod := handlers.NewKubectlPodTerminalHandler(clusterSvc, auditSvc)
 		podHandler := handlers.NewPodHandler(db, cfg, clusterSvc, k8sMgr)
 
 		// 集群级 kubectl 终端（旧方案：本地执行）

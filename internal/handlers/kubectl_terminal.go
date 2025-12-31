@@ -24,6 +24,7 @@ import (
 // KubectlTerminalHandler kubectl终端WebSocket处理器
 type KubectlTerminalHandler struct {
 	clusterService *services.ClusterService
+	auditService   *services.AuditService
 	upgrader       websocket.Upgrader
 	sessions       map[string]*KubectlSession
 	sessionsMutex  sync.RWMutex
@@ -31,18 +32,19 @@ type KubectlTerminalHandler struct {
 
 // KubectlSession kubectl会话
 type KubectlSession struct {
-	ID          string
-	ClusterID   string
-	Namespace   string
-	Conn        *websocket.Conn
-	Cmd         *exec.Cmd
-	StdinPipe   *os.File
-	StdoutPipe  *os.File
-	Context     context.Context
-	Cancel      context.CancelFunc
-	LastCommand string
-	History     []string
-	Mutex       sync.Mutex
+	ID             string
+	AuditSessionID uint // 审计会话ID
+	ClusterID      string
+	Namespace      string
+	Conn           *websocket.Conn
+	Cmd            *exec.Cmd
+	StdinPipe      *os.File
+	StdoutPipe     *os.File
+	Context        context.Context
+	Cancel         context.CancelFunc
+	LastCommand    string
+	History        []string
+	Mutex          sync.Mutex
 }
 
 // TerminalMessage 终端消息
@@ -52,9 +54,10 @@ type TerminalMessage struct {
 }
 
 // NewKubectlTerminalHandler 创建kubectl终端处理器
-func NewKubectlTerminalHandler(clusterService *services.ClusterService) *KubectlTerminalHandler {
+func NewKubectlTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService) *KubectlTerminalHandler {
 	return &KubectlTerminalHandler{
 		clusterService: clusterService,
+		auditService:   auditService,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true // 在生产环境中应该检查Origin
@@ -71,6 +74,7 @@ func NewKubectlTerminalHandler(clusterService *services.ClusterService) *Kubectl
 func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 	namespace := c.DefaultQuery("namespace", "default")
+	userID := c.GetUint("user_id") // 从JWT中获取用户ID
 
 	// 获取集群信息
 	cluster, err := h.clusterService.GetCluster(uint(mustParseUint(clusterID)))
@@ -79,10 +83,30 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		return
 	}
 
+	// 创建审计会话
+	var auditSessionID uint
+	if h.auditService != nil {
+		auditSession, err := h.auditService.CreateSession(&services.CreateSessionRequest{
+			UserID:     userID,
+			ClusterID:  cluster.ID,
+			TargetType: services.TerminalTypeKubectl,
+			Namespace:  namespace,
+		})
+		if err != nil {
+			logger.Error("创建审计会话失败", "error", err)
+		} else {
+			auditSessionID = auditSession.ID
+		}
+	}
+
 	// 升级到WebSocket连接
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		logger.Error("升级WebSocket连接失败", "error", err)
+		// 关闭审计会话
+		if h.auditService != nil && auditSessionID > 0 {
+			h.auditService.CloseSession(auditSessionID, "error")
+		}
 		return
 	}
 	defer conn.Close()
@@ -92,13 +116,14 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	session := &KubectlSession{
-		ID:        sessionID,
-		ClusterID: clusterID,
-		Namespace: namespace,
-		Conn:      conn,
-		Context:   ctx,
-		Cancel:    cancel,
-		History:   make([]string, 0),
+		ID:             sessionID,
+		AuditSessionID: auditSessionID,
+		ClusterID:      clusterID,
+		Namespace:      namespace,
+		Conn:           conn,
+		Context:        ctx,
+		Cancel:         cancel,
+		History:        make([]string, 0),
 	}
 
 	// 注册会话
@@ -114,6 +139,10 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		cancel()
 		if session.Cmd != nil && session.Cmd.Process != nil {
 			session.Cmd.Process.Kill()
+		}
+		// 关闭审计会话
+		if h.auditService != nil && auditSessionID > 0 {
+			h.auditService.CloseSession(auditSessionID, "closed")
 		}
 	}()
 
@@ -192,6 +221,11 @@ func (h *KubectlTerminalHandler) handleCommand(session *KubectlSession, kubeconf
 		session.History = session.History[1:]
 	}
 
+	// 记录命令到审计数据库（异步）
+	if h.auditService != nil && session.AuditSessionID > 0 {
+		h.auditService.RecordCommandAsync(session.AuditSessionID, command, command, nil)
+	}
+
 	// 执行kubectl命令，使用会话中的命名空间
 	h.executeKubectlCommand(session, kubeconfigPath, currentNamespace, command)
 }
@@ -199,6 +233,12 @@ func (h *KubectlTerminalHandler) handleCommand(session *KubectlSession, kubeconf
 // handleQuickCommand 处理快捷命令
 func (h *KubectlTerminalHandler) handleQuickCommand(session *KubectlSession, kubeconfigPath, namespace, command string) {
 	h.sendMessage(session.Conn, "output", fmt.Sprintf("\n%s\n", command))
+
+	// 记录快捷命令到审计数据库（异步）
+	if h.auditService != nil && session.AuditSessionID > 0 {
+		h.auditService.RecordCommandAsync(session.AuditSessionID, command, command, nil)
+	}
+
 	// 使用会话中的命名空间，而不是传入的参数
 	h.executeKubectlCommand(session, kubeconfigPath, session.Namespace, command)
 }

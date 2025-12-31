@@ -24,17 +24,18 @@ import (
 )
 
 const (
-	kubectlPodNamespace = "rbac"
-	kubectlPodImage     = "registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubectl:v0.1"
-	kubectlPodSA        = "kubepolaris-sa"
-	kubectlPodPrefix    = "kubepolaris-kubectl-"
-	kubectlIdleTimeout  = 1 * time.Hour
+	kubectlPodNamespace    = "rbac"
+	kubectlPodImage        = "registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubectl:v0.1"
+	kubectlPodSA           = "kubepolaris-sa"
+	kubectlPodPrefix       = "kubepolaris-kubectl-"
+	kubectlIdleTimeout     = 1 * time.Hour
 	kubectlCleanupInterval = 10 * time.Minute
 )
 
 // KubectlPodTerminalHandler kubectl Pod 终端处理器
 type KubectlPodTerminalHandler struct {
 	clusterService *services.ClusterService
+	auditService   *services.AuditService
 	podTerminal    *PodTerminalHandler
 	activeSessions map[string]int // podName -> activeConnections
 	sessionsMutex  sync.RWMutex
@@ -42,10 +43,11 @@ type KubectlPodTerminalHandler struct {
 }
 
 // NewKubectlPodTerminalHandler 创建 kubectl Pod 终端处理器
-func NewKubectlPodTerminalHandler(clusterService *services.ClusterService) *KubectlPodTerminalHandler {
+func NewKubectlPodTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService) *KubectlPodTerminalHandler {
 	h := &KubectlPodTerminalHandler{
 		clusterService: clusterService,
-		podTerminal:    NewPodTerminalHandler(clusterService),
+		auditService:   auditService,
+		podTerminal:    NewPodTerminalHandler(clusterService, auditService),
 		activeSessions: make(map[string]int),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
@@ -131,6 +133,9 @@ func (h *KubectlPodTerminalHandler) HandleKubectlPodTerminal(c *gin.Context) {
 		{Key: "name", Value: podName},
 	}
 	c.Request.URL.RawQuery = "container=kubectl"
+
+	// 设置终端类型为 kubectl（用于审计记录）
+	c.Set("terminal_type", "kubectl")
 
 	// 复用 Pod Terminal 处理逻辑
 	h.podTerminal.HandlePodTerminal(c)
@@ -336,5 +341,3 @@ func (h *KubectlPodTerminalHandler) createK8sConfig(cluster *models.Cluster) (*r
 
 	return config, nil
 }
-
-

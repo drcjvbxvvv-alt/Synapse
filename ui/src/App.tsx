@@ -34,6 +34,7 @@ import Login from './pages/auth/Login';
 import SystemSettings from './pages/settings/SystemSettings';
 import UserProfile from './pages/profile/UserProfile';
 import Overview from './pages/overview/Overview';
+import AlertCenter from './pages/alert/AlertCenter';
 import { CommandHistory } from './pages/audit';
 import { tokenManager } from './services/authService';
 import './App.css';
@@ -111,6 +112,8 @@ const App: React.FC = () => {
               <Route path="clusters/:clusterId/network" element={<NetworkList />} />
               {/* 存储管理路由（PVC、PV、StorageClass） */}
               <Route path="clusters/:clusterId/storage" element={<StorageList />} />
+              {/* 告警中心路由 */}
+              <Route path="clusters/:clusterId/alerts" element={<AlertCenter />} />
               {/* 审计管理路由 */}
               <Route path="audit/commands" element={<CommandHistory />} />
               {/* 系统设置路由 */}

@@ -28,6 +28,7 @@ import (
 // PodTerminalHandler Pod终端WebSocket处理器
 type PodTerminalHandler struct {
 	clusterService *services.ClusterService
+	auditService   *services.AuditService
 	upgrader       websocket.Upgrader
 	sessions       map[string]*PodTerminalSession
 	sessionsMutex  sync.RWMutex
@@ -35,15 +36,21 @@ type PodTerminalHandler struct {
 
 // PodTerminalSession Pod终端会话
 type PodTerminalSession struct {
-	ID        string
-	ClusterID string
-	Namespace string
-	PodName   string
-	Container string
-	Conn      *websocket.Conn
-	Context   context.Context
-	Cancel    context.CancelFunc
-	Mutex     sync.Mutex
+	ID             string
+	AuditSessionID uint // 审计会话ID
+	ClusterID      string
+	Namespace      string
+	PodName        string
+	Container      string
+	Conn           *websocket.Conn
+	Context        context.Context
+	Cancel         context.CancelFunc
+	Mutex          sync.Mutex
+
+	// 命令捕获（从终端输出中提取完整命令，包括Tab补全结果）
+	currentLine      strings.Builder // 当前行的输出内容
+	lastCompleteLine string          // 上一个完整行（用于提取命令）
+	pendingEnter     bool            // 是否有待处理的回车键
 
 	// Kubernetes连接相关
 	stdinReader  io.ReadCloser
@@ -63,9 +70,10 @@ type PodTerminalMessage struct {
 }
 
 // NewPodTerminalHandler 创建Pod终端处理器
-func NewPodTerminalHandler(clusterService *services.ClusterService) *PodTerminalHandler {
+func NewPodTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService) *PodTerminalHandler {
 	return &PodTerminalHandler{
 		clusterService: clusterService,
+		auditService:   auditService,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true // 在生产环境中应该检查Origin
@@ -84,6 +92,7 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 	namespace := c.Param("namespace")
 	podName := c.Param("name")
 	container := c.DefaultQuery("container", "")
+	userID := c.GetUint("user_id") // 从JWT中获取用户ID
 
 	// 获取集群信息
 	clusterIDUint, err := strconv.ParseUint(clusterID, 10, 32)
@@ -98,9 +107,37 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		return
 	}
 
+	// 创建审计会话
+	var auditSessionID uint
+	if h.auditService != nil {
+		// 检查是否是 kubectl 模式（由 kubectl_pod_terminal 设置）
+		terminalType := services.TerminalTypePod
+		if t, exists := c.Get("terminal_type"); exists && t == "kubectl" {
+			terminalType = services.TerminalTypeKubectl
+		}
+
+		auditSession, err := h.auditService.CreateSession(&services.CreateSessionRequest{
+			UserID:     userID,
+			ClusterID:  cluster.ID,
+			TargetType: terminalType,
+			Namespace:  namespace,
+			Pod:        podName,
+			Container:  container,
+		})
+		if err != nil {
+			logger.Error("创建审计会话失败", "error", err)
+		} else {
+			auditSessionID = auditSession.ID
+		}
+	}
+
 	// 升级到WebSocket连接
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		// 关闭审计会话
+		if h.auditService != nil && auditSessionID > 0 {
+			h.auditService.CloseSession(auditSessionID, "error")
+		}
 		return
 	}
 	defer conn.Close()
@@ -110,14 +147,15 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	session := &PodTerminalSession{
-		ID:        sessionID,
-		ClusterID: clusterID,
-		Namespace: namespace,
-		PodName:   podName,
-		Container: container,
-		Conn:      conn,
-		Context:   ctx,
-		Cancel:    cancel,
+		ID:             sessionID,
+		AuditSessionID: auditSessionID,
+		ClusterID:      clusterID,
+		Namespace:      namespace,
+		PodName:        podName,
+		Container:      container,
+		Conn:           conn,
+		Context:        ctx,
+		Cancel:         cancel,
 	}
 
 	// 注册会话
@@ -132,6 +170,10 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		h.sessionsMutex.Unlock()
 		cancel()
 		h.closeSession(session)
+		// 关闭审计会话
+		if h.auditService != nil && auditSessionID > 0 {
+			h.auditService.CloseSession(auditSessionID, "closed")
+		}
 	}()
 
 	// 创建Kubernetes配置
@@ -321,6 +363,17 @@ func (h *PodTerminalHandler) handleInput(session *PodTerminalSession, input stri
 		_, err := session.stdinWriter.Write([]byte(input))
 		if err != nil {
 			h.sendMessage(session.Conn, "error", "写入输入失败")
+			return
+		}
+	}
+
+	// 检测回车键，标记待处理（命令将从输出中提取）
+	if h.auditService != nil && session.AuditSessionID > 0 {
+		if strings.Contains(input, "\r") || strings.Contains(input, "\n") {
+			session.pendingEnter = true
+		} else if input == "\x03" {
+			// Ctrl+C 清空当前行
+			session.currentLine.Reset()
 		}
 	}
 }
@@ -349,9 +402,122 @@ func (h *PodTerminalHandler) readOutput(session *PodTerminalSession) {
 		}
 
 		if n > 0 {
-			h.sendMessage(session.Conn, "data", string(buffer[:n]))
+			output := string(buffer[:n])
+			h.sendMessage(session.Conn, "data", output)
+
+			// 追踪终端输出，用于提取完整命令（包括Tab补全结果）
+			if h.auditService != nil && session.AuditSessionID > 0 {
+				h.trackOutputForCommand(session, output)
+			}
 		}
 	}
+}
+
+// trackOutputForCommand 追踪输出以提取命令
+func (h *PodTerminalHandler) trackOutputForCommand(session *PodTerminalSession, output string) {
+	session.Mutex.Lock()
+	defer session.Mutex.Unlock()
+
+	for _, c := range output {
+		switch c {
+		case '\n':
+			// 遇到换行，保存当前行并检查是否需要记录命令
+			currentContent := session.currentLine.String()
+			session.currentLine.Reset()
+
+			if session.pendingEnter && currentContent != "" {
+				// 用户按了回车，提取命令
+				cmd := h.extractCommandFromLine(currentContent)
+				if cmd != "" {
+					h.auditService.RecordCommandAsync(session.AuditSessionID, cmd, cmd, nil)
+				}
+				session.pendingEnter = false
+			}
+			session.lastCompleteLine = currentContent
+
+		case '\r':
+			// 回车符，可能是行首返回，暂时忽略
+			continue
+
+		case '\x1b':
+			// ESC 字符，可能是 ANSI 转义序列的开始，忽略
+			continue
+
+		case '\x07':
+			// Bell 字符，忽略
+			continue
+
+		default:
+			// 过滤掉不可打印字符和ANSI序列中的字符
+			if c >= 32 && c < 127 {
+				session.currentLine.WriteRune(c)
+			}
+		}
+	}
+}
+
+// extractCommandFromLine 从行内容中提取命令（去掉shell提示符）
+func (h *PodTerminalHandler) extractCommandFromLine(line string) string {
+	// 去掉 ANSI 转义序列
+	line = h.stripANSI(line)
+	line = strings.TrimSpace(line)
+
+	if line == "" {
+		return ""
+	}
+
+	// 尝试识别并去掉常见的 shell 提示符
+	// 格式如: "bash-4.4#", "root@hostname:~#", "$ ", "# ", "[user@host ~]$ "
+	promptPatterns := []string{
+		"# ", // root 提示符
+		"$ ", // 普通用户提示符
+		"] ", // 方括号结尾的提示符
+		"> ", // 其他提示符
+	}
+
+	for _, pattern := range promptPatterns {
+		if idx := strings.LastIndex(line, pattern); idx != -1 {
+			cmd := strings.TrimSpace(line[idx+len(pattern):])
+			if cmd != "" {
+				return cmd
+			}
+		}
+	}
+
+	// 如果没有找到提示符模式，检查是否看起来像命令
+	// 如果行以常见命令开头，可能就是命令本身
+	commonCommands := []string{"ls", "cd", "cat", "grep", "kubectl", "find", "pwd", "echo", "ps", "top", "vi", "vim", "nano", "apt", "yum", "dnf", "pip", "npm", "go", "python", "java", "curl", "wget", "tar", "cp", "mv", "rm", "mkdir", "chmod", "chown", "df", "du", "free", "whoami", "id", "date", "tail", "head", "less", "more", "sort", "uniq", "wc", "awk", "sed", "cut", "tr", "diff", "patch", "git", "docker", "helm", "make", "sh", "bash", "exit", "clear", "history"}
+
+	lineLower := strings.ToLower(line)
+	for _, cmd := range commonCommands {
+		if strings.HasPrefix(lineLower, cmd+" ") || lineLower == cmd {
+			return line
+		}
+	}
+
+	return ""
+}
+
+// stripANSI 去掉ANSI转义序列
+func (h *PodTerminalHandler) stripANSI(s string) string {
+	// 简单的ANSI转义序列过滤
+	result := strings.Builder{}
+	inEscape := false
+	for _, c := range s {
+		if c == '\x1b' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			// ANSI序列通常以字母结尾
+			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
+				inEscape = false
+			}
+			continue
+		}
+		result.WriteRune(c)
+	}
+	return result.String()
 }
 
 // closeSession 关闭会话

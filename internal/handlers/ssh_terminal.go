@@ -6,8 +6,10 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -16,11 +18,15 @@ import (
 )
 
 // SSHHandler SSH终端处理器
-type SSHHandler struct{}
+type SSHHandler struct {
+	auditService *services.AuditService
+}
 
 // NewSSHHandler 创建SSH处理器
-func NewSSHHandler() *SSHHandler {
-	return &SSHHandler{}
+func NewSSHHandler(auditService *services.AuditService) *SSHHandler {
+	return &SSHHandler{
+		auditService: auditService,
+	}
 }
 
 // SSHConfig SSH连接配置
@@ -31,6 +37,7 @@ type SSHConfig struct {
 	Password   string `json:"password,omitempty"`
 	PrivateKey string `json:"privateKey,omitempty"`
 	AuthType   string `json:"authType"` // "password" or "key"
+	ClusterID  uint   `json:"clusterId,omitempty"`
 }
 
 // SSHMessage WebSocket消息
@@ -43,6 +50,14 @@ type SSHMessage struct {
 	Error  string      `json:"error,omitempty"`
 }
 
+// SSHSession SSH会话信息
+type SSHSession struct {
+	auditSessionID   uint
+	currentLine      strings.Builder // 当前行的输出内容
+	lastCompleteLine string          // 上一个完整行
+	pendingEnter     bool            // 是否有待处理的回车键
+}
+
 // WebSocket升级器
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -52,6 +67,8 @@ var upgrader = websocket.Upgrader{
 
 // SSHConnect 处理SSH WebSocket连接
 func (h *SSHHandler) SSHConnect(c *gin.Context) {
+	userID := c.GetUint("user_id") // 从JWT中获取用户ID
+
 	// 升级HTTP连接为WebSocket
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -67,6 +84,7 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 	var stdin io.WriteCloser
 	var stdout io.Reader
 	var stderr io.Reader
+	var sessionInfo *SSHSession
 
 	// 清理资源
 	defer func() {
@@ -75,6 +93,10 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 		}
 		if sshClient != nil {
 			sshClient.Close()
+		}
+		// 关闭审计会话
+		if sessionInfo != nil && sessionInfo.auditSessionID > 0 && h.auditService != nil {
+			h.auditService.CloseSession(sessionInfo.auditSessionID, "closed")
 		}
 	}()
 
@@ -93,10 +115,29 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 				continue
 			}
 
+			// 创建审计会话
+			sessionInfo = &SSHSession{}
+			if h.auditService != nil {
+				auditSession, err := h.auditService.CreateSession(&services.CreateSessionRequest{
+					UserID:     userID,
+					ClusterID:  msg.Config.ClusterID,
+					TargetType: services.TerminalTypeNode,
+					Node:       fmt.Sprintf("%s:%d", msg.Config.Host, msg.Config.Port),
+				})
+				if err != nil {
+					logger.Error("创建审计会话失败", "error", err)
+				} else {
+					sessionInfo.auditSessionID = auditSession.ID
+				}
+			}
+
 			// 创建SSH连接
 			sshClient, sshSession, stdin, stdout, stderr, err = h.createSSHConnection(msg.Config)
 			if err != nil {
 				h.sendError(conn, fmt.Sprintf("SSH连接失败: %v", err))
+				if sessionInfo != nil && sessionInfo.auditSessionID > 0 && h.auditService != nil {
+					h.auditService.CloseSession(sessionInfo.auditSessionID, "error")
+				}
 				continue
 			}
 
@@ -106,7 +147,7 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 			})
 
 			// 启动输出读取协程
-			go h.readSSHOutput(conn, stdout, stderr)
+			go h.readSSHOutput(conn, stdout, stderr, sessionInfo)
 
 		case "input":
 			if stdin != nil && msg.Data != nil {
@@ -115,6 +156,16 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 					if err != nil {
 						logger.Error("写入SSH输入失败", "error", err)
 						h.sendError(conn, "写入输入失败")
+					}
+
+					// 检测回车键，标记待处理
+					if sessionInfo != nil && h.auditService != nil && sessionInfo.auditSessionID > 0 {
+						if strings.Contains(input, "\r") || strings.Contains(input, "\n") {
+							sessionInfo.pendingEnter = true
+						} else if input == "\x03" {
+							// Ctrl+C 清空当前行
+							sessionInfo.currentLine.Reset()
+						}
 					}
 				}
 			}
@@ -130,6 +181,106 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 	}
 
 	logger.Info("SSH WebSocket连接关闭")
+}
+
+// trackOutputForCommand 追踪输出以提取命令
+func (h *SSHHandler) trackOutputForCommand(session *SSHSession, output string) {
+	for _, c := range output {
+		switch c {
+		case '\n':
+			// 遇到换行，保存当前行并检查是否需要记录命令
+			currentContent := session.currentLine.String()
+			session.currentLine.Reset()
+
+			if session.pendingEnter && currentContent != "" {
+				// 用户按了回车，提取命令
+				cmd := h.extractCommandFromLine(currentContent)
+				if cmd != "" {
+					h.auditService.RecordCommandAsync(session.auditSessionID, cmd, cmd, nil)
+				}
+				session.pendingEnter = false
+			}
+			session.lastCompleteLine = currentContent
+
+		case '\r':
+			// 回车符，忽略
+			continue
+
+		case '\x1b':
+			// ESC 字符，忽略
+			continue
+
+		case '\x07':
+			// Bell 字符，忽略
+			continue
+
+		default:
+			// 过滤掉不可打印字符
+			if c >= 32 && c < 127 {
+				session.currentLine.WriteRune(c)
+			}
+		}
+	}
+}
+
+// extractCommandFromLine 从行内容中提取命令（去掉shell提示符）
+func (h *SSHHandler) extractCommandFromLine(line string) string {
+	// 去掉 ANSI 转义序列
+	line = h.stripANSI(line)
+	line = strings.TrimSpace(line)
+
+	if line == "" {
+		return ""
+	}
+
+	// 尝试识别并去掉常见的 shell 提示符
+	promptPatterns := []string{
+		"# ",
+		"$ ",
+		"] ",
+		"> ",
+	}
+
+	for _, pattern := range promptPatterns {
+		if idx := strings.LastIndex(line, pattern); idx != -1 {
+			cmd := strings.TrimSpace(line[idx+len(pattern):])
+			if cmd != "" {
+				return cmd
+			}
+		}
+	}
+
+	// 检查是否看起来像命令
+	commonCommands := []string{"ls", "cd", "cat", "grep", "kubectl", "find", "pwd", "echo", "ps", "top", "vi", "vim", "nano", "apt", "yum", "dnf", "pip", "npm", "go", "python", "java", "curl", "wget", "tar", "cp", "mv", "rm", "mkdir", "chmod", "chown", "df", "du", "free", "whoami", "id", "date", "tail", "head", "less", "more", "sort", "uniq", "wc", "awk", "sed", "cut", "tr", "diff", "patch", "git", "docker", "helm", "make", "sh", "bash", "exit", "clear", "history", "systemctl", "journalctl", "service", "ifconfig", "ip", "netstat", "ss", "ping", "traceroute", "nslookup", "dig", "hostname", "uname", "uptime", "dmesg", "lsof", "kill", "pkill", "htop", "iotop", "vmstat", "iostat", "sar"}
+
+	lineLower := strings.ToLower(line)
+	for _, cmd := range commonCommands {
+		if strings.HasPrefix(lineLower, cmd+" ") || lineLower == cmd {
+			return line
+		}
+	}
+
+	return ""
+}
+
+// stripANSI 去掉ANSI转义序列
+func (h *SSHHandler) stripANSI(s string) string {
+	result := strings.Builder{}
+	inEscape := false
+	for _, c := range s {
+		if c == '\x1b' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
+				inEscape = false
+			}
+			continue
+		}
+		result.WriteRune(c)
+	}
+	return result.String()
 }
 
 // createSSHConnection 创建SSH连接
@@ -233,7 +384,7 @@ func (h *SSHHandler) createSSHConnection(config *SSHConfig) (*ssh.Client, *ssh.S
 }
 
 // readSSHOutput 读取SSH输出
-func (h *SSHHandler) readSSHOutput(conn *websocket.Conn, stdout, stderr io.Reader) {
+func (h *SSHHandler) readSSHOutput(conn *websocket.Conn, stdout, stderr io.Reader, session *SSHSession) {
 	// 读取stdout
 	go func() {
 		buffer := make([]byte, 1024)
@@ -247,13 +398,19 @@ func (h *SSHHandler) readSSHOutput(conn *websocket.Conn, stdout, stderr io.Reade
 			}
 
 			if n > 0 {
+				output := string(buffer[:n])
 				err = conn.WriteJSON(SSHMessage{
 					Type: "data",
-					Data: string(buffer[:n]),
+					Data: output,
 				})
 				if err != nil {
 					logger.Error("发送SSH输出失败", "error", err)
 					break
+				}
+
+				// 追踪输出以提取命令
+				if session != nil && h.auditService != nil && session.auditSessionID > 0 {
+					h.trackOutputForCommand(session, output)
 				}
 			}
 		}

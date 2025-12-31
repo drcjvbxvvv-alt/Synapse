@@ -32,6 +32,7 @@ import {
   CodeOutlined,
   ContainerOutlined,
   LogoutOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import type { MenuProps as AntMenuProps } from 'antd';
 import type {  Cluster } from '../types';
@@ -169,6 +170,7 @@ const MainLayout: React.FC = () => {
     if (path === '/overview' || path === '/') return ['overview'];
     if (path.startsWith('/clusters') && !path.match(/\/clusters\/[^/]+\//)) return ['cluster-management'];
     if (path.startsWith('/permissions')) return ['permission-management'];
+    if (path.startsWith('/audit')) return ['audit-management'];
     if (path.startsWith('/settings')) return ['system-settings'];
     
     return ['overview'];
@@ -193,6 +195,12 @@ const MainLayout: React.FC = () => {
       icon: <KeyOutlined />,
       label: '权限管理',
       onClick: () => navigate('/permissions'),
+    },
+    {
+      key: 'audit-management',
+      icon: <HistoryOutlined />,
+      label: '审计管理',
+      onClick: () => navigate('/audit/commands'),
     },
     {
       key: 'system-settings',
