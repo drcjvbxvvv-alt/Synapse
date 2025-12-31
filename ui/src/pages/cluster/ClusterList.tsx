@@ -151,31 +151,33 @@ const ClusterList: React.FC = () => {
       title: 'CPU使用率',
       dataIndex: 'cpuUsage',
       key: 'cpuUsage',
-      width: 120,
+      width: 150,
       responsive: ['lg'] as const,
       render: (usage) => (
         <Progress
-          percent={Math.round(usage)}
+          percent={Math.round(usage || 0)}
           size="small"
           status={usage > 80 ? 'exception' : usage > 60 ? 'active' : 'success'}
+          format={() => `${(usage || 0).toFixed(1)}%`}
         />
       ),
-      sorter: (a, b) => a.cpuUsage - b.cpuUsage,
+      sorter: (a, b) => (a.cpuUsage || 0) - (b.cpuUsage || 0),
     },
     {
       title: '内存使用率',
       dataIndex: 'memoryUsage',
       key: 'memoryUsage',
-      width: 120,
+      width: 150,
       responsive: ['xl'],
       render: (usage) => (
         <Progress
-          percent={Math.round(usage)}
+          percent={Math.round(usage || 0)}
           size="small"
           status={usage > 80 ? 'exception' : usage > 60 ? 'active' : 'success'}
+          format={() => `${(usage || 0).toFixed(1)}%`}
         />
       ),
-      sorter: (a, b) => a.memoryUsage - b.memoryUsage,
+      sorter: (a, b) => (a.memoryUsage || 0) - (b.memoryUsage || 0),
     },
     {
       title: '最后心跳',
@@ -193,7 +195,11 @@ const ClusterList: React.FC = () => {
       render: (_, record) => (
         <Space size="middle">
           <Tooltip title="监控">
-            <Button type="text" icon={<BarChartOutlined />} />
+            <Button 
+              type="text" 
+              icon={<BarChartOutlined />} 
+              onClick={() => navigate(`/clusters/${record.id}/overview?tab=monitoring`)}
+            />
           </Tooltip>
           <Tooltip title="kubectl终端">
             <Button 

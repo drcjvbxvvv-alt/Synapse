@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Row,
@@ -45,12 +45,14 @@ const { Title, Text } = Typography;
 const ClusterDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [pods, setPods] = useState<Pod[]>([]);
   const [clusterOverview, setClusterOverview] = useState<ClusterOverview | null>(null);
-  const [activeTab, setActiveTab] = useState('events');
+  // 从 URL 参数读取默认 Tab，默认为 events
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'events');
   const [loadingNodes, setLoadingNodes] = useState(false);
   const [loadingPods, setLoadingPods] = useState(false);
   const [loadingOverview, setLoadingOverview] = useState(false);
@@ -398,7 +400,11 @@ const ClusterDetail: React.FC = () => {
           <Card>
             <Tabs 
               activeKey={activeTab} 
-              onChange={setActiveTab}
+              onChange={(key) => {
+                setActiveTab(key);
+                // 同步更新 URL 参数
+                setSearchParams({ tab: key });
+              }}
               items={tabItems}
             />
           </Card>
