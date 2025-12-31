@@ -165,7 +165,7 @@ const KubectlTerminalPage: React.FC = () => {
     terminal.current.writeln('');
   };
 
-  // 处理终端输入
+  // 处理终端输入 - 直接发送所有输入到服务端（Pod Terminal 模式）
   const handleTerminalInput = (data: string) => {
     if (!connectedRef.current || !websocket.current) return;
 
@@ -174,57 +174,11 @@ const KubectlTerminalPage: React.FC = () => {
       return;
     }
 
-    const code = data.charCodeAt(0);
-    
-    // 处理回车键
-    if (code === 13) {
-      terminal.current?.write('\r\n');
-      websocket.current.send(JSON.stringify({
-        type: 'command',
-        data: currentLineRef.current.trim(),
-      }));
-      currentLineRef.current = '';
-      return;
-    }
-    
-    // 处理退格键
-    if (code === 127) {
-      if (currentLineRef.current.length > 0) {
-        currentLineRef.current = currentLineRef.current.slice(0, -1);
-        websocket.current.send(JSON.stringify({
-          type: 'input',
-          data: '\u007f',
-        }));
-      }
-      return;
-    }
-    
-    // 处理 Ctrl+C (中断)
-    if (code === 3) {
-      if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
-        websocket.current.send(JSON.stringify({
-          type: 'interrupt',
-          data: '',
-        }));
-        terminal.current?.write('^C\r\n');
-        currentLineRef.current = '';
-      }
-      return;
-    }
-    
-    // 处理 ESC 序列
-    if (code === 27) {
-      return;
-    }
-    
-    // 处理普通字符
-    if (code >= 32 && code <= 126) {
-      currentLineRef.current += data;
-      websocket.current.send(JSON.stringify({
-        type: 'input',
-        data: data,
-      }));
-    }
+    // 直接发送所有输入到服务端，由服务端处理并回显
+    websocket.current.send(JSON.stringify({
+      type: 'input',
+      data: data,
+    }));
   };
 
   // 粘贴剪贴板内容
@@ -237,11 +191,11 @@ const KubectlTerminalPage: React.FC = () => {
     navigator.clipboard.readText()
       .then((text) => {
         if (text && websocket.current && websocket.current.readyState === WebSocket.OPEN) {
+          // 直接作为输入发送
           websocket.current.send(JSON.stringify({
-            type: 'quick_command',
+            type: 'input',
             data: text
           }));
-          currentLineRef.current = '';
         }
       })
       .catch((err) => {
@@ -255,33 +209,29 @@ const KubectlTerminalPage: React.FC = () => {
     if (!terminal.current) return;
 
     switch (msg.type) {
+      case 'data':
+        // Pod Terminal 模式：直接写入终端输出
+        terminal.current.write(msg.data);
+        break;
       case 'output':
-        const outputText = msg.data;
-        if (outputText.includes('\n')) {
-          const lines = outputText.split('\n');
-          for (let i = 0; i < lines.length; i++) {
-            if (i < lines.length - 1 || outputText.endsWith('\n')) {
-              terminal.current.writeln(lines[i]);
-            } else {
-              terminal.current.write(lines[i]);
-            }
-          }
-        } else {
-          terminal.current.write(outputText);
-        }
+        // 旧模式兼容
+        terminal.current.write(msg.data);
+        break;
+      case 'connected':
+        // Pod 连接成功
+        console.log('Pod terminal connected:', msg.data);
+        break;
+      case 'disconnected':
+        terminal.current.writeln(`\r\n\x1b[33m${msg.data}\x1b[0m`);
         break;
       case 'error':
         terminal.current.writeln(`\r\n\x1b[31m${msg.data}\x1b[0m`);
         break;
       case 'command_result':
-        terminal.current.write('$ ');
+        // 旧模式兼容
         break;
       case 'clear':
         terminal.current.clear();
-        break;
-      case 'namespace_changed':
-        setSelectedNamespace(msg.data);
-        terminal.current.writeln(`\r\nNamespace changed to: ${msg.data}\r\n`);
         break;
       default:
         break;
@@ -310,8 +260,8 @@ const KubectlTerminalPage: React.FC = () => {
     }
     
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // 在 URL 中添加 token 参数用于 WebSocket 认证
-    const wsUrl = `${protocol}//${window.location.hostname}:8080/ws/clusters/${clusterId}/terminal?namespace=${selectedNamespace}&token=${encodeURIComponent(token)}`;
+    // 使用新的 kubectl Pod 终端（支持 tab 补全）
+    const wsUrl = `${protocol}//${window.location.hostname}:8080/ws/clusters/${clusterId}/kubectl?token=${encodeURIComponent(token)}`;
     
     try {
       const ws = new WebSocket(wsUrl);
@@ -325,11 +275,19 @@ const KubectlTerminalPage: React.FC = () => {
         
         if (terminal.current) {
           terminal.current.clear();
-          terminal.current.writeln(`\x1b[32m✓ 已连接到集群: ${clusterId}\x1b[0m`);
-          terminal.current.writeln(`\x1b[32m✓ 命名空间: ${selectedNamespace}\x1b[0m`);
-          terminal.current.writeln('');
-          terminal.current.writeln('\x1b[36m提示: 输入 help 或 ? 查看帮助信息\x1b[0m');
-          terminal.current.writeln('');
+          // Pod Terminal 模式：服务端会自动显示 shell 提示符
+        }
+        
+        // 发送初始终端尺寸
+        if (fitAddon.current && terminal.current) {
+          const dimensions = fitAddon.current.proposeDimensions();
+          if (dimensions) {
+            ws.send(JSON.stringify({
+              type: 'resize',
+              cols: dimensions.cols,
+              rows: dimensions.rows
+            }));
+          }
         }
       };
       
@@ -428,6 +386,17 @@ const KubectlTerminalPage: React.FC = () => {
         setTimeout(() => {
           try {
             fitAddon.current?.fit();
+            // 发送新的终端尺寸到服务端
+            if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
+              const dimensions = fitAddon.current?.proposeDimensions();
+              if (dimensions) {
+                websocket.current.send(JSON.stringify({
+                  type: 'resize',
+                  cols: dimensions.cols,
+                  rows: dimensions.rows
+                }));
+              }
+            }
           } catch (e) {
             console.warn('Resize error:', e);
           }

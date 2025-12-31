@@ -331,6 +331,17 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			}
 		}
 
+		// overview - 总览大盘
+		overview := protected.Group("/overview")
+		{
+			overviewHandler := handlers.NewOverviewHandler(clusterSvc, k8sMgr, prometheusSvc, monitoringConfigSvc)
+			overview.GET("/stats", overviewHandler.GetStats)
+			overview.GET("/resource-usage", overviewHandler.GetResourceUsage)
+			overview.GET("/distribution", overviewHandler.GetDistribution)
+			overview.GET("/trends", overviewHandler.GetTrends)
+			overview.GET("/abnormal-workloads", overviewHandler.GetAbnormalWorkloads)
+		}
+
 		// search
 		search := protected.Group("/search")
 		{
@@ -375,10 +386,14 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		kctl := handlers.NewKubectlTerminalHandler(clusterSvc)
 		ssh := handlers.NewSSHHandler()
 		podTerminal := handlers.NewPodTerminalHandler(clusterSvc)
+		kubectlPod := handlers.NewKubectlPodTerminalHandler(clusterSvc) // 新增：kubectl Pod 终端
 		podHandler := handlers.NewPodHandler(db, cfg, clusterSvc, k8sMgr)
 
-		// 集群级 kubectl 终端
+		// 集群级 kubectl 终端（旧方案：本地执行）
 		ws.GET("/clusters/:clusterID/terminal", kctl.HandleKubectlTerminal)
+
+		// 集群级 kubectl 终端（新方案：Pod 模式，支持 tab 补全）
+		ws.GET("/clusters/:clusterID/kubectl", kubectlPod.HandleKubectlPodTerminal)
 
 		// 节点 SSH 终端
 		ws.GET("/ssh/terminal", ssh.SSHConnect)

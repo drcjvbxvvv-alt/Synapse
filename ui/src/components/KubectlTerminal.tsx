@@ -177,11 +177,9 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     setConnecting(true);
     
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // 修复 WebSocket URL，确保与后端路由匹配
-    const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws/clusters/${clusterId}/terminal`;
-    // 在 URL 中添加 token 参数用于 WebSocket 认证
+    // 使用新的 kubectl Pod 终端（支持 tab 补全）
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws/clusters/${clusterId}/kubectl`;
     const params = new URLSearchParams({
-      namespace: selectedNamespace,
       token: token,
     });
 
