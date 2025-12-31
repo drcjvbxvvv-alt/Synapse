@@ -178,16 +178,19 @@ const MainLayout: React.FC = () => {
   const mainMenuItems: MenuItem[] = [
     {
       key: 'overview',
+      icon: <AppstoreOutlined />,
       label: '总览',
       onClick: () => navigate('/overview'),
     },
     {
       key: 'cluster-management',
+      icon: <ClusterOutlined />,
       label: '集群管理',
       onClick: () => navigate('/clusters'),
     },
     {
       key: 'permission-management',
+      icon: <KeyOutlined />,
       label: '权限管理',
       onClick: () => navigate('/permissions'),
     },
