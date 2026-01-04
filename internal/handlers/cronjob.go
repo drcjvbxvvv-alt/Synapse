@@ -11,7 +11,7 @@ import (
 
 	"kubepolaris/internal/config"
 	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/models"
+	"kubepolaris/internal/middleware"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
 
@@ -79,6 +79,16 @@ func (h *CronJobHandler) ListCronJobs(c *gin.Context) {
 		return
 	}
 
+	// 检查命名空间权限
+	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
+	if !hasAccess {
+		c.JSON(http.StatusForbidden, gin.H{
+			"code":    403,
+			"message": fmt.Sprintf("无权访问命名空间: %s", namespace),
+		})
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -98,6 +108,13 @@ func (h *CronJobHandler) ListCronJobs(c *gin.Context) {
 	var cronJobs []CronJobInfo
 	for _, cj := range cronJobList.Items {
 		cronJobs = append(cronJobs, h.convertToCronJobInfo(&cj))
+	}
+
+	// 根据命名空间权限过滤
+	if !nsInfo.HasAllAccess && namespace == "" {
+		cronJobs = middleware.FilterResourcesByNamespace(c, cronJobs, func(cj CronJobInfo) string {
+			return cj.Namespace
+		})
 	}
 
 	if searchName != "" {
@@ -313,7 +330,6 @@ func (h *CronJobHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	name, _ := metadata["name"].(string)
 	namespace, _ := metadata["namespace"].(string)
 	if namespace == "" {
 		namespace = "default"
@@ -323,18 +339,6 @@ func (h *CronJobHandler) ApplyYAML(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "YAML应用失败: " + err.Error()})
 		return
-	}
-
-	if !req.DryRun {
-		auditLog := models.AuditLog{
-			UserID:       1,
-			Action:       "apply_yaml",
-			ResourceType: "cronjob",
-			ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-			Result:       "success",
-			Details:      fmt.Sprintf("应用CronJob YAML: %s/%s", namespace, name),
-		}
-		h.db.Create(&auditLog)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "YAML应用成功", "data": result})
@@ -374,16 +378,6 @@ func (h *CronJobHandler) DeleteCronJob(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "删除失败: " + err.Error()})
 		return
 	}
-
-	auditLog := models.AuditLog{
-		UserID:       1,
-		Action:       "delete_cronjob",
-		ResourceType: "cronjob",
-		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-		Result:       "success",
-		Details:      fmt.Sprintf("删除CronJob: %s/%s", namespace, name),
-	}
-	h.db.Create(&auditLog)
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "删除成功"})
 }

@@ -2,14 +2,12 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
 	"kubepolaris/internal/config"
 	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/models"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
 
@@ -399,17 +397,6 @@ func (h *NodeHandler) CordonNode(c *gin.Context) {
 		return
 	}
 
-	// 记录审计日志
-	auditLog := models.AuditLog{
-		UserID:       1, // TODO: 从上下文获取用户ID
-		Action:       "cordon_node",
-		ResourceType: "node",
-		ResourceRef:  `{"cluster_id":"` + clusterId + `","node_name":"` + name + `"}`,
-		Result:       "success",
-		Details:      "封锁节点: " + name,
-	}
-	h.db.Create(&auditLog)
-
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "节点封锁成功",
@@ -458,17 +445,6 @@ func (h *NodeHandler) UncordonNode(c *gin.Context) {
 		})
 		return
 	}
-
-	// 记录审计日志
-	auditLog := models.AuditLog{
-		UserID:       1, // TODO: 从上下文获取用户ID
-		Action:       "uncordon_node",
-		ResourceType: "node",
-		ResourceRef:  `{"cluster_id":"` + clusterId + `","node_name":"` + name + `"}`,
-		Result:       "success",
-		Details:      "解封节点: " + name,
-	}
-	h.db.Create(&auditLog)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
@@ -528,18 +504,6 @@ func (h *NodeHandler) DrainNode(c *gin.Context) {
 		})
 		return
 	}
-
-	// 记录审计日志
-	optionsJSON, _ := json.Marshal(options)
-	auditLog := models.AuditLog{
-		UserID:       1, // TODO: 从上下文获取用户ID
-		Action:       "drain_node",
-		ResourceType: "node",
-		ResourceRef:  `{"cluster_id":"` + clusterId + `","node_name":"` + name + `"}`,
-		Result:       "success",
-		Details:      "驱逐节点: " + name + ", 选项: " + string(optionsJSON),
-	}
-	h.db.Create(&auditLog)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,

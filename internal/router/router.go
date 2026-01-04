@@ -20,12 +20,16 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// 	gin.SetMode(gin.ReleaseMode)
 	// }
 
+	// 创建操作审计日志服务
+	opLogSvc := services.NewOperationLogService(db)
+
 	// 全局中间件：建议引入 RequestID + 结构化日志 + 统一恢复
 	r.Use(
 		// middleware.RequestID(), // TODO: 注入 traceId/requestId
 		gin.Recovery(),    // 可替换为自定义 Recovery 统一错误响应
 		gin.Logger(),      // 可替换为 zap/logrus 结构化日志中间件
 		middleware.CORS(), // TODO: 从 cfg 读取允许的 Origin/Methods/Headers
+		middleware.OperationAudit(opLogSvc), // 操作审计中间件（记录所有非GET请求）
 		// middleware.Gzip(),     // TODO: 如需压缩
 		// middleware.RateLimit() // TODO: 关键接口限流
 	)
@@ -80,7 +84,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// Auth 仅开放登录与登出，其余走受保护分组
 	auth := api.Group("/auth")
 	{
-		authHandler := handlers.NewAuthHandler(db, cfg)
+		authHandler := handlers.NewAuthHandler(db, cfg, opLogSvc)
 		auth.POST("/login", authHandler.Login)
 		auth.POST("/logout", authHandler.Logout)
 		auth.GET("/status", authHandler.GetAuthStatus) // 获取认证状态（无需登录）
@@ -93,19 +97,24 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	protected := api.Group("")
 	protected.Use(middleware.AuthRequired(cfg.JWT.Secret))
 	{
+		// 创建权限中间件
+		permMiddleware := middleware.NewPermissionMiddleware(permissionSvc)
+
 		// clusters 根分组
 		clusters := protected.Group("/clusters")
 		{
 			clusterHandler := handlers.NewClusterHandler(db, cfg, k8sMgr, prometheusSvc, monitoringConfigSvc)
 
-			// 静态路由优先
+			// 静态路由优先（不需要集群权限检查）
 			clusters.GET("/stats", clusterHandler.GetClusterStats)
 			clusters.POST("/import", clusterHandler.ImportCluster)
 			clusters.POST("/test-connection", clusterHandler.TestConnection)
 			clusters.GET("", clusterHandler.GetClusters)
 
-			// 动态 cluster 子分组
+			// 动态 cluster 子分组（需要集群权限检查）
 			cluster := clusters.Group("/:clusterID")
+			cluster.Use(permMiddleware.ClusterAccessRequired()) // 启用集群权限检查
+			cluster.Use(permMiddleware.AutoWriteCheck())        // 自动检查写权限（POST/PUT/DELETE需要非只读权限）
 			{
 				cluster.GET("", clusterHandler.GetCluster)
 				cluster.GET("/status", clusterHandler.GetClusterStatus)
@@ -386,6 +395,18 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					argocd.POST("/applications/:appName/rollback", argoCDHandler.RollbackApplication)
 					argocd.GET("/applications/:appName/resources", argoCDHandler.GetApplicationResources)
 				}
+
+				// RBAC 子分组 - KubePolaris 权限管理
+				rbacSvc := services.NewRBACService()
+				rbacHandler := handlers.NewRBACHandler(clusterSvc, rbacSvc)
+				rbacGroup := cluster.Group("/rbac")
+				{
+					rbacGroup.GET("/status", rbacHandler.GetSyncStatus)
+					rbacGroup.POST("/sync", rbacHandler.SyncPermissions)
+					rbacGroup.GET("/clusterroles", rbacHandler.ListClusterRoles)
+					rbacGroup.POST("/clusterroles", rbacHandler.CreateCustomClusterRole)
+					rbacGroup.DELETE("/clusterroles/:name", rbacHandler.DeleteClusterRole)
+				}
 			}
 		}
 
@@ -414,11 +435,20 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		// audit - 审计管理
 		audit := protected.Group("/audit")
 		{
-			auditHandler := handlers.NewAuditHandler(db, cfg)
-			audit.GET("/terminal/sessions", auditHandler.GetTerminalSessions)
-			audit.GET("/terminal/sessions/:sessionId", auditHandler.GetTerminalSession)
-			audit.GET("/terminal/sessions/:sessionId/commands", auditHandler.GetTerminalCommands)
-			audit.GET("/terminal/stats", auditHandler.GetTerminalStats)
+			// 终端会话审计（保持不变）
+			terminalAuditHandler := handlers.NewAuditHandler(db, cfg)
+			audit.GET("/terminal/sessions", terminalAuditHandler.GetTerminalSessions)
+			audit.GET("/terminal/sessions/:sessionId", terminalAuditHandler.GetTerminalSession)
+			audit.GET("/terminal/sessions/:sessionId/commands", terminalAuditHandler.GetTerminalCommands)
+			audit.GET("/terminal/stats", terminalAuditHandler.GetTerminalStats)
+
+			// 操作日志审计（新增）
+			opLogHandler := handlers.NewOperationLogHandler(opLogSvc)
+			audit.GET("/operations", opLogHandler.GetOperationLogs)
+			audit.GET("/operations/:id", opLogHandler.GetOperationLog)
+			audit.GET("/operations/stats", opLogHandler.GetOperationLogStats)
+			audit.GET("/modules", opLogHandler.GetModules)
+			audit.GET("/actions", opLogHandler.GetActions)
 		}
 
 		// monitoring templates
@@ -442,10 +472,14 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 		// permissions - 权限管理
 		permissionHandler := handlers.NewPermissionHandler(permissionSvc)
+		globalRbacSvc := services.NewRBACService()
+		globalRbacHandler := handlers.NewRBACHandler(clusterSvc, globalRbacSvc)
 		permissions := protected.Group("/permissions")
 		{
 			// 权限类型
 			permissions.GET("/types", permissionHandler.GetPermissionTypes)
+			// KubePolaris 预定义 ClusterRole 信息
+			permissions.GET("/kubepolaris-roles", globalRbacHandler.GetKubePolarisClusterRoles)
 
 			// 用户列表（用于权限分配）
 			permissions.GET("/users", permissionHandler.ListUsers)

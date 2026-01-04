@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"kubepolaris/internal/config"
+	"kubepolaris/internal/constants"
 	"kubepolaris/internal/models"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
@@ -21,14 +22,16 @@ type AuthHandler struct {
 	db          *gorm.DB
 	cfg         *config.Config
 	ldapService *services.LDAPService
+	opLogSvc    *services.OperationLogService
 }
 
 // NewAuthHandler 创建认证处理器
-func NewAuthHandler(db *gorm.DB, cfg *config.Config) *AuthHandler {
+func NewAuthHandler(db *gorm.DB, cfg *config.Config, opLogSvc *services.OperationLogService) *AuthHandler {
 	return &AuthHandler{
 		db:          db,
 		cfg:         cfg,
 		ldapService: services.NewLDAPService(db),
+		opLogSvc:    opLogSvc,
 	}
 }
 
@@ -41,9 +44,10 @@ type LoginRequest struct {
 
 // LoginResponse 登录响应结构
 type LoginResponse struct {
-	Token     string      `json:"token"`
-	User      models.User `json:"user"`
-	ExpiresAt int64       `json:"expires_at"`
+	Token       string                        `json:"token"`
+	User        models.User                   `json:"user"`
+	ExpiresAt   int64                         `json:"expires_at"`
+	Permissions []models.MyPermissionsResponse `json:"permissions,omitempty"` // 用户权限列表
 }
 
 // Login 用户登录 - 支持本地密码和LDAP两种认证方式
@@ -82,6 +86,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	if err != nil {
 		logger.Warn("用户登录失败: %s, 错误: %v", req.Username, err)
+		
+		// 记录登录失败审计日志
+		h.opLogSvc.RecordAsync(&services.LogEntry{
+			Username:     req.Username,
+			Method:       "POST",
+			Path:         "/api/v1/auth/login",
+			Module:       constants.ModuleAuth,
+			Action:       constants.ActionLoginFailed,
+			ResourceType: "user",
+			ResourceName: req.Username,
+			StatusCode:   401,
+			Success:      false,
+			ErrorMessage: err.Error(),
+			ClientIP:     c.ClientIP(),
+			UserAgent:    c.Request.UserAgent(),
+		})
+		
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
 			"message": err.Error(),
@@ -126,15 +147,63 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	user.LastLoginIP = c.ClientIP()
 	h.db.Save(user)
 
+	// 获取用户权限信息
+	permissionSvc := services.NewPermissionService(h.db)
+	clusterPermissions, _ := permissionSvc.GetUserAllClusterPermissions(user.ID)
+
+	// 转换为响应格式
+	permissionResponses := make([]models.MyPermissionsResponse, 0, len(clusterPermissions))
+	for _, p := range clusterPermissions {
+		permissionName := ""
+		for _, pt := range models.GetPermissionTypes() {
+			if pt.Type == p.PermissionType {
+				permissionName = pt.Name
+				break
+			}
+		}
+
+		clusterName := ""
+		if p.Cluster != nil {
+			clusterName = p.Cluster.Name
+		}
+
+		permissionResponses = append(permissionResponses, models.MyPermissionsResponse{
+			ClusterID:      p.ClusterID,
+			ClusterName:    clusterName,
+			PermissionType: p.PermissionType,
+			PermissionName: permissionName,
+			Namespaces:     p.GetNamespaceList(),
+			CustomRoleRef:  p.CustomRoleRef,
+		})
+	}
+
 	logger.Info("用户登录成功: %s (认证类型: %s)", user.Username, user.AuthType)
+
+	// 记录登录成功审计日志
+	userID := user.ID
+	h.opLogSvc.RecordAsync(&services.LogEntry{
+		UserID:       &userID,
+		Username:     user.Username,
+		Method:       "POST",
+		Path:         "/api/v1/auth/login",
+		Module:       constants.ModuleAuth,
+		Action:       constants.ActionLogin,
+		ResourceType: "user",
+		ResourceName: user.Username,
+		StatusCode:   200,
+		Success:      true,
+		ClientIP:     c.ClientIP(),
+		UserAgent:    c.Request.UserAgent(),
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "登录成功",
 		"data": LoginResponse{
-			Token:     tokenString,
-			User:      *user,
-			ExpiresAt: expiresAt.Unix(),
+			Token:       tokenString,
+			User:        *user,
+			ExpiresAt:   expiresAt.Unix(),
+			Permissions: permissionResponses,
 		},
 	})
 }
@@ -207,6 +276,32 @@ func (h *AuthHandler) authenticateLDAP(username, password, clientIP string) (*mo
 
 // Logout 用户登出
 func (h *AuthHandler) Logout(c *gin.Context) {
+	// 获取用户信息（如果有）
+	var userID *uint
+	username := ""
+	if uid := c.GetUint("user_id"); uid > 0 {
+		userID = &uid
+	}
+	if un := c.GetString("username"); un != "" {
+		username = un
+	}
+
+	// 记录登出审计日志
+	h.opLogSvc.RecordAsync(&services.LogEntry{
+		UserID:       userID,
+		Username:     username,
+		Method:       "POST",
+		Path:         "/api/v1/auth/logout",
+		Module:       constants.ModuleAuth,
+		Action:       constants.ActionLogout,
+		ResourceType: "user",
+		ResourceName: username,
+		StatusCode:   200,
+		Success:      true,
+		ClientIP:     c.ClientIP(),
+		UserAgent:    c.Request.UserAgent(),
+	})
+
 	// 这里可以实现token黑名单机制
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,

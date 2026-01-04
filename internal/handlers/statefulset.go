@@ -11,7 +11,7 @@ import (
 
 	"kubepolaris/internal/config"
 	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/models"
+	"kubepolaris/internal/middleware"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
 
@@ -94,6 +94,16 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 		return
 	}
 
+	// 检查命名空间权限
+	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
+	if !hasAccess {
+		c.JSON(http.StatusForbidden, gin.H{
+			"code":    403,
+			"message": fmt.Sprintf("无权访问命名空间: %s", namespace),
+		})
+		return
+	}
+
 	var statefulSets []StatefulSetInfo
 	sel := labels.Everything()
 
@@ -115,6 +125,13 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 				statefulSets = append(statefulSets, h.convertToStatefulSetInfo(ss))
 			}
 		}
+	}
+
+	// 根据命名空间权限过滤
+	if !nsInfo.HasAllAccess && namespace == "" {
+		statefulSets = middleware.FilterResourcesByNamespace(c, statefulSets, func(ss StatefulSetInfo) string {
+			return ss.Namespace
+		})
 	}
 
 	if searchName != "" {
@@ -363,16 +380,6 @@ func (h *StatefulSetHandler) ScaleStatefulSet(c *gin.Context) {
 		return
 	}
 
-	auditLog := models.AuditLog{
-		UserID:       1,
-		Action:       "scale_statefulset",
-		ResourceType: "statefulset",
-		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-		Result:       "success",
-		Details:      fmt.Sprintf("扩缩容StatefulSet %s/%s 到 %d 个副本", namespace, name, req.Replicas),
-	}
-	h.db.Create(&auditLog)
-
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "扩缩容成功",
@@ -456,7 +463,6 @@ func (h *StatefulSetHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	name, _ := metadata["name"].(string)
 	namespace, _ := metadata["namespace"].(string)
 	if namespace == "" {
 		namespace = "default"
@@ -469,18 +475,6 @@ func (h *StatefulSetHandler) ApplyYAML(c *gin.Context) {
 			"message": "YAML应用失败: " + err.Error(),
 		})
 		return
-	}
-
-	if !req.DryRun {
-		auditLog := models.AuditLog{
-			UserID:       1,
-			Action:       "apply_yaml",
-			ResourceType: "statefulset",
-			ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-			Result:       "success",
-			Details:      fmt.Sprintf("应用StatefulSet YAML: %s/%s", namespace, name),
-		}
-		h.db.Create(&auditLog)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -534,16 +528,6 @@ func (h *StatefulSetHandler) DeleteStatefulSet(c *gin.Context) {
 		})
 		return
 	}
-
-	auditLog := models.AuditLog{
-		UserID:       1,
-		Action:       "delete_statefulset",
-		ResourceType: "statefulset",
-		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-		Result:       "success",
-		Details:      fmt.Sprintf("删除StatefulSet: %s/%s", namespace, name),
-	}
-	h.db.Create(&auditLog)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,

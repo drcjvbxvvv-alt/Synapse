@@ -35,8 +35,13 @@ import SystemSettings from './pages/settings/SystemSettings';
 import UserProfile from './pages/profile/UserProfile';
 import Overview from './pages/overview/Overview';
 import AlertCenter from './pages/alert/AlertCenter';
-import { CommandHistory } from './pages/audit';
+import { CommandHistory, OperationLogs } from './pages/audit';
+import ArgoCDConfigPage from './pages/plugins/ArgoCDConfigPage';
+import ArgoCDApplicationsPage from './pages/plugins/ArgoCDApplicationsPage';
+import { PermissionManagement } from './pages/permission';
+import { PermissionProvider } from './contexts/PermissionContext';
 import { tokenManager } from './services/authService';
+import { PermissionGuard, ClusterPermissionGuard } from './components/PermissionGuard';
 import './App.css';
 
 // 认证保护组件
@@ -67,19 +72,40 @@ const App: React.FC = () => {
             {/* 受保护的路由 */}
             <Route path="/" element={
               <RequireAuth>
-                <MainLayout />
+                <PermissionProvider>
+                  <MainLayout />
+                </PermissionProvider>
               </RequireAuth>
             }>
               <Route index element={<Navigate to="/overview" replace />} />
               <Route path="overview" element={<Overview />} />
               <Route path="clusters" element={<ClusterList />} />
               <Route path="clusters/:id/overview" element={<ClusterDetail />} />
-              <Route path="clusters/:clusterId/config-center" element={<ConfigCenter />} />
-              <Route path="clusters/:clusterId/upgrade" element={<ClusterUpgrade />} />
+              {/* 配置中心 - 需要运维权限 */}
+              <Route path="clusters/:clusterId/config-center" element={
+                <PermissionGuard requiredPermission="ops">
+                  <ConfigCenter />
+                </PermissionGuard>
+              } />
+              {/* 集群升级 - 需要管理员权限 */}
+              <Route path="clusters/:clusterId/upgrade" element={
+                <PermissionGuard requiredPermission="admin">
+                  <ClusterUpgrade />
+                </PermissionGuard>
+              } />
               <Route path="clusters/import" element={<ClusterImport />} />
               <Route path="clusters/:id/terminal" element={<KubectlTerminalPage  />} />
-              <Route path="clusters/:clusterId/nodes" element={<NodeList />} />
-              <Route path="clusters/:clusterId/nodes/:nodeName" element={<NodeDetail />} />
+              {/* 节点管理 - 需要运维权限 */}
+              <Route path="clusters/:clusterId/nodes" element={
+                <PermissionGuard requiredPermission="ops">
+                  <NodeList />
+                </PermissionGuard>
+              } />
+              <Route path="clusters/:clusterId/nodes/:nodeName" element={
+                <PermissionGuard requiredPermission="ops">
+                  <NodeDetail />
+                </PermissionGuard>
+              } />
               <Route path="nodes" element={<NodeList />} />
               <Route path="nodes/:id" element={<NodeDetail />} />
               <Route path="clusters/:clusterId/pods" element={<PodList />} />
@@ -114,10 +140,50 @@ const App: React.FC = () => {
               <Route path="clusters/:clusterId/storage" element={<StorageList />} />
               {/* 告警中心路由 */}
               <Route path="clusters/:clusterId/alerts" element={<AlertCenter />} />
-              {/* 审计管理路由 */}
-              <Route path="audit/commands" element={<CommandHistory />} />
-              {/* 系统设置路由 */}
-              <Route path="settings" element={<SystemSettings />} />
+              {/* ArgoCD / GitOps 插件中心路由 - 需要运维权限 */}
+              <Route path="clusters/:clusterId/plugins" element={
+                <PermissionGuard requiredPermission="ops">
+                  <ArgoCDApplicationsPage />
+                </PermissionGuard>
+              } />
+              <Route path="clusters/:clusterId/argocd" element={
+                <PermissionGuard requiredPermission="ops">
+                  <ArgoCDApplicationsPage />
+                </PermissionGuard>
+              } />
+              <Route path="clusters/:clusterId/argocd/config" element={
+                <PermissionGuard requiredPermission="ops">
+                  <ArgoCDConfigPage />
+                </PermissionGuard>
+              } />
+              <Route path="clusters/:clusterId/argocd/applications" element={
+                <PermissionGuard requiredPermission="ops">
+                  <ArgoCDApplicationsPage />
+                </PermissionGuard>
+              } />
+              {/* 审计管理路由 - 仅平台管理员 */}
+              <Route path="audit/operations" element={
+                <PermissionGuard platformAdminOnly>
+                  <OperationLogs />
+                </PermissionGuard>
+              } />
+              <Route path="audit/commands" element={
+                <PermissionGuard platformAdminOnly>
+                  <CommandHistory />
+                </PermissionGuard>
+              } />
+              {/* 权限管理路由 - 仅平台管理员 */}
+              <Route path="permissions" element={
+                <PermissionGuard platformAdminOnly>
+                  <PermissionManagement />
+                </PermissionGuard>
+              } />
+              {/* 系统设置路由 - 仅平台管理员 */}
+              <Route path="settings" element={
+                <PermissionGuard platformAdminOnly>
+                  <SystemSettings />
+                </PermissionGuard>
+              } />
               {/* 个人资料路由 */}
               <Route path="profile" element={<UserProfile />} />
             </Route>

@@ -101,7 +101,12 @@ func autoMigrate(db *gorm.DB) error {
 		&models.TerminalSession{},
 		&models.TerminalCommand{},
 		&models.AuditLog{},
-		&models.SystemSetting{}, // 系统设置表
+		&models.OperationLog{},        // 操作审计日志表（新增）
+		&models.SystemSetting{},       // 系统设置表
+		&models.ArgoCDConfig{},        // ArgoCD 配置表
+		&models.UserGroup{},           // 用户组表
+		&models.UserGroupMember{},     // 用户组成员关联表
+		&models.ClusterPermission{},   // 集群权限表
 	)
 
 	// 重新启用外键约束检查
@@ -112,9 +117,65 @@ func autoMigrate(db *gorm.DB) error {
 		createDefaultUser(db)
 		createTestClusters(db)
 		createDefaultSystemSettings(db)
+		createDefaultPermissions(db) // 创建默认权限配置
 	}
 
 	return err
+}
+
+// createDefaultPermissions 创建默认权限配置
+func createDefaultPermissions(db *gorm.DB) {
+	// 检查是否已有权限配置
+	var count int64
+	db.Model(&models.ClusterPermission{}).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	// 获取管理员用户
+	var adminUser models.User
+	if err := db.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
+		logger.Error("未找到管理员用户，跳过权限配置: %v", err)
+		return
+	}
+
+	// 获取所有集群
+	var clusters []models.Cluster
+	if err := db.Find(&clusters).Error; err != nil {
+		logger.Error("获取集群列表失败: %v", err)
+		return
+	}
+
+	// 为管理员用户在所有集群创建管理员权限
+	for _, cluster := range clusters {
+		permission := &models.ClusterPermission{
+			ClusterID:      cluster.ID,
+			UserID:         &adminUser.ID,
+			PermissionType: models.PermissionTypeAdmin,
+			Namespaces:     `["*"]`,
+		}
+
+		if err := db.Create(permission).Error; err != nil {
+			logger.Error("创建集群权限失败: cluster=%s, error=%v", cluster.Name, err)
+		} else {
+			logger.Info("创建默认管理员权限: user=%s, cluster=%s", adminUser.Username, cluster.Name)
+		}
+	}
+
+	// 创建默认用户组
+	defaultGroups := []models.UserGroup{
+		{Name: "运维组", Description: "运维团队成员，拥有运维权限"},
+		{Name: "开发组", Description: "开发团队成员，拥有开发权限"},
+		{Name: "只读组", Description: "只读权限用户组"},
+	}
+
+	for _, group := range defaultGroups {
+		if err := db.Create(&group).Error; err != nil {
+			logger.Error("创建用户组失败: %v", err)
+		} else {
+			logger.Info("创建默认用户组: %s", group.Name)
+		}
+	}
 }
 
 // createDefaultUser 创建默认管理员用户

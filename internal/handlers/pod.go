@@ -12,7 +12,7 @@ import (
 
 	"kubepolaris/internal/config"
 	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/models"
+	"kubepolaris/internal/middleware"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
 
@@ -167,8 +167,20 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 		nodeFilter = strings.TrimPrefix(fieldSelector, "spec.nodeName=")
 	}
 
+	// 获取用户允许访问的命名空间
+	allowedNamespaces, hasAllAccess := middleware.GetAllowedNamespaces(c)
+	
 	var pods []PodInfo
 	if namespace != "" {
+		// 用户指定了命名空间，检查权限
+		if !hasAllAccess && !middleware.HasNamespaceAccess(c, namespace) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"code":    403,
+				"message": fmt.Sprintf("无权访问命名空间: %s", namespace),
+			})
+			return
+		}
+		
 		podObjs, err := h.k8sMgr.PodsLister(cluster.ID).Pods(namespace).List(sel)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "读取Pod缓存失败: " + err.Error()})
@@ -181,7 +193,8 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 			}
 		}
 		pods = h.convertPodsToInfo(filtered)
-	} else {
+	} else if hasAllAccess {
+		// 有全部命名空间权限，返回所有Pod
 		podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(sel)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "读取Pod缓存失败: " + err.Error()})
@@ -194,6 +207,56 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 			}
 		}
 		pods = h.convertPodsToInfo(filtered)
+	} else {
+		// 只有部分命名空间权限，遍历有权限的命名空间
+		allPods := make([]corev1.Pod, 0)
+		for _, ns := range allowedNamespaces {
+			// 跳过通配符命名空间，后面单独处理
+			if strings.HasSuffix(ns, "*") {
+				continue
+			}
+			podObjs, err := h.k8sMgr.PodsLister(cluster.ID).Pods(ns).List(sel)
+			if err != nil {
+				continue // 跳过出错的命名空间
+			}
+			for _, p := range podObjs {
+				if nodeFilter == "" || p.Spec.NodeName == nodeFilter {
+					allPods = append(allPods, *p)
+				}
+			}
+		}
+		
+		// 处理通配符命名空间匹配（如 "app-*"）
+		for _, ns := range allowedNamespaces {
+			if strings.HasSuffix(ns, "*") {
+				prefix := strings.TrimSuffix(ns, "*")
+				// 获取所有 Pod，然后过滤匹配的命名空间
+				podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(sel)
+				if err != nil {
+					continue
+				}
+				for _, p := range podObjs {
+					if strings.HasPrefix(p.Namespace, prefix) {
+						if nodeFilter == "" || p.Spec.NodeName == nodeFilter {
+							allPods = append(allPods, *p)
+						}
+					}
+				}
+			}
+		}
+		
+		// 去重（如果有多个规则匹配到同一个 Pod）
+		seen := make(map[string]bool)
+		uniquePods := make([]corev1.Pod, 0)
+		for _, p := range allPods {
+			key := p.Namespace + "/" + p.Name
+			if !seen[key] {
+				seen[key] = true
+				uniquePods = append(uniquePods, p)
+			}
+		}
+		
+		pods = h.convertPodsToInfo(uniquePods)
 	}
 
 	// 搜索过滤
@@ -336,17 +399,6 @@ func (h *PodHandler) DeletePod(c *gin.Context) {
 		})
 		return
 	}
-
-	// 记录审计日志
-	auditLog := models.AuditLog{
-		UserID:       1, // TODO: 从上下文获取用户ID
-		Action:       "delete_pod",
-		ResourceType: "pod",
-		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-		Result:       "success",
-		Details:      fmt.Sprintf("删除Pod %s/%s", namespace, name),
-	}
-	h.db.Create(&auditLog)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,

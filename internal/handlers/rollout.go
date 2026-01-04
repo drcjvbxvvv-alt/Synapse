@@ -11,7 +11,7 @@ import (
 
 	"kubepolaris/internal/config"
 	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/models"
+	"kubepolaris/internal/middleware"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
 
@@ -162,6 +162,16 @@ func (h *RolloutHandler) ListRollouts(c *gin.Context) {
 		return
 	}
 
+	// 检查命名空间权限
+	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
+	if !hasAccess {
+		c.JSON(http.StatusForbidden, gin.H{
+			"code":    403,
+			"message": fmt.Sprintf("无权访问命名空间: %s", namespace),
+		})
+		return
+	}
+
 	// 从Informer缓存读取
 	if namespace != "" {
 		rs, err := lister.Rollouts(namespace).List(sel)
@@ -181,6 +191,13 @@ func (h *RolloutHandler) ListRollouts(c *gin.Context) {
 				rolloutList = append(rolloutList, h.convertToRolloutInfo(r))
 			}
 		}
+	}
+
+	// 根据命名空间权限过滤
+	if !nsInfo.HasAllAccess && namespace == "" {
+		rolloutList = middleware.FilterResourcesByNamespace(c, rolloutList, func(ro RolloutInfo) string {
+			return ro.Namespace
+		})
 	}
 
 	// 搜索过滤
@@ -469,17 +486,6 @@ func (h *RolloutHandler) ScaleRollout(c *gin.Context) {
 		return
 	}
 
-	// 记录审计日志
-	auditLog := models.AuditLog{
-		UserID:       1, // TODO: 从上下文获取用户ID
-		Action:       "scale_rollout",
-		ResourceType: "rollout",
-		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-		Result:       "success",
-		Details:      fmt.Sprintf("扩缩容Rollout %s/%s 到 %d 个副本", namespace, name, req.Replicas),
-	}
-	h.db.Create(&auditLog)
-
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "扩缩容成功",
@@ -567,7 +573,6 @@ func (h *RolloutHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	name, _ := metadata["name"].(string)
 	namespace, _ := metadata["namespace"].(string)
 	if namespace == "" {
 		namespace = "default"
@@ -581,19 +586,6 @@ func (h *RolloutHandler) ApplyYAML(c *gin.Context) {
 			"message": "YAML应用失败: " + err.Error(),
 		})
 		return
-	}
-
-	// 记录审计日志
-	if !req.DryRun {
-		auditLog := models.AuditLog{
-			UserID:       1, // TODO: 从上下文获取用户ID
-			Action:       "apply_yaml",
-			ResourceType: "rollout",
-			ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-			Result:       "success",
-			Details:      fmt.Sprintf("应用Rollout YAML: %s/%s", namespace, name),
-		}
-		h.db.Create(&auditLog)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -656,17 +648,6 @@ func (h *RolloutHandler) DeleteRollout(c *gin.Context) {
 		})
 		return
 	}
-
-	// 记录审计日志
-	auditLog := models.AuditLog{
-		UserID:       1, // TODO: 从上下文获取用户ID
-		Action:       "delete_rollout",
-		ResourceType: "rollout",
-		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-		Result:       "success",
-		Details:      fmt.Sprintf("删除Rollout: %s/%s", namespace, name),
-	}
-	h.db.Create(&auditLog)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,

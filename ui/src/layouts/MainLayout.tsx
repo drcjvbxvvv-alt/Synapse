@@ -10,6 +10,7 @@ import {
   Space,
   Select,
   message,
+  Tag,
 } from 'antd';
 import {
   ClusterOutlined,
@@ -33,12 +34,21 @@ import {
   ContainerOutlined,
   LogoutOutlined,
   HistoryOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import type { MenuProps as AntMenuProps } from 'antd';
-import type {  Cluster } from '../types';
+import type {  Cluster, PermissionType } from '../types';
 import { clusterService } from '../services/clusterService';
 import SearchDropdown from '../components/SearchDropdown';
 import { tokenManager } from '../services/authService';
+import { usePermission } from '../contexts/PermissionContext';
+import { getPermissionTypeName, getPermissionTypeColor } from '../services/permissionService';
+import { 
+  MAIN_MENU_PERMISSIONS, 
+  CLUSTER_MENU_PERMISSIONS, 
+  hasPermission, 
+  isPlatformAdmin 
+} from '../config/menuPermissions';
 
 
 const { Header, Sider, Content } = Layout;
@@ -137,12 +147,29 @@ const MainLayout: React.FC = () => {
     return location.pathname.match(/\/clusters\/[^/]+\//);
   };
   
-  // 获取所有需要展开的菜单键
-  const getOpenKeys = () => {
+  // 获取默认展开的菜单键
+  const getDefaultOpenKeys = () => {
     if (isClusterDetailPage()) {
       return ['kubernetes-resources', 'cluster', 'cloud-native-observability', 'cloud-native-cost'];
     }
+    // 主页面：如果当前在审计页面，默认展开审计管理
+    if (location.pathname.startsWith('/audit')) {
+      return ['audit-management'];
+    }
     return [];
+  };
+
+  // 管理菜单展开状态
+  const [openKeys, setOpenKeys] = useState<string[]>(getDefaultOpenKeys());
+
+  // 当路由变化时，更新展开的菜单
+  useEffect(() => {
+    setOpenKeys(getDefaultOpenKeys());
+  }, [location.pathname]);
+
+  // 处理菜单展开/折叠
+  const handleOpenChange = (keys: string[]) => {
+    setOpenKeys(keys);
   };
 
   const getSelectedKeys = () => {
@@ -170,7 +197,9 @@ const MainLayout: React.FC = () => {
     if (path === '/overview' || path === '/') return ['overview'];
     if (path.startsWith('/clusters') && !path.match(/\/clusters\/[^/]+\//)) return ['cluster-management'];
     if (path.startsWith('/permissions')) return ['permission-management'];
-    if (path.startsWith('/audit')) return ['audit-management'];
+    if (path === '/audit/operations') return ['audit-operations'];
+    if (path === '/audit/commands') return ['audit-commands'];
+    if (path.startsWith('/audit')) return ['audit-operations'];
     if (path.startsWith('/settings')) return ['system-settings'];
     
     return ['overview'];
@@ -198,9 +227,22 @@ const MainLayout: React.FC = () => {
     },
     {
       key: 'audit-management',
-      icon: <HistoryOutlined />,
+      icon: <AuditOutlined />,
       label: '审计管理',
-      onClick: () => navigate('/audit/commands'),
+      children: [
+        {
+          key: 'audit-operations',
+          icon: <AuditOutlined />,
+          label: '操作审计',
+          onClick: () => navigate('/audit/operations'),
+        },
+        {
+          key: 'audit-commands',
+          icon: <HistoryOutlined />,
+          label: '命令历史',
+          onClick: () => navigate('/audit/commands'),
+        },
+      ],
     },
     {
       key: 'system-settings',
@@ -402,11 +444,72 @@ const MainLayout: React.FC = () => {
     },
   ];
 
-  // 根据当前页面选择对应的菜单
-  const menuItems = isClusterDetailPage() ? clusterDetailMenuItems : mainMenuItems;
-
   // 获取当前用户信息
   const currentUser = tokenManager.getUser();
+  const isUserPlatformAdmin = isPlatformAdmin(currentUser?.username);
+  
+  // 获取当前集群权限（用于集群内层菜单过滤）
+  const { currentClusterPermission } = usePermission();
+  const currentPermissionType = currentClusterPermission?.permission_type as PermissionType | undefined;
+
+  // 过滤外层主菜单
+  const filterMainMenuItems = useCallback((items: MenuItem[]): MenuItem[] => {
+    return items.filter((item) => {
+      if (!item || typeof item !== 'object' || !('key' in item)) return true;
+      const key = item.key as string;
+      const config = MAIN_MENU_PERMISSIONS[key];
+      
+      // 如果没有配置，默认显示
+      if (!config) return true;
+      
+      // 平台管理员专属菜单
+      if (config.platformAdminOnly && !isUserPlatformAdmin) {
+        return false;
+      }
+      
+      // 递归过滤子菜单
+      if ('children' in item && Array.isArray(item.children)) {
+        const filteredChildren = filterMainMenuItems(item.children as MenuItem[]);
+        if (filteredChildren.length === 0) return false;
+        (item as any).children = filteredChildren;
+      }
+      
+      return true;
+    });
+  }, [isUserPlatformAdmin]);
+
+  // 过滤集群内层菜单
+  const filterClusterMenuItems = useCallback((items: MenuItem[]): MenuItem[] => {
+    return items.filter((item) => {
+      if (!item || typeof item !== 'object' || !('key' in item)) return true;
+      const key = item.key as string;
+      const config = CLUSTER_MENU_PERMISSIONS[key];
+      
+      // 如果没有配置，默认显示
+      if (!config) return true;
+      
+      // 检查权限要求
+      if (config.requiredPermission) {
+        if (!hasPermission(currentPermissionType, config.requiredPermission)) {
+          return false;
+        }
+      }
+      
+      // 递归过滤子菜单
+      if ('children' in item && Array.isArray(item.children)) {
+        const filteredChildren = filterClusterMenuItems(item.children as MenuItem[]);
+        if (filteredChildren.length === 0) return false;
+        (item as any).children = filteredChildren;
+      }
+      
+      return true;
+    });
+  }, [currentPermissionType]);
+
+  // 根据当前页面和权限选择对应的菜单
+  const menuItems = isClusterDetailPage() 
+    ? filterClusterMenuItems([...clusterDetailMenuItems]) 
+    : filterMainMenuItems([...mainMenuItems]);
   
   // 处理用户名显示，去掉末尾的数字
   const getDisplayName = () => {
@@ -461,8 +564,21 @@ const MainLayout: React.FC = () => {
     const navigate = useNavigate();
     const { Option } = Select;
     const [clusters, setClusters] = useState<Cluster[]>([]);
+    const { getPermissionType, setCurrentClusterId, canWrite } = usePermission();
     // 优先使用 clusterId，如果没有则使用 id
     const currentClusterId = clusterId || id;
+    
+    // 获取当前集群的权限类型
+    const permissionType = currentClusterId ? getPermissionType(currentClusterId) : null;
+    const hasWritePermission = currentClusterId ? canWrite(currentClusterId) : false;
+    
+    // 同步当前集群到权限上下文
+    useEffect(() => {
+      if (currentClusterId) {
+        setCurrentClusterId(currentClusterId);
+      }
+    }, [currentClusterId, setCurrentClusterId]);
+    
     const openTerminal = () => {
       if (currentClusterId) {
         window.open(`/clusters/${currentClusterId}/terminal`);
@@ -515,12 +631,25 @@ const MainLayout: React.FC = () => {
             </Option>
           ))}
         </Select>
+        {/* 权限类型标签 */}
+        {permissionType && (
+          <Tag color={getPermissionTypeColor(permissionType)} style={{ marginLeft: 8 }}>
+            {getPermissionTypeName(permissionType)}
+          </Tag>
+        )}
+        {!hasWritePermission && permissionType && (
+          <span style={{ color: '#ff4d4f', fontSize: '12px' }}>
+            （只读模式）
+          </span>
+        )}
         </div>
         <Space size="middle">
           <Button 
             type="text" 
             icon={<CodeOutlined />}
             onClick={() => openTerminal()}  // 调用已有的终端功能
+            disabled={!hasWritePermission}
+            title={!hasWritePermission ? '只读权限无法使用终端' : undefined}
           >
               kubectl终端
           </Button>
@@ -641,7 +770,8 @@ const MainLayout: React.FC = () => {
             <Menu
               mode="inline"
               selectedKeys={getSelectedKeys()}
-              openKeys={getOpenKeys()}
+              openKeys={openKeys}
+              onOpenChange={handleOpenChange}
               items={menuItems}
               className="compact-menu"
               style={{ 

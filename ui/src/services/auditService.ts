@@ -92,7 +92,105 @@ export interface SessionListParams {
   keyword?: string;
 }
 
+// ==================== 操作审计相关类型 ====================
+
+// 操作日志列表项
+export interface OperationLogItem {
+  id: number;
+  user_id: number | null;
+  username: string;
+  method: string;
+  path: string;
+  module: string;
+  module_name: string;
+  action: string;
+  action_name: string;
+  cluster_id: number | null;
+  cluster_name: string;
+  namespace: string;
+  resource_type: string;
+  resource_name: string;
+  status_code: number;
+  success: boolean;
+  error_message: string;
+  client_ip: string;
+  duration: number;
+  created_at: string;
+}
+
+// 操作日志列表响应
+export interface OperationLogListResponse {
+  items: OperationLogItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+// 操作日志详情（含请求体）
+export interface OperationLogDetail extends OperationLogItem {
+  query: string;
+  request_body: string;
+  user_agent: string;
+}
+
+// 模块统计
+export interface ModuleStat {
+  module: string;
+  module_name: string;
+  count: number;
+}
+
+// 操作统计
+export interface ActionStat {
+  action: string;
+  action_name: string;
+  count: number;
+}
+
+// 用户操作统计
+export interface UserOperationStat {
+  user_id: number;
+  username: string;
+  count: number;
+}
+
+// 操作日志统计
+export interface OperationLogStats {
+  total_count: number;
+  today_count: number;
+  success_count: number;
+  failed_count: number;
+  module_stats: ModuleStat[];
+  action_stats: ActionStat[];
+  recent_failures: OperationLogItem[];
+  user_stats: UserOperationStat[];
+}
+
+// 操作日志查询参数
+export interface OperationLogListParams {
+  page?: number;
+  pageSize?: number;
+  userId?: number;
+  username?: string;
+  module?: string;
+  action?: string;
+  resourceType?: string;
+  clusterId?: number;
+  success?: boolean;
+  startTime?: string;
+  endTime?: string;
+  keyword?: string;
+}
+
+// 模块/操作选项
+export interface ModuleOption {
+  key: string;
+  name: string;
+}
+
 export const auditService = {
+  // ==================== 终端会话审计 ====================
+  
   // 获取终端会话列表
   getTerminalSessions: (params?: SessionListParams) => {
     return request.get<SessionListResponse>('/audit/terminal/sessions', { params });
@@ -111,6 +209,33 @@ export const auditService = {
   // 获取终端会话统计
   getTerminalStats: () => {
     return request.get<SessionStats>('/audit/terminal/stats');
+  },
+
+  // ==================== 操作审计 ====================
+
+  // 获取操作日志列表
+  getOperationLogs: (params?: OperationLogListParams) => {
+    return request.get<OperationLogListResponse>('/audit/operations', { params });
+  },
+
+  // 获取操作日志详情
+  getOperationLog: (id: number) => {
+    return request.get<OperationLogDetail>(`/audit/operations/${id}`);
+  },
+
+  // 获取操作日志统计
+  getOperationLogStats: (params?: { startTime?: string; endTime?: string }) => {
+    return request.get<OperationLogStats>('/audit/operations/stats', { params });
+  },
+
+  // 获取模块列表
+  getModules: () => {
+    return request.get<ModuleOption[]>('/audit/modules');
+  },
+
+  // 获取操作列表
+  getActions: () => {
+    return request.get<ModuleOption[]>('/audit/actions');
   },
 };
 

@@ -11,7 +11,7 @@ import (
 
 	"kubepolaris/internal/config"
 	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/models"
+	"kubepolaris/internal/middleware"
 	"kubepolaris/internal/services"
 	"kubepolaris/pkg/logger"
 
@@ -80,6 +80,16 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 		return
 	}
 
+	// 检查命名空间权限
+	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
+	if !hasAccess {
+		c.JSON(http.StatusForbidden, gin.H{
+			"code":    403,
+			"message": fmt.Sprintf("无权访问命名空间: %s", namespace),
+		})
+		return
+	}
+
 	var jobs []JobInfo
 	sel := labels.Everything()
 
@@ -101,6 +111,13 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 				jobs = append(jobs, h.convertToJobInfo(j))
 			}
 		}
+	}
+
+	// 根据命名空间权限过滤
+	if !nsInfo.HasAllAccess && namespace == "" {
+		jobs = middleware.FilterResourcesByNamespace(c, jobs, func(j JobInfo) string {
+			return j.Namespace
+		})
 	}
 
 	if searchName != "" {
@@ -311,7 +328,6 @@ func (h *JobHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	name, _ := metadata["name"].(string)
 	namespace, _ := metadata["namespace"].(string)
 	if namespace == "" {
 		namespace = "default"
@@ -321,18 +337,6 @@ func (h *JobHandler) ApplyYAML(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "YAML应用失败: " + err.Error()})
 		return
-	}
-
-	if !req.DryRun {
-		auditLog := models.AuditLog{
-			UserID:       1,
-			Action:       "apply_yaml",
-			ResourceType: "job",
-			ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-			Result:       "success",
-			Details:      fmt.Sprintf("应用Job YAML: %s/%s", namespace, name),
-		}
-		h.db.Create(&auditLog)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "YAML应用成功", "data": result})
@@ -372,16 +376,6 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "删除失败: " + err.Error()})
 		return
 	}
-
-	auditLog := models.AuditLog{
-		UserID:       1,
-		Action:       "delete_job",
-		ResourceType: "job",
-		ResourceRef:  fmt.Sprintf(`{"cluster_id":"%s","namespace":"%s","name":"%s"}`, clusterId, namespace, name),
-		Result:       "success",
-		Details:      fmt.Sprintf("删除Job: %s/%s", namespace, name),
-	}
-	h.db.Create(&auditLog)
 
 	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "删除成功"})
 }
