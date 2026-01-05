@@ -175,16 +175,17 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 
 	// 创建集群模型
 	cluster := &models.Cluster{
-		Name:          req.Name,
-		APIServer:     req.ApiServer,
-		KubeconfigEnc: req.Kubeconfig, // TODO: 需要加密存储
-		SATokenEnc:    req.Token,      // TODO: 需要加密存储
-		CAEnc:         req.CaCert,     // TODO: 需要加密存储
-		Version:       clusterInfo.Version,
-		Status:        clusterInfo.Status,
-		Labels:        "{}",
-		MonitoringConfig: "{}", // 初始化为空 JSON 对象，避免 MySQL JSON 字段报错
-		CreatedBy: 1, // 临时设置为1，后续需要从JWT中获取用户ID
+		Name:               req.Name,
+		APIServer:          req.ApiServer,
+		KubeconfigEnc:      req.Kubeconfig, // TODO: 需要加密存储
+		SATokenEnc:         req.Token,      // TODO: 需要加密存储
+		CAEnc:              req.CaCert,     // TODO: 需要加密存储
+		Version:            clusterInfo.Version,
+		Status:             clusterInfo.Status,
+		Labels:             "{}",
+		MonitoringConfig:   "{}", // 初始化为空 JSON 对象，避免 MySQL JSON 字段报错
+		AlertManagerConfig: "{}", // 初始化为空 JSON 对象，避免 MySQL JSON 字段报错
+		CreatedBy:          1,    // 临时设置为1，后续需要从JWT中获取用户ID
 	}
 
 	// 保存到数据库

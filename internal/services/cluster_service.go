@@ -54,6 +54,19 @@ func (s *ClusterService) CreateCluster(cluster *models.Cluster) error {
 		}
 	}
 
+	// 确保 AlertManagerConfig 是有效的 JSON，避免 MySQL JSON 字段报错
+	if cluster.AlertManagerConfig == "" {
+		cluster.AlertManagerConfig = "{}"
+	}
+	// 验证 AlertManagerConfig 是否为有效的 JSON
+	if cluster.AlertManagerConfig != "" {
+		var testJSON interface{}
+		if err := json.Unmarshal([]byte(cluster.AlertManagerConfig), &testJSON); err != nil {
+			// 如果不是有效的 JSON，设置为空对象
+			cluster.AlertManagerConfig = "{}"
+		}
+	}
+
 	// 保存到数据库
 	if err := s.db.Create(cluster).Error; err != nil {
 		logger.Error("创建集群失败", "error", err)
@@ -109,17 +122,67 @@ func (s *ClusterService) UpdateClusterStatus(id uint, status string, version str
 
 // DeleteCluster 删除集群
 func (s *ClusterService) DeleteCluster(id uint) error {
-	result := s.db.Delete(&models.Cluster{}, id)
-	if result.Error != nil {
-		return fmt.Errorf("删除集群失败: %w", result.Error)
-	}
+	// 使用事务确保数据一致性
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// 1. 检查集群是否存在
+		var cluster models.Cluster
+		if err := tx.First(&cluster, id).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return fmt.Errorf("集群不存在: %d", id)
+			}
+			return fmt.Errorf("查询集群失败: %w", err)
+		}
 
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("集群不存在: %d", id)
-	}
+		// 2. 删除关联的集群权限（硬删除）
+		if err := tx.Unscoped().Where("cluster_id = ?", id).Delete(&models.ClusterPermission{}).Error; err != nil {
+			logger.Error("删除集群权限失败", "cluster_id", id, "error", err)
+			return fmt.Errorf("删除集群权限失败: %w", err)
+		}
+		logger.Info("已删除集群关联的权限", "cluster_id", id)
 
-	logger.Info("集群删除成功", "id", id)
-	return nil
+		// 3. 删除关联的终端会话（硬删除）
+		// 先删除终端命令记录
+		if err := tx.Unscoped().Exec(`
+			DELETE FROM terminal_commands 
+			WHERE session_id IN (SELECT id FROM terminal_sessions WHERE cluster_id = ?)
+		`, id).Error; err != nil {
+			logger.Error("删除终端命令记录失败", "cluster_id", id, "error", err)
+			return fmt.Errorf("删除终端命令记录失败: %w", err)
+		}
+		// 再删除终端会话
+		if err := tx.Unscoped().Where("cluster_id = ?", id).Delete(&models.TerminalSession{}).Error; err != nil {
+			logger.Error("删除终端会话失败", "cluster_id", id, "error", err)
+			return fmt.Errorf("删除终端会话失败: %w", err)
+		}
+		logger.Info("已删除集群关联的终端会话", "cluster_id", id)
+
+		// 4. 删除关联的 ArgoCD 配置（硬删除）
+		if err := tx.Unscoped().Where("cluster_id = ?", id).Delete(&models.ArgoCDConfig{}).Error; err != nil {
+			logger.Error("删除 ArgoCD 配置失败", "cluster_id", id, "error", err)
+			return fmt.Errorf("删除 ArgoCD 配置失败: %w", err)
+		}
+		logger.Info("已删除集群关联的 ArgoCD 配置", "cluster_id", id)
+
+		// 5. 清空关联的操作日志的集群引用（保留日志记录，只清空集群ID）
+		if err := tx.Model(&models.OperationLog{}).Where("cluster_id = ?", id).Update("cluster_id", nil).Error; err != nil {
+			logger.Error("清空操作日志集群引用失败", "cluster_id", id, "error", err)
+			// 操作日志清空失败不阻止删除
+		}
+
+		// 6. 删除集群监控指标
+		if err := tx.Where("cluster_id = ?", id).Delete(&models.ClusterMetrics{}).Error; err != nil {
+			logger.Error("删除集群监控指标失败", "cluster_id", id, "error", err)
+			// 监控指标删除失败不阻止删除
+		}
+
+		// 7. 硬删除集群（使用 Unscoped 绕过软删除）
+		if err := tx.Unscoped().Delete(&cluster).Error; err != nil {
+			return fmt.Errorf("删除集群失败: %w", err)
+		}
+
+		logger.Info("集群删除成功", "id", id, "name", cluster.Name)
+		return nil
+	})
 }
 
 // GetClusterStats 获取集群统计信息
