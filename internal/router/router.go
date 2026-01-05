@@ -180,7 +180,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				}
 
 				// nodes 子分组
-				nodeHandler := handlers.NewNodeHandler(db, cfg, clusterSvc, k8sMgr)
+				nodeHandler := handlers.NewNodeHandler(db, cfg, clusterSvc, k8sMgr, prometheusSvc, monitoringConfigSvc)
 				nodes := cluster.Group("/nodes")
 				{
 					nodes.GET("", nodeHandler.GetNodes)
@@ -408,6 +408,19 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					rbacGroup.POST("/clusterroles", rbacHandler.CreateCustomClusterRole)
 					rbacGroup.DELETE("/clusterroles/:name", rbacHandler.DeleteClusterRole)
 				}
+
+				// logs - 日志中心
+				logCenterHandler := handlers.NewLogCenterHandler(clusterSvc)
+				logs := cluster.Group("/logs")
+				{
+					logs.GET("/containers", logCenterHandler.GetContainerLogs)      // 获取容器日志
+					logs.GET("/events", logCenterHandler.GetEventLogs)              // 获取K8s事件日志
+					logs.POST("/search", logCenterHandler.SearchLogs)               // 日志搜索
+					logs.GET("/stats", logCenterHandler.GetLogStats)                // 日志统计
+					logs.GET("/namespaces", logCenterHandler.GetNamespacesForLogs)  // 获取命名空间列表
+					logs.GET("/pods", logCenterHandler.GetPodsForLogs)              // 获取Pod列表
+					logs.POST("/export", logCenterHandler.ExportLogs)               // 导出日志
+				}
 			}
 		}
 
@@ -526,6 +539,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		podTerminal := handlers.NewPodTerminalHandler(clusterSvc, auditSvc)
 		kubectlPod := handlers.NewKubectlPodTerminalHandler(clusterSvc, auditSvc)
 		podHandler := handlers.NewPodHandler(db, cfg, clusterSvc, k8sMgr)
+		logCenterHandler := handlers.NewLogCenterHandler(clusterSvc)
 
 		// 节点 SSH 终端（不需要集群权限检查）
 		ws.GET("/ssh/terminal", ssh.SSHConnect)
@@ -545,6 +559,10 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 			// Pod 日志流式传输
 			wsCluster.GET("/pods/:namespace/:name/logs", podHandler.StreamPodLogs)
+
+			// 日志中心 WebSocket 路由
+			wsCluster.GET("/logs/stream", logCenterHandler.HandleAggregateLogStream)         // 多Pod聚合日志流
+			wsCluster.GET("/logs/pod/:namespace/:name", logCenterHandler.HandleSinglePodLogStream) // 单Pod日志流
 		}
 	}
 

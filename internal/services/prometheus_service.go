@@ -167,7 +167,7 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if nodeList, err := s.queryNodeListMetrics(ctx, config, clusterName); err == nil {
+		if nodeList, err := s.QueryNodeListMetrics(ctx, config, clusterName); err == nil {
 			mu.Lock()
 			metrics.NodeList = nodeList
 			mu.Unlock()
@@ -1424,8 +1424,8 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 	return overview, nil
 }
 
-// queryNodeListMetrics 查询节点列表监控指标（使用并发查询优化性能）
-func (s *PrometheusService) queryNodeListMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName string) ([]models.NodeMetricItem, error) {
+// QueryNodeListMetrics 查询节点列表监控指标（使用并发查询优化性能）
+func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName string) ([]models.NodeMetricItem, error) {
 	nodeList := []models.NodeMetricItem{}
 	now := time.Now().Unix()
 

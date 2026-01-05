@@ -19,19 +19,23 @@ import (
 
 // NodeHandler 节点处理器
 type NodeHandler struct {
-	db             *gorm.DB
-	cfg            *config.Config
-	clusterService *services.ClusterService
-	k8sMgr         *k8s.ClusterInformerManager
+	db               *gorm.DB
+	cfg              *config.Config
+	clusterService   *services.ClusterService
+	k8sMgr           *k8s.ClusterInformerManager
+	promService      *services.PrometheusService
+	monitoringCfgSvc *services.MonitoringConfigService
 }
 
 // NewNodeHandler 创建节点处理器
-func NewNodeHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *NodeHandler {
+func NewNodeHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, promService *services.PrometheusService, monitoringCfgSvc *services.MonitoringConfigService) *NodeHandler {
 	return &NodeHandler{
-		db:             db,
-		cfg:            cfg,
-		clusterService: clusterService,
-		k8sMgr:         k8sMgr,
+		db:               db,
+		cfg:              cfg,
+		clusterService:   clusterService,
+		k8sMgr:           k8sMgr,
+		promService:      promService,
+		monitoringCfgSvc: monitoringCfgSvc,
 	}
 }
 
@@ -66,13 +70,24 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 	for _, n := range nodeObjs {
 		items = append(items, *n)
 	}
+
+	// 获取所有 Pod，统计每个节点上的 Pod 数量
+	nodePodCounts := make(map[string]int)
+	podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(labels.Everything())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "获取节点列表失败: " + err.Error(),
-		})
-		return
+		logger.Error("读取 Pod 缓存失败: %v", err)
+		// 继续执行，podCount 将为 0
+	} else {
+		for _, pod := range podObjs {
+			// 只统计非 Succeeded/Failed 状态的 Pod
+			if pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed {
+				nodePodCounts[pod.Spec.NodeName]++
+			}
+		}
 	}
+
+	// 获取所有节点的资源使用率
+	nodeResourceUsage := h.getNodesResourceUsage(c.Request.Context(), cluster.ID)
 
 	// 转换为API响应格式
 	result := make([]map[string]interface{}, 0, len(items))
@@ -117,6 +132,24 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 		memoryCapacity := node.Status.Capacity.Memory().Value() / (1024 * 1024) // 转换为MB
 		podCapacity := node.Status.Capacity.Pods().Value()
 
+		// 获取节点的 CPU 和内存使用率
+		cpuUsage := 0.0
+		memoryUsage := 0.0
+		// 尝试通过节点名称匹配
+		if usage, exists := nodeResourceUsage[node.Name]; exists {
+			cpuUsage = usage["cpuUsage"]
+			memoryUsage = usage["memoryUsage"]
+		} else {
+			// 尝试通过内部 IP 匹配（Prometheus 的 instance 标签可能是 IP 地址）
+			internalIP := getNodeInternalIP(node)
+			if internalIP != "" {
+				if usage, exists := nodeResourceUsage[internalIP]; exists {
+					cpuUsage = usage["cpuUsage"]
+					memoryUsage = usage["memoryUsage"]
+				}
+			}
+		}
+
 		result = append(result, map[string]interface{}{
 			"id":               node.Name, // 使用节点名作为ID
 			"name":             node.Name,
@@ -126,9 +159,9 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 			"osImage":          node.Status.NodeInfo.OSImage,
 			"kernelVersion":    node.Status.NodeInfo.KernelVersion,
 			"containerRuntime": node.Status.NodeInfo.ContainerRuntimeVersion,
-			"cpuUsage":         0, // 将在下面批量获取
-			"memoryUsage":      0, // 将在下面批量获取
-			"podCount":         0, // 将在下面批量获取
+			"cpuUsage":         cpuUsage,
+			"memoryUsage":      memoryUsage,
+			"podCount":         nodePodCounts[node.Name],
 			"maxPods":          podCapacity,
 			"taints":           taints,
 			"unschedulable":    node.Spec.Unschedulable,
@@ -296,9 +329,9 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 	}
 
 	// 获取节点标签
-	labels := []map[string]string{}
+	nodeLabels := []map[string]string{}
 	for key, value := range node.Labels {
-		labels = append(labels, map[string]string{
+		nodeLabels = append(nodeLabels, map[string]string{
 			"key":   key,
 			"value": value,
 		})
@@ -323,6 +356,19 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 	memoryUsage := 0.0
 	podCount := 0
 
+	// 统计该节点上的 Pod 数量
+	podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(labels.Everything())
+	if err != nil {
+		logger.Error("读取 Pod 缓存失败: %v", err)
+	} else {
+		for _, pod := range podObjs {
+			// 只统计运行在该节点上且非 Succeeded/Failed 状态的 Pod
+			if pod.Spec.NodeName == name && pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed {
+				podCount++
+			}
+		}
+	}
+
 	result := map[string]interface{}{
 		"name":              node.Name,
 		"status":            status,
@@ -335,7 +381,7 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 		"containerRuntime":  node.Status.NodeInfo.ContainerRuntimeVersion,
 		"architecture":      node.Status.NodeInfo.Architecture,
 		"taints":            taints,
-		"labels":            labels,
+		"labels":            nodeLabels,
 		"unschedulable":     node.Spec.Unschedulable,
 		"creationTimestamp": node.CreationTimestamp.Time,
 		"cpuUsage":          cpuUsage,
@@ -530,4 +576,37 @@ func getNodeExternalIP(node corev1.Node) string {
 		}
 	}
 	return ""
+}
+
+// getNodesResourceUsage 获取所有节点的 CPU 和内存使用率
+// 返回一个 map，key 是节点名称，value 包含 cpuUsage 和 memoryUsage
+func (h *NodeHandler) getNodesResourceUsage(ctx context.Context, clusterID uint) map[string]map[string]float64 {
+	result := make(map[string]map[string]float64)
+
+	if h.promService == nil || h.monitoringCfgSvc == nil {
+		return result
+	}
+
+	// 获取集群的监控配置
+	config, err := h.monitoringCfgSvc.GetMonitoringConfig(clusterID)
+	if err != nil || config.Type == "disabled" {
+		return result
+	}
+
+	// 调用 PrometheusService 的 queryNodeListMetrics 获取节点指标
+	nodeList, err := h.promService.QueryNodeListMetrics(ctx, config, "")
+	if err != nil {
+		logger.Error("获取节点资源使用率失败", "error", err)
+		return result
+	}
+
+	// 将结果转换为 map
+	for _, node := range nodeList {
+		result[node.NodeName] = map[string]float64{
+			"cpuUsage":    node.CPUUsageRate,
+			"memoryUsage": node.MemoryUsageRate,
+		}
+	}
+
+	return result
 }

@@ -156,8 +156,8 @@ const NodeList: React.FC = () => {
   };
 
   const handleNodeTerminal = (name: string) => {
-    message.info(`打开节点终端: ${name}`);
-    // TODO: 实现节点终端逻辑
+    // 导航到节点详情页并自动打开SSH终端标签页
+    navigate(`/clusters/${selectedClusterId}/nodes/${name}?tab=terminal`);
   };
 
   const handleCordon = async (name: string) => {
@@ -525,7 +525,7 @@ const NodeList: React.FC = () => {
       sortOrder: sortField === 'cpuUsage' ? sortOrder : null,
       render: (_, record) => (
         <Progress
-          percent={record.cpuUsage}
+          percent={Math.round(record.cpuUsage || 0)}
           size="small"
           status={
             record.cpuUsage > 80 
@@ -534,6 +534,7 @@ const NodeList: React.FC = () => {
                 ? 'active' 
                 : 'success'
           }
+          format={() => `${(record.cpuUsage || 0).toFixed(1)}%`}
         />
       ),
     },
@@ -546,7 +547,7 @@ const NodeList: React.FC = () => {
       sortOrder: sortField === 'memoryUsage' ? sortOrder : null,
       render: (_, record) => (
         <Progress
-          percent={record.memoryUsage}
+          percent={Math.round(record.memoryUsage || 0)}
           size="small"
           status={
             record.memoryUsage > 80 
@@ -555,6 +556,7 @@ const NodeList: React.FC = () => {
                 ? 'active' 
                 : 'success'
           }
+          format={() => `${(record.memoryUsage || 0).toFixed(1)}%`}
         />
       ),
     },
