@@ -200,6 +200,7 @@ const MainLayout: React.FC = () => {
     if (path === '/audit/operations') return ['audit-operations'];
     if (path === '/audit/commands') return ['audit-commands'];
     if (path.startsWith('/audit')) return ['audit-operations'];
+    if (path === '/alerts') return ['alert-center'];
     if (path.startsWith('/settings')) return ['system-settings'];
     
     return ['overview'];
@@ -243,6 +244,12 @@ const MainLayout: React.FC = () => {
           onClick: () => navigate('/audit/commands'),
         },
       ],
+    },
+    {
+      key: 'alert-center',
+      icon: <AlertOutlined />,
+      label: '告警中心',
+      onClick: () => navigate('/alerts'),
     },
     {
       key: 'system-settings',

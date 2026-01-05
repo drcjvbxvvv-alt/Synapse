@@ -34,8 +34,9 @@ import Login from './pages/auth/Login';
 import SystemSettings from './pages/settings/SystemSettings';
 import UserProfile from './pages/profile/UserProfile';
 import Overview from './pages/overview/Overview';
-import AlertCenter from './pages/alert/AlertCenter';
+import { AlertCenter, GlobalAlertCenter } from './pages/alert';
 import { CommandHistory, OperationLogs } from './pages/audit';
+import { LogCenter, EventLogs } from './pages/logs';
 import ArgoCDConfigPage from './pages/plugins/ArgoCDConfigPage';
 import ArgoCDApplicationsPage from './pages/plugins/ArgoCDApplicationsPage';
 import { PermissionManagement } from './pages/permission';
@@ -123,6 +124,8 @@ const App: React.FC = () => {
               <Route path="workloads" element={<WorkloadList />} />
               <Route path="workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
               <Route path="search" element={<GlobalSearch />} />
+              {/* 全局告警中心路由 */}
+              <Route path="alerts" element={<GlobalAlertCenter />} />
               {/* 命名空间路由 */}
               <Route path="clusters/:clusterId/namespaces" element={<NamespaceList />} />
               <Route path="clusters/:clusterId/namespaces/:namespace" element={<NamespaceDetail />} />
@@ -140,6 +143,9 @@ const App: React.FC = () => {
               <Route path="clusters/:clusterId/storage" element={<StorageList />} />
               {/* 告警中心路由 */}
               <Route path="clusters/:clusterId/alerts" element={<AlertCenter />} />
+              {/* 日志中心路由 */}
+              <Route path="clusters/:clusterId/logs" element={<LogCenter />} />
+              <Route path="clusters/:clusterId/logs/events" element={<EventLogs />} />
               {/* ArgoCD / GitOps 插件中心路由 - 需要运维权限 */}
               <Route path="clusters/:clusterId/plugins" element={
                 <PermissionGuard requiredPermission="ops">
