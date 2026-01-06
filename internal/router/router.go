@@ -410,7 +410,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				}
 
 				// logs - 日志中心
-				logCenterHandler := handlers.NewLogCenterHandler(clusterSvc)
+				logCenterHandler := handlers.NewLogCenterHandler(clusterSvc, k8sMgr)
 				logs := cluster.Group("/logs")
 				{
 					logs.GET("/containers", logCenterHandler.GetContainerLogs)      // 获取容器日志
@@ -539,7 +539,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		podTerminal := handlers.NewPodTerminalHandler(clusterSvc, auditSvc)
 		kubectlPod := handlers.NewKubectlPodTerminalHandler(clusterSvc, auditSvc)
 		podHandler := handlers.NewPodHandler(db, cfg, clusterSvc, k8sMgr)
-		logCenterHandler := handlers.NewLogCenterHandler(clusterSvc)
+		logCenterHandler := handlers.NewLogCenterHandler(clusterSvc, k8sMgr)
 
 		// 节点 SSH 终端（不需要集群权限检查）
 		ws.GET("/ssh/terminal", ssh.SSHConnect)

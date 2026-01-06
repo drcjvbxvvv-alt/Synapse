@@ -23,6 +23,7 @@ import {
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { WorkloadService } from '../../services/workloadService';
 import { getNamespaces } from '../../services/namespaceService';
+import { secretService } from '../../services/configService';
 import WorkloadForm from '../../components/workload/WorkloadForm';
 import { WorkloadYamlService } from '../../services/workloadYamlService';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
@@ -123,14 +124,14 @@ const DeploymentCreate: React.FC = () => {
       if (!clusterId || !currentNamespace) return;
       try {
         // 调用后端 API 获取 dockerconfigjson 类型的 secrets
-        const response = await fetch(`/api/v1/clusters/${clusterId}/secrets?namespace=${currentNamespace}&type=kubernetes.io/dockerconfigjson`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.code === 200 && data.data && data.data.items) {
-            setImagePullSecretsList(data.data.items.map((s: { name: string }) => s.name));
-          } else {
-            setImagePullSecretsList([]);
-          }
+        const data = await secretService.getSecrets(Number(clusterId), {
+          namespace: currentNamespace,
+          type: 'kubernetes.io/dockerconfigjson',
+        });
+        if (data && data.items) {
+          setImagePullSecretsList(data.items.map((s) => s.name));
+        } else {
+          setImagePullSecretsList([]);
         }
       } catch (error) {
         console.error('获取镜像拉取凭证失败:', error);

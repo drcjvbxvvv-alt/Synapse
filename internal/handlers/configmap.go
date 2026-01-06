@@ -73,7 +73,7 @@ func (h *ConfigMapHandler) GetConfigMaps(c *gin.Context) {
 	if page < 1 {
 		page = 1
 	}
-	if pageSize < 1 || pageSize > 100 {
+	if pageSize < 1 {
 		pageSize = 10
 	}
 

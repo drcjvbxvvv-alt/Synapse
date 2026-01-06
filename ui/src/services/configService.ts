@@ -180,6 +180,7 @@ export const secretService = {
     params: {
       namespace?: string;
       name?: string;
+      type?: string;  // 支持按类型过滤 (如 kubernetes.io/dockerconfigjson)
       page?: number;
       pageSize?: number;
     }
@@ -187,6 +188,7 @@ export const secretService = {
     const queryParams = new URLSearchParams();
     if (params.namespace) queryParams.append('namespace', params.namespace);
     if (params.name) queryParams.append('name', params.name);
+    if (params.type) queryParams.append('type', params.type);
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
 

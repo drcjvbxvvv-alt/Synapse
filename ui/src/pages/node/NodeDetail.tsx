@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Typography,
@@ -46,8 +46,10 @@ import {
   PlusOutlined,
   BarChartOutlined,
   AppstoreOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { nodeService } from '../../services/nodeService';
+import { PodService } from '../../services/podService';
 import type { Node, NodeTaint, Pod, NodeCondition } from '../../types';
 import type { ColumnsType } from 'antd/es/table';
 import KubectlTerminal from '../../components/KubectlTerminal';
@@ -60,11 +62,15 @@ const { TabPane } = Tabs;
 const NodeDetail: React.FC = () => {
   const { clusterId, nodeName } = useParams<{ clusterId: string; nodeName: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // 从 URL 参数读取默认标签页
+  const defaultTab = searchParams.get('tab') || 'overview';
   
   const [loading, setLoading] = useState(false);
   const [node, setNode] = useState<Node | null>(null);
   const [pods, setPods] = useState<Pod[]>([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [loadingPods, setLoadingPods] = useState(false);
   const [labelModalVisible, setLabelModalVisible] = useState(false);
   const [taintModalVisible, setTaintModalVisible] = useState(false);
@@ -97,62 +103,102 @@ const NodeDetail: React.FC = () => {
     }
   };
 
-  // 获取节点上的Pod列表 - 暂时使用模拟数据，后续可以添加到nodeService中
+  // 获取节点上的Pod列表
   const fetchNodePods = async () => {
     if (!clusterId || !nodeName) return;
     
     setLoadingPods(true);
     try {
-      // 这里应该使用真实API，暂时使用模拟数据
-      const mockPods: Pod[] = [
-        {
-          id: '1',
-          name: 'nginx-deployment-7d5c6d8b4f-abc123',
-          namespace: 'default',
-          clusterId: clusterId || '',
-          nodeName: nodeName || '',
-          status: 'Running',
-          phase: 'Running',
-          restartCount: 0,
-          cpuUsage: 0.1,
-          memoryUsage: 64,
-          containers: [
-            {
-              name: 'nginx',
-              image: 'nginx:1.21',
-              ready: true,
-              restartCount: 0,
-              state: { running: { startedAt: '2024-01-15T10:40:00Z' } },
-            },
-          ],
-          labels: { app: 'nginx', version: 'v1' },
-          createdAt: '2024-01-15T10:40:00Z',
-        },
-        {
-          id: '2',
-          name: 'api-server-5d7c9d4b3f-def456',
-          namespace: 'kube-system',
-          clusterId: clusterId || '',
-          nodeName: nodeName || '',
-          status: 'Running',
-          phase: 'Running',
-          restartCount: 0,
-          cpuUsage: 0.2,
-          memoryUsage: 128,
-          containers: [
-            {
-              name: 'api-server',
-              image: 'k8s.gcr.io/kube-apiserver:v1.28.2',
-              ready: true,
-              restartCount: 0,
-              state: { running: { startedAt: '2024-01-15T10:35:00Z' } },
-            },
-          ],
-          labels: { component: 'apiserver', tier: 'control-plane' },
-          createdAt: '2024-01-15T10:35:00Z',
-        },
-      ];
-      setPods(mockPods);
+      // 调用真实API，传入 nodeName 参数过滤该节点上的 Pod
+      const response = await PodService.getPods(
+        clusterId,
+        undefined, // namespace: 获取所有命名空间
+        nodeName,  // nodeName: 过滤该节点上的 Pod
+        undefined, // labelSelector
+        undefined, // fieldSelector
+        undefined, // search
+        1,         // page
+        1000       // pageSize: 获取所有 Pod
+      );
+      
+      if (response.code === 200 && response.data?.items) {
+        // 将 PodInfo 转换为 Pod 类型
+        const convertedPods: Pod[] = response.data.items.map((podInfo) => {
+          // 聚合所有容器的 CPU 和内存 limits
+          let totalCpuLimit = 0; // 单位: m (millicore)
+          let totalMemoryLimit = 0; // 单位: Mi
+          
+          podInfo.containers.forEach((c) => {
+            if (c.resources?.limits) {
+              // 解析 CPU limit (例如: "100m", "1", "0.5")
+              const cpuStr = c.resources.limits.cpu || c.resources.limits.CPU || '';
+              if (cpuStr) {
+                if (cpuStr.endsWith('m')) {
+                  totalCpuLimit += parseInt(cpuStr.replace('m', ''), 10) || 0;
+                } else {
+                  totalCpuLimit += (parseFloat(cpuStr) || 0) * 1000;
+                }
+              }
+              
+              // 解析 Memory limit (例如: "128Mi", "1Gi", "256M")
+              const memStr = c.resources.limits.memory || c.resources.limits.Memory || '';
+              if (memStr) {
+                if (memStr.endsWith('Gi')) {
+                  totalMemoryLimit += (parseFloat(memStr.replace('Gi', '')) || 0) * 1024;
+                } else if (memStr.endsWith('Mi')) {
+                  totalMemoryLimit += parseFloat(memStr.replace('Mi', '')) || 0;
+                } else if (memStr.endsWith('Ki')) {
+                  totalMemoryLimit += (parseFloat(memStr.replace('Ki', '')) || 0) / 1024;
+                } else if (memStr.endsWith('G')) {
+                  totalMemoryLimit += (parseFloat(memStr.replace('G', '')) || 0) * 1024;
+                } else if (memStr.endsWith('M')) {
+                  totalMemoryLimit += parseFloat(memStr.replace('M', '')) || 0;
+                } else if (memStr.endsWith('K')) {
+                  totalMemoryLimit += (parseFloat(memStr.replace('K', '')) || 0) / 1024;
+                } else {
+                  // 纯数字，假设是字节
+                  totalMemoryLimit += (parseFloat(memStr) || 0) / (1024 * 1024);
+                }
+              }
+            }
+          });
+          
+          return {
+            id: podInfo.name,
+            name: podInfo.name,
+            namespace: podInfo.namespace,
+            clusterId: clusterId || '',
+            nodeName: podInfo.nodeName,
+            status: podInfo.status as Pod['status'],
+            phase: podInfo.phase,
+            restartCount: podInfo.restartCount,
+            cpuUsage: totalCpuLimit, // 存储 CPU limit (单位: m)
+            memoryUsage: totalMemoryLimit, // 存储 Memory limit (单位: Mi)
+            containers: podInfo.containers.map((c) => ({
+              name: c.name,
+              image: c.image,
+              ready: c.ready,
+              restartCount: c.restartCount,
+              state: {
+                running: c.state.state === 'Running' ? { startedAt: c.state.startedAt || '' } : undefined,
+                waiting: c.state.state === 'Waiting' ? { reason: c.state.reason || '', message: c.state.message } : undefined,
+                terminated: c.state.state === 'Terminated' ? { 
+                  exitCode: 0, 
+                  reason: c.state.reason || '', 
+                  message: c.state.message,
+                  startedAt: c.state.startedAt || '',
+                  finishedAt: ''
+                } : undefined,
+              },
+            })),
+            labels: podInfo.labels || {},
+            createdAt: podInfo.createdAt,
+          };
+        });
+        setPods(convertedPods);
+      } else {
+        setPods([]);
+      }
     } catch (error) {
       console.error('获取节点Pod列表失败:', error);
       setPods([]);
@@ -165,6 +211,50 @@ const NodeDetail: React.FC = () => {
   const refreshAllData = () => {
     fetchNodeDetail();
     fetchNodePods();
+  };
+
+  // 导出 Pod 列表为 CSV
+  const handleExportPods = () => {
+    if (pods.length === 0) {
+      message.warning('暂无数据可导出');
+      return;
+    }
+
+    // CSV 表头
+    const headers = ['Pod名称', '命名空间', '状态', '重启次数', 'CPU Limit', '内存 Limit', '创建时间'];
+    
+    // 构建 CSV 数据
+    const csvData = pods.map((pod) => [
+      pod.name,
+      pod.namespace,
+      pod.status,
+      pod.restartCount.toString(),
+      pod.cpuUsage > 0 ? `${Math.round(pod.cpuUsage)}m` : '-',
+      pod.memoryUsage > 0 ? `${Math.round(pod.memoryUsage)}Mi` : '-',
+      new Date(pod.createdAt).toLocaleString(),
+    ]);
+
+    // 添加表头
+    csvData.unshift(headers);
+
+    // 转换为 CSV 字符串
+    const csvContent = csvData.map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
+
+    // 添加 BOM 以支持中文
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // 创建下载链接
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${nodeName}_pods_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    message.success(`成功导出 ${pods.length} 条 Pod 数据`);
   };
 
   // 处理节点操作
@@ -324,14 +414,14 @@ const NodeDetail: React.FC = () => {
       key: 'restartCount',
     },
     {
-      title: 'CPU',
-      key: 'cpuUsage',
-      render: (_, record) => `${record.cpuUsage * 1000}m`,
+      title: 'CPU Limit',
+      key: 'cpuLimit',
+      render: (_, record) => record.cpuUsage > 0 ? `${Math.round(record.cpuUsage)}m` : '-',
     },
     {
-      title: '内存',
-      key: 'memoryUsage',
-      render: (_, record) => `${record.memoryUsage}Mi`,
+      title: '内存 Limit',
+      key: 'memoryLimit',
+      render: (_, record) => record.memoryUsage > 0 ? `${Math.round(record.memoryUsage)}Mi` : '-',
     },
     {
       title: '创建时间',
@@ -547,19 +637,30 @@ const NodeDetail: React.FC = () => {
                 </span>
               ),
               children: (
-                <Table
-                  columns={podColumns}
-                  dataSource={pods}
-                  rowKey="id"
-                  pagination={{
-                    pageSize: 10,
-                    showSizeChanger: true,
-                    showQuickJumper: true,
-                    showTotal: (total) => `共 ${total} 个Pod`,
-                  }}
-                  loading={loadingPods}
-                  locale={{ emptyText: '暂无Pod数据' }}
-                />
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      onClick={handleExportPods}
+                      disabled={pods.length === 0}
+                    >
+                      导出列表
+                    </Button>
+                  </div>
+                  <Table
+                    columns={podColumns}
+                    dataSource={pods}
+                    rowKey="id"
+                    pagination={{
+                      pageSize: 10,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
+                      showTotal: (total) => `共 ${total} 个Pod`,
+                    }}
+                    loading={loadingPods}
+                    locale={{ emptyText: '暂无Pod数据' }}
+                  />
+                </div>
               ),
             },
             {
