@@ -40,6 +40,7 @@ import { LogCenter, EventLogs } from './pages/logs';
 import ArgoCDConfigPage from './pages/plugins/ArgoCDConfigPage';
 import ArgoCDApplicationsPage from './pages/plugins/ArgoCDApplicationsPage';
 import { PermissionManagement } from './pages/permission';
+import { MonitoringCenter } from './pages/om';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { tokenManager } from './services/authService';
 import { PermissionGuard, ClusterPermissionGuard } from './components/PermissionGuard';
@@ -146,6 +147,8 @@ const App: React.FC = () => {
               {/* 日志中心路由 */}
               <Route path="clusters/:clusterId/logs" element={<LogCenter />} />
               <Route path="clusters/:clusterId/logs/events" element={<EventLogs />} />
+              {/* 监控中心路由 */}
+              <Route path="clusters/:clusterId/monitoring" element={<MonitoringCenter />} />
               {/* ArgoCD 应用管理路由 - 需要运维权限 */}
               <Route path="clusters/:clusterId/plugins" element={
                 <PermissionGuard requiredPermission="ops">

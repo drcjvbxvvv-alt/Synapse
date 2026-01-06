@@ -421,6 +421,16 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 					logs.GET("/pods", logCenterHandler.GetPodsForLogs)              // 获取Pod列表
 					logs.POST("/export", logCenterHandler.ExportLogs)               // 导出日志
 				}
+
+				// O&M - 监控中心（运维）
+				omSvc := services.NewOMService(prometheusSvc, monitoringConfigSvc)
+				omHandler := handlers.NewOMHandler(clusterSvc, omSvc)
+				om := cluster.Group("/om")
+				{
+					om.GET("/health-diagnosis", omHandler.GetHealthDiagnosis)       // 集群健康诊断
+					om.GET("/resource-top", omHandler.GetResourceTop)               // 资源消耗 Top N
+					om.GET("/control-plane-status", omHandler.GetControlPlaneStatus) // 控制面组件状态
+				}
 			}
 		}
 
