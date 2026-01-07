@@ -703,7 +703,7 @@ const JobTab: React.FC<JobTabProps> = ({ clusterId, onCountChange }) => {
       <Table
         rowSelection={{
           selectedRowKeys,
-          onChange: setSelectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys as string[]),
         }}
         columns={filteredColumns}
         dataSource={workloads}

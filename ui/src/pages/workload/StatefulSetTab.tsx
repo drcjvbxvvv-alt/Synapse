@@ -710,7 +710,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
       <Table
         rowSelection={{
           selectedRowKeys,
-          onChange: setSelectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys as string[]),
         }}
         columns={filteredColumns}
         dataSource={workloads}

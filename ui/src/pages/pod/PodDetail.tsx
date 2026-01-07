@@ -111,7 +111,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     const fetchClusterName = async () => {
       if (!clusterId) return;
       try {
-        const response = await clusterService.getCluster(parseInt(clusterId));
+        const response = await clusterService.getCluster(clusterId);
         if (response.code === 200 && response.data) {
           setClusterName(response.data.name);
         }

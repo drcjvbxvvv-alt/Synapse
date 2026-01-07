@@ -39,7 +39,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
   if (workloadName) variables.workload = workloadName;
 
   // 获取配置
-  const config = GRAFANA_CONFIG[type];
+  const config = GRAFANA_CONFIG[type] as { dashboardUid: string; panels: Record<string, number> };
   const { dashboardUid, panels } = config;
 
   // 时间范围

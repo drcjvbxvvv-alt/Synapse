@@ -67,3 +67,16 @@ export const deleteNamespace = async (
   await request.delete<void>(`/clusters/${clusterId}/namespaces/${namespace}`);
 };
 
+/**
+ * 命名空间服务对象 - 兼容旧的调用方式
+ */
+export const namespaceService = {
+  getNamespaces: async (clusterId: string) => {
+    const response = await request.get<NamespaceData[]>(`/clusters/${clusterId}/namespaces`);
+    return { code: 200, data: response.data, message: 'success' };
+  },
+  getNamespaceDetail,
+  createNamespace,
+  deleteNamespace,
+};
+

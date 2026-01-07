@@ -581,7 +581,7 @@ const NodeDetail: React.FC = () => {
               ),
               children: (
                 <MonitoringCharts 
-                  clusterId={clusterId} 
+                  clusterId={clusterId || ''} 
                   nodeName={nodeName}
                   type="node"
                 />
@@ -784,8 +784,8 @@ const NodeDetail: React.FC = () => {
               children: (
                 <SSHTerminal
                   nodeIP={node?.addresses?.find(addr => addr.type === 'InternalIP')?.address || ''}
-                  nodeName={nodeName}
-                  clusterId={clusterId}
+                  nodeName={nodeName || ''}
+                  clusterId={clusterId || ''}
                 />
               ),
             },

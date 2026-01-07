@@ -533,7 +533,6 @@ const CommandHistory: React.FC = () => {
                             </Text>
                             {cmd.exit_code !== null && (
                               <Tag
-                                size="small"
                                 color={cmd.exit_code === 0 ? 'success' : 'error'}
                                 style={{ marginLeft: 8 }}
                               >

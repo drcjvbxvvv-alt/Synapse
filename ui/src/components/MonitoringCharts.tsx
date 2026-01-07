@@ -550,7 +550,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Space>
             <Button
               icon={<ReloadOutlined />}
-              onClick={fetchMetrics}
+              onClick={() => fetchMetrics()}
               loading={loading}
             >
               刷新

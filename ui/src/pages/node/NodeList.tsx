@@ -367,7 +367,7 @@ const NodeList: React.FC = () => {
         '内存使用率': `${node.memoryUsage || 0}%`,
         'Pod数量': `${node.podCount || 0}/${node.maxPods || 0}`,
         '污点数量': node.taints?.length || 0,
-        '创建时间': node.createdAt ? new Date(node.createdAt).toLocaleString('zh-CN', {
+        '创建时间': node.creationTimestamp ? new Date(node.creationTimestamp).toLocaleString('zh-CN', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
