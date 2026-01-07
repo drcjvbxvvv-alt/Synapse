@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/kubepolaris/kubepolaris/discussions
+    about: Ask questions and discuss ideas
+  - name: 📖 Documentation
+    url: https://kubepolaris.io/docs
+    about: Check our documentation for answers
+  - name: 🔒 Security Issues
+    url: https://github.com/kubepolaris/kubepolaris/security/advisories/new
+    about: Report security vulnerabilities privately

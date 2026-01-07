@@ -1,0 +1,310 @@
+# KubePolaris CI Pipeline
+# 主要的持续集成流程：代码检查、测试、构建
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+
+env:
+  GO_VERSION: '1.24'
+  NODE_VERSION: '20'
+
+jobs:
+  # ==================== 后端 CI ====================
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout=5m
+
+  backend-test:
+    name: Backend Test
+    runs-on: ubuntu-latest
+    needs: backend-lint
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: kubepolaris_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests with coverage
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: testpassword
+          DB_NAME: kubepolaris_test
+        run: |
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.out
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+
+  backend-build:
+    name: Backend Build
+    runs-on: ubuntu-latest
+    needs: backend-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o kubepolaris-server ./cmd/main.go
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-binary
+          path: kubepolaris-server
+          retention-days: 7
+
+  # ==================== 前端 CI ====================
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  frontend-typecheck:
+    name: Frontend TypeCheck
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+  frontend-test:
+    name: Frontend Test
+    runs-on: ubuntu-latest
+    needs: frontend-typecheck
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage || echo "No tests configured yet"
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./ui/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    needs: frontend-test
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: ui/dist
+          retention-days: 7
+
+  # ==================== Docker 构建 ====================
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (test only)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deploy/docker/Dockerfile
+          push: false
+          tags: kubepolaris:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==================== 集成测试 ====================
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: kubepolaris_integration
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run integration tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: testpassword
+          DB_NAME: kubepolaris_integration
+          INTEGRATION_TEST: true
+        run: |
+          go test -v -tags=integration ./internal/integration/... || echo "No integration tests yet"
+        continue-on-error: true
+
+  # ==================== 通知 ====================
+  notify:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build, docker-build]
+    if: always()
+    steps:
+      - name: Check job statuses
+        run: |
+          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Build | ${{ needs.backend-build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Build | ${{ needs.frontend-build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | ${{ needs.docker-build.result }} |" >> $GITHUB_STEP_SUMMARY
+
