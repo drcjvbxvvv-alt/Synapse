@@ -35,5 +35,5 @@ grafana:
   # 方式1: 直接配置 API Key
   api_key: ""
   # 方式2: 从文件读取（推荐，支持自动化）- 优先级高于 api_key
-  api_key_file: "./grafana/secrets/grafana_api_key"
+  api_key_file: "./deploy/docker/grafana/secrets/grafana_api_key"
   # 说明: 当使用 docker-compose 启动 Grafana 时，API Key 会自动生成到上述文件
