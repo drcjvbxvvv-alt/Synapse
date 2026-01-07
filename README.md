@@ -1,223 +1,355 @@
-# KubePolaris（北辰）
+<p align="center">
+  <img src="website/static/img/logo.svg" alt="KubePolaris Logo" width="120" height="120">
+</p>
 
-一个基于 **React + Go** 的现代化 Kubernetes 集群管理平台，提供直观的 Web 界面来管理和监控 Kubernetes 集群。
+<h1 align="center">KubePolaris</h1>
 
-## ✨ 特性
+<p align="center">
+  <strong>🌟 Enterprise-Grade Kubernetes Multi-Cluster Management Platform</strong>
+</p>
 
-- 🚀 **多集群管理** - 支持导入和管理多个 Kubernetes 集群
-- 📊 **实时监控** - 集群、节点、Pod 的实时监控和资源使用情况
-- 🖥️ **Web 终端** - 内置 Kubectl、SSH 和 Pod 终端访问
-- 🔍 **全局搜索** - 跨集群、跨资源类型的统一搜索
-- 📝 **YAML 编辑** - 在线 YAML 编辑器，支持语法高亮和校验
-- 🔐 **安全审计** - 完整的操作审计和会话记录
-- 📱 **响应式设计** - 支持桌面和移动设备
+<p align="center">
+  <a href="https://github.com/kubepolaris/kubepolaris/releases/latest">
+    <img src="https://img.shields.io/github/v/release/kubepolaris/kubepolaris?style=flat-square&logo=github&color=blue" alt="Release">
+  </a>
+  <a href="https://github.com/kubepolaris/kubepolaris/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/kubepolaris/kubepolaris?style=flat-square" alt="License">
+  </a>
+  <a href="https://github.com/kubepolaris/kubepolaris/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/kubepolaris/kubepolaris/release.yml?style=flat-square&logo=github" alt="Build Status">
+  </a>
+  <a href="https://goreportcard.com/report/github.com/kubepolaris/kubepolaris">
+    <img src="https://goreportcard.com/badge/github.com/kubepolaris/kubepolaris?style=flat-square" alt="Go Report Card">
+  </a>
+  <a href="https://github.com/kubepolaris/kubepolaris/stargazers">
+    <img src="https://img.shields.io/github/stars/kubepolaris/kubepolaris?style=flat-square&logo=github" alt="Stars">
+  </a>
+</p>
 
-## 🏗️ 技术架构
+<p align="center">
+  <a href="https://kubepolaris.io">Website</a> •
+  <a href="https://kubepolaris.io/docs/getting-started/quick-start">Quick Start</a> •
+  <a href="https://kubepolaris.io/docs">Documentation</a> •
+  <a href="https://github.com/kubepolaris/kubepolaris/discussions">Discussions</a> •
+  <a href="./ROADMAP.md">Roadmap</a>
+</p>
 
-### 前端技术栈
-- **React 19.1.1** + **TypeScript 5.8.3**
-- **Vite 7.1.2** - 快速构建工具
-- **Ant Design 5.x** - 企业级 UI 组件库
-- **Monaco Editor** - 代码编辑器
-- **xterm.js** - 终端组件
-
-### 后端技术栈
-- **Go 1.24.0** + **Gin 1.9.1**
-- **GORM 1.30.1** + **MySQL 8.x**
-- **k8s.io/client-go** - Kubernetes 客户端
-- **WebSocket** - 实时通信
-- **JWT** - 身份认证
-
-## 🚀 快速开始
-
-### 环境要求
-- Node.js >= 16.0.0
-- Go >= 1.24.0
-- MySQL >= 8.0 (可选)
-- 可访问的 Kubernetes 集群
-
-### 安装和运行
-
-1. **克隆项目**
-```bash
-git clone <repository-url>
-cd k8s-management
-```
-
-2. **启动后端服务**
-```bash
-cd k8s-management-backend
-go mod tidy
-go run main.go
-# 服务运行在 http://localhost:8080
-```
-
-3. **启动前端服务**
-```bash
-cd k8s-management-frontend
-npm install
-npm run dev
-# 访问 http://localhost:5173
-```
-
-4. **访问应用**
-打开浏览器访问 `http://localhost:5173`
-
-## 📖 功能模块
-
-### 🏢 集群管理
-- 集群导入（支持 kubeconfig 文件和手动配置）
-- 集群列表和详情查看
-- 集群连接状态监控
-- 集群资源统计和概览
-
-### 🖥️ 节点管理
-- 节点列表和详细信息
-- 节点资源使用监控
-- 节点操作（Cordon/Uncordon/Drain）
-- 节点终端访问
-
-### 📦 Pod 管理
-- Pod 列表和详情查看
-- 实时日志查看和下载
-- Pod 终端访问
-- Pod 删除和重启操作
-
-### ⚙️ 工作负载管理
-- Deployment、StatefulSet、DaemonSet 等管理
-- 工作负载扩缩容
-- YAML 配置在线编辑
-- 滚动更新和回滚
-
-### 🔍 全局搜索
-- 跨集群资源搜索
-- 按类型、命名空间筛选
-- 快速跳转到资源详情
-
-### 🖥️ Web 终端
-- Kubectl 终端（支持命名空间切换）
-- SSH 终端连接
-- Pod 容器终端
-- 终端会话审计
-
-## 📊 项目状态
-
-### ✅ 已完成功能
-- [x] 项目基础架构
-- [x] 集群管理完整功能
-- [x] 节点管理完整功能
-- [x] Pod 管理基础功能
-- [x] 工作负载管理
-- [x] 全局搜索功能
-- [x] Kubectl 和 SSH 终端
-
-### 🚧 正在开发
-- [ ] Pod 终端 WebSocket 功能完善
-- [ ] 实时监控图表集成
-- [ ] 用户认证和权限管理
-
-### 📋 计划功能
-- [ ] 集群监控和告警
-- [ ] Helm 应用管理
-- [ ] CI/CD 集成
-- [ ] 多租户支持
-
-## 🔧 配置
-
-### 后端配置
-编辑 `k8s-management-backend/configs/config.yaml`：
-
-```yaml
-server:
-  port: 8080
-  mode: debug
-
-database:
-  driver: mysql
-  host: localhost
-  port: 3306
-  username: root
-  password: password
-  database: k8s_management
-
-jwt:
-  secret: your-secret-key
-  expire_time: 24
-```
-
-### 环境变量
-```bash
-export DB_HOST=localhost
-export DB_PORT=3306
-export DB_USERNAME=root
-export DB_PASSWORD=password
-export JWT_SECRET=your-secret-key
-```
-
-## 🐳 Docker 部署
-
-### 使用 Docker Compose
-```bash
-docker-compose up -d
-```
-
-### 手动构建
-```bash
-# 构建后端
-cd k8s-management-backend
-docker build -t k8s-management-backend .
-
-# 构建前端
-cd k8s-management-frontend
-docker build -t k8s-management-frontend .
-```
-
-## 🤝 贡献
-
-欢迎贡献代码！请遵循以下步骤：
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-## 📝 开发规范
-
-### 前端
-- 使用 TypeScript 进行类型检查
-- 遵循 React Hooks 模式
-- 组件使用 PascalCase 命名
-- 使用 ESLint 和 Prettier 格式化代码
-
-### 后端
-- 遵循 Go 标准项目结构
-- 使用 GORM 进行数据库操作
-- API 使用 RESTful 设计
-- 统一错误处理和日志记录
-
-## 🔒 安全
-
-- 所有敏感数据加密存储
-- JWT Token 安全传输
-- RBAC 权限控制
-- 操作审计日志
-- HTTPS 强制使用
-
-
-
-## 🆘 支持
-
-如果您遇到问题或有疑问：
-
-1. 查看 [Issues](../../issues) 页面
-2. 创建新的 Issue
-3. 联系维护者
-
-## 🙏 致谢
-
-感谢所有为这个项目做出贡献的开发者！
+<p align="center">
+  <a href="./README_ZH.md">中文</a> | <a href="./README.md">English</a>
+</p>
 
 ---
 
-**注意**: 这是一个正在积极开发的项目，某些功能可能还在完善中。生产环境使用前请进行充分测试。
+## 📖 About
+
+**KubePolaris** is a modern Kubernetes cluster management platform built with **React + Go**. It provides an intuitive web interface to help DevOps and development teams efficiently manage and monitor multiple Kubernetes clusters.
+
+> "Polaris" refers to the North Star, symbolizing stable and reliable guidance for Kubernetes cluster operations.
+
+### Why KubePolaris?
+
+- 🎯 **User-Centric** - Clean, intuitive interface that lowers the K8s learning curve
+- 🏢 **Enterprise-Ready** - Complete permission control, audit logs, multi-cluster management
+- 🔌 **Ecosystem Integration** - Seamless integration with Prometheus, Grafana, AlertManager, ArgoCD
+- 🚀 **Out-of-the-Box** - One-click Docker deployment, easy to get started
+- 💯 **Fully Open Source** - Apache 2.0 License, community-driven
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🏗️ Cluster Management
+- Multi-cluster unified management
+- Support kubeconfig / Token import
+- Real-time cluster health monitoring
+- Resource usage overview dashboard
+
+</td>
+<td width="50%">
+
+### 📦 Workload Management
+- Deployment / StatefulSet / DaemonSet
+- Job / CronJob management
+- Scale, rolling update, rollback
+- Online YAML editor with syntax highlighting
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🖥️ Node Management
+- Node list and details
+- Cordon / Uncordon / Drain operations
+- Labels and taints management
+- SSH terminal remote access
+
+</td>
+<td width="50%">
+
+### 📊 Monitoring & Alerting
+- Prometheus metrics integration
+- Grafana dashboard embedding
+- AlertManager integration
+- Multi-channel notifications
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🔐 Security & Permissions
+- User / Role management
+- RBAC fine-grained access control
+- LDAP authentication integration
+- Operation audit logs
+
+</td>
+<td width="50%">
+
+### 🚀 DevOps Integration
+- ArgoCD GitOps integration
+- Global resource search
+- Log center aggregation
+- Web Terminal (Pod/Kubectl/SSH)
+
+</td>
+</tr>
+</table>
+
+## 🎬 Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="80%">
+</p>
+
+<details>
+<summary>📸 More Screenshots</summary>
+
+| Cluster Overview | Workload Management |
+|:---:|:---:|
+| ![Cluster Overview](docs/screenshots/cluster-overview.png) | ![Workloads](docs/screenshots/workloads.png) |
+
+| Pod Management | Web Terminal |
+|:---:|:---:|
+| ![Pod Management](docs/screenshots/pods.png) | ![Terminal](docs/screenshots/terminal.png) |
+
+</details>
+
+## 🚀 Quick Start
+
+### Option 1: Docker Compose (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/kubepolaris/kubepolaris.git
+cd kubepolaris
+
+# Start services
+docker-compose -f deploy/docker-compose/docker-compose.yml up -d
+
+# Access http://localhost:8080
+# Default credentials: admin / admin123
+```
+
+### Option 2: Kubernetes Deployment
+
+```bash
+# Install with Helm
+helm repo add kubepolaris https://kubepolaris.github.io/charts
+helm install kubepolaris kubepolaris/kubepolaris -n kubepolaris --create-namespace
+
+# Or deploy with YAML
+kubectl apply -f https://raw.githubusercontent.com/kubepolaris/kubepolaris/main/deploy/yaml/kubepolaris.yaml
+```
+
+### Option 3: Run from Source
+
+```bash
+# Requirements
+# - Go 1.24+
+# - Node.js 18+
+# - MySQL 8.0+
+
+# Start backend (port 8080)
+cd kubepolaris
+go run cmd/main.go
+
+# Start frontend (port 5173)
+cd ui
+npm install && npm run dev
+
+# Access http://localhost:5173
+```
+
+📚 For detailed installation guide, see [Installation Documentation](https://kubepolaris.io/docs/getting-started/installation)
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        KubePolaris                               │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                    Frontend (React)                      │    │
+│  │  React 19 · TypeScript · Ant Design · Monaco · xterm.js │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+│                         REST / WebSocket                         │
+│                              │                                   │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                     Backend (Go)                         │    │
+│  │      Gin · GORM · k8s client-go · WebSocket · JWT       │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+│         ┌────────────────────┼────────────────────┐             │
+│         │                    │                    │             │
+│    ┌────▼────┐         ┌────▼────┐         ┌────▼────┐         │
+│    │  MySQL  │         │   K8s   │         │ Monitor │         │
+│    │  Store  │         │ Clusters│         │Prometheus│         │
+│    └─────────┘         └─────────┘         └─────────┘         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Tech Stack
+
+| Layer | Technology | Version |
+|:---|:---|:---|
+| **Frontend** | React, TypeScript, Ant Design, Vite | 19.x, 5.8, 5.x, 7.x |
+| **Backend** | Go, Gin, GORM | 1.24, 1.9, 1.30 |
+| **Database** | MySQL | 8.0+ |
+| **K8s Client** | client-go | 0.29 |
+| **Monitoring** | Prometheus, Grafana | - |
+
+## 📁 Project Structure
+
+```
+kubepolaris/
+├── cmd/                    # Application entry
+├── internal/               # Internal packages
+│   ├── handlers/           # HTTP handlers
+│   ├── services/           # Business services
+│   ├── models/             # Data models
+│   ├── middleware/         # Middleware
+│   ├── router/             # Router configuration
+│   └── k8s/                # K8s client wrapper
+├── ui/                     # Frontend source
+│   ├── src/
+│   │   ├── pages/          # Page components
+│   │   ├── components/     # Common components
+│   │   ├── services/       # API services
+│   │   └── types/          # Type definitions
+├── deploy/                 # Deployment configs
+│   ├── docker/             # Docker configs
+│   ├── docker-compose/     # Compose files
+│   └── yaml/               # K8s YAML
+├── website/                # Documentation site
+└── configs/                # Configuration files
+```
+
+## 📊 Feature Status
+
+| Module | Status | Description |
+|:---|:---:|:---|
+| Cluster Management | ✅ | Import, switch, monitor, delete |
+| Node Management | ✅ | List, details, operations, SSH |
+| Workloads | ✅ | Deploy/STS/DS/Job/CronJob |
+| Pod Management | ✅ | List, logs, terminal, delete |
+| Config Management | ✅ | ConfigMap, Secret |
+| Network Management | ✅ | Service, Ingress |
+| Storage Management | ✅ | PV, PVC, StorageClass |
+| User & Permissions | ✅ | Users, roles, RBAC |
+| Monitoring | ✅ | Prometheus, Grafana |
+| Alerting | ✅ | AlertManager integration |
+| GitOps | ✅ | ArgoCD integration |
+| Audit Logs | ✅ | Operation logs, session audit |
+| Global Search | ✅ | Cross-cluster resource search |
+| i18n | 🚧 | Planned for v1.1 |
+
+## 🗺️ Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for the detailed plan.
+
+### Upcoming
+
+- **v1.1 (Q2 2026)** - i18n support, OAuth2/OIDC integration, cost analysis
+- **v1.2 (Q3 2026)** - Multi-tenancy, NetworkPolicy management, Service Mesh visualization
+- **v2.0 (Q4 2026)** - Cluster lifecycle management, backup & restore, plugin system
+
+## 🤝 Contributing
+
+We welcome all contributions!
+
+- 🐛 [Report Bug](https://github.com/kubepolaris/kubepolaris/issues/new?template=bug_report.md)
+- 💡 [Request Feature](https://github.com/kubepolaris/kubepolaris/issues/new?template=feature_request.md)
+- 📖 [Improve Documentation](https://github.com/kubepolaris/kubepolaris/tree/main/website/docs)
+- 🔧 [Submit PR](https://github.com/kubepolaris/kubepolaris/pulls)
+
+### How to Contribute
+
+```bash
+# 1. Fork and clone
+git clone https://github.com/YOUR_USERNAME/kubepolaris.git
+
+# 2. Create feature branch
+git checkout -b feature/amazing-feature
+
+# 3. Commit changes
+git commit -m 'feat: add amazing feature'
+
+# 4. Push and create PR
+git push origin feature/amazing-feature
+```
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
+
+## 📚 Documentation
+
+| Document | Link |
+|:---|:---|
+| 🏠 Official Website | [kubepolaris.io](https://kubepolaris.io) |
+| 📖 User Documentation | [docs](https://kubepolaris.io/docs) |
+| 🚀 Quick Start | [quick-start](https://kubepolaris.io/docs/getting-started/quick-start) |
+| 📦 Installation Guide | [installation](https://kubepolaris.io/docs/getting-started/installation) |
+| 🔧 Configuration | [configuration](https://kubepolaris.io/docs/admin-guide/configuration) |
+| 🔌 API Reference | [api-reference](https://kubepolaris.io/docs/api/overview) |
+
+## 💬 Community
+
+- 💭 [GitHub Discussions](https://github.com/kubepolaris/kubepolaris/discussions) - Q&A and feature discussions
+- 📢 [Slack](https://kubepolaris.slack.com) - Real-time chat
+- 📧 Mailing List: [kubepolaris@googlegroups.com](mailto:kubepolaris@googlegroups.com)
+
+## 🔒 Security
+
+If you discover a security vulnerability, please see [SECURITY.md](./SECURITY.md) for the reporting process.
+
+## 📄 License
+
+KubePolaris is open-sourced under the [Apache License 2.0](./LICENSE).
+
+## 🙏 Acknowledgements
+
+Thanks to these amazing open source projects:
+
+- [Kubernetes](https://kubernetes.io/) - Container orchestration platform
+- [Gin](https://gin-gonic.com/) - Go web framework
+- [Ant Design](https://ant.design/) - React UI component library
+- [client-go](https://github.com/kubernetes/client-go) - Kubernetes Go client
+- [xterm.js](https://xtermjs.org/) - Terminal component
+
+Special thanks to all [contributors](https://github.com/kubepolaris/kubepolaris/graphs/contributors)!
+
+---
+
+<p align="center">
+  If KubePolaris helps you, please give us a ⭐️ Star!
+</p>
+
+<p align="center">
+  <a href="https://github.com/kubepolaris/kubepolaris/stargazers">
+    <img src="https://img.shields.io/github/stars/kubepolaris/kubepolaris?style=social" alt="Stars">
+  </a>
+</p>
