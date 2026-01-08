@@ -65,6 +65,7 @@ services:
     environment:
       SERVER_PORT: 8080
       SERVER_MODE: release
+      DB_DRIVER: mysql
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USERNAME: kubepolaris
