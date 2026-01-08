@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
+import kubernetesLogo from '../assets/kubernetes.png';
 import {
   Layout,
   Menu,
@@ -702,7 +703,7 @@ const MainLayout: React.FC = () => {
             }}
           >
             <img 
-              src="/src/assets/kubernetes.png" 
+              src={kubernetesLogo} 
               alt="Kubernetes" 
               style={{ width: '32px', height: '32px', marginRight: 8 }} 
             />

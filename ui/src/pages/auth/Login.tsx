@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import kubernetesLogo from '../../assets/kubernetes.png';
 import {
   Form,
   Input,
@@ -304,7 +305,7 @@ const Login: React.FC = () => {
               }}
             />
             <img
-              src="/src/assets/kubernetes.png"
+              src={kubernetesLogo}
               alt="KubePolaris"
               style={{ 
                 width: 72, 
