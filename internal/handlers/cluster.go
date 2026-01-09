@@ -173,10 +173,21 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 		return
 	}
 
+	// 获取 API Server 地址：如果使用 kubeconfig，从配置中解析
+	apiServer := req.ApiServer
+	if apiServer == "" && req.Kubeconfig != "" {
+		// 从 kubeconfig 解析出的配置中获取 API Server 地址
+		restConfig := k8sClient.GetRestConfig()
+		if restConfig != nil && restConfig.Host != "" {
+			apiServer = restConfig.Host
+			logger.Info("从 kubeconfig 中解析出 API Server: %s", apiServer)
+		}
+	}
+
 	// 创建集群模型
 	cluster := &models.Cluster{
 		Name:               req.Name,
-		APIServer:          req.ApiServer,
+		APIServer:          apiServer,
 		KubeconfigEnc:      req.Kubeconfig, // TODO: 需要加密存储
 		SATokenEnc:         req.Token,      // TODO: 需要加密存储
 		CAEnc:              req.CaCert,     // TODO: 需要加密存储
