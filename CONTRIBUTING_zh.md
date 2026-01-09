@@ -65,7 +65,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 
 # 安装 Go 依赖
@@ -243,9 +243,9 @@ feat(cluster): 添加支持多 kubeconfig 文件
 
 ## 获取帮助
 
-- 💬 [GitHub Discussions](https://github.com/kubepolaris/kubepolaris/discussions)
+- 💬 [GitHub Discussions](https://github.com/clay-wangzhi/KubePolaris/discussions)
 - 📖 [文档](https://kubepolaris.io/docs)
-- 🐛 [Issue 追踪器](https://github.com/kubepolaris/kubepolaris/issues)
+- 🐛 [Issue 追踪器](https://github.com/clay-wangzhi/KubePolaris/issues)
 
 ## 贡献者认可
 

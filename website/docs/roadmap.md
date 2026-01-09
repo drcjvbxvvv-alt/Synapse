@@ -155,11 +155,11 @@ sidebar_position: 101
 
 ### 功能投票
 
-你可以在 [GitHub Discussions](https://github.com/kubepolaris/kubepolaris/discussions) 中为你希望的功能投票或提出新的功能建议。
+你可以在 [GitHub Discussions](https://github.com/clay-wangzhi/KubePolaris/discussions) 中为你希望的功能投票或提出新的功能建议。
 
 ### 参与开发
 
-欢迎参与 KubePolaris 的开发！查看 [CONTRIBUTING.md](https://github.com/kubepolaris/kubepolaris/blob/main/CONTRIBUTING.md) 了解如何贡献。
+欢迎参与 KubePolaris 的开发！查看 [CONTRIBUTING.md](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md) 了解如何贡献。
 
 ### 路线图更新
 

@@ -83,7 +83,7 @@ slug: /
 
 ```bash
 # 克隆仓库
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 
 # 启动服务
@@ -124,15 +124,15 @@ helm install kubepolaris kubepolaris/kubepolaris \
 - 📝 完善文档
 - 🔧 提交代码 PR
 
-请查看 [贡献指南](https://github.com/kubepolaris/kubepolaris/blob/main/CONTRIBUTING.md) 了解详情。
+请查看 [贡献指南](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md) 了解详情。
 
 ## 📄 开源协议
 
-KubePolaris 采用 [Apache License 2.0](https://github.com/kubepolaris/kubepolaris/blob/main/LICENSE) 开源协议。
+KubePolaris 采用 [Apache License 2.0](https://github.com/clay-wangzhi/KubePolaris/blob/main/LICENSE) 开源协议。
 
 ## 🌟 Star History
 
 如果 KubePolaris 对你有帮助，请给我们一个 Star ⭐️
 
-[![Star History Chart](https://api.star-history.com/svg?repos=kubepolaris/kubepolaris&type=Date)](https://star-history.com/#kubepolaris/kubepolaris&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=clay-wangzhi/KubePolaris&type=Date)](https://star-history.com/#clay-wangzhi/KubePolaris&Date)
 

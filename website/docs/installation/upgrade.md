@@ -22,7 +22,7 @@ kubectl exec -it deployment/kubepolaris-mysql -n kubepolaris -- mysqldump -u roo
 
 ### 2. 查看变更日志
 
-访问 [CHANGELOG](https://github.com/kubepolaris/kubepolaris/blob/main/CHANGELOG.md) 了解版本变更：
+访问 [CHANGELOG](https://github.com/clay-wangzhi/KubePolaris/blob/main/CHANGELOG.md) 了解版本变更：
 
 - **Breaking Changes**: 不兼容的变更，需要特别注意
 - **New Features**: 新功能
@@ -197,7 +197,7 @@ v1.0.0 → v1.1.0 → v1.2.0 → v2.0.0
 2. API 路径变更
 3. 数据库结构变更
 
-详细迁移指南请参考 [v2.0.0 迁移指南](https://github.com/kubepolaris/kubepolaris/releases/tag/v2.0.0)。
+详细迁移指南请参考 [v2.0.0 迁移指南](https://github.com/clay-wangzhi/KubePolaris/releases/tag/v2.0.0)。
 
 ## 升级检查清单
 

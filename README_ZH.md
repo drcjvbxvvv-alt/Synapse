@@ -9,20 +9,20 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kubepolaris/kubepolaris/releases/latest">
-    <img src="https://img.shields.io/github/v/release/kubepolaris/kubepolaris?style=flat-square&logo=github&color=blue" alt="Release">
+  <a href="https://github.com/clay-wangzhi/KubePolaris/releases/latest">
+    <img src="https://img.shields.io/github/v/release/clay-wangzhi/KubePolaris?style=flat-square&logo=github&color=blue" alt="Release">
   </a>
-  <a href="https://github.com/kubepolaris/kubepolaris/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/kubepolaris/kubepolaris?style=flat-square" alt="License">
+  <a href="https://github.com/clay-wangzhi/KubePolaris/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/clay-wangzhi/KubePolaris?style=flat-square" alt="License">
   </a>
-  <a href="https://github.com/kubepolaris/kubepolaris/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/kubepolaris/kubepolaris/release.yml?style=flat-square&logo=github" alt="Build Status">
+  <a href="https://github.com/clay-wangzhi/KubePolaris/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/clay-wangzhi/KubePolaris/release.yml?style=flat-square&logo=github" alt="Build Status">
   </a>
-  <a href="https://goreportcard.com/report/github.com/kubepolaris/kubepolaris">
-    <img src="https://goreportcard.com/badge/github.com/kubepolaris/kubepolaris?style=flat-square" alt="Go Report Card">
+  <a href="https://goreportcard.com/report/github.com/clay-wangzhi/KubePolaris">
+    <img src="https://goreportcard.com/badge/github.com/clay-wangzhi/KubePolaris?style=flat-square" alt="Go Report Card">
   </a>
-  <a href="https://github.com/kubepolaris/kubepolaris/stargazers">
-    <img src="https://img.shields.io/github/stars/kubepolaris/kubepolaris?style=flat-square&logo=github" alt="Stars">
+  <a href="https://github.com/clay-wangzhi/KubePolaris/stargazers">
+    <img src="https://img.shields.io/github/stars/clay-wangzhi/KubePolaris?style=flat-square&logo=github" alt="Stars">
   </a>
 </p>
 
@@ -30,7 +30,7 @@
   <a href="https://kubepolaris.io">官网</a> •
   <a href="https://kubepolaris.io/docs/getting-started/quick-start">快速开始</a> •
   <a href="https://kubepolaris.io/docs">文档</a> •
-  <a href="https://github.com/kubepolaris/kubepolaris/discussions">社区讨论</a> •
+  <a href="https://github.com/clay-wangzhi/KubePolaris/discussions">社区讨论</a> •
   <a href="./ROADMAP.md">路线图</a>
 </p>
 
@@ -144,7 +144,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 
 # 启动服务
@@ -162,7 +162,7 @@ helm repo add kubepolaris https://kubepolaris.github.io/charts
 helm install kubepolaris kubepolaris/kubepolaris -n kubepolaris --create-namespace
 
 # 或使用 YAML 直接部署
-kubectl apply -f https://raw.githubusercontent.com/kubepolaris/kubepolaris/main/deploy/yaml/kubepolaris.yaml
+kubectl apply -f https://raw.githubusercontent.com/clay-wangzhi/KubePolaris/main/deploy/yaml/kubepolaris.yaml
 ```
 
 ### 方式三：源码运行
@@ -282,10 +282,10 @@ kubepolaris/
 
 我们欢迎任何形式的贡献！
 
-- 🐛 [报告 Bug](https://github.com/kubepolaris/kubepolaris/issues/new?template=bug_report.md)
-- 💡 [提交功能建议](https://github.com/kubepolaris/kubepolaris/issues/new?template=feature_request.md)
-- 📖 [完善文档](https://github.com/kubepolaris/kubepolaris/tree/main/website/docs)
-- 🔧 [提交 PR](https://github.com/kubepolaris/kubepolaris/pulls)
+- 🐛 [报告 Bug](https://github.com/clay-wangzhi/KubePolaris/issues/new?template=bug_report.md)
+- 💡 [提交功能建议](https://github.com/clay-wangzhi/KubePolaris/issues/new?template=feature_request.md)
+- 📖 [完善文档](https://github.com/clay-wangzhi/KubePolaris/tree/main/website/docs)
+- 🔧 [提交 PR](https://github.com/clay-wangzhi/KubePolaris/pulls)
 
 ### 贡献流程
 
@@ -318,7 +318,7 @@ git push origin feature/amazing-feature
 
 ## 💬 社区
 
-- 💭 [GitHub Discussions](https://github.com/kubepolaris/kubepolaris/discussions) - 问题讨论和功能建议
+- 💭 [GitHub Discussions](https://github.com/clay-wangzhi/KubePolaris/discussions) - 问题讨论和功能建议
 - 📢 [Slack](https://kubepolaris.slack.com) - 实时交流
 - 📧 邮件列表: [kubepolaris@googlegroups.com](mailto:kubepolaris@googlegroups.com)
 
@@ -340,7 +340,7 @@ KubePolaris 基于 [Apache License 2.0](./LICENSE) 开源。
 - [client-go](https://github.com/kubernetes/client-go) - Kubernetes Go 客户端
 - [xterm.js](https://xtermjs.org/) - 终端组件
 
-特别感谢所有 [贡献者](https://github.com/kubepolaris/kubepolaris/graphs/contributors)！
+特别感谢所有 [贡献者](https://github.com/clay-wangzhi/KubePolaris/graphs/contributors)！
 
 ---
 
@@ -349,8 +349,8 @@ KubePolaris 基于 [Apache License 2.0](./LICENSE) 开源。
 </p>
 
 <p align="center">
-  <a href="https://github.com/kubepolaris/kubepolaris/stargazers">
-    <img src="https://img.shields.io/github/stars/kubepolaris/kubepolaris?style=social" alt="Stars">
+  <a href="https://github.com/clay-wangzhi/KubePolaris/stargazers">
+    <img src="https://img.shields.io/github/stars/clay-wangzhi/KubePolaris?style=social" alt="Stars">
   </a>
 </p>
 

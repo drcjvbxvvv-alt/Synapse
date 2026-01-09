@@ -41,13 +41,13 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/kubepolaris/kubepolaris/tree/main/website/',
+          editUrl: 'https://github.com/clay-wangzhi/KubePolaris/tree/main/website/',
           showLastUpdateTime: true,
           showLastUpdateAuthor: true,
         },
         blog: {
           showReadingTime: true,
-          editUrl: 'https://github.com/kubepolaris/kubepolaris/tree/main/website/',
+          editUrl: 'https://github.com/clay-wangzhi/KubePolaris/tree/main/website/',
           blogTitle: 'KubePolaris 博客',
           blogDescription: '分享 Kubernetes 管理最佳实践与 KubePolaris 更新动态',
         },
@@ -65,7 +65,7 @@ const config: Config = {
     // 公告栏
     announcementBar: {
       id: 'support_us',
-      content: '⭐️ 如果你觉得 KubePolaris 有帮助，请在 <a target="_blank" rel="noopener noreferrer" href="https://github.com/kubepolaris/kubepolaris">GitHub</a> 上给我们一个 Star！',
+      content: '⭐️ 如果你觉得 KubePolaris 有帮助，请在 <a target="_blank" rel="noopener noreferrer" href="https://github.com/clay-wangzhi/KubePolaris">GitHub</a> 上给我们一个 Star！',
       backgroundColor: '#1890ff',
       textColor: '#ffffff',
       isCloseable: true,
@@ -106,7 +106,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/kubepolaris/kubepolaris',
+          href: 'https://github.com/clay-wangzhi/KubePolaris',
           position: 'right',
           className: 'header-github-link',
           'aria-label': 'GitHub repository',
@@ -139,7 +139,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub Discussions',
-              href: 'https://github.com/kubepolaris/kubepolaris/discussions',
+              href: 'https://github.com/clay-wangzhi/KubePolaris/discussions',
             },
             {
               label: 'Slack',
@@ -160,11 +160,11 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/kubepolaris/kubepolaris',
+              href: 'https://github.com/clay-wangzhi/KubePolaris',
             },
             {
               label: '发布日志',
-              href: 'https://github.com/kubepolaris/kubepolaris/releases',
+              href: 'https://github.com/clay-wangzhi/KubePolaris/releases',
             },
           ],
         },

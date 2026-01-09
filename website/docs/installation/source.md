@@ -21,7 +21,7 @@ sidebar_position: 3
 
 ```bash
 # 克隆仓库
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 
 # 查看目录结构
@@ -375,6 +375,6 @@ kill -9 <PID>
 
 ## 下一步
 
-- [贡献指南](https://github.com/kubepolaris/kubepolaris/blob/main/CONTRIBUTING.md) - 参与贡献
+- [贡献指南](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md) - 参与贡献
 - [API 文档](../api/overview) - API 参考
 

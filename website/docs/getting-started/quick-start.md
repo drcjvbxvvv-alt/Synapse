@@ -18,7 +18,7 @@ sidebar_position: 1
 
 ```bash
 # 克隆仓库
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 
 # 启动所有服务
@@ -153,5 +153,5 @@ docker exec -it kubepolaris-backend curl -k https://your-api-server:6443/healthz
 # 或者使用无痕模式访问
 ```
 
-如果问题持续，请查看 [故障排查指南](../admin-guide/troubleshooting) 或在 [GitHub Issues](https://github.com/kubepolaris/kubepolaris/issues) 提问。
+如果问题持续，请查看 [故障排查指南](../admin-guide/troubleshooting) 或在 [GitHub Issues](https://github.com/clay-wangzhi/KubePolaris/issues) 提问。
 

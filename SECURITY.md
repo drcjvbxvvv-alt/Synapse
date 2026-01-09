@@ -88,5 +88,5 @@ Currently, we do not have a formal bug bounty program. However, we greatly appre
 
 - Security issues: security@kubepolaris.io
 - General questions: hello@kubepolaris.io
-- GitHub: https://github.com/kubepolaris/kubepolaris
+- GitHub: https://github.com/clay-wangzhi/KubePolaris
 

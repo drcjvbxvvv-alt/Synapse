@@ -67,7 +67,7 @@ We actively welcome pull requests:
 
 ```bash
 # Clone the repository
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 
 # Install Go dependencies
@@ -245,9 +245,9 @@ Use the PR template and include:
 
 ## Getting Help
 
-- 💬 [GitHub Discussions](https://github.com/kubepolaris/kubepolaris/discussions)
+- 💬 [GitHub Discussions](https://github.com/clay-wangzhi/KubePolaris/discussions)
 - 📖 [Documentation](https://kubepolaris.io/docs)
-- 🐛 [Issue Tracker](https://github.com/kubepolaris/kubepolaris/issues)
+- 🐛 [Issue Tracker](https://github.com/clay-wangzhi/KubePolaris/issues)
 
 ## Recognition
 

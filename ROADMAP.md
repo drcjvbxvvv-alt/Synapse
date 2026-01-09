@@ -114,7 +114,7 @@ To become the most popular enterprise-grade Kubernetes multi-cluster management 
 
 We welcome community input on our roadmap:
 
-1. **Vote** on existing feature requests in [GitHub Discussions](https://github.com/kubepolaris/kubepolaris/discussions)
+1. **Vote** on existing feature requests in [GitHub Discussions](https://github.com/clay-wangzhi/KubePolaris/discussions)
 2. **Propose** new features by opening a discussion
 3. **Contribute** by submitting pull requests
 
@@ -122,7 +122,7 @@ We welcome community input on our roadmap:
 
 Your feedback helps shape the future of KubePolaris. Please share your thoughts:
 
-- GitHub Discussions: https://github.com/kubepolaris/kubepolaris/discussions
+- GitHub Discussions: https://github.com/clay-wangzhi/KubePolaris/discussions
 - Email: feedback@kubepolaris.io
 
 ---

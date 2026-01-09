@@ -85,9 +85,9 @@ mkdir -p /opt/kubepolaris
 cd /opt/kubepolaris
 
 # 克隆仓库或下载发布包
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 # 或
-wget https://github.com/kubepolaris/kubepolaris/releases/download/v1.0.0/kubepolaris-v1.0.0.tar.gz
+wget https://github.com/clay-wangzhi/KubePolaris/releases/download/v1.0.0/kubepolaris-v1.0.0.tar.gz
 tar -xzf kubepolaris-v1.0.0.tar.gz
 ```
 

@@ -80,7 +80,7 @@ function HomepageHeader() {
             </Link>
             <Link
               className="button button--secondary button--lg"
-              to="https://github.com/kubepolaris/kubepolaris">
+              to="https://github.com/clay-wangzhi/KubePolaris">
               ⭐ GitHub
             </Link>
           </div>
@@ -180,7 +180,7 @@ helm repo add kubepolaris https://kubepolaris.github.io/charts
 helm install kubepolaris kubepolaris/kubepolaris -n kubepolaris --create-namespace
 
 # 或使用 Docker Compose 快速体验
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 docker-compose up -d`}
             </code>
@@ -209,7 +209,7 @@ function CTASection() {
             <Link className="button button--primary button--lg" to="/docs/getting-started/quick-start">
               立即开始
             </Link>
-            <Link className="button button--outline button--lg" to="https://github.com/kubepolaris/kubepolaris/discussions">
+            <Link className="button button--outline button--lg" to="https://github.com/clay-wangzhi/KubePolaris/discussions">
               加入社区
             </Link>
           </div>

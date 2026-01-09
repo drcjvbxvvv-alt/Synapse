@@ -18,7 +18,7 @@ sidebar_position: 1
 ### 1. 获取代码
 
 ```bash
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 ```
 

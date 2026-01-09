@@ -383,7 +383,7 @@ kubectl describe pod -l app=kubepolaris -n kubepolaris > pod-describe.txt
 
 ### 提交 Issue
 
-访问 [GitHub Issues](https://github.com/kubepolaris/kubepolaris/issues) 并提供：
+访问 [GitHub Issues](https://github.com/clay-wangzhi/KubePolaris/issues) 并提供：
 
 1. KubePolaris 版本
 2. 部署方式

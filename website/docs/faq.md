@@ -175,11 +175,11 @@ terminal:
 
 ### 如何参与贡献？
 
-参考 [CONTRIBUTING.md](https://github.com/kubepolaris/kubepolaris/blob/main/CONTRIBUTING.md)。
+参考 [CONTRIBUTING.md](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md)。
 
 ### 如何报告 Bug？
 
-在 [GitHub Issues](https://github.com/kubepolaris/kubepolaris/issues) 提交，请提供详细的复现步骤和环境信息。
+在 [GitHub Issues](https://github.com/clay-wangzhi/KubePolaris/issues) 提交，请提供详细的复现步骤和环境信息。
 
 ### 如何获取商业支持？
 
@@ -187,7 +187,7 @@ terminal:
 
 ### 有官方交流群吗？
 
-- GitHub Discussions: https://github.com/kubepolaris/kubepolaris/discussions
+- GitHub Discussions: https://github.com/clay-wangzhi/KubePolaris/discussions
 - Slack: https://kubepolaris.slack.com
 
 ## 还有其他问题？
@@ -196,6 +196,6 @@ terminal:
 
 1. 查阅 [用户指南](./user-guide/cluster-management)
 2. 查阅 [故障排查](./admin-guide/troubleshooting)
-3. 在 [GitHub Discussions](https://github.com/kubepolaris/kubepolaris/discussions) 提问
-4. 提交 [GitHub Issue](https://github.com/kubepolaris/kubepolaris/issues)
+3. 在 [GitHub Discussions](https://github.com/clay-wangzhi/KubePolaris/discussions) 提问
+4. 提交 [GitHub Issue](https://github.com/clay-wangzhi/KubePolaris/issues)
 

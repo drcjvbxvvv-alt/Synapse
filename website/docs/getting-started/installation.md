@@ -39,7 +39,7 @@ sidebar_position: 2
 ### 1. 获取代码
 
 ```bash
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 ```
 
@@ -264,7 +264,7 @@ pnpm --version
 ### 2. 获取代码
 
 ```bash
-git clone https://github.com/kubepolaris/kubepolaris.git
+git clone https://github.com/clay-wangzhi/KubePolaris.git
 cd kubepolaris
 ```
 

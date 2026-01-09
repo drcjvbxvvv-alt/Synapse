@@ -200,7 +200,7 @@ curl -X POST https://kubepolaris.example.com/api/clusters/1/namespaces/default/d
 ### Go SDK
 
 ```go
-import "github.com/kubepolaris/kubepolaris-go-sdk"
+import "github.com/clay-wangzhi/KubePolaris-go-sdk"
 
 client := kubepolaris.NewClient(
     kubepolaris.WithBaseURL("https://kubepolaris.example.com"),
