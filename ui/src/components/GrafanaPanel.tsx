@@ -29,7 +29,7 @@ interface GrafanaPanelProps {
 }
 
 const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
-  grafanaUrl = import.meta.env.VITE_GRAFANA_URL || 'http://localhost:3000',
+  grafanaUrl = '/grafana',  // 使用相对路径，通过 Nginx 代理访问
   dashboardUid,
   panelId,
   variables = {},

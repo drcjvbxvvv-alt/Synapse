@@ -10,7 +10,8 @@ import { generateDataSourceUID } from '../../../config/grafana.config';
 
 const { Text } = Typography;
 
-const GRAFANA_URL = import.meta.env.VITE_GRAFANA_URL || 'http://localhost:3000';
+// 使用相对路径，通过 Nginx 代理访问 Grafana
+const GRAFANA_URL = '/grafana';
 const DASHBOARD_UID = 'kubepolaris-pod-detail';
 
 // Grafana 风格的时间范围选项

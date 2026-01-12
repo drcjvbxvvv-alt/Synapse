@@ -18,6 +18,13 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      // Grafana 代理（本地开发时使用）
+      '/grafana': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/grafana/, ''),
+      },
     },
   },
   optimizeDeps: {
