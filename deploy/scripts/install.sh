@@ -258,11 +258,11 @@ main() {
     generate_env_file
     
     # 询问是否构建镜像
-    read -p "是否构建 Docker 镜像？[Y/n] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-        build_images
-    fi
+    # read -p "是否构建 Docker 镜像？[Y/n] " -n 1 -r
+    # echo
+    # if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+    #     build_images
+    # fi
     
     # 询问是否启动服务
     read -p "是否启动服务？[Y/n] " -n 1 -r
