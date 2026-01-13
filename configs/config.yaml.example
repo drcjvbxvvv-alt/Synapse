@@ -1,3 +1,12 @@
+# ==========================================
+# KubePolaris 配置文件模板
+# ==========================================
+# 使用说明:
+#   1. 复制此文件为 config.yaml
+#   2. 修改下面的配置项
+#   3. 或者通过环境变量覆盖（推荐）
+# ==========================================
+
 # 服务器配置
 server:
   port: 8080
@@ -10,13 +19,13 @@ database:
   host: 127.0.0.1
   port: 3306
   username: kubepolaris
-  password: kubepolaris!@#
+  password: CHANGE_ME  # 请修改为实际密码
   database: kubepolaris
   charset: utf8mb4
 
 # JWT配置
 jwt:
-  secret: k8s-management-secret-key
+  secret: CHANGE_ME  # 请修改为随机生成的密钥
   expire_time: 24  # 小时
 
 # 日志配置
@@ -35,7 +44,8 @@ grafana:
   # 方式1: 直接配置 API Key
   api_key: ""
   # 方式2: 从文件读取（推荐，支持自动化）- 优先级高于 api_key
-  api_key_file: "./deploy/docker/grafana/secrets/grafana_api_key"
+  api_key_file: "/app/grafana/secrets/grafana_api_key"
   # 说明: 
   #   - Docker 环境使用: /app/grafana/secrets/grafana_api_key
   #   - 本地开发使用: ./deploy/docker/grafana/secrets/grafana_api_key
+

@@ -1,3 +1,6 @@
+# Configuration files with sensitive data
+configs/config.yaml
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
