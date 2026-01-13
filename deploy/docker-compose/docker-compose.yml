@@ -51,6 +51,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      grafana:
+        condition: service_healthy
     environment:
       SERVER_PORT: 8080
       SERVER_MODE: debug
@@ -149,6 +151,7 @@ services:
   grafana-init:
     image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/curl:8.16.0
     container_name: kubepolaris-grafana-init
+    user: "0:0"  # 以 root 用户运行，解决权限问题
     depends_on:
       grafana:
         condition: service_healthy
