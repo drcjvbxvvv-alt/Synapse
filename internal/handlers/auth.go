@@ -44,9 +44,9 @@ type LoginRequest struct {
 
 // LoginResponse 登录响应结构
 type LoginResponse struct {
-	Token       string                        `json:"token"`
-	User        models.User                   `json:"user"`
-	ExpiresAt   int64                         `json:"expires_at"`
+	Token       string                         `json:"token"`
+	User        models.User                    `json:"user"`
+	ExpiresAt   int64                          `json:"expires_at"`
 	Permissions []models.MyPermissionsResponse `json:"permissions,omitempty"` // 用户权限列表
 }
 
@@ -86,7 +86,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	if err != nil {
 		logger.Warn("用户登录失败: %s, 错误: %v", req.Username, err)
-		
+
 		// 记录登录失败审计日志
 		h.opLogSvc.RecordAsync(&services.LogEntry{
 			Username:     req.Username,
@@ -102,7 +102,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			ClientIP:     c.ClientIP(),
 			UserAgent:    c.Request.UserAgent(),
 		})
-		
+
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
 			"message": err.Error(),

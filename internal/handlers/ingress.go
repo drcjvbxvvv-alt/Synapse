@@ -809,7 +809,6 @@ func (h *IngressHandler) updateIngressFromForm(clientset kubernetes.Interface, n
 	return updatedIngress, nil
 }
 
-
 // GetIngressNamespaces 获取Ingress所在的命名空间列表
 func (h *IngressHandler) GetIngressNamespaces(c *gin.Context) {
 	clusterID := c.Param("clusterID")
@@ -883,5 +882,3 @@ func (h *IngressHandler) GetIngressNamespaces(c *gin.Context) {
 		"data":    namespaces,
 	})
 }
-
-

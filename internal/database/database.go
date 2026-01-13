@@ -101,12 +101,12 @@ func autoMigrate(db *gorm.DB) error {
 		&models.TerminalSession{},
 		&models.TerminalCommand{},
 		&models.AuditLog{},
-		&models.OperationLog{},        // 操作审计日志表（新增）
-		&models.SystemSetting{},       // 系统设置表
-		&models.ArgoCDConfig{},        // ArgoCD 配置表
-		&models.UserGroup{},           // 用户组表
-		&models.UserGroupMember{},     // 用户组成员关联表
-		&models.ClusterPermission{},   // 集群权限表
+		&models.OperationLog{},      // 操作审计日志表（新增）
+		&models.SystemSetting{},     // 系统设置表
+		&models.ArgoCDConfig{},      // ArgoCD 配置表
+		&models.UserGroup{},         // 用户组表
+		&models.UserGroupMember{},   // 用户组成员关联表
+		&models.ClusterPermission{}, // 集群权限表
 	)
 
 	// 重新启用外键约束检查

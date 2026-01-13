@@ -27,7 +27,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-
 // PodHandler Pod处理器
 type PodHandler struct {
 	db             *gorm.DB
@@ -53,7 +52,6 @@ func NewPodHandler(db *gorm.DB, cfg *config.Config, clusterService *services.Clu
 		},
 	}
 }
-
 
 // PodInfo Pod信息
 type PodInfo struct {
@@ -169,7 +167,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 
 	// 获取用户允许访问的命名空间
 	allowedNamespaces, hasAllAccess := middleware.GetAllowedNamespaces(c)
-	
+
 	var pods []PodInfo
 	if namespace != "" {
 		// 用户指定了命名空间，检查权限
@@ -180,7 +178,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		podObjs, err := h.k8sMgr.PodsLister(cluster.ID).Pods(namespace).List(sel)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "读取Pod缓存失败: " + err.Error()})
@@ -225,7 +223,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		// 处理通配符命名空间匹配（如 "app-*"）
 		for _, ns := range allowedNamespaces {
 			if strings.HasSuffix(ns, "*") {
@@ -244,7 +242,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		// 去重（如果有多个规则匹配到同一个 Pod）
 		seen := make(map[string]bool)
 		uniquePods := make([]corev1.Pod, 0)
@@ -255,7 +253,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 				uniquePods = append(uniquePods, p)
 			}
 		}
-		
+
 		pods = h.convertPodsToInfo(uniquePods)
 	}
 
@@ -1015,4 +1013,3 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 		}
 	}
 }
-

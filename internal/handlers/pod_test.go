@@ -133,4 +133,3 @@ func (s *PodHandlerTestSuite) TestGetPod_ClusterExists() {
 func TestPodHandlerSuite(t *testing.T) {
 	suite.Run(t, new(PodHandlerTestSuite))
 }
-

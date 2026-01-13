@@ -31,13 +31,13 @@ type InformerListerProvider interface {
 
 // OverviewService 总览服务
 type OverviewService struct {
-	db                      *gorm.DB
-	clusterService          *ClusterService
-	listerProvider          InformerListerProvider
-	promService             *PrometheusService
-	monitoringCfgSvc        *MonitoringConfigService
-	alertManagerCfgSvc      *AlertManagerConfigService
-	alertManagerSvc         *AlertManagerService
+	db                 *gorm.DB
+	clusterService     *ClusterService
+	listerProvider     InformerListerProvider
+	promService        *PrometheusService
+	monitoringCfgSvc   *MonitoringConfigService
+	alertManagerCfgSvc *AlertManagerConfigService
+	alertManagerSvc    *AlertManagerService
 }
 
 // NewOverviewService 创建总览服务
@@ -51,13 +51,13 @@ func NewOverviewService(
 	alertManagerSvc *AlertManagerService,
 ) *OverviewService {
 	return &OverviewService{
-		db:                     db,
-		clusterService:         clusterService,
-		listerProvider:         listerProvider,
-		promService:            promService,
-		monitoringCfgSvc:       monitoringCfgSvc,
-		alertManagerCfgSvc:     alertManagerCfgSvc,
-		alertManagerSvc:        alertManagerSvc,
+		db:                 db,
+		clusterService:     clusterService,
+		listerProvider:     listerProvider,
+		promService:        promService,
+		monitoringCfgSvc:   monitoringCfgSvc,
+		alertManagerCfgSvc: alertManagerCfgSvc,
+		alertManagerSvc:    alertManagerSvc,
 	}
 }
 
@@ -65,10 +65,10 @@ func NewOverviewService(
 
 // OverviewStatsResponse 总览统计响应
 type OverviewStatsResponse struct {
-	ClusterStats        ClusterStatsData        `json:"clusterStats"`
-	NodeStats           NodeStatsData           `json:"nodeStats"`
-	PodStats            PodStatsData            `json:"podStats"`
-	VersionDistribution []VersionDistribution   `json:"versionDistribution"`
+	ClusterStats        ClusterStatsData      `json:"clusterStats"`
+	NodeStats           NodeStatsData         `json:"nodeStats"`
+	PodStats            PodStatsData          `json:"podStats"`
+	VersionDistribution []VersionDistribution `json:"versionDistribution"`
 }
 
 // ClusterStatsData 集群统计
@@ -166,14 +166,14 @@ type AbnormalWorkload struct {
 
 // GlobalAlertStats 全局告警统计
 type GlobalAlertStats struct {
-	Total        int            `json:"total"`        // 告警总数
-	Firing       int            `json:"firing"`       // 触发中
-	Pending      int            `json:"pending"`      // 等待中
-	Resolved     int            `json:"resolved"`     // 已解决
-	Suppressed   int            `json:"suppressed"`   // 已抑制
-	BySeverity   map[string]int `json:"bySeverity"`   // 按严重程度统计
-	ByCluster    []ClusterAlertCount `json:"byCluster"` // 按集群统计
-	EnabledCount int            `json:"enabledCount"` // 已启用告警的集群数
+	Total        int                 `json:"total"`        // 告警总数
+	Firing       int                 `json:"firing"`       // 触发中
+	Pending      int                 `json:"pending"`      // 等待中
+	Resolved     int                 `json:"resolved"`     // 已解决
+	Suppressed   int                 `json:"suppressed"`   // 已抑制
+	BySeverity   map[string]int      `json:"bySeverity"`   // 按严重程度统计
+	ByCluster    []ClusterAlertCount `json:"byCluster"`    // 按集群统计
+	EnabledCount int                 `json:"enabledCount"` // 已启用告警的集群数
 }
 
 // ClusterAlertCount 集群告警计数

@@ -23,7 +23,7 @@ type Alert struct {
 
 // AlertStatus 告警状态
 type AlertStatus struct {
-	State       string   `json:"state"`       // active, suppressed, resolved
+	State       string   `json:"state"` // active, suppressed, resolved
 	SilencedBy  []string `json:"silencedBy"`
 	InhibitedBy []string `json:"inhibitedBy"`
 }
@@ -83,17 +83,17 @@ type CreateSilenceRequest struct {
 
 // AlertManagerStatus Alertmanager 状态
 type AlertManagerStatus struct {
-	Cluster    ClusterStatus    `json:"cluster"`
-	VersionInfo VersionInfo     `json:"versionInfo"`
-	Config      ConfigInfo      `json:"config"`
-	Uptime      time.Time       `json:"uptime"`
+	Cluster     ClusterStatus `json:"cluster"`
+	VersionInfo VersionInfo   `json:"versionInfo"`
+	Config      ConfigInfo    `json:"config"`
+	Uptime      time.Time     `json:"uptime"`
 }
 
 // ClusterStatus 集群状态
 type ClusterStatus struct {
-	Name   string   `json:"name"`
-	Status string   `json:"status"`
-	Peers  []Peer   `json:"peers"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Peers  []Peer `json:"peers"`
 }
 
 // Peer 对等节点
@@ -131,4 +131,3 @@ type AlertStats struct {
 	Suppressed int            `json:"suppressed"`
 	BySeverity map[string]int `json:"bySeverity"`
 }
-

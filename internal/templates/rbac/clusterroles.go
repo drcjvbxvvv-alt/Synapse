@@ -489,4 +489,3 @@ func GetServiceAccountByPermissionType(permissionType string) string {
 		return ""
 	}
 }
-

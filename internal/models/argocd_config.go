@@ -8,17 +8,17 @@ import (
 
 // ArgoCDConfig ArgoCD 集成配置
 type ArgoCDConfig struct {
-	ID        uint           `json:"id" gorm:"primaryKey"`
-	ClusterID uint           `json:"cluster_id" gorm:"uniqueIndex"` // 关联的 KubePolaris 集群
+	ID        uint `json:"id" gorm:"primaryKey"`
+	ClusterID uint `json:"cluster_id" gorm:"uniqueIndex"` // 关联的 KubePolaris 集群
 
 	// ArgoCD 连接配置
-	Enabled  bool   `json:"enabled" gorm:"default:false"`   // 是否启用
-	ServerURL string `json:"server_url" gorm:"size:255"`     // ArgoCD 服务器地址，如 https://argocd.example.com
-	AuthType  string `json:"auth_type" gorm:"size:20"`       // token, username
-	Token     string `json:"-" gorm:"type:text"`             // ArgoCD API Token (加密存储)
-	Username  string `json:"username" gorm:"size:100"`       // ArgoCD 用户名
-	Password  string `json:"-" gorm:"type:text"`             // ArgoCD 密码 (加密存储)
-	Insecure  bool   `json:"insecure" gorm:"default:false"`  // 是否跳过 TLS 验证
+	Enabled   bool   `json:"enabled" gorm:"default:false"`  // 是否启用
+	ServerURL string `json:"server_url" gorm:"size:255"`    // ArgoCD 服务器地址，如 https://argocd.example.com
+	AuthType  string `json:"auth_type" gorm:"size:20"`      // token, username
+	Token     string `json:"-" gorm:"type:text"`            // ArgoCD API Token (加密存储)
+	Username  string `json:"username" gorm:"size:100"`      // ArgoCD 用户名
+	Password  string `json:"-" gorm:"type:text"`            // ArgoCD 密码 (加密存储)
+	Insecure  bool   `json:"insecure" gorm:"default:false"` // 是否跳过 TLS 验证
 
 	// Git 仓库配置
 	GitRepoURL  string `json:"git_repo_url" gorm:"size:500"`            // Git 仓库地址
@@ -30,8 +30,8 @@ type ArgoCDConfig struct {
 	GitSSHKey   string `json:"-" gorm:"type:text"` // SSH 私钥 (加密存储)
 
 	// ArgoCD 中的集群名称
-	ArgoCDClusterName string `json:"argocd_cluster_name" gorm:"size:100"`              // 在 ArgoCD 中注册的集群名称
-	ArgoCDProject     string `json:"argocd_project" gorm:"size:100;default:default"`   // ArgoCD 项目名称
+	ArgoCDClusterName string `json:"argocd_cluster_name" gorm:"size:100"`            // 在 ArgoCD 中注册的集群名称
+	ArgoCDProject     string `json:"argocd_project" gorm:"size:100;default:default"` // ArgoCD 项目名称
 
 	// 状态
 	ConnectionStatus string     `json:"connection_status" gorm:"size:20"` // connected, disconnected, error
@@ -61,7 +61,7 @@ type ArgoCDConfigRequest struct {
 	AuthType  string `json:"auth_type"` // token, username
 	Token     string `json:"token"`     // 前端可以传 token
 	Username  string `json:"username"`
-	Password  string `json:"password"`  // 前端可以传 password
+	Password  string `json:"password"` // 前端可以传 password
 	Insecure  bool   `json:"insecure"`
 
 	// Git 仓库配置
@@ -135,11 +135,11 @@ type ArgoCDApplication struct {
 
 // ArgoCDSource ArgoCD 应用源配置
 type ArgoCDSource struct {
-	RepoURL        string              `json:"repo_url"`
-	Path           string              `json:"path"`
-	TargetRevision string              `json:"target_revision"`
-	Helm           *ArgoCDHelmSource   `json:"helm,omitempty"`
-	Kustomize      *ArgoCDKustomize    `json:"kustomize,omitempty"`
+	RepoURL        string            `json:"repo_url"`
+	Path           string            `json:"path"`
+	TargetRevision string            `json:"target_revision"`
+	Helm           *ArgoCDHelmSource `json:"helm,omitempty"`
+	Kustomize      *ArgoCDKustomize  `json:"kustomize,omitempty"`
 }
 
 // ArgoCDHelmSource Helm 配置
@@ -180,9 +180,9 @@ type ArgoCDResource struct {
 
 // ArgoCDSyncHistory 同步历史
 type ArgoCDSyncHistory struct {
-	ID         int64  `json:"id"`
-	Revision   string `json:"revision"`
-	DeployedAt string `json:"deployed_at"`
+	ID         int64        `json:"id"`
+	Revision   string       `json:"revision"`
+	DeployedAt string       `json:"deployed_at"`
 	Source     ArgoCDSource `json:"source"`
 }
 
@@ -211,9 +211,9 @@ type CreateApplicationRequest struct {
 
 // SyncApplicationRequest 同步应用请求
 type SyncApplicationRequest struct {
-	Revision string   `json:"revision"`
-	Prune    bool     `json:"prune"`
-	DryRun   bool     `json:"dry_run"`
+	Revision  string   `json:"revision"`
+	Prune     bool     `json:"prune"`
+	DryRun    bool     `json:"dry_run"`
 	Resources []string `json:"resources,omitempty"` // 指定同步的资源
 }
 
@@ -221,4 +221,3 @@ type SyncApplicationRequest struct {
 type RollbackApplicationRequest struct {
 	RevisionID int64 `json:"revision_id" binding:"required"`
 }
-

@@ -381,14 +381,14 @@ func (s *OperationLogService) GetDetail(id uint) (*models.OperationLog, error) {
 
 // OperationLogStats 操作日志统计
 type OperationLogStats struct {
-	TotalCount     int64                `json:"total_count"`
-	TodayCount     int64                `json:"today_count"`
-	SuccessCount   int64                `json:"success_count"`
-	FailedCount    int64                `json:"failed_count"`
-	ModuleStats    []ModuleStat         `json:"module_stats"`
-	ActionStats    []ActionStat         `json:"action_stats"`
-	RecentFailures []OperationLogItem   `json:"recent_failures"`
-	UserStats      []UserOperationStat  `json:"user_stats"`
+	TotalCount     int64               `json:"total_count"`
+	TodayCount     int64               `json:"today_count"`
+	SuccessCount   int64               `json:"success_count"`
+	FailedCount    int64               `json:"failed_count"`
+	ModuleStats    []ModuleStat        `json:"module_stats"`
+	ActionStats    []ActionStat        `json:"action_stats"`
+	RecentFailures []OperationLogItem  `json:"recent_failures"`
+	UserStats      []UserOperationStat `json:"user_stats"`
 }
 
 // ModuleStat 模块统计
@@ -446,7 +446,7 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		Order("count DESC").
 		Limit(10).
 		Scan(&moduleStats)
-	
+
 	stats.ModuleStats = make([]ModuleStat, len(moduleStats))
 	for i, ms := range moduleStats {
 		stats.ModuleStats[i] = ModuleStat{
@@ -467,7 +467,7 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		Order("count DESC").
 		Limit(10).
 		Scan(&actionStats)
-	
+
 	stats.ActionStats = make([]ActionStat, len(actionStats))
 	for i, as := range actionStats {
 		stats.ActionStats[i] = ActionStat{
@@ -484,7 +484,7 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		Order("created_at DESC").
 		Limit(10).
 		Find(&recentFailures)
-	
+
 	stats.RecentFailures = make([]OperationLogItem, len(recentFailures))
 	for i, log := range recentFailures {
 		stats.RecentFailures[i] = OperationLogItem{
@@ -520,7 +520,7 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		Order("count DESC").
 		Limit(10).
 		Scan(&userStats)
-	
+
 	stats.UserStats = make([]UserOperationStat, len(userStats))
 	for i, us := range userStats {
 		stats.UserStats[i] = UserOperationStat{
@@ -584,4 +584,3 @@ func getActionName(action string) string {
 	}
 	return action
 }
-

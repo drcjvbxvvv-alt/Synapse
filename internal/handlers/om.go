@@ -304,4 +304,3 @@ func (h *OMHandler) GetControlPlaneStatus(c *gin.Context) {
 		"data":    result,
 	})
 }
-

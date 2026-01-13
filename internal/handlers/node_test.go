@@ -123,4 +123,3 @@ func (s *NodeHandlerTestSuite) TestGetNode_ClusterExists() {
 func TestNodeHandlerSuite(t *testing.T) {
 	suite.Run(t, new(NodeHandlerTestSuite))
 }
-

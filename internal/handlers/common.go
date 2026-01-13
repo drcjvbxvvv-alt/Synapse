@@ -20,4 +20,3 @@ func parseClusterID(clusterIDStr string) uint {
 	}
 	return 0
 }
-

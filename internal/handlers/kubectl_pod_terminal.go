@@ -75,7 +75,7 @@ func (h *KubectlPodTerminalHandler) HandleKubectlPodTerminal(c *gin.Context) {
 	permissionType := "readonly" // 默认只读权限
 	var namespaces []string
 	var customRoleRef string
-	
+
 	if perm, exists := c.Get("cluster_permission"); exists {
 		if cp, ok := perm.(*models.ClusterPermission); ok && cp != nil {
 			permissionType = cp.PermissionType
@@ -207,9 +207,9 @@ func (h *KubectlPodTerminalHandler) ensureKubectlPod(client *kubernetes.Clientse
 				"permission-type": permissionType,
 			},
 			Annotations: map[string]string{
-				"kubepolaris.io/last-activity":    time.Now().Format(time.RFC3339),
-				"kubepolaris.io/permission-type":  permissionType,
-				"kubepolaris.io/service-account":  serviceAccount,
+				"kubepolaris.io/last-activity":   time.Now().Format(time.RFC3339),
+				"kubepolaris.io/permission-type": permissionType,
+				"kubepolaris.io/service-account": serviceAccount,
 			},
 		},
 		Spec: corev1.PodSpec{

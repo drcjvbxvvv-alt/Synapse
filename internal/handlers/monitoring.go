@@ -402,7 +402,6 @@ func (h *MonitoringHandler) GetWorkloadMetrics(c *gin.Context) {
 	})
 }
 
-
 // GetMonitoringTemplates 获取监控配置模板
 func (h *MonitoringHandler) GetMonitoringTemplates(c *gin.Context) {
 	templates := gin.H{

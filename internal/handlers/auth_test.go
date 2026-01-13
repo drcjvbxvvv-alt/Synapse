@@ -136,4 +136,3 @@ func (s *AuthHandlerTestSuite) TestGetProfile_NoToken() {
 func TestAuthHandlerSuite(t *testing.T) {
 	suite.Run(t, new(AuthHandlerTestSuite))
 }
-

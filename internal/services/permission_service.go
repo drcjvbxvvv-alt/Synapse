@@ -41,7 +41,7 @@ func (s *PermissionService) UpdateUserGroup(id uint, name, description string) (
 	if err := s.db.First(&group, id).Error; err != nil {
 		return nil, fmt.Errorf("用户组不存在")
 	}
-	
+
 	group.Name = name
 	group.Description = description
 	if err := s.db.Save(&group).Error; err != nil {
@@ -58,10 +58,10 @@ func (s *PermissionService) DeleteUserGroup(id uint) error {
 	if count > 0 {
 		return fmt.Errorf("该用户组还有关联的权限配置，请先删除相关权限")
 	}
-	
+
 	// 删除用户组成员关联
 	s.db.Where("user_group_id = ?", id).Delete(&models.UserGroupMember{})
-	
+
 	// 删除用户组
 	if err := s.db.Delete(&models.UserGroup{}, id).Error; err != nil {
 		return fmt.Errorf("删除用户组失败: %w", err)
@@ -94,20 +94,20 @@ func (s *PermissionService) AddUserToGroup(userID, groupID uint) error {
 	if err := s.db.First(&user, userID).Error; err != nil {
 		return fmt.Errorf("用户不存在")
 	}
-	
+
 	// 检查用户组是否存在
 	var group models.UserGroup
 	if err := s.db.First(&group, groupID).Error; err != nil {
 		return fmt.Errorf("用户组不存在")
 	}
-	
+
 	// 检查是否已在组中
 	var count int64
 	s.db.Model(&models.UserGroupMember{}).Where("user_id = ? AND user_group_id = ?", userID, groupID).Count(&count)
 	if count > 0 {
 		return nil // 已存在，跳过
 	}
-	
+
 	// 添加关联
 	member := &models.UserGroupMember{
 		UserID:      userID,
@@ -135,7 +135,7 @@ func (s *PermissionService) CreateClusterPermission(req *CreateClusterPermission
 	if req.UserID != nil && req.UserGroupID != nil {
 		return nil, errors.New("不能同时指定用户和用户组")
 	}
-	
+
 	// 验证权限类型
 	validTypes := map[string]bool{
 		models.PermissionTypeAdmin:    true,
@@ -147,12 +147,12 @@ func (s *PermissionService) CreateClusterPermission(req *CreateClusterPermission
 	if !validTypes[req.PermissionType] {
 		return nil, errors.New("无效的权限类型")
 	}
-	
+
 	// 自定义权限必须指定角色
 	if req.PermissionType == models.PermissionTypeCustom && req.CustomRoleRef == "" {
 		return nil, errors.New("自定义权限必须指定ClusterRole或Role")
 	}
-	
+
 	// 检查是否已存在相同的权限配置
 	query := s.db.Model(&models.ClusterPermission{}).Where("cluster_id = ?", req.ClusterID)
 	if req.UserID != nil {
@@ -165,14 +165,14 @@ func (s *PermissionService) CreateClusterPermission(req *CreateClusterPermission
 	if count > 0 {
 		return nil, errors.New("该用户/用户组在此集群已有权限配置")
 	}
-	
+
 	// 处理命名空间
 	namespaces := req.Namespaces
 	if len(namespaces) == 0 {
 		namespaces = []string{"*"}
 	}
 	namespacesJSON, _ := json.Marshal(namespaces)
-	
+
 	permission := &models.ClusterPermission{
 		ClusterID:      req.ClusterID,
 		UserID:         req.UserID,
@@ -181,17 +181,17 @@ func (s *PermissionService) CreateClusterPermission(req *CreateClusterPermission
 		Namespaces:     string(namespacesJSON),
 		CustomRoleRef:  req.CustomRoleRef,
 	}
-	
+
 	if err := s.db.Create(permission).Error; err != nil {
 		return nil, fmt.Errorf("创建权限配置失败: %w", err)
 	}
-	
+
 	// 预加载关联数据
 	s.db.Preload("User").Preload("UserGroup").Preload("Cluster").First(permission, permission.ID)
-	
-	logger.Info("创建集群权限: clusterID=%d, userID=%v, userGroupID=%v, type=%s", 
+
+	logger.Info("创建集群权限: clusterID=%d, userID=%v, userGroupID=%v, type=%s",
 		req.ClusterID, req.UserID, req.UserGroupID, req.PermissionType)
-	
+
 	return permission, nil
 }
 
@@ -211,7 +211,7 @@ func (s *PermissionService) UpdateClusterPermission(id uint, req *UpdateClusterP
 	if err := s.db.First(&permission, id).Error; err != nil {
 		return nil, errors.New("权限配置不存在")
 	}
-	
+
 	// 验证权限类型
 	if req.PermissionType != "" {
 		validTypes := map[string]bool{
@@ -226,7 +226,7 @@ func (s *PermissionService) UpdateClusterPermission(id uint, req *UpdateClusterP
 		}
 		permission.PermissionType = req.PermissionType
 	}
-	
+
 	// 自定义权限必须指定角色
 	if permission.PermissionType == models.PermissionTypeCustom {
 		if req.CustomRoleRef != "" {
@@ -235,20 +235,20 @@ func (s *PermissionService) UpdateClusterPermission(id uint, req *UpdateClusterP
 			return nil, errors.New("自定义权限必须指定ClusterRole或Role")
 		}
 	}
-	
+
 	// 更新命名空间
 	if len(req.Namespaces) > 0 {
 		namespacesJSON, _ := json.Marshal(req.Namespaces)
 		permission.Namespaces = string(namespacesJSON)
 	}
-	
+
 	if err := s.db.Save(&permission).Error; err != nil {
 		return nil, fmt.Errorf("更新权限配置失败: %w", err)
 	}
-	
+
 	// 预加载关联数据
 	s.db.Preload("User").Preload("UserGroup").Preload("Cluster").First(&permission, permission.ID)
-	
+
 	return &permission, nil
 }
 
@@ -313,17 +313,17 @@ func (s *PermissionService) GetUserClusterPermission(userID, clusterID uint) (*m
 	if err == nil {
 		return &directPermission, nil
 	}
-	
+
 	// 2. 查找用户组权限
 	var userGroups []models.UserGroupMember
 	s.db.Where("user_id = ?", userID).Find(&userGroups)
-	
+
 	if len(userGroups) > 0 {
 		groupIDs := make([]uint, len(userGroups))
 		for i, ug := range userGroups {
 			groupIDs[i] = ug.UserGroupID
 		}
-		
+
 		var groupPermission models.ClusterPermission
 		err = s.db.Where("cluster_id = ? AND user_group_id IN ?", clusterID, groupIDs).
 			Order("FIELD(permission_type, 'admin', 'ops', 'dev', 'readonly', 'custom')"). // 优先返回权限最大的
@@ -332,7 +332,7 @@ func (s *PermissionService) GetUserClusterPermission(userID, clusterID uint) (*m
 			return &groupPermission, nil
 		}
 	}
-	
+
 	// 3. 返回默认权限
 	return s.getDefaultPermission(userID, clusterID)
 }
@@ -345,13 +345,13 @@ func (s *PermissionService) getDefaultPermission(userID, clusterID uint) (*model
 	if err := s.db.First(&user, userID).Error; err != nil {
 		return nil, errors.New("用户不存在")
 	}
-	
+
 	// 确定默认权限类型
 	permissionType := models.PermissionTypeReadonly // 默认只读
 	if user.Username == "admin" {
 		permissionType = models.PermissionTypeAdmin // admin 用户默认管理员权限
 	}
-	
+
 	// 返回虚拟权限对象（不存储到数据库，仅用于权限检查）
 	defaultPermission := &models.ClusterPermission{
 		ClusterID:      clusterID,
@@ -359,59 +359,59 @@ func (s *PermissionService) getDefaultPermission(userID, clusterID uint) (*model
 		PermissionType: permissionType,
 		Namespaces:     `["*"]`, // 默认全部命名空间
 	}
-	
+
 	logger.Info("使用默认权限: userID=%d, clusterID=%d, type=%s", userID, clusterID, permissionType)
-	
+
 	return defaultPermission, nil
 }
 
 // GetUserAllClusterPermissions 获取用户在所有集群的权限（包括默认权限）
 func (s *PermissionService) GetUserAllClusterPermissions(userID uint) ([]models.ClusterPermission, error) {
 	var permissions []models.ClusterPermission
-	
+
 	// 获取用户所在的用户组
 	var userGroups []models.UserGroupMember
 	s.db.Where("user_id = ?", userID).Find(&userGroups)
-	
+
 	groupIDs := make([]uint, len(userGroups))
 	for i, ug := range userGroups {
 		groupIDs[i] = ug.UserGroupID
 	}
-	
+
 	// 查询用户直接权限和用户组权限
 	query := s.db.Preload("Cluster").Where("user_id = ?", userID)
 	if len(groupIDs) > 0 {
 		query = s.db.Preload("Cluster").Where("user_id = ? OR user_group_id IN ?", userID, groupIDs)
 	}
-	
+
 	if err := query.Find(&permissions).Error; err != nil {
 		return nil, fmt.Errorf("获取用户权限失败: %w", err)
 	}
-	
+
 	// 获取已配置权限的集群ID
 	configuredClusterIDs := make(map[uint]bool)
 	for _, p := range permissions {
 		configuredClusterIDs[p.ClusterID] = true
 	}
-	
+
 	// 获取所有集群，为未配置权限的集群添加默认权限
 	var allClusters []models.Cluster
 	if err := s.db.Find(&allClusters).Error; err != nil {
 		return nil, fmt.Errorf("获取集群列表失败: %w", err)
 	}
-	
+
 	// 查询用户信息（用于确定默认权限类型）
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
 		return nil, fmt.Errorf("用户不存在: %w", err)
 	}
-	
+
 	// 确定默认权限类型
 	defaultPermissionType := models.PermissionTypeReadonly
 	if user.Username == "admin" {
 		defaultPermissionType = models.PermissionTypeAdmin
 	}
-	
+
 	// 为未配置权限的集群添加默认权限
 	for _, cluster := range allClusters {
 		if !configuredClusterIDs[cluster.ID] {
@@ -425,7 +425,7 @@ func (s *PermissionService) GetUserAllClusterPermissions(userID uint) ([]models.
 			permissions = append(permissions, defaultPerm)
 		}
 	}
-	
+
 	return permissions, nil
 }
 
@@ -441,12 +441,12 @@ func (s *PermissionService) CanPerformAction(userID, clusterID uint, action stri
 	if err != nil {
 		return false
 	}
-	
+
 	// 检查命名空间权限
 	if namespace != "" && !permission.HasNamespaceAccess(namespace) {
 		return false
 	}
-	
+
 	// 检查操作权限
 	return permission.CanPerformAction(action)
 }
@@ -482,4 +482,3 @@ func (s *PermissionService) BatchDeleteClusterPermissions(ids []uint) error {
 	}
 	return nil
 }
-

@@ -74,7 +74,7 @@ func Load() *Config {
 
 	// 读取环境变量
 	viper.AutomaticEnv()
-	
+
 	// 绑定服务器环境变量
 	viper.BindEnv("server.port", "PORT")
 	viper.BindEnv("server.port", "SERVER_PORT")
@@ -135,9 +135,9 @@ func Load() *Config {
 
 // readAPIKeyFromFile 从文件读取 API Key（带重试机制）
 func readAPIKeyFromFile(filePath string) (string, error) {
-	maxRetries := 30                  // 最多重试 30 次
-	retryInterval := 2 * time.Second  // 每次间隔 2 秒
-	
+	maxRetries := 30                 // 最多重试 30 次
+	retryInterval := 2 * time.Second // 每次间隔 2 秒
+
 	for i := 0; i < maxRetries; i++ {
 		data, err := os.ReadFile(filePath)
 		if err == nil {
@@ -155,12 +155,12 @@ func readAPIKeyFromFile(filePath string) (string, error) {
 				log.Printf("⏳ 等待 Grafana API Key 文件生成... (尝试 %d/%d)", i+1, maxRetries)
 			}
 		}
-		
+
 		if i < maxRetries-1 {
 			time.Sleep(retryInterval)
 		}
 	}
-	
+
 	return "", fmt.Errorf("重试 %d 次后仍无法读取有效的 API Key 文件: %s", maxRetries, filePath)
 }
 

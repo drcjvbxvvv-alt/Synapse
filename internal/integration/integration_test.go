@@ -203,4 +203,3 @@ func (s *IntegrationTestSuite) TestAuthFlow() {
 func TestIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
 }
-

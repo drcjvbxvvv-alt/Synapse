@@ -187,4 +187,3 @@ func getIntParam(c *gin.Context, key string, defaultValue int) int {
 	}
 	return defaultValue
 }
-

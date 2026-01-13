@@ -589,12 +589,12 @@ func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID u
 
 	var result struct {
 		Nodes []struct {
-			Group         string `json:"group"`
-			Kind          string `json:"kind"`
-			Namespace     string `json:"namespace"`
-			Name          string `json:"name"`
+			Group           string `json:"group"`
+			Kind            string `json:"kind"`
+			Namespace       string `json:"namespace"`
+			Name            string `json:"name"`
 			ResourceVersion string `json:"resourceVersion"`
-			Health        struct {
+			Health          struct {
 				Status  string `json:"status"`
 				Message string `json:"message"`
 			} `json:"health"`
@@ -639,7 +639,7 @@ func (s *ArgoCDService) setAuthHeader(req *http.Request, config *models.ArgoCDCo
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Token))
 		return
 	}
-	
+
 	// 如果没有 Token 但有用户名密码，尝试获取 session token
 	if config.Username != "" && config.Password != "" {
 		token, err := s.getSessionToken(config)
@@ -654,7 +654,7 @@ func (s *ArgoCDService) setAuthHeader(req *http.Request, config *models.ArgoCDCo
 // getSessionToken 使用用户名密码获取 ArgoCD session token
 func (s *ArgoCDService) getSessionToken(config *models.ArgoCDConfig) (string, error) {
 	client := s.createHTTPClient(config.Insecure)
-	
+
 	// 构建登录请求
 	loginReq := map[string]string{
 		"username": config.Username,
@@ -664,24 +664,24 @@ func (s *ArgoCDService) getSessionToken(config *models.ArgoCDConfig) (string, er
 	if err != nil {
 		return "", err
 	}
-	
+
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/v1/session", config.ServerURL), bytes.NewReader(body))
 	if err != nil {
 		return "", fmt.Errorf("创建登录请求失败: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("登录请求失败: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("登录失败 (状态码 %d): %s", resp.StatusCode, string(respBody))
 	}
-	
+
 	// 解析响应获取 token
 	var result struct {
 		Token string `json:"token"`
@@ -689,11 +689,11 @@ func (s *ArgoCDService) getSessionToken(config *models.ArgoCDConfig) (string, er
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", fmt.Errorf("解析登录响应失败: %w", err)
 	}
-	
+
 	if result.Token == "" {
 		return "", fmt.Errorf("登录成功但未返回 token")
 	}
-	
+
 	logger.Info("ArgoCD 登录成功，获取到 session token")
 	return result.Token, nil
 }
@@ -831,4 +831,3 @@ func (s *ArgoCDService) convertApplication(item argoCDAppResponse) models.ArgoCD
 
 	return app
 }
-

@@ -22,12 +22,12 @@ import (
 
 // ClusterHandler 集群处理器
 type ClusterHandler struct {
-	db                *gorm.DB
-	cfg               *config.Config
-	clusterService    *services.ClusterService
-	k8sMgr            *k8s.ClusterInformerManager
-	promService       *services.PrometheusService
-	monitoringCfgSvc  *services.MonitoringConfigService
+	db               *gorm.DB
+	cfg              *config.Config
+	clusterService   *services.ClusterService
+	k8sMgr           *k8s.ClusterInformerManager
+	promService      *services.PrometheusService
+	monitoringCfgSvc *services.MonitoringConfigService
 }
 
 // NewClusterHandler 创建集群处理器

@@ -43,9 +43,9 @@ func (UserGroupMember) TableName() string {
 // ClusterPermission 集群级别权限配置
 type ClusterPermission struct {
 	ID             uint           `json:"id" gorm:"primaryKey"`
-	ClusterID      uint           `json:"cluster_id" gorm:"index;not null"`         // 关联集群
-	UserID         *uint          `json:"user_id" gorm:"index"`                     // 用户ID（与用户组二选一）
-	UserGroupID    *uint          `json:"user_group_id" gorm:"index"`               // 用户组ID
+	ClusterID      uint           `json:"cluster_id" gorm:"index;not null"`        // 关联集群
+	UserID         *uint          `json:"user_id" gorm:"index"`                    // 用户ID（与用户组二选一）
+	UserGroupID    *uint          `json:"user_group_id" gorm:"index"`              // 用户组ID
 	PermissionType string         `json:"permission_type" gorm:"not null;size:50"` // admin, ops, dev, readonly, custom
 	Namespaces     string         `json:"namespaces" gorm:"type:text"`             // 命名空间范围，JSON格式，["*"] 表示全部
 	CustomRoleRef  string         `json:"custom_role_ref" gorm:"size:200"`         // 自定义权限时引用的 ClusterRole/Role 名称
@@ -118,16 +118,16 @@ func (cp *ClusterPermission) CanPerformAction(action string) bool {
 	case PermissionTypeOps:
 		// 运维权限：排除节点 cordon/drain、存储管理、配额管理的写操作
 		restrictedActions := map[string]bool{
-			"node:cordon":       true,
-			"node:uncordon":     true,
-			"node:drain":        true,
-			"pv:create":         true,
-			"pv:delete":         true,
+			"node:cordon":         true,
+			"node:uncordon":       true,
+			"node:drain":          true,
+			"pv:create":           true,
+			"pv:delete":           true,
 			"storageclass:create": true,
 			"storageclass:delete": true,
-			"quota:create":      true,
-			"quota:update":      true,
-			"quota:delete":      true,
+			"quota:create":        true,
+			"quota:update":        true,
+			"quota:delete":        true,
 		}
 		return !restrictedActions[action]
 	case PermissionTypeDev:
@@ -156,15 +156,15 @@ func (cp *ClusterPermission) CanPerformAction(action string) bool {
 
 // PermissionTypeInfo 权限类型信息
 type PermissionTypeInfo struct {
-	Type                    string   `json:"type"`
-	Name                    string   `json:"name"`
-	Description             string   `json:"description"`
-	Resources               []string `json:"resources"`
-	Actions                 []string `json:"actions"`
-	AllowPartialNamespaces  bool     `json:"allowPartialNamespaces"`  // 是否允许选择部分命名空间
-	RequireAllNamespaces    bool     `json:"requireAllNamespaces"`    // 是否必须选择全部命名空间
-	ClusterRoleName         string   `json:"clusterRoleName"`         // 对应的 ClusterRole 名称
-	ServiceAccountName      string   `json:"serviceAccountName"`      // 对应的 ServiceAccount 名称
+	Type                   string   `json:"type"`
+	Name                   string   `json:"name"`
+	Description            string   `json:"description"`
+	Resources              []string `json:"resources"`
+	Actions                []string `json:"actions"`
+	AllowPartialNamespaces bool     `json:"allowPartialNamespaces"` // 是否允许选择部分命名空间
+	RequireAllNamespaces   bool     `json:"requireAllNamespaces"`   // 是否必须选择全部命名空间
+	ClusterRoleName        string   `json:"clusterRoleName"`        // 对应的 ClusterRole 名称
+	ServiceAccountName     string   `json:"serviceAccountName"`     // 对应的 ServiceAccount 名称
 }
 
 // ClusterRole 和 ServiceAccount 常量
@@ -280,19 +280,19 @@ func GetServiceAccountByPermissionType(permissionType string) string {
 
 // ClusterPermissionResponse 集群权限响应结构
 type ClusterPermissionResponse struct {
-	ID             uint       `json:"id"`
-	ClusterID      uint       `json:"cluster_id"`
-	ClusterName    string     `json:"cluster_name,omitempty"`
-	UserID         *uint      `json:"user_id,omitempty"`
-	Username       string     `json:"username,omitempty"`
-	UserGroupID    *uint      `json:"user_group_id,omitempty"`
-	UserGroupName  string     `json:"user_group_name,omitempty"`
-	PermissionType string     `json:"permission_type"`
-	PermissionName string     `json:"permission_name"`
-	Namespaces     []string   `json:"namespaces"`
-	CustomRoleRef  string     `json:"custom_role_ref,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID             uint      `json:"id"`
+	ClusterID      uint      `json:"cluster_id"`
+	ClusterName    string    `json:"cluster_name,omitempty"`
+	UserID         *uint     `json:"user_id,omitempty"`
+	Username       string    `json:"username,omitempty"`
+	UserGroupID    *uint     `json:"user_group_id,omitempty"`
+	UserGroupName  string    `json:"user_group_name,omitempty"`
+	PermissionType string    `json:"permission_type"`
+	PermissionName string    `json:"permission_name"`
+	Namespaces     []string  `json:"namespaces"`
+	CustomRoleRef  string    `json:"custom_role_ref,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // ToResponse 转换为响应结构
@@ -341,4 +341,3 @@ type MyPermissionsResponse struct {
 	AllowedActions []string `json:"allowed_actions"`
 	CustomRoleRef  string   `json:"custom_role_ref,omitempty"`
 }
-

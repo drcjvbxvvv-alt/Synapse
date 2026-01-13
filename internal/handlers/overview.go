@@ -144,7 +144,7 @@ func (h *OverviewHandler) GetTrends(c *gin.Context) {
 	logger.Info("获取趋势数据开始", "timeRange", timeRange, "step", step)
 
 	trends, err := h.overviewService.GetTrends(c.Request.Context(), timeRange, step)
-	
+
 	elapsed := time.Since(startTime)
 	logger.Info("获取趋势数据完成", "耗时", elapsed.String())
 
@@ -226,4 +226,3 @@ func (h *OverviewHandler) GetAlertStats(c *gin.Context) {
 		"data":    stats,
 	})
 }
-

@@ -243,4 +243,3 @@ func (s *ClusterHandlerTestSuite) TestDeleteCluster_NotFound() {
 func TestClusterHandlerSuite(t *testing.T) {
 	suite.Run(t, new(ClusterHandlerTestSuite))
 }
-

@@ -504,4 +504,3 @@ func (s *AlertManagerService) setAuth(req *http.Request, auth *models.Monitoring
 
 	return nil
 }
-

@@ -138,4 +138,3 @@ func (s *AlertManagerConfigService) GetAlertManagerConfigTemplate() *models.Aler
 		},
 	}
 }
-

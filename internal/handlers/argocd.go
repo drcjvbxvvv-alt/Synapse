@@ -424,4 +424,3 @@ func (h *ArgoCDHandler) GetApplicationResources(c *gin.Context) {
 		"data":    resources,
 	})
 }
-

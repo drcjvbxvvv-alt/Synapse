@@ -26,9 +26,9 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// 全局中间件：建议引入 RequestID + 结构化日志 + 统一恢复
 	r.Use(
 		// middleware.RequestID(), // TODO: 注入 traceId/requestId
-		gin.Recovery(),    // 可替换为自定义 Recovery 统一错误响应
-		gin.Logger(),      // 可替换为 zap/logrus 结构化日志中间件
-		middleware.CORS(), // TODO: 从 cfg 读取允许的 Origin/Methods/Headers
+		gin.Recovery(),                      // 可替换为自定义 Recovery 统一错误响应
+		gin.Logger(),                        // 可替换为 zap/logrus 结构化日志中间件
+		middleware.CORS(),                   // TODO: 从 cfg 读取允许的 Origin/Methods/Headers
 		middleware.OperationAudit(opLogSvc), // 操作审计中间件（记录所有非GET请求）
 		// middleware.Gzip(),     // TODO: 如需压缩
 		// middleware.RateLimit() // TODO: 关键接口限流
@@ -46,8 +46,8 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// 统一的 Service 实例，避免重复创建
 	clusterSvc := services.NewClusterService(db)
 	prometheusSvc := services.NewPrometheusService()
-	auditSvc := services.NewAuditService(db) // 审计服务
-	argoCDSvc := services.NewArgoCDService(db) // ArgoCD 服务
+	auditSvc := services.NewAuditService(db)           // 审计服务
+	argoCDSvc := services.NewArgoCDService(db)         // ArgoCD 服务
 	permissionSvc := services.NewPermissionService(db) // 权限服务
 
 	// 初始化 Grafana 服务（用于自动同步数据源）
@@ -423,13 +423,13 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				logCenterHandler := handlers.NewLogCenterHandler(clusterSvc, k8sMgr)
 				logs := cluster.Group("/logs")
 				{
-					logs.GET("/containers", logCenterHandler.GetContainerLogs)      // 获取容器日志
-					logs.GET("/events", logCenterHandler.GetEventLogs)              // 获取K8s事件日志
-					logs.POST("/search", logCenterHandler.SearchLogs)               // 日志搜索
-					logs.GET("/stats", logCenterHandler.GetLogStats)                // 日志统计
-					logs.GET("/namespaces", logCenterHandler.GetNamespacesForLogs)  // 获取命名空间列表
-					logs.GET("/pods", logCenterHandler.GetPodsForLogs)              // 获取Pod列表
-					logs.POST("/export", logCenterHandler.ExportLogs)               // 导出日志
+					logs.GET("/containers", logCenterHandler.GetContainerLogs)     // 获取容器日志
+					logs.GET("/events", logCenterHandler.GetEventLogs)             // 获取K8s事件日志
+					logs.POST("/search", logCenterHandler.SearchLogs)              // 日志搜索
+					logs.GET("/stats", logCenterHandler.GetLogStats)               // 日志统计
+					logs.GET("/namespaces", logCenterHandler.GetNamespacesForLogs) // 获取命名空间列表
+					logs.GET("/pods", logCenterHandler.GetPodsForLogs)             // 获取Pod列表
+					logs.POST("/export", logCenterHandler.ExportLogs)              // 导出日志
 				}
 
 				// O&M - 监控中心（运维）
@@ -437,8 +437,8 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				omHandler := handlers.NewOMHandler(clusterSvc, omSvc)
 				om := cluster.Group("/om")
 				{
-					om.GET("/health-diagnosis", omHandler.GetHealthDiagnosis)       // 集群健康诊断
-					om.GET("/resource-top", omHandler.GetResourceTop)               // 资源消耗 Top N
+					om.GET("/health-diagnosis", omHandler.GetHealthDiagnosis)        // 集群健康诊断
+					om.GET("/resource-top", omHandler.GetResourceTop)                // 资源消耗 Top N
 					om.GET("/control-plane-status", omHandler.GetControlPlaneStatus) // 控制面组件状态
 				}
 			}
@@ -581,7 +581,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			wsCluster.GET("/pods/:namespace/:name/logs", podHandler.StreamPodLogs)
 
 			// 日志中心 WebSocket 路由
-			wsCluster.GET("/logs/stream", logCenterHandler.HandleAggregateLogStream)         // 多Pod聚合日志流
+			wsCluster.GET("/logs/stream", logCenterHandler.HandleAggregateLogStream)               // 多Pod聚合日志流
 			wsCluster.GET("/logs/pod/:namespace/:name", logCenterHandler.HandleSinglePodLogStream) // 单Pod日志流
 		}
 	}

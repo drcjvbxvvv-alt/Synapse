@@ -84,7 +84,7 @@ func (h *NamespaceHandler) GetNamespaces(c *gin.Context) {
 		if !hasAllAccess && !middleware.HasNamespaceAccess(c, ns.Name) {
 			continue
 		}
-		
+
 		namespaceResp := NamespaceResponse{
 			Name:              ns.Name,
 			Status:            string(ns.Status.Phase),
@@ -362,4 +362,3 @@ func convertResourceList(rl corev1.ResourceList) map[string]string {
 	}
 	return result
 }
-

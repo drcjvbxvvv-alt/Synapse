@@ -761,4 +761,3 @@ func (h *LogCenterHandler) ExportLogs(c *gin.Context) {
 	c.Header("Content-Type", "text/plain; charset=utf-8")
 	c.String(http.StatusOK, builder.String())
 }
-

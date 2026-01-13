@@ -10,8 +10,8 @@ import (
 type LogEntry struct {
 	ID          string                 `json:"id"`
 	Timestamp   time.Time              `json:"timestamp"`
-	Type        string                 `json:"type"`         // container, event, audit
-	Level       string                 `json:"level"`        // debug, info, warn, error
+	Type        string                 `json:"type"`  // container, event, audit
+	Level       string                 `json:"level"` // debug, info, warn, error
 	ClusterID   uint                   `json:"cluster_id"`
 	ClusterName string                 `json:"cluster_name"`
 	Namespace   string                 `json:"namespace"`
@@ -131,4 +131,3 @@ type EventLogEntry struct {
 	SourceComponent string    `json:"source_component"` // 事件来源组件
 	SourceHost      string    `json:"source_host"`      // 事件来源主机
 }
-

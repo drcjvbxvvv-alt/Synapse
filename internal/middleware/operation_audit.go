@@ -270,11 +270,11 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 
 		// 异步记录
 		logSvc.RecordAsync(entry)
-		
-		logger.Debug("操作审计记录", 
-			"module", module, 
-			"action", action, 
-			"path", path, 
+
+		logger.Debug("操作审计记录",
+			"module", module,
+			"action", action,
+			"path", path,
 			"user", username,
 			"success", entry.Success)
 	}
@@ -349,4 +349,3 @@ func guessResourceType(path string) string {
 
 	return "unknown"
 }
-

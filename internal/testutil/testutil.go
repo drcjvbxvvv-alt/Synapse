@@ -54,7 +54,7 @@ func HTTPRequest(router *gin.Engine, method, path string, body interface{}) *htt
 
 	req, _ := http.NewRequest(method, path, reqBody)
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	return w
@@ -72,11 +72,11 @@ func HTTPRequestWithHeaders(router *gin.Engine, method, path string, body interf
 
 	req, _ := http.NewRequest(method, path, reqBody)
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
-	
+
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	return w
@@ -93,4 +93,3 @@ func ParseJSONResponse(w *httptest.ResponseRecorder) (map[string]interface{}, er
 func AssertStatusCode(expected, actual int) bool {
 	return expected == actual
 }
-

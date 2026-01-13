@@ -66,4 +66,3 @@ func (s *SSHSettingService) SaveSSHConfig(config *models.SSHConfig) error {
 	setting.Value = string(configJSON)
 	return s.db.Save(&setting).Error
 }
-

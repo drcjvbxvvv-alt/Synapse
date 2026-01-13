@@ -820,7 +820,6 @@ func (h *ServiceHandler) updateServiceFromForm(clientset kubernetes.Interface, n
 	return updatedService, nil
 }
 
-
 // GetServiceNamespaces 获取Service所在的命名空间列表
 func (h *ServiceHandler) GetServiceNamespaces(c *gin.Context) {
 	clusterID := c.Param("clusterID")
@@ -894,5 +893,3 @@ func (h *ServiceHandler) GetServiceNamespaces(c *gin.Context) {
 		"data":    namespaces,
 	})
 }
-
-

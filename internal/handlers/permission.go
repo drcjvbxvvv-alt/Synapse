@@ -773,4 +773,3 @@ func (h *PermissionHandler) ListUsers(c *gin.Context) {
 		"data":    users,
 	})
 }
-

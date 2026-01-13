@@ -191,11 +191,11 @@ func (h *RBACHandler) ListClusterRoles(c *gin.Context) {
 
 	// Convert to response format
 	type ClusterRoleItem struct {
-		Name        string            `json:"name"`
-		Labels      map[string]string `json:"labels"`
-		CreatedAt   string            `json:"created_at"`
-		RulesCount  int               `json:"rules_count"`
-		IsKubePolaris bool            `json:"is_kubepolaris"`
+		Name          string            `json:"name"`
+		Labels        map[string]string `json:"labels"`
+		CreatedAt     string            `json:"created_at"`
+		RulesCount    int               `json:"rules_count"`
+		IsKubePolaris bool              `json:"is_kubepolaris"`
 	}
 
 	items := make([]ClusterRoleItem, 0, len(clusterRoles))
@@ -205,10 +205,10 @@ func (h *RBACHandler) ListClusterRoles(c *gin.Context) {
 			isKubePolaris = true
 		}
 		items = append(items, ClusterRoleItem{
-			Name:         cr.Name,
-			Labels:       cr.Labels,
-			CreatedAt:    cr.CreationTimestamp.Format("2006-01-02 15:04:05"),
-			RulesCount:   len(cr.Rules),
+			Name:          cr.Name,
+			Labels:        cr.Labels,
+			CreatedAt:     cr.CreationTimestamp.Format("2006-01-02 15:04:05"),
+			RulesCount:    len(cr.Rules),
 			IsKubePolaris: isKubePolaris,
 		})
 	}
@@ -403,12 +403,12 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 
 	// Convert to response format
 	type RoleItem struct {
-		Name        string            `json:"name"`
-		Namespace   string            `json:"namespace"`
-		Labels      map[string]string `json:"labels"`
-		CreatedAt   string            `json:"created_at"`
-		RulesCount  int               `json:"rules_count"`
-		IsKubePolaris bool            `json:"is_kubepolaris"`
+		Name          string            `json:"name"`
+		Namespace     string            `json:"namespace"`
+		Labels        map[string]string `json:"labels"`
+		CreatedAt     string            `json:"created_at"`
+		RulesCount    int               `json:"rules_count"`
+		IsKubePolaris bool              `json:"is_kubepolaris"`
 	}
 
 	items := make([]RoleItem, 0, len(roles))
@@ -418,11 +418,11 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 			isKubePolaris = true
 		}
 		items = append(items, RoleItem{
-			Name:         role.Name,
-			Namespace:    role.Namespace,
-			Labels:       role.Labels,
-			CreatedAt:    role.CreationTimestamp.Format("2006-01-02 15:04:05"),
-			RulesCount:   len(role.Rules),
+			Name:          role.Name,
+			Namespace:     role.Namespace,
+			Labels:        role.Labels,
+			CreatedAt:     role.CreationTimestamp.Format("2006-01-02 15:04:05"),
+			RulesCount:    len(role.Rules),
 			IsKubePolaris: isKubePolaris,
 		})
 	}
@@ -599,4 +599,3 @@ func (h *RBACHandler) GetKubePolarisClusterRoles(c *gin.Context) {
 		"data":    items,
 	})
 }
-

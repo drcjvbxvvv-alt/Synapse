@@ -975,4 +975,3 @@ func (h *ResourceYAMLHandler) GetStorageClassYAMLClean(c *gin.Context) {
 		},
 	})
 }
-

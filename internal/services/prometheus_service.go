@@ -180,7 +180,6 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 	return metrics, nil
 }
 
-
 // QueryNodeMetrics 查询节点监控指标
 func (s *PrometheusService) QueryNodeMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName, nodeName string, timeRange string, step string) (*models.ClusterMetricsData, error) {
 	// 解析时间范围
@@ -501,7 +500,6 @@ func (s *PrometheusService) QueryWorkloadMetrics(ctx context.Context, config *mo
 	return metrics, nil
 }
 
-
 // buildQueryURL 构建查询 URL
 func (s *PrometheusService) buildQueryURL(endpoint string, query *models.MetricsQuery) (*url.URL, error) {
 	baseURL, err := url.Parse(endpoint)
@@ -678,7 +676,6 @@ func (s *PrometheusService) buildWorkloadSelector(labels map[string]string, clus
 	return strings.Join(selectors, ",")
 }
 
-
 // queryMetricSeries 查询指标时间序列
 func (s *PrometheusService) queryMetricSeries(ctx context.Context, config *models.MonitoringConfig, query string, start, end int64, step string) (*models.MetricSeries, error) {
 	fmt.Println("query", query)
@@ -824,7 +821,6 @@ func (s *PrometheusService) queryMultiSeriesMetric(ctx context.Context, config *
 		Series: series,
 	}, nil
 }
-
 
 // queryNetworkMetrics 查询网络指标（使用并发查询优化性能）
 func (s *PrometheusService) queryNetworkMetrics(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkMetrics, error) {
@@ -1733,4 +1729,3 @@ func (s *PrometheusService) queryWorkloadDiskThroughput(ctx context.Context, con
 		Write: writeSeries,
 	}, nil
 }
-

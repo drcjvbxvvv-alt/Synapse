@@ -262,4 +262,3 @@ type NodeMetricItem struct {
 	TotalMemory     float64 `json:"total_memory"`      // 总内存（bytes）
 	Status          string  `json:"status"`            // 节点状态
 }
-

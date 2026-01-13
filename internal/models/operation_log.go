@@ -40,7 +40,7 @@ type OperationLog struct {
 	UserAgent string `json:"user_agent" gorm:"size:500"`
 
 	// 其他
-	Duration  int64     `json:"duration"`               // 请求耗时(ms)
+	Duration  int64     `json:"duration"` // 请求耗时(ms)
 	CreatedAt time.Time `json:"created_at" gorm:"index"`
 }
 
@@ -48,4 +48,3 @@ type OperationLog struct {
 func (OperationLog) TableName() string {
 	return "operation_logs"
 }
-

@@ -183,4 +183,3 @@ func (s *APIIntegrationTestSuite) TestClusterNotFound() {
 func TestAPIIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(APIIntegrationTestSuite))
 }
-

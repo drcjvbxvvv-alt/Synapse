@@ -202,4 +202,3 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_NotFound() {
 func TestClusterServiceSuite(t *testing.T) {
 	suite.Run(t, new(ClusterServiceTestSuite))
 }
-

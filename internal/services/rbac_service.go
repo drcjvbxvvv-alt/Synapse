@@ -683,4 +683,3 @@ func (s *RBACService) GetEffectiveServiceAccount(config *UserRBACConfig) string 
 		return rbac.SAReadonly
 	}
 }
-

@@ -303,7 +303,7 @@ func GetAllowedNamespaces(c *gin.Context) ([]string, bool) {
 	if permission == nil {
 		return []string{}, false
 	}
-	
+
 	namespaces := permission.GetNamespaceList()
 	for _, ns := range namespaces {
 		if ns == "*" {
@@ -328,12 +328,12 @@ func FilterNamespaces(c *gin.Context, namespaces []string) []string {
 	if permission == nil {
 		return []string{}
 	}
-	
+
 	// 如果有全部命名空间权限，直接返回
 	if permission.HasAllNamespaceAccess() {
 		return namespaces
 	}
-	
+
 	// 过滤只保留有权限的命名空间
 	filtered := make([]string, 0)
 	for _, ns := range namespaces {
@@ -353,14 +353,14 @@ func GetEffectiveNamespace(c *gin.Context, requestedNs string) (string, bool) {
 	if permission == nil {
 		return "", false
 	}
-	
+
 	// 如果有全部权限
 	if permission.HasAllNamespaceAccess() {
 		return requestedNs, true
 	}
-	
+
 	allowedNs := permission.GetNamespaceList()
-	
+
 	// 如果用户指定了命名空间，检查权限
 	if requestedNs != "" {
 		if permission.HasNamespaceAccess(requestedNs) {
@@ -368,22 +368,22 @@ func GetEffectiveNamespace(c *gin.Context, requestedNs string) (string, bool) {
 		}
 		return "", false // 无权访问请求的命名空间
 	}
-	
+
 	// 用户没有指定命名空间，返回空字符串让后续逻辑处理
 	// 后续逻辑会遍历用户有权限的所有命名空间
 	if len(allowedNs) > 0 {
 		return "", true // 表示需要遍历多个命名空间
 	}
-	
+
 	return "", false
 }
 
 // NamespacePermissionInfo 命名空间权限信息
 type NamespacePermissionInfo struct {
-	HasAllAccess       bool     // 是否有全部命名空间权限
-	AllowedNamespaces  []string // 允许的命名空间列表
-	RequestedNs        string   // 请求的命名空间
-	HasAccess          bool     // 是否有权限访问
+	HasAllAccess      bool     // 是否有全部命名空间权限
+	AllowedNamespaces []string // 允许的命名空间列表
+	RequestedNs       string   // 请求的命名空间
+	HasAccess         bool     // 是否有权限访问
 }
 
 // CheckNamespacePermission 检查命名空间权限
@@ -392,11 +392,11 @@ func CheckNamespacePermission(c *gin.Context, requestedNs string) (*NamespacePer
 	info := &NamespacePermissionInfo{
 		RequestedNs: requestedNs,
 	}
-	
+
 	allowedNs, hasAll := GetAllowedNamespaces(c)
 	info.HasAllAccess = hasAll
 	info.AllowedNamespaces = allowedNs
-	
+
 	// 如果用户指定了命名空间，检查权限
 	if requestedNs != "" {
 		if hasAll || HasNamespaceAccess(c, requestedNs) {
@@ -406,7 +406,7 @@ func CheckNamespacePermission(c *gin.Context, requestedNs string) (*NamespacePer
 		info.HasAccess = false
 		return info, false // 无权访问
 	}
-	
+
 	// 没有指定命名空间
 	info.HasAccess = true
 	return info, true
@@ -417,12 +417,12 @@ func CheckNamespacePermission(c *gin.Context, requestedNs string) (*NamespacePer
 // getNamespace: 从资源对象中获取命名空间的函数
 func FilterResourcesByNamespace[T any](c *gin.Context, resources []T, getNamespace func(T) string) []T {
 	allowedNs, hasAll := GetAllowedNamespaces(c)
-	
+
 	// 如果有全部权限，直接返回
 	if hasAll {
 		return resources
 	}
-	
+
 	// 过滤资源
 	filtered := make([]T, 0, len(resources))
 	for _, r := range resources {
@@ -450,4 +450,3 @@ func matchNamespace(namespace string, allowedNamespaces []string) bool {
 	}
 	return false
 }
-

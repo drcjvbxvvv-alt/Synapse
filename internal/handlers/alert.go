@@ -606,4 +606,3 @@ func (h *AlertHandler) GetAlertManagerConfigTemplate(c *gin.Context) {
 		"data":    template,
 	})
 }
-
