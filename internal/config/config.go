@@ -1,9 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -109,26 +111,57 @@ func Load() *Config {
 		log.Fatalf("配置解析失败: %v", err)
 	}
 
-	// 如果配置了 API Key 文件路径，尝试从文件读取
+	// 如果配置了 API Key 文件路径，尝试从文件读取（带重试和优雅降级）
 	if config.Grafana.APIKeyFile != "" {
 		if apiKey, err := readAPIKeyFromFile(config.Grafana.APIKeyFile); err == nil {
 			config.Grafana.APIKey = apiKey
-			log.Printf("Grafana API Key 已从文件加载: %s", config.Grafana.APIKeyFile)
+			log.Printf("✅ Grafana API Key 已从文件加载: %s", config.Grafana.APIKeyFile)
 		} else {
-			log.Printf("从文件读取 Grafana API Key 失败: %v", err)
+			// 如果 Grafana 是启用的，记录警告但不中断启动
+			if config.Grafana.Enabled {
+				log.Printf("⚠️  从文件读取 Grafana API Key 失败: %v", err)
+				log.Printf("⚠️  Grafana 功能将被禁用，但系统将继续运行")
+				config.Grafana.Enabled = false // 自动禁用 Grafana 功能
+			} else {
+				log.Printf("ℹ️  Grafana 未启用，跳过 API Key 加载")
+			}
 		}
+	} else if config.Grafana.Enabled && config.Grafana.APIKey == "" {
+		log.Printf("⚠️  Grafana 已启用但未配置 API Key，功能可能不可用")
 	}
 
 	return &config
 }
 
-// readAPIKeyFromFile 从文件读取 API Key
+// readAPIKeyFromFile 从文件读取 API Key（带重试机制）
 func readAPIKeyFromFile(filePath string) (string, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", err
+	maxRetries := 30                  // 最多重试 30 次
+	retryInterval := 2 * time.Second  // 每次间隔 2 秒
+	
+	for i := 0; i < maxRetries; i++ {
+		data, err := os.ReadFile(filePath)
+		if err == nil {
+			apiKey := strings.TrimSpace(string(data))
+			if apiKey != "" {
+				return apiKey, nil
+			}
+			// 文件存在但内容为空，继续重试
+			if i < maxRetries-1 {
+				log.Printf("⏳ Grafana API Key 文件存在但为空，等待内容写入... (尝试 %d/%d)", i+1, maxRetries)
+			}
+		} else {
+			// 文件不存在，继续重试
+			if i < maxRetries-1 {
+				log.Printf("⏳ 等待 Grafana API Key 文件生成... (尝试 %d/%d)", i+1, maxRetries)
+			}
+		}
+		
+		if i < maxRetries-1 {
+			time.Sleep(retryInterval)
+		}
 	}
-	return strings.TrimSpace(string(data)), nil
+	
+	return "", fmt.Errorf("重试 %d 次后仍无法读取有效的 API Key 文件: %s", maxRetries, filePath)
 }
 
 // setDefaults 设置默认配置值
