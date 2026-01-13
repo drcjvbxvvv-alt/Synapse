@@ -89,6 +89,8 @@ create_directories() {
     
     mkdir -p "$DEPLOY_DIR/docker/grafana/secrets"
     
+    chmod -R 755 "$DEPLOY_DIR/docker/grafana/"
+    
     log_success "目录创建完成"
 }
 
