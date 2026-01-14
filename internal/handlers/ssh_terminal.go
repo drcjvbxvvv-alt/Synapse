@@ -75,7 +75,9 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 		logger.Error("WebSocket升级失败", "error", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	logger.Info("SSH WebSocket连接建立")
 
@@ -89,14 +91,14 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 	// 清理资源
 	defer func() {
 		if sshSession != nil {
-			sshSession.Close()
+			_ = sshSession.Close()
 		}
 		if sshClient != nil {
-			sshClient.Close()
+			_ = sshClient.Close()
 		}
 		// 关闭审计会话
 		if sessionInfo != nil && sessionInfo.auditSessionID > 0 && h.auditService != nil {
-			h.auditService.CloseSession(sessionInfo.auditSessionID, "closed")
+			_ = h.auditService.CloseSession(sessionInfo.auditSessionID, "closed")
 		}
 	}()
 
@@ -136,13 +138,13 @@ func (h *SSHHandler) SSHConnect(c *gin.Context) {
 			if err != nil {
 				h.sendError(conn, fmt.Sprintf("SSH连接失败: %v", err))
 				if sessionInfo != nil && sessionInfo.auditSessionID > 0 && h.auditService != nil {
-					h.auditService.CloseSession(sessionInfo.auditSessionID, "error")
+					_ = h.auditService.CloseSession(sessionInfo.auditSessionID, "error")
 				}
 				continue
 			}
 
 			// 发送连接成功消息
-			conn.WriteJSON(SSHMessage{
+			_ = conn.WriteJSON(SSHMessage{
 				Type: "connected",
 			})
 
@@ -331,7 +333,7 @@ func (h *SSHHandler) createSSHConnection(config *SSHConfig) (*ssh.Client, *ssh.S
 	// 创建SSH会话
 	session, err := client.NewSession()
 	if err != nil {
-		client.Close()
+		_ = client.Close()
 		return nil, nil, nil, nil, nil, fmt.Errorf("创建SSH会话失败: %v", err)
 	}
 
@@ -345,38 +347,38 @@ func (h *SSHHandler) createSSHConnection(config *SSHConfig) (*ssh.Client, *ssh.S
 	// 请求伪终端
 	err = session.RequestPty("xterm-256color", 24, 80, modes)
 	if err != nil {
-		session.Close()
-		client.Close()
+		_ = session.Close()
+		_ = client.Close()
 		return nil, nil, nil, nil, nil, fmt.Errorf("请求伪终端失败: %v", err)
 	}
 
 	// 获取输入输出流
 	stdin, err := session.StdinPipe()
 	if err != nil {
-		session.Close()
-		client.Close()
+		_ = session.Close()
+		_ = client.Close()
 		return nil, nil, nil, nil, nil, fmt.Errorf("获取stdin失败: %v", err)
 	}
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
-		session.Close()
-		client.Close()
+		_ = session.Close()
+		_ = client.Close()
 		return nil, nil, nil, nil, nil, fmt.Errorf("获取stdout失败: %v", err)
 	}
 
 	stderr, err := session.StderrPipe()
 	if err != nil {
-		session.Close()
-		client.Close()
+		_ = session.Close()
+		_ = client.Close()
 		return nil, nil, nil, nil, nil, fmt.Errorf("获取stderr失败: %v", err)
 	}
 
 	// 启动shell
 	err = session.Shell()
 	if err != nil {
-		session.Close()
-		client.Close()
+		_ = session.Close()
+		_ = client.Close()
 		return nil, nil, nil, nil, nil, fmt.Errorf("启动shell失败: %v", err)
 	}
 
@@ -444,7 +446,7 @@ func (h *SSHHandler) readSSHOutput(conn *websocket.Conn, stdout, stderr io.Reade
 
 // sendError 发送错误消息
 func (h *SSHHandler) sendError(conn *websocket.Conn, errorMsg string) {
-	conn.WriteJSON(SSHMessage{
+	_ = conn.WriteJSON(SSHMessage{
 		Type:  "error",
 		Error: errorMsg,
 	})

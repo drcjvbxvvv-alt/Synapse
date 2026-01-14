@@ -58,7 +58,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	}
 
 	// 自动迁移测试表
-	s.db.AutoMigrate(&models.User{}, &models.Cluster{}, &models.Role{})
+	_ = s.db.AutoMigrate(&models.User{}, &models.Cluster{}, &models.Role{})
 
 	// 设置路由
 	s.router = s.setupRouter()
@@ -73,7 +73,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 
 		sqlDB, _ := s.db.DB()
 		if sqlDB != nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	}
 }
@@ -124,7 +124,7 @@ func (s *IntegrationTestSuite) TestClusterCRUD() {
 	s.Equal(http.StatusOK, w.Code)
 
 	var importResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &importResp)
+	_ = json.Unmarshal(w.Body.Bytes(), &importResp)
 	s.Equal(float64(200), importResp["code"])
 
 	// 获取导入的集群 ID
@@ -177,7 +177,7 @@ func (s *IntegrationTestSuite) TestAuthFlow() {
 
 	// 验证登录响应
 	var loginResp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &loginResp)
+	_ = json.Unmarshal(w.Body.Bytes(), &loginResp)
 
 	if loginResp["code"] == float64(200) {
 		data := loginResp["data"].(map[string]interface{})

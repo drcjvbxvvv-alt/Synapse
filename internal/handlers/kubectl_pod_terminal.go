@@ -255,7 +255,7 @@ func (h *KubectlPodTerminalHandler) waitForPodRunning(client *kubernetes.Clients
 		}
 
 		if pod.Status.Phase == corev1.PodFailed {
-			return fmt.Errorf("Pod启动失败: %s", pod.Status.Message)
+			return fmt.Errorf("pod启动失败: %s", pod.Status.Message)
 		}
 
 		select {

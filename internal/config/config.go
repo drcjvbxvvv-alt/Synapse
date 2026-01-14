@@ -76,31 +76,31 @@ func Load() *Config {
 	viper.AutomaticEnv()
 
 	// 绑定服务器环境变量
-	viper.BindEnv("server.port", "PORT")
-	viper.BindEnv("server.port", "SERVER_PORT")
-	viper.BindEnv("server.mode", "SERVER_MODE")
+	_ = viper.BindEnv("server.port", "PORT")
+	_ = viper.BindEnv("server.port", "SERVER_PORT")
+	_ = viper.BindEnv("server.mode", "SERVER_MODE")
 
 	// 绑定数据库环境变量
-	viper.BindEnv("database.driver", "DB_DRIVER")
-	viper.BindEnv("database.host", "DB_HOST")
-	viper.BindEnv("database.port", "DB_PORT")
-	viper.BindEnv("database.username", "DB_USERNAME")
-	viper.BindEnv("database.password", "DB_PASSWORD")
-	viper.BindEnv("database.database", "DB_DATABASE")
-	viper.BindEnv("database.charset", "DB_CHARSET")
+	_ = viper.BindEnv("database.driver", "DB_DRIVER")
+	_ = viper.BindEnv("database.host", "DB_HOST")
+	_ = viper.BindEnv("database.port", "DB_PORT")
+	_ = viper.BindEnv("database.username", "DB_USERNAME")
+	_ = viper.BindEnv("database.password", "DB_PASSWORD")
+	_ = viper.BindEnv("database.database", "DB_DATABASE")
+	_ = viper.BindEnv("database.charset", "DB_CHARSET")
 
 	// 绑定 JWT 环境变量
-	viper.BindEnv("jwt.secret", "JWT_SECRET")
-	viper.BindEnv("jwt.expire_time", "JWT_EXPIRE_TIME")
+	_ = viper.BindEnv("jwt.secret", "JWT_SECRET")
+	_ = viper.BindEnv("jwt.expire_time", "JWT_EXPIRE_TIME")
 
 	// 绑定日志环境变量
-	viper.BindEnv("log.level", "LOG_LEVEL")
+	_ = viper.BindEnv("log.level", "LOG_LEVEL")
 
 	// 绑定 Grafana 环境变量
-	viper.BindEnv("grafana.enabled", "GRAFANA_ENABLED")
-	viper.BindEnv("grafana.url", "GRAFANA_URL")
-	viper.BindEnv("grafana.api_key", "GRAFANA_API_KEY")
-	viper.BindEnv("grafana.api_key_file", "GRAFANA_API_KEY_FILE")
+	_ = viper.BindEnv("grafana.enabled", "GRAFANA_ENABLED")
+	_ = viper.BindEnv("grafana.url", "GRAFANA_URL")
+	_ = viper.BindEnv("grafana.api_key", "GRAFANA_API_KEY")
+	_ = viper.BindEnv("grafana.api_key_file", "GRAFANA_API_KEY_FILE")
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Printf("配置文件读取失败，使用默认配置: %v", err)

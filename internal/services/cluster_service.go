@@ -305,7 +305,7 @@ func (s *ClusterService) GetClusterMetrics(clusterID uint) (*models.ClusterMetri
 func (s *ClusterService) ConvertToStoredCluster(cluster *models.Cluster) *StoredCluster {
 	var labels map[string]string
 	if cluster.Labels != "" {
-		json.Unmarshal([]byte(cluster.Labels), &labels)
+		_ = json.Unmarshal([]byte(cluster.Labels), &labels)
 	}
 	if labels == nil {
 		labels = make(map[string]string)

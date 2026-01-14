@@ -107,7 +107,9 @@ func (a *LogAggregator) streamPodLogs(
 		logger.Error("获取日志流失败", "pod", target.Pod, "error", err)
 		return
 	}
-	defer stream.Close()
+	defer func() {
+		_ = stream.Close()
+	}()
 
 	reader := bufio.NewReader(stream)
 	for {

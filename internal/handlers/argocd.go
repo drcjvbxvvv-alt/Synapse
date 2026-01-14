@@ -319,7 +319,10 @@ func (h *ArgoCDHandler) SyncApplication(c *gin.Context) {
 	appName := c.Param("appName")
 
 	var req models.SyncApplicationRequest
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "请求参数错误: " + err.Error()})
+		return
+	}
 
 	if err := h.argoCDSvc.SyncApplication(c.Request.Context(), uint(clusterID), appName, req.Revision); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": err.Error()})

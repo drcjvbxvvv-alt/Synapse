@@ -139,11 +139,11 @@ func (s *MonitoringConfigService) validateConfig(config *models.MonitoringConfig
 			// 无需认证，不需要验证额外字段
 		case "basic":
 			if config.Auth.Username == "" || config.Auth.Password == "" {
-				return fmt.Errorf("Basic 认证需要用户名和密码")
+				return fmt.Errorf("basic 认证需要用户名和密码")
 			}
 		case "bearer":
 			if config.Auth.Token == "" {
-				return fmt.Errorf("Bearer 认证需要 Token")
+				return fmt.Errorf("bearer 认证需要 Token")
 			}
 		case "mtls":
 			if config.Auth.CertFile == "" || config.Auth.KeyFile == "" {

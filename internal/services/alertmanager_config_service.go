@@ -97,7 +97,7 @@ func (s *AlertManagerConfigService) validateConfig(config *models.AlertManagerCo
 	}
 
 	if config.Endpoint == "" {
-		return fmt.Errorf("Alertmanager 端点地址不能为空")
+		return fmt.Errorf("alertmanager 端点地址不能为空")
 	}
 
 	// 验证认证配置
@@ -107,11 +107,11 @@ func (s *AlertManagerConfigService) validateConfig(config *models.AlertManagerCo
 			// 无需认证，不需要验证额外字段
 		case "basic":
 			if config.Auth.Username == "" || config.Auth.Password == "" {
-				return fmt.Errorf("Basic 认证需要用户名和密码")
+				return fmt.Errorf("basic 认证需要用户名和密码")
 			}
 		case "bearer":
 			if config.Auth.Token == "" {
-				return fmt.Errorf("Bearer 认证需要 Token")
+				return fmt.Errorf("bearer 认证需要 token")
 			}
 		default:
 			return fmt.Errorf("不支持的认证类型: %s", config.Auth.Type)

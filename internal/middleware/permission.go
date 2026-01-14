@@ -269,10 +269,9 @@ func PlatformAdminRequired() gin.HandlerFunc {
 
 		// TODO: 检查用户是否是平台管理员
 		// 目前简单实现：ID为1的用户是超级管理员
-		if userID != 1 {
-			// 实际应用中应该从数据库查询用户角色
-			// 这里先放行，后续完善
-		}
+		// 实际应用中应该从数据库查询用户角色
+		// 这里先放行，后续完善
+		_ = userID
 
 		c.Next()
 	}

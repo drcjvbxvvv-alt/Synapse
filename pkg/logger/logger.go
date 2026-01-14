@@ -50,7 +50,7 @@ func Init(level string) {
 func Debug(format string, args ...interface{}) {
 	if currentLevel <= DEBUG {
 		message := fmt.Sprintf("[DEBUG] "+format, args...)
-		log.Output(2, message)
+		_ = log.Output(2, message)
 		klog.V(4).Info(message)
 	}
 }
@@ -59,7 +59,7 @@ func Debug(format string, args ...interface{}) {
 func Info(format string, args ...interface{}) {
 	if currentLevel <= INFO {
 		message := fmt.Sprintf("[INFO] "+format, args...)
-		log.Output(2, message)
+		_ = log.Output(2, message)
 	}
 }
 
@@ -67,7 +67,7 @@ func Info(format string, args ...interface{}) {
 func Warn(format string, args ...interface{}) {
 	if currentLevel <= WARN {
 		message := fmt.Sprintf("[WARN] "+format, args...)
-		log.Output(2, message)
+		_ = log.Output(2, message)
 		klog.Warning(message)
 	}
 }
@@ -76,7 +76,7 @@ func Warn(format string, args ...interface{}) {
 func Error(format string, args ...interface{}) {
 	if currentLevel <= ERROR {
 		message := fmt.Sprintf("[ERROR] "+format, args...)
-		log.Output(2, message)
+		_ = log.Output(2, message)
 		klog.Error(message)
 	}
 }
@@ -84,6 +84,6 @@ func Error(format string, args ...interface{}) {
 // Fatal 致命错误日志
 func Fatal(format string, args ...interface{}) {
 	message := fmt.Sprintf("[FATAL] "+format, args...)
-	log.Output(2, message)
+	_ = log.Output(2, message)
 	klog.Fatal(message)
 }

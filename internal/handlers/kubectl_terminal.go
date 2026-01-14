@@ -105,11 +105,13 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		logger.Error("升级WebSocket连接失败", "error", err)
 		// 关闭审计会话
 		if h.auditService != nil && auditSessionID > 0 {
-			h.auditService.CloseSession(auditSessionID, "error")
+			_ = h.auditService.CloseSession(auditSessionID, "error")
 		}
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 创建会话
 	sessionID := fmt.Sprintf("%s-%d", clusterID, time.Now().Unix())
@@ -138,11 +140,11 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		h.sessionsMutex.Unlock()
 		cancel()
 		if session.Cmd != nil && session.Cmd.Process != nil {
-			session.Cmd.Process.Kill()
+			_ = session.Cmd.Process.Kill()
 		}
 		// 关闭审计会话
 		if h.auditService != nil && auditSessionID > 0 {
-			h.auditService.CloseSession(auditSessionID, "closed")
+			_ = h.auditService.CloseSession(auditSessionID, "closed")
 		}
 	}()
 
@@ -152,7 +154,9 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		h.sendMessage(conn, "error", fmt.Sprintf("创建kubeconfig失败: %v", err))
 		return
 	}
-	defer os.Remove(kubeconfigPath)
+	defer func() {
+		_ = os.Remove(kubeconfigPath)
+	}()
 
 	// 发送欢迎消息
 	h.sendMessage(conn, "output", fmt.Sprintf("Connected to cluster: %s\n", cluster.Name))
@@ -565,17 +569,17 @@ func (h *KubectlTerminalHandler) handleInterrupt(session *KubectlSession) {
 
 		// 在Windows上，Kill()可能不会立即终止进程，尝试使用taskkill
 		if runtime.GOOS == "windows" {
-			exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
+			_ = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
 		} else {
 			// 在Unix系统上，发送SIGINT信号（等同于Ctrl+C）
-			cmd.Process.Signal(syscall.SIGINT)
+			_ = cmd.Process.Signal(syscall.SIGINT)
 
 			// 给进程一点时间响应SIGINT
 			time.Sleep(100 * time.Millisecond)
 
 			// 如果进程仍在运行，强制终止
 			if cmd.ProcessState == nil || !cmd.ProcessState.Exited() {
-				cmd.Process.Kill()
+				_ = cmd.Process.Kill()
 			}
 		}
 	}
@@ -590,7 +594,9 @@ func (h *KubectlTerminalHandler) createTempKubeconfig(cluster *models.Cluster) (
 	if err != nil {
 		return "", fmt.Errorf("创建临时文件失败: %v", err)
 	}
-	defer tmpFile.Close()
+	defer func() {
+		_ = tmpFile.Close()
+	}()
 
 	// 写入kubeconfig内容
 	var kubeconfigContent string

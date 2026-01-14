@@ -946,6 +946,7 @@ func parseTimeRange(timeRange string) (int64, int64) {
 }
 
 // extractInstantValue 从 Prometheus 响应中提取即时值（用于 instant query）
+//nolint:unused // 保留用于未来使用
 func extractInstantValue(resp *models.MetricsResponse) float64 {
 	if resp == nil || len(resp.Data.Result) == 0 {
 		return -1
@@ -954,8 +955,9 @@ func extractInstantValue(resp *models.MetricsResponse) float64 {
 	if len(result.Value) >= 2 {
 		if val, ok := result.Value[1].(string); ok {
 			var f float64
-			fmt.Sscanf(val, "%f", &f)
-			return f
+			if _, err := fmt.Sscanf(val, "%f", &f); err == nil {
+				return f
+			}
 		}
 	}
 	return -1
@@ -973,8 +975,9 @@ func extractLatestValue(resp *models.MetricsResponse) float64 {
 		if len(lastValue) >= 2 {
 			if strVal, ok := lastValue[1].(string); ok {
 				var f float64
-				fmt.Sscanf(strVal, "%f", &f)
-				return f
+				if _, err := fmt.Sscanf(strVal, "%f", &f); err == nil {
+					return f
+				}
 			}
 		}
 	}
@@ -982,14 +985,16 @@ func extractLatestValue(resp *models.MetricsResponse) float64 {
 	if len(result.Value) >= 2 {
 		if val, ok := result.Value[1].(string); ok {
 			var f float64
-			fmt.Sscanf(val, "%f", &f)
-			return f
+			if _, err := fmt.Sscanf(val, "%f", &f); err == nil {
+				return f
+			}
 		}
 	}
 	return -1
 }
 
 // extractRangeSeries 从 Prometheus 响应中提取范围序列
+//nolint:unused // 保留用于未来使用
 func extractRangeSeries(resp *models.MetricsResponse) []TrendDataPoint {
 	if resp == nil || len(resp.Data.Result) == 0 {
 		return nil
@@ -1001,7 +1006,7 @@ func extractRangeSeries(resp *models.MetricsResponse) []TrendDataPoint {
 			ts, _ := v[0].(float64)
 			var val float64
 			if strVal, ok := v[1].(string); ok {
-				fmt.Sscanf(strVal, "%f", &val)
+				_, _ = fmt.Sscanf(strVal, "%f", &val)
 			}
 			points = append(points, TrendDataPoint{
 				Timestamp: int64(ts),

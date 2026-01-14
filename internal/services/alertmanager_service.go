@@ -37,7 +37,7 @@ func NewAlertManagerService() *AlertManagerService {
 // TestConnection 测试 Alertmanager 连接
 func (s *AlertManagerService) TestConnection(ctx context.Context, config *models.AlertManagerConfig) error {
 	if !config.Enabled {
-		return fmt.Errorf("Alertmanager 未启用")
+		return fmt.Errorf("alertmanager 未启用")
 	}
 
 	// 构建测试 URL
@@ -63,11 +63,13 @@ func (s *AlertManagerService) TestConnection(ctx context.Context, config *models
 	if err != nil {
 		return fmt.Errorf("连接测试失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Alertmanager 响应异常: %s, 状态码: %d", string(body), resp.StatusCode)
+		return fmt.Errorf("alertmanager 响应异常: %s, 状态码: %d", string(body), resp.StatusCode)
 	}
 
 	return nil
@@ -76,7 +78,7 @@ func (s *AlertManagerService) TestConnection(ctx context.Context, config *models
 // GetAlerts 获取告警列表
 func (s *AlertManagerService) GetAlerts(ctx context.Context, config *models.AlertManagerConfig, filter map[string]string) ([]models.Alert, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("Alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未启用")
 	}
 
 	// 构建 URL
@@ -88,11 +90,9 @@ func (s *AlertManagerService) GetAlerts(ctx context.Context, config *models.Aler
 
 	// 添加过滤参数
 	params := url.Values{}
-	if filter != nil {
-		for key, value := range filter {
-			if value != "" {
-				params.Add("filter", fmt.Sprintf("%s=%s", key, value))
-			}
+	for key, value := range filter {
+		if value != "" {
+			params.Add("filter", fmt.Sprintf("%s=%s", key, value))
 		}
 	}
 	if len(params) > 0 {
@@ -115,7 +115,9 @@ func (s *AlertManagerService) GetAlerts(ctx context.Context, config *models.Aler
 	if err != nil {
 		return nil, fmt.Errorf("获取告警失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
@@ -139,7 +141,7 @@ func (s *AlertManagerService) GetAlerts(ctx context.Context, config *models.Aler
 // GetAlertGroups 获取告警分组
 func (s *AlertManagerService) GetAlertGroups(ctx context.Context, config *models.AlertManagerConfig) ([]models.AlertGroup, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("Alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未启用")
 	}
 
 	// 构建 URL
@@ -165,7 +167,9 @@ func (s *AlertManagerService) GetAlertGroups(ctx context.Context, config *models
 	if err != nil {
 		return nil, fmt.Errorf("获取告警分组失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
@@ -189,7 +193,7 @@ func (s *AlertManagerService) GetAlertGroups(ctx context.Context, config *models
 // GetSilences 获取静默规则列表
 func (s *AlertManagerService) GetSilences(ctx context.Context, config *models.AlertManagerConfig) ([]models.Silence, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("Alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未启用")
 	}
 
 	// 构建 URL
@@ -215,7 +219,9 @@ func (s *AlertManagerService) GetSilences(ctx context.Context, config *models.Al
 	if err != nil {
 		return nil, fmt.Errorf("获取静默规则失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
@@ -239,7 +245,7 @@ func (s *AlertManagerService) GetSilences(ctx context.Context, config *models.Al
 // CreateSilence 创建静默规则
 func (s *AlertManagerService) CreateSilence(ctx context.Context, config *models.AlertManagerConfig, silence *models.CreateSilenceRequest) (*models.Silence, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("Alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未启用")
 	}
 
 	// 构建 URL
@@ -272,7 +278,9 @@ func (s *AlertManagerService) CreateSilence(ctx context.Context, config *models.
 	if err != nil {
 		return nil, fmt.Errorf("创建静默规则失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
@@ -311,7 +319,7 @@ func (s *AlertManagerService) CreateSilence(ctx context.Context, config *models.
 // DeleteSilence 删除静默规则
 func (s *AlertManagerService) DeleteSilence(ctx context.Context, config *models.AlertManagerConfig, silenceID string) error {
 	if !config.Enabled {
-		return fmt.Errorf("Alertmanager 未启用")
+		return fmt.Errorf("alertmanager 未启用")
 	}
 
 	// 构建 URL
@@ -337,7 +345,9 @@ func (s *AlertManagerService) DeleteSilence(ctx context.Context, config *models.
 	if err != nil {
 		return fmt.Errorf("删除静默规则失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
@@ -351,7 +361,7 @@ func (s *AlertManagerService) DeleteSilence(ctx context.Context, config *models.
 // GetStatus 获取 Alertmanager 状态
 func (s *AlertManagerService) GetStatus(ctx context.Context, config *models.AlertManagerConfig) (*models.AlertManagerStatus, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("Alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未启用")
 	}
 
 	// 构建 URL
@@ -377,7 +387,9 @@ func (s *AlertManagerService) GetStatus(ctx context.Context, config *models.Aler
 	if err != nil {
 		return nil, fmt.Errorf("获取状态失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
@@ -401,7 +413,7 @@ func (s *AlertManagerService) GetStatus(ctx context.Context, config *models.Aler
 // GetReceivers 获取接收器列表
 func (s *AlertManagerService) GetReceivers(ctx context.Context, config *models.AlertManagerConfig) ([]models.Receiver, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("Alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未启用")
 	}
 
 	// 构建 URL
@@ -427,7 +439,9 @@ func (s *AlertManagerService) GetReceivers(ctx context.Context, config *models.A
 	if err != nil {
 		return nil, fmt.Errorf("获取接收器失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)

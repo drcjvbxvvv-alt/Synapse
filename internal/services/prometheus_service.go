@@ -66,7 +66,9 @@ func (s *PrometheusService) QueryPrometheus(ctx context.Context, config *models.
 	if err != nil {
 		return nil, fmt.Errorf("执行请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
@@ -99,10 +101,8 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 	metrics := &models.ClusterMetricsData{}
 
 	// 构建集群标签选择器
-	clusterSelector := s.buildClusterSelector(config.Labels, clusterName)
-
-	// 如果是 prometheus ，标签不用过来
-	clusterSelector = ""
+	// 如果是 prometheus，标签不用过来
+	clusterSelector := ""
 
 	// 使用 WaitGroup 和 Mutex 进行并发查询
 	var wg sync.WaitGroup
@@ -112,7 +112,7 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if cpuSeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m]))) * 100"), start, end, step); err == nil {
+		if cpuSeries, err := s.queryMetricSeries(ctx, config, "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m]))) * 100", start, end, step); err == nil {
 			mu.Lock()
 			metrics.CPU = cpuSeries
 			mu.Unlock()
@@ -123,7 +123,7 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if memorySeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100"), start, end, step); err == nil {
+		if memorySeries, err := s.queryMetricSeries(ctx, config, "(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100", start, end, step); err == nil {
 			mu.Lock()
 			metrics.Memory = memorySeries
 			mu.Unlock()
@@ -580,6 +580,7 @@ func (s *PrometheusService) parseTimeRange(timeRange string) (int64, int64, erro
 }
 
 // buildClusterSelector 构建集群标签选择器
+//nolint:unused // 保留用于未来使用
 func (s *PrometheusService) buildClusterSelector(labels map[string]string, clusterName string) string {
 	selectors := []string{}
 
@@ -1098,7 +1099,9 @@ func (s *PrometheusService) TestConnection(ctx context.Context, config *models.M
 	if err != nil {
 		return fmt.Errorf("连接测试失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

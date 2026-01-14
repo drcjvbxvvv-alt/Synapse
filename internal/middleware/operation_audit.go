@@ -183,7 +183,7 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 			bodyBytes, err := io.ReadAll(c.Request.Body)
 			if err == nil && len(bodyBytes) > 0 {
 				c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-				json.Unmarshal(bodyBytes, &requestBody)
+				_ = json.Unmarshal(bodyBytes, &requestBody)
 			}
 		}
 

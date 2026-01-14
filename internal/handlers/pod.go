@@ -479,7 +479,9 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 		})
 		return
 	}
-	defer logs.Close()
+	defer func() {
+		_ = logs.Close()
+	}()
 
 	// 如果是follow模式，返回错误提示使用WebSocket
 	if follow {
@@ -846,7 +848,9 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 		logger.Error("升级WebSocket连接失败", "error", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 发送连接成功消息
 	err = conn.WriteJSON(map[string]interface{}{
@@ -866,7 +870,7 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
 	}
 	if err != nil {
-		conn.WriteJSON(map[string]interface{}{
+		_ = conn.WriteJSON(map[string]interface{}{
 			"type":    "error",
 			"message": "创建K8s客户端失败: " + err.Error(),
 		})
@@ -907,7 +911,7 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 	// 使用无超时config创建临时clientset
 	logClientset, err := kubernetes.NewForConfig(&logStreamConfig)
 	if err != nil {
-		conn.WriteJSON(map[string]interface{}{
+		_ = conn.WriteJSON(map[string]interface{}{
 			"type":    "error",
 			"message": "创建日志客户端失败: " + err.Error(),
 		})
@@ -918,13 +922,15 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 	req := logClientset.CoreV1().Pods(namespace).GetLogs(name, logOptions)
 	logStream, err := req.Stream(context.Background())
 	if err != nil {
-		conn.WriteJSON(map[string]interface{}{
+		_ = conn.WriteJSON(map[string]interface{}{
 			"type":    "error",
 			"message": "获取日志流失败: " + err.Error(),
 		})
 		return
 	}
-	defer logStream.Close()
+	defer func() {
+		_ = logStream.Close()
+	}()
 
 	// 创建读取器
 	reader := bufio.NewReader(logStream)
@@ -936,7 +942,7 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 			if err != nil {
 				logger.Info("WebSocket连接关闭", "error", err)
 				cancel()
-				logStream.Close() // 主动关闭日志流
+				_ = logStream.Close() // 主动关闭日志流
 				return
 			}
 		}
@@ -957,7 +963,7 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 		select {
 		case <-ctx.Done():
 			// 连接被关闭
-			conn.WriteJSON(map[string]interface{}{
+			_ = conn.WriteJSON(map[string]interface{}{
 				"type":    "closed",
 				"message": "日志流已关闭",
 			})
@@ -968,7 +974,7 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 			if err != nil {
 				if err == io.EOF {
 					// 日志流正常结束
-					conn.WriteJSON(map[string]interface{}{
+					_ = conn.WriteJSON(map[string]interface{}{
 						"type":    "end",
 						"message": "日志流已结束",
 					})
@@ -993,7 +999,7 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 
 				// 其他错误才记录ERROR
 				logger.Error("读取日志失败", "error", err)
-				conn.WriteJSON(map[string]interface{}{
+				_ = conn.WriteJSON(map[string]interface{}{
 					"type":    "error",
 					"message": "读取日志失败: " + err.Error(),
 				})

@@ -78,8 +78,8 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 			// 如果base64解码失败，尝试直接使用原始数据
 			caCertData = []byte(caCert)
 		}
-		config.TLSClientConfig.CAData = caCertData
-		config.TLSClientConfig.Insecure = false
+		config.CAData = caCertData
+		config.Insecure = false
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
@@ -177,6 +177,8 @@ func (c *K8sClient) TestConnection() (*ClusterInfo, error) {
 }
 
 // analyzeConnectionError 分析连接错误并提供诊断信息
+//
+//nolint:unused // 保留用于未来使用
 func analyzeConnectionError(err error) string {
 	errStr := err.Error()
 
@@ -926,7 +928,7 @@ func (c *K8sClient) DrainNode(nodeName string, options map[string]interface{}) e
 				}
 			}
 			if hasEmptyDir && !force {
-				return fmt.Errorf("Pod %s/%s 使用emptyDir卷，需要设置deleteLocalData=true或force=true", pod.Namespace, pod.Name)
+				return fmt.Errorf("pod %s/%s 使用emptyDir卷，需要设置deleteLocalData=true或force=true", pod.Namespace, pod.Name)
 			}
 		}
 

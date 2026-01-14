@@ -99,7 +99,9 @@ func (s *LDAPService) AuthenticateWithConfig(username, password string, config *
 	if err != nil {
 		return nil, fmt.Errorf("连接LDAP服务器失败: %w", err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 使用绑定账号进行绑定
 	if config.BindDN != "" && config.BindPassword != "" {
@@ -167,7 +169,9 @@ func (s *LDAPService) TestConnection(config *models.LDAPConfig) error {
 	if err != nil {
 		return fmt.Errorf("连接LDAP服务器失败: %w", err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 如果配置了绑定DN，测试绑定
 	if config.BindDN != "" && config.BindPassword != "" {
@@ -190,9 +194,11 @@ func (s *LDAPService) connect(config *models.LDAPConfig) (*ldap.Conn, error) {
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: config.SkipTLSVerify,
 		}
-		conn, err = ldap.DialTLS("tcp", addr, tlsConfig)
+		ldapURL := fmt.Sprintf("ldaps://%s", addr)
+		conn, err = ldap.DialURL(ldapURL, ldap.DialWithTLSConfig(tlsConfig))
 	} else {
-		conn, err = ldap.Dial("tcp", addr)
+		ldapURL := fmt.Sprintf("ldap://%s", addr)
+		conn, err = ldap.DialURL(ldapURL)
 	}
 
 	if err != nil {

@@ -93,7 +93,9 @@ func (s *ArgoCDService) TestConnection(ctx context.Context, config *models.ArgoC
 	if err != nil {
 		return fmt.Errorf("连接 ArgoCD 失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("认证失败: Token 无效或已过期")
@@ -141,7 +143,9 @@ func (s *ArgoCDService) ListApplications(ctx context.Context, clusterID uint) ([
 	if err != nil {
 		return nil, fmt.Errorf("获取应用列表失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -193,7 +197,9 @@ func (s *ArgoCDService) GetApplication(ctx context.Context, clusterID uint, appN
 	if err != nil {
 		return nil, fmt.Errorf("获取应用详情失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("应用 %s 不存在", appName)
@@ -313,7 +319,9 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 	if err != nil {
 		return nil, fmt.Errorf("创建应用失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -421,7 +429,9 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 	if err != nil {
 		return nil, fmt.Errorf("更新应用失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -471,7 +481,9 @@ func (s *ArgoCDService) SyncApplication(ctx context.Context, clusterID uint, app
 	if err != nil {
 		return fmt.Errorf("同步应用失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -506,7 +518,9 @@ func (s *ArgoCDService) DeleteApplication(ctx context.Context, clusterID uint, a
 	if err != nil {
 		return fmt.Errorf("删除应用失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -546,7 +560,9 @@ func (s *ArgoCDService) RollbackApplication(ctx context.Context, clusterID uint,
 	if err != nil {
 		return fmt.Errorf("回滚失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -580,7 +596,9 @@ func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID u
 	if err != nil {
 		return nil, fmt.Errorf("获取资源树失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -675,7 +693,9 @@ func (s *ArgoCDService) getSessionToken(config *models.ArgoCDConfig) (string, er
 	if err != nil {
 		return "", fmt.Errorf("登录请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)

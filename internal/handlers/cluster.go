@@ -504,11 +504,11 @@ func (h *ClusterHandler) GetClusterEvents(c *gin.Context) {
 		// 关键字过滤（对象kind/name/ns、reason、message）
 		if search != "" {
 			s := strings.ToLower(search)
-			if !(strings.Contains(strings.ToLower(e.InvolvedObject.Kind), s) ||
-				strings.Contains(strings.ToLower(e.InvolvedObject.Name), s) ||
-				strings.Contains(strings.ToLower(e.InvolvedObject.Namespace), s) ||
-				strings.Contains(strings.ToLower(e.Reason), s) ||
-				strings.Contains(strings.ToLower(e.Message), s)) {
+			if !strings.Contains(strings.ToLower(e.InvolvedObject.Kind), s) &&
+				!strings.Contains(strings.ToLower(e.InvolvedObject.Name), s) &&
+				!strings.Contains(strings.ToLower(e.InvolvedObject.Namespace), s) &&
+				!strings.Contains(strings.ToLower(e.Reason), s) &&
+				!strings.Contains(strings.ToLower(e.Message), s) {
 				continue
 			}
 		}
@@ -521,7 +521,7 @@ func (h *ClusterHandler) GetClusterEvents(c *gin.Context) {
 			lastTS = e.EventTime.Time.UTC().Format(time.RFC3339)
 		} else if !e.FirstTimestamp.IsZero() {
 			lastTS = e.FirstTimestamp.Time.UTC().Format(time.RFC3339)
-		} else if !e.ObjectMeta.CreationTimestamp.IsZero() {
+		} else if !e.CreationTimestamp.IsZero() {
 			lastTS = e.ObjectMeta.CreationTimestamp.Time.UTC().Format(time.RFC3339)
 		}
 
@@ -531,10 +531,10 @@ func (h *ClusterHandler) GetClusterEvents(c *gin.Context) {
 				"name":      e.Name,
 				"namespace": e.Namespace,
 				"creationTimestamp": func() string {
-					if e.ObjectMeta.CreationTimestamp.IsZero() {
+					if e.CreationTimestamp.IsZero() {
 						return ""
 					}
-					return e.ObjectMeta.CreationTimestamp.Time.UTC().Format(time.RFC3339)
+					return e.CreationTimestamp.Time.UTC().Format(time.RFC3339)
 				}(),
 			},
 			"involvedObject": gin.H{
@@ -816,8 +816,9 @@ func extractLatestValueFromResponse(resp *models.MetricsResponse) float64 {
 		if len(lastValue) >= 2 {
 			if strVal, ok := lastValue[1].(string); ok {
 				var f float64
-				fmt.Sscanf(strVal, "%f", &f)
+				if _, err := fmt.Sscanf(strVal, "%f", &f); err == nil {
 				return f
+				}
 			}
 		}
 	}
@@ -825,14 +826,16 @@ func extractLatestValueFromResponse(resp *models.MetricsResponse) float64 {
 	if len(result.Value) >= 2 {
 		if val, ok := result.Value[1].(string); ok {
 			var f float64
-			fmt.Sscanf(val, "%f", &f)
+			if _, err := fmt.Sscanf(val, "%f", &f); err == nil {
 			return f
+			}
 		}
 	}
 	return -1
 }
 
 // maxInt 返回较大的整数，避免出现负数（例如 worker = total - 1）
+//nolint:unused // 保留用于未来使用
 func maxInt(a, b int) int {
 	if a > b {
 		return a

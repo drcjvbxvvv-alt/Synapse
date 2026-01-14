@@ -123,7 +123,9 @@ func (s *GrafanaService) DeleteDataSource(clusterName string) error {
 	if err != nil {
 		return fmt.Errorf("删除数据源请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode == http.StatusNotFound {
 		logger.Info("数据源不存在，无需删除", "name", dataSourceName)
@@ -153,7 +155,9 @@ func (s *GrafanaService) dataSourceExists(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	return resp.StatusCode == http.StatusOK, nil
 }
@@ -191,7 +195,9 @@ func (s *GrafanaService) createDataSource(name, clusterName, prometheusURL strin
 	if err != nil {
 		return fmt.Errorf("创建数据源请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -217,7 +223,9 @@ func (s *GrafanaService) updateDataSource(name, clusterName, prometheusURL strin
 	if err != nil {
 		return fmt.Errorf("获取数据源失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("数据源不存在: %s", name)
@@ -260,7 +268,9 @@ func (s *GrafanaService) updateDataSource(name, clusterName, prometheusURL strin
 	if err != nil {
 		return fmt.Errorf("更新数据源请求失败: %w", err)
 	}
-	defer updateResp.Body.Close()
+	defer func() {
+		_ = updateResp.Body.Close()
+	}()
 
 	if updateResp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(updateResp.Body)
@@ -280,7 +290,7 @@ func (s *GrafanaService) setHeaders(req *http.Request) {
 // TestConnection 测试 Grafana 连接
 func (s *GrafanaService) TestConnection() error {
 	if !s.IsEnabled() {
-		return fmt.Errorf("Grafana 服务未配置")
+		return fmt.Errorf("grafana 服务未配置")
 	}
 
 	url := fmt.Sprintf("%s/api/health", s.baseURL)
@@ -295,10 +305,12 @@ func (s *GrafanaService) TestConnection() error {
 	if err != nil {
 		return fmt.Errorf("连接 Grafana 失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Grafana 健康检查失败: status=%d", resp.StatusCode)
+		return fmt.Errorf("grafana 健康检查失败: status=%d", resp.StatusCode)
 	}
 
 	return nil
@@ -307,7 +319,7 @@ func (s *GrafanaService) TestConnection() error {
 // ListDataSources 列出所有数据源
 func (s *GrafanaService) ListDataSources() ([]DataSourceResponse, error) {
 	if !s.IsEnabled() {
-		return nil, fmt.Errorf("Grafana 服务未配置")
+		return nil, fmt.Errorf("grafana 服务未配置")
 	}
 
 	url := fmt.Sprintf("%s/api/datasources", s.baseURL)
@@ -322,7 +334,9 @@ func (s *GrafanaService) ListDataSources() ([]DataSourceResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("获取数据源列表失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("获取数据源列表失败: status=%d", resp.StatusCode)

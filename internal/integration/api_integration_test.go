@@ -56,7 +56,7 @@ func (s *APIIntegrationTestSuite) SetupSuite() {
 		},
 	}
 
-	s.db.AutoMigrate(&models.User{}, &models.Cluster{}, &models.Role{})
+	_ = s.db.AutoMigrate(&models.User{}, &models.Cluster{}, &models.Role{})
 	s.router = s.setupRouter()
 
 	// 创建测试用户并获取 token
@@ -71,7 +71,7 @@ func (s *APIIntegrationTestSuite) TearDownSuite() {
 
 		sqlDB, _ := s.db.DB()
 		if sqlDB != nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	}
 }
@@ -127,7 +127,7 @@ func (s *APIIntegrationTestSuite) setupTestUser() {
 	s.router.ServeHTTP(w, req)
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 
 	if resp["code"] == float64(200) {
 		data := resp["data"].(map[string]interface{})
@@ -162,7 +162,7 @@ func (s *APIIntegrationTestSuite) TestClusterAPI() {
 	s.Equal(http.StatusOK, w.Code)
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	s.Equal(float64(200), resp["code"])
 }
 

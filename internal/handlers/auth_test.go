@@ -65,7 +65,7 @@ func (s *AuthHandlerTestSuite) TearDownTest() {
 	if s.db != nil {
 		sqlDB, _ := s.db.DB()
 		if sqlDB != nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	}
 }

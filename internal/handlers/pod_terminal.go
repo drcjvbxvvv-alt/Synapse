@@ -137,11 +137,13 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 	if err != nil {
 		// 关闭审计会话
 		if h.auditService != nil && auditSessionID > 0 {
-			h.auditService.CloseSession(auditSessionID, "error")
+			_ = h.auditService.CloseSession(auditSessionID, "error")
 		}
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 创建会话
 	sessionID := fmt.Sprintf("%s-%s-%s-%d", clusterID, namespace, podName, time.Now().Unix())
@@ -173,7 +175,7 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		h.closeSession(session)
 		// 关闭审计会话
 		if h.auditService != nil && auditSessionID > 0 {
-			h.auditService.CloseSession(auditSessionID, "closed")
+			_ = h.auditService.CloseSession(auditSessionID, "closed")
 		}
 	}()
 
@@ -524,10 +526,10 @@ func (h *PodTerminalHandler) stripANSI(s string) string {
 // closeSession 关闭会话
 func (h *PodTerminalHandler) closeSession(session *PodTerminalSession) {
 	if session.stdinWriter != nil {
-		session.stdinWriter.Close()
+		_ = session.stdinWriter.Close()
 	}
 	if session.stdoutReader != nil {
-		session.stdoutReader.Close()
+		_ = session.stdoutReader.Close()
 	}
 	if session.done != nil {
 		select {

@@ -62,7 +62,7 @@ func (s *PodHandlerTestSuite) TearDownTest() {
 	if s.db != nil {
 		sqlDB, _ := s.db.DB()
 		if sqlDB != nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	}
 }

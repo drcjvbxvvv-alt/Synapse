@@ -364,7 +364,9 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 		logger.Error("WebSocket升级失败", "error", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -372,17 +374,17 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 	// 读取客户端配置消息
 	var config models.LogStreamConfig
 	if err := conn.ReadJSON(&config); err != nil {
-		conn.WriteJSON(gin.H{"type": "error", "message": "无效的配置: " + err.Error()})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "无效的配置: " + err.Error()})
 		return
 	}
 
 	if len(config.Targets) == 0 {
-		conn.WriteJSON(gin.H{"type": "error", "message": "至少需要一个日志目标"})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "至少需要一个日志目标"})
 		return
 	}
 
 	// 发送连接成功消息
-	conn.WriteJSON(gin.H{
+	_ = conn.WriteJSON(gin.H{
 		"type":    "connected",
 		"message": fmt.Sprintf("已连接到 %d 个日志源", len(config.Targets)),
 	})
@@ -396,7 +398,7 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 
 	logCh, err := h.aggregator.AggregateStream(ctx, cluster, config.Targets, opts)
 	if err != nil {
-		conn.WriteJSON(gin.H{"type": "error", "message": err.Error()})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": err.Error()})
 		return
 	}
 
@@ -411,7 +413,7 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 	}()
 
 	// 发送日志开始消息
-	conn.WriteJSON(gin.H{
+	_ = conn.WriteJSON(gin.H{
 		"type":    "start",
 		"message": "开始接收日志流",
 	})
@@ -435,7 +437,7 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 		}
 	}
 
-	conn.WriteJSON(gin.H{
+	_ = conn.WriteJSON(gin.H{
 		"type":    "end",
 		"message": "日志流已结束",
 	})
@@ -463,10 +465,12 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 		logger.Error("WebSocket升级失败", "error", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// 发送连接成功消息
-	conn.WriteJSON(gin.H{
+	_ = conn.WriteJSON(gin.H{
 		"type":    "connected",
 		"message": "WebSocket连接已建立",
 	})
@@ -482,7 +486,7 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
 	}
 	if err != nil {
-		conn.WriteJSON(gin.H{"type": "error", "message": "创建K8s客户端失败: " + err.Error()})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "创建K8s客户端失败: " + err.Error()})
 		return
 	}
 
@@ -508,10 +512,12 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 	// 获取日志流
 	stream, err := k8sClient.GetClientset().CoreV1().Pods(namespace).GetLogs(podName, podLogOpts).Stream(ctx)
 	if err != nil {
-		conn.WriteJSON(gin.H{"type": "error", "message": "获取日志流失败: " + err.Error()})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "获取日志流失败: " + err.Error()})
 		return
 	}
-	defer stream.Close()
+	defer func() {
+		_ = stream.Close()
+	}()
 
 	// 监听客户端断开
 	go func() {
@@ -519,14 +525,14 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 			_, _, err := conn.ReadMessage()
 			if err != nil {
 				cancel()
-				stream.Close()
+				_ = stream.Close()
 				return
 			}
 		}
 	}()
 
 	// 发送日志开始消息
-	conn.WriteJSON(gin.H{
+	_ = conn.WriteJSON(gin.H{
 		"type":    "start",
 		"message": "开始接收日志流",
 	})
@@ -536,7 +542,7 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			conn.WriteJSON(gin.H{"type": "closed", "message": "日志流已关闭"})
+			_ = conn.WriteJSON(gin.H{"type": "closed", "message": "日志流已关闭"})
 			return
 		default:
 			line, err := reader.ReadString('\n')
@@ -547,7 +553,7 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 				if strings.Contains(err.Error(), "closed") || strings.Contains(err.Error(), "canceled") {
 					return
 				}
-				conn.WriteJSON(gin.H{"type": "end", "message": "日志流已结束"})
+				_ = conn.WriteJSON(gin.H{"type": "end", "message": "日志流已结束"})
 				return
 			}
 
