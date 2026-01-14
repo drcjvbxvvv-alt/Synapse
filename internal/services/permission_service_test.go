@@ -65,12 +65,30 @@ func (s *PermissionServiceTestSuite) TestCreateUserGroup() {
 // TestGetUserGroup_Success 测试获取用户组成功
 func (s *PermissionServiceTestSuite) TestGetUserGroup_Success() {
 	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at"}).
+	// 主查询：获取用户组
+	groupRows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at"}).
 		AddRow(1, "test-group", "Test description", now, now)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `user_groups` WHERE `user_groups`.`id` = ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `user_groups` WHERE `user_groups`.`id` = ? AND `user_groups`.`deleted_at` IS NULL ORDER BY `user_groups`.`id` LIMIT ?")).
+		WithArgs(1, 1).
+		WillReturnRows(groupRows)
+
+	// Preload Users 查询
+	userRows := sqlmock.NewRows([]string{"id", "username", "password", "email", "role", "status",
+		"created_at", "updated_at", "last_login_at", "avatar", "display_name", "user_group_id"}).
+		AddRow(1, "user1", "hash1", "user1@example.com", "user", "active", now, now, now, "", "User 1", 1)
+
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` IN (?)")).
 		WithArgs(1).
-		WillReturnRows(rows)
+		WillReturnRows(userRows)
+
+	// UserGroupMember 关联查询
+	memberRows := sqlmock.NewRows([]string{"user_id", "user_group_id"}).
+		AddRow(1, 1)
+
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `user_group_members` WHERE `user_group_members`.`user_group_id` = ?")).
+		WithArgs(1).
+		WillReturnRows(memberRows)
 
 	group, err := s.service.GetUserGroup(1)
 	assert.NoError(s.T(), err)
@@ -92,12 +110,18 @@ func (s *PermissionServiceTestSuite) TestGetUserGroup_NotFound() {
 // TestListUserGroups 测试列出所有用户组
 func (s *PermissionServiceTestSuite) TestListUserGroups() {
 	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at"}).
+	// 主查询：获取所有用户组
+	groupRows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at"}).
 		AddRow(1, "group-1", "Group 1", now, now).
 		AddRow(2, "group-2", "Group 2", now, now)
 
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `user_groups`")).
-		WillReturnRows(rows)
+		WillReturnRows(groupRows)
+
+	// Preload Users 查询 - 查询用户组成员关联
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `user_group_members` WHERE `user_group_members`.`user_group_id` IN (?,?)")).
+		WithArgs(1, 2).
+		WillReturnRows(sqlmock.NewRows([]string{"user_id", "user_group_id"}))
 
 	groups, err := s.service.ListUserGroups()
 	assert.NoError(s.T(), err)
@@ -106,26 +130,20 @@ func (s *PermissionServiceTestSuite) TestListUserGroups() {
 
 // TestDeleteUserGroup_Success 测试删除用户组成功
 func (s *PermissionServiceTestSuite) TestDeleteUserGroup_Success() {
-	// 先查询用户组
-	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at"}).
-		AddRow(1, "test-group", "Test description", now, now)
-
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `user_groups` WHERE `user_groups`.`id` = ?")).
+	// 检查关联的权限配置
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `cluster_permissions` WHERE `cluster_permissions`.`user_group_id` = ?")).
 		WithArgs(1).
-		WillReturnRows(rows)
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
 	// 删除关联的用户组成员
-	s.mock.ExpectBegin()
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE")).
+	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `user_group_members` WHERE `user_group_members`.`user_group_id` = ?")).
+		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	s.mock.ExpectCommit()
 
 	// 删除用户组
-	s.mock.ExpectBegin()
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `user_groups`")).
+	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `user_groups` WHERE `user_groups`.`id` = ?")).
+		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	s.mock.ExpectCommit()
 
 	err := s.service.DeleteUserGroup(1)
 	assert.NoError(s.T(), err)
@@ -134,17 +152,27 @@ func (s *PermissionServiceTestSuite) TestDeleteUserGroup_Success() {
 // TestHasClusterAccess 测试检查集群访问权限
 func (s *PermissionServiceTestSuite) TestHasClusterAccess() {
 	now := time.Now()
-	// 模拟查询用户
+	// 1. 先查找用户直接权限（不存在）
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `cluster_permissions` WHERE `cluster_permissions`.`cluster_id` = ? AND `cluster_permissions`.`user_id` = ? AND `cluster_permissions`.`deleted_at` IS NULL ORDER BY `cluster_permissions`.`id` LIMIT ?")).
+		WithArgs(1, 1, 1).
+		WillReturnError(gorm.ErrRecordNotFound)
+
+	// 2. 查找用户组权限（不存在）
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `user_group_members` WHERE `user_group_members`.`user_id` = ?")).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"user_id", "user_group_id"}))
+
+	// 3. 查询用户信息以获取默认权限
 	userRows := sqlmock.NewRows([]string{
-		"id", "username", "password", "email", "role", "status",
-		"created_at", "updated_at", "last_login_at", "avatar", "display_name",
+		"id", "username", "password_hash", "email", "role", "status",
+		"created_at", "updated_at", "last_login_at", "avatar", "display_name", "auth_type", "salt",
 	}).AddRow(
 		1, "admin", "hashedpassword", "admin@example.com", "admin", "active",
-		now, now, now, "", "Admin User",
+		now, now, now, "", "Admin User", "local", "salt123",
 	)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ?")).
-		WithArgs(1).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+		WithArgs(1, 1).
 		WillReturnRows(userRows)
 
 	// 管理员应该有所有集群的访问权限

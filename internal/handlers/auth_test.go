@@ -17,6 +17,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
 )
 
 // AuthHandlerTestSuite 定义认证处理器测试套件
@@ -53,7 +54,9 @@ func (s *AuthHandlerTestSuite) SetupTest() {
 		},
 	}
 
-	s.handler = NewAuthHandler(gormDB, cfg, nil)
+	// 创建 OperationLogService 用于测试（即使为 nil 也不会 panic，因为已添加 nil 检查）
+	opLogSvc := services.NewOperationLogService(gormDB)
+	s.handler = NewAuthHandler(gormDB, cfg, opLogSvc)
 
 	s.router = gin.New()
 	s.router.POST("/api/auth/login", s.handler.Login)

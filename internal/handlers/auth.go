@@ -88,20 +88,22 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		logger.Warn("用户登录失败: %s, 错误: %v", req.Username, err)
 
 		// 记录登录失败审计日志
-		h.opLogSvc.RecordAsync(&services.LogEntry{
-			Username:     req.Username,
-			Method:       "POST",
-			Path:         "/api/v1/auth/login",
-			Module:       constants.ModuleAuth,
-			Action:       constants.ActionLoginFailed,
-			ResourceType: "user",
-			ResourceName: req.Username,
-			StatusCode:   401,
-			Success:      false,
-			ErrorMessage: err.Error(),
-			ClientIP:     c.ClientIP(),
-			UserAgent:    c.Request.UserAgent(),
-		})
+		if h.opLogSvc != nil {
+			h.opLogSvc.RecordAsync(&services.LogEntry{
+				Username:     req.Username,
+				Method:       "POST",
+				Path:         "/api/v1/auth/login",
+				Module:       constants.ModuleAuth,
+				Action:       constants.ActionLoginFailed,
+				ResourceType: "user",
+				ResourceName: req.Username,
+				StatusCode:   401,
+				Success:      false,
+				ErrorMessage: err.Error(),
+				ClientIP:     c.ClientIP(),
+				UserAgent:    c.Request.UserAgent(),
+			})
+		}
 
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
@@ -180,21 +182,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	logger.Info("用户登录成功: %s (认证类型: %s)", user.Username, user.AuthType)
 
 	// 记录登录成功审计日志
-	userID := user.ID
-	h.opLogSvc.RecordAsync(&services.LogEntry{
-		UserID:       &userID,
-		Username:     user.Username,
-		Method:       "POST",
-		Path:         "/api/v1/auth/login",
-		Module:       constants.ModuleAuth,
-		Action:       constants.ActionLogin,
-		ResourceType: "user",
-		ResourceName: user.Username,
-		StatusCode:   200,
-		Success:      true,
-		ClientIP:     c.ClientIP(),
-		UserAgent:    c.Request.UserAgent(),
-	})
+	if h.opLogSvc != nil {
+		userID := user.ID
+		h.opLogSvc.RecordAsync(&services.LogEntry{
+			UserID:       &userID,
+			Username:     user.Username,
+			Method:       "POST",
+			Path:         "/api/v1/auth/login",
+			Module:       constants.ModuleAuth,
+			Action:       constants.ActionLogin,
+			ResourceType: "user",
+			ResourceName: user.Username,
+			StatusCode:   200,
+			Success:      true,
+			ClientIP:     c.ClientIP(),
+			UserAgent:    c.Request.UserAgent(),
+		})
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
@@ -287,20 +291,22 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	// 记录登出审计日志
-	h.opLogSvc.RecordAsync(&services.LogEntry{
-		UserID:       userID,
-		Username:     username,
-		Method:       "POST",
-		Path:         "/api/v1/auth/logout",
-		Module:       constants.ModuleAuth,
-		Action:       constants.ActionLogout,
-		ResourceType: "user",
-		ResourceName: username,
-		StatusCode:   200,
-		Success:      true,
-		ClientIP:     c.ClientIP(),
-		UserAgent:    c.Request.UserAgent(),
-	})
+	if h.opLogSvc != nil {
+		h.opLogSvc.RecordAsync(&services.LogEntry{
+			UserID:       userID,
+			Username:     username,
+			Method:       "POST",
+			Path:         "/api/v1/auth/logout",
+			Module:       constants.ModuleAuth,
+			Action:       constants.ActionLogout,
+			ResourceType: "user",
+			ResourceName: username,
+			StatusCode:   200,
+			Success:      true,
+			ClientIP:     c.ClientIP(),
+			UserAgent:    c.Request.UserAgent(),
+		})
+	}
 
 	// 这里可以实现token黑名单机制
 	c.JSON(http.StatusOK, gin.H{
