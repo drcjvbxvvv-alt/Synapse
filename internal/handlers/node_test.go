@@ -16,8 +16,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"kubepolaris/internal/config"
-	"kubepolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
 )
 
 // NodeHandlerTestSuite 定义节点处理器测试套件

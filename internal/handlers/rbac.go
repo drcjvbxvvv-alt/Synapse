@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"kubepolaris/internal/services"
-	"kubepolaris/internal/templates/rbac"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/internal/templates/rbac"
 
 	"github.com/gin-gonic/gin"
 	rbacv1 "k8s.io/api/rbac/v1"

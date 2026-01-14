@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"kubepolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
 )
 
 // ClusterHandlerTestSuite 定义集群处理器测试套件

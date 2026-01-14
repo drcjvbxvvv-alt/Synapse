@@ -16,9 +16,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"kubepolaris/internal/config"
-	"kubepolaris/internal/handlers"
-	"kubepolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/handlers"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
 )
 
 // IntegrationTestSuite 集成测试套件

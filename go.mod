@@ -1,4 +1,4 @@
-module kubepolaris
+module github.com/clay-wangzhi/KubePolaris
 
 go 1.24.0
 

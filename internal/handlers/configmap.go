@@ -14,11 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
-	"kubepolaris/internal/config"
-	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/middleware"
-	"kubepolaris/internal/services"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
+	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 )
 
 type ConfigMapHandler struct {

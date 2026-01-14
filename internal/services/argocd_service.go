@@ -12,8 +12,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"kubepolaris/internal/models"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 )
 
 // ArgoCDService ArgoCD 服务

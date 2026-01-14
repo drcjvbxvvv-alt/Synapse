@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"kubepolaris/internal/services"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"

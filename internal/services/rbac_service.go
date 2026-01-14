@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"kubepolaris/internal/templates/rbac"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/templates/rbac"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"kubepolaris/internal/constants"
-	"kubepolaris/internal/services"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/constants"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"kubepolaris/internal/models"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 )
 
 // AlertManagerService Alertmanager 服务

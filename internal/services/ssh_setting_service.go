@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"kubepolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
 
 	"gorm.io/gorm"
 )

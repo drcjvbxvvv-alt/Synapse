@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/middleware"
-	"kubepolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
+	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
 
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"

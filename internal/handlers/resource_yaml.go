@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"kubepolaris/internal/config"
-	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/models"
-	"kubepolaris/internal/services"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

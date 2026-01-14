@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"kubepolaris/internal/models"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 )
 
 // PrometheusService Prometheus 查询服务

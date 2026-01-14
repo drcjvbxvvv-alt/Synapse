@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"kubepolaris/internal/config"
-	"kubepolaris/internal/database"
-	"kubepolaris/internal/router"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/database"
+	"github.com/clay-wangzhi/KubePolaris/internal/router"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

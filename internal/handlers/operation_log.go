@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"kubepolaris/internal/constants"
-	"kubepolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/internal/constants"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
 
 	"github.com/gin-gonic/gin"
 )

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 )
 
 // GrafanaService Grafana API 服务

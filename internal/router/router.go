@@ -4,12 +4,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"kubepolaris/internal/config"
-	"kubepolaris/internal/handlers"
-	"kubepolaris/internal/k8s"
-	"kubepolaris/internal/middleware"
-	"kubepolaris/internal/services"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/handlers"
+	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
+	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 )
 
 func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {

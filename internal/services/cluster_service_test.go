@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"kubepolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
 )
 
 // ClusterServiceTestSuite 定义集群服务测试套件

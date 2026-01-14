@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"kubepolaris/internal/config"
-	"kubepolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

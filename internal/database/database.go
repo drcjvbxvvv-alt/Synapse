@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"kubepolaris/internal/config"
-	"kubepolaris/internal/models"
-	"kubepolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/internal/config"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
