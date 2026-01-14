@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
@@ -23,7 +23,6 @@ import {
   DeleteOutlined,
   FileTextOutlined,
   ConsoleSqlOutlined,
-  BarChartOutlined,
   LineChartOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
@@ -34,7 +33,7 @@ import type { PodInfo, ContainerInfo } from '../../services/podService';
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
-interface PodDetailProps {}
+type PodDetailProps = Record<string, never>;
 
 const PodDetail: React.FC<PodDetailProps> = () => {
   const { clusterId, namespace, name } = useParams<{
@@ -47,12 +46,12 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   const initialTab = searchParams.get('tab') || 'overview';
   
   const [pod, setPod] = useState<PodInfo | null>(null);
-  const [rawPod, setRawPod] = useState<any>(null);
+  const [rawPod, setRawPod] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [clusterName, setClusterName] = useState<string>('');
 
   // 获取Pod详情
-  const fetchPodDetail = async () => {
+  const fetchPodDetail = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     
     setLoading(true);
@@ -71,7 +70,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, name]);
 
   // 删除Pod
   const handleDelete = async () => {
@@ -104,7 +103,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
 
   useEffect(() => {
     fetchPodDetail();
-  }, [clusterId, namespace, name]);
+  }, [fetchPodDetail]);
 
   // 获取集群名用于 Grafana 数据源
   useEffect(() => {
@@ -146,7 +145,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       key: 'status',
       render: (container: ContainerInfo) => (
         <Badge
-          status={PodService.getContainerStatusColor(container) as any}
+          status={PodService.getContainerStatusColor(container) as 'success' | 'error' | 'default' | 'processing' | 'warning'}
           text={PodService.formatContainerStatus(container)}
         />
       ),
@@ -171,7 +170,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       title: '端口',
       dataIndex: 'ports',
       key: 'ports',
-      render: (ports: any[]) => {
+      render: (ports: Array<{ containerPort: number; protocol: string; name?: string }>) => {
         if (!ports || ports.length === 0) {
           return <Text type="secondary">-</Text>;
         }
@@ -237,7 +236,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
             {pod.name}
           </Title>
           <Tag color="blue">{pod.namespace}</Tag>
-          <Badge status={color as any} text={status} />
+          <Badge status={color as 'success' | 'error' | 'default' | 'processing' | 'warning'} text={status} />
         </Space>
         
         <div style={{ marginTop: 16 }}>
@@ -291,7 +290,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
                   <Descriptions.Item label="名称">{pod.name}</Descriptions.Item>
                   <Descriptions.Item label="命名空间">{pod.namespace}</Descriptions.Item>
                   <Descriptions.Item label="状态">
-                    <Badge status={color as any} text={status} />
+                    <Badge status={color as 'success' | 'error' | 'default' | 'processing' | 'warning'} text={status} />
                   </Descriptions.Item>
                   <Descriptions.Item label="阶段">{pod.phase}</Descriptions.Item>
                   <Descriptions.Item label="节点">{pod.nodeName || '-'}</Descriptions.Item>

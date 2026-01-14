@@ -13,6 +13,26 @@ interface IngressCreateModalProps {
   onSuccess: () => void;
 }
 
+interface RuleFormItem {
+  host: string;
+  paths?: Array<{
+    path: string;
+    pathType: string;
+    serviceName: string;
+    servicePort: number | string;
+  }>;
+}
+
+interface TLSFormItem {
+  hosts: string;
+  secretName: string;
+}
+
+interface LabelFormItem {
+  key: string;
+  value: string;
+}
+
 const IngressCreateModal: React.FC<IngressCreateModalProps> = ({
   visible,
   clusterId,
@@ -90,24 +110,24 @@ spec:
           formData: {
             name: values.name,
             ingressClassName: values.ingressClassName || null,
-            rules: values.rules?.map((rule: any) => ({
+            rules: (values.rules as RuleFormItem[] | undefined)?.map((rule) => ({
               host: rule.host,
-              paths: rule.paths?.map((path: any) => ({
+              paths: rule.paths?.map((path) => ({
                 path: path.path,
                 pathType: path.pathType,
                 serviceName: path.serviceName,
                 servicePort: path.servicePort,
               })) || [],
             })) || [],
-            tls: values.tls?.map((t: any) => ({
+            tls: (values.tls as TLSFormItem[] | undefined)?.map((t) => ({
               hosts: t.hosts?.split(',').map((h: string) => h.trim()) || [],
               secretName: t.secretName,
             })) || [],
-            labels: values.labels?.reduce((acc: any, item: any) => {
+            labels: (values.labels as LabelFormItem[] | undefined)?.reduce((acc: Record<string, string>, item) => {
               acc[item.key] = item.value;
               return acc;
             }, {}) || {},
-            annotations: values.annotations?.reduce((acc: any, item: any) => {
+            annotations: (values.annotations as LabelFormItem[] | undefined)?.reduce((acc: Record<string, string>, item) => {
               acc[item.key] = item.value;
               return acc;
             }, {}) || {},
@@ -123,9 +143,10 @@ spec:
           message.error(response.message || 'Ingress创建失败');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('创建Ingress失败:', error);
-      message.error(error.message || '创建Ingress失败');
+      const err = error as { message?: string };
+      message.error(err.message || '创建Ingress失败');
     } finally {
       setLoading(false);
     }
@@ -159,7 +180,7 @@ spec:
     try {
       const values = form.getFieldsValue();
       
-      const ingressObj: any = {
+      const ingressObj: KubernetesIngressYAML = {
         apiVersion: 'networking.k8s.io/v1',
         kind: 'Ingress',
         metadata: {
@@ -168,10 +189,10 @@ spec:
         },
         spec: {
           ingressClassName: values.ingressClassName || 'nginx',
-          rules: values.rules?.map((rule: any) => ({
+          rules: (values.rules as RuleFormItem[] | undefined)?.map((rule) => ({
             host: rule.host,
             http: {
-              paths: rule.paths?.map((path: any) => ({
+              paths: rule.paths?.map((path) => ({
                 path: path.path || '/',
                 pathType: path.pathType || 'Prefix',
                 backend: {
@@ -184,7 +205,7 @@ spec:
                 },
               })) || [],
             },
-          })).filter((r: any) => r.host) || [
+          })).filter((r) => r.host) || [
             {
               host: 'example.com',
               http: {
@@ -207,23 +228,25 @@ spec:
       };
 
       // 添加TLS配置（如果存在）
-      if (values.tls && values.tls.length > 0) {
-        ingressObj.spec.tls = values.tls.map((t: any) => ({
-          hosts: t.hosts?.split(',').map((h: string) => h.trim()).filter((h: string) => h) || [],
-          secretName: t.secretName,
-        })).filter((t: any) => t.hosts.length > 0 && t.secretName);
+      if (values.tls && Array.isArray(values.tls) && values.tls.length > 0) {
+        ingressObj.spec.tls = (values.tls as TLSFormItem[])
+          .map((t) => ({
+            hosts: t.hosts?.split(',').map((h: string) => h.trim()).filter((h: string) => h) || [],
+            secretName: t.secretName,
+          }))
+          .filter((t) => t.hosts.length > 0 && t.secretName);
       }
 
       // 添加labels和annotations（如果存在）
-      if (values.labels && values.labels.length > 0) {
-        ingressObj.metadata.labels = values.labels.reduce((acc: any, item: any) => {
+      if (values.labels && Array.isArray(values.labels) && values.labels.length > 0) {
+        ingressObj.metadata.labels = (values.labels as LabelFormItem[]).reduce((acc: Record<string, string>, item) => {
           if (item.key) acc[item.key] = item.value;
           return acc;
         }, {});
       }
 
-      if (values.annotations && values.annotations.length > 0) {
-        ingressObj.metadata.annotations = values.annotations.reduce((acc: any, item: any) => {
+      if (values.annotations && Array.isArray(values.annotations) && values.annotations.length > 0) {
+        ingressObj.metadata.annotations = (values.annotations as LabelFormItem[]).reduce((acc: Record<string, string>, item) => {
           if (item.key) acc[item.key] = item.value;
           return acc;
         }, {});
@@ -242,21 +265,44 @@ spec:
       const ingressObj = YAML.parse(yamlContent);
       
       // 提取rules
-      const rules = ingressObj.spec?.rules?.map((rule: any) => ({
+      interface ParsedRule {
+        host?: string;
+        http?: {
+          paths?: Array<{
+            path?: string;
+            pathType?: string;
+            backend?: {
+              service?: {
+                name?: string;
+                port?: {
+                  number?: number | string;
+                };
+              };
+            };
+          }>;
+        };
+      }
+
+      interface ParsedTLS {
+        hosts?: string[];
+        secretName?: string;
+      }
+
+      const rules = ((ingressObj.spec?.rules as ParsedRule[] | undefined) || []).map((rule) => ({
         host: rule.host || '',
-        paths: rule.http?.paths?.map((path: any) => ({
+        paths: (rule.http?.paths || []).map((path) => ({
           path: path.path || '/',
           pathType: path.pathType || 'Prefix',
           serviceName: path.backend?.service?.name || '',
           servicePort: path.backend?.service?.port?.number || 80,
-        })) || [],
-      })) || [];
+        })),
+      }));
 
       // 提取TLS
-      const tls = ingressObj.spec?.tls?.map((t: any) => ({
+      const tls = ((ingressObj.spec?.tls as ParsedTLS[] | undefined) || []).map((t) => ({
         hosts: t.hosts?.join(', ') || '',
         secretName: t.secretName || '',
-      })) || [];
+      }));
 
       // 提取labels
       const labels = ingressObj.metadata?.labels

@@ -1,25 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Typography,
-  Row,
-  Col,
   Button,
   Space,
   Tabs,
   Tag,
-  Statistic,
-  Progress,
   Descriptions,
   Table,
   Divider,
   Badge,
-  Tooltip,
   Input,
   Modal,
   message,
-  Dropdown,
   Menu,
   Result,
   Empty,
@@ -27,9 +21,9 @@ import {
   Alert,
   Checkbox,
   InputNumber,
+  Statistic,
 } from 'antd';
 import {
-  ArrowLeftOutlined,
   ReloadOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -38,7 +32,6 @@ import {
   CodeOutlined,
   EditOutlined,
   SettingOutlined,
-  DownOutlined,
   PauseCircleOutlined,
   WarningOutlined,
   InfoCircleOutlined,
@@ -47,17 +40,16 @@ import {
   BarChartOutlined,
   AppstoreOutlined,
   DownloadOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import { nodeService } from '../../services/nodeService';
 import { PodService } from '../../services/podService';
 import type { Node, NodeTaint, Pod, NodeCondition } from '../../types';
 import type { ColumnsType } from 'antd/es/table';
-import KubectlTerminal from '../../components/KubectlTerminal';
 import SSHTerminal from '../../components/SSHTerminal';
 import MonitoringCharts from '../../components/MonitoringCharts';
 
-const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
+const { Title, Text } = Typography;
 
 const NodeDetail: React.FC = () => {
   const { clusterId, nodeName } = useParams<{ clusterId: string; nodeName: string }>();
@@ -88,7 +80,7 @@ const NodeDetail: React.FC = () => {
   });
 
   // 获取节点详情
-  const fetchNodeDetail = async () => {
+  const fetchNodeDetail = useCallback(async () => {
     if (!clusterId || !nodeName) return;
     
     setLoading(true);
@@ -101,10 +93,10 @@ const NodeDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, nodeName]);
 
   // 获取节点上的Pod列表
-  const fetchNodePods = async () => {
+  const fetchNodePods = useCallback(async () => {
     if (!clusterId || !nodeName) return;
     
     setLoadingPods(true);
@@ -205,7 +197,7 @@ const NodeDetail: React.FC = () => {
     } finally {
       setLoadingPods(false);
     }
-  };
+  }, [clusterId, nodeName]);
 
   // 刷新所有数据
   const refreshAllData = () => {
@@ -431,7 +423,8 @@ const NodeDetail: React.FC = () => {
     },
   ];
 
-  // 更多操作菜单
+  // 更多操作菜单（未使用，保留以备将来使用）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const moreActionsMenu = (
     <Menu>
       {node?.taints?.some(t => t.effect === 'NoSchedule') ? (
@@ -470,7 +463,7 @@ const NodeDetail: React.FC = () => {
       fetchNodeDetail();
       fetchNodePods();
     }
-  }, [clusterId, nodeName]);
+  }, [clusterId, nodeName, fetchNodeDetail, fetchNodePods]);
 
   if (!node && !loading) {
     return (
@@ -894,7 +887,7 @@ const NodeDetail: React.FC = () => {
             <Select
               placeholder="效果"
               value={newTaintEffect}
-              onChange={(value) => setNewTaintEffect(value as any)}
+              onChange={(value) => setNewTaintEffect(value as 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute')}
               style={{ width: '100%' }}
             >
               <Select.Option value="NoSchedule">NoSchedule (不调度新Pod)</Select.Option>

@@ -70,7 +70,8 @@ const GlobalAlertCenter: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // 获取严重程度颜色
+  // 获取严重程度颜色（未使用，保留以备将来使用）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getSeverityColor = (severity: string) => {
     switch (severity?.toLowerCase()) {
       case 'critical':

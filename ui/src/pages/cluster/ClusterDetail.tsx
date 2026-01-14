@@ -4,8 +4,6 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
-  Progress,
   Tag,
   Button,
   Space,
@@ -15,32 +13,26 @@ import {
   Typography,
   Descriptions,
   Badge,
-  Tooltip,
   message,
   Input,
 } from 'antd';
 import {
-  ArrowLeftOutlined,
-  ReloadOutlined,
   BarChartOutlined,
   DesktopOutlined,
   AppstoreOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  ClusterOutlined,
   CalendarOutlined,
   ApiOutlined,
   FolderFilled,
   CloudServerOutlined,
 } from '@ant-design/icons';
-import KubectlTerminal from '../../components/KubectlTerminal';
-import MonitoringCharts from '../../components/MonitoringCharts';
 import ClusterMonitoringPanels from '../../components/ClusterMonitoringPanels';
 import type { ColumnsType } from 'antd/es/table';
-import type { Cluster, Node, Pod, K8sEvent, ClusterOverview } from '../../types';
+import type { Cluster, K8sEvent, ClusterOverview } from '../../types';
 import { clusterService } from '../../services/clusterService';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const ClusterDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -48,14 +40,9 @@ const ClusterDetail: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [cluster, setCluster] = useState<Cluster | null>(null);
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [pods, setPods] = useState<Pod[]>([]);
   const [clusterOverview, setClusterOverview] = useState<ClusterOverview | null>(null);
   // 从 URL 参数读取默认 Tab，默认为 events
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'events');
-  const [loadingNodes, setLoadingNodes] = useState(false);
-  const [loadingPods, setLoadingPods] = useState(false);
-  const [loadingOverview, setLoadingOverview] = useState(false);
 
   // 获取集群详情
   const fetchClusterDetail = async () => {
@@ -199,7 +186,7 @@ const ClusterDetail: React.FC = () => {
       title: '发生时间',
       dataIndex: 'lastTimestamp',
       key: 'time',
-      render: (_: any, ev: K8sEvent) => {
+      render: (_: unknown, ev: K8sEvent) => {
         const t = ev.lastTimestamp || ev.eventTime || ev.metadata?.creationTimestamp || ev.firstTimestamp;
         return t ? new Date(t).toLocaleString() : '-';
       },
@@ -256,7 +243,7 @@ const ClusterDetail: React.FC = () => {
           </Space>
           <Table
             rowKey={(e) => (e as K8sEvent).metadata?.uid || `${(e as K8sEvent).involvedObject.kind}/${(e as K8sEvent).involvedObject.namespace || 'default'}/${(e as K8sEvent).involvedObject.name}/${(e as K8sEvent).reason}/${(e as K8sEvent).lastTimestamp || (e as K8sEvent).eventTime || (e as K8sEvent).metadata?.creationTimestamp || ''}`}
-            columns={eventColumns as any}
+            columns={eventColumns}
             dataSource={events}
             loading={loadingEvents}
             pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }}
@@ -268,6 +255,7 @@ const ClusterDetail: React.FC = () => {
 
   useEffect(() => {
     refreshAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -276,6 +264,7 @@ const ClusterDetail: React.FC = () => {
     }
     // 当切换到监控概览标签页时，自动触发加载（如果使用懒加载）
     // 注意：MonitoringCharts 组件内部会处理懒加载逻辑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, id]);
 
   if (!cluster && !loading) {

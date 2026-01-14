@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Card, Button, Select, Space, message, Alert, Input, Tooltip } from 'antd';
+import { Card, Button, Space, message, Alert } from 'antd';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -10,12 +10,7 @@ import {
   StopOutlined,
   ClearOutlined,
   FullscreenOutlined,
-  SendOutlined,
-  CopyOutlined,
-  SnippetsOutlined,
 } from '@ant-design/icons';
-
-const { Option } = Select;
 
 interface KubectlTerminalProps {
   clusterId: string;
@@ -24,7 +19,6 @@ interface KubectlTerminalProps {
 
 const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   clusterId,
-  namespace = 'default',
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
@@ -33,9 +27,6 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  const [selectedNamespace, setSelectedNamespace] = useState(namespace);
-  const [command, setCommand] = useState('');
-  const [namespaces, setNamespaces] = useState<string[]>(['default', 'kube-system']);
   
   // 使用 ref 来保存连接状态，避免闭包问题
   const connectedRef = useRef(false);
@@ -152,6 +143,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     // 延迟初始化以确保组件完全挂载
     const timer = setTimeout(initTerminal, 100);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 显示欢迎信息
@@ -200,14 +192,14 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
         try {
           const message = JSON.parse(event.data);
           handleWebSocketMessage(message);
-        } catch (error) {
+        } catch {
           // 如果不是JSON格式，直接显示
           terminal.current?.write(event.data);
         }
       };
 
-      websocket.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      websocket.current.onerror = () => {
+        console.error('WebSocket error');
         message.error('终端连接出错');
         setConnected(false);
         connectedRef.current = false;
@@ -228,27 +220,9 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     }
   };
 
-  // 执行快速命令
-  const executeQuickCommand = () => {
-    if (!command.trim()) {
-      message.error('请输入命令');
-      return;
-    }
-
-    if (!connected) {
-      message.error('请先连接终端');
-      return;
-    }
-
-    // 发送命令到后端执行
-    executeCommand(command);
-    setCommand('');
-  };
-
   // 终端输入处理
-  const [currentLine, setCurrentLine] = useState('');
-  const [commandHistory, setCommandHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [, setCurrentLine] = useState('');
+  const [, setCommandHistory] = useState<string[]>([]);
 
   const handleTerminalInput = (data: string) => {
     if (!terminal.current) return;
@@ -280,7 +254,6 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
       
       if (currentLineRef.current.trim()) {
         setCommandHistory(prev => [...prev, currentLineRef.current.trim()]);
-        setHistoryIndex(-1);
       }
       
       currentLineRef.current = '';
@@ -339,11 +312,16 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   };
 
   // 处理 WebSocket 消息
-  const handleWebSocketMessage = (message: any) => {
+  interface WebSocketMessage {
+    type: string;
+    data: string;
+  }
+
+  const handleWebSocketMessage = (message: WebSocketMessage) => {
     if (!terminal.current) return;
 
     switch (message.type) {
-      case 'output':
+      case 'output': {
         // 确保正确处理换行符
         const outputText = message.data;
         if (outputText.includes('\n')) {
@@ -360,6 +338,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
           terminal.current.write(outputText);
         }
         break;
+      }
       case 'error':
         terminal.current.writeln(`\r\n\x1b[31m${message.data}\x1b[0m`);
         break;
@@ -378,18 +357,6 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     }
   };
 
-  const executeCommand = (command: string) => {
-    if (!websocket.current || websocket.current.readyState !== WebSocket.OPEN) {
-      terminal.current?.writeln('\r\nConnection lost. Please reconnect.\r\n');
-      return;
-    }
-
-    // 发送命令到后端
-    websocket.current.send(JSON.stringify({
-      type: 'command',
-      data: command,
-    }));
-  };
 
   // 断开连接
   const disconnect = () => {
@@ -421,50 +388,9 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     }
   };
 
-  // 获取命名空间数据
-  const fetchNamespaces = async () => {
-    setNamespaces(['default', 'kube-system', 'kube-public', 'monitoring']);
-  };
-
-  // 事件处理
-  const handleNamespaceChange = (value: string) => {
-    setSelectedNamespace(value);
-    
-    // 如果已连接，发送命名空间切换命令到后端
-    if (connected && websocket.current && websocket.current.readyState === WebSocket.OPEN) {
-      websocket.current.send(JSON.stringify({
-        type: 'change_namespace',
-        data: value
-      }));
-    }
-  };
-
-  useEffect(() => {
-    fetchNamespaces();
-  }, []);
-
   useEffect(() => {
     showWelcomeMessage();
   }, []);
-
-  // 复制选中的文本
-  const copySelectedText = () => {
-    if (terminal.current?.hasSelection()) {
-      const selection = terminal.current.getSelection();
-      if (selection) {
-        navigator.clipboard.writeText(selection)
-          .then(() => {
-            message.success('已复制到剪贴板');
-          })
-          .catch((err) => {
-            console.error('复制失败:', err);
-            message.error('复制失败');
-          });
-      }
-    } else {
-      message.info('请先选择要复制的文本');
-    }
-  };
 
   // 粘贴剪贴板内容
   const pasteFromClipboard = () => {

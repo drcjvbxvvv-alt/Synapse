@@ -120,7 +120,7 @@ const CommandHistory: React.FC = () => {
         setSessions(res.data.items || []);
         setTotal(res.data.total);
       }
-    } catch (error) {
+    } catch {
       message.error('获取会话列表失败');
     } finally {
       setLoading(false);
@@ -143,7 +143,7 @@ const CommandHistory: React.FC = () => {
         setCommands(commandsRes.data.items || []);
         setCommandsTotal(commandsRes.data.total);
       }
-    } catch (error) {
+    } catch {
       message.error('获取会话详情失败');
     } finally {
       setCommandsLoading(false);

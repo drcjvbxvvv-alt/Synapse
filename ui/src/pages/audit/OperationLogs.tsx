@@ -161,7 +161,7 @@ const OperationLogs: React.FC = () => {
         setLogs(res.data.items || []);
         setTotal(res.data.total);
       }
-    } catch (error) {
+    } catch {
       message.error('获取操作日志失败');
     } finally {
       setLoading(false);
@@ -176,7 +176,7 @@ const OperationLogs: React.FC = () => {
       if (res.code === 200) {
         setSelectedLog(res.data);
       }
-    } catch (error) {
+    } catch {
       message.error('获取日志详情失败');
     } finally {
       setDetailLoading(false);

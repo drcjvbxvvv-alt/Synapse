@@ -23,13 +23,6 @@ import {
   ReloadOutlined,
   SettingOutlined,
   SearchOutlined,
-  ExportOutlined,
-  DeleteOutlined,
-  MoreOutlined,
-  CodeOutlined,
-  FileTextOutlined,
-  DashboardOutlined,
-  AlertOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
@@ -37,6 +30,93 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 
 const { Option } = Select;
+
+// 解析CPU值（转换为毫核）
+const parseCpuValue = (value: string): number => {
+  if (!value) return 0;
+  if (value.endsWith('m')) {
+    return parseInt(value.slice(0, -1), 10);
+  }
+  return parseFloat(value) * 1000;
+};
+
+// 格式化CPU值
+const formatCpuValue = (milliCores: number): string => {
+  if (milliCores >= 1000) {
+    return `${(milliCores / 1000).toFixed(1)}`;
+  }
+  return `${milliCores}m`;
+};
+
+// 解析内存值（转换为字节）
+const parseMemoryValue = (value: string): number => {
+  if (!value) return 0;
+  const units: Record<string, number> = {
+    'Ki': 1024,
+    'Mi': 1024 * 1024,
+    'Gi': 1024 * 1024 * 1024,
+    'Ti': 1024 * 1024 * 1024 * 1024,
+    'K': 1000,
+    'M': 1000 * 1000,
+    'G': 1000 * 1000 * 1000,
+    'T': 1000 * 1000 * 1000 * 1000,
+  };
+  
+  for (const [unit, multiplier] of Object.entries(units)) {
+    if (value.endsWith(unit)) {
+      return parseFloat(value.slice(0, -unit.length)) * multiplier;
+    }
+  }
+  return parseFloat(value);
+};
+
+// 格式化内存值
+const formatMemoryValue = (bytes: number): string => {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}Gi`;
+  }
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(0)}Mi`;
+  }
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(0)}Ki`;
+  }
+  return `${bytes}`;
+};
+
+// 获取Pod的CPU和Memory资源
+const getPodResources = (pod: PodInfo) => {
+  let cpuRequest = 0;
+  let cpuLimit = 0;
+  let memoryRequest = 0;
+  let memoryLimit = 0;
+
+  pod.containers?.forEach(container => {
+    // CPU Request
+    if (container.resources?.requests?.cpu) {
+      cpuRequest += parseCpuValue(container.resources.requests.cpu);
+    }
+    // CPU Limit
+    if (container.resources?.limits?.cpu) {
+      cpuLimit += parseCpuValue(container.resources.limits.cpu);
+    }
+    // Memory Request
+    if (container.resources?.requests?.memory) {
+      memoryRequest += parseMemoryValue(container.resources.requests.memory);
+    }
+    // Memory Limit
+    if (container.resources?.limits?.memory) {
+      memoryLimit += parseMemoryValue(container.resources.limits.memory);
+    }
+  });
+
+  return {
+    cpuRequest: cpuRequest > 0 ? formatCpuValue(cpuRequest) : '-',
+    cpuLimit: cpuLimit > 0 ? formatCpuValue(cpuLimit) : '-',
+    memoryRequest: memoryRequest > 0 ? formatMemoryValue(memoryRequest) : '-',
+    memoryLimit: memoryLimit > 0 ? formatMemoryValue(memoryLimit) : '-',
+  };
+};
 
 const PodList: React.FC = () => {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
@@ -115,93 +195,6 @@ const PodList: React.FC = () => {
       memoryLimit: 'MEM Limit',
     };
     return labels[field] || field;
-  };
-
-  // 获取Pod的CPU和Memory资源
-  const getPodResources = (pod: PodInfo) => {
-    let cpuRequest = 0;
-    let cpuLimit = 0;
-    let memoryRequest = 0;
-    let memoryLimit = 0;
-
-    pod.containers?.forEach(container => {
-      // CPU Request
-      if (container.resources?.requests?.cpu) {
-        cpuRequest += parseCpuValue(container.resources.requests.cpu);
-      }
-      // CPU Limit
-      if (container.resources?.limits?.cpu) {
-        cpuLimit += parseCpuValue(container.resources.limits.cpu);
-      }
-      // Memory Request
-      if (container.resources?.requests?.memory) {
-        memoryRequest += parseMemoryValue(container.resources.requests.memory);
-      }
-      // Memory Limit
-      if (container.resources?.limits?.memory) {
-        memoryLimit += parseMemoryValue(container.resources.limits.memory);
-      }
-    });
-
-    return {
-      cpuRequest: cpuRequest > 0 ? formatCpuValue(cpuRequest) : '-',
-      cpuLimit: cpuLimit > 0 ? formatCpuValue(cpuLimit) : '-',
-      memoryRequest: memoryRequest > 0 ? formatMemoryValue(memoryRequest) : '-',
-      memoryLimit: memoryLimit > 0 ? formatMemoryValue(memoryLimit) : '-',
-    };
-  };
-
-  // 解析CPU值（转换为毫核）
-  const parseCpuValue = (value: string): number => {
-    if (!value) return 0;
-    if (value.endsWith('m')) {
-      return parseInt(value.slice(0, -1), 10);
-    }
-    return parseFloat(value) * 1000;
-  };
-
-  // 格式化CPU值
-  const formatCpuValue = (milliCores: number): string => {
-    if (milliCores >= 1000) {
-      return `${(milliCores / 1000).toFixed(1)}`;
-    }
-    return `${milliCores}m`;
-  };
-
-  // 解析内存值（转换为字节）
-  const parseMemoryValue = (value: string): number => {
-    if (!value) return 0;
-    const units: Record<string, number> = {
-      'Ki': 1024,
-      'Mi': 1024 * 1024,
-      'Gi': 1024 * 1024 * 1024,
-      'Ti': 1024 * 1024 * 1024 * 1024,
-      'K': 1000,
-      'M': 1000 * 1000,
-      'G': 1000 * 1000 * 1000,
-      'T': 1000 * 1000 * 1000 * 1000,
-    };
-    
-    for (const [unit, multiplier] of Object.entries(units)) {
-      if (value.endsWith(unit)) {
-        return parseFloat(value.slice(0, -unit.length)) * multiplier;
-      }
-    }
-    return parseFloat(value);
-  };
-
-  // 格式化内存值
-  const formatMemoryValue = (bytes: number): string => {
-    if (bytes >= 1024 * 1024 * 1024) {
-      return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}Gi`;
-    }
-    if (bytes >= 1024 * 1024) {
-      return `${(bytes / (1024 * 1024)).toFixed(0)}Mi`;
-    }
-    if (bytes >= 1024) {
-      return `${(bytes / 1024).toFixed(0)}Ki`;
-    }
-    return `${bytes}`;
   };
 
   // 客户端过滤Pod列表
@@ -511,7 +504,7 @@ const PodList: React.FC = () => {
       setSelectedRowKeys([]);
       loadPods();
     }
-  }, [routeClusterId]);
+  }, [routeClusterId, loadPods]);
 
   // 行选择配置
   const rowSelection = {

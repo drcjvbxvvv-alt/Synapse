@@ -15,7 +15,6 @@ import {
   Checkbox,
 } from 'antd';
 import {
-  DeleteOutlined,
   ReloadOutlined,
   SearchOutlined,
   SettingOutlined,
@@ -25,7 +24,7 @@ import type { PVC } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 
-const { Text, Link } = Typography;
+const { Link } = Typography;
 
 interface PVCTabProps {
   clusterId: string;
@@ -73,7 +72,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
   const [yamlLoading, setYamlLoading] = useState(false);
   
   // 命名空间列表
-  const [namespaces, setNamespaces] = useState<{ name: string; count: number }[]>([]);
+  const [, setNamespaces] = useState<{ name: string; count: number }[]>([]);
 
   // 添加搜索条件
   const addSearchCondition = () => {
@@ -464,7 +463,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       key: 'action',
       fixed: 'right' as const,
       width: 120,
-      render: (_: any, record: PVC) => (
+      render: (_: unknown, record: PVC) => (
         <Space size="small">
           <Button
             type="link"

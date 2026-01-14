@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Card, Row, Col, Statistic, Select, Button, Space, Spin, Alert, Switch, Skeleton } from 'antd';
+import { Card, Row, Col, Statistic, Select, Button, Space, Alert, Switch, Skeleton } from 'antd';
 import { Line, Area } from '@ant-design/plots';
 import { ReloadOutlined } from '@ant-design/icons';
 import api from '../utils/api';

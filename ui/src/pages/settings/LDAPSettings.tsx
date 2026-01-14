@@ -65,7 +65,7 @@ const LDAPSettings: React.FC = () => {
     };
 
     fetchConfig();
-  }, [form]);
+  }, [form, message]);
 
   // 保存配置
   const handleSave = async () => {
@@ -102,9 +102,10 @@ const LDAPSettings: React.FC = () => {
         const errorMsg = response.data?.error || response.message || '连接测试失败';
         message.error(errorMsg);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('测试连接错误:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'LDAP连接测试失败';
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      const errorMsg = err.response?.data?.message || err.message || 'LDAP连接测试失败';
       message.error(errorMsg);
     } finally {
       setTesting(false);
@@ -147,11 +148,12 @@ const LDAPSettings: React.FC = () => {
           error: response.message || '认证测试失败',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('测试认证错误:', error);
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
       setTestAuthResult({
         success: false,
-        error: error.response?.data?.message || error.message || '认证测试失败',
+        error: err.response?.data?.message || err.message || '认证测试失败',
       });
     } finally {
       setTestingAuth(false);

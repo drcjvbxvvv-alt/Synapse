@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
@@ -31,10 +31,10 @@ import type { WorkloadInfo } from '../../services/workloadService';
 import MonitoringCharts from '../../components/MonitoringCharts';
 
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { TabPane } = Tabs;
 
-interface WorkloadDetailProps {}
+type WorkloadDetailProps = Record<string, never>;
 
 const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
   const { clusterId, namespace, name } = useParams<{
@@ -47,15 +47,15 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
   
   const workloadType = searchParams.get('type') || 'deployment';
   
-  const [workload, setWorkload] = useState<any>(null);
+  const [workload, setWorkload] = useState<Record<string, unknown> | null>(null);
   const [workloadInfo, setWorkloadInfo] = useState<WorkloadInfo | null>(null);
-  const [pods, setPods] = useState<any[]>([]);
+  const [pods, setPods] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(false);
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleReplicas, setScaleReplicas] = useState(1);
 
   // 获取工作负载详情
-  const fetchWorkloadDetail = async () => {
+  const fetchWorkloadDetail = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     
     setLoading(true);
@@ -81,7 +81,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, name, workloadType]);
 
   // 扩缩容工作负载
   const handleScale = async () => {
@@ -135,7 +135,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
 
   useEffect(() => {
     fetchWorkloadDetail();
-  }, [clusterId, namespace, name, workloadType]);
+  }, [fetchWorkloadDetail]);
 
   if (!workloadInfo) {
     return <div>加载中...</div>;
@@ -196,7 +196,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
           <Tag color="green">
             {WorkloadService.getWorkloadTypes().find(t => t.value === workloadType)?.label || workloadType}
           </Tag>
-          <Badge status={color as any} text={status} />
+          <Badge status={color as 'success' | 'error' | 'default' | 'processing' | 'warning'} text={status} />
         </Space>
         
         <div style={{ marginTop: 16 }}>
@@ -274,7 +274,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
                     {new Date(workloadInfo.createdAt).toLocaleString()}
                   </Descriptions.Item>
                   <Descriptions.Item label="状态">
-                    <Badge status={color as any} text={status} />
+                    <Badge status={color as 'success' | 'error' | 'default' | 'processing' | 'warning'} text={status} />
                   </Descriptions.Item>
                 </Descriptions>
               </Card>
@@ -359,7 +359,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
                 title: '容器',
                 dataIndex: 'containers',
                 key: 'containers',
-                render: (containers: any[]) => (
+                render: (containers: Array<{ name: string; image: string }>) => (
                   <Space wrap>
                     {containers.map((container, index) => (
                       <Tag key={index} color={container.ready ? 'green' : 'red'}>

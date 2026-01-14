@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Card,
@@ -10,6 +10,7 @@ import {
   Alert,
   Row,
   Col,
+  Spin,
 } from 'antd';
 import {
   PlayCircleOutlined,
@@ -28,7 +29,7 @@ import type { PodInfo } from '../../services/podService';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-interface PodTerminalProps {}
+type PodTerminalProps = Record<string, never>;
 
 const PodTerminal: React.FC<PodTerminalProps> = () => {
   const { clusterId, namespace, name } = useParams<{
@@ -46,13 +47,46 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
   const [selectedContainer, setSelectedContainer] = useState<string>('');
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const connectedRef = useRef(false);
 
-  // 获取Pod详情
-  const fetchPodDetail = async () => {
-    if (!clusterId || !namespace || !name) return;
+  // 显示欢迎信息
+  const showWelcomeMessage = useCallback(() => {
+    if (!terminal.current) return;
     
+    terminal.current.clear();
+    terminal.current.writeln('\x1b[32m╭─────────────────────────────────────────────────────────────╮\x1b[0m');
+    terminal.current.writeln('\x1b[32m│                    KubePolaris Pod Terminal                 │\x1b[0m');
+    terminal.current.writeln('\x1b[32m╰─────────────────────────────────────────────────────────────╯\x1b[0m');
+    terminal.current.writeln('');
+    terminal.current.writeln(`\x1b[36mPod:\x1b[0m ${namespace}/${name}`);
+    terminal.current.writeln(`\x1b[36mCluster:\x1b[0m ${clusterId}`);
+    terminal.current.writeln('');
+    terminal.current.writeln('\x1b[33m请选择容器并点击"连接终端"开始...\x1b[0m');
+    terminal.current.writeln('');
+  }, [namespace, name, clusterId]);
+
+  // 处理终端输入
+  const handleTerminalInput = useCallback((data: string) => {
+    if (!connectedRef.current || !websocket.current) return;
+
+    if (websocket.current.readyState === WebSocket.OPEN) {
+      websocket.current.send(JSON.stringify({ 
+        type: 'input', 
+        data: data 
+      }));
+    }
+  }, []);
+
+  // 获取Pod详情
+  const fetchPodDetail = useCallback(async () => {
+    if (!clusterId || !namespace || !name) {
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
     try {
       const response = await PodService.getPodDetail(clusterId, namespace, name);
       
@@ -67,11 +101,23 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
     } catch (error) {
       console.error('获取Pod详情失败:', error);
       message.error('获取Pod详情失败');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [clusterId, namespace, name, selectedContainer]);
 
-  // 初始化终端
+  // 初始化终端 - 只在 pod 加载完成后初始化
   useEffect(() => {
+    // 如果 pod 还没加载完成，不初始化终端
+    if (!pod || !terminalRef.current) {
+      return;
+    }
+
+    // 如果终端已经初始化，不重复初始化
+    if (terminal.current) {
+      return;
+    }
+
     const initTerminal = () => {
       if (terminalRef.current && !terminal.current) {
         try {
@@ -158,35 +204,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
         terminal.current = null;
       }
     };
-  }, []);
-
-  // 显示欢迎信息
-  const showWelcomeMessage = () => {
-    if (!terminal.current) return;
-    
-    terminal.current.clear();
-    terminal.current.writeln('\x1b[32m╭─────────────────────────────────────────────────────────────╮\x1b[0m');
-    terminal.current.writeln('\x1b[32m│                    KubePolaris Pod Terminal                 │\x1b[0m');
-    terminal.current.writeln('\x1b[32m╰─────────────────────────────────────────────────────────────╯\x1b[0m');
-    terminal.current.writeln('');
-    terminal.current.writeln(`\x1b[36mPod:\x1b[0m ${namespace}/${name}`);
-    terminal.current.writeln(`\x1b[36mCluster:\x1b[0m ${clusterId}`);
-    terminal.current.writeln('');
-    terminal.current.writeln('\x1b[33m请选择容器并点击"连接终端"开始...\x1b[0m');
-    terminal.current.writeln('');
-  };
-
-  // 处理终端输入
-  const handleTerminalInput = (data: string) => {
-    if (!connectedRef.current || !websocket.current) return;
-
-    if (websocket.current.readyState === WebSocket.OPEN) {
-      websocket.current.send(JSON.stringify({ 
-        type: 'input', 
-        data: data 
-      }));
-    }
-  };
+  }, [pod, showWelcomeMessage, handleTerminalInput]);
 
   // 连接终端
   const connectTerminal = () => {
@@ -383,10 +401,40 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
 
   useEffect(() => {
     fetchPodDetail();
-  }, [clusterId, namespace, name]);
+  }, [fetchPodDetail]);
 
-  if (!pod) {
-    return <div>加载中...</div>;
+  // 参数验证
+  if (!clusterId || !namespace || !name) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: 16
+      }}>
+        <Alert
+          message="参数错误"
+          description="缺少必要的路由参数（clusterId、namespace 或 name）"
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
+
+  if (loading || !pod) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <Spin size="large" tip="加载中..." />
+      </div>
+    );
   }
 
   return (

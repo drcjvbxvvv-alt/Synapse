@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Descriptions, Button, Modal, Form, Input, Space, Tag, Spin, App } from 'antd';
 import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
 import { authService, tokenManager } from '../../services/authService';
@@ -13,11 +13,7 @@ const UserProfile: React.FC = () => {
   const [form] = Form.useForm();
 
   // 加载用户信息
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
     setLoading(true);
     try {
       const response = await authService.getProfile();
@@ -34,7 +30,11 @@ const UserProfile: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
+
+  useEffect(() => {
+    loadUserProfile();
+  }, [loadUserProfile]);
 
   // 打开修改密码对话框
   const handleOpenChangePassword = () => {
@@ -71,13 +71,14 @@ const UserProfile: React.FC = () => {
       } else {
         message.error(response.message || '密码修改失败');
       }
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      const err = error as { errorFields?: unknown[]; response?: { data?: { message?: string } }; message?: string };
+      if (err.errorFields) {
         // 表单验证错误
         return;
       }
       // 处理HTTP错误响应
-      const errorMessage = error?.response?.data?.message || error?.message || '密码修改失败，请稍后重试';
+      const errorMessage = err?.response?.data?.message || err?.message || '密码修改失败，请稍后重试';
       message.error(errorMessage);
       console.error('修改密码失败:', error);
     } finally {

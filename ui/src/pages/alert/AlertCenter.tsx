@@ -31,7 +31,6 @@ import {
   SearchOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
-  CheckCircleOutlined,
   StopOutlined,
   PlusOutlined,
   DeleteOutlined,
@@ -76,7 +75,7 @@ const AlertCenter: React.FC = () => {
   const [severityFilter, setSeverityFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [silenceModalVisible, setSilenceModalVisible] = useState(false);
-  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [, setSelectedAlert] = useState<Alert | null>(null);
   const [silenceForm] = Form.useForm();
   const [configEnabled, setConfigEnabled] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);

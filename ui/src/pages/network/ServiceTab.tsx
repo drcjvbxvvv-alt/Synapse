@@ -20,12 +20,8 @@ import {
   Drawer,
 } from 'antd';
 import {
-  DeleteOutlined,
-  FileTextOutlined,
   ReloadOutlined,
   SearchOutlined,
-  LinkOutlined,
-  EditOutlined,
   PlusOutlined,
   MinusCircleOutlined,
   SettingOutlined,
@@ -43,6 +39,34 @@ const { Text, Link } = Typography;
 interface ServiceTabProps {
   clusterId: string;
   onCountChange?: (count: number) => void;
+}
+
+interface KubernetesServiceYAML {
+  apiVersion: string;
+  kind: string;
+  metadata: {
+    name: string;
+    namespace: string;
+    labels: Record<string, string>;
+    annotations: Record<string, string>;
+  };
+  spec: {
+    type?: string;
+    selector?: Record<string, string>;
+    ports: Array<{
+      name?: string;
+      protocol: string;
+      port: number;
+      targetPort: number | string;
+      nodePort?: number;
+    }>;
+    sessionAffinity?: string;
+  };
+}
+
+interface LabelItem {
+  key: string;
+  value: string;
 }
 
 const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => {
@@ -87,8 +111,16 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   const [yamlLoading, setYamlLoading] = useState(false);
 
   // Endpoints查看Modal
+  interface EndpointsData {
+    name: string;
+    namespace: string;
+    subsets?: Array<{
+      addresses?: Array<{ ip: string; nodeName?: string }>;
+      ports?: Array<{ name?: string; port: number; protocol: string }>;
+    }>;
+  }
   const [endpointsModalVisible, setEndpointsModalVisible] = useState(false);
-  const [currentEndpoints, setCurrentEndpoints] = useState<any>(null);
+  const [currentEndpoints, setCurrentEndpoints] = useState<EndpointsData | null>(null);
   const [endpointsLoading, setEndpointsLoading] = useState(false);
 
   // YAML编辑Modal
@@ -104,7 +136,6 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   
   // 命名空间列表
   const [namespaces, setNamespaces] = useState<{ name: string; count: number }[]>([]);
-  const [loadingNamespaces, setLoadingNamespaces] = useState(false);
 
   // 添加搜索条件
   const addSearchCondition = () => {
@@ -159,7 +190,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       // 不同字段之间是 AND 关系
       // 相同字段之间是 OR 关系
       return Object.entries(conditionsByField).every(([field, values]) => {
-        let serviceValue: any;
+        let serviceValue: string | number | boolean | undefined;
         
         if (field === 'selector') {
           serviceValue = ServiceService.formatSelector(service.selector);
@@ -177,14 +208,11 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   useEffect(() => {
     const loadNamespaces = async () => {
       if (!clusterId) return;
-      setLoadingNamespaces(true);
       try {
         const nsList = await ServiceService.getServiceNamespaces(clusterId);
         setNamespaces(nsList);
       } catch (error) {
         console.error('加载命名空间失败:', error);
-      } finally {
-        setLoadingNamespaces(false);
       }
     };
 
@@ -485,7 +513,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         const values = await editForm.validateFields();
         
         // 构建Service YAML
-        const serviceYaml: any = {
+        const serviceYaml: KubernetesServiceYAML = {
           apiVersion: 'v1',
           kind: 'Service',
           metadata: {
@@ -503,8 +531,8 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         };
 
         // 添加labels
-        if (values.labels && values.labels.length > 0) {
-          values.labels.forEach((label: any) => {
+        if (values.labels && Array.isArray(values.labels) && values.labels.length > 0) {
+          (values.labels as LabelItem[]).forEach((label) => {
             if (label && label.key) {
               serviceYaml.metadata.labels[label.key] = label.value || '';
             }
@@ -512,8 +540,8 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         }
 
         // 添加annotations
-        if (values.annotations && values.annotations.length > 0) {
-          values.annotations.forEach((annotation: any) => {
+        if (values.annotations && Array.isArray(values.annotations) && values.annotations.length > 0) {
+          (values.annotations as LabelItem[]).forEach((annotation) => {
             if (annotation && annotation.key) {
               serviceYaml.metadata.annotations[annotation.key] = annotation.value || '';
             }
@@ -521,10 +549,10 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         }
 
         // 添加selectors
-        if (values.selectors && values.selectors.length > 0) {
-          values.selectors.forEach((selector: any) => {
+        if (values.selectors && Array.isArray(values.selectors) && values.selectors.length > 0) {
+          (values.selectors as LabelItem[]).forEach((selector) => {
             if (selector && selector.key) {
-              serviceYaml.spec.selector[selector.key] = selector.value || '';
+              serviceYaml.spec.selector![selector.key] = selector.value || '';
             }
           });
         }
@@ -614,7 +642,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       title: '访问地址',
       key: 'access',
       width: 200,
-      render: (_: any, record: Service) => {
+      render: (_: unknown, record: Service) => {
         const addresses = ServiceService.formatAccessAddress(record);
         return (
           <div>
@@ -638,7 +666,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       title: '端口',
       key: 'ports',
       width: 180,
-      render: (_: any, record: Service) => (
+      render: (_: unknown, record: Service) => (
         <Tooltip title={ServiceService.formatPorts(record)}>
           <Text ellipsis style={{ width: 160, display: 'block' }}>
             {ServiceService.formatPorts(record)}
@@ -650,7 +678,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       title: '选择器',
       key: 'selector',
       width: 200,
-      render: (_: any, record: Service) => (
+      render: (_: unknown, record: Service) => (
         <Tooltip title={ServiceService.formatSelector(record.selector)}>
           <Text ellipsis style={{ width: 180, display: 'block' }}>
             {ServiceService.formatSelector(record.selector)}
@@ -685,7 +713,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       key: 'action',
       fixed: 'right' as const,
       width: 180,
-      render: (_: any, record: Service) => (
+      render: (_: unknown, record: Service) => (
         <Space size="small">
           <Button
             type="link"
@@ -902,16 +930,16 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
             <Descriptions.Item label="命名空间">{currentEndpoints.namespace}</Descriptions.Item>
             <Descriptions.Item label="子网">
               {currentEndpoints.subsets && currentEndpoints.subsets.length > 0 ? (
-                currentEndpoints.subsets.map((subset: any, idx: number) => (
+                currentEndpoints.subsets.map((subset: { addresses?: Array<{ ip: string; nodeName?: string }>; ports?: Array<{ name?: string; port: number; protocol: string }> }, idx: number) => (
                   <div key={idx} style={{ marginBottom: 16 }}>
                     <Text strong>地址:</Text>
-                    {subset.addresses?.map((addr: any, addrIdx: number) => (
+                    {subset.addresses?.map((addr, addrIdx: number) => (
                       <div key={addrIdx} style={{ marginLeft: 16 }}>
                         {addr.ip} {addr.nodeName && `(节点: ${addr.nodeName})`}
                       </div>
                     ))}
                     <Text strong style={{ marginTop: 8, display: 'block' }}>端口:</Text>
-                    {subset.ports?.map((port: any, portIdx: number) => (
+                    {subset.ports?.map((port, portIdx: number) => (
                       <div key={portIdx} style={{ marginLeft: 16 }}>
                         {port.name && `${port.name}: `}{port.port}/{port.protocol}
                       </div>

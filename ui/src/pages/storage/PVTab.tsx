@@ -15,7 +15,6 @@ import {
   Checkbox,
 } from 'antd';
 import {
-  DeleteOutlined,
   ReloadOutlined,
   SearchOutlined,
   SettingOutlined,
@@ -25,7 +24,7 @@ import type { PV } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 
-const { Text, Link } = Typography;
+const { Link } = Typography;
 
 interface PVTabProps {
   clusterId: string;
@@ -447,7 +446,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       key: 'action',
       fixed: 'right' as const,
       width: 120,
-      render: (_: any, record: PV) => (
+      render: (_: unknown, record: PV) => (
         <Space size="small">
           <Button
             type="link"

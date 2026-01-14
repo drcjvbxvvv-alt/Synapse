@@ -47,7 +47,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
   const [pageSize, setPageSize] = useState(20);
   
   // 命名空间
-  const [namespaces, setNamespaces] = useState<NamespaceItem[]>([]);
+  const [, setNamespaces] = useState<NamespaceItem[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   // 多条件搜索状态

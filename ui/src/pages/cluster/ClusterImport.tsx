@@ -10,7 +10,6 @@ import {
   Radio,
   message,
   Alert,
-  Divider,
   Typography,
 } from 'antd';
 import {
@@ -25,15 +24,6 @@ const { Step } = Steps;
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
-interface ImportFormData {
-  name: string;
-  description?: string;
-  connectionType: 'kubeconfig' | 'token';
-  apiServer?: string;
-  kubeconfig?: string;
-  token?: string;
-  caCert?: string;
-}
 
 const ClusterImport: React.FC = () => {
   const navigate = useNavigate();
@@ -42,7 +32,7 @@ const ClusterImport: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
   const [connectionType, setConnectionType] = useState<'kubeconfig' | 'token'>('kubeconfig');
-  const [testResult, setTestResult] = useState<any>(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null);
 
   // 测试连接
   const handleTestConnection = async () => {
@@ -61,8 +51,9 @@ const ClusterImport: React.FC = () => {
       setTestResult(response.data);
       message.success('连接测试成功！');
       setCurrentStep(2);
-    } catch (error: any) {
-      message.error(`连接测试失败: ${error.response?.data?.message || error.message}`);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      message.error(`连接测试失败: ${err.response?.data?.message || err.message || '未知错误'}`);
       setTestResult(null);
     } finally {
       setTestLoading(false);
@@ -88,8 +79,9 @@ const ClusterImport: React.FC = () => {
       await clusterService.importCluster(importData);
       message.success('集群导入成功！');
       navigate('/clusters');
-    } catch (error: any) {
-      message.error(`集群导入失败: ${error.response?.data?.message || error.message}`);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      message.error(`集群导入失败: ${err.response?.data?.message || err.message || '未知错误'}`);
     } finally {
       setLoading(false);
     }

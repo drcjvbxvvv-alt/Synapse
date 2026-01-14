@@ -452,7 +452,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       key: 'action',
       fixed: 'right' as const,
       width: 120,
-      render: (_: any, record: StorageClass) => (
+      render: (_: unknown, record: StorageClass) => (
         <Space size="small">
           <Button
             type="link"

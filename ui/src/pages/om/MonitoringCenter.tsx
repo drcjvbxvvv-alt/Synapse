@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Card,
   Row,
@@ -7,7 +7,6 @@ import {
   Progress,
   Tag,
   Table,
-  Tabs,
   Select,
   Button,
   Spin,
@@ -75,7 +74,7 @@ const formatTime = (timestamp: number): string => {
 
 const MonitoringCenter: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // 未使用
 
   // 健康诊断状态
   const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse | null>(null);

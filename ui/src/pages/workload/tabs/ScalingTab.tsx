@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Spin, message, Empty, Tag } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Descriptions, Spin, Empty, Tag } from 'antd';
 import { WorkloadService } from '../../../services/workloadService';
 
 interface HPAInfo {
@@ -63,7 +63,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
     : '';
 
   // 加载HPA信息
-  const loadHPA = async () => {
+  const loadHPA = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
     setLoading(true);
@@ -86,11 +86,11 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, workloadName, workloadType]);
 
   useEffect(() => {
     loadHPA();
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [loadHPA]);
 
   if (loading) {
     return (

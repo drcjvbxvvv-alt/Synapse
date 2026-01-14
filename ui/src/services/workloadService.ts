@@ -1,4 +1,13 @@
 import { request } from '../utils/api';
+import type { ApiResponse } from '../types';
+
+interface VolumeItem {
+  name: string;
+  type: string;
+  hostPath?: string;
+  configMapName?: string;
+  secretName?: string;
+}
 
 export interface WorkloadInfo {
   id: string;
@@ -49,9 +58,9 @@ export interface WorkloadDetailResponse {
   message: string;
   data: {
     workload: WorkloadInfo;
-    raw: any;
+    raw: Record<string, unknown>;
     yaml?: string;  // 原始 YAML 字符串（保持原始格式）
-    pods: any[];
+    pods: Array<Record<string, unknown>>;
   };
 }
 
@@ -209,7 +218,7 @@ export class WorkloadService {
     name: string,
     type: string,
     replicas: number
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (type) {
       case 'Deployment':
@@ -233,7 +242,7 @@ export class WorkloadService {
     namespace: string,
     name: string,
     type: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (type) {
       case 'Deployment':
@@ -266,7 +275,7 @@ export class WorkloadService {
     namespace: string,
     name: string,
     type: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (type) {
       case 'Deployment':
@@ -292,7 +301,7 @@ export class WorkloadService {
     clusterId: string,
     yaml: string,
     dryRun = false
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     // 解析YAML中的kind来确定使用哪个endpoint
     try {
       const kindMatch = yaml.match(/kind:\s*(\w+)/);
@@ -323,7 +332,7 @@ export class WorkloadService {
         }
         return request.post(endpoint, { yaml, dryRun });
       }
-    } catch (e) {
+    } catch {
       // fallback to default
     }
     return request.post(`/clusters/${clusterId}/workloads/yaml/apply`, {
@@ -386,7 +395,7 @@ export class WorkloadService {
   // 表单数据转YAML
   static formDataToYAML(
     workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob',
-    formData: any
+    formData: Record<string, unknown>
   ): string {
     // 解析labels和annotations
     const parseKeyValue = (str: string): Record<string, string> => {
@@ -566,7 +575,7 @@ export class WorkloadService {
       
       // 数据卷挂载（添加到容器）
       if (formData.volumes && formData.volumes.length > 0) {
-        const volumeMounts = formData.volumes.map((vol: any) => 
+        const volumeMounts = (formData.volumes as VolumeItem[]).map((vol) => 
           `\n        - name: ${vol.name}\n          mountPath: ${vol.mountPath}${vol.readOnly ? '\n          readOnly: true' : ''}`
         ).join('');
         podSpecYAML += `\n        volumeMounts:${volumeMounts}`;
@@ -591,7 +600,7 @@ export class WorkloadService {
       // 容忍策略
       if (formData.tolerations && formData.tolerations.length > 0) {
         podSpecYAML += `\n      tolerations:`;
-        formData.tolerations.forEach((tol: any) => {
+        (formData.tolerations as Array<{ key: string; operator: string; effect: string; value?: string; tolerationSeconds?: number }>).forEach((tol) => {
           podSpecYAML += `\n      - key: ${tol.key}\n        operator: ${tol.operator}\n        effect: ${tol.effect}`;
           if (tol.value) {
             podSpecYAML += `\n        value: ${tol.value}`;
@@ -627,7 +636,7 @@ export class WorkloadService {
     let yaml = '';
 
     switch (workloadType) {
-      case 'Deployment':
+      case 'Deployment': {
         let deploymentStrategy = '';
         if (formData.strategy) {
           if (formData.strategy.type === 'Recreate') {
@@ -677,7 +686,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + formData.volumes.map((vol: any) => {
+${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -693,6 +702,7 @@ ${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n    
           return volYAML;
         }).join('') : ''}`;
         break;
+      }
 
       case 'StatefulSet':
         yaml = `apiVersion: apps/v1
@@ -720,7 +730,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + formData.volumes.map((vol: any) => {
+${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -761,7 +771,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + formData.volumes.map((vol: any) => {
+${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -803,7 +813,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + formData.volumes.map((vol: any) => {
+${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -849,7 +859,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + formData.volumes.map((vol: any) => {
+${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -890,7 +900,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
         spec:
           containers:
-${buildPodSpecYAML().replace(/^      /gm, '          ')}${formData.volumes && formData.volumes.length > 0 ? `\n          volumes:` + formData.volumes.map((vol: any) => {
+${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && formData.volumes.length > 0 ? `\n          volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n          - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n            emptyDir: {}`;
@@ -921,7 +931,7 @@ ${buildPodSpecYAML().replace(/^      /gm, '          ')}${formData.volumes && fo
     namespace: string,
     workloadType: string,
     workloadName: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (workloadType) {
       case 'Deployment':
@@ -942,7 +952,7 @@ ${buildPodSpecYAML().replace(/^      /gm, '          ')}${formData.volumes && fo
     namespace: string,
     workloadType: string,
     workloadName: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (workloadType) {
       case 'Deployment':
@@ -963,7 +973,7 @@ ${buildPodSpecYAML().replace(/^      /gm, '          ')}${formData.volumes && fo
     namespace: string,
     workloadType: string,
     workloadName: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (workloadType) {
       case 'Deployment':
@@ -984,7 +994,7 @@ ${buildPodSpecYAML().replace(/^      /gm, '          ')}${formData.volumes && fo
     namespace: string,
     workloadType: string,
     workloadName: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (workloadType) {
       case 'Deployment':
@@ -1005,7 +1015,7 @@ ${buildPodSpecYAML().replace(/^      /gm, '          ')}${formData.volumes && fo
     namespace: string,
     workloadType: string,
     workloadName: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (workloadType) {
       case 'Deployment':
@@ -1026,7 +1036,7 @@ ${buildPodSpecYAML().replace(/^      /gm, '          ')}${formData.volumes && fo
     namespace: string,
     workloadType: string,
     workloadName: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     let endpoint = `/clusters/${clusterId}/`;
     switch (workloadType) {
       case 'Deployment':

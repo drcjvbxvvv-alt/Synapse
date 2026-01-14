@@ -10,7 +10,6 @@ import {
   Card,
   Collapse,
   Typography,
-  Divider,
 } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Button, Space, message, Spin, Tabs, Empty } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { WorkloadService } from '../../../services/workloadService';
@@ -74,7 +74,7 @@ const AccessTab: React.FC<AccessTabProps> = ({
     : '';
 
   // 加载Service列表
-  const loadServices = async () => {
+  const loadServices = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
     setLoading(true);
@@ -97,10 +97,10 @@ const AccessTab: React.FC<AccessTabProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, workloadName, workloadType]);
 
   // 加载Ingress列表
-  const loadIngresses = async () => {
+  const loadIngresses = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
     setLoading(true);
@@ -123,12 +123,12 @@ const AccessTab: React.FC<AccessTabProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, workloadName, workloadType]);
 
   useEffect(() => {
     loadServices();
     loadIngresses();
-  }, [clusterId, namespace, deploymentName]);
+  }, [loadServices, loadIngresses]);
 
   // 格式化时间
   const formatTime = (timeStr: string) => {

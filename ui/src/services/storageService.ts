@@ -1,17 +1,17 @@
 import { request } from '../utils/api';
 import type { PVC, PV, StorageClass, ApiResponse, PaginatedResponse } from '../types';
 
-export interface PVCListResponse extends ApiResponse<PaginatedResponse<PVC>> {}
-export interface PVCDetailResponse extends ApiResponse<PVC> {}
-export interface PVCYAMLResponse extends ApiResponse<{ yaml: string }> {}
+export type PVCListResponse = ApiResponse<PaginatedResponse<PVC>>;
+export type PVCDetailResponse = ApiResponse<PVC>;
+export type PVCYAMLResponse = ApiResponse<{ yaml: string }>;
 
-export interface PVListResponse extends ApiResponse<PaginatedResponse<PV>> {}
-export interface PVDetailResponse extends ApiResponse<PV> {}
-export interface PVYAMLResponse extends ApiResponse<{ yaml: string }> {}
+export type PVListResponse = ApiResponse<PaginatedResponse<PV>>;
+export type PVDetailResponse = ApiResponse<PV>;
+export type PVYAMLResponse = ApiResponse<{ yaml: string }>;
 
-export interface StorageClassListResponse extends ApiResponse<PaginatedResponse<StorageClass>> {}
-export interface StorageClassDetailResponse extends ApiResponse<StorageClass> {}
-export interface StorageClassYAMLResponse extends ApiResponse<{ yaml: string }> {}
+export type StorageClassListResponse = ApiResponse<PaginatedResponse<StorageClass>>;
+export type StorageClassDetailResponse = ApiResponse<StorageClass>;
+export type StorageClassYAMLResponse = ApiResponse<{ yaml: string }>;
 
 export class StorageService {
   // ==================== PVC 相关方法 ====================

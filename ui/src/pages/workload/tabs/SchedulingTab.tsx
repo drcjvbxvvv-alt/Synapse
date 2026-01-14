@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Descriptions, Spin, message, Empty, Tag } from 'antd';
 import { WorkloadService } from '../../../services/workloadService';
 
 interface SchedulingInfo {
   nodeSelector?: Record<string, string>;
   affinity?: {
-    nodeAffinity?: any;
-    podAffinity?: any;
-    podAntiAffinity?: any;
+    nodeAffinity?: Record<string, unknown>;
+    podAffinity?: Record<string, unknown>;
+    podAntiAffinity?: Record<string, unknown>;
   };
   tolerations?: Array<{
     key?: string;
@@ -53,7 +53,7 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
     : '';
 
   // 加载调度策略
-  const loadScheduling = async () => {
+  const loadScheduling = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
     setLoading(true);
@@ -85,11 +85,11 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, workloadName, workloadType]);
 
   useEffect(() => {
     loadScheduling();
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [loadScheduling]);
 
   if (loading) {
     return (

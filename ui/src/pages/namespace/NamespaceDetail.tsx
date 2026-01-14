@@ -36,6 +36,7 @@ const NamespaceDetail: React.FC = () => {
 
   useEffect(() => {
     fetchNamespaceDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId, namespace]);
 
   const fetchNamespaceDetail = async () => {

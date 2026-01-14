@@ -19,11 +19,9 @@ import {
   Drawer,
 } from 'antd';
 import {
-  DeleteOutlined,
   ReloadOutlined,
   SearchOutlined,
   SafetyCertificateOutlined,
-  EditOutlined,
   PlusOutlined,
   MinusCircleOutlined,
   SettingOutlined,
@@ -41,6 +39,63 @@ const { Text, Link } = Typography;
 interface IngressTabProps {
   clusterId: string;
   onCountChange?: (count: number) => void;
+}
+
+interface LabelItem {
+  key: string;
+  value?: string;
+}
+
+interface AnnotationItem {
+  key: string;
+  value?: string;
+}
+
+interface PathItem {
+  path: string;
+  pathType: string;
+  serviceName: string;
+  servicePort: number | string;
+}
+
+interface RuleItem {
+  host: string;
+  paths?: PathItem[];
+}
+
+interface KubernetesIngressYAML {
+  apiVersion: string;
+  kind: string;
+  metadata: {
+    name: string;
+    namespace: string;
+    labels: Record<string, string>;
+    annotations: Record<string, string>;
+  };
+  spec: {
+    ingressClassName?: string;
+    rules: Array<{
+      host: string;
+      http: {
+        paths: Array<{
+          path: string;
+          pathType: string;
+          backend: {
+            service: {
+              name: string;
+              port: {
+                number: number | string;
+              };
+            };
+          };
+        }>;
+      };
+    }>;
+    tls?: Array<{
+      hosts: string[];
+      secretName: string;
+    }>;
+  };
 }
 
 const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => {
@@ -97,7 +152,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
   
   // 命名空间列表
   const [namespaces, setNamespaces] = useState<{ name: string; count: number }[]>([]);
-  const [loadingNamespaces, setLoadingNamespaces] = useState(false);
+  const [, setLoadingNamespaces] = useState(false);
 
   // 添加搜索条件
   const addSearchCondition = () => {
@@ -151,7 +206,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       // 不同字段之间是 AND 关系
       // 相同字段之间是 OR 关系
       return Object.entries(conditionsByField).every(([field, values]) => {
-        let ingressValue: any;
+        let ingressValue: string | number | boolean | undefined;
         
         if (field === 'host') {
           // host 需要特殊处理，搜索所有 hosts
@@ -457,7 +512,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         const values = await editForm.validateFields();
         
         // 构建Ingress YAML
-        const ingressYaml: any = {
+        const ingressYaml: KubernetesIngressYAML = {
           apiVersion: 'networking.k8s.io/v1',
           kind: 'Ingress',
           metadata: {
@@ -474,8 +529,8 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         };
 
         // 添加labels
-        if (values.labels && values.labels.length > 0) {
-          values.labels.forEach((label: any) => {
+        if (values.labels && Array.isArray(values.labels) && values.labels.length > 0) {
+          (values.labels as LabelItem[]).forEach((label) => {
             if (label && label.key) {
               ingressYaml.metadata.labels[label.key] = label.value || '';
             }
@@ -483,8 +538,8 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         }
 
         // 添加annotations
-        if (values.annotations && values.annotations.length > 0) {
-          values.annotations.forEach((annotation: any) => {
+        if (values.annotations && Array.isArray(values.annotations) && values.annotations.length > 0) {
+          (values.annotations as AnnotationItem[]).forEach((annotation) => {
             if (annotation && annotation.key) {
               ingressYaml.metadata.annotations[annotation.key] = annotation.value || '';
             }
@@ -492,11 +547,11 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         }
 
         // 添加rules
-        if (values.rules && values.rules.length > 0) {
-          ingressYaml.spec.rules = values.rules.map((rule: any) => ({
+        if (values.rules && Array.isArray(values.rules) && values.rules.length > 0) {
+          ingressYaml.spec.rules = (values.rules as RuleItem[]).map((rule) => ({
             host: rule.host,
             http: {
-              paths: rule.paths?.map((path: any) => ({
+              paths: (rule.paths || []).map((path) => ({
                 path: path.path,
                 pathType: path.pathType,
                 backend: {
@@ -513,8 +568,8 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         }
 
         // 添加TLS
-        if (values.tls && values.tls.length > 0) {
-          ingressYaml.spec.tls = values.tls.map((tls: any) => ({
+        if (values.tls && Array.isArray(values.tls) && values.tls.length > 0) {
+          ingressYaml.spec.tls = (values.tls as Array<{ secretName: string; hosts: string[] }>).map((tls) => ({
             secretName: tls.secretName,
             hosts: tls.hosts,
           }));
@@ -612,7 +667,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       title: '访问入口',
       key: 'loadBalancer',
       width: 200,
-      render: (_: any, record: Ingress) => {
+      render: (_: unknown, record: Ingress) => {
         const lbs = IngressService.formatLoadBalancers(record);
         return (
           <div>
@@ -636,7 +691,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       title: 'Hosts',
       key: 'hosts',
       width: 200,
-      render: (_: any, record: Ingress) => {
+      render: (_: unknown, record: Ingress) => {
         const hosts = IngressService.getHosts(record);
         return (
           <div>
@@ -660,7 +715,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       title: '转发策略',
       key: 'backends',
       width: 300,
-      render: (_: any, record: Ingress) => {
+      render: (_: unknown, record: Ingress) => {
         const backends = IngressService.formatBackends(record);
         return (
           <div style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
@@ -700,7 +755,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       key: 'action',
       fixed: 'right' as const,
       width: 150,
-      render: (_: any, record: Ingress) => (
+      render: (_: unknown, record: Ingress) => (
         <Space size="small">
           <Button
             type="link"

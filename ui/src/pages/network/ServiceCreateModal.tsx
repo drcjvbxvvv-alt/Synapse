@@ -13,6 +13,24 @@ interface ServiceCreateModalProps {
   onSuccess: () => void;
 }
 
+interface SelectorItem {
+  key: string;
+  value: string;
+}
+
+interface PortItem {
+  name?: string;
+  protocol?: string;
+  port: number;
+  targetPort?: number | string;
+  nodePort?: number;
+}
+
+interface LabelItem {
+  key: string;
+  value: string;
+}
+
 const ServiceCreateModal: React.FC<ServiceCreateModalProps> = ({
   visible,
   clusterId,
@@ -86,11 +104,11 @@ spec:
           formData: {
             name: values.name,
             type: values.type,
-            selector: values.selector?.reduce((acc: any, item: any) => {
+            selector: (values.selector as SelectorItem[] | undefined)?.reduce((acc: Record<string, string>, item) => {
               acc[item.key] = item.value;
               return acc;
             }, {}) || {},
-            ports: values.ports?.map((port: any) => ({
+            ports: (values.ports as PortItem[] | undefined)?.map((port) => ({
               name: port.name,
               protocol: port.protocol || 'TCP',
               port: port.port,
@@ -98,11 +116,11 @@ spec:
               nodePort: port.nodePort,
             })) || [],
             sessionAffinity: values.sessionAffinity || 'None',
-            labels: values.labels?.reduce((acc: any, item: any) => {
+            labels: (values.labels as LabelItem[] | undefined)?.reduce((acc: Record<string, string>, item) => {
               acc[item.key] = item.value;
               return acc;
             }, {}) || {},
-            annotations: values.annotations?.reduce((acc: any, item: any) => {
+            annotations: (values.annotations as LabelItem[] | undefined)?.reduce((acc: Record<string, string>, item) => {
               acc[item.key] = item.value;
               return acc;
             }, {}) || {},
@@ -118,9 +136,10 @@ spec:
           message.error(response.message || 'Service创建失败');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('创建Service失败:', error);
-      message.error(error.message || '创建Service失败');
+      const errorMessage = error instanceof Error ? error.message : '创建Service失败';
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -150,7 +169,30 @@ spec:
     try {
       const values = form.getFieldsValue();
       
-      const serviceObj: any = {
+      interface KubernetesServiceYAML {
+        apiVersion: string;
+        kind: string;
+        metadata: {
+          name: string;
+          namespace: string;
+          labels?: Record<string, string>;
+          annotations?: Record<string, string>;
+        };
+        spec: {
+          type: string;
+          selector?: Record<string, string>;
+          ports: Array<{
+            name?: string;
+            protocol: string;
+            port: number;
+            targetPort: number | string;
+            nodePort?: number;
+          }>;
+          sessionAffinity?: string;
+        };
+      }
+
+      const serviceObj: KubernetesServiceYAML = {
         apiVersion: 'v1',
         kind: 'Service',
         metadata: {
@@ -159,16 +201,16 @@ spec:
         },
         spec: {
           type: values.type || 'ClusterIP',
-          selector: values.selector?.reduce((acc: any, item: any) => {
+          selector: (values.selector as SelectorItem[] | undefined)?.reduce((acc: Record<string, string>, item) => {
             if (item.key) acc[item.key] = item.value;
             return acc;
           }, {}) || { app: 'my-app' },
-          ports: values.ports?.map((port: any) => ({
+          ports: (values.ports as PortItem[] | undefined)?.map((port) => ({
             name: port.name || undefined,
             protocol: port.protocol || 'TCP',
             port: port.port || 80,
             targetPort: port.targetPort ? (isNaN(Number(port.targetPort)) ? port.targetPort : Number(port.targetPort)) : port.port || 8080,
-          })).filter((p: any) => p.port) || [
+          })).filter((p) => p.port) || [
             { protocol: 'TCP', port: 80, targetPort: 8080 }
           ],
           sessionAffinity: values.sessionAffinity || 'None',
@@ -177,14 +219,14 @@ spec:
 
       // 添加labels和annotations（如果存在）
       if (values.labels && values.labels.length > 0) {
-        serviceObj.metadata.labels = values.labels.reduce((acc: any, item: any) => {
+        serviceObj.metadata.labels = (values.labels as LabelItem[]).reduce((acc: Record<string, string>, item: LabelItem) => {
           if (item.key) acc[item.key] = item.value;
           return acc;
         }, {});
       }
 
       if (values.annotations && values.annotations.length > 0) {
-        serviceObj.metadata.annotations = values.annotations.reduce((acc: any, item: any) => {
+        serviceObj.metadata.annotations = (values.annotations as LabelItem[]).reduce((acc: Record<string, string>, item: LabelItem) => {
           if (item.key) acc[item.key] = item.value;
           return acc;
         }, {});
@@ -208,7 +250,14 @@ spec:
         : [];
 
       // 提取ports
-      const ports = serviceObj.spec?.ports?.map((port: any) => ({
+      interface PortConfig {
+        name?: string;
+        protocol?: string;
+        port: number;
+        targetPort?: number | string;
+        nodePort?: number;
+      }
+      const ports = (serviceObj.spec?.ports as PortConfig[] | undefined)?.map((port: PortConfig) => ({
         name: port.name || '',
         protocol: port.protocol || 'TCP',
         port: port.port,

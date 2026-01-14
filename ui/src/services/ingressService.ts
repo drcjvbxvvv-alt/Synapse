@@ -1,11 +1,11 @@
 import { request } from '../utils/api';
 import type { Ingress, ApiResponse, PaginatedResponse } from '../types';
 
-export interface IngressListResponse extends ApiResponse<PaginatedResponse<Ingress>> {}
+export type IngressListResponse = ApiResponse<PaginatedResponse<Ingress>>;
 
-export interface IngressDetailResponse extends ApiResponse<Ingress> {}
+export type IngressDetailResponse = ApiResponse<Ingress>;
 
-export interface IngressYAMLResponse extends ApiResponse<{ yaml: string }> {}
+export type IngressYAMLResponse = ApiResponse<{ yaml: string }>;
 
 export class IngressService {
   // 获取Ingress列表
@@ -70,7 +70,7 @@ export class IngressService {
     data: {
       namespace: string;
       yaml?: string;
-      formData?: any;
+      formData?: Record<string, unknown>;
     }
   ): Promise<ApiResponse<Ingress>> {
     return request.post(`/clusters/${clusterId}/ingresses`, data);
@@ -84,7 +84,7 @@ export class IngressService {
     data: {
       namespace: string;
       yaml?: string;
-      formData?: any;
+      formData?: Record<string, unknown>;
     }
   ): Promise<ApiResponse<Ingress>> {
     return request.put(`/clusters/${clusterId}/ingresses/${namespace}/${name}`, data);

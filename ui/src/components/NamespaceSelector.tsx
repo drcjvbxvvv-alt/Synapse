@@ -6,7 +6,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Select, Tag, Tooltip } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
-import { usePermission } from '../contexts/PermissionContext';
+import { usePermission } from '../hooks/usePermission';
 import { namespaceService } from '../services/namespaceService';
 
 const { Option } = Select;
@@ -45,8 +45,10 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
       try {
         const response = await namespaceService.getNamespaces(String(clusterId));
         if (response.code === 200 && response.data) {
-          const names = response.data.map((ns: any) => ns.name || ns);
-          setAllNamespaces(names);
+          const names = response.data.map((ns: { name?: string } | string) => 
+            typeof ns === 'string' ? ns : (ns.name || '')
+          );
+          setAllNamespaces(names.filter(Boolean));
         }
       } catch (error) {
         console.error('获取命名空间列表失败:', error);

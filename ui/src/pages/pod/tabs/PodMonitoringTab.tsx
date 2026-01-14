@@ -117,7 +117,7 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
 
     // 完全 kiosk 模式：隐藏侧边栏和顶部导航栏
     return `${GRAFANA_URL}/d/${DASHBOARD_UID}/?${params.toString()}&kiosk`;
-  }, [getFromTime, getToTime, dataSourceUid, namespace, podName, refreshKey, autoRefresh]);
+  }, [getFromTime, getToTime, dataSourceUid, namespace, podName, autoRefresh]);
 
   const handleRefresh = () => {
     setLoading(true);

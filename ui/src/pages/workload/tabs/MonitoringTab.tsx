@@ -115,6 +115,9 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
       params.append('refresh', '30s');
     }
 
+    // 添加 refreshKey 作为查询参数以强制 iframe 重新加载
+    params.append('_refresh', refreshKey.toString());
+
     // 完全 kiosk 模式：隐藏侧边栏和顶部导航栏
     return `${GRAFANA_URL}/d/${DASHBOARD_UID}/?${params.toString()}&kiosk`;
   }, [getFromTime, getToTime, dataSourceUid, namespace, workloadName, refreshKey, autoRefresh]);

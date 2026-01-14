@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Button, Space, message, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { WorkloadService } from '../../../services/workloadService';
@@ -49,7 +49,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
     : '';
 
   // 加载ReplicaSet列表
-  const loadReplicaSets = async () => {
+  const loadReplicaSets = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
     setLoading(true);
@@ -72,11 +72,11 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, workloadName, workloadType]);
 
   useEffect(() => {
     loadReplicaSets();
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [loadReplicaSets]);
 
   // 格式化时间
   const formatTime = (timeStr: string) => {

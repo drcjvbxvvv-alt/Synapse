@@ -12,7 +12,6 @@ import {
   Col,
   Tabs,
   Card,
-  message,
   App,
 } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
@@ -119,17 +118,18 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
       // Process form data
       const formData: WorkloadFormData = {
         ...values,
-        env: values.env?.filter((item: any) => item.name && item.value),
+        env: values.env?.filter((item: { name?: string; value?: string }) => item.name && item.value),
       };
 
       await onSubmit(formData);
       messageApi.success(mode === 'create' ? '创建成功' : '更新成功');
       form.resetFields();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      const err = error as { errorFields?: unknown[]; message?: string };
+      if (err.errorFields) {
         messageApi.error('请检查表单填写是否完整');
       } else {
-        messageApi.error(error.message || '操作失败');
+        messageApi.error(err.message || '操作失败');
       }
     } finally {
       setSubmitting(false);

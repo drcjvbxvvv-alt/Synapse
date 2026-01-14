@@ -43,7 +43,7 @@ import type {  Cluster, PermissionType } from '../types';
 import { clusterService } from '../services/clusterService';
 import SearchDropdown from '../components/SearchDropdown';
 import { tokenManager } from '../services/authService';
-import { usePermission } from '../contexts/PermissionContext';
+import { usePermission } from '../hooks/usePermission';
 import { getPermissionTypeName, getPermissionTypeColor } from '../services/permissionService';
 import { 
   MAIN_MENU_PERMISSIONS, 
@@ -167,6 +167,7 @@ const MainLayout: React.FC = () => {
   // 当路由变化时，更新展开的菜单
   useEffect(() => {
     setOpenKeys(getDefaultOpenKeys());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   // 处理菜单展开/折叠
@@ -480,7 +481,7 @@ const MainLayout: React.FC = () => {
       if ('children' in item && Array.isArray(item.children)) {
         const filteredChildren = filterMainMenuItems(item.children as MenuItem[]);
         if (filteredChildren.length === 0) return false;
-        (item as any).children = filteredChildren;
+        (item as MenuItem & { children: MenuItem[] }).children = filteredChildren;
       }
       
       return true;
@@ -508,7 +509,7 @@ const MainLayout: React.FC = () => {
       if ('children' in item && Array.isArray(item.children)) {
         const filteredChildren = filterClusterMenuItems(item.children as MenuItem[]);
         if (filteredChildren.length === 0) return false;
-        (item as any).children = filteredChildren;
+        (item as MenuItem & { children: MenuItem[] }).children = filteredChildren;
       }
       
       return true;

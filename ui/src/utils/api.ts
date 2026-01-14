@@ -68,13 +68,13 @@ export const request = {
       throw error;
     }),
   
-  post: <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+  post: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
     api.post(url, data, config).then(res => res.data).catch(error => {
       console.error('POST请求失败:', url, error);
       throw error;
     }),
   
-  put: <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+  put: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
     api.put(url, data, config).then(res => res.data).catch(error => {
       console.error('PUT请求失败:', url, error);
       throw error;
@@ -86,7 +86,7 @@ export const request = {
       throw error;
     }),
   
-  patch: <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+  patch: <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
     api.patch(url, data, config).then(res => res.data).catch(error => {
       console.error('PATCH请求失败:', url, error);
       throw error;

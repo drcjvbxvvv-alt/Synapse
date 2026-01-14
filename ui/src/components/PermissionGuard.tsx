@@ -4,10 +4,10 @@
  */
 
 import React from 'react';
-import { Navigate, useLocation, useParams } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Result, Button } from 'antd';
 import { tokenManager } from '../services/authService';
-import { usePermission } from '../contexts/PermissionContext';
+import { usePermission } from '../hooks/usePermission';
 import { 
   isPlatformAdmin, 
   hasPermission, 
@@ -38,7 +38,6 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
 }) => {
   const currentUser = tokenManager.getUser();
   const { currentClusterPermission, loading } = usePermission();
-  const location = useLocation();
 
   // 如果权限还在加载中，可以显示加载状态
   if (loading) {
@@ -112,8 +111,6 @@ export const PlatformAdminGuard: React.FC<{ children: React.ReactNode }> = ({ ch
 export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const { currentClusterPermission, loading } = usePermission();
-  const { clusterId, id } = useParams();
-  const currentClusterId = clusterId || id;
 
   if (loading) {
     return null;
@@ -146,49 +143,6 @@ export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = (
   }
 
   return <>{children}</>;
-};
-
-/**
- * 操作权限检查 Hook
- * 用于在组件内检查是否有权限执行某个操作
- */
-export const useActionPermission = () => {
-  const { currentClusterPermission } = usePermission();
-  const currentUser = tokenManager.getUser();
-
-  const canPerform = (action: string): boolean => {
-    // 平台管理员可以执行所有操作
-    if (isPlatformAdmin(currentUser?.username)) {
-      return true;
-    }
-
-    const userPermission = currentClusterPermission?.permission_type as PermissionType | undefined;
-    if (!userPermission) return false;
-
-    // 管理员权限可以执行所有操作
-    if (userPermission === 'admin') return true;
-
-    // 只读权限只能查看
-    if (userPermission === 'readonly') {
-      return ['view', 'list', 'get'].includes(action);
-    }
-
-    // 开发权限
-    if (userPermission === 'dev') {
-      const allowedPrefixes = ['pod:', 'deployment:', 'statefulset:', 'service:', 'configmap:', 'secret:', 'ingress:', 'job:', 'cronjob:'];
-      return allowedPrefixes.some(prefix => action.startsWith(prefix)) || ['view', 'list', 'get'].includes(action);
-    }
-
-    // 运维权限（排除节点和存储的高危操作）
-    if (userPermission === 'ops') {
-      const restricted = ['node:cordon', 'node:uncordon', 'node:drain', 'pv:delete', 'storageclass:delete'];
-      return !restricted.includes(action);
-    }
-
-    return false;
-  };
-
-  return { canPerform };
 };
 
 // 获取权限类型的显示名称

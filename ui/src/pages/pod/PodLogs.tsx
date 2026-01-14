@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -35,7 +35,7 @@ interface LogMessage {
   message?: string;
 }
 
-interface PodLogsProps {}
+type PodLogsProps = Record<string, never>;
 
 const PodLogs: React.FC<PodLogsProps> = () => {
   const { clusterId, namespace, name } = useParams<{
@@ -61,7 +61,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
   const wsRef = useRef<WebSocket | null>(null);
 
   // 获取Pod详情
-  const fetchPodDetail = async () => {
+  const fetchPodDetail = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     
     try {
@@ -80,10 +80,10 @@ const PodLogs: React.FC<PodLogsProps> = () => {
       console.error('获取Pod详情失败:', error);
       message.error('获取Pod详情失败');
     }
-  };
+  }, [clusterId, namespace, name, selectedContainer]);
 
   // 获取日志
-  const fetchLogs = async (isFollow = false) => {
+  const fetchLogs = useCallback(async (isFollow = false) => {
     if (!clusterId || !namespace || !name) return;
     
     setLoading(true);
@@ -123,7 +123,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, name, selectedContainer, previous, tailLines, sinceSeconds]);
 
   // 开始/停止跟踪日志
   const toggleFollow = () => {
@@ -265,13 +265,13 @@ const PodLogs: React.FC<PodLogsProps> = () => {
 
   useEffect(() => {
     fetchPodDetail();
-  }, [clusterId, namespace, name]);
+  }, [fetchPodDetail]);
 
   useEffect(() => {
     if (selectedContainer) {
       fetchLogs(false);
     }
-  }, [selectedContainer, previous, tailLines, sinceSeconds]);
+  }, [selectedContainer, previous, tailLines, sinceSeconds, fetchLogs]);
 
   // 组件卸载时清理WebSocket连接
   useEffect(() => {

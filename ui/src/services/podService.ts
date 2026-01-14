@@ -74,7 +74,7 @@ export interface PodDetailResponse {
   message: string;
   data: {
     pod: PodInfo;
-    raw: any;
+    raw: Record<string, unknown>;
   };
 }
 
@@ -140,7 +140,7 @@ export class PodService {
     clusterId: string,
     namespace: string,
     name: string
-  ): Promise<any> {
+  ): Promise<ApiResponse<unknown>> {
     return request.delete(`/clusters/${clusterId}/pods/${namespace}/${name}`);
   }
 

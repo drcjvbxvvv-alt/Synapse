@@ -1,36 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import React, { useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { MyPermissionsResponse, PermissionType } from '../types';
 import permissionService from '../services/permissionService';
 import { tokenManager } from '../services/authService';
-
-// 权限上下文类型
-interface PermissionContextType {
-  // 用户在所有集群的权限
-  clusterPermissions: Map<number, MyPermissionsResponse>;
-  // 当前集群权限
-  currentClusterPermission: MyPermissionsResponse | null;
-  // 加载状态
-  loading: boolean;
-  // 权限检查方法
-  hasClusterAccess: (clusterId: number | string) => boolean;
-  hasNamespaceAccess: (clusterId: number | string, namespace: string) => boolean;
-  canPerformAction: (action: string, clusterId?: number | string) => boolean;
-  isAdmin: (clusterId?: number | string) => boolean;
-  isReadonly: (clusterId?: number | string) => boolean;
-  canWrite: (clusterId?: number | string) => boolean; // 检查是否有写权限
-  // 获取权限类型
-  getPermissionType: (clusterId: number | string) => PermissionType | null;
-  // 刷新权限
-  refreshPermissions: () => Promise<void>;
-  // 设置当前集群
-  setCurrentClusterId: (clusterId: number | string | null) => void;
-  // 命名空间权限相关
-  getAllowedNamespaces: (clusterId?: number | string) => string[];
-  hasAllNamespaceAccess: (clusterId?: number | string) => boolean;
-  filterNamespaces: (namespaces: string[], clusterId?: number | string) => string[];
-}
-
-const PermissionContext = createContext<PermissionContextType | null>(null);
+import { PermissionContext, type PermissionContextType } from './PermissionContext';
 
 // 权限Provider组件
 export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -127,14 +99,16 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     switch (type) {
       case 'admin':
         return true;
-      case 'ops':
+      case 'ops': {
         // 运维权限：排除节点操作和存储管理
         const restrictedOps = ['node:cordon', 'node:uncordon', 'node:drain', 'pv:create', 'pv:delete'];
         return !restrictedOps.includes(action);
-      case 'dev':
+      }
+      case 'dev': {
         // 开发权限：只能操作工作负载相关
         const allowedDev = ['pod:', 'deployment:', 'statefulset:', 'service:', 'configmap:', 'secret:'];
         return allowedDev.some(prefix => action.startsWith(prefix)) || action === 'view';
+      }
       case 'readonly':
         return action === 'view' || action === 'list' || action === 'get';
       case 'custom':
@@ -274,31 +248,4 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     </PermissionContext.Provider>
   );
 };
-
-// 使用权限的 Hook
-export const usePermission = (): PermissionContextType => {
-  const context = useContext(PermissionContext);
-  if (!context) {
-    throw new Error('usePermission must be used within a PermissionProvider');
-  }
-  return context;
-};
-
-// 权限检查高阶组件
-export const withPermission = <P extends object>(
-  WrappedComponent: React.ComponentType<P>,
-  requiredAction?: string
-) => {
-  return (props: P) => {
-    const { canPerformAction } = usePermission();
-    
-    if (requiredAction && !canPerformAction(requiredAction)) {
-      return null; // 或者返回无权限提示组件
-    }
-    
-    return <WrappedComponent {...props} />;
-  };
-};
-
-export default PermissionContext;
 

@@ -22,8 +22,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
   SearchOutlined,
   QuestionCircleOutlined,
   UserOutlined,
@@ -191,7 +189,7 @@ const PermissionManagement: React.FC = () => {
       setClusters(clustersRes.data?.items || []);
       setUsers(usersRes.data || []);
       setUserGroups(groupsRes.data || []);
-    } catch (error) {
+    } catch {
       console.error('加载数据失败:', error);
       message.error('加载数据失败');
     } finally {
@@ -264,7 +262,7 @@ const PermissionManagement: React.FC = () => {
       } else {
         message.error(res.message || '同步失败');
       }
-    } catch (err) {
+    } catch {
       message.error('同步失败');
     } finally {
       setSyncLoading(false);
@@ -295,7 +293,7 @@ const PermissionManagement: React.FC = () => {
       await permissionService.deleteClusterPermission(id);
       message.success('删除成功');
       loadData();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -311,7 +309,7 @@ const PermissionManagement: React.FC = () => {
       message.success('批量删除成功');
       setSelectedRowKeys([]);
       loadData();
-    } catch (error) {
+    } catch {
       message.error('批量删除失败');
     }
   };
@@ -344,8 +342,9 @@ const PermissionManagement: React.FC = () => {
 
       setModalVisible(false);
       loadData();
-    } catch (error: any) {
-      message.error(error.response?.data?.message || '操作失败');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      message.error(err.response?.data?.message || '操作失败');
     }
   };
 

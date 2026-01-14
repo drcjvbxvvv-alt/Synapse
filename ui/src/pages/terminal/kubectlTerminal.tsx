@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Card,
@@ -22,6 +22,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { ClipboardAddon } from '@xterm/addon-clipboard';
 import 'xterm/css/xterm.css';
+import { namespaceService } from '../../services/namespaceService';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -41,6 +42,90 @@ const KubectlTerminalPage: React.FC = () => {
   
   const connectedRef = useRef(false);
   const currentLineRef = useRef('');
+
+  // 加载命名空间列表
+  useEffect(() => {
+    const fetchNamespaces = async () => {
+      if (!clusterId) return;
+      
+      try {
+        const response = await namespaceService.getNamespaces(clusterId);
+        if (response.code === 200 && response.data) {
+          const names = response.data.map((ns) => ns.name).filter(Boolean);
+          if (names.length > 0) {
+            setNamespaces(names);
+            // 如果当前选中的命名空间不在新列表中，则切换到第一个
+            setSelectedNamespace((prev) => {
+              if (!names.includes(prev)) {
+                return names[0];
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (error) {
+        console.error('获取命名空间列表失败:', error);
+        // 保持默认值，不显示错误提示，避免影响用户体验
+      }
+    };
+
+    fetchNamespaces();
+  }, [clusterId]);
+
+  // 处理终端输入 - 直接发送所有输入到服务端（Pod Terminal 模式）
+  const handleTerminalInput = useCallback((data: string) => {
+    if (!connectedRef.current || !websocket.current) return;
+
+    if (websocket.current.readyState !== WebSocket.OPEN) {
+      terminal.current?.write('\r\nConnection lost. Please reconnect.\r\n');
+      return;
+    }
+
+    // 直接发送所有输入到服务端，由服务端处理并回显
+    websocket.current.send(JSON.stringify({
+      type: 'input',
+      data: data,
+    }));
+  }, []);
+
+  // 粘贴剪贴板内容
+  const pasteFromClipboard = useCallback(() => {
+    if (!connectedRef.current) {
+      message.error('请先连接终端');
+      return;
+    }
+    
+    navigator.clipboard.readText()
+      .then((text) => {
+        if (text && websocket.current && websocket.current.readyState === WebSocket.OPEN) {
+          // 直接作为输入发送
+          websocket.current.send(JSON.stringify({
+            type: 'input',
+            data: text
+          }));
+        }
+      })
+      .catch((err) => {
+        console.error('粘贴失败:', err);
+        message.error('粘贴失败，请检查浏览器权限');
+      });
+  }, []);
+
+  // 显示欢迎信息
+  const showWelcomeMessage = useCallback(() => {
+    if (!terminal.current) return;
+    
+    terminal.current.clear();
+    terminal.current.writeln('\x1b[32m╭─────────────────────────────────────────────────────────────╮\x1b[0m');
+    terminal.current.writeln('\x1b[32m│                  KubePolaris Kubectl Terminal               │\x1b[0m');
+    terminal.current.writeln('\x1b[32m╰─────────────────────────────────────────────────────────────╯\x1b[0m');
+    terminal.current.writeln('');
+    terminal.current.writeln(`\x1b[36mCluster:\x1b[0m ${clusterId}`);
+    terminal.current.writeln(`\x1b[36mNamespace:\x1b[0m ${selectedNamespace}`);
+    terminal.current.writeln('');
+    terminal.current.writeln('\x1b[33m请选择命名空间并点击"连接终端"开始...\x1b[0m');
+    terminal.current.writeln('');
+  }, [clusterId, selectedNamespace]);
 
   // 初始化终端
   useEffect(() => {
@@ -147,65 +232,15 @@ const KubectlTerminalPage: React.FC = () => {
         terminal.current = null;
       }
     };
-  }, []);
-
-  // 显示欢迎信息
-  const showWelcomeMessage = () => {
-    if (!terminal.current) return;
-    
-    terminal.current.clear();
-    terminal.current.writeln('\x1b[32m╭─────────────────────────────────────────────────────────────╮\x1b[0m');
-    terminal.current.writeln('\x1b[32m│                  KubePolaris Kubectl Terminal               │\x1b[0m');
-    terminal.current.writeln('\x1b[32m╰─────────────────────────────────────────────────────────────╯\x1b[0m');
-    terminal.current.writeln('');
-    terminal.current.writeln(`\x1b[36mCluster:\x1b[0m ${clusterId}`);
-    terminal.current.writeln(`\x1b[36mNamespace:\x1b[0m ${selectedNamespace}`);
-    terminal.current.writeln('');
-    terminal.current.writeln('\x1b[33m请选择命名空间并点击"连接终端"开始...\x1b[0m');
-    terminal.current.writeln('');
-  };
-
-  // 处理终端输入 - 直接发送所有输入到服务端（Pod Terminal 模式）
-  const handleTerminalInput = (data: string) => {
-    if (!connectedRef.current || !websocket.current) return;
-
-    if (websocket.current.readyState !== WebSocket.OPEN) {
-      terminal.current?.write('\r\nConnection lost. Please reconnect.\r\n');
-      return;
-    }
-
-    // 直接发送所有输入到服务端，由服务端处理并回显
-    websocket.current.send(JSON.stringify({
-      type: 'input',
-      data: data,
-    }));
-  };
-
-  // 粘贴剪贴板内容
-  const pasteFromClipboard = () => {
-    if (!connectedRef.current) {
-      message.error('请先连接终端');
-      return;
-    }
-    
-    navigator.clipboard.readText()
-      .then((text) => {
-        if (text && websocket.current && websocket.current.readyState === WebSocket.OPEN) {
-          // 直接作为输入发送
-          websocket.current.send(JSON.stringify({
-            type: 'input',
-            data: text
-          }));
-        }
-      })
-      .catch((err) => {
-        console.error('粘贴失败:', err);
-        message.error('粘贴失败，请检查浏览器权限');
-      });
-  };
+  }, [showWelcomeMessage, handleTerminalInput, pasteFromClipboard]);
 
   // 处理 WebSocket 消息
-  const handleWebSocketMessage = (msg: any) => {
+  interface WebSocketMessage {
+    type: string;
+    data: string;
+  }
+
+  const handleWebSocketMessage = (msg: WebSocketMessage) => {
     if (!terminal.current) return;
 
     switch (msg.type) {

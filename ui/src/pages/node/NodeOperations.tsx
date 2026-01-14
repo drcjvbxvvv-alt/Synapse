@@ -80,7 +80,12 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
     teamNotified: false,
   });
   const [operationProgress, setOperationProgress] = useState(0);
-  const [nodeOperationStatus, setNodeOperationStatus] = useState<any[]>([]);
+  interface NodeOperationStatusItem {
+    nodeName: string;
+    status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+    message?: string;
+  }
+  const [nodeOperationStatus, setNodeOperationStatus] = useState<NodeOperationStatusItem[]>([]);
   const [operationResults, setOperationResults] = useState<OperationResults>({
     success: 0,
     failed: 0,
@@ -93,7 +98,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   const [executionStrategy, setExecutionStrategy] = useState('serial');
   const [failureHandling, setFailureHandling] = useState('stop');
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
+  // const [form] = Form.useForm(); // 未使用
 
   // 初始化节点操作状态
   useEffect(() => {
@@ -109,7 +114,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   }, [selectedNodes]);
 
   // 处理操作类型变更
-  const handleOperationTypeChange = (e: any) => {
+  const handleOperationTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOperationType(e.target.value);
   };
 
@@ -750,7 +755,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         <List
           itemLayout="horizontal"
           dataSource={nodeOperationStatus}
-          renderItem={(item: any, index: number) => (
+          renderItem={(item: NodeOperationStatusItem) => (
             <List.Item>
               <List.Item.Meta
                 avatar={getStatusIcon(item.status)}

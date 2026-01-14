@@ -43,9 +43,9 @@ import ArgoCDConfigPage from './pages/plugins/ArgoCDConfigPage';
 import ArgoCDApplicationsPage from './pages/plugins/ArgoCDApplicationsPage';
 import { PermissionManagement } from './pages/permission';
 import { MonitoringCenter } from './pages/om';
-import { PermissionProvider } from './contexts/PermissionContext';
+import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
-import { PermissionGuard, ClusterPermissionGuard } from './components/PermissionGuard';
+import { PermissionGuard } from './components/PermissionGuard';
 import './App.css';
 
 // 认证保护组件

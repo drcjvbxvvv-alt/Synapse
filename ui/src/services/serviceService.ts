@@ -1,13 +1,13 @@
 import { request } from '../utils/api';
 import type { Service, Endpoints, ApiResponse, PaginatedResponse } from '../types';
 
-export interface ServiceListResponse extends ApiResponse<PaginatedResponse<Service>> {}
+export type ServiceListResponse = ApiResponse<PaginatedResponse<Service>>;
 
-export interface ServiceDetailResponse extends ApiResponse<Service> {}
+export type ServiceDetailResponse = ApiResponse<Service>;
 
-export interface ServiceYAMLResponse extends ApiResponse<{ yaml: string }> {}
+export type ServiceYAMLResponse = ApiResponse<{ yaml: string }>;
 
-export interface EndpointsResponse extends ApiResponse<Endpoints> {}
+export type EndpointsResponse = ApiResponse<Endpoints>;
 
 export class ServiceService {
   // 获取Service列表
@@ -81,7 +81,7 @@ export class ServiceService {
     data: {
       namespace: string;
       yaml?: string;
-      formData?: any;
+      formData?: Record<string, unknown>;
     }
   ): Promise<ApiResponse<Service>> {
     return request.post(`/clusters/${clusterId}/services`, data);
@@ -95,7 +95,7 @@ export class ServiceService {
     data: {
       namespace: string;
       yaml?: string;
-      formData?: any;
+      formData?: Record<string, unknown>;
     }
   ): Promise<ApiResponse<Service>> {
     return request.put(`/clusters/${clusterId}/services/${namespace}/${name}`, data);

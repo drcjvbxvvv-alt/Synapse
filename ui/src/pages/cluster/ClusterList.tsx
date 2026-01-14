@@ -1,26 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card,
   Table,
   Button,
   Space,
   Tag,
-  Progress,
   Tooltip,
   Input,
-  Select,
-  Row,
-  Col,
-  Statistic,
-  Badge,
   Dropdown,
   App,
+  Progress,
 } from 'antd';
 import {
   PlusOutlined,
   ReloadOutlined,
-  EyeOutlined,
   BarChartOutlined,
   MoreOutlined,
   DatabaseOutlined,
@@ -36,17 +29,13 @@ import { clusterService } from '../../services/clusterService';
 import { message } from 'antd';
 
 const { Search } = Input;
-const { Option } = Select;
 
 const ClusterList: React.FC = () => {
   const navigate = useNavigate();
   const { modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
   const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [terminalVisible, setTerminalVisible] = useState(false);
-  const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
 
   // 获取集群列表 - 使用useCallback优化
   const fetchClusters = useCallback(async () => {
@@ -240,11 +229,6 @@ const ClusterList: React.FC = () => {
     }
   };
 
-  // 关闭终端
-  const closeTerminal = () => {
-    setTerminalVisible(false);
-    setSelectedCluster(null);
-  };
 
   // 刷新集群列表
   const handleRefresh = () => {
@@ -283,14 +267,11 @@ const ClusterList: React.FC = () => {
   const filteredClusters = clusters.filter((cluster) => {
     const matchesSearch = cluster.name.toLowerCase().includes(searchText.toLowerCase()) ||
                          cluster.apiServer.toLowerCase().includes(searchText.toLowerCase());
-    const matchesStatus = !statusFilter || cluster.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   // 统计数据
-  const healthyClusters = clusters.filter(c => c.status === 'healthy').length;
   const unhealthyClusters = clusters.filter(c => c.status === 'unhealthy').length;
-  const totalNodes = clusters.reduce((sum, c) => sum + c.nodeCount, 0);
   const readyNodes = clusters.reduce((sum, c) => sum + c.readyNodes, 0);
 
   return (
@@ -356,9 +337,9 @@ const ClusterList: React.FC = () => {
                 <DatabaseOutlined style={{ fontSize: 48, color: '#ccc', marginBottom: 16 }} />
                 <div style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>暂无集群数据</div>
                 <div style={{ fontSize: 14, color: '#999', marginBottom: 16 }}>
-                  {searchText || statusFilter ? '没有找到符合条件的集群' : '请先导入集群'}
+                  {searchText ? '没有找到符合条件的集群' : '请先导入集群'}
                 </div>
-                {!searchText && !statusFilter && (
+                {!searchText && (
                   <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/clusters/import')}>
                     导入集群
                   </Button>
