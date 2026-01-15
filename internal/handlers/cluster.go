@@ -74,9 +74,14 @@ func (h *ClusterHandler) GetClusters(c *gin.Context) {
 		}
 
 		// 获取实时节点信息和指标
-		nodeCount, readyNodes := h.getClusterNodeInfo(cluster)
-		clusterData["nodeCount"] = nodeCount
-		clusterData["readyNodes"] = readyNodes
+		if h.k8sMgr != nil {
+			nodeCount, readyNodes := h.getClusterNodeInfo(cluster)
+			clusterData["nodeCount"] = nodeCount
+			clusterData["readyNodes"] = readyNodes
+		} else {
+			clusterData["nodeCount"] = 0
+			clusterData["readyNodes"] = 0
+		}
 
 		// 获取集群 CPU、内存使用率
 		cpuUsage, memoryUsage := h.getClusterResourceUsage(c.Request.Context(), cluster)
@@ -288,7 +293,9 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 	clusterID := uint(id)
 
 	// 先停止集群的 informer/watch，避免删除后继续 watch 导致错误
-	h.k8sMgr.StopForCluster(clusterID)
+	if h.k8sMgr != nil {
+		h.k8sMgr.StopForCluster(clusterID)
+	}
 
 	err = h.clusterService.DeleteCluster(clusterID)
 	if err != nil {

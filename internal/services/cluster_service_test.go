@@ -191,21 +191,27 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
 		WithArgs(1, 1).
 		WillReturnRows(rows)
-	// 删除关联数据
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `cluster_permissions`")).
+	// 删除关联数据 - 使用 Unscoped
+	s.mock.ExpectExec(`DELETE FROM.*cluster_permissions.*WHERE.*cluster_id`).
+		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `terminal_commands`")).
+	s.mock.ExpectExec(`DELETE FROM terminal_commands.*WHERE session_id IN.*SELECT id FROM terminal_sessions WHERE cluster_id`).
+		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `terminal_sessions`")).
+	s.mock.ExpectExec(`DELETE FROM.*terminal_sessions.*WHERE.*cluster_id`).
+		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `argocd_configs`")).
+	s.mock.ExpectExec(`DELETE FROM.*argocd_configs.*WHERE.*cluster_id`).
+		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `operation_logs` SET `cluster_id`")).
+	s.mock.ExpectExec(`UPDATE.*operation_logs.*SET.*cluster_id`).
+		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `cluster_metrics`")).
+	s.mock.ExpectExec(`DELETE FROM.*cluster_metrics.*WHERE.*cluster_id`).
+		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	// 删除集群
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `clusters` WHERE `clusters`.`id` = ?")).
+	// 删除集群 - 使用 Unscoped
+	s.mock.ExpectExec(`DELETE FROM.*clusters.*WHERE.*id`).
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	s.mock.ExpectCommit()

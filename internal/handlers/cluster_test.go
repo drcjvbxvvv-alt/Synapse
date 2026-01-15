@@ -58,8 +58,8 @@ func (s *ClusterHandlerTestSuite) SetupTest() {
 	// 创建路由
 	s.router = gin.New()
 	s.router.GET("/api/clusters", s.handler.GetClusters)
-	s.router.GET("/api/clusters/:id", s.handler.GetCluster)
-	s.router.DELETE("/api/clusters/:id", s.handler.DeleteCluster)
+	s.router.GET("/api/clusters/:clusterID", s.handler.GetCluster)
+	s.router.DELETE("/api/clusters/:clusterID", s.handler.DeleteCluster)
 }
 
 // TearDownTest 每个测试后的清理

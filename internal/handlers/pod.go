@@ -133,6 +133,13 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 
 	// 从集群服务获取集群信息
 	clusterID := parseClusterID(clusterId)
+	if clusterID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "无效的集群ID",
+		})
+		return
+	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -311,6 +318,13 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 
 	// 从集群服务获取集群信息
 	clusterID := parseClusterID(clusterId)
+	if clusterID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "无效的集群ID",
+		})
+		return
+	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
