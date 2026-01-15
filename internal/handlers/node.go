@@ -63,6 +63,10 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 	}
 
 	// 使用 informer+lister 获取节点列表
+	if h.k8sMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "K8s informer 管理器未初始化"})
+		return
+	}
 	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
 		return
@@ -283,6 +287,10 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 	}
 
 	// 使用 informer+lister 获取节点详情
+	if h.k8sMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "K8s informer 管理器未初始化"})
+		return
+	}
 	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
 		return

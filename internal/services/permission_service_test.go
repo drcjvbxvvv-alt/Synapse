@@ -69,8 +69,10 @@ func (s *PermissionServiceTestSuite) TestGetUserGroup_Success() {
 	groupRows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at", "deleted_at"}).
 		AddRow(1, "test-group", "Test description", now, now, nil)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `user_groups` WHERE `user_groups`.`id` = ? AND `user_groups`.`deleted_at` IS NULL ORDER BY `user_groups`.`id` LIMIT ?")).
-		WithArgs(1, 1).
+	// GORM 的 Preload 会先查询主表，然后查询关联表
+	// 主查询：获取用户组（First 会使用 LIMIT 1）
+	s.mock.ExpectQuery(`SELECT.*FROM.*user_groups.*WHERE.*id.*AND.*deleted_at.*LIMIT`).
+		WithArgs(1).
 		WillReturnRows(groupRows)
 
 	// Preload Users 查询 - GORM 会通过 user_group_members 关联查询
@@ -81,7 +83,7 @@ func (s *PermissionServiceTestSuite) TestGetUserGroup_Success() {
 		WithArgs(1).
 		WillReturnRows(memberRows)
 
-	// 查询关联的用户
+	// 查询关联的用户（如果有关联用户）
 	userRows := sqlmock.NewRows([]string{"id", "username", "password_hash", "email", "role", "status",
 		"created_at", "updated_at", "last_login_at", "avatar", "display_name", "auth_type", "salt", "deleted_at"}).
 		AddRow(1, "user1", "hash1", "user1@example.com", "user", "active", now, now, now, "", "User 1", "local", "salt", nil)
@@ -93,7 +95,9 @@ func (s *PermissionServiceTestSuite) TestGetUserGroup_Success() {
 	group, err := s.service.GetUserGroup(1)
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), group)
+	if group != nil {
 	assert.Equal(s.T(), "test-group", group.Name)
+	}
 }
 
 // TestGetUserGroup_NotFound 测试获取不存在的用户组
@@ -135,14 +139,19 @@ func (s *PermissionServiceTestSuite) TestDeleteUserGroup_Success() {
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
-	// 删除关联的用户组成员
+	// GORM 的 Delete 操作可能会自动使用事务（在某些情况下）
+	// 删除关联的用户组成员（UserGroupMember 没有软删除，直接 DELETE）
+	// GORM 的 Where().Delete() 可能不会先查询，直接执行 DELETE
 	s.mock.ExpectExec(`DELETE FROM.*user_group_members.*WHERE.*user_group_id`).
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	// 删除用户组
-	s.mock.ExpectExec(`DELETE FROM.*user_groups.*WHERE.*id`).
+	// 删除用户组（GORM 的 Delete 会先查询，然后软删除）
+	s.mock.ExpectQuery(`SELECT.*FROM.*user_groups.*WHERE.*id.*AND.*deleted_at`).
 		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at", "deleted_at"}).AddRow(1, "test-group", "Test", time.Now(), time.Now(), nil))
+	s.mock.ExpectExec(`UPDATE.*user_groups.*SET.*deleted_at.*WHERE.*id`).
+		WithArgs(sqlmock.AnyArg(), 1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err := s.service.DeleteUserGroup(1)
@@ -175,7 +184,7 @@ func (s *PermissionServiceTestSuite) TestHasClusterAccess() {
 		WithArgs(1).
 		WillReturnRows(userRows)
 
-	// 管理员应该有所有集群的访问权限
+	// 管理员应该有所有集群的访问权限（GetUserClusterPermission 会返回默认权限，不会返回错误）
 	hasAccess := s.service.HasClusterAccess(1, 1)
 	assert.True(s.T(), hasAccess)
 }

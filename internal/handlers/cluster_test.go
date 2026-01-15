@@ -155,8 +155,8 @@ func (s *ClusterHandlerTestSuite) TestGetCluster_Success() {
 		"{}", "{}", "{}", now, now, now,
 	)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ?")).
-		WithArgs(1).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+		WithArgs(1, 1).
 		WillReturnRows(rows)
 
 	w := httptest.NewRecorder()
@@ -174,8 +174,8 @@ func (s *ClusterHandlerTestSuite) TestGetCluster_Success() {
 
 // TestGetCluster_NotFound 测试获取不存在的集群
 func (s *ClusterHandlerTestSuite) TestGetCluster_NotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ?")).
-		WithArgs(999).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
 	w := httptest.NewRecorder()
@@ -208,13 +208,37 @@ func (s *ClusterHandlerTestSuite) TestDeleteCluster_Success() {
 		"{}", "{}", "{}", now, now, now,
 	)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ?")).
-		WithArgs(1).
-		WillReturnRows(rows)
-
-	// 期望删除操作
+	// 期望删除操作（使用事务）
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `clusters` WHERE `clusters`.`id` = ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+		WithArgs(1, 1).
+		WillReturnRows(rows)
+	// 删除关联的集群权限
+	s.mock.ExpectExec(`DELETE FROM.*cluster_permissions.*WHERE.*cluster_id`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	// 删除终端命令记录
+	s.mock.ExpectExec(`DELETE FROM terminal_commands.*WHERE session_id IN.*SELECT id FROM terminal_sessions WHERE cluster_id`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	// 删除终端会话
+	s.mock.ExpectExec(`DELETE FROM.*terminal_sessions.*WHERE.*cluster_id`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	// 删除 ArgoCD 配置
+	s.mock.ExpectExec(`DELETE FROM.*argocd_configs.*WHERE.*cluster_id`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	// 清空操作日志的集群引用
+	s.mock.ExpectExec(`UPDATE.*operation_logs.*SET.*cluster_id`).
+		WithArgs(nil, 1).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	// 删除集群监控指标
+	s.mock.ExpectExec(`DELETE FROM.*cluster_metrics.*WHERE.*cluster_id`).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	// 删除集群
+	s.mock.ExpectExec(`DELETE FROM.*clusters.*WHERE.*id`).
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	s.mock.ExpectCommit()
@@ -228,9 +252,11 @@ func (s *ClusterHandlerTestSuite) TestDeleteCluster_Success() {
 
 // TestDeleteCluster_NotFound 测试删除不存在的集群
 func (s *ClusterHandlerTestSuite) TestDeleteCluster_NotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ?")).
-		WithArgs(999).
+	s.mock.ExpectBegin()
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
+	s.mock.ExpectRollback()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", "/api/clusters/999", nil)

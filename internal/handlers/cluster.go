@@ -299,6 +299,15 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 
 	err = h.clusterService.DeleteCluster(clusterID)
 	if err != nil {
+		// 检查是否是集群不存在的错误
+		if strings.Contains(err.Error(), "集群不存在") {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    404,
+				"message": err.Error(),
+				"data":    nil,
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
 			"message": err.Error(),

@@ -53,8 +53,8 @@ func (s *PodHandlerTestSuite) SetupTest() {
 
 	s.router = gin.New()
 	// 添加集群 ID 路由参数
-	s.router.GET("/api/clusters/:clusterId/pods", s.handler.GetPods)
-	s.router.GET("/api/clusters/:clusterId/namespaces/:namespace/pods/:name", s.handler.GetPod)
+	s.router.GET("/api/clusters/:clusterID/pods", s.handler.GetPods)
+	s.router.GET("/api/clusters/:clusterID/namespaces/:namespace/pods/:name", s.handler.GetPod)
 }
 
 // TearDownTest 每个测试后的清理
@@ -69,8 +69,8 @@ func (s *PodHandlerTestSuite) TearDownTest() {
 
 // TestGetPods_ClusterNotFound 测试获取 Pod 列表时集群不存在
 func (s *PodHandlerTestSuite) TestGetPods_ClusterNotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ?")).
-		WithArgs(999).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
 	w := httptest.NewRecorder()
@@ -117,16 +117,16 @@ func (s *PodHandlerTestSuite) TestGetPod_ClusterExists() {
 		"{}", "{}", "{}", now, now, now,
 	)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ?")).
-		WithArgs(1).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+		WithArgs(1, 1).
 		WillReturnRows(rows)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/clusters/1/namespaces/default/pods/test-pod", nil)
 	s.router.ServeHTTP(w, req)
 
-	// 由于 K8s 客户端为 nil，应该返回错误
-	assert.True(s.T(), w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+	// 由于 K8s 客户端为 nil，应该返回错误（503 或 500）
+	assert.True(s.T(), w.Code == http.StatusInternalServerError || w.Code == http.StatusServiceUnavailable || w.Code == http.StatusNotFound)
 }
 
 // TestPodHandlerSuite 运行测试套件

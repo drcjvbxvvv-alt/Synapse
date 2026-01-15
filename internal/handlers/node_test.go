@@ -52,8 +52,8 @@ func (s *NodeHandlerTestSuite) SetupTest() {
 	s.handler = NewNodeHandler(gormDB, cfg, clusterService, nil, nil, nil)
 
 	s.router = gin.New()
-	s.router.GET("/api/clusters/:clusterId/nodes", s.handler.GetNodes)
-	s.router.GET("/api/clusters/:clusterId/nodes/:name", s.handler.GetNode)
+	s.router.GET("/api/clusters/:clusterID/nodes", s.handler.GetNodes)
+	s.router.GET("/api/clusters/:clusterID/nodes/:name", s.handler.GetNode)
 }
 
 // TearDownTest 每个测试后的清理
@@ -68,8 +68,8 @@ func (s *NodeHandlerTestSuite) TearDownTest() {
 
 // TestGetNodes_ClusterNotFound 测试获取节点列表时集群不存在
 func (s *NodeHandlerTestSuite) TestGetNodes_ClusterNotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ?")).
-		WithArgs(999).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
 	w := httptest.NewRecorder()
@@ -107,16 +107,16 @@ func (s *NodeHandlerTestSuite) TestGetNode_ClusterExists() {
 		"{}", "{}", "{}", now, now, now,
 	)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ?")).
-		WithArgs(1).
+	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+		WithArgs(1, 1).
 		WillReturnRows(rows)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/clusters/1/nodes/test-node", nil)
 	s.router.ServeHTTP(w, req)
 
-	// 由于 K8s 客户端为 nil，应该返回错误
-	assert.True(s.T(), w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+	// 由于 K8s 客户端为 nil，应该返回错误（503 Service Unavailable）
+	assert.True(s.T(), w.Code == http.StatusServiceUnavailable || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
 }
 
 // TestNodeHandlerSuite 运行测试套件

@@ -205,7 +205,7 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	s.mock.ExpectExec(`UPDATE.*operation_logs.*SET.*cluster_id`).
-		WithArgs(1).
+		WithArgs(nil, 1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	s.mock.ExpectExec(`DELETE FROM.*cluster_metrics.*WHERE.*cluster_id`).
 		WithArgs(1).

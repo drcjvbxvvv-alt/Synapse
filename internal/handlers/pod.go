@@ -153,6 +153,10 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 	defer cancel()
 
 	// 确保 informer 缓存就绪
+	if h.k8sMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "K8s informer 管理器未初始化"})
+		return
+	}
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
 		return
@@ -338,6 +342,10 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 	defer cancel()
 
 	// 使用 informer+lister 获取Pod详情
+	if h.k8sMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "K8s informer 管理器未初始化"})
+		return
+	}
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
 		return
@@ -731,6 +739,10 @@ func (h *PodHandler) GetPodNamespaces(c *gin.Context) {
 	defer cancel()
 
 	// 确保 informer 缓存就绪
+	if h.k8sMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "K8s informer 管理器未初始化"})
+		return
+	}
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
 		return
@@ -794,6 +806,10 @@ func (h *PodHandler) GetPodNodes(c *gin.Context) {
 	defer cancel()
 
 	// 确保 informer 缓存就绪
+	if h.k8sMgr == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "K8s informer 管理器未初始化"})
+		return
+	}
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "message": "informer 未就绪: " + err.Error()})
 		return
