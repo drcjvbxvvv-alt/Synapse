@@ -21,6 +21,7 @@ import {
   Badge,
   Statistic,
 } from 'antd';
+import type { RadioChangeEvent } from 'antd/es/radio';
 import {
   PauseCircleOutlined,
   PlayCircleOutlined,
@@ -82,8 +83,10 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   const [operationProgress, setOperationProgress] = useState(0);
   interface NodeOperationStatusItem {
     nodeName: string;
-    status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+    status: 'pending' | 'running' | 'success' | 'failed' | 'skipped' | 'waiting';
     message?: string;
+    description?: string;
+    progress?: number;
   }
   const [nodeOperationStatus, setNodeOperationStatus] = useState<NodeOperationStatusItem[]>([]);
   const [operationResults, setOperationResults] = useState<OperationResults>({
@@ -103,9 +106,9 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   // 初始化节点操作状态
   useEffect(() => {
     if (selectedNodes.length > 0) {
-      const initialStatus = selectedNodes.map(node => ({
+      const initialStatus: NodeOperationStatusItem[] = selectedNodes.map(node => ({
         nodeName: node.name,
-        status: 'pending',
+        status: 'pending' as const,
         description: '等待操作',
         progress: 0,
       }));
@@ -114,8 +117,8 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   }, [selectedNodes]);
 
   // 处理操作类型变更
-  const handleOperationTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setOperationType(e.target.value);
+  const handleOperationTypeChange = (e: RadioChangeEvent) => {
+    setOperationType(e.target.value as 'cordon' | 'uncordon' | 'drain');
   };
 
   // 处理下一步
@@ -189,9 +192,9 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
 
     try {
       // 更新所有节点状态为等待中
-      const updatedStatus = nodeOperationStatus.map(node => ({
+      const updatedStatus: NodeOperationStatusItem[] = nodeOperationStatus.map(node => ({
         ...node,
-        status: 'waiting',
+        status: 'waiting' as const,
         description: '等待操作',
       }));
       setNodeOperationStatus(updatedStatus);
@@ -355,7 +358,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   };
 
   // 更新节点状态
-  const updateNodeStatus = (index: number, status: string, description: string, progress: number) => {
+  const updateNodeStatus = (index: number, status: NodeOperationStatusItem['status'], description: string, progress: number) => {
     setNodeOperationStatus(prev => {
       const updated = [...prev];
       updated[index] = {

@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import NamespaceSelector from '../NamespaceSelector'
-import { PermissionProvider } from '../../contexts/PermissionContext'
+import { PermissionProvider } from '../../contexts/PermissionContext.tsx'
 import { namespaceService } from '../../services/namespaceService'
 
 // Mock namespaceService

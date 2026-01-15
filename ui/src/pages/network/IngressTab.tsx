@@ -214,7 +214,13 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
           const hostsStr = hosts.join(' ').toLowerCase();
           return values.some(searchValue => hostsStr.includes(searchValue));
         } else {
-          ingressValue = ingress[field as keyof Ingress];
+          const value = ingress[field as keyof Ingress];
+          // 处理复杂类型（对象、数组等）
+          if (typeof value === 'object' && value !== null) {
+            ingressValue = JSON.stringify(value);
+          } else {
+            ingressValue = value as string | number | boolean | undefined;
+          }
         }
         
         const itemStr = String(ingressValue || '').toLowerCase();

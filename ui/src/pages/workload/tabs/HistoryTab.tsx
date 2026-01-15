@@ -62,7 +62,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       );
       
       if (response.code === 200 && response.data) {
-        setReplicaSets(response.data.items || []);
+        setReplicaSets(((response.data as { items?: unknown[] }).items || []) as ReplicaSetInfo[]);
       } else {
         message.error(response.message || '获取版本记录失败');
       }

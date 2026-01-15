@@ -39,6 +39,7 @@ const ClusterDetail: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [loadingOverview, setLoadingOverview] = useState(false);
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [clusterOverview, setClusterOverview] = useState<ClusterOverview | null>(null);
   // 从 URL 参数读取默认 Tab，默认为 events

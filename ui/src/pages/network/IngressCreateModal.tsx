@@ -6,6 +6,41 @@ import * as YAML from 'yaml';
 import { IngressService } from '../../services/ingressService';
 import { getNamespaces } from '../../services/configService';
 
+interface KubernetesIngressYAML {
+  apiVersion: string;
+  kind: string;
+  metadata: {
+    name: string;
+    namespace: string;
+    labels?: Record<string, string>;
+    annotations?: Record<string, string>;
+  };
+  spec: {
+    ingressClassName?: string;
+    rules?: Array<{
+      host: string;
+      http: {
+        paths: Array<{
+          path: string;
+          pathType: string;
+          backend: {
+            service: {
+              name: string;
+              port: {
+                number: number;
+              };
+            };
+          };
+        }>;
+      };
+    }>;
+    tls?: Array<{
+      hosts: string[];
+      secretName: string;
+    }>;
+  };
+}
+
 interface IngressCreateModalProps {
   visible: boolean;
   clusterId: string;
@@ -199,7 +234,7 @@ spec:
                   service: {
                     name: path.serviceName,
                     port: {
-                      number: path.servicePort,
+                      number: typeof path.servicePort === 'string' ? parseInt(path.servicePort, 10) : path.servicePort,
                     },
                   },
                 },

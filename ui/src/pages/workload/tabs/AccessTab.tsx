@@ -87,7 +87,7 @@ const AccessTab: React.FC<AccessTabProps> = ({
       );
       
       if (response.code === 200 && response.data) {
-        setServices(response.data.items || []);
+        setServices(((response.data as { items?: unknown[] }).items || []) as ServiceInfo[]);
       } else {
         message.error(response.message || '获取Service列表失败');
       }
@@ -113,7 +113,7 @@ const AccessTab: React.FC<AccessTabProps> = ({
       );
       
       if (response.code === 200 && response.data) {
-        setIngresses(response.data.items || []);
+        setIngresses(((response.data as { items?: unknown[] }).items || []) as IngressInfo[]);
       } else {
         message.error(response.message || '获取Ingress列表失败');
       }

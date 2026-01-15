@@ -129,7 +129,7 @@ const YAMLEditor: React.FC = () => {
       
       if (response.code === 200) {
         if (isDryRun) {
-          setPreviewResult(response.data);
+          setPreviewResult(response.data as Record<string, unknown>);
           setDryRunResult({
             success: true,
             message: '预检通过！YAML 配置有效，可以安全应用。',

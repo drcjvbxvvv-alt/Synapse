@@ -189,7 +189,7 @@ const PermissionManagement: React.FC = () => {
       setClusters(clustersRes.data?.items || []);
       setUsers(usersRes.data || []);
       setUserGroups(groupsRes.data || []);
-    } catch {
+    } catch (error) {
       console.error('加载数据失败:', error);
       message.error('加载数据失败');
     } finally {

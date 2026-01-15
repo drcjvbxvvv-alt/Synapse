@@ -1,4 +1,5 @@
 import { request } from '../utils/api';
+import type { ApiResponse } from '../types';
 
 export interface ContainerInfo {
   name: string;

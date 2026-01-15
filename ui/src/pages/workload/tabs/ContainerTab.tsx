@@ -277,12 +277,14 @@ const ContainerTab: React.FC<ContainerTabProps> = ({
       
       if (response.code === 200 && response.data) {
         // 使用 raw 字段获取完整的 Deployment 对象
-        const deployment = response.data.raw || response.data.workload;
-        setSpec(deployment.spec || null);
+        const data = response.data as { raw?: any; workload?: any };
+        const deployment = data.raw || data.workload;
+        setSpec(deployment?.spec || null);
         
         // 默认选择第一个容器
-        if (deployment.spec?.template?.spec?.containers && deployment.spec.template.spec.containers.length > 0) {
-          setSelectedContainer(deployment.spec.template.spec.containers[0].name);
+        const spec = deployment?.spec;
+        if (spec?.template?.spec?.containers && Array.isArray(spec.template.spec.containers) && spec.template.spec.containers.length > 0) {
+          setSelectedContainer(spec.template.spec.containers[0].name);
         }
       } else {
         message.error(response.message || '获取容器信息失败');

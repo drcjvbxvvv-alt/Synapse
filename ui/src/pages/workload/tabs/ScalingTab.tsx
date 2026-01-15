@@ -76,7 +76,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
       );
       
       if (response.code === 200 && response.data) {
-        setHpa(response.data);
+        setHpa(response.data as HPAInfo);
       } else {
         setHpa(null);
       }

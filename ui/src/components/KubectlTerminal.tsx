@@ -27,6 +27,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [selectedNamespace, setSelectedNamespace] = useState<string>('default');
   
   // 使用 ref 来保存连接状态，避免闭包问题
   const connectedRef = useRef(false);

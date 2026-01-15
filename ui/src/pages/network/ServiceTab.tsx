@@ -195,7 +195,13 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         if (field === 'selector') {
           serviceValue = ServiceService.formatSelector(service.selector);
         } else {
-          serviceValue = service[field as keyof Service];
+          const value = service[field as keyof Service];
+          // 处理复杂类型（对象、数组等）
+          if (typeof value === 'object' && value !== null) {
+            serviceValue = JSON.stringify(value);
+          } else {
+            serviceValue = value as string | number | boolean | undefined;
+          }
         }
         
         const itemStr = String(serviceValue || '').toLowerCase();

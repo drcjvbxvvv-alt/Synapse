@@ -72,7 +72,7 @@ const EventsTab: React.FC<EventsTabProps> = ({
       );
       
       if (response.code === 200 && response.data) {
-        const eventList = response.data.items || [];
+        const eventList = ((response.data as { items?: unknown[] }).items || []) as EventInfo[];
         setEvents(eventList);
         setFilteredEvents(eventList);
       } else {

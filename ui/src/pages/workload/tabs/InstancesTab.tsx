@@ -71,7 +71,7 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
       );
       
       if (response.code === 200 && response.data) {
-        setPods(response.data.items || []);
+        setPods(((response.data as { items?: unknown[] }).items || []) as PodInfo[]);
       } else {
         message.error(response.message || '获取Pod列表失败');
       }

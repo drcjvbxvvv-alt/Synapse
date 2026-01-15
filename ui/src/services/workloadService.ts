@@ -7,6 +7,9 @@ interface VolumeItem {
   hostPath?: string;
   configMapName?: string;
   secretName?: string;
+  mountPath?: string;
+  readOnly?: boolean;
+  pvcName?: string;
 }
 
 export interface WorkloadInfo {
@@ -421,7 +424,7 @@ export class WorkloadService {
     } else if (typeof formData.labels === 'string') {
       labels = parseKeyValue(formData.labels);
     } else if (formData.labels) {
-      labels = formData.labels;
+      labels = formData.labels as Record<string, string>;
     }
 
     // 处理 annotations（支持数组和对象格式）
@@ -435,7 +438,7 @@ export class WorkloadService {
     } else if (typeof formData.annotations === 'string') {
       annotations = parseKeyValue(formData.annotations);
     } else if (formData.annotations) {
-      annotations = formData.annotations;
+      annotations = formData.annotations as Record<string, string>;
     }
 
     // 基础metadata - 确保 name 不为 undefined
@@ -464,105 +467,110 @@ export class WorkloadService {
         containerYAML += `\n        ports:\n        - containerPort: ${formData.containerPort}`;
       }
       
-      if (formData.env && formData.env.length > 0) {
+      if (formData.env && Array.isArray(formData.env) && formData.env.length > 0) {
         containerYAML += `\n        env:`;
-        formData.env.forEach((e: { name: string; value: string }) => {
+        (formData.env as Array<{ name: string; value: string }>).forEach((e: { name: string; value: string }) => {
           containerYAML += `\n        - name: ${e.name}\n          value: "${e.value}"`;
         });
       }
       
       if (formData.resources) {
+        const resources = formData.resources as { requests?: { cpu?: string; memory?: string }; limits?: { cpu?: string; memory?: string } };
         containerYAML += `\n        resources:`;
-        if (formData.resources.requests) {
+        if (resources.requests) {
           containerYAML += `\n          requests:`;
-          if (formData.resources.requests.cpu) {
-            containerYAML += `\n            cpu: ${formData.resources.requests.cpu}`;
+          if (resources.requests.cpu) {
+            containerYAML += `\n            cpu: ${resources.requests.cpu}`;
           }
-          if (formData.resources.requests.memory) {
-            containerYAML += `\n            memory: ${formData.resources.requests.memory}`;
+          if (resources.requests.memory) {
+            containerYAML += `\n            memory: ${resources.requests.memory}`;
           }
         }
-        if (formData.resources.limits) {
+        if (resources.limits) {
           containerYAML += `\n          limits:`;
-          if (formData.resources.limits.cpu) {
-            containerYAML += `\n            cpu: ${formData.resources.limits.cpu}`;
+          if (resources.limits.cpu) {
+            containerYAML += `\n            cpu: ${resources.limits.cpu}`;
           }
-          if (formData.resources.limits.memory) {
-            containerYAML += `\n            memory: ${formData.resources.limits.memory}`;
+          if (resources.limits.memory) {
+            containerYAML += `\n            memory: ${resources.limits.memory}`;
           }
         }
       }
       
       // 生命周期
       if (formData.lifecycle) {
+        const lifecycle = formData.lifecycle as { postStart?: { exec?: { command: string | string[] } }; preStop?: { exec?: { command: string | string[] } } };
         containerYAML += `\n        lifecycle:`;
-        if (formData.lifecycle.postStart?.exec?.command) {
-          const cmd = Array.isArray(formData.lifecycle.postStart.exec.command)
-            ? formData.lifecycle.postStart.exec.command
-            : formData.lifecycle.postStart.exec.command.split(',');
+        if (lifecycle.postStart?.exec?.command) {
+          const cmd = Array.isArray(lifecycle.postStart.exec.command)
+            ? lifecycle.postStart.exec.command
+            : lifecycle.postStart.exec.command.split(',');
           containerYAML += `\n          postStart:\n            exec:\n              command: [${cmd.map((c: string) => `"${c.trim()}"`).join(', ')}]`;
         }
-        if (formData.lifecycle.preStop?.exec?.command) {
-          const cmd = Array.isArray(formData.lifecycle.preStop.exec.command)
-            ? formData.lifecycle.preStop.exec.command
-            : formData.lifecycle.preStop.exec.command.split(',');
+        if (lifecycle.preStop?.exec?.command) {
+          const cmd = Array.isArray(lifecycle.preStop.exec.command)
+            ? lifecycle.preStop.exec.command
+            : lifecycle.preStop.exec.command.split(',');
           containerYAML += `\n          preStop:\n            exec:\n              command: [${cmd.map((c: string) => `"${c.trim()}"`).join(', ')}]`;
         }
       }
       
       // 健康检查
       if (formData.livenessProbe) {
+        const livenessProbe = formData.livenessProbe as { httpGet?: { path: string; port: number }; initialDelaySeconds?: number; periodSeconds?: number; failureThreshold?: number };
         containerYAML += `\n        livenessProbe:`;
-        if (formData.livenessProbe.httpGet) {
-          containerYAML += `\n          httpGet:\n            path: ${formData.livenessProbe.httpGet.path}\n            port: ${formData.livenessProbe.httpGet.port}`;
+        if (livenessProbe.httpGet) {
+          containerYAML += `\n          httpGet:\n            path: ${livenessProbe.httpGet.path}\n            port: ${livenessProbe.httpGet.port}`;
         }
-        if (formData.livenessProbe.initialDelaySeconds !== undefined) {
-          containerYAML += `\n          initialDelaySeconds: ${formData.livenessProbe.initialDelaySeconds}`;
+        if (livenessProbe.initialDelaySeconds !== undefined) {
+          containerYAML += `\n          initialDelaySeconds: ${livenessProbe.initialDelaySeconds}`;
         }
-        if (formData.livenessProbe.periodSeconds !== undefined) {
-          containerYAML += `\n          periodSeconds: ${formData.livenessProbe.periodSeconds}`;
+        if (livenessProbe.periodSeconds !== undefined) {
+          containerYAML += `\n          periodSeconds: ${livenessProbe.periodSeconds}`;
         }
-        if (formData.livenessProbe.failureThreshold !== undefined) {
-          containerYAML += `\n          failureThreshold: ${formData.livenessProbe.failureThreshold}`;
+        if (livenessProbe.failureThreshold !== undefined) {
+          containerYAML += `\n          failureThreshold: ${livenessProbe.failureThreshold}`;
         }
       }
       
       if (formData.readinessProbe) {
+        const readinessProbe = formData.readinessProbe as { httpGet?: { path: string; port: number }; initialDelaySeconds?: number; periodSeconds?: number; failureThreshold?: number };
         containerYAML += `\n        readinessProbe:`;
-        if (formData.readinessProbe.httpGet) {
-          containerYAML += `\n          httpGet:\n            path: ${formData.readinessProbe.httpGet.path}\n            port: ${formData.readinessProbe.httpGet.port}`;
+        if (readinessProbe.httpGet) {
+          containerYAML += `\n          httpGet:\n            path: ${readinessProbe.httpGet.path}\n            port: ${readinessProbe.httpGet.port}`;
         }
-        if (formData.readinessProbe.initialDelaySeconds !== undefined) {
-          containerYAML += `\n          initialDelaySeconds: ${formData.readinessProbe.initialDelaySeconds}`;
+        if (readinessProbe.initialDelaySeconds !== undefined) {
+          containerYAML += `\n          initialDelaySeconds: ${readinessProbe.initialDelaySeconds}`;
         }
-        if (formData.readinessProbe.periodSeconds !== undefined) {
-          containerYAML += `\n          periodSeconds: ${formData.readinessProbe.periodSeconds}`;
+        if (readinessProbe.periodSeconds !== undefined) {
+          containerYAML += `\n          periodSeconds: ${readinessProbe.periodSeconds}`;
         }
-        if (formData.readinessProbe.failureThreshold !== undefined) {
-          containerYAML += `\n          failureThreshold: ${formData.readinessProbe.failureThreshold}`;
+        if (readinessProbe.failureThreshold !== undefined) {
+          containerYAML += `\n          failureThreshold: ${readinessProbe.failureThreshold}`;
         }
       }
       
       // 安全上下文
       if (formData.securityContext) {
+        const securityContext = formData.securityContext as { privileged?: boolean; runAsUser?: number; runAsGroup?: number; runAsNonRoot?: boolean; readOnlyRootFilesystem?: boolean; allowPrivilegeEscalation?: boolean };
         containerYAML += `\n        securityContext:`;
-        if (formData.securityContext.privileged !== undefined) {
-          containerYAML += `\n          privileged: ${formData.securityContext.privileged}`;
+        if (securityContext.privileged !== undefined) {
+          containerYAML += `\n          privileged: ${securityContext.privileged}`;
         }
-        if (formData.securityContext.runAsUser !== undefined) {
-          containerYAML += `\n          runAsUser: ${formData.securityContext.runAsUser}`;
+        if (securityContext.runAsUser !== undefined) {
+          containerYAML += `\n          runAsUser: ${securityContext.runAsUser}`;
         }
-        if (formData.securityContext.runAsGroup !== undefined) {
-          containerYAML += `\n          runAsGroup: ${formData.securityContext.runAsGroup}`;
+        if (securityContext.runAsGroup !== undefined) {
+          containerYAML += `\n          runAsGroup: ${securityContext.runAsGroup}`;
         }
-        if (formData.securityContext.runAsNonRoot !== undefined) {
-          containerYAML += `\n          runAsNonRoot: ${formData.securityContext.runAsNonRoot}`;
+        if (securityContext.runAsNonRoot !== undefined) {
+          containerYAML += `\n          runAsNonRoot: ${securityContext.runAsNonRoot}`;
         }
-        if (formData.securityContext.readOnlyRootFilesystem !== undefined) {
-          containerYAML += `\n          readOnlyRootFilesystem: ${formData.securityContext.readOnlyRootFilesystem}`;
+        if (securityContext.readOnlyRootFilesystem !== undefined) {
+          containerYAML += `\n          readOnlyRootFilesystem: ${securityContext.readOnlyRootFilesystem}`;
         }
-        if (formData.securityContext.allowPrivilegeEscalation !== undefined) {
-          containerYAML += `\n          allowPrivilegeEscalation: ${formData.securityContext.allowPrivilegeEscalation}`;
+        if (securityContext.allowPrivilegeEscalation !== undefined) {
+          containerYAML += `\n          allowPrivilegeEscalation: ${securityContext.allowPrivilegeEscalation}`;
         }
       }
       
@@ -574,7 +582,7 @@ export class WorkloadService {
       let podSpecYAML = buildContainerYAML();
       
       // 数据卷挂载（添加到容器）
-      if (formData.volumes && formData.volumes.length > 0) {
+      if (formData.volumes && Array.isArray(formData.volumes) && formData.volumes.length > 0) {
         const volumeMounts = (formData.volumes as VolumeItem[]).map((vol) => 
           `\n        - name: ${vol.name}\n          mountPath: ${vol.mountPath}${vol.readOnly ? '\n          readOnly: true' : ''}`
         ).join('');
@@ -582,23 +590,23 @@ export class WorkloadService {
       }
       
       // 镜像拉取密钥
-      if (formData.imagePullSecrets && formData.imagePullSecrets.length > 0) {
+      if (formData.imagePullSecrets && Array.isArray(formData.imagePullSecrets) && formData.imagePullSecrets.length > 0) {
         podSpecYAML += `\n      imagePullSecrets:`;
-        formData.imagePullSecrets.forEach((secret: string) => {
+        (formData.imagePullSecrets as string[]).forEach((secret: string) => {
           podSpecYAML += `\n      - name: ${secret}`;
         });
       }
       
       // 节点选择器
-      if (formData.nodeSelectorList && formData.nodeSelectorList.length > 0) {
+      if (formData.nodeSelectorList && Array.isArray(formData.nodeSelectorList) && formData.nodeSelectorList.length > 0) {
         podSpecYAML += `\n      nodeSelector:`;
-        formData.nodeSelectorList.forEach((item: { key: string; value: string }) => {
+        (formData.nodeSelectorList as Array<{ key: string; value: string }>).forEach((item: { key: string; value: string }) => {
           podSpecYAML += `\n        ${item.key}: ${item.value}`;
         });
       }
       
       // 容忍策略
-      if (formData.tolerations && formData.tolerations.length > 0) {
+      if (formData.tolerations && Array.isArray(formData.tolerations) && formData.tolerations.length > 0) {
         podSpecYAML += `\n      tolerations:`;
         (formData.tolerations as Array<{ key: string; operator: string; effect: string; value?: string; tolerationSeconds?: number }>).forEach((tol) => {
           podSpecYAML += `\n      - key: ${tol.key}\n        operator: ${tol.operator}\n        effect: ${tol.effect}`;
@@ -616,12 +624,13 @@ export class WorkloadService {
         podSpecYAML += `\n      dnsPolicy: ${formData.dnsPolicy}`;
       }
       if (formData.dnsConfig) {
+        const dnsConfig = formData.dnsConfig as { nameservers?: string[]; searches?: string[] };
         podSpecYAML += `\n      dnsConfig:`;
-        if (formData.dnsConfig.nameservers && formData.dnsConfig.nameservers.length > 0) {
-          podSpecYAML += `\n        nameservers: [${formData.dnsConfig.nameservers.map((ns: string) => `"${ns}"`).join(', ')}]`;
+        if (dnsConfig.nameservers && Array.isArray(dnsConfig.nameservers) && dnsConfig.nameservers.length > 0) {
+          podSpecYAML += `\n        nameservers: [${dnsConfig.nameservers.map((ns: string) => `"${ns}"`).join(', ')}]`;
         }
-        if (formData.dnsConfig.searches && formData.dnsConfig.searches.length > 0) {
-          podSpecYAML += `\n        searches: [${formData.dnsConfig.searches.map((s: string) => `"${s}"`).join(', ')}]`;
+        if (dnsConfig.searches && Array.isArray(dnsConfig.searches) && dnsConfig.searches.length > 0) {
+          podSpecYAML += `\n        searches: [${dnsConfig.searches.map((s: string) => `"${s}"`).join(', ')}]`;
         }
       }
       
@@ -639,24 +648,25 @@ export class WorkloadService {
       case 'Deployment': {
         let deploymentStrategy = '';
         if (formData.strategy) {
-          if (formData.strategy.type === 'Recreate') {
+          const strategy = formData.strategy as { type?: string; rollingUpdate?: { maxUnavailable?: string; maxSurge?: string; minReadySeconds?: number; revisionHistoryLimit?: number; progressDeadlineSeconds?: number } };
+          if (strategy.type === 'Recreate') {
             deploymentStrategy = `\n  strategy:\n    type: Recreate`;
-          } else if (formData.strategy.type === 'RollingUpdate' && formData.strategy.rollingUpdate) {
+          } else if (strategy.type === 'RollingUpdate' && strategy.rollingUpdate) {
             deploymentStrategy = `\n  strategy:\n    type: RollingUpdate\n    rollingUpdate:`;
-            if (formData.strategy.rollingUpdate.maxUnavailable) {
-              deploymentStrategy += `\n      maxUnavailable: ${formData.strategy.rollingUpdate.maxUnavailable}`;
+            if (strategy.rollingUpdate.maxUnavailable) {
+              deploymentStrategy += `\n      maxUnavailable: ${strategy.rollingUpdate.maxUnavailable}`;
             }
-            if (formData.strategy.rollingUpdate.maxSurge) {
-              deploymentStrategy += `\n      maxSurge: ${formData.strategy.rollingUpdate.maxSurge}`;
+            if (strategy.rollingUpdate.maxSurge) {
+              deploymentStrategy += `\n      maxSurge: ${strategy.rollingUpdate.maxSurge}`;
             }
-            if (formData.strategy.rollingUpdate.minReadySeconds !== undefined) {
-              deploymentStrategy += `\n      minReadySeconds: ${formData.strategy.rollingUpdate.minReadySeconds}`;
+            if (strategy.rollingUpdate.minReadySeconds !== undefined) {
+              deploymentStrategy += `\n      minReadySeconds: ${strategy.rollingUpdate.minReadySeconds}`;
             }
-            if (formData.strategy.rollingUpdate.revisionHistoryLimit !== undefined) {
-              deploymentStrategy += `\n      revisionHistoryLimit: ${formData.strategy.rollingUpdate.revisionHistoryLimit}`;
+            if (strategy.rollingUpdate.revisionHistoryLimit !== undefined) {
+              deploymentStrategy += `\n      revisionHistoryLimit: ${strategy.rollingUpdate.revisionHistoryLimit}`;
             }
-            if (formData.strategy.rollingUpdate.progressDeadlineSeconds !== undefined) {
-              deploymentStrategy += `\n      progressDeadlineSeconds: ${formData.strategy.rollingUpdate.progressDeadlineSeconds}`;
+            if (strategy.rollingUpdate.progressDeadlineSeconds !== undefined) {
+              deploymentStrategy += `\n      progressDeadlineSeconds: ${strategy.rollingUpdate.progressDeadlineSeconds}`;
             }
           }
         }
@@ -686,7 +696,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
+${buildPodSpecYAML()}${formData.volumes && Array.isArray(formData.volumes) && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -730,7 +740,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
+${buildPodSpecYAML()}${formData.volumes && Array.isArray(formData.volumes) && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -771,7 +781,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
+${buildPodSpecYAML()}${formData.volumes && Array.isArray(formData.volumes) && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -813,7 +823,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
+${buildPodSpecYAML()}${formData.volumes && Array.isArray(formData.volumes) && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -859,7 +869,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
     spec:
       containers:
-${buildPodSpecYAML()}${formData.volumes && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
+${buildPodSpecYAML()}${formData.volumes && Array.isArray(formData.volumes) && formData.volumes.length > 0 ? `\n      volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n      - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n        emptyDir: {}`;
@@ -900,7 +910,7 @@ ${Object.entries(metadata.labels)
   .join('\n')}
         spec:
           containers:
-${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && formData.volumes.length > 0 ? `\n          volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
+${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && Array.isArray(formData.volumes) && formData.volumes.length > 0 ? `\n          volumes:` + (formData.volumes as VolumeItem[]).map((vol) => {
           let volYAML = `\n          - name: ${vol.name}`;
           if (vol.type === 'emptyDir') {
             volYAML += `\n            emptyDir: {}`;

@@ -32,7 +32,14 @@ const ClusterImport: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
   const [connectionType, setConnectionType] = useState<'kubeconfig' | 'token'>('kubeconfig');
-  const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ 
+    success: boolean; 
+    message?: string;
+    version?: string;
+    readyNodes?: number;
+    nodeCount?: number;
+    status?: string;
+  } | null>(null);
 
   // 测试连接
   const handleTestConnection = async () => {
@@ -48,7 +55,14 @@ const ClusterImport: React.FC = () => {
       };
 
       const response = await clusterService.testConnection(testData);
-      setTestResult(response.data);
+      setTestResult(response.data as { 
+        success: boolean; 
+        message?: string;
+        version?: string;
+        readyNodes?: number;
+        nodeCount?: number;
+        status?: string;
+      });
       message.success('连接测试成功！');
       setCurrentStep(2);
     } catch (error: unknown) {

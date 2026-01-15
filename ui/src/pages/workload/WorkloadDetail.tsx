@@ -359,11 +359,11 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
                 title: '容器',
                 dataIndex: 'containers',
                 key: 'containers',
-                render: (containers: Array<{ name: string; image: string }>) => (
+                render: (containers: Array<{ name: string; image: string; ready?: boolean; restartCount?: number }>) => (
                   <Space wrap>
                     {containers.map((container, index) => (
                       <Tag key={index} color={container.ready ? 'green' : 'red'}>
-                        {container.name} ({container.restartCount} 重启)
+                        {container.name} ({container.restartCount || 0} 重启)
                       </Tag>
                     ))}
                   </Space>

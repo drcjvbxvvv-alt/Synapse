@@ -29,6 +29,27 @@ interface SchedulingTabProps {
   cronJobName?: string;
 }
 
+interface PodSpec {
+  nodeSelector?: Record<string, string>;
+  affinity?: unknown;
+  tolerations?: unknown[];
+}
+
+interface PodTemplate {
+  spec?: PodSpec;
+}
+
+interface WorkloadSpec {
+  spec?: {
+    template?: PodTemplate;
+  };
+}
+
+interface WorkloadResponse {
+  raw?: WorkloadSpec;
+  workload?: WorkloadSpec;
+}
+
 const SchedulingTab: React.FC<SchedulingTabProps> = ({ 
   clusterId, 
   namespace, 
@@ -66,14 +87,15 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
       );
       
       if (response.code === 200 && response.data) {
-        // 使用 raw 字段获取完整的 Deployment 对象
-        const deployment = response.data.raw || response.data.workload;
-        const spec = deployment.spec;
+        // 使用 raw 字段获取完整的工作负载对象
+        const data = response.data as WorkloadResponse;
+        const deployment = data.raw || data.workload;
+        const spec = deployment?.spec;
         if (spec?.template?.spec) {
           setScheduling({
             nodeSelector: spec.template.spec.nodeSelector,
-            affinity: spec.template.spec.affinity,
-            tolerations: spec.template.spec.tolerations,
+            affinity: spec.template.spec.affinity as SchedulingInfo['affinity'],
+            tolerations: spec.template.spec.tolerations as SchedulingInfo['tolerations'],
           });
         }
       } else {
