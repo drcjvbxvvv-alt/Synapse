@@ -143,26 +143,24 @@
 ### 方式一：Docker Compose（推荐）
 
 ```bash
+# 环境要求 Docker 20.10+ and Docker Compose 2.0+
+
 # 克隆项目
 git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
+
 
 # 启动服务
-docker-compose -f deploy/docker-compose/docker-compose.yml up -d
+cd KubePolaris/deploy/scripts/
+./install.sh
 
-# 访问 http://localhost:8080
-# 默认账号: admin / admin123
+# Access http://${ip}
+# Default credentials: admin / KubePolaris@2026
 ```
 
 ### 方式二：Kubernetes 部署
 
 ```bash
-# 使用 Helm 安装
-helm repo add kubepolaris https://kubepolaris.github.io/charts
-helm install kubepolaris kubepolaris/kubepolaris -n kubepolaris --create-namespace
-
-# 或使用 YAML 直接部署
-kubectl apply -f https://raw.githubusercontent.com/clay-wangzhi/KubePolaris/main/deploy/yaml/kubepolaris.yaml
+todo
 ```
 
 ### 方式三：源码运行
@@ -275,8 +273,8 @@ kubepolaris/
 ### 近期计划
 
 - **v1.1 (Q2 2026)** - 国际化支持、OAuth2/OIDC 集成、成本分析
-- **v1.2 (Q3 2026)** - 多租户、NetworkPolicy 管理、Service Mesh 可视化
-- **v2.0 (Q4 2026)** - 集群生命周期管理、备份恢复、插件系统
+- **v1.2 (Q3 2026)** - Node/Pod 文件管理
+- **v2.0 (Q4 2026)** - Kubevirt 生命周期管理
 
 ## 🤝 参与贡献
 

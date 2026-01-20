@@ -17,18 +17,18 @@ sidebar_position: 1
 使用 Docker Compose 是最快速的体验方式：
 
 ```bash
-# 克隆仓库
+# 克隆项目
 git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
 
-# 启动所有服务
-docker-compose up -d
+
+# 启动服务
+cd KubePolaris/deploy/scripts/
+./install.sh
 ```
 
 等待约 1-2 分钟，所有服务启动完成后，访问：
 
-- **Web 界面**: http://localhost:8080
-- **API 文档**: http://localhost:8080/api/docs
+- **Web 界面**: http://${ip}
 
 ## 第二步：登录系统
 
@@ -37,7 +37,7 @@ docker-compose up -d
 | 项目 | 值 |
 |------|-----|
 | 用户名 | `admin` |
-| 密码 | `admin123` |
+| 密码 | `KubePolaris@2026` |
 
 :::warning 安全提示
 首次登录后请立即修改默认密码！
@@ -45,7 +45,7 @@ docker-compose up -d
 
 ## 第三步：导入集群
 
-1. 点击左侧菜单 **集群管理** → **添加集群**
+1. 点击左侧菜单 **集群管理** → **导入集群**
 2. 填写集群信息：
    - **集群名称**: 为集群起一个易识别的名称
    - **API Server**: Kubernetes API 服务器地址，如 `https://192.168.1.100:6443`
@@ -101,15 +101,14 @@ users:
 3. 选择容器（多容器 Pod）
 4. 开始在浏览器中操作容器
 
-## 第五步：配置监控（可选）
+## 第五步：配置监控告警（可选）
 
-KubePolaris 支持集成 Prometheus 和 Grafana：
+KubePolaris 支持集成 Prometheus 和 Altermanager
 
-1. 进入 **系统设置** → **监控配置**
+1. 进入 **集群** → **配置中心**
 2. 填写 Prometheus 地址，如 `http://prometheus:9090`
-3. 填写 Grafana 地址，如 `http://grafana:3000`
-4. 配置 Grafana API Key（用于嵌入面板）
-5. 保存配置
+3. 填写 Alertmanager 地址，如 `http://alertmanager:9093`
+4. 保存配置
 
 配置完成后，你可以在各个资源详情页查看监控图表。
 

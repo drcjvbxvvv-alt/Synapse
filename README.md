@@ -143,26 +143,24 @@
 ### Option 1: Docker Compose (Recommended)
 
 ```bash
+# Environmental requirements Docker 20.10+ and Docker Compose 2.0+
+
 # Clone the repository
 git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
+
 
 # Start services
-docker-compose -f deploy/docker-compose/docker-compose.yml up -d
+cd KubePolaris/deploy/scripts/
+./install.sh
 
-# Access http://localhost:8080
-# Default credentials: admin / admin123
+# Access http://${ip}
+# Default credentials: admin / KubePolaris@2026
 ```
 
 ### Option 2: Kubernetes Deployment
 
 ```bash
-# Install with Helm
-helm repo add kubepolaris https://kubepolaris.github.io/charts
-helm install kubepolaris kubepolaris/kubepolaris -n kubepolaris --create-namespace
-
-# Or deploy with YAML
-kubectl apply -f https://raw.githubusercontent.com/clay-wangzhi/KubePolaris/main/deploy/yaml/kubepolaris.yaml
+todo
 ```
 
 ### Option 3: Run from Source

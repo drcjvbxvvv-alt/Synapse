@@ -12,7 +12,7 @@ sidebar_position: 3
 |------|---------|------|
 | Go | 1.22+ | 后端编译 |
 | Node.js | 18+ | 前端编译 |
-| pnpm / npm | 8+ / 9+ | 包管理 |
+| npm | 8+ / 9+ | 包管理 |
 | MySQL | 8.0+ | 数据库 |
 | Git | 2.0+ | 代码管理 |
 | Make | 3.8+ | 构建工具（可选） |
@@ -83,10 +83,7 @@ go run ./cmd/main.go
 # 进入前端目录
 cd ui
 
-# 使用 pnpm（推荐）
-pnpm install
-
-# 或使用 npm
+# 使用 npm
 npm install
 ```
 
@@ -94,8 +91,6 @@ npm install
 
 ```bash
 # 启动开发服务器
-pnpm dev
-# 或
 npm run dev
 
 # 默认访问 http://localhost:5173
@@ -105,8 +100,6 @@ npm run dev
 
 ```bash
 # 构建生产版本
-pnpm build
-# 或
 npm run build
 
 # 构建产物在 dist/ 目录
@@ -117,7 +110,7 @@ ls -la dist/
 
 ```bash
 # 预览生产构建
-pnpm preview
+npm preview
 ```
 
 ## 数据库准备

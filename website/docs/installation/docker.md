@@ -19,244 +19,268 @@ sidebar_position: 1
 
 ```bash
 git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
 ```
 
 ### 2. 启动服务
 
 ```bash
-# 启动所有服务（后台运行）
-docker-compose up -d
-
-# 查看启动日志
-docker-compose logs -f
+cd KubePolaris/deploy/scripts/
+./install.sh
 ```
 
 ### 3. 验证部署
 
 ```bash
 # 查看服务状态
-docker-compose ps
+docker ps
 
 # 健康检查
-curl http://localhost:8080/api/health
+curl http://localhost:8080/healthz
 ```
 
-访问 http://localhost:8080 开始使用。
+访问 http://${ip} 开始使用。
 
 ## Docker Compose 配置
 
 ### 默认配置
 
 ```yaml title="docker-compose.yml"
-version: '3.8'
 
 services:
+  # ==========================================
   # MySQL 数据库
+  # ==========================================
   mysql:
-    image: mysql:8.0
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/mysql:8.0
     container_name: kubepolaris-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-kubepolaris123}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-kubepolaris}
-      MYSQL_CHARACTER_SET: utf8mb4
-      MYSQL_COLLATION: utf8mb4_unicode_ci
-    volumes:
-      - mysql_data:/var/lib/mysql
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: kubepolaris
+      MYSQL_USER: kubepolaris
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
     ports:
       - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - kubepolaris-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD && mysql -h localhost -u kubepolaris -p$$MYSQL_PASSWORD -e 'SELECT 1' kubepolaris || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  # ==========================================
+  # KubePolaris 后端
+  # ==========================================
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/kubepolaris/Dockerfile.backend
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris-backend:latest
+    container_name: kubepolaris-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      SERVER_MODE: debug
+      DB_DRIVER: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: kubepolaris
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_DATABASE: kubepolaris
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE_TIME: 24
+      LOG_LEVEL: debug
+      GRAFANA_ENABLED: "true"
+      GRAFANA_URL: http://grafana:3000
+      GRAFANA_API_KEY_FILE: /app/grafana/secrets/grafana_api_key
+      TZ: Asia/Shanghai
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../configs:/app/configs:ro
+      - ../docker/grafana/secrets:/app/grafana/secrets:ro
+      - ~/.kube:/root/.kube:ro
+    networks:
+      - kubepolaris-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 100s
+
+  # ==========================================
+  # KubePolaris 前端
+  # ==========================================
+  frontend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/kubepolaris/Dockerfile.frontend
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris-frontend:latest
+    container_name: kubepolaris-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "80:80"
+    networks:
+      - kubepolaris-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # KubePolaris 后端
-  backend:
-    image: kubepolaris/kubepolaris-backend:latest
-    container_name: kubepolaris-backend
+  # ==========================================
+  # Grafana
+  # ==========================================
+  grafana:
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/grafana:10.2.0
+    container_name: kubepolaris-grafana
     restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
     environment:
-      - KUBEPOLARIS_DATABASE_HOST=mysql
-      - KUBEPOLARIS_DATABASE_PORT=3306
-      - KUBEPOLARIS_DATABASE_USER=root
-      - KUBEPOLARIS_DATABASE_PASSWORD=${MYSQL_ROOT_PASSWORD:-kubepolaris123}
-      - KUBEPOLARIS_DATABASE_NAME=${MYSQL_DATABASE:-kubepolaris}
-      - KUBEPOLARIS_JWT_SECRET=${JWT_SECRET:-please-change-this-secret}
-    volumes:
-      - ./configs:/app/configs:ro
-      - kubeconfig_data:/root/.kube:ro
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_SECURITY_COOKIE_SAMESITE: lax
+      GF_SECURITY_COOKIE_SECURE: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_ANONYMOUS_ORG_NAME: Main Org.
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_LOG_LEVEL: info
+      # 配置子路径，通过 Nginx 代理访问
+      GF_SERVER_ROOT_URL: "/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      TZ: Asia/Shanghai
     ports:
-      - "8080:8080"
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - kubepolaris-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # KubePolaris 前端
-  frontend:
-    image: kubepolaris/kubepolaris-frontend:latest
-    container_name: kubepolaris-frontend
-    restart: unless-stopped
+  # ==========================================
+  # Grafana 初始化（自动生成 API Key）
+  # ==========================================
+  grafana-init:
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/curl:8.16.0
+    container_name: kubepolaris-grafana-init
+    user: "0:0"  # 以 root 用户运行，解决权限问题
     depends_on:
-      - backend
-    ports:
-      - "80:80"
-
-volumes:
-  mysql_data:
-  kubeconfig_data:
-```
-
-### 生产环境配置
-
-对于生产环境，建议使用 `docker-compose.prod.yml`：
-
-```yaml title="docker-compose.prod.yml"
-version: '3.8'
-
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: kubepolaris-mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
-      MYSQL_DATABASE: kubepolaris
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql/conf.d:/etc/mysql/conf.d:ro
-    secrets:
-      - mysql_root_password
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
-
-  backend:
-    image: kubepolaris/kubepolaris-backend:${VERSION:-latest}
-    container_name: kubepolaris-backend
-    restart: always
-    depends_on:
-      mysql:
+      grafana:
         condition: service_healthy
     environment:
-      - KUBEPOLARIS_SERVER_MODE=release
-      - KUBEPOLARIS_DATABASE_HOST=mysql
-      - KUBEPOLARIS_DATABASE_PORT=3306
-      - KUBEPOLARIS_DATABASE_USER=root
-      - KUBEPOLARIS_DATABASE_NAME=kubepolaris
-      - KUBEPOLARIS_LOG_LEVEL=info
-      - KUBEPOLARIS_LOG_FORMAT=json
-    env_file:
-      - .env.prod
-    secrets:
-      - mysql_root_password
-      - jwt_secret
+      GRAFANA_URL: http://grafana:3000
+      GRAFANA_USER: admin
+      GRAFANA_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
     volumes:
-      - ./configs:/app/configs:ro
-      - logs:/app/logs
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 512M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "5"
+      - ../docker/grafana/secrets:/secrets
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "⏳ 等待 Dashboard 加载完成..."
+        sleep 5
 
-  frontend:
-    image: kubepolaris/kubepolaris-frontend:${VERSION:-latest}
-    container_name: kubepolaris-frontend
-    restart: always
-    depends_on:
-      - backend
-    ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+        echo "🔧 设置 KubePolaris 文件夹权限..."
+        curl -s -X POST \
+          -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
+          -H "Content-Type: application/json" \
+          -d '{"items":[{"role":"Viewer","permission":1},{"role":"Editor","permission":2}]}' \
+          "$${GRAFANA_URL}/api/folders/kubepolaris-folder/permissions"
+        echo " ✅ 权限设置完成"
 
-secrets:
-  mysql_root_password:
-    file: ./secrets/mysql_root_password
-  jwt_secret:
-    file: ./secrets/jwt_secret
+        echo ""
+        echo "🔑 创建 Service Account 和 API Token..."
 
+        SA_EXISTS=$$(curl -s -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
+          "$${GRAFANA_URL}/api/serviceaccounts/search?query=kubepolaris" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+
+        if [ -z "$$SA_EXISTS" ]; then
+          echo "  📝 创建新的 Service Account..."
+          SA_RESULT=$$(curl -s -X POST \
+            -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"kubepolaris","role":"Admin","isDisabled":false}' \
+            "$${GRAFANA_URL}/api/serviceaccounts")
+          SA_ID=$$(echo "$$SA_RESULT" | grep -o '"id":[0-9]*' | cut -d: -f2)
+          echo "  ✅ Service Account 创建成功，ID: $$SA_ID"
+        else
+          SA_ID=$$SA_EXISTS
+          echo "  ℹ️  Service Account 已存在，ID: $$SA_ID"
+        fi
+
+        curl -s -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
+          "$${GRAFANA_URL}/api/serviceaccounts/$$SA_ID/tokens" | \
+          grep -o '"id":[0-9]*' | cut -d: -f2 | while read TOKEN_ID; do
+            curl -s -X DELETE \
+              -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
+              "$${GRAFANA_URL}/api/serviceaccounts/$$SA_ID/tokens/$$TOKEN_ID"
+          done
+
+        echo "  🔐 生成新的 API Token..."
+        TOKEN_RESULT=$$(curl -s -X POST \
+          -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
+          -H "Content-Type: application/json" \
+          -d '{"name":"kubepolaris-token","secondsToLive":0}' \
+          "$${GRAFANA_URL}/api/serviceaccounts/$$SA_ID/tokens")
+
+        API_KEY=$$(echo "$$TOKEN_RESULT" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
+
+        if [ -n "$$API_KEY" ]; then
+          echo "$$API_KEY" > /secrets/grafana_api_key
+          echo "  ✅ API Token 已保存到 /secrets/grafana_api_key"
+          echo ""
+          echo "=========================================="
+          echo "🎉 Grafana 初始化完成！"
+          echo "=========================================="
+        else
+          echo "  ❌ Token 创建失败: $$TOKEN_RESULT"
+          exit 1
+        fi
+    networks:
+      - kubepolaris-network
+    restart: "no"
+
+# ==========================================
+# 数据卷
+# ==========================================
 volumes:
   mysql_data:
-  logs:
+    name: kubepolaris-mysql-data
+  grafana_data:
+    name: kubepolaris-grafana-data
+
+# ==========================================
+# 网络
+# ==========================================
+networks:
+  kubepolaris-network:
+    name: kubepolaris-network
+    driver: bridge
 ```
 
-## 自定义配置
-
-### 使用环境变量
-
-创建 `.env` 文件：
-
-```bash title=".env"
-# 数据库
-MYSQL_ROOT_PASSWORD=your_secure_password
-MYSQL_DATABASE=kubepolaris
-
-# JWT
-JWT_SECRET=your-random-secret-key-at-least-32-chars
-
-# 服务端口
-BACKEND_PORT=8080
-FRONTEND_PORT=80
-
-# 版本
-VERSION=v1.0.0
-```
-
-### 挂载 kubeconfig
-
-如果需要管理本地 Kubernetes 集群，可以挂载 kubeconfig：
-
-```yaml
-backend:
-  volumes:
-    - ~/.kube:/root/.kube:ro
-```
-
-### 启用 HTTPS
-
-使用 Let's Encrypt 自动获取证书：
-
-```yaml
-frontend:
-  image: kubepolaris/kubepolaris-frontend:latest
-  volumes:
-    - ./nginx/nginx-ssl.conf:/etc/nginx/nginx.conf:ro
-    - ./certbot/conf:/etc/letsencrypt:ro
-    - ./certbot/www:/var/www/certbot:ro
-  ports:
-    - "80:80"
-    - "443:443"
-
-certbot:
-  image: certbot/certbot
-  volumes:
-    - ./certbot/conf:/etc/letsencrypt
-    - ./certbot/www:/var/www/certbot
-  entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-```
 
 ## 数据备份
 
