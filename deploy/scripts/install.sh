@@ -55,26 +55,41 @@ print_banner() {
 # 检查依赖
 check_dependencies() {
     log_info "检查依赖..."
-    
+
     # 检查 Docker
     if ! command -v docker &> /dev/null; then
         log_error "Docker 未安装，请先安装 Docker"
         exit 1
     fi
     log_success "Docker 已安装: $(docker --version)"
-    
-    # 检查 Docker Compose
-    if command -v docker-compose &> /dev/null; then
-        COMPOSE_CMD="docker-compose"
-        log_success "Docker Compose 已安装: $(docker-compose --version)"
-    elif docker compose version &> /dev/null; then
-        COMPOSE_CMD="docker compose"
-        log_success "Docker Compose 已安装: $(docker compose version)"
+
+    # 检查 Docker Compose V2（必须使用 docker compose 插件）
+    # 注意：docker-compose（V1）不支持 Compose Specification 格式
+    if docker compose version &> /dev/null; then
+        COMPOSE_VERSION=$(docker compose version --short 2>/dev/null || docker compose version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        COMPOSE_MAJOR_VERSION=$(echo "$COMPOSE_VERSION" | cut -d. -f1)
+
+        if [ "$COMPOSE_MAJOR_VERSION" -ge 2 ] 2>/dev/null; then
+            COMPOSE_CMD="docker compose"
+            log_success "Docker Compose V2 已安装: $(docker compose version)"
+        else
+            log_error "Docker Compose 版本过低，需要 V2.0.0 或更高版本"
+            log_error "当前版本: $COMPOSE_VERSION"
+            log_info "请升级 Docker Compose: https://docs.docker.com/compose/install/"
+            exit 1
+        fi
+    elif command -v docker-compose &> /dev/null; then
+        log_error "检测到 docker-compose (Compose V1)，但本项目需要 Docker Compose V2"
+        log_error "Compose V1 不支持 Compose Specification 格式"
+        log_info "请卸载 docker-compose 并安装 docker-compose-plugin"
+        log_info "安装指南: https://docs.docker.com/compose/install/"
+        exit 1
     else
-        log_error "Docker Compose 未安装，请先安装 Docker Compose"
+        log_error "Docker Compose 未安装，请安装 Docker Compose V2 (docker-compose-plugin)"
+        log_info "安装指南: https://docs.docker.com/compose/install/"
         exit 1
     fi
-    
+
     # 检查 Docker 服务
     if ! docker info &> /dev/null; then
         log_error "Docker 服务未运行，请启动 Docker 服务"
