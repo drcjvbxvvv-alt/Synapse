@@ -1,0 +1,115 @@
+{{- if .Values.mysql.internal.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-mysql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.mysql.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "kubepolaris.fullname" . }}-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kubepolaris.mysql.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kubepolaris.mysql.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
+      containers:
+      - name: mysql
+        image: {{ include "kubepolaris.image" (dict "repository" .Values.mysql.internal.image.repository "tag" .Values.mysql.internal.image.tag "Values" .Values "Chart" .Chart) }}
+        imagePullPolicy: {{ .Values.mysql.internal.image.pullPolicy }}
+        ports:
+        - name: mysql
+          containerPort: 3306
+          protocol: TCP
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "kubepolaris.mysql.secretName" . }}
+              key: {{ .Values.mysql.internal.existingSecretRootPasswordKey | default "mysql-root-password" }}
+        - name: MYSQL_DATABASE
+          value: {{ .Values.mysql.internal.database }}
+        - name: MYSQL_USER
+          value: {{ .Values.mysql.internal.username }}
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "kubepolaris.mysql.secretName" . }}
+              key: {{ .Values.mysql.internal.existingSecretPasswordKey | default "mysql-password" }}
+        - name: TZ
+          value: "Asia/Shanghai"
+        args:
+        - --character-set-server=utf8mb4
+        - --collation-server=utf8mb4_unicode_ci
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        {{- if .Values.mysql.internal.config }}
+        - name: config
+          mountPath: /etc/mysql/conf.d
+        {{- end }}
+        resources:
+          {{- toYaml .Values.mysql.internal.resources | nindent 10 }}
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - 'mysqladmin ping -h localhost -u root -p"${MYSQL_ROOT_PASSWORD}"'
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+      volumes:
+      {{- if .Values.mysql.internal.config }}
+      - name: config
+        configMap:
+          name: {{ include "kubepolaris.fullname" . }}-mysql-config
+      {{- end }}
+      {{- if not .Values.mysql.internal.persistence.enabled }}
+      - name: data
+        emptyDir: {}
+      {{- end }}
+      {{- with .Values.mysql.internal.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mysql.internal.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.mysql.internal.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+        - {{ .Values.mysql.internal.persistence.accessMode }}
+      {{- if .Values.mysql.internal.persistence.storageClass }}
+      {{- if (eq "-" .Values.mysql.internal.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.mysql.internal.persistence.storageClass }}
+      {{- end }}
+      {{- else if .Values.global.storageClass }}
+      storageClassName: {{ .Values.global.storageClass }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.mysql.internal.persistence.size }}
+  {{- end }}
+{{- end }}

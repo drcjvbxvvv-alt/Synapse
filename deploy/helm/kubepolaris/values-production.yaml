@@ -1,0 +1,101 @@
+# ============================================================================
+# KubePolaris 生产环境部署配置
+# ============================================================================
+
+# 全局配置
+global:
+  imageRegistry: "registry.cn-hangzhou.aliyuncs.com/clay-wangzhi"
+  storageClass: "your-storage-class"
+
+# 后端配置
+backend:
+  replicaCount: 2
+  
+  image:
+    tag: "v1.0.0"  # 使用固定版本
+    pullPolicy: IfNotPresent
+  
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+# 前端配置
+frontend:
+  replicaCount: 2
+  
+  image:
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+
+# 数据库配置 - 使用外部数据库
+mysql:
+  internal:
+    enabled: false
+  external:
+    enabled: true
+    host: "your-mysql-host.example.com"
+    port: 3306
+    database: kubepolaris
+    username: kubepolaris
+    existingSecret: "kubepolaris-mysql-secret"
+
+# Ingress 配置
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+  hosts:
+    - host: kubepolaris.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+        - path: /api
+          pathType: Prefix
+          backend: backend
+  tls:
+    - secretName: kubepolaris-tls
+      hosts:
+        - kubepolaris.yourdomain.com
+
+# Grafana - 使用外部 Grafana
+grafana:
+  enabled: false
+  external:
+    enabled: true
+    url: "https://grafana.yourdomain.com"
+    existingSecret: "kubepolaris-grafana-secret"
+
+# 监控配置
+monitoring:
+  prometheus:
+    enabled: true
+    url: "http://prometheus-server:9090"
+
+# 安全配置
+security:
+  existingSecret: "kubepolaris-secrets"
+
+# PDB 配置
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# 配置
+config:
+  server:
+    mode: release
+  log:
+    level: info
+    format: json
+  audit:
+    enabled: true
+    retentionDays: 365

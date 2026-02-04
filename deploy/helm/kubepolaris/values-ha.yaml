@@ -1,0 +1,130 @@
+# ============================================================================
+# KubePolaris 高可用部署配置
+# ============================================================================
+# 使用方法:
+#   helm install kubepolaris kubepolaris/kubepolaris \
+#     -f values-ha.yaml \
+#     -n kubepolaris \
+#     --create-namespace
+# ============================================================================
+
+# 后端配置
+backend:
+  replicaCount: 3
+  
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+
+  # Pod 反亲和性 - 确保 Pod 分散到不同节点
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - backend
+          topologyKey: kubernetes.io/hostname
+
+  # 拓扑分布约束 - 跨可用区分布
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/component: backend
+
+# 前端配置
+frontend:
+  replicaCount: 3
+  
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: frontend
+            topologyKey: kubernetes.io/hostname
+
+# 使用外部数据库（推荐）
+mysql:
+  internal:
+    enabled: false
+  external:
+    enabled: true
+    host: mysql.example.com
+    port: 3306
+    database: kubepolaris
+    username: kubepolaris
+    existingSecret: kubepolaris-mysql-secret
+
+# Ingress 配置
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # 会话保持
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "route"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "3600"
+    # HTTPS 证书
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # 请求大小限制
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    - host: kubepolaris.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+        - path: /api
+          pathType: Prefix
+          backend: backend
+  tls:
+    - secretName: kubepolaris-tls
+      hosts:
+        - kubepolaris.example.com
+
+# PDB 配置 - 确保至少 2 个副本可用
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# HPA 配置 - 自动扩缩容
+autoscaling:
+  backend:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  frontend:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# 监控集成
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+  
+  prometheus:
+    enabled: true
+    url: http://prometheus-server:9090
+
+# 安全配置
+security:
+  jwtSecret: "your-secure-jwt-secret-at-least-32-characters-long"

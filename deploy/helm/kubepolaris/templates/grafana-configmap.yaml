@@ -1,0 +1,52 @@
+{{- if .Values.grafana.enabled }}
+---
+# Grafana Provisioning - Datasources
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-datasources
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: {{ .Values.grafana.datasource.prometheusUrl }}
+        isDefault: true
+        jsonData:
+          httpMethod: POST
+          timeInterval: "15s"
+          timeout: 60
+        editable: true
+
+---
+# Grafana Provisioning - Dashboards
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-dashboards-provider
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'KubePolaris Dashboards'
+        orgId: 1
+        folder: 'KubePolaris'
+        folderUid: 'kubepolaris-folder'
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: false
+{{- end }}

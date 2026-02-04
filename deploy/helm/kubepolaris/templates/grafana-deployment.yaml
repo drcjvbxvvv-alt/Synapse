@@ -1,0 +1,103 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kubepolaris.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: grafana
+  template:
+    metadata:
+      labels:
+        {{- include "kubepolaris.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: grafana
+    spec:
+      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        fsGroup: 472
+        runAsUser: 472
+        runAsNonRoot: true
+      containers:
+      - name: grafana
+        image: {{ include "kubepolaris.image" (dict "repository" .Values.grafana.image.repository "tag" .Values.grafana.image.tag "Values" .Values "Chart" .Chart) }}
+        imagePullPolicy: {{ .Values.grafana.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "kubepolaris.grafana.secretName" . }}
+              key: {{ .Values.grafana.existingSecretPasswordKey }}
+        - name: GF_SERVER_ROOT_URL
+          value: "/grafana/"
+        - name: GF_SERVER_SERVE_FROM_SUB_PATH
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: GF_DATABASE_TYPE
+          value: "sqlite3"
+        - name: GF_INSTALL_PLUGINS
+          value: ""
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/grafana
+        - name: datasources
+          mountPath: /etc/grafana/provisioning/datasources
+          readOnly: true
+        - name: dashboards-provider
+          mountPath: /etc/grafana/provisioning/dashboards
+          readOnly: true
+        {{- if .Values.grafana.dashboards.enabled }}
+        - name: dashboards
+          mountPath: /var/lib/grafana/dashboards
+          readOnly: true
+        {{- end }}
+        resources:
+          {{- toYaml .Values.grafana.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+      volumes:
+      {{- if .Values.grafana.persistence.enabled }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "kubepolaris.fullname" . }}-grafana
+      {{- else }}
+      - name: data
+        emptyDir: {}
+      {{- end }}
+      - name: datasources
+        configMap:
+          name: {{ include "kubepolaris.fullname" . }}-grafana-datasources
+      - name: dashboards-provider
+        configMap:
+          name: {{ include "kubepolaris.fullname" . }}-grafana-dashboards-provider
+      {{- if .Values.grafana.dashboards.enabled }}
+      - name: dashboards
+        configMap:
+          name: {{ include "kubepolaris.fullname" . }}-grafana-dashboards
+      {{- end }}
+{{- end }}

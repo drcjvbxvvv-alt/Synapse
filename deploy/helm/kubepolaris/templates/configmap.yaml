@@ -1,0 +1,199 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: {{ .Values.config.server.port }}
+      mode: {{ .Values.config.server.mode }}
+    
+    database:
+      driver: mysql
+      host: {{ include "kubepolaris.database.host" . }}
+      port: {{ include "kubepolaris.database.port" . }}
+      username: {{ include "kubepolaris.database.username" . }}
+      database: {{ include "kubepolaris.database.name" . }}
+      charset: utf8mb4
+    
+    jwt:
+      expire_time: 24
+    
+    log:
+      level: {{ .Values.config.log.level }}
+      format: {{ .Values.config.log.format }}
+    
+    k8s:
+      default_namespace: {{ .Values.config.k8s.defaultNamespace }}
+    
+    {{- if .Values.grafana.enabled }}
+    grafana:
+      enabled: true
+      url: http://{{ include "kubepolaris.fullname" . }}-grafana:3000
+    {{- else if .Values.grafana.external.enabled }}
+    grafana:
+      enabled: true
+      url: {{ .Values.grafana.external.url }}
+    {{- else }}
+    grafana:
+      enabled: false
+    {{- end }}
+    
+    {{- if .Values.monitoring.prometheus.enabled }}
+    prometheus:
+      url: {{ .Values.monitoring.prometheus.url }}
+    {{- end }}
+    
+    {{- if .Values.config.audit.enabled }}
+    audit:
+      enabled: {{ .Values.config.audit.enabled }}
+      retention_days: {{ .Values.config.audit.retentionDays }}
+    {{- end }}
+---
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-frontend-nginx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.frontend.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /tmp/nginx.pid;
+
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        client_body_temp_path /tmp/client_temp;
+        proxy_temp_path /tmp/proxy_temp;
+        fastcgi_temp_path /tmp/fastcgi_temp;
+        uwsgi_temp_path /tmp/uwsgi_temp;
+        scgi_temp_path /tmp/scgi_temp;
+
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log /var/log/nginx/access.log main;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css text/xml application/json application/javascript 
+                   application/xml application/xml+rss text/javascript application/x-javascript
+                   image/svg+xml;
+        gzip_min_length 1000;
+
+        server {
+            listen 8080;
+            server_name _;
+
+            root /usr/share/nginx/html;
+            index index.html;
+
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+
+            location /api/ {
+                proxy_pass http://{{ include "kubepolaris.fullname" . }}-backend:8080;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header Connection "";
+                
+                proxy_connect_timeout 60s;
+                proxy_send_timeout 60s;
+                proxy_read_timeout 60s;
+            }
+
+            location /ws/ {
+                proxy_pass http://{{ include "kubepolaris.fullname" . }}-backend:8080;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                proxy_connect_timeout 7d;
+                proxy_send_timeout 7d;
+                proxy_read_timeout 7d;
+            }
+
+            {{- if .Values.grafana.enabled }}
+            location ^~ /grafana/ {
+                proxy_pass http://{{ include "kubepolaris.fullname" . }}-grafana:3000;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header X-Forwarded-Host $host;
+                proxy_set_header X-Forwarded-Server $host;
+                
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                
+                proxy_connect_timeout 60s;
+                proxy_send_timeout 60s;
+                proxy_read_timeout 60s;
+                
+                proxy_hide_header X-Frame-Options;
+            }
+            {{- end }}
+
+            location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+                access_log off;
+            }
+
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+        }
+    }
+{{- end }}
+---
+{{- if and .Values.mysql.internal.enabled .Values.mysql.internal.config }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-mysql-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.mysql.labels" . | nindent 4 }}
+data:
+  my.cnf: |
+{{ .Values.mysql.internal.config | indent 4 }}
+{{- end }}

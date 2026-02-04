@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "kubepolaris.fullname" . }}-test-connection"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  containers:
+  - name: wget
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/busybox:1.36
+    command: ['wget']
+    args: ['{{ include "kubepolaris.fullname" . }}-backend:{{ .Values.backend.service.port }}/healthz']
+  restartPolicy: Never

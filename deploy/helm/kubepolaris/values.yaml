@@ -1,0 +1,468 @@
+# ============================================================================
+# KubePolaris Helm Chart - Default Values
+# ============================================================================
+# 完整配置参考: https://kubepolaris.clay-wangzhi.com/docs/installation/kubernetes
+# ============================================================================
+
+# ============== 全局配置 ==============
+global:
+  # 镜像仓库前缀（如果使用私有镜像仓库）
+  imageRegistry: "registry.cn-hangzhou.aliyuncs.com/clay-wangzhi"
+  
+  # 镜像拉取密钥
+  imagePullSecrets: []
+  # - name: my-registry-secret
+  
+  # 默认存储类
+  storageClass: ""
+
+# ============== 后端配置 ==============
+backend:
+  # 是否启用后端
+  enabled: true
+  
+  # 副本数
+  replicaCount: 2
+  
+  image:
+    repository: kubepolaris-backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  # 服务配置
+  service:
+    type: ClusterIP
+    port: 8080
+    annotations: {}
+  
+  # 资源限制
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  
+  # 健康检查
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  # 环境变量
+  env: []
+  # - name: LOG_LEVEL
+  #   value: "info"
+  
+  # 从 Secret 加载环境变量
+  envFrom: []
+  
+  # 额外的卷
+  extraVolumes: []
+  
+  # 额外的卷挂载
+  extraVolumeMounts: []
+  
+  # 节点选择器
+  nodeSelector: {}
+  
+  # 容忍度
+  tolerations: []
+  
+  # 亲和性
+  affinity: {}
+  
+  # Pod 安全上下文
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+  
+  # 容器安全上下文
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
+  
+  # 服务账号
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+# ============== 前端配置 ==============
+frontend:
+  # 是否启用前端
+  enabled: true
+  
+  # 副本数
+  replicaCount: 2
+  
+  image:
+    repository: kubepolaris-frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  # 服务配置
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+    annotations: {}
+  
+  # 资源限制
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  # 健康检查
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+  
+  # 节点选择器
+  nodeSelector: {}
+  
+  # 容忍度
+  tolerations: []
+  
+  # 亲和性
+  affinity: {}
+  
+  # Pod 安全上下文
+  podSecurityContext:
+    fsGroup: 101
+    runAsNonRoot: true
+    runAsUser: 101
+  
+  # 容器安全上下文
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 101
+    capabilities:
+      drop:
+        - ALL
+
+# ============== 数据库配置 ==============
+mysql:
+  # 使用内置 MySQL
+  internal:
+    enabled: true
+    
+    image:
+      repository: mysql
+      tag: "8.0"
+      pullPolicy: IfNotPresent
+    
+    # 持久化存储
+    persistence:
+      enabled: false 
+      size: 20Gi
+      storageClass: ""
+      accessMode: ReadWriteOnce
+    
+    # 资源限制
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    
+    # MySQL root 密码（建议使用 existingSecret）
+    rootPassword: ""
+    
+    # MySQL 数据库配置
+    database: kubepolaris
+    username: kubepolaris
+    password: ""
+    
+    # 使用已有的 Secret
+    existingSecret: ""
+    existingSecretRootPasswordKey: "mysql-root-password"
+    existingSecretPasswordKey: "mysql-password"
+    
+    # MySQL 配置
+    config: |
+      [mysqld]
+      character-set-server=utf8mb4
+      collation-server=utf8mb4_unicode_ci
+      max_connections=1000
+      max_allowed_packet=256M
+    
+    # 节点选择器
+    nodeSelector: {}
+    
+    # 容忍度
+    tolerations: []
+  
+  # 使用外部 MySQL
+  external:
+    enabled: false
+    host: ""
+    port: 3306
+    database: kubepolaris
+    username: kubepolaris
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: "password"
+
+# ============== Ingress 配置 ==============
+ingress:
+  enabled: false
+  className: "nginx"
+  
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    # nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+  
+  hosts:
+    - host: kubepolaris.local
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+        - path: /api
+          pathType: Prefix
+          backend: backend
+  
+  tls: []
+  # - secretName: kubepolaris-tls
+  #   hosts:
+  #     - kubepolaris.local
+
+# ============== Grafana 配置 ==============
+grafana:
+  # 是否启用内置 Grafana
+  enabled: true
+  
+  image:
+    repository: grafana
+    tag: "10.2.0"
+    pullPolicy: IfNotPresent
+  
+  # 持久化存储
+  persistence:
+    enabled: false
+    size: 5Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  
+  # 资源限制
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  # 管理员密码
+  adminPassword: ""
+  existingSecret: ""
+  existingSecretPasswordKey: "grafana-admin-password"
+  
+  # 服务配置
+  service:
+    type: ClusterIP
+    port: 3000
+  
+  # Dashboards 配置
+  dashboards:
+    enabled: true
+  
+  # 数据源配置
+  datasource:
+    # Prometheus 数据源地址
+    # 如果使用外部 Prometheus，修改此地址
+    # 例如: http://prometheus-server:9090
+    prometheusUrl: "http://your-prometheus:9090"
+  
+  # 外部 Grafana 配置
+  external:
+    enabled: false
+    url: ""
+    apiKey: ""
+    existingSecret: ""
+    existingSecretApiKeyKey: "grafana-api-key"
+
+# ============== 持久化配置 ==============
+persistence:
+  # 日志持久化
+  logs:
+    enabled: false
+    size: 10Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+# ============== 监控配置 ==============
+monitoring:
+  # Prometheus ServiceMonitor
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+  
+  # Prometheus 集成
+  prometheus:
+    enabled: false
+    url: ""
+    existingSecret: ""
+    existingSecretUsernameKey: "username"
+    existingSecretPasswordKey: "password"
+
+# ============== 告警配置 ==============
+alerting:
+  alertmanager:
+    enabled: false
+    url: ""
+
+# ============== 安全配置 ==============
+security:
+  # JWT 密钥（必须设置，至少 32 字符）
+  jwtSecret: ""
+  
+  # 使用已有的 Secret
+  existingSecret: ""
+  existingSecretJwtKey: "jwt-secret"
+
+# ============== RBAC 配置 ==============
+rbac:
+  # 创建 RBAC 资源
+  create: true
+  
+  # ClusterRole 权限规则
+  rules:
+    # 核心资源
+    - apiGroups: [""]
+      resources: ["nodes", "namespaces", "pods", "pods/log", "pods/exec", "services", "endpoints", "configmaps", "secrets", "persistentvolumes", "persistentvolumeclaims", "events"]
+      verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    
+    # 工作负载资源
+    - apiGroups: ["apps"]
+      resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+      verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    
+    # Batch 资源
+    - apiGroups: ["batch"]
+      resources: ["jobs", "cronjobs"]
+      verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    
+    # 网络资源
+    - apiGroups: ["networking.k8s.io"]
+      resources: ["ingresses", "networkpolicies"]
+      verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    
+    # 存储资源
+    - apiGroups: ["storage.k8s.io"]
+      resources: ["storageclasses"]
+      verbs: ["get", "list"]
+    
+    # RBAC 资源（只读）
+    - apiGroups: ["rbac.authorization.k8s.io"]
+      resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+      verbs: ["get", "list"]
+    
+    # Metrics
+    - apiGroups: ["metrics.k8s.io"]
+      resources: ["nodes", "pods"]
+      verbs: ["get", "list"]
+
+# ============== Pod 中断预算 ==============
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# ============== 水平自动伸缩 ==============
+autoscaling:
+  backend:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  frontend:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# ============== 初始化配置 ==============
+init:
+  # 初始化 Job（创建默认用户等）
+  enabled: true
+  
+  # 默认管理员账号
+  admin:
+    username: admin
+    password: "KubePolaris@2026"
+    email: admin@example.com
+
+# ============== 配置文件 ==============
+config:
+  # 服务器配置
+  server:
+    port: 8080
+    mode: release
+  
+  # 日志配置
+  log:
+    level: info
+    format: json
+  
+  # K8s 配置
+  k8s:
+    defaultNamespace: default
+  
+  # 审计配置
+  audit:
+    enabled: true
+    retentionDays: 365
+
+# ============== 名称覆盖 ==============
+nameOverride: ""
+fullnameOverride: ""
+
+# ============== 其他配置 ==============
+podLabels: {}
+podAnnotations: {}
+priorityClassName: ""
