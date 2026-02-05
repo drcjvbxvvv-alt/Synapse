@@ -59,5 +59,6 @@ jobs:
         with:
           charts_dir: deploy/helm
           config: .github/cr.yaml
+          pages_branch: helm-charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
