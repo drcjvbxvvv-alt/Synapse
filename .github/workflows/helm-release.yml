@@ -36,6 +36,24 @@ jobs:
         with:
           version: v3.13.0
 
+      - name: Create helm-charts branch if not exists
+        run: |
+          if ! git ls-remote --heads origin helm-charts | grep -q helm-charts; then
+            echo "Creating helm-charts branch..."
+            git checkout --orphan helm-charts
+            git rm -rf .
+            echo "# KubePolaris Helm Charts" > README.md
+            echo "" >> README.md
+            echo "This branch hosts the Helm chart repository index." >> README.md
+            git add README.md
+            git commit -m "Initialize helm-charts branch for Helm repository"
+            git push origin helm-charts
+            git checkout main
+            echo "helm-charts branch created successfully"
+          else
+            echo "helm-charts branch already exists"
+          fi
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         with:
