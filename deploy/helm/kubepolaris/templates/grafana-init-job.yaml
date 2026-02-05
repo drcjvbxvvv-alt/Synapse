@@ -208,4 +208,116 @@ spec:
           requests:
             cpu: 50m
             memory: 64Mi
+---
+# Grafana 清理 Job - 在 helm uninstall 时删除动态创建的资源
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-cleanup
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-cleanup
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "serviceaccounts"]
+  verbs: ["get", "delete"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings"]
+  verbs: ["get", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-cleanup
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+subjects:
+- kind: ServiceAccount
+  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-cleanup
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  ttlSecondsAfterFinished: 60
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        {{- include "kubepolaris.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: grafana-cleanup
+    spec:
+      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+      restartPolicy: Never
+      containers:
+      - name: cleanup
+        image: {{ include "kubepolaris.image" (dict "repository" .Values.grafana.init.image.repository "tag" .Values.grafana.init.image.tag "Values" .Values "Chart" .Chart) }}
+        imagePullPolicy: {{ .Values.grafana.init.image.pullPolicy }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "🧹 开始清理 Grafana 相关资源..."
+          NAMESPACE="{{ .Release.Namespace }}"
+          FULLNAME="{{ include "kubepolaris.fullname" . }}"
+          
+          echo "  删除 Grafana API Key Secret..."
+          kubectl delete secret "${FULLNAME}-grafana-api-key" -n "${NAMESPACE}" --ignore-not-found
+          
+          echo "  删除 Grafana Init RBAC 资源..."
+          kubectl delete rolebinding "${FULLNAME}-grafana-init" -n "${NAMESPACE}" --ignore-not-found
+          kubectl delete role "${FULLNAME}-grafana-init" -n "${NAMESPACE}" --ignore-not-found
+          kubectl delete serviceaccount "${FULLNAME}-grafana-init" -n "${NAMESPACE}" --ignore-not-found
+          kubectl delete job "${FULLNAME}-grafana-init" -n "${NAMESPACE}" --ignore-not-found
+          
+          echo "✅ Grafana 资源清理完成"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 64Mi
+          requests:
+            cpu: 25m
+            memory: 32Mi
 {{- end }}
