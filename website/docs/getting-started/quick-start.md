@@ -28,7 +28,7 @@ cd KubePolaris/deploy/scripts/
 
 等待约 1-2 分钟，所有服务启动完成后，访问：
 
-- **Web 界面**: http://${ip}
+- **Web 界面**: `http://<服务器IP>`
 
 ## 第二步：登录系统
 

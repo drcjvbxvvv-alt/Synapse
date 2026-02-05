@@ -38,7 +38,7 @@ docker ps
 curl http://localhost:8080/healthz
 ```
 
-访问 http://${ip} 开始使用。
+访问 `http://<服务器IP>` 开始使用。
 
 ## Docker Compose 配置
 
