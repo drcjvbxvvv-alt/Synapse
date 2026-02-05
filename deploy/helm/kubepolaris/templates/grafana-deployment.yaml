@@ -44,8 +44,20 @@ spec:
           value: "/grafana/"
         - name: GF_SERVER_SERVE_FROM_SUB_PATH
           value: "true"
+        - name: GF_SECURITY_ALLOW_EMBEDDING
+          value: "true"
+        - name: GF_SECURITY_COOKIE_SAMESITE
+          value: "lax"
+        - name: GF_SECURITY_COOKIE_SECURE
+          value: "false"
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: "Viewer"
+        - name: GF_AUTH_ANONYMOUS_ORG_NAME
+          value: "Main Org."
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
         - name: GF_DATABASE_TYPE
           value: "sqlite3"
         - name: GF_INSTALL_PLUGINS

@@ -315,6 +315,14 @@ grafana:
     # 例如: http://prometheus-server:9090
     prometheusUrl: "http://your-prometheus:9090"
   
+  # 初始化 Job 配置
+  init:
+    # kubectl 镜像（用于创建 Secret 和重启后端）
+    image:
+      repository: kubectl
+      tag: "v0.1"
+      pullPolicy: IfNotPresent
+  
   # 外部 Grafana 配置
   external:
     enabled: false

@@ -1,0 +1,211 @@
+{{- if .Values.grafana.enabled }}
+# Grafana Init RBAC - 授权 Job 创建 Secret
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+subjects:
+- kind: ServiceAccount
+  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  namespace: {{ .Release.Namespace }}
+---
+# Grafana 初始化 Job - 设置文件夹权限、创建 Service Account 并自动创建 API Key Secret
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubepolaris.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        {{- include "kubepolaris.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: grafana-init
+    spec:
+      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "kubepolaris.fullname" . }}-grafana-init
+      restartPolicy: OnFailure
+      containers:
+      - name: grafana-init
+        image: {{ include "kubepolaris.image" (dict "repository" .Values.grafana.init.image.repository "tag" .Values.grafana.init.image.tag "Values" .Values "Chart" .Chart) }}
+        imagePullPolicy: {{ .Values.grafana.init.image.pullPolicy }}
+        env:
+        - name: GRAFANA_URL
+          value: "http://{{ include "kubepolaris.fullname" . }}-grafana:{{ .Values.grafana.service.port }}"
+        - name: GRAFANA_USER
+          value: "admin"
+        - name: GRAFANA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "kubepolaris.grafana.secretName" . }}
+              key: {{ .Values.grafana.existingSecretPasswordKey }}
+        - name: NAMESPACE
+          value: {{ .Release.Namespace | quote }}
+        - name: SECRET_NAME
+          value: "{{ include "kubepolaris.fullname" . }}-grafana-api-key"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "⏳ 等待 Grafana 启动..."
+          for i in $(seq 1 60); do
+            if curl -s "${GRAFANA_URL}/api/health" | grep -q "ok"; then
+              echo "✅ Grafana 已就绪"
+              break
+            fi
+            echo "等待中... ($i/60)"
+            sleep 5
+          done
+
+          echo ""
+          echo "⏳ 等待 Dashboard 加载完成..."
+          sleep 10
+
+          echo ""
+          echo "🔧 设置 KubePolaris 文件夹权限..."
+          PERM_RESULT=$(curl -s -X POST \
+            -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+            -H "Content-Type: application/json" \
+            -d '{"items":[{"role":"Viewer","permission":1},{"role":"Editor","permission":2}]}' \
+            "${GRAFANA_URL}/api/folders/kubepolaris-folder/permissions")
+          echo "权限设置结果: ${PERM_RESULT}"
+          echo "✅ 权限设置完成"
+
+          echo ""
+          echo "🔑 创建 Service Account 和 API Token..."
+
+          # 检查 Service Account 是否存在
+          SA_EXISTS=$(curl -s -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+            "${GRAFANA_URL}/api/serviceaccounts/search?query=kubepolaris" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+
+          if [ -z "${SA_EXISTS}" ]; then
+            echo "  📝 创建新的 Service Account..."
+            SA_RESULT=$(curl -s -X POST \
+              -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+              -H "Content-Type: application/json" \
+              -d '{"name":"kubepolaris","role":"Admin","isDisabled":false}' \
+              "${GRAFANA_URL}/api/serviceaccounts")
+            SA_ID=$(echo "${SA_RESULT}" | grep -o '"id":[0-9]*' | cut -d: -f2)
+            echo "  ✅ Service Account 创建成功，ID: ${SA_ID}"
+          else
+            SA_ID=${SA_EXISTS}
+            echo "  ℹ️  Service Account 已存在，ID: ${SA_ID}"
+          fi
+
+          # 删除旧的 Token
+          curl -s -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+            "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens" | \
+            grep -o '"id":[0-9]*' | cut -d: -f2 | while read TOKEN_ID; do
+              curl -s -X DELETE \
+                -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens/${TOKEN_ID}"
+            done
+
+          echo "  🔐 生成新的 API Token..."
+          TOKEN_RESULT=$(curl -s -X POST \
+            -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"kubepolaris-token","secondsToLive":0}' \
+            "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens")
+
+          API_KEY=$(echo "${TOKEN_RESULT}" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
+
+          if [ -n "${API_KEY}" ]; then
+            echo "  ✅ API Token 创建成功"
+            echo ""
+            echo "🔧 自动创建/更新 Grafana API Key Secret..."
+            
+            # 使用 kubectl 创建或更新 Secret
+            kubectl create secret generic "${SECRET_NAME}" \
+              --from-literal=grafana-api-key="${API_KEY}" \
+              -n "${NAMESPACE}" \
+              --dry-run=client -o yaml | kubectl apply -f -
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Secret ${SECRET_NAME} 创建/更新成功"
+              echo ""
+              echo "🔄 重启后端服务以加载新的 API Key..."
+              kubectl rollout restart deployment {{ include "kubepolaris.fullname" . }}-backend -n "${NAMESPACE}"
+              if [ $? -eq 0 ]; then
+                echo "✅ 后端服务重启成功"
+              else
+                echo "⚠️  后端服务重启失败，请手动重启"
+              fi
+              echo ""
+              echo "=========================================="
+              echo "🎉 Grafana 初始化完成！"
+              echo "=========================================="
+            else
+              echo "❌ Secret 创建失败"
+              exit 1
+            fi
+          else
+            echo "  ❌ Token 创建失败"
+            echo "  结果: ${TOKEN_RESULT}"
+            exit 1
+          fi
+
+          echo ""
+          echo "初始化脚本执行完成"
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+{{- end }}
