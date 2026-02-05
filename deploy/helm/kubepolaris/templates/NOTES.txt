@@ -32,11 +32,8 @@
   GitHub: https://github.com/clay-wangzhi/KubePolaris
 
 {{ if not .Values.security.jwtSecret }}
-⚠️  警告: JWT Secret 未设置！
-  请使用以下命令重新安装并设置 JWT Secret:
-  helm upgrade {{ .Release.Name }} kubepolaris/kubepolaris \
-    --set security.jwtSecret="your-secure-jwt-secret-at-least-32-chars" \
-    -n {{ .Release.Namespace }}
+ℹ️  JWT Secret 已自动生成（32 位随机字符串）
+  升级时会自动复用现有值，无需手动设置
 {{- end }}
 
 {{ if and .Values.mysql.internal.enabled (not .Values.mysql.internal.rootPassword) (not .Values.mysql.internal.existingSecret) }}

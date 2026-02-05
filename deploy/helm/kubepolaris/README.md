@@ -39,13 +39,10 @@ helm repo update
 ### 安装 Chart
 
 ```bash
-# 创建命名空间
-kubectl create namespace kubepolaris
-
-# 基础安装
+# 基础安装（JWT Secret 会自动生成）
 helm install kubepolaris kubepolaris/kubepolaris \
   --namespace kubepolaris \
-  --set security.jwtSecret="your-secure-jwt-secret-at-least-32-chars"
+  --create-namespace
 
 # 查看安装状态
 helm status kubepolaris -n kubepolaris
@@ -76,7 +73,7 @@ kubectl port-forward -n kubepolaris svc/kubepolaris-frontend 8080:80
 | `mysql.internal.enabled` | 启用内置 MySQL | `true` |
 | `mysql.external.enabled` | 使用外部 MySQL | `false` |
 | `ingress.enabled` | 启用 Ingress | `false` |
-| `security.jwtSecret` | JWT 密钥（必填） | `""` |
+| `security.jwtSecret` | JWT 密钥（可选，留空自动生成） | `""` |
 | `rbac.create` | 创建 RBAC 资源 | `true` |
 
 ### 完整配置
