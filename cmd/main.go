@@ -16,7 +16,6 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 func main() {
@@ -27,17 +26,9 @@ func main() {
 	logger.Init(cfg.Log.Level)
 
 	// 初始化数据库连接
-	var db *gorm.DB
-	var err error
-
-	if cfg.Database.Driver == "mysql" {
-		db, err = database.Init(cfg.Database)
-		if err != nil {
-			log.Fatalf("数据库初始化失败: %v", err)
-		}
-		logger.Info("MySQL数据库连接成功")
-	} else {
-		logger.Info("使用内存存储（数据不会持久化）")
+	db, err := database.Init(cfg.Database)
+	if err != nil {
+		log.Fatalf("数据库初始化失败: %v", err)
 	}
 
 	// 设置 Gin 模式

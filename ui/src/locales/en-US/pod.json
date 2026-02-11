@@ -1,0 +1,98 @@
+{
+  "title": "Pod Management",
+  "list": {
+    "title": "Pod List",
+    "search": "Search pod name",
+    "fetchError": "Failed to fetch pod list",
+    "noPods": "No pods"
+  },
+  "columns": {
+    "name": "Pod Name",
+    "namespace": "Namespace",
+    "status": "Status",
+    "ready": "Ready",
+    "restarts": "Restarts",
+    "node": "Node",
+    "ip": "IP Address",
+    "age": "Age",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "actions": "Actions"
+  },
+  "status": {
+    "running": "Running",
+    "pending": "Pending",
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "unknown": "Unknown",
+    "terminating": "Terminating",
+    "containerCreating": "Container Creating",
+    "crashLoopBackOff": "CrashLoopBackOff",
+    "imagePullBackOff": "ImagePullBackOff",
+    "error": "Error"
+  },
+  "actions": {
+    "viewDetails": "View Details",
+    "viewLogs": "View Logs",
+    "terminal": "Terminal",
+    "delete": "Delete",
+    "yaml": "View YAML",
+    "confirmDelete": "Are you sure you want to delete pod \"{{name}}\"?"
+  },
+  "detail": {
+    "title": "Pod Details",
+    "overview": "Overview",
+    "info": "Basic Info",
+    "containers": "Containers",
+    "conditions": "Conditions",
+    "events": "Events",
+    "labels": "Labels",
+    "annotations": "Annotations",
+    "volumes": "Volumes",
+    "nodeName": "Node",
+    "nodeSelector": "Node Selector",
+    "tolerations": "Tolerations",
+    "serviceAccount": "Service Account",
+    "qosClass": "QoS Class",
+    "restartPolicy": "Restart Policy"
+  },
+  "container": {
+    "name": "Container Name",
+    "image": "Image",
+    "status": "Status",
+    "ready": "Ready",
+    "restarts": "Restarts",
+    "ports": "Ports",
+    "resources": "Resources",
+    "env": "Environment Variables",
+    "mounts": "Mounts",
+    "command": "Command",
+    "args": "Arguments"
+  },
+  "logs": {
+    "title": "Pod Logs",
+    "container": "Container",
+    "follow": "Follow",
+    "timestamps": "Show Timestamps",
+    "previous": "Previous Logs",
+    "lines": "Lines",
+    "download": "Download",
+    "clear": "Clear",
+    "noLogs": "No logs",
+    "fetchError": "Failed to fetch logs"
+  },
+  "terminal": {
+    "title": "Pod Terminal",
+    "container": "Container",
+    "shell": "Shell",
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "reconnect": "Reconnect",
+    "connectionError": "Connection failed"
+  },
+  "messages": {
+    "deleteSuccess": "Pod deleted successfully",
+    "deleteError": "Failed to delete pod"
+  }
+}

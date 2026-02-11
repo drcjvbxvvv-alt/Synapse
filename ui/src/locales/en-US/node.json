@@ -1,0 +1,79 @@
+{
+  "title": "Node Management",
+  "list": {
+    "title": "Node List",
+    "search": "Search node name",
+    "fetchError": "Failed to fetch node list",
+    "noNodes": "No nodes"
+  },
+  "columns": {
+    "name": "Node Name",
+    "status": "Status",
+    "roles": "Roles",
+    "version": "Version",
+    "internalIP": "Internal IP",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "pods": "Pods",
+    "age": "Age",
+    "actions": "Actions"
+  },
+  "status": {
+    "ready": "Ready",
+    "notReady": "Not Ready",
+    "unknown": "Unknown",
+    "schedulable": "Schedulable",
+    "unschedulable": "Unschedulable"
+  },
+  "roles": {
+    "master": "Master",
+    "controlPlane": "Control Plane",
+    "worker": "Worker",
+    "none": "None"
+  },
+  "actions": {
+    "viewDetails": "View Details",
+    "cordon": "Cordon",
+    "uncordon": "Uncordon",
+    "drain": "Drain",
+    "ssh": "SSH",
+    "confirmCordon": "Are you sure you want to cordon node \"{{name}}\"?",
+    "confirmUncordon": "Are you sure you want to uncordon node \"{{name}}\"?",
+    "confirmDrain": "Are you sure you want to drain all pods on node \"{{name}}\"?"
+  },
+  "detail": {
+    "title": "Node Details",
+    "overview": "Overview",
+    "info": "Basic Info",
+    "conditions": "Conditions",
+    "resources": "Resource Usage",
+    "pods": "Pod List",
+    "labels": "Labels",
+    "taints": "Taints",
+    "annotations": "Annotations",
+    "systemInfo": "System Info",
+    "osImage": "OS Image",
+    "kernelVersion": "Kernel Version",
+    "containerRuntime": "Container Runtime",
+    "kubeletVersion": "Kubelet Version",
+    "architecture": "Architecture"
+  },
+  "resources": {
+    "cpu": "CPU",
+    "memory": "Memory",
+    "pods": "Pods",
+    "allocatable": "Allocatable",
+    "capacity": "Capacity",
+    "used": "Used",
+    "requests": "Requests",
+    "limits": "Limits"
+  },
+  "messages": {
+    "cordonSuccess": "Node cordoned successfully",
+    "cordonError": "Failed to cordon node",
+    "uncordonSuccess": "Node uncordoned successfully",
+    "uncordonError": "Failed to uncordon node",
+    "drainSuccess": "Node drained successfully",
+    "drainError": "Failed to drain node"
+  }
+}

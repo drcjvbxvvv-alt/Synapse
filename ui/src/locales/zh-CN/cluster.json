@@ -1,0 +1,70 @@
+{
+  "title": "集群管理",
+  "list": {
+    "title": "集群列表",
+    "import": "导入集群",
+    "search": "搜索集群名称",
+    "fetchError": "获取集群列表失败",
+    "noCluster": "暂无集群"
+  },
+  "columns": {
+    "name": "集群名称",
+    "status": "状态",
+    "version": "版本",
+    "nodes": "节点数",
+    "pods": "Pod 数",
+    "provider": "提供商",
+    "region": "区域",
+    "createdAt": "创建时间",
+    "actions": "操作"
+  },
+  "status": {
+    "healthy": "健康",
+    "unhealthy": "异常",
+    "unknown": "未知"
+  },
+  "actions": {
+    "viewOverview": "查看概览",
+    "terminal": "终端",
+    "delete": "删除",
+    "confirmDelete": "确定要删除集群 \"{{name}}\" 吗？此操作不可恢复。"
+  },
+  "detail": {
+    "title": "集群详情",
+    "overview": "概览",
+    "resources": "资源使用",
+    "info": "基本信息",
+    "apiServer": "API Server",
+    "k8sVersion": "Kubernetes 版本",
+    "createdAt": "创建时间",
+    "nodeCount": "节点数量",
+    "podCount": "Pod 数量"
+  },
+  "import": {
+    "title": "导入集群",
+    "name": "集群名称",
+    "namePlaceholder": "请输入集群名称",
+    "nameRequired": "请输入集群名称",
+    "kubeconfig": "Kubeconfig",
+    "kubeconfigPlaceholder": "请粘贴 kubeconfig 内容",
+    "kubeconfigRequired": "请输入 kubeconfig",
+    "description": "描述",
+    "descriptionPlaceholder": "请输入集群描述（可选）",
+    "testConnection": "测试连接",
+    "testing": "测试中...",
+    "testSuccess": "连接成功",
+    "testFailed": "连接失败",
+    "submit": "导入",
+    "importing": "导入中...",
+    "importSuccess": "集群导入成功",
+    "importFailed": "集群导入失败"
+  },
+  "resources": {
+    "cpu": "CPU",
+    "memory": "内存",
+    "pods": "Pods",
+    "used": "已使用",
+    "total": "总量",
+    "available": "可用"
+  }
+}

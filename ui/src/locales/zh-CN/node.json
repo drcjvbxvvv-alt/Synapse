@@ -1,0 +1,79 @@
+{
+  "title": "节点管理",
+  "list": {
+    "title": "节点列表",
+    "search": "搜索节点名称",
+    "fetchError": "获取节点列表失败",
+    "noNodes": "暂无节点"
+  },
+  "columns": {
+    "name": "节点名称",
+    "status": "状态",
+    "roles": "角色",
+    "version": "版本",
+    "internalIP": "内网 IP",
+    "cpu": "CPU",
+    "memory": "内存",
+    "pods": "Pod 数",
+    "age": "运行时间",
+    "actions": "操作"
+  },
+  "status": {
+    "ready": "就绪",
+    "notReady": "未就绪",
+    "unknown": "未知",
+    "schedulable": "可调度",
+    "unschedulable": "不可调度"
+  },
+  "roles": {
+    "master": "Master",
+    "controlPlane": "Control Plane",
+    "worker": "Worker",
+    "none": "无"
+  },
+  "actions": {
+    "viewDetails": "查看详情",
+    "cordon": "停止调度",
+    "uncordon": "恢复调度",
+    "drain": "驱逐 Pod",
+    "ssh": "SSH 连接",
+    "confirmCordon": "确定要停止调度节点 \"{{name}}\" 吗？",
+    "confirmUncordon": "确定要恢复调度节点 \"{{name}}\" 吗？",
+    "confirmDrain": "确定要驱逐节点 \"{{name}}\" 上的所有 Pod 吗？"
+  },
+  "detail": {
+    "title": "节点详情",
+    "overview": "概览",
+    "info": "基本信息",
+    "conditions": "状态条件",
+    "resources": "资源使用",
+    "pods": "Pod 列表",
+    "labels": "标签",
+    "taints": "污点",
+    "annotations": "注解",
+    "systemInfo": "系统信息",
+    "osImage": "操作系统",
+    "kernelVersion": "内核版本",
+    "containerRuntime": "容器运行时",
+    "kubeletVersion": "Kubelet 版本",
+    "architecture": "架构"
+  },
+  "resources": {
+    "cpu": "CPU",
+    "memory": "内存",
+    "pods": "Pods",
+    "allocatable": "可分配",
+    "capacity": "容量",
+    "used": "已使用",
+    "requests": "请求",
+    "limits": "限制"
+  },
+  "messages": {
+    "cordonSuccess": "节点已停止调度",
+    "cordonError": "停止调度失败",
+    "uncordonSuccess": "节点已恢复调度",
+    "uncordonError": "恢复调度失败",
+    "drainSuccess": "节点 Pod 驱逐成功",
+    "drainError": "节点 Pod 驱逐失败"
+  }
+}

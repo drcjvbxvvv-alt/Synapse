@@ -1,0 +1,70 @@
+{
+  "title": "Cluster Management",
+  "list": {
+    "title": "Cluster List",
+    "import": "Import Cluster",
+    "search": "Search cluster name",
+    "fetchError": "Failed to fetch cluster list",
+    "noCluster": "No clusters"
+  },
+  "columns": {
+    "name": "Cluster Name",
+    "status": "Status",
+    "version": "Version",
+    "nodes": "Nodes",
+    "pods": "Pods",
+    "provider": "Provider",
+    "region": "Region",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "status": {
+    "healthy": "Healthy",
+    "unhealthy": "Unhealthy",
+    "unknown": "Unknown"
+  },
+  "actions": {
+    "viewOverview": "View Overview",
+    "terminal": "Terminal",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete cluster \"{{name}}\"? This action cannot be undone."
+  },
+  "detail": {
+    "title": "Cluster Details",
+    "overview": "Overview",
+    "resources": "Resource Usage",
+    "info": "Basic Info",
+    "apiServer": "API Server",
+    "k8sVersion": "Kubernetes Version",
+    "createdAt": "Created At",
+    "nodeCount": "Node Count",
+    "podCount": "Pod Count"
+  },
+  "import": {
+    "title": "Import Cluster",
+    "name": "Cluster Name",
+    "namePlaceholder": "Enter cluster name",
+    "nameRequired": "Please enter cluster name",
+    "kubeconfig": "Kubeconfig",
+    "kubeconfigPlaceholder": "Paste kubeconfig content here",
+    "kubeconfigRequired": "Please enter kubeconfig",
+    "description": "Description",
+    "descriptionPlaceholder": "Enter cluster description (optional)",
+    "testConnection": "Test Connection",
+    "testing": "Testing...",
+    "testSuccess": "Connection successful",
+    "testFailed": "Connection failed",
+    "submit": "Import",
+    "importing": "Importing...",
+    "importSuccess": "Cluster imported successfully",
+    "importFailed": "Failed to import cluster"
+  },
+  "resources": {
+    "cpu": "CPU",
+    "memory": "Memory",
+    "pods": "Pods",
+    "used": "Used",
+    "total": "Total",
+    "available": "Available"
+  }
+}

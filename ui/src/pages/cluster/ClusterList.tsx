@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Table,
   Button,
@@ -33,6 +34,8 @@ const { Search } = Input;
 const ClusterList: React.FC = () => {
   const navigate = useNavigate();
   const { modal } = App.useApp();
+  const { t } = useTranslation('cluster');
+  const { t: tc } = useTranslation('common');
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [clusters, setClusters] = useState<Cluster[]>([]);
@@ -44,12 +47,12 @@ const ClusterList: React.FC = () => {
       const response = await clusterService.getClusters();
       setClusters(response.data.items || []);
     } catch (error) {
-      message.error('获取集群列表失败');
-      console.error('获取集群列表失败:', error);
+      message.error(t('list.fetchError'));
+      console.error('Failed to fetch clusters:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchClusters();
@@ -57,9 +60,9 @@ const ClusterList: React.FC = () => {
 
   const getStatusTag = (status: string) => {
     const statusConfig = {
-      healthy: { color: 'success', icon: <CheckCircleOutlined />, text: '健康' },
-      unhealthy: { color: 'error', icon: <ExclamationCircleOutlined />, text: '异常' },
-      unknown: { color: 'default', icon: <ExclamationCircleOutlined />, text: '未知' },
+      healthy: { color: 'success', icon: <CheckCircleOutlined />, text: t('status.healthy') },
+      unhealthy: { color: 'error', icon: <ExclamationCircleOutlined />, text: t('status.unhealthy') },
+      unknown: { color: 'default', icon: <ExclamationCircleOutlined />, text: t('status.unknown') },
     };
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.unknown;
     return (
@@ -71,7 +74,7 @@ const ClusterList: React.FC = () => {
 
   const columns: ColumnsType<Cluster> = [
     {
-      title: '集群名称',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 200,
@@ -110,26 +113,26 @@ const ClusterList: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('columns.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
       render: (status) => getStatusTag(status),
       filters: [
-        { text: '健康', value: 'healthy' },
-        { text: '异常', value: 'unhealthy' },
-        { text: '未知', value: 'unknown' },
+        { text: t('status.healthy'), value: 'healthy' },
+        { text: t('status.unhealthy'), value: 'unhealthy' },
+        { text: t('status.unknown'), value: 'unknown' },
       ],
     },
     {
-      title: '版本',
+      title: t('columns.version'),
       dataIndex: 'version',
       key: 'version',
       width: 120,
       responsive: ['md'],
     },
     {
-      title: '节点数',
+      title: t('columns.nodes'),
       key: 'nodeCount',
       width: 100,
       responsive: ['lg'],
@@ -137,7 +140,7 @@ const ClusterList: React.FC = () => {
       sorter: (a, b) => a.nodeCount - b.nodeCount,
     },
     {
-      title: 'CPU使用率',
+      title: t('resources.cpu'),
       dataIndex: 'cpuUsage',
       key: 'cpuUsage',
       width: 150,
@@ -153,7 +156,7 @@ const ClusterList: React.FC = () => {
       sorter: (a, b) => (a.cpuUsage || 0) - (b.cpuUsage || 0),
     },
     {
-      title: '内存使用率',
+      title: t('resources.memory'),
       dataIndex: 'memoryUsage',
       key: 'memoryUsage',
       width: 150,
@@ -169,7 +172,7 @@ const ClusterList: React.FC = () => {
       sorter: (a, b) => (a.memoryUsage || 0) - (b.memoryUsage || 0),
     },
     {
-      title: '最后心跳',
+      title: tc('table.updatedAt'),
       dataIndex: 'lastHeartbeat',
       key: 'lastHeartbeat',
       width: 150,
@@ -177,24 +180,24 @@ const ClusterList: React.FC = () => {
       render: (time) => new Date(time).toLocaleString(),
     },
     {
-      title: '操作',
+      title: tc('table.actions'),
       key: 'action',
       width: 150,
       fixed: 'right' as const,
       render: (_, record) => (
         <Space size="middle">
-          <Tooltip title="监控">
+          <Tooltip title={tc('menu.monitoring')}>
             <Button 
               type="text" 
               icon={<BarChartOutlined />} 
               onClick={() => navigate(`/clusters/${record.id}/overview?tab=monitoring`)}
             />
           </Tooltip>
-          <Tooltip title="kubectl终端">
+          <Tooltip title={t('actions.terminal')}>
             <Button 
               type="text" 
               icon={<CodeOutlined />}
-              onClick={() => openTerminal(record)}  // 调用已有的终端功能
+              onClick={() => openTerminal(record)}
             />
           </Tooltip>
           <Dropdown
@@ -202,7 +205,7 @@ const ClusterList: React.FC = () => {
               items: [
                 {
                   key: 'delete',
-                  label: '删除集群',
+                  label: t('actions.delete'),
                   icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => {
@@ -213,7 +216,7 @@ const ClusterList: React.FC = () => {
             }}
             trigger={['click']}
           >
-            <Button type="text" icon={<MoreOutlined />} title="更多" />
+            <Button type="text" icon={<MoreOutlined />} title={tc('actions.more')} />
           </Dropdown>
         </Space>
       ),
@@ -225,7 +228,7 @@ const ClusterList: React.FC = () => {
     if (cluster.id) {
       window.open(`/clusters/${cluster.id}/terminal`);
     } else {
-      message.error('无法获取集群ID');
+      message.error(tc('messages.error'));
     }
   };
 
@@ -239,26 +242,26 @@ const ClusterList: React.FC = () => {
   // 删除集群
   const handleDelete = (cluster: Cluster) => {
     if (!cluster.id) {
-      message.error('无法获取集群ID');
+      message.error(tc('messages.error'));
       return;
     }
 
     modal.confirm({
-      title: '确定要删除这个集群吗？',
-      content: `删除集群 "${cluster.name}" 后，将无法恢复。此操作将删除集群的所有配置信息。`,
-      okText: '确定',
-      cancelText: '取消',
+      title: tc('messages.confirmDelete'),
+      content: t('actions.confirmDelete', { name: cluster.name }),
+      okText: tc('actions.confirm'),
+      cancelText: tc('actions.cancel'),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await clusterService.deleteCluster(cluster.id!.toString());
-          message.success('删除成功');
+          message.success(tc('messages.deleteSuccess'));
           // 刷新列表
           fetchClusters();
         } catch (error: unknown) {
-          const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || '删除失败';
+          const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || tc('messages.deleteError');
           message.error(errorMessage);
-          console.error('删除集群失败:', error);
+          console.error('Failed to delete cluster:', error);
         }
       },
     });
@@ -280,17 +283,15 @@ const ClusterList: React.FC = () => {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1>集群管理</h1>
+            <h1>{t('title')}</h1>
             {/* // Todo 改为异常节点 */}
             <div style={{ display: 'flex', gap: '36px' }}>
-              <span>异常集群/总数：<b>{unhealthyClusters}</b>/<b>{clusters.length}</b></span>
-              <span>异常节点/总数：<b>{unhealthyClusters}</b>/<b>{readyNodes}</b></span>
+              <span>{t('status.unhealthy')}/{tc('table.status')}: <b>{unhealthyClusters}</b>/<b>{clusters.length}</b></span>
             </div>
           </div>
           <Space>
-
             <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/clusters/import')}>
-              导入集群
+              {t('list.import')}
             </Button>
           </Space>
         </div>
@@ -300,18 +301,18 @@ const ClusterList: React.FC = () => {
       <div className="table-container">
         <div className="toolbar">
           <div className="toolbar-left">
-            <h3>集群列表</h3>
+            <h3>{t('list.title')}</h3>
           </div>
           <div className="toolbar-right">
             <Search
-              placeholder="搜索集群..."
+              placeholder={t('list.search')}
               style={{ width: 240 }}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
             />
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={loading}>
-              刷新
+              {tc('actions.refresh')}
             </Button>
           </div>
         </div>
@@ -335,13 +336,13 @@ const ClusterList: React.FC = () => {
             emptyText: (
               <div style={{ padding: '48px 0', textAlign: 'center' }}>
                 <DatabaseOutlined style={{ fontSize: 48, color: '#ccc', marginBottom: 16 }} />
-                <div style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>暂无集群数据</div>
+                <div style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>{t('list.noCluster')}</div>
                 <div style={{ fontSize: 14, color: '#999', marginBottom: 16 }}>
-                  {searchText ? '没有找到符合条件的集群' : '请先导入集群'}
+                  {searchText ? tc('messages.noData') : t('list.import')}
                 </div>
                 {!searchText && (
                   <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/clusters/import')}>
-                    导入集群
+                    {t('list.import')}
                   </Button>
                 )}
               </div>

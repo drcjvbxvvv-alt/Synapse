@@ -3,6 +3,8 @@ package database
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/clay-wangzhi/KubePolaris/internal/config"
@@ -11,11 +13,21 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 )
 
+// currentDriver 保存当前使用的数据库驱动类型
+var currentDriver string
+
+// GetCurrentDriver 返回当前使用的数据库驱动类型
+func GetCurrentDriver() string {
+	return currentDriver
+}
+
 // Init 初始化数据库连接
+// 支持 MySQL 和 SQLite 两种数据库驱动
 func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	// 配置 GORM 日志
 	gormConfig := &gorm.Config{
@@ -25,6 +37,83 @@ func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	var db *gorm.DB
 	var err error
 
+	// 根据配置的驱动类型选择数据库
+	driver := cfg.Driver
+	if driver == "" {
+		driver = "sqlite" // 默认使用 SQLite
+	}
+	currentDriver = driver
+
+	switch driver {
+	case "sqlite":
+		db, err = initSQLite(cfg, gormConfig)
+	case "mysql":
+		db, err = initMySQL(cfg, gormConfig)
+	default:
+		return nil, fmt.Errorf("不支持的数据库驱动: %s，请使用 'sqlite' 或 'mysql'", driver)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取底层的 sql.DB 对象来配置连接池
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("获取数据库连接失败: %w", err)
+	}
+
+	// 设置连接池参数
+	if driver == "mysql" {
+		sqlDB.SetMaxIdleConns(10)
+		sqlDB.SetMaxOpenConns(100)
+		sqlDB.SetConnMaxLifetime(time.Hour)
+	} else {
+		// SQLite 使用单连接模式以避免锁冲突
+		sqlDB.SetMaxIdleConns(1)
+		sqlDB.SetMaxOpenConns(1)
+		sqlDB.SetConnMaxLifetime(time.Hour)
+	}
+
+	// 自动迁移数据库表
+	if err := autoMigrate(db); err != nil {
+		return nil, fmt.Errorf("数据库迁移失败: %w", err)
+	}
+
+	logger.Info("数据库连接成功 (驱动: %s)", driver)
+	return db, nil
+}
+
+// initSQLite 初始化 SQLite 数据库连接
+func initSQLite(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
+	// 获取数据库文件路径
+	dbPath := cfg.DSN
+	if dbPath == "" {
+		dbPath = "./data/kubepolaris.db"
+	}
+
+	// 确保目录存在
+	dir := filepath.Dir(dbPath)
+	if dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("创建数据库目录失败: %w", err)
+		}
+	}
+
+	logger.Info("连接 SQLite 数据库: %s", dbPath)
+
+	// SQLite 连接参数：启用 WAL 模式提升并发性能，启用外键约束
+	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_foreign_keys=on", dbPath)
+	db, err := gorm.Open(sqlite.Open(dsn), gormConfig)
+	if err != nil {
+		return nil, fmt.Errorf("连接 SQLite 数据库失败: %w", err)
+	}
+
+	return db, nil
+}
+
+// initMySQL 初始化 MySQL 数据库连接
+func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
 	// 先连接到MySQL服务器（不指定数据库）来创建数据库
 	dsnWithoutDB := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=%s&parseTime=True&loc=Local",
 		cfg.Username,
@@ -58,36 +147,22 @@ func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	)
 
 	logger.Info("连接MySQL数据库: %s@%s:%d/%s", cfg.Username, cfg.Host, cfg.Port, cfg.Database)
-	db, err = gorm.Open(mysql.Open(dsn), gormConfig)
-
+	db, err := gorm.Open(mysql.Open(dsn), gormConfig)
 	if err != nil {
 		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
 
-	// 获取底层的 sql.DB 对象来配置连接池
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("获取数据库连接失败: %w", err)
-	}
-
-	// 设置连接池参数
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetConnMaxLifetime(time.Hour)
-
-	// 自动迁移数据库表
-	if err := autoMigrate(db); err != nil {
-		return nil, fmt.Errorf("数据库迁移失败: %w", err)
-	}
-
-	logger.Info("数据库连接成功")
 	return db, nil
 }
 
 // autoMigrate 自动迁移数据库表
 func autoMigrate(db *gorm.DB) error {
-	// 禁用外键约束检查
-	db.Exec("SET FOREIGN_KEY_CHECKS = 0")
+	// 根据数据库驱动类型禁用外键约束检查
+	if currentDriver == "mysql" {
+		db.Exec("SET FOREIGN_KEY_CHECKS = 0")
+	} else if currentDriver == "sqlite" {
+		db.Exec("PRAGMA foreign_keys = OFF")
+	}
 
 	// 按依赖顺序迁移表
 	err := db.AutoMigrate(
@@ -109,8 +184,12 @@ func autoMigrate(db *gorm.DB) error {
 		&models.ClusterPermission{}, // 集群权限表
 	)
 
-	// 重新启用外键约束检查
-	db.Exec("SET FOREIGN_KEY_CHECKS = 1")
+	// 根据数据库驱动类型重新启用外键约束检查
+	if currentDriver == "mysql" {
+		db.Exec("SET FOREIGN_KEY_CHECKS = 1")
+	} else if currentDriver == "sqlite" {
+		db.Exec("PRAGMA foreign_keys = ON")
+	}
 
 	// 创建默认管理员用户和系统设置（如果不存在）
 	if err == nil {

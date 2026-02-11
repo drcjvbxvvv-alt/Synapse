@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { ConfigProvider, App as AntdApp } from 'antd';
+import { ConfigProvider, App as AntdApp, Spin } from 'antd';
+import { useTranslation } from 'react-i18next';
 import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
 import MainLayout from './layouts/MainLayout';
 import ClusterList from './pages/cluster/ClusterList';
 import ClusterDetail from './pages/cluster/ClusterDetail';
@@ -64,9 +66,19 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
   return <>{children}</>;
 };
 
-const App: React.FC = () => {
+// Ant Design locale 映射
+const antdLocaleMap: Record<string, typeof zhCN> = {
+  'zh-CN': zhCN,
+  'en-US': enUS,
+};
+
+// 内部 App 组件（需要访问 i18n hook）
+const AppContent: React.FC = () => {
+  const { i18n } = useTranslation();
+  const currentLocale = antdLocaleMap[i18n.language] || zhCN;
+
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider locale={currentLocale}>
       <AntdApp>
         <Router>
           <Routes>
@@ -204,6 +216,24 @@ const App: React.FC = () => {
         </Router>
       </AntdApp>
     </ConfigProvider>
+  );
+};
+
+// 主 App 组件（包含 Suspense 用于 i18n 加载）
+const App: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <Spin size="large" />
+      </div>
+    }>
+      <AppContent />
+    </Suspense>
   );
 };
 

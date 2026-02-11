@@ -1,0 +1,98 @@
+{
+  "title": "Pod 管理",
+  "list": {
+    "title": "Pod 列表",
+    "search": "搜索 Pod 名称",
+    "fetchError": "获取 Pod 列表失败",
+    "noPods": "暂无 Pod"
+  },
+  "columns": {
+    "name": "Pod 名称",
+    "namespace": "命名空间",
+    "status": "状态",
+    "ready": "就绪",
+    "restarts": "重启次数",
+    "node": "节点",
+    "ip": "IP 地址",
+    "age": "运行时间",
+    "cpu": "CPU",
+    "memory": "内存",
+    "actions": "操作"
+  },
+  "status": {
+    "running": "运行中",
+    "pending": "等待中",
+    "succeeded": "已完成",
+    "failed": "失败",
+    "unknown": "未知",
+    "terminating": "终止中",
+    "containerCreating": "容器创建中",
+    "crashLoopBackOff": "崩溃循环",
+    "imagePullBackOff": "镜像拉取失败",
+    "error": "错误"
+  },
+  "actions": {
+    "viewDetails": "查看详情",
+    "viewLogs": "查看日志",
+    "terminal": "终端",
+    "delete": "删除",
+    "yaml": "查看 YAML",
+    "confirmDelete": "确定要删除 Pod \"{{name}}\" 吗？"
+  },
+  "detail": {
+    "title": "Pod 详情",
+    "overview": "概览",
+    "info": "基本信息",
+    "containers": "容器",
+    "conditions": "状态条件",
+    "events": "事件",
+    "labels": "标签",
+    "annotations": "注解",
+    "volumes": "存储卷",
+    "nodeName": "所在节点",
+    "nodeSelector": "节点选择器",
+    "tolerations": "容忍度",
+    "serviceAccount": "服务账号",
+    "qosClass": "QoS 等级",
+    "restartPolicy": "重启策略"
+  },
+  "container": {
+    "name": "容器名称",
+    "image": "镜像",
+    "status": "状态",
+    "ready": "就绪",
+    "restarts": "重启次数",
+    "ports": "端口",
+    "resources": "资源配置",
+    "env": "环境变量",
+    "mounts": "挂载点",
+    "command": "启动命令",
+    "args": "启动参数"
+  },
+  "logs": {
+    "title": "Pod 日志",
+    "container": "容器",
+    "follow": "实时跟踪",
+    "timestamps": "显示时间戳",
+    "previous": "上一次日志",
+    "lines": "行数",
+    "download": "下载日志",
+    "clear": "清空",
+    "noLogs": "暂无日志",
+    "fetchError": "获取日志失败"
+  },
+  "terminal": {
+    "title": "Pod 终端",
+    "container": "容器",
+    "shell": "Shell",
+    "connecting": "连接中...",
+    "connected": "已连接",
+    "disconnected": "已断开",
+    "reconnect": "重新连接",
+    "connectionError": "连接失败"
+  },
+  "messages": {
+    "deleteSuccess": "Pod 删除成功",
+    "deleteError": "Pod 删除失败"
+  }
+}

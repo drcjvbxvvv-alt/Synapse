@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import kubernetesLogo from '../assets/kubernetes.png';
 import {
   Layout,
@@ -13,6 +14,7 @@ import {
   message,
   Tag,
 } from 'antd';
+import { GlobalOutlined } from '@ant-design/icons';
 import {
   ClusterOutlined,
   DesktopOutlined,
@@ -42,6 +44,7 @@ import type { MenuProps as AntMenuProps } from 'antd';
 import type {  Cluster, PermissionType } from '../types';
 import { clusterService } from '../services/clusterService';
 import SearchDropdown from '../components/SearchDropdown';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import { tokenManager } from '../services/authService';
 import { usePermission } from '../hooks/usePermission';
 import { getPermissionTypeName, getPermissionTypeColor } from '../services/permissionService';
@@ -143,6 +146,7 @@ type MenuItem = Required<AntMenuProps>['items'][number];
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   // 判断是否在集群详情页面
   const isClusterDetailPage = () => {
@@ -214,36 +218,36 @@ const MainLayout: React.FC = () => {
     {
       key: 'overview',
       icon: <AppstoreOutlined />,
-      label: '总览',
+      label: t('menu.overview'),
       onClick: () => navigate('/overview'),
     },
     {
       key: 'cluster-management',
       icon: <ClusterOutlined />,
-      label: '集群管理',
+      label: t('menu.clusters'),
       onClick: () => navigate('/clusters'),
     },
     {
       key: 'permission-management',
       icon: <KeyOutlined />,
-      label: '权限管理',
+      label: t('menu.permissions'),
       onClick: () => navigate('/permissions'),
     },
     {
       key: 'audit-management',
       icon: <AuditOutlined />,
-      label: '审计管理',
+      label: t('menu.audit'),
       children: [
         {
           key: 'audit-operations',
           icon: <AuditOutlined />,
-          label: '操作审计',
+          label: t('menu.operationLogs'),
           onClick: () => navigate('/audit/operations'),
         },
         {
           key: 'audit-commands',
           icon: <HistoryOutlined />,
-          label: '命令历史',
+          label: t('menu.commandHistory'),
           onClick: () => navigate('/audit/commands'),
         },
       ],
@@ -251,13 +255,13 @@ const MainLayout: React.FC = () => {
     {
       key: 'alert-center',
       icon: <AlertOutlined />,
-      label: '告警中心',
+      label: t('menu.alerts'),
       onClick: () => navigate('/alerts'),
     },
     {
       key: 'system-settings',
       icon: <SettingOutlined />,
-      label: '系统设置',
+      label: t('menu.settings'),
       onClick: () => navigate('/settings'),
     },
   ];
@@ -532,7 +536,7 @@ const MainLayout: React.FC = () => {
   const handleUserMenuClick: AntMenuProps['onClick'] = ({ key }) => {
     if (key === 'logout') {
       tokenManager.clear();
-      message.success('已退出登录');
+      message.success(t('auth.logoutSuccess'));
       navigate('/login');
     } else if (key === 'settings') {
       navigate('/settings');
@@ -545,12 +549,12 @@ const MainLayout: React.FC = () => {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: '个人资料',
+      label: t('menu.profile'),
     },
     {
       key: 'settings',
       icon: <SettingOutlined />,
-      label: '系统设置',
+      label: t('menu.settings'),
     },
     {
       type: 'divider',
@@ -558,7 +562,7 @@ const MainLayout: React.FC = () => {
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: '退出登录',
+      label: t('auth.logout'),
       danger: true,
     },
   ];
@@ -717,6 +721,7 @@ const MainLayout: React.FC = () => {
         </div>
 
         <Space size="middle">
+          <LanguageSwitcher />
           <Badge count={3} size="small" offset={[-8, 10]}>
             <Button type="text" icon={<BellOutlined />} size="large" style={{ color: '#ffffff' }} />
           </Badge>

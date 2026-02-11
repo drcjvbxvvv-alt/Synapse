@@ -208,3 +208,6 @@ grafana/secrets/
 website/.docusaurus/
 website/build/
 website/node_modules/
+
+# sqlite database
+data/
