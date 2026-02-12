@@ -1,6 +1,7 @@
 package router
 
 import (
+	"embed"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -15,10 +16,13 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
-	"github.com/clay-wangzhi/KubePolaris/web"
 )
 
-func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
+// staticFS 保存嵌入的前端静态文件系统，由 Setup 注入
+var staticFS embed.FS
+
+func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
+	staticFS = frontendFS
 	r := gin.New()
 
 	// 根据环境设置 gin 模式（可选）
@@ -603,7 +607,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 // setupStatic 配置嵌入的前端静态文件服务
 func setupStatic(r *gin.Engine) {
-	assetsFS, err := fs.Sub(web.StaticFS, "static/assets")
+	assetsFS, err := fs.Sub(staticFS, "ui/dist/assets")
 	if err != nil {
 		logger.Error("加载前端静态资源失败", "error", err)
 		return
@@ -630,16 +634,16 @@ func setupStatic(r *gin.Engine) {
 		// 尝试提供静态文件（如 favicon.ico 等根目录文件）
 		filePath := strings.TrimPrefix(path, "/")
 		if filePath != "" {
-			if f, err := web.StaticFS.Open("static/" + filePath); err == nil {
+			if f, err := staticFS.Open("ui/dist/" + filePath); err == nil {
 				f.Close()
-				fileServer := http.FileServer(http.FS(mustSub(web.StaticFS, "static")))
+				fileServer := http.FileServer(http.FS(mustSub(staticFS, "ui/dist")))
 				fileServer.ServeHTTP(c.Writer, c.Request)
 				return
 			}
 		}
 
 		// 回退到 index.html
-		content, err := web.StaticFS.ReadFile("static/index.html")
+		content, err := staticFS.ReadFile("ui/dist/index.html")
 		if err != nil {
 			c.JSON(500, gin.H{"code": 500, "message": "frontend not available"})
 			return

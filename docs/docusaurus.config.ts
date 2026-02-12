@@ -41,7 +41,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/clay-wangzhi/KubePolaris/tree/main/website/',
+          editUrl: 'https://github.com/clay-wangzhi/KubePolaris/tree/main/docs/',
           showLastUpdateTime: true,
           showLastUpdateAuthor: true,
         },

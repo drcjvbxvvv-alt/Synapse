@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,6 +18,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+//go:embed all:ui/dist
+var staticFS embed.FS
 
 func main() {
 	// 初始化配置
@@ -37,7 +41,7 @@ func main() {
 	}
 
 	// 初始化路由
-	r := router.Setup(db, cfg)
+	r := router.Setup(db, cfg, staticFS)
 
 	// 创建 HTTP 服务器
 	srv := &http.Server{

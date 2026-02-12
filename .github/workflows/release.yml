@@ -75,7 +75,7 @@ jobs:
           fi
           
           go build -ldflags="-s -w -X main.Version=${{ needs.validate.outputs.version }}" \
-            -o ${OUTPUT_NAME} ./cmd/main.go
+            -o ${OUTPUT_NAME} .
           
           # 创建压缩包
           if [ "${{ matrix.goos }}" = "windows" ]; then

@@ -210,5 +210,5 @@ website/node_modules/
 data/
 
 # Embedded frontend build artifacts
-web/static
-!web/static/index.html
+ui/dist
+!ui/dist/index.html

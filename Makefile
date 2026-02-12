@@ -74,13 +74,13 @@ dev:
 	$(COMPOSE_CMD) up -d mysql grafana grafana-init
 	@echo "$(GREEN)基础服务已启动$(NC)"
 	@echo "请在单独的终端运行:"
-	@echo "  后端: go run cmd/main.go"
+	@echo "  后端: go run main.go"
 	@echo "  前端: cd ui && npm run dev"
 
 ## dev-backend: 启动后端开发服务
 dev-backend:
 	@echo "$(BLUE)启动后端开发服务...$(NC)"
-	go run cmd/main.go
+	go run main.go
 
 ## dev-frontend: 启动前端开发服务
 dev-frontend:
@@ -98,14 +98,14 @@ build: build-frontend build-backend
 ## build-backend: 构建后端（需要先构建前端）
 build-backend:
 	@echo "$(BLUE)构建后端...$(NC)"
-	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/kubepolaris ./cmd/main.go
+	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/kubepolaris .
 	@echo "$(GREEN)后端构建完成: bin/kubepolaris$(NC)"
 
-## build-frontend: 构建前端到 web/static
+## build-frontend: 构建前端到 ui/dist
 build-frontend:
 	@echo "$(BLUE)构建前端...$(NC)"
 	cd ui && npm ci && npm run build
-	@echo "$(GREEN)前端构建完成: web/static/$(NC)"
+	@echo "$(GREEN)前端构建完成: ui/dist/$(NC)"
 
 # ==========================================
 # 测试命令
@@ -219,7 +219,7 @@ swagger:
 clean:
 	@echo "$(BLUE)清理构建产物...$(NC)"
 	rm -rf bin/
-	rm -rf web/static/assets web/static/*.js web/static/*.css web/static/*.ico web/static/*.svg web/static/*.png
+	rm -rf ui/dist/assets ui/dist/*.js ui/dist/*.css ui/dist/*.ico ui/dist/*.svg ui/dist/*.png
 	rm -rf coverage.out coverage.html
 	rm -rf dist/
 	docker image prune -f

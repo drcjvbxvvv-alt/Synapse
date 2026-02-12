@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'website/**'
+      - 'docs/**'
       - '.github/workflows/docs-deploy.yml'
   workflow_dispatch:
 
@@ -33,11 +33,11 @@ jobs:
           cache-dependency-path: website/package-lock.json
 
       - name: Install dependencies
-        working-directory: website
+        working-directory: docs
         run: npm ci
 
       - name: Build website
-        working-directory: website
+        working-directory: docs
         run: npm run build
 
       # 配置环境
@@ -61,7 +61,7 @@ jobs:
           # 复制操作的参数。"-avzr --delete"意味部署时清空服务器目标目录下的文件
           ARGS: "-avz --delete"
           # 源目录
-          SOURCE: "./website/build/"
+          SOURCE: "./docs/build/"
           # 部署目标主机
           REMOTE_HOST: 139.196.230.188
           # 部署目标主机端口

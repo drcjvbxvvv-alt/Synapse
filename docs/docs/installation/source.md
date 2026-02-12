@@ -47,16 +47,16 @@ go mod verify
 
 ```bash
 # 编译后端
-go build -o bin/kubepolaris-backend ./cmd/main.go
+go build -o bin/kubepolaris-backend .
 
 # 或使用 Makefile
 make build-backend
 
 # 交叉编译（Linux）
-GOOS=linux GOARCH=amd64 go build -o bin/kubepolaris-backend-linux ./cmd/main.go
+GOOS=linux GOARCH=amd64 go build -o bin/kubepolaris-backend-linux .
 
 # 交叉编译（Windows）
-GOOS=windows GOARCH=amd64 go build -o bin/kubepolaris-backend.exe ./cmd/main.go
+GOOS=windows GOARCH=amd64 go build -o bin/kubepolaris-backend.exe .
 ```
 
 ### 3. 运行
@@ -69,7 +69,7 @@ cp .env.example .env
 ./bin/kubepolaris-backend
 
 # 或开发模式（热重载）
-go run ./cmd/main.go
+go run main.go
 ```
 
 ## 前端编译
@@ -188,7 +188,7 @@ docker-compose up -d mysql
 ```bash
 # 终端 1
 cd kubepolaris
-go run ./cmd/main.go
+go run main.go
 ```
 
 ### 3. 启动前端
@@ -280,7 +280,7 @@ kubepolaris/
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/main.go",
+      "program": "${workspaceFolder}/main.go",
       "env": {
         "KUBEPOLARIS_SERVER_MODE": "debug"
       }

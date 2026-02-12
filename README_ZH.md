@@ -122,7 +122,7 @@
 ## 🎬 界面预览
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="80%">
+  <img src="docs/static/img/screenshots/dashboard.png" alt="Dashboard" width="80%">
 </p>
 
 <details>
@@ -130,11 +130,11 @@
 
 | 集群概览 | 工作负载管理 |
 |:---:|:---:|
-| ![集群概览](docs/screenshots/cluster-overview.png) | ![工作负载](docs/screenshots/workloads.png) |
+| ![集群概览](docs/static/img/screenshots/cluster-overview.png) | ![工作负载](docs/static/img/screenshots/workloads.png) |
 
 | Pod 管理 | Web 终端 |
 |:---:|:---:|
-| ![Pod管理](docs/screenshots/pods.png) | ![终端](docs/screenshots/terminal.png) |
+| ![Pod管理](docs/static/img/screenshots/pods.png) | ![终端](docs/static/img/screenshots/terminal.png) |
 
 </details>
 
@@ -197,7 +197,7 @@ helm status kubepolaris -n kubepolaris
 
 # 启动后端 (端口 8080)
 cd kubepolaris
-go run cmd/main.go
+go run main.go
 
 # 启动前端 (端口 5173)
 cd ui
@@ -249,7 +249,7 @@ npm install && npm run dev
 
 ```
 kubepolaris/
-├── cmd/                    # 程序入口
+├── main.go                 # 程序入口 + embed
 ├── internal/               # 内部包
 │   ├── handlers/           # HTTP 处理器
 │   ├── services/           # 业务服务层
@@ -257,17 +257,19 @@ kubepolaris/
 │   ├── middleware/         # 中间件
 │   ├── router/             # 路由配置
 │   └── k8s/                # K8s 客户端封装
-├── ui/                     # 前端源码
+├── ui/                     # 前端（源码 + 构建产物）
 │   ├── src/
 │   │   ├── pages/          # 页面组件
 │   │   ├── components/     # 通用组件
 │   │   ├── services/       # API 服务
 │   │   └── types/          # 类型定义
+│   └── dist/               # 构建产物（嵌入二进制）
+├── docs/                   # 文档站（Docusaurus）
 ├── deploy/                 # 部署配置
-│   ├── docker/             # Docker 配置
-│   ├── docker-compose/     # Compose 文件
-│   └── yaml/               # K8s YAML
-├── website/                # 文档站点
+│   ├── docker/             # Grafana & MySQL 配置
+│   └── helm/               # Kubernetes Helm Chart
+├── Dockerfile              # 多阶段构建（单二进制）
+├── docker-compose.yaml     # Docker Compose 编排
 └── .env.example            # 环境变量配置模板
 ```
 

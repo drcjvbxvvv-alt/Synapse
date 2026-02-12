@@ -122,7 +122,7 @@
 ## 🎬 Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="80%">
+  <img src="docs/static/img/screenshots/dashboard.png" alt="Dashboard" width="80%">
 </p>
 
 <details>
@@ -130,11 +130,11 @@
 
 | Cluster Overview | Workload Management |
 |:---:|:---:|
-| ![Cluster Overview](docs/screenshots/cluster-overview.png) | ![Workloads](docs/screenshots/workloads.png) |
+| ![Cluster Overview](docs/static/img/screenshots/cluster-overview.png) | ![Workloads](docs/screenshots/workloads.png) |
 
 | Pod Management | Web Terminal |
 |:---:|:---:|
-| ![Pod Management](docs/screenshots/pods.png) | ![Terminal](docs/screenshots/terminal.png) |
+| ![Pod Management](docs/static/img/screenshots/pods.png) | ![Terminal](docs/static/img/screenshots/terminal.png) |
 
 </details>
 
@@ -197,7 +197,7 @@ helm status kubepolaris -n kubepolaris
 
 # Start backend (port 8080)
 cd kubepolaris
-go run cmd/main.go
+go run main.go
 
 # Start frontend (port 5173)
 cd ui
@@ -249,7 +249,7 @@ npm install && npm run dev
 
 ```
 kubepolaris/
-├── cmd/                    # Application entry
+├── main.go                 # Application entry + embed
 ├── internal/               # Internal packages
 │   ├── handlers/           # HTTP handlers
 │   ├── services/           # Business services
@@ -257,19 +257,20 @@ kubepolaris/
 │   ├── middleware/         # Middleware
 │   ├── router/             # Router configuration
 │   └── k8s/                # K8s client wrapper
-├── ui/                     # Frontend source
+├── ui/                     # Frontend (source + build output)
 │   ├── src/
 │   │   ├── pages/          # Page components
 │   │   ├── components/     # Common components
 │   │   ├── services/       # API services
 │   │   └── types/          # Type definitions
-├── Dockerfile              # Multi-stage build (single binary)
-├── docker-compose.yaml     # Docker Compose orchestration
-├── .env.example            # Environment variables template
+│   └── dist/               # Build output (embedded into binary)
+├── docs/                   # Documentation site (Docusaurus)
 ├── deploy/                 # Deployment configs
 │   ├── docker/             # Grafana & MySQL configs
 │   └── helm/               # Kubernetes Helm Chart
-└── website/                # Documentation site
+├── Dockerfile              # Multi-stage build (single binary)
+├── docker-compose.yaml     # Docker Compose orchestration
+└── .env.example            # Environment variables template
 ```
 
 ## 📊 Feature Status

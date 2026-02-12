@@ -43,11 +43,11 @@ RUN go mod download
 # 复制源代码
 COPY . .
 
-# 将前端构建产物复制到 web/static 目录（供 go:embed 嵌入）
-COPY --from=frontend-builder /app/web/static ./web/static
+# 将前端构建产物复制到 ui/dist 目录（供 go:embed 嵌入）
+COPY --from=frontend-builder /app/ui/dist ./ui/dist
 
 # 构建二进制文件
-RUN go build -ldflags="-s -w" -o kubepolaris ./cmd/main.go
+RUN go build -ldflags="-s -w" -o kubepolaris .
 
 # ==========================================
 # Stage 3: Production Image

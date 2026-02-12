@@ -106,7 +106,7 @@ jobs:
 
       - name: Build binary
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o kubepolaris-server ./cmd/main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o kubepolaris-server .
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4

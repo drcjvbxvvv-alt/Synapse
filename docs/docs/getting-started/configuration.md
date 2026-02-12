@@ -332,7 +332,7 @@ export KUBEPOLARIS_JWT_SECRET=my-secret-key
 ```bash
 cp .env.example .env
 vim .env
-go run cmd/main.go
+go run main.go
 ```
 
 开发环境 `.env` 示例：
