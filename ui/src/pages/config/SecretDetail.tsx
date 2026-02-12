@@ -23,6 +23,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { secretService, type SecretDetail as SecretDetailType } from '../../services/configService';
 import MonacoEditor from '@monaco-editor/react';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -34,7 +35,8 @@ const SecretDetail: React.FC = () => {
     namespace: string;
     name: string;
   }>();
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(['config', 'common']);
+const [loading, setLoading] = useState(false);
   const [secret, setSecret] = useState<SecretDetailType | null>(null);
   const [showValues, setShowValues] = useState(false);
 
@@ -47,7 +49,7 @@ const SecretDetail: React.FC = () => {
       setSecret(data);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
-      message.error(err.response?.data?.error || '加载Secret详情失败');
+      message.error(err.response?.data?.error || t('config:detail.loadSecretError'));
     } finally {
       setLoading(false);
     }
@@ -60,17 +62,17 @@ const SecretDetail: React.FC = () => {
   // 删除Secret
   const handleDelete = () => {
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除Secret "${name}" 吗？`,
+      title: t('common:messages.confirmDelete'),
+      content: t('config:detail.confirmDeleteSecret', { name }),
       onOk: async () => {
         if (!clusterId || !namespace || !name) return;
         try {
             await secretService.deleteSecret(Number(clusterId), namespace, name);
-          message.success('Secret删除成功');
+          message.success(t('config:detail.deleteSecretSuccess'));
           navigate(`/clusters/${clusterId}/configs`);
         } catch (error) {
           const err = error as { response?: { data?: { error?: string } } };
-          message.error(err.response?.data?.error || '删除Secret失败');
+          message.error(err.response?.data?.error || t('config:detail.deleteSecretError'));
         }
       },
     });
@@ -102,7 +104,7 @@ const SecretDetail: React.FC = () => {
     return (
       <Card>
         <div style={{ textAlign: 'center', padding: '50px' }}>
-          <Text>Secret不存在</Text>
+          <Text>{t('config:detail.secretNotExist')}</Text>
         </div>
       </Card>
     );
@@ -119,7 +121,7 @@ const SecretDetail: React.FC = () => {
                 icon={<ArrowLeftOutlined />}
                 onClick={() => navigate(`/clusters/${clusterId}/configs`)}
               >
-                返回
+                {t('common:actions.back')}
               </Button>
               <Title level={4} style={{ margin: 0 }}>
                 Secret: {secret.name}
@@ -127,7 +129,7 @@ const SecretDetail: React.FC = () => {
             </Space>
             <Space>
               <Button icon={<ReloadOutlined />} onClick={loadSecret}>
-                刷新
+                {t('common:actions.refresh')}
               </Button>
               <Button
                 icon={<EditOutlined />}
@@ -135,41 +137,41 @@ const SecretDetail: React.FC = () => {
                   navigate(`/clusters/${clusterId}/configs/secret/${namespace}/${name}/edit`)
                 }
               >
-                编辑
+                {t('common:actions.edit')}
               </Button>
               <Button icon={<DeleteOutlined />} danger onClick={handleDelete}>
-                删除
+                {t('common:actions.delete')}
               </Button>
             </Space>
           </Space>
         </Card>
 
         {/* 基本信息 */}
-        <Card title="基本信息">
+        <Card title={t('config:detail.basicInfo')}>
           <Descriptions bordered column={2}>
-            <Descriptions.Item label="名称">{secret.name}</Descriptions.Item>
-            <Descriptions.Item label="命名空间">
+            <Descriptions.Item label={t('config:detail.name')}>{secret.name}</Descriptions.Item>
+            <Descriptions.Item label={t('config:detail.namespace')}>
               <Tag color="blue">{secret.namespace}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="类型">
+            <Descriptions.Item label={t('config:detail.type')}>
               <Tag color="orange">{secret.type}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="创建时间">
+            <Descriptions.Item label={t('config:detail.createdAt')}>
               {new Date(secret.creationTimestamp).toLocaleString('zh-CN')}
             </Descriptions.Item>
-            <Descriptions.Item label="存在时间">
+            <Descriptions.Item label={t('config:detail.age')}>
               {secret.age}
             </Descriptions.Item>
-            <Descriptions.Item label="资源版本">
+            <Descriptions.Item label={t('config:detail.resourceVersion')}>
               {secret.resourceVersion}
             </Descriptions.Item>
           </Descriptions>
         </Card>
 
         {/* 标签和注解 */}
-        <Card title="标签和注解">
+        <Card title={t('config:detail.labelsAndAnnotations')}>
           <Tabs defaultActiveKey="labels">
-            <TabPane tab="标签" key="labels">
+            <TabPane tab={t('config:detail.labels')} key="labels">
               <Space size={[0, 8]} wrap>
                 {Object.entries(secret.labels || {}).length > 0 ? (
                   Object.entries(secret.labels).map(([key, value]) => (
@@ -178,11 +180,11 @@ const SecretDetail: React.FC = () => {
                     </Tag>
                   ))
                 ) : (
-                  <Text type="secondary">无标签</Text>
+                  <Text type="secondary">{t('config:detail.noLabels')}</Text>
                 )}
               </Space>
             </TabPane>
-            <TabPane tab="注解" key="annotations">
+            <TabPane tab={t('config:detail.annotations')} key="annotations">
               <Space size={[0, 8]} wrap direction="vertical" style={{ width: '100%' }}>
                 {Object.entries(secret.annotations || {}).length > 0 ? (
                   Object.entries(secret.annotations).map(([key, value]) => (
@@ -191,7 +193,7 @@ const SecretDetail: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <Text type="secondary">无注解</Text>
+                  <Text type="secondary">{t('config:detail.noAnnotations')}</Text>
                 )}
               </Space>
             </TabPane>
@@ -200,10 +202,10 @@ const SecretDetail: React.FC = () => {
 
         {/* 数据内容 */}
         <Card
-          title="数据内容"
+          title={t('config:detail.dataContent')}
           extra={
             <Space>
-              <Text>显示值</Text>
+              <Text>{t('config:detail.showValues')}</Text>
               <Switch
                 checked={showValues}
                 onChange={setShowValues}
@@ -241,7 +243,7 @@ const SecretDetail: React.FC = () => {
               })}
             </Tabs>
           ) : (
-            <Text type="secondary">无数据</Text>
+            <Text type="secondary">{t('config:detail.noData')}</Text>
           )}
         </Card>
       </Space>

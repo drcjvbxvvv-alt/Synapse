@@ -5,7 +5,8 @@
     "import": "Import Cluster",
     "search": "Search cluster name",
     "fetchError": "Failed to fetch cluster list",
-    "noCluster": "No clusters"
+    "noCluster": "No clusters",
+    "totalClusters": "Total {{total}} Clusters"
   },
   "columns": {
     "name": "Cluster Name",
@@ -21,7 +22,10 @@
   "status": {
     "healthy": "Healthy",
     "unhealthy": "Unhealthy",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "ready": "Ready",
+    "running": "Running",
+    "notReady": "Not Ready"
   },
   "actions": {
     "viewOverview": "View Overview",
@@ -30,7 +34,7 @@
     "confirmDelete": "Are you sure you want to delete cluster \"{{name}}\"? This action cannot be undone."
   },
   "detail": {
-    "title": "Cluster Details",
+    "title": "Cluster Detail",
     "overview": "Overview",
     "resources": "Resource Usage",
     "info": "Basic Info",
@@ -38,15 +42,45 @@
     "k8sVersion": "Kubernetes Version",
     "createdAt": "Created At",
     "nodeCount": "Node Count",
-    "podCount": "Pod Count"
+    "podCount": "Pod Count",
+    "clusterName": "Cluster Name",
+    "version": "Version",
+    "status": "Status",
+    "containerSubnet": "Container Subnet",
+    "cidrAvailable": "CIDR (Available/Total IPs: {{available}}/{{total}})",
+    "cidrUnavailable": "CIDR (IP info unavailable)",
+    "fetchError": "Failed to fetch cluster detail",
+    "fetchOverviewError": "Failed to fetch cluster overview",
+    "notFound": "Cluster not found",
+    "notFoundDesc": "Please check if the cluster ID is correct",
+    "totalNodes": "Total Nodes",
+    "totalNamespaces": "Total Namespaces",
+    "totalWorkloads": "Total Workloads",
+    "totalPods": "Total Pods",
+    "monitoringOverview": "Monitoring Overview",
+    "k8sEvents": "K8S Events",
+    "eventsAlert": "K8S events are cluster resource events, including workloads, services, storage, etc. Events are kept for a short time, please export them in time.",
+    "fetchEventsError": "Failed to fetch K8s events"
+  },
+  "events": {
+    "object": "Object",
+    "type": "Type",
+    "eventName": "Event Name",
+    "k8sEvent": "K8s Event",
+    "time": "Time",
+    "normal": "Normal",
+    "warning": "Warning",
+    "totalEvents": "Total {{count}} items"
   },
   "import": {
     "title": "Import Cluster",
     "name": "Cluster Name",
     "namePlaceholder": "Enter cluster name",
     "nameRequired": "Please enter cluster name",
+    "nameLength": "Cluster name must be 2-50 characters",
+    "nameSample": "Enter cluster name, e.g. production-cluster",
     "kubeconfig": "Kubeconfig",
-    "kubeconfigPlaceholder": "Paste kubeconfig content here",
+    "kubeconfigPlaceholder": "Paste kubeconfig content",
     "kubeconfigRequired": "Please enter kubeconfig",
     "description": "Description",
     "descriptionPlaceholder": "Enter cluster description (optional)",
@@ -56,8 +90,54 @@
     "testFailed": "Connection failed",
     "submit": "Import",
     "importing": "Importing...",
-    "importSuccess": "Cluster imported successfully",
-    "importFailed": "Failed to import cluster"
+    "importSuccess": "Cluster imported successfully!",
+    "importFailed": "Failed to import cluster",
+    "subtitle": "Import an existing Kubernetes cluster into the management platform",
+    "steps": {
+      "basicInfo": "Basic Info",
+      "basicInfoDesc": "Fill in cluster basic information",
+      "connectionConfig": "Connection Config",
+      "connectionConfigDesc": "Configure cluster connection method",
+      "testConnection": "Test Connection",
+      "testConnectionDesc": "Verify connection configuration",
+      "complete": "Complete Import",
+      "completeDesc": "Confirm and import cluster"
+    },
+    "clusterBasicInfo": "Cluster Basic Info",
+    "clusterDescription": "Cluster Description",
+    "connectionType": "Connection Type",
+    "kubeconfigFile": "Kubeconfig File",
+    "tokenAuth": "Token Auth",
+    "kubeconfigContent": "Kubeconfig Content",
+    "kubeconfigContentPlaceholder": "Paste the complete kubeconfig file content...",
+    "kubeconfigContentRequired": "Please enter kubeconfig content",
+    "apiServerAddress": "API Server Address",
+    "apiServerRequired": "Please enter API Server address",
+    "apiServerValid": "Please enter a valid URL",
+    "accessToken": "Access Token",
+    "accessTokenRequired": "Please enter access token",
+    "accessTokenPlaceholder": "Enter ServiceAccount Token or other access token...",
+    "caCert": "CA Certificate (optional)",
+    "caCertPlaceholder": "Enter CA certificate content (PEM format), required if cluster uses self-signed certificate...",
+    "testResult": "Connection Test Result",
+    "testResultSuccess": "Connection Test Successful",
+    "clusterVersion": "Cluster Version",
+    "nodeCount": "Node Count",
+    "clusterStatus": "Cluster Status",
+    "confirmImport": "Confirm Import",
+    "confirmImportAlert": "Please confirm the information below is correct before importing",
+    "connectionMethod": "Connection Method",
+    "nodeStatusReady": "ready"
+  },
+  "upgrade": {
+    "title": "Cluster Upgrade",
+    "inDev": "This feature is under active development",
+    "inDevDesc": "We are working hard to build a powerful Kubernetes cluster upgrade feature to help you safely and efficiently complete cluster version upgrades."
+  },
+  "configCenter": {
+    "monitoringConfig": "Monitoring Config",
+    "alertConfig": "Alert Config",
+    "argocdConfig": "ArgoCD Config"
   },
   "resources": {
     "cpu": "CPU",

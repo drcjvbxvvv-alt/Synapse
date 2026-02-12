@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Descriptions, Spin, message, Empty, Tag } from 'antd';
 import { WorkloadService } from '../../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 
 interface SchedulingInfo {
   nodeSelector?: Record<string, string>;
@@ -60,7 +61,8 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
   jobName,
   cronJobName
 }) => {
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(['workload', 'common']);
+const [loading, setLoading] = useState(false);
   const [scheduling, setScheduling] = useState<SchedulingInfo | null>(null);
 
   // 获取工作负载名称和类型
@@ -99,11 +101,11 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
           });
         }
       } else {
-        message.error(response.message || '获取调度策略失败');
+        message.error(response.message || t('messages.fetchSchedulingError'));
       }
     } catch (error) {
       console.error('获取调度策略失败:', error);
-      message.error('获取调度策略失败');
+      message.error(t('messages.fetchSchedulingError'));
     } finally {
       setLoading(false);
     }
@@ -116,7 +118,7 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '50px 0' }}>
-        <Spin tip="加载中..." />
+        <Spin tip={t('scheduling.loading')} />
       </div>
     );
   }
@@ -132,7 +134,7 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
   if (!hasNodeSelector && !hasAffinity && !hasTolerations) {
     return (
       <Empty 
-        description="未配置调度策略"
+        description={t("scheduling.noScheduling")}
         style={{ padding: '50px 0' }}
       />
     );
@@ -142,7 +144,7 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
     <div>
       {/* 节点选择器 */}
       {hasNodeSelector && (
-        <Card title="节点选择器 (Node Selector)" size="small" style={{ marginBottom: 16 }}>
+        <Card title={t('scheduling.nodeSelector')} size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={1} bordered size="small">
             {Object.entries(scheduling!.nodeSelector!).map(([key, value]) => (
               <Descriptions.Item key={key} label={key}>
@@ -155,9 +157,9 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
 
       {/* 节点亲和性 */}
       {hasAffinity && scheduling!.affinity!.nodeAffinity && (
-        <Card title="节点亲和性 (Node Affinity)" size="small" style={{ marginBottom: 16 }}>
+        <Card title={t('scheduling.nodeAffinity')} size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="配置">
+            <Descriptions.Item label={t('scheduling.config')}>
               <pre style={{ margin: 0, maxHeight: 300, overflow: 'auto' }}>
                 {JSON.stringify(scheduling!.affinity!.nodeAffinity, null, 2)}
               </pre>
@@ -168,9 +170,9 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
 
       {/* Pod亲和性 */}
       {hasAffinity && scheduling!.affinity!.podAffinity && (
-        <Card title="Pod亲和性 (Pod Affinity)" size="small" style={{ marginBottom: 16 }}>
+        <Card title={t('scheduling.podAffinity')} size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="配置">
+            <Descriptions.Item label={t('scheduling.config')}>
               <pre style={{ margin: 0, maxHeight: 300, overflow: 'auto' }}>
                 {JSON.stringify(scheduling!.affinity!.podAffinity, null, 2)}
               </pre>
@@ -181,9 +183,9 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
 
       {/* Pod反亲和性 */}
       {hasAffinity && scheduling!.affinity!.podAntiAffinity && (
-        <Card title="Pod反亲和性 (Pod Anti-Affinity)" size="small" style={{ marginBottom: 16 }}>
+        <Card title={t('scheduling.podAntiAffinity')} size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="配置">
+            <Descriptions.Item label={t('scheduling.config')}>
               <pre style={{ margin: 0, maxHeight: 300, overflow: 'auto' }}>
                 {JSON.stringify(scheduling!.affinity!.podAntiAffinity, null, 2)}
               </pre>
@@ -194,10 +196,10 @@ const SchedulingTab: React.FC<SchedulingTabProps> = ({
 
       {/* 容忍度 */}
       {hasTolerations && (
-        <Card title="容忍度 (Tolerations)" size="small">
+        <Card title={t('scheduling.tolerations')} size="small">
           <Descriptions column={1} bordered size="small">
             {scheduling!.tolerations!.map((toleration, index) => (
-              <Descriptions.Item key={index} label={`容忍 ${index + 1}`}>
+              <Descriptions.Item key={index} label={t('scheduling.tolerationIndex', { index: index + 1 })}>
                 <div>
                   {toleration.key && <div>Key: {toleration.key}</div>}
                   {toleration.operator && <div>Operator: <Tag>{toleration.operator}</Tag></div>}

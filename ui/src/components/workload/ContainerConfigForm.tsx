@@ -15,6 +15,7 @@ import {
   Typography,
 } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -32,6 +33,7 @@ const ProbeConfigForm: React.FC<{
   containerType: 'containers' | 'initContainers';
   label: string;
 }> = ({ namePrefix, containerType, label }) => {
+  const { t } = useTranslation('components');
   const form = Form.useFormInstance();
   // 构建完整的路径来监听表单值
   const fullPath = [containerType, ...namePrefix];
@@ -40,7 +42,7 @@ const ProbeConfigForm: React.FC<{
     <Card size="small" title={label} style={{ marginBottom: 16 }}>
       <Space>
         <Form.Item name={[...namePrefix, 'enabled']} valuePropName="checked" noStyle>
-          <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+          <Switch checkedChildren={t('containerConfig.enable')} unCheckedChildren={t('containerConfig.disable')} />
         </Form.Item>
       </Space>
       
@@ -56,37 +58,37 @@ const ProbeConfigForm: React.FC<{
           const probeType = form.getFieldValue([...fullPath, 'type']) || 'httpGet';
           
           if (!enabled) {
-            return <Text type="secondary" style={{ marginLeft: 8 }}>未启用</Text>;
+            return <Text type="secondary" style={{ marginLeft: 8 }}>{t('containerConfig.notEnabled')}</Text>;
           }
           
           return (
             <div style={{ marginTop: 16 }}>
               <Form.Item
                 name={[...namePrefix, 'type']}
-                label="检查方式"
+                label={t('containerConfig.checkMethod')}
                 initialValue="httpGet"
               >
-                <Select placeholder="选择检查方式">
-                  <Option value="httpGet">HTTP请求</Option>
-                  <Option value="exec">执行命令</Option>
-                  <Option value="tcpSocket">TCP端口</Option>
+                <Select placeholder={t('containerConfig.selectCheckMethod')}>
+                  <Option value="httpGet">{t('containerConfig.httpRequest')}</Option>
+                  <Option value="exec">{t('containerConfig.execCommand')}</Option>
+                  <Option value="tcpSocket">{t('containerConfig.tcpPort')}</Option>
                 </Select>
               </Form.Item>
               
               {(probeType === 'httpGet' || !probeType) && (
                 <Row gutter={16}>
                   <Col span={12}>
-                    <Form.Item name={[...namePrefix, 'httpGet', 'path']} label="HTTP路径">
+                    <Form.Item name={[...namePrefix, 'httpGet', 'path']} label={t('containerConfig.httpPath')}>
                       <Input placeholder="/healthz" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item name={[...namePrefix, 'httpGet', 'port']} label="端口">
+                    <Form.Item name={[...namePrefix, 'httpGet', 'port']} label={t('containerConfig.port')}>
                       <InputNumber min={1} max={65535} style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
                   <Col span={4}>
-                    <Form.Item name={[...namePrefix, 'httpGet', 'scheme']} label="协议" initialValue="HTTP">
+                    <Form.Item name={[...namePrefix, 'httpGet', 'scheme']} label={t('containerConfig.protocol')} initialValue="HTTP">
                       <Select>
                         <Option value="HTTP">HTTP</Option>
                         <Option value="HTTPS">HTTPS</Option>
@@ -97,33 +99,33 @@ const ProbeConfigForm: React.FC<{
               )}
               
               {probeType === 'exec' && (
-                <Form.Item name={[...namePrefix, 'exec', 'command']} label="执行命令">
+                <Form.Item name={[...namePrefix, 'exec', 'command']} label={t('containerConfig.execCommand')}>
                   <TextArea
-                    placeholder="每行一个命令参数，例如：&#10;/bin/sh&#10;-c&#10;cat /tmp/healthy"
+                    placeholder={t('containerConfig.execCommandPlaceholder')}
                     rows={3}
                   />
                 </Form.Item>
               )}
               
               {probeType === 'tcpSocket' && (
-                <Form.Item name={[...namePrefix, 'tcpSocket', 'port']} label="TCP端口">
+                <Form.Item name={[...namePrefix, 'tcpSocket', 'port']} label={t('containerConfig.tcpPort')}>
                   <InputNumber min={1} max={65535} style={{ width: '100%' }} />
                 </Form.Item>
               )}
               
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item name={[...namePrefix, 'initialDelaySeconds']} label="初始延迟(秒)">
+                  <Form.Item name={[...namePrefix, 'initialDelaySeconds']} label={t('containerConfig.initialDelay')}>
                     <InputNumber min={0} style={{ width: '100%' }} placeholder="0" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name={[...namePrefix, 'periodSeconds']} label="检查周期(秒)">
+                  <Form.Item name={[...namePrefix, 'periodSeconds']} label={t('containerConfig.checkPeriod')}>
                     <InputNumber min={1} style={{ width: '100%' }} placeholder="10" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name={[...namePrefix, 'timeoutSeconds']} label="超时时间(秒)">
+                  <Form.Item name={[...namePrefix, 'timeoutSeconds']} label={t('containerConfig.timeout')}>
                     <InputNumber min={1} style={{ width: '100%' }} placeholder="1" />
                   </Form.Item>
                 </Col>
@@ -131,12 +133,12 @@ const ProbeConfigForm: React.FC<{
               
               <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item name={[...namePrefix, 'successThreshold']} label="成功阈值">
+                  <Form.Item name={[...namePrefix, 'successThreshold']} label={t('containerConfig.successThreshold')}>
                     <InputNumber min={1} style={{ width: '100%' }} placeholder="1" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name={[...namePrefix, 'failureThreshold']} label="失败阈值">
+                  <Form.Item name={[...namePrefix, 'failureThreshold']} label={t('containerConfig.failureThreshold')}>
                     <InputNumber min={1} style={{ width: '100%' }} placeholder="3" />
                   </Form.Item>
                 </Col>
@@ -154,16 +156,17 @@ const ContainerConfigForm: React.FC<ContainerConfigFormProps> = ({
   remove,
   isInitContainer = false,
 }) => {
+  const { t } = useTranslation('components');
   
   return (
     <Card
       size="small"
       title={
         <Space>
-          <Text strong>{isInitContainer ? 'Init容器' : '容器'}</Text>
+          <Text strong>{isInitContainer ? t('containerConfig.initContainer') : t('containerConfig.container')}</Text>
           <Form.Item name={[field.name, 'name']} noStyle>
             <Input 
-              placeholder="容器名称" 
+              placeholder={t('containerConfig.containerName')} 
               style={{ width: 200 }}
               bordered={false}
             />
@@ -177,7 +180,7 @@ const ContainerConfigForm: React.FC<ContainerConfigFormProps> = ({
           icon={<DeleteOutlined />}
           onClick={() => remove(field.name)}
         >
-          删除
+          {t('containerConfig.delete')}
         </Button>
       }
       style={{ marginBottom: 16 }}
@@ -188,90 +191,90 @@ const ContainerConfigForm: React.FC<ContainerConfigFormProps> = ({
         items={[
           {
             key: 'basic',
-            label: '基本信息',
+            label: t('containerConfig.basicInfo'),
             children: (
               <>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Form.Item
                       name={[field.name, 'name']}
-                      label="容器名称"
+                      label={t('containerConfig.containerName')}
                       rules={[
-                        { required: true, message: '请输入容器名称' },
+                        { required: true, message: t('containerConfig.containerNameRequired') },
                         {
                           pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/,
-                          message: '名称只能包含小写字母、数字和连字符',
+                          message: t('containerConfig.namePattern'),
                         },
                       ]}
                     >
-                      <Input placeholder="请输入容器名称" />
+                      <Input placeholder={t('containerConfig.containerNamePlaceholder')} />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
                     <Form.Item
                       name={[field.name, 'image']}
-                      label="镜像"
-                      rules={[{ required: true, message: '请输入镜像地址' }]}
+                      label={t('containerConfig.image')}
+                      rules={[{ required: true, message: t('containerConfig.imageRequired') }]}
                     >
-                      <Input placeholder="例如: nginx:latest" />
+                      <Input placeholder={t('containerConfig.imagePlaceholder')} />
                     </Form.Item>
                   </Col>
                 </Row>
                 
                 <Row gutter={16}>
                   <Col span={8}>
-                    <Form.Item name={[field.name, 'imagePullPolicy']} label="镜像拉取策略">
-                      <Select placeholder="选择拉取策略">
-                        <Option value="IfNotPresent">IfNotPresent (按需拉取)</Option>
-                        <Option value="Always">Always (总是拉取)</Option>
-                        <Option value="Never">Never (从不拉取)</Option>
+                    <Form.Item name={[field.name, 'imagePullPolicy']} label={t('containerConfig.imagePullPolicy')}>
+                      <Select placeholder={t('containerConfig.selectPullPolicy')}>
+                        <Option value="IfNotPresent">{t('containerConfig.ifNotPresent')}</Option>
+                        <Option value="Always">{t('containerConfig.always')}</Option>
+                        <Option value="Never">{t('containerConfig.never')}</Option>
                       </Select>
                     </Form.Item>
                   </Col>
                 </Row>
                 
                 <Divider orientation="left" plain>
-                  <Text type="secondary">资源配置</Text>
+                  <Text type="secondary">{t('containerConfig.resourceConfig')}</Text>
                 </Divider>
                 
                 <Row gutter={16}>
                   <Col span={12}>
-                    <Card size="small" title="请求资源 (Requests)">
+                    <Card size="small" title={t('containerConfig.requests')}>
                       <Row gutter={8}>
                         <Col span={8}>
                           <Form.Item name={[field.name, 'resources', 'requests', 'cpu']} label="CPU">
-                            <Input placeholder="例如: 100m" />
+                            <Input placeholder={t('containerConfig.cpuPlaceholder')} />
                           </Form.Item>
                         </Col>
                         <Col span={8}>
-                          <Form.Item name={[field.name, 'resources', 'requests', 'memory']} label="内存">
-                            <Input placeholder="例如: 128Mi" />
+                          <Form.Item name={[field.name, 'resources', 'requests', 'memory']} label={t('containerConfig.memory')}>
+                            <Input placeholder={t('containerConfig.memoryPlaceholder')} />
                           </Form.Item>
                         </Col>
                         <Col span={8}>
-                          <Form.Item name={[field.name, 'resources', 'requests', 'ephemeral-storage']} label="临时存储">
-                            <Input placeholder="例如: 1Gi" />
+                          <Form.Item name={[field.name, 'resources', 'requests', 'ephemeral-storage']} label={t('containerConfig.ephemeralStorage')}>
+                            <Input placeholder={t('containerConfig.ephemeralStoragePlaceholder')} />
                           </Form.Item>
                         </Col>
                       </Row>
                     </Card>
                   </Col>
                   <Col span={12}>
-                    <Card size="small" title="限制资源 (Limits)">
+                    <Card size="small" title={t('containerConfig.limits')}>
                       <Row gutter={8}>
                         <Col span={8}>
                           <Form.Item name={[field.name, 'resources', 'limits', 'cpu']} label="CPU">
-                            <Input placeholder="例如: 500m" />
+                            <Input placeholder={t('containerConfig.cpuLimitPlaceholder')} />
                           </Form.Item>
                         </Col>
                         <Col span={8}>
-                          <Form.Item name={[field.name, 'resources', 'limits', 'memory']} label="内存">
-                            <Input placeholder="例如: 512Mi" />
+                          <Form.Item name={[field.name, 'resources', 'limits', 'memory']} label={t('containerConfig.memory')}>
+                            <Input placeholder={t('containerConfig.memoryLimitPlaceholder')} />
                           </Form.Item>
                         </Col>
                         <Col span={8}>
-                          <Form.Item name={[field.name, 'resources', 'limits', 'ephemeral-storage']} label="临时存储">
-                            <Input placeholder="例如: 2Gi" />
+                          <Form.Item name={[field.name, 'resources', 'limits', 'ephemeral-storage']} label={t('containerConfig.ephemeralStorage')}>
+                            <Input placeholder={t('containerConfig.ephemeralStorageLimitPlaceholder')} />
                           </Form.Item>
                         </Col>
                       </Row>
@@ -280,7 +283,7 @@ const ContainerConfigForm: React.FC<ContainerConfigFormProps> = ({
                 </Row>
                 
                 <Divider orientation="left" plain>
-                  <Text type="secondary">端口配置</Text>
+                  <Text type="secondary">{t('containerConfig.portConfig')}</Text>
                 </Divider>
                 
                 <Form.List name={[field.name, 'ports']}>
@@ -290,26 +293,26 @@ const ContainerConfigForm: React.FC<ContainerConfigFormProps> = ({
                         <Row key={portField.key} gutter={16} style={{ marginBottom: 8 }}>
                           <Col span={8}>
                             <Form.Item name={[portField.name, 'name']} noStyle>
-                              <Input placeholder="端口名称(可选)" />
+                              <Input placeholder={t('containerConfig.portNamePlaceholder')} />
                             </Form.Item>
                           </Col>
                           <Col span={8}>
                             <Form.Item
                               name={[portField.name, 'containerPort']}
                               noStyle
-                              rules={[{ required: true, message: '请输入端口' }]}
+                              rules={[{ required: true, message: t('containerConfig.portRequired') }]}
                             >
                               <InputNumber
                                 min={1}
                                 max={65535}
-                                placeholder="容器端口"
+                                placeholder={t('containerConfig.containerPort')}
                                 style={{ width: '100%' }}
                               />
                             </Form.Item>
                           </Col>
                           <Col span={6}>
                             <Form.Item name={[portField.name, 'protocol']} noStyle>
-                              <Select placeholder="协议" defaultValue="TCP">
+                              <Select placeholder={t('containerConfig.protocol')} defaultValue="TCP">
                                 <Option value="TCP">TCP</Option>
                                 <Option value="UDP">UDP</Option>
                               </Select>

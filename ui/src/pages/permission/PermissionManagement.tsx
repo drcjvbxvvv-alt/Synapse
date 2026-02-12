@@ -51,58 +51,13 @@ import { clusterService } from '../../services/clusterService';
 import rbacService from '../../services/rbacService';
 import type { SyncStatusResult } from '../../services/rbacService';
 import CustomRoleEditor from '../../components/CustomRoleEditor';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
-// 默认权限类型定义（API未返回时使用）
-const defaultPermissionTypes: PermissionTypeInfo[] = [
-  {
-    type: 'admin',
-    name: '管理员权限',
-    description: '对全部命名空间下所有资源的读写权限（必须选择全部命名空间）。',
-    resources: ['*'],
-    actions: ['*'],
-    allowPartialNamespaces: false,
-    requireAllNamespaces: true,
-  },
-  {
-    type: 'ops',
-    name: '运维权限',
-    description: '对全部命名空间下大多数资源的读写权限（必须选择全部命名空间）。',
-    resources: ['pods', 'deployments', 'services'],
-    actions: ['get', 'list', 'watch', 'create', 'update', 'delete'],
-    allowPartialNamespaces: false,
-    requireAllNamespaces: true,
-  },
-  {
-    type: 'dev',
-    name: '开发权限',
-    description: '对所选命名空间下大多数资源的读写权限（可选择部分命名空间）。',
-    resources: ['pods', 'deployments', 'services'],
-    actions: ['get', 'list', 'watch', 'create', 'update', 'delete'],
-    allowPartialNamespaces: true,
-    requireAllNamespaces: false,
-  },
-  {
-    type: 'readonly',
-    name: '只读权限',
-    description: '对所选命名空间下大多数资源的只读权限（可选择部分命名空间）。',
-    resources: ['*'],
-    actions: ['get', 'list', 'watch'],
-    allowPartialNamespaces: true,
-    requireAllNamespaces: false,
-  },
-  {
-    type: 'custom',
-    name: '自定义权限',
-    description: '权限由您所选择的ClusterRole或Role决定。',
-    resources: [],
-    actions: [],
-    allowPartialNamespaces: true,
-    requireAllNamespaces: false,
-  },
-];
+// 默认权限类型key（API未返回时使用）
+const defaultPermissionTypeKeys = ['admin', 'ops', 'dev', 'readonly', 'custom'] as const;
 
 // 权限类型卡片组件
 const PermissionTypeCard: React.FC<{
@@ -138,7 +93,19 @@ const PermissionTypeCard: React.FC<{
 
 const PermissionManagement: React.FC = () => {
   // 状态
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(['permission', 'common']);
+
+const defaultPermissionTypes: PermissionTypeInfo[] = defaultPermissionTypeKeys.map(type => ({
+    type,
+    name: t(`permission:types.${type}.name`),
+    description: t(`permission:types.${type}.description`),
+    resources: type === 'admin' ? ['*'] : type === 'readonly' ? ['*'] : type === 'custom' ? [] : ['pods', 'deployments', 'services'],
+    actions: type === 'admin' ? ['*'] : type === 'readonly' ? ['get', 'list', 'watch'] : type === 'custom' ? [] : ['get', 'list', 'watch', 'create', 'update', 'delete'],
+    allowPartialNamespaces: type !== 'admin' && type !== 'ops',
+    requireAllNamespaces: type === 'admin' || type === 'ops',
+  }));
+
+const [loading, setLoading] = useState(false);
   const [permissions, setPermissions] = useState<ClusterPermission[]>([]);
   const [permissionTypes, setPermissionTypes] = useState<PermissionTypeInfo[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
@@ -190,8 +157,8 @@ const PermissionManagement: React.FC = () => {
       setUsers(usersRes.data || []);
       setUserGroups(groupsRes.data || []);
     } catch (error) {
-      console.error('加载数据失败:', error);
-      message.error('加载数据失败');
+      console.error('Failed to load data:', error);
+      message.error(t('permission:loadError'));
     } finally {
       setLoading(false);
     }
@@ -253,17 +220,17 @@ const PermissionManagement: React.FC = () => {
     try {
       const res = await rbacService.syncPermissions(Number(clusterId));
       if (res.code === 200) {
-        message.success(res.data?.message || '同步成功');
+        message.success(res.data?.message || t('permission:sync.syncSuccess'));
         // 刷新该集群的同步状态
         const statusRes = await rbacService.getSyncStatus(Number(clusterId));
         if (statusRes.code === 200 && statusRes.data) {
           setSyncStatus(prev => ({ ...prev, [clusterId]: statusRes.data! }));
         }
       } else {
-        message.error(res.message || '同步失败');
+        message.error(res.message || t('permission:sync.syncFailed'));
       }
     } catch {
-      message.error('同步失败');
+      message.error(t('permission:sync.syncFailed'));
     } finally {
       setSyncLoading(false);
       setSelectedClusterForSync(null);
@@ -291,26 +258,26 @@ const PermissionManagement: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       await permissionService.deleteClusterPermission(id);
-      message.success('删除成功');
+      message.success(t('common:messages.deleteSuccess'));
       loadData();
     } catch {
-      message.error('删除失败');
+      message.error(t('common:messages.deleteError'));
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的权限');
+      message.warning(t('permission:actions.selectDeleteFirst'));
       return;
     }
     try {
       await permissionService.batchDeleteClusterPermissions(selectedRowKeys as number[]);
-      message.success('批量删除成功');
+      message.success(t('permission:actions.batchDeleteSuccess'));
       setSelectedRowKeys([]);
       loadData();
     } catch {
-      message.error('批量删除失败');
+      message.error(t('permission:actions.batchDeleteError'));
     }
   };
 
@@ -334,36 +301,36 @@ const PermissionManagement: React.FC = () => {
           namespaces: data.namespaces,
           custom_role_ref: data.custom_role_ref,
         });
-        message.success('更新成功');
+        message.success(t('common:messages.saveSuccess'));
       } else {
         await permissionService.createClusterPermission(data);
-        message.success('添加成功');
+        message.success(t('permission:actions.addSuccess'));
       }
 
       setModalVisible(false);
       loadData();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
-      message.error(err.response?.data?.message || '操作失败');
+      message.error(err.response?.data?.message || t('permission:actions.operationError'));
     }
   };
 
   // 表格列定义
   const columns: ColumnsType<ClusterPermission> = [
     {
-      title: '用户/用户组',
+      title: t('permission:columns.subject'),
       key: 'subject',
       width: 200,
       render: (_, record) => (
         <Space>
           {record.user_id ? (
             <>
-              <Tag color="blue" icon={<UserOutlined />}>用户</Tag>
+              <Tag color="blue" icon={<UserOutlined />}>{t('permission:columns.user')}</Tag>
               <Text>{record.username}</Text>
             </>
           ) : (
             <>
-              <Tag color="green" icon={<TeamOutlined />}>用户组</Tag>
+              <Tag color="green" icon={<TeamOutlined />}>{t('permission:columns.userGroup')}</Tag>
               <Text>{record.user_group_name}</Text>
             </>
           )}
@@ -371,7 +338,7 @@ const PermissionManagement: React.FC = () => {
       ),
     },
     {
-      title: '集群名称',
+      title: t('permission:columns.clusterName'),
       dataIndex: 'cluster_name',
       key: 'cluster_name',
       width: 150,
@@ -382,7 +349,7 @@ const PermissionManagement: React.FC = () => {
       },
     },
     {
-      title: '权限类型',
+      title: t('permission:columns.permissionType'),
       dataIndex: 'permission_type',
       key: 'permission_type',
       width: 150,
@@ -393,7 +360,7 @@ const PermissionManagement: React.FC = () => {
       ),
     },
     {
-      title: '命名空间',
+      title: t('common:table.namespace'),
       dataIndex: 'namespaces',
       key: 'namespaces',
       width: 200,
@@ -404,28 +371,28 @@ const PermissionManagement: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       width: 150,
       render: (_, record) => (
         <Space>
-          <Tooltip title="编辑权限">
+          <Tooltip title={t('permission:actions.editTooltip')}>
             <Button
               type="link"
               size="small"
               onClick={() => handleEdit(record)}
             >
-              编辑权限
+              {t('permission:actions.editTooltip')}
             </Button>
           </Tooltip>
           <Popconfirm
-            title="确定删除该权限配置吗？"
+            title={t('permission:actions.confirmDeletePermission')}
             onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button type="link" size="small" danger>
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -438,17 +405,17 @@ const PermissionManagement: React.FC = () => {
       {/* 页面标题 */}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space>
-          <Title level={4} style={{ margin: 0 }}>权限管理</Title>
-          <Tooltip title="配置用户/用户组在集群中的访问权限">
+          <Title level={4} style={{ margin: 0 }}>{t('permission:title')}</Title>
+          <Tooltip title={t('permission:tooltip')}>
             <QuestionCircleOutlined style={{ color: '#999' }} />
           </Tooltip>
         </Space>
         <Space>
           <Button icon={<SyncOutlined />} onClick={handleOpenSyncModal}>
-            同步权限
+            {t('permission:syncPermissions')}
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            添加权限
+            {t('permission:addPermission')}
           </Button>
         </Space>
       </div>
@@ -485,21 +452,21 @@ const PermissionManagement: React.FC = () => {
         <Space size="large" wrap>
           <Space>
             <Popconfirm
-              title="确定批量删除选中的权限吗？"
+              title={t('permission:actions.confirmBatchDelete')}
               onConfirm={handleBatchDelete}
               disabled={selectedRowKeys.length === 0}
             >
               <Button
                 disabled={selectedRowKeys.length === 0}
               >
-                批量删除
+                {t('common:actions.batchDelete')}
               </Button>
             </Popconfirm>
           </Space>
           <Divider type="vertical" style={{ height: 24 }} />
           <Space>
             <Select
-              placeholder="选择集群"
+              placeholder={t('permission:filter.selectCluster')}
               allowClear
               style={{ width: 200 }}
               value={filterCluster || undefined}
@@ -512,16 +479,16 @@ const PermissionManagement: React.FC = () => {
               ))}
             </Select>
             <Select
-              placeholder="命名空间"
+              placeholder={t('permission:filter.namespace')}
               allowClear
               style={{ width: 120 }}
               value={filterNamespace || undefined}
               onChange={(v) => setFilterNamespace(v || '')}
             >
-              <Option value="*">全部</Option>
+              <Option value="*">{t('permission:filter.all')}</Option>
             </Select>
             <Input.Search
-              placeholder="请输入关键词"
+              placeholder={t('permission:filter.keyword')}
               allowClear
               style={{ width: 200 }}
               value={searchKeyword}
@@ -529,7 +496,7 @@ const PermissionManagement: React.FC = () => {
               enterButton={<SearchOutlined />}
             />
             <Button icon={<ReloadOutlined />} onClick={loadData}>
-              刷新
+              {t('common:actions.refresh')}
             </Button>
           </Space>
         </Space>
@@ -549,14 +516,14 @@ const PermissionManagement: React.FC = () => {
           pagination={{
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => t('permission:pagination.total', { total }),
           }}
         />
       </Card>
 
       {/* 添加/编辑权限弹窗 */}
       <Modal
-        title={editingPermission ? '编辑权限' : '添加权限'}
+        title={editingPermission ? t('permission:editPermission') : t('permission:addPermission')}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
@@ -574,11 +541,11 @@ const PermissionManagement: React.FC = () => {
             {/* 选择集群 */}
             <Form.Item
               name="cluster_id"
-              label="选择集群"
-              rules={[{ required: true, message: '请选择集群' }]}
+              label={t('permission:form.selectCluster')}
+              rules={[{ required: true, message: t('permission:form.selectClusterRequired') }]}
             >
               <Select
-                placeholder="请选择集群"
+                placeholder={t('permission:form.selectClusterPlaceholder')}
                 disabled={!!editingPermission}
                 showSearch
                 optionFilterProp="children"
@@ -599,7 +566,7 @@ const PermissionManagement: React.FC = () => {
             </Form.Item>
 
             {/* 权限类型选择 */}
-            <Form.Item label="权限类型" required>
+            <Form.Item label={t('permission:form.permissionType')} required>
               <Row gutter={12}>
                 {permissionTypes.map((type) => (
                   <Col span={Math.floor(24 / Math.max(permissionTypes.length, 1))} key={type.type}>
@@ -623,11 +590,11 @@ const PermissionManagement: React.FC = () => {
             {selectedPermissionType === 'custom' && (
               <Form.Item
                 name="custom_role_ref"
-                label="ClusterRole/Role 名称"
-                rules={[{ required: true, message: '请输入角色名称' }]}
+                label={t('permission:form.customRoleName')}
+                rules={[{ required: true, message: t('permission:form.customRoleRequired') }]}
                 extra={
                   <Space style={{ marginTop: 8 }}>
-                    <Text type="secondary">没有合适的角色？</Text>
+                    <Text type="secondary">{t('permission:form.noSuitableRole')}</Text>
                     <Button
                       type="link"
                       size="small"
@@ -635,7 +602,7 @@ const PermissionManagement: React.FC = () => {
                       onClick={() => {
                         const clusterId = form.getFieldValue('cluster_id');
                         if (!clusterId) {
-                          message.warning('请先选择集群');
+                          message.warning(t('permission:form.selectClusterFirst'));
                           return;
                         }
                         const cluster = clusters.find(c => c.id === clusterId);
@@ -644,33 +611,33 @@ const PermissionManagement: React.FC = () => {
                         setCustomRoleEditorVisible(true);
                       }}
                     >
-                      立即创建新的 ClusterRole
+                      {t('permission:form.createClusterRole')}
                     </Button>
                   </Space>
                 }
               >
-                <Input placeholder="例如: view, edit, cluster-admin 或自定义创建的角色名" />
+                <Input placeholder={t('permission:form.customRolePlaceholder')} />
               </Form.Item>
             )}
 
             {/* 分配对象 */}
             {!editingPermission && (
               <>
-                <Form.Item label="分配给">
+                <Form.Item label={t('permission:form.assignTo')}>
                   <Space>
                     <Button
                       type={assignType === 'user' ? 'primary' : 'default'}
                       icon={<UserOutlined />}
                       onClick={() => setAssignType('user')}
                     >
-                      用户
+                      {t('permission:columns.user')}
                     </Button>
                     <Button
                       type={assignType === 'group' ? 'primary' : 'default'}
                       icon={<TeamOutlined />}
                       onClick={() => setAssignType('group')}
                     >
-                      用户组
+                      {t('permission:columns.userGroup')}
                     </Button>
                   </Space>
                 </Form.Item>
@@ -678,11 +645,11 @@ const PermissionManagement: React.FC = () => {
                 {assignType === 'user' ? (
                   <Form.Item
                     name="user_id"
-                    label="选择用户"
-                    rules={[{ required: true, message: '请选择用户' }]}
+                    label={t('permission:form.selectUser')}
+                    rules={[{ required: true, message: t('permission:form.selectUserRequired') }]}
                   >
                     <Select
-                      placeholder="请选择用户"
+                      placeholder={t('permission:form.selectUserPlaceholder')}
                       showSearch
                       optionFilterProp="children"
                     >
@@ -700,11 +667,11 @@ const PermissionManagement: React.FC = () => {
                 ) : (
                   <Form.Item
                     name="user_group_id"
-                    label="选择用户组"
-                    rules={[{ required: true, message: '请选择用户组' }]}
+                    label={t('permission:form.selectUserGroup')}
+                    rules={[{ required: true, message: t('permission:form.selectUserGroupRequired') }]}
                   >
                     <Select
-                      placeholder="请选择用户组"
+                      placeholder={t('permission:form.selectUserGroupPlaceholder')}
                       showSearch
                       optionFilterProp="children"
                     >
@@ -713,7 +680,7 @@ const PermissionManagement: React.FC = () => {
                           <Space>
                             <TeamOutlined />
                             {g.name}
-                            <Text type="secondary">({g.users?.length || 0} 人)</Text>
+                            <Text type="secondary">({t('permission:form.memberCount', { count: g.users?.length || 0 })})</Text>
                           </Space>
                         </Option>
                       ))}
@@ -725,9 +692,9 @@ const PermissionManagement: React.FC = () => {
 
             {/* 命名空间范围 */}
             <Form.Item 
-              label="命名空间范围"
+              label={t('permission:form.namespaceScope')}
               extra={requiresAllNamespaces(selectedPermissionType) 
-                ? <Text type="warning">此权限类型必须选择全部命名空间</Text> 
+                ? <Text type="warning">{t('permission:form.allNamespacesRequired')}</Text> 
                 : null}
             >
               <Checkbox
@@ -735,19 +702,19 @@ const PermissionManagement: React.FC = () => {
                 onChange={(e) => setAllNamespaces(e.target.checked)}
                 disabled={requiresAllNamespaces(selectedPermissionType)}
               >
-                全部命名空间
+                {t('permission:form.allNamespaces')}
               </Checkbox>
             </Form.Item>
 
             {!allNamespaces && allowsPartialNamespaces(selectedPermissionType) && (
               <Form.Item
                 name="namespaces"
-                label="选择命名空间"
-                rules={[{ required: true, message: '请选择命名空间' }]}
+                label={t('permission:form.selectNamespace')}
+                rules={[{ required: true, message: t('permission:form.selectNamespaceRequired') }]}
               >
                 <Select
                   mode="tags"
-                  placeholder="输入命名空间名称（支持通配符，如 app-*）"
+                  placeholder={t('permission:form.namespacePlaceholder')}
                   tokenSeparators={[',']}
                 >
                   <Option value="default">default</Option>
@@ -762,7 +729,7 @@ const PermissionManagement: React.FC = () => {
 
       {/* 同步权限弹窗 */}
       <Modal
-        title="同步 KubePolaris 权限资源"
+        title={t('permission:sync.title')}
         open={syncModalVisible}
         onCancel={() => setSyncModalVisible(false)}
         footer={null}
@@ -770,8 +737,7 @@ const PermissionManagement: React.FC = () => {
       >
         <div style={{ marginBottom: 16 }}>
           <Paragraph type="secondary">
-            同步将在目标集群中创建 KubePolaris 所需的 RBAC 资源（ClusterRole、ServiceAccount、ClusterRoleBinding），
-            以支持不同权限类型的 kubectl 终端访问。
+            {t('permission:sync.description')}
           </Paragraph>
         </div>
         <Table
@@ -780,7 +746,7 @@ const PermissionManagement: React.FC = () => {
           pagination={false}
           columns={[
             {
-              title: '集群名称',
+              title: t('permission:sync.clusterName'),
               dataIndex: 'name',
               key: 'name',
             },
@@ -791,23 +757,23 @@ const PermissionManagement: React.FC = () => {
               ellipsis: true,
             },
             {
-              title: '同步状态',
+              title: t('permission:sync.syncStatus'),
               key: 'status',
               width: 120,
               render: (_, record) => {
                 const status = syncStatus[record.id];
                 if (!status) {
-                  return <Tag>未检查</Tag>;
+                  return <Tag>{t('permission:sync.notChecked')}</Tag>;
                 }
                 return status.synced ? (
-                  <Tag icon={<CheckCircleOutlined />} color="success">已同步</Tag>
+                  <Tag icon={<CheckCircleOutlined />} color="success">{t('permission:sync.synced')}</Tag>
                 ) : (
-                  <Tag icon={<CloseCircleOutlined />} color="warning">未同步</Tag>
+                  <Tag icon={<CloseCircleOutlined />} color="warning">{t('permission:sync.notSynced')}</Tag>
                 );
               },
             },
             {
-              title: '操作',
+              title: t('common:table.actions'),
               key: 'action',
               width: 120,
               render: (_, record) => (
@@ -818,14 +784,14 @@ const PermissionManagement: React.FC = () => {
                   loading={syncLoading && selectedClusterForSync === record.id}
                   onClick={() => handleSyncPermissions(record.id)}
                 >
-                  {syncStatus[record.id]?.synced ? '重新同步' : '同步'}
+                  {syncStatus[record.id]?.synced ? t('permission:sync.resyncBtn') : t('permission:sync.syncBtn')}
                 </Button>
               ),
             },
           ]}
         />
         <div style={{ marginTop: 16 }}>
-          <Title level={5}>将创建的资源：</Title>
+          <Title level={5}>{t('permission:sync.resourcesTitle')}</Title>
           <Row gutter={16}>
             <Col span={8}>
               <Card size="small" title="ClusterRole" bodyStyle={{ padding: 12 }}>

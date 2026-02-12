@@ -26,7 +26,7 @@ import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
-
+import { useTranslation } from 'react-i18next';
 const { Option } = Select;
 
 interface StatefulSetTabProps {
@@ -37,8 +37,8 @@ interface StatefulSetTabProps {
 const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
-  
-  // 数据状态
+const { t } = useTranslation(['workload', 'common']);
+// 数据状态
   const [allWorkloads, setAllWorkloads] = useState<WorkloadInfo[]>([]); // 所有原始数据
   const [workloads, setWorkloads] = useState<WorkloadInfo[]>([]); // 当前页显示的数据
   const [loading, setLoading] = useState(false);
@@ -106,22 +106,21 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
     }
   };
 
-  // 获取字段的中文标签
+// 获取字段的显示标签
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '工作负载名称',
-      namespace: '命名空间',
-      image: '镜像',
-      status: '状态',
-      cpuLimit: 'CPU限制值',
-      cpuRequest: 'CPU申请值',
-      memoryLimit: '内存限制值',
-      memoryRequest: '内存申请值',
+      name: t('search.workloadName'),
+      namespace: t('search.namespace'),
+      image: t('search.image'),
+      status: t('search.status'),
+      cpuLimit: t('search.cpuLimit'),
+      cpuRequest: t('search.cpuRequest'),
+      memoryLimit: t('search.memoryLimit'),
+      memoryRequest: t('search.memoryRequest'),
     };
     return labels[field] || field;
   };
-
-  // 客户端过滤
+// 客户端过滤
   const filterWorkloads = useCallback((items: WorkloadInfo[]): WorkloadInfo[] => {
     if (searchConditions.length === 0) return items;
 
@@ -223,11 +222,11 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
       }
     } catch (error) {
       console.error('加载StatefulSet列表失败:', error);
-      message.error('加载StatefulSet列表失败');
-    } finally {
+message.error(t('messages.fetchError', { type: 'StatefulSet' }));
+} finally {
       setLoading(false);
     }
-  }, [clusterId, onCountChange, message]);
+  }, [clusterId, onCountChange, message, t]);
 
   // 应用过滤、排序和分页
   useEffect(() => {
@@ -255,10 +254,10 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
     loadWorkloads();
   }, [loadWorkloads]);
 
-  // 表格列定义
+// 表格列定义
   const columns: ColumnsType<WorkloadInfo> = [
     {
-      title: '名称',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 200,
@@ -282,7 +281,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
       ),
     },
     {
-      title: '命名空间',
+      title: t('columns.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 130,
@@ -291,7 +290,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
       render: (text: string) => <Tag color="blue">{text}</Tag>,
     },
     {
-      title: '状态',
+      title: t('columns.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -308,7 +307,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
       },
     },
     {
-      title: '实例个数(正常/全部)',
+      title: t('columns.replicas'),
       dataIndex: 'replicas',
       key: 'replicas',
       width: 150,
@@ -321,35 +320,35 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
       ),
     },
     {
-      title: 'CPU限制值',
+      title: t('columns.cpuLimit'),
       dataIndex: 'cpuLimit',
       key: 'cpuLimit',
       width: 120,
       render: (value: string) => <span>{value || '-'}</span>,
     },
     {
-      title: 'CPU申请值',
+      title: t('columns.cpuRequest'),
       dataIndex: 'cpuRequest',
       key: 'cpuRequest',
       width: 120,
       render: (value: string) => <span>{value || '-'}</span>,
     },
     {
-      title: '内存限制值',
+      title: t('columns.memoryLimit'),
       dataIndex: 'memoryLimit',
       key: 'memoryLimit',
       width: 120,
       render: (value: string) => <span>{value || '-'}</span>,
     },
     {
-      title: '内存申请值',
+      title: t('columns.memoryRequest'),
       dataIndex: 'memoryRequest',
       key: 'memoryRequest',
       width: 120,
       render: (value: string) => <span>{value || '-'}</span>,
     },
     {
-      title: '镜像',
+      title: t('columns.images'),
       dataIndex: 'images',
       key: 'images',
       width: 250,
@@ -378,7 +377,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
       },
     },
     {
-      title: '创建时间',
+      title: t('columns.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -400,7 +399,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
       },
     },
     {
-      title: '操作',
+      title: t('columns.actions'),
       key: 'actions',
       width: 220,
       fixed: 'right' as const,
@@ -411,14 +410,14 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
             size="small"
             onClick={() => navigate(`/clusters/${clusterId}/workloads/${record.namespace}/${record.name}?type=StatefulSet&tab=monitoring`)}
           >
-            监控
+            {t('actions.monitoring')}
           </Button>
           <Button
             type="link"
             size="small"
             onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=StatefulSet&namespace=${record.namespace}&name=${record.name}`)}
           >
-            编辑
+            {t('actions.edit')}
           </Button>
           <Button
             type="link"
@@ -429,24 +428,23 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
               setScaleModalVisible(true);
             }}
           >
-            扩缩容
+            {t('actions.scale')}
           </Button>
           <Popconfirm
-            title="确定删除这个StatefulSet吗？"
+            title={t('actions.confirmDelete', { type: 'StatefulSet' })}
             onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button type="link" size="small" danger>
-              删除
+              {t('actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
       ),
     },
   ];
-
-  // 根据可见列过滤columns
+// 根据可见列过滤columns
   const filteredColumns = columns.filter(col => {
     if (!col.key) return true;
     if (col.key === 'actions') return true;
@@ -485,13 +483,13 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
         'StatefulSet',
         scaleReplicas
       );
-      message.success('扩缩容成功');
-      setScaleModalVisible(false);
+message.success(t('messages.scaleSuccess'));
+setScaleModalVisible(false);
       loadWorkloads();
     } catch (error) {
       console.error('扩缩容失败:', error);
-      message.error('扩缩容失败');
-    }
+message.error(t('messages.scaleError'));
+}
   };
 
   // 删除
@@ -503,19 +501,19 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
         record.name,
         'StatefulSet'
       );
-      message.success('删除成功');
-      loadWorkloads();
+message.success(t('messages.deleteSuccess'));
+loadWorkloads();
     } catch (error) {
       console.error('删除失败:', error);
-      message.error('删除失败');
-    }
+message.error(t('messages.deleteError'));
+}
   };
 
   // 批量重新部署
   const handleBatchRedeploy = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要重新部署的StatefulSet');
-      return;
+message.warning(t('actions.selectRedeploy', { type: 'StatefulSet' }));
+return;
     }
     
     try {
@@ -530,33 +528,32 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
           );
         }
       }
-      message.success('重新部署成功');
-      setSelectedRowKeys([]);
+message.success(t('messages.redeploySuccess'));
+setSelectedRowKeys([]);
       loadWorkloads();
     } catch (error) {
       console.error('重新部署失败:', error);
-      message.error('重新部署失败');
-    }
+message.error(t('messages.redeployError'));
+}
   };
 
   // 导出
   const handleExport = () => {
     const filteredData = filterWorkloads(sortWorkloads(allWorkloads));
     
-    const headers = [
-      '名称',
-      '命名空间',
-      '状态',
-      '实例个数',
-      'CPU限制值',
-      'CPU申请值',
-      '内存限制值',
-      '内存申请值',
-      '镜像',
-      '创建时间'
+const headers = [
+      t('columns.name'),
+      t('columns.namespace'),
+      t('columns.status'),
+      t('columns.replicas'),
+      t('columns.cpuLimit'),
+      t('columns.cpuRequest'),
+      t('columns.memoryLimit'),
+      t('columns.memoryRequest'),
+      t('columns.images'),
+      t('columns.createdAt')
     ];
-    
-    const dataToExport = filteredData.map(workload => [
+const dataToExport = filteredData.map(workload => [
       workload.name,
       workload.namespace,
       workload.status,
@@ -593,21 +590,20 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
     URL.revokeObjectURL(link.href);
   };
 
-  // 列设置
-  const allColumns = [
-    { key: 'name', title: '名称', fixed: true },
-    { key: 'namespace', title: '命名空间' },
-    { key: 'status', title: '状态' },
-    { key: 'replicas', title: '实例个数' },
-    { key: 'cpuLimit', title: 'CPU限制值' },
-    { key: 'cpuRequest', title: 'CPU申请值' },
-    { key: 'memoryLimit', title: '内存限制值' },
-    { key: 'memoryRequest', title: '内存申请值' },
-    { key: 'images', title: '镜像' },
-    { key: 'createdAt', title: '创建时间' },
+// 列设置
+  const allColumnSettings = [
+    { key: 'name', title: t('columns.name'), fixed: true },
+    { key: 'namespace', title: t('columns.namespace') },
+    { key: 'status', title: t('columns.status') },
+    { key: 'replicas', title: t('columns.replicas') },
+    { key: 'cpuLimit', title: t('columns.cpuLimit') },
+    { key: 'cpuRequest', title: t('columns.cpuRequest') },
+    { key: 'memoryLimit', title: t('columns.memoryLimit') },
+    { key: 'memoryRequest', title: t('columns.memoryRequest') },
+    { key: 'images', title: t('columns.images') },
+    { key: 'createdAt', title: t('columns.createdAt') },
   ];
-
-  const handleColumnVisibilityChange = (columnKey: string, checked: boolean) => {
+const handleColumnVisibilityChange = (columnKey: string, checked: boolean) => {
     if (checked) {
       setVisibleColumns([...visibleColumns, columnKey]);
     } else {
@@ -617,8 +613,8 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
 
   const handleSaveColumnSettings = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
-  };
+message.success(t('messages.columnSettingsSaved'));
+};
 
   return (
     <div>
@@ -629,10 +625,10 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
             disabled={selectedRowKeys.length === 0}
             onClick={handleBatchRedeploy}
           >
-            批量重新部署
+            {t('actions.batchRedeploy')}
           </Button>
           <Button onClick={handleExport}>
-            导出
+            {t('actions.export')}
             </Button>
         </Space>
           <Button
@@ -640,7 +636,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
             icon={<PlusOutlined />}
           onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=StatefulSet`)}
           >
-            创建StatefulSet
+            {t('actions.create', { type: 'StatefulSet' })}
           </Button>
       </div>
 
@@ -650,7 +646,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="选择属性筛选，或输入关键字搜索"
+            placeholder={t('search.placeholder')}
             style={{ flex: 1 }}
             value={currentSearchValue}
             onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -662,14 +658,14 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
                 onChange={setCurrentSearchField} 
                 style={{ width: 140 }}
               >
-                <Option value="name">工作负载名称</Option>
-                <Option value="namespace">命名空间</Option>
-                <Option value="image">镜像</Option>
-                <Option value="status">状态</Option>
-                <Option value="cpuLimit">CPU限制值</Option>
-                <Option value="cpuRequest">CPU申请值</Option>
-                <Option value="memoryLimit">内存限制值</Option>
-                <Option value="memoryRequest">内存申请值</Option>
+                <Option value="name">{t('search.workloadName')}</Option>
+                <Option value="namespace">{t('search.namespace')}</Option>
+                <Option value="image">{t('search.image')}</Option>
+                <Option value="status">{t('search.status')}</Option>
+                <Option value="cpuLimit">{t('search.cpuLimit')}</Option>
+                <Option value="cpuRequest">{t('search.cpuRequest')}</Option>
+                <Option value="memoryLimit">{t('search.memoryLimit')}</Option>
+                <Option value="memoryRequest">{t('search.memoryRequest')}</Option>
               </Select>
             }
           />
@@ -699,8 +695,8 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
                 </Tag>
               ))}
               <Button type="link" size="small" onClick={clearAllConditions}>
-                清空所有条件
-          </Button>
+                {t('common:actions.clearAllConditions')}
+              </Button>
         </Space>
           </div>
         )}
@@ -721,8 +717,8 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
           pageSize: pageSize,
           total: total,
           showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条`,
-          pageSizeOptions: ['10', '20', '50', '100'],
+showTotal: (total) => t('messages.totalItems', { count: total, type: 'StatefulSet' }),
+pageSizeOptions: ['10', '20', '50', '100'],
         }}
         onChange={handleTableChange}
         scroll={{ x: 1500 }}
@@ -730,25 +726,25 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
 
       {/* 扩缩容Modal */}
       <Modal
-        title="扩缩容StatefulSet"
+        title={t('scale.title', { type: 'StatefulSet' })}
         open={scaleModalVisible}
         onOk={handleScale}
         onCancel={() => setScaleModalVisible(false)}
-        okText="确定"
-        cancelText="取消"
+        okText={t('common:actions.confirm')}
+        cancelText={t('common:actions.cancel')}
       >
         <Space direction="vertical" style={{ width: '100%' }}>
           <div>
-            <strong>StatefulSet名称：</strong>{scaleWorkload?.name}
+            <strong>{t('scale.workloadName', { type: 'StatefulSet' })}：</strong>{scaleWorkload?.name}
           </div>
           <div>
-            <strong>命名空间：</strong>{scaleWorkload?.namespace}
+            <strong>{t('scale.namespace')}：</strong>{scaleWorkload?.namespace}
           </div>
           <div>
-            <strong>当前副本数：</strong>{scaleWorkload?.replicas}
+            <strong>{t('scale.currentReplicas')}：</strong>{scaleWorkload?.replicas}
           </div>
           <Space>
-            <span>目标副本数：</span>
+            <span>{t('scale.targetReplicas')}：</span>
               <InputNumber
                 min={0}
                 value={scaleReplicas}
@@ -760,22 +756,22 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
 
       {/* 列设置Drawer */}
       <Drawer
-        title="列设置"
+        title={t('columnSettings.title')}
         placement="right"
         onClose={() => setColumnSettingsVisible(false)}
         open={columnSettingsVisible}
         width={400}
         footer={
           <Space style={{ float: 'right' }}>
-            <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
+            <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
             <Button type="primary" onClick={handleSaveColumnSettings}>
-              保存
+              {t('common:actions.save')}
             </Button>
           </Space>
         }
       >
         <Space direction="vertical" style={{ width: '100%' }}>
-          {allColumns.map(col => (
+          {allColumnSettings.map(col => (
             <Checkbox
               key={col.key}
               checked={visibleColumns.includes(col.key)}

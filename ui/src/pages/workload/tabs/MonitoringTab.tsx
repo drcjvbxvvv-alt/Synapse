@@ -7,36 +7,13 @@ import { Card, Space, Button, Switch, Spin, DatePicker, Popover, Divider, Typogr
 import { ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { generateDataSourceUID } from '../../../config/grafana.config';
+import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
 // 使用相对路径，通过 Nginx 代理访问 Grafana
 const GRAFANA_URL = '/grafana';
 const DASHBOARD_UID = 'kubepolaris-workload-detail';
-
-// Grafana 风格的时间范围选项
-const TIME_RANGE_OPTIONS = [
-  {
-    label: '快速选择',
-    options: [
-      { value: '5m', label: 'Last 5 minutes' },
-      { value: '15m', label: 'Last 15 minutes' },
-      { value: '30m', label: 'Last 30 minutes' },
-      { value: '1h', label: 'Last 1 hour' },
-      { value: '3h', label: 'Last 3 hours' },
-      { value: '6h', label: 'Last 6 hours' },
-    ],
-  },
-  {
-    label: '更长时间',
-    options: [
-      { value: '12h', label: 'Last 12 hours' },
-      { value: '24h', label: 'Last 24 hours' },
-      { value: '2d', label: 'Last 2 days' },
-      { value: '7d', label: 'Last 7 days' },
-    ],
-  },
-];
 
 interface MonitoringTabProps {
   clusterId: string;
@@ -52,7 +29,33 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
   namespace,
   workloadName,
 }) => {
-  const [timeRange, setTimeRange] = useState('1h');
+const { t } = useTranslation(['workload', 'common']);
+
+// Grafana 风格的时间范围选项
+const TIME_RANGE_OPTIONS = [
+  {
+    label: t('monitoringTab.quickSelect'),
+    options: [
+      { value: '5m', label: 'Last 5 minutes' },
+      { value: '15m', label: 'Last 15 minutes' },
+      { value: '30m', label: 'Last 30 minutes' },
+      { value: '1h', label: 'Last 1 hour' },
+      { value: '3h', label: 'Last 3 hours' },
+      { value: '6h', label: 'Last 6 hours' },
+    ],
+  },
+  {
+    label: t('monitoringTab.longerPeriod'),
+    options: [
+      { value: '12h', label: 'Last 12 hours' },
+      { value: '24h', label: 'Last 24 hours' },
+      { value: '2d', label: 'Last 2 days' },
+      { value: '7d', label: 'Last 7 days' },
+    ],
+  },
+];
+
+const [timeRange, setTimeRange] = useState('1h');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
@@ -152,7 +155,7 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
   if (!clusterName) {
     return (
       <Empty
-        description="无法获取集群信息，请刷新页面重试"
+        description={t("monitoringTab.noClusterInfo")}
         style={{ padding: '60px 0' }}
       />
     );
@@ -170,7 +173,7 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
             value={customFromTime}
             onChange={setCustomFromTime}
             style={{ width: '100%', marginTop: 4 }}
-            placeholder="开始时间"
+            placeholder={t("monitoringTab.startTime")}
             format="YYYY-MM-DD HH:mm:ss"
           />
         </div>
@@ -181,7 +184,7 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
             value={customToTime}
             onChange={setCustomToTime}
             style={{ width: '100%', marginTop: 4 }}
-            placeholder="结束时间"
+            placeholder={t("monitoringTab.endTime")}
             format="YYYY-MM-DD HH:mm:ss"
           />
         </div>
@@ -222,7 +225,7 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
 
   return (
     <Card
-      title="监控图表"
+      title={t('monitoringTab.title')}
       extra={
         <Space>
           <Popover
@@ -237,19 +240,19 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
             </Button>
           </Popover>
           <Space>
-            <span>自动刷新</span>
+            <span>{t('monitoringTab.autoRefresh')}</span>
             <Switch
               checked={autoRefresh}
               onChange={(checked) => {
                 setAutoRefresh(checked);
                 handleRefresh();
               }}
-              checkedChildren="开"
-              unCheckedChildren="关"
+              checkedChildren={t("monitoringTab.on")}
+              unCheckedChildren={t("monitoringTab.off")}
             />
           </Space>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-            刷新
+            {t('monitoringTab.refresh')}
           </Button>
         </Space>
       }
@@ -266,7 +269,7 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
           textAlign: 'center',
         }}>
           <Spin size="large" />
-          <div style={{ marginTop: 16, color: '#666' }}>监控数据加载中...</div>
+          <div style={{ marginTop: 16, color: '#666' }}>{t('monitoringTab.loading')}</div>
         </div>
       )}
       

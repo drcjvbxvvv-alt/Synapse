@@ -35,6 +35,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import { overviewService } from '../../services/overviewService';
 import type { GlobalAlertStats, ClusterAlertCount } from '../../services/overviewService';
+import { useTranslation } from 'react-i18next';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -49,7 +50,8 @@ const cardStyle = {
 
 const GlobalAlertCenter: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+const { t } = useTranslation(['alert', 'common']);
+const [loading, setLoading] = useState(true);
   const [alertStats, setAlertStats] = useState<GlobalAlertStats | null>(null);
 
   // 加载数据
@@ -60,7 +62,7 @@ const GlobalAlertCenter: React.FC = () => {
       setAlertStats(response.data);
     } catch (error) {
       console.error('加载告警统计失败:', error);
-      message.error('加载告警统计失败');
+      message.error(t('alert:global.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -88,7 +90,7 @@ const GlobalAlertCenter: React.FC = () => {
   // 集群告警表格列
   const clusterColumns: ColumnsType<ClusterAlertCount> = [
     {
-      title: '集群名称',
+      title: t('alert:global.clusterName'),
       dataIndex: 'clusterName',
       key: 'clusterName',
       render: (text: string) => (
@@ -99,7 +101,7 @@ const GlobalAlertCenter: React.FC = () => {
       ),
     },
     {
-      title: '触发中告警',
+      title: t('alert:global.firingAlerts'),
       dataIndex: 'firing',
       key: 'firing',
       width: 140,
@@ -117,7 +119,7 @@ const GlobalAlertCenter: React.FC = () => {
       ),
     },
     {
-      title: '告警总数',
+      title: t('alert:global.totalAlertsCol'),
       dataIndex: 'total',
       key: 'total',
       width: 120,
@@ -127,7 +129,7 @@ const GlobalAlertCenter: React.FC = () => {
       ),
     },
     {
-      title: '告警状态',
+      title: t('alert:global.alertStatus'),
       key: 'status',
       width: 200,
       render: (_: unknown, record: ClusterAlertCount) => {
@@ -135,7 +137,7 @@ const GlobalAlertCenter: React.FC = () => {
           return (
             <Space>
               <CheckCircleOutlined style={{ color: '#52c41a' }} />
-              <Text type="secondary">无告警</Text>
+              <Text type="secondary">{t('alert:global.noAlerts')}</Text>
             </Space>
           );
         }
@@ -155,7 +157,7 @@ const GlobalAlertCenter: React.FC = () => {
       },
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       width: 120,
       render: (_: unknown, record: ClusterAlertCount) => (
@@ -165,7 +167,7 @@ const GlobalAlertCenter: React.FC = () => {
           icon={<RightOutlined />}
           onClick={() => navigate(`/clusters/${record.clusterId}/alerts`)}
         >
-          查看详情
+          {t('alert:global.viewDetails')}
         </Button>
       ),
     },
@@ -216,7 +218,7 @@ const GlobalAlertCenter: React.FC = () => {
         alignItems: 'center', 
         height: 'calc(100vh - 200px)' 
       }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip={t('common:messages.loading')} />
       </div>
     );
   }
@@ -229,13 +231,13 @@ const GlobalAlertCenter: React.FC = () => {
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={
               <Space direction="vertical" align="center">
-                <Text>暂无已配置告警的集群</Text>
-                <Text type="secondary">请在集群配置中心配置 Alertmanager</Text>
+                <Text>{t('alert:global.noClustersConfigured')}</Text>
+                <Text type="secondary">{t('alert:global.noClustersConfiguredDesc')}</Text>
               </Space>
             }
           >
             <Button type="primary" onClick={() => navigate('/clusters')}>
-              前往集群管理
+              {t('alert:global.goToClusterManagement')}
             </Button>
           </Empty>
         </Card>
@@ -262,9 +264,9 @@ const GlobalAlertCenter: React.FC = () => {
       }}>
         <Space>
           <AlertOutlined style={{ fontSize: 20, color: '#f59e0b' }} />
-          <Title level={4} style={{ margin: 0 }}>全局告警中心</Title>
+          <Title level={4} style={{ margin: 0 }}>{t('alert:global.title')}</Title>
           <Tag color={alertStats.enabledCount > 0 ? 'blue' : 'default'}>
-            {alertStats.enabledCount} 个集群已配置
+            {t('alert:global.clustersConfigured', { count: alertStats.enabledCount })}
           </Tag>
         </Space>
         <Button 
@@ -272,7 +274,7 @@ const GlobalAlertCenter: React.FC = () => {
           onClick={loadData} 
           loading={loading}
         >
-          刷新
+          {t('common:actions.refresh')}
         </Button>
       </div>
 
@@ -281,7 +283,7 @@ const GlobalAlertCenter: React.FC = () => {
         <Col span={6}>
           <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><AlertOutlined /> 告警总数</span>}
+              title={<span style={{ color: '#6b7280' }}><AlertOutlined /> {t('alert:global.totalAlerts')}</span>}
               value={alertStats.total}
               valueStyle={{ color: '#1f2937', fontSize: 32, fontWeight: 700 }}
             />
@@ -299,13 +301,13 @@ const GlobalAlertCenter: React.FC = () => {
             bodyStyle={{ padding: '20px 16px' }}
           >
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><FireOutlined style={{ color: '#ff4d4f' }} /> 触发中</span>}
+              title={<span style={{ color: '#6b7280' }}><FireOutlined style={{ color: '#ff4d4f' }} /> {t('alert:global.firing')}</span>}
               value={alertStats.firing}
               valueStyle={{ color: alertStats.firing > 0 ? '#ff4d4f' : '#9ca3af', fontSize: 32, fontWeight: 700 }}
             />
             {firingClusters.length > 0 && (
               <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
-                {firingClusters.length} 个集群有告警
+                {t('alert:global.clustersWithAlerts', { count: firingClusters.length })}
               </div>
             )}
           </Card>
@@ -313,7 +315,7 @@ const GlobalAlertCenter: React.FC = () => {
         <Col span={6}>
           <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><StopOutlined style={{ color: '#faad14' }} /> 已静默</span>}
+              title={<span style={{ color: '#6b7280' }}><StopOutlined style={{ color: '#faad14' }} /> {t('alert:global.suppressed')}</span>}
               value={alertStats.suppressed}
               valueStyle={{ color: alertStats.suppressed > 0 ? '#faad14' : '#9ca3af', fontSize: 32, fontWeight: 700 }}
             />
@@ -322,7 +324,7 @@ const GlobalAlertCenter: React.FC = () => {
         <Col span={6}>
           <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> 严重告警</span>}
+              title={<span style={{ color: '#6b7280' }}><ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> {t('alert:global.criticalAlerts')}</span>}
               value={alertStats.bySeverity?.critical || 0}
               valueStyle={{ color: (alertStats.bySeverity?.critical || 0) > 0 ? '#ff4d4f' : '#9ca3af', fontSize: 32, fontWeight: 700 }}
             />
@@ -335,7 +337,7 @@ const GlobalAlertCenter: React.FC = () => {
         title={
           <Space>
             <WarningOutlined style={{ color: '#f59e0b' }} />
-            <span>告警严重程度分布</span>
+            <span>{t('alert:global.severityDistribution')}</span>
           </Space>
         }
         bordered={false}
@@ -350,7 +352,7 @@ const GlobalAlertCenter: React.FC = () => {
         title={
           <Space>
             <ClusterOutlined style={{ color: '#1890ff' }} />
-            <span>集群告警分布</span>
+            <span>{t('alert:global.clusterDistribution')}</span>
             <Badge 
               count={firingClusters.length} 
               style={{ backgroundColor: firingClusters.length > 0 ? '#ff4d4f' : '#52c41a' }}
@@ -369,7 +371,7 @@ const GlobalAlertCenter: React.FC = () => {
           loading={loading}
           pagination={false}
           size="middle"
-          locale={{ emptyText: '暂无已配置告警的集群' }}
+          locale={{ emptyText: t('alert:global.noConfiguredClusters') }}
           rowClassName={(record) => record.firing > 0 ? 'alert-row-firing' : ''}
         />
       </Card>

@@ -38,6 +38,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { auditService } from '../../services/auditService';
+import { useTranslation } from 'react-i18next';
 import type {
   OperationLogItem,
   OperationLogDetail,
@@ -90,7 +91,8 @@ const OperationLogs: React.FC = () => {
   const { message } = App.useApp();
 
   // 数据状态
-  const [logs, setLogs] = useState<OperationLogItem[]>([]);
+const { t } = useTranslation(['audit', 'common']);
+const [logs, setLogs] = useState<OperationLogItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<OperationLogStats | null>(null);
@@ -162,7 +164,7 @@ const OperationLogs: React.FC = () => {
         setTotal(res.data.total);
       }
     } catch {
-      message.error('获取操作日志失败');
+      message.error(t('audit:operations.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -177,7 +179,7 @@ const OperationLogs: React.FC = () => {
         setSelectedLog(res.data);
       }
     } catch {
-      message.error('获取日志详情失败');
+      message.error(t('audit:operations.fetchDetailFailed'));
     } finally {
       setDetailLoading(false);
     }
@@ -219,7 +221,7 @@ const OperationLogs: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<OperationLogItem> = [
     {
-      title: '时间',
+      title: t('audit:operations.time'),
       dataIndex: 'created_at',
       width: 170,
       render: (time: string) => (
@@ -230,7 +232,7 @@ const OperationLogs: React.FC = () => {
       ),
     },
     {
-      title: '用户',
+      title: t('audit:operations.user'),
       dataIndex: 'username',
       width: 120,
       render: (username: string) => (
@@ -241,7 +243,7 @@ const OperationLogs: React.FC = () => {
       ),
     },
     {
-      title: '模块',
+      title: t('audit:operations.module'),
       dataIndex: 'module_name',
       width: 110,
       render: (name: string, record) => (
@@ -251,7 +253,7 @@ const OperationLogs: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       width: 120,
       render: (_, record) => (
@@ -262,7 +264,7 @@ const OperationLogs: React.FC = () => {
       ),
     },
     {
-      title: '方法',
+      title: t('audit:operations.method'),
       dataIndex: 'method',
       width: 80,
       render: (method: string) => (
@@ -270,7 +272,7 @@ const OperationLogs: React.FC = () => {
       ),
     },
     {
-      title: '资源',
+      title: t('audit:operations.resourceCol'),
       key: 'resource',
       width: 200,
       ellipsis: true,
@@ -288,7 +290,7 @@ const OperationLogs: React.FC = () => {
       },
     },
     {
-      title: '集群',
+      title: t('audit:operations.cluster'),
       key: 'cluster',
       width: 120,
       render: (_, record) => (
@@ -301,20 +303,20 @@ const OperationLogs: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('common:table.status'),
       dataIndex: 'success',
       width: 80,
       align: 'center',
       render: (success: boolean) => (
         success ? (
-          <Badge status="success" text="成功" />
+          <Badge status="success" text={t('audit:operations.statusSuccess')} />
         ) : (
-          <Badge status="error" text="失败" />
+          <Badge status="error" text={t('audit:operations.statusFailed')} />
         )
       ),
     },
     {
-      title: '耗时',
+      title: t('audit:operations.duration'),
       dataIndex: 'duration',
       width: 80,
       align: 'right',
@@ -325,7 +327,7 @@ const OperationLogs: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'actions',
       width: 80,
       fixed: 'right',
@@ -336,7 +338,7 @@ const OperationLogs: React.FC = () => {
           icon={<InfoCircleOutlined />}
           onClick={() => handleViewDetail(record)}
         >
-          详情
+          {t('audit:operations.detail')}
         </Button>
       ),
     },
@@ -349,7 +351,7 @@ const OperationLogs: React.FC = () => {
         <Col span={4}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="总操作数"
+              title={t('audit:operations.totalOperations')}
               value={stats?.total_count || 0}
               prefix={<AuditOutlined style={{ color: '#1890ff' }} />}
             />
@@ -358,7 +360,7 @@ const OperationLogs: React.FC = () => {
         <Col span={4}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="今日操作"
+              title={t('audit:operations.todayOperations')}
               value={stats?.today_count || 0}
               valueStyle={{ color: '#722ed1' }}
               prefix={<ClockCircleOutlined />}
@@ -368,7 +370,7 @@ const OperationLogs: React.FC = () => {
         <Col span={4}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="成功"
+              title={t('audit:operations.success')}
               value={stats?.success_count || 0}
               valueStyle={{ color: '#52c41a' }}
               prefix={<CheckCircleOutlined />}
@@ -378,7 +380,7 @@ const OperationLogs: React.FC = () => {
         <Col span={4}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="失败"
+              title={t('audit:operations.failed')}
               value={stats?.failed_count || 0}
               valueStyle={{ color: '#ff4d4f' }}
               prefix={<CloseCircleOutlined />}
@@ -388,7 +390,7 @@ const OperationLogs: React.FC = () => {
         <Col span={8}>
           <Card size="small" bordered={false}>
             <div style={{ marginBottom: 8 }}>
-              <Text type="secondary">操作分布</Text>
+              <Text type="secondary">{t('audit:operations.operationDistribution')}</Text>
             </div>
             <Space wrap size="small">
               {stats?.module_stats?.slice(0, 5).map((m) => (
@@ -406,12 +408,12 @@ const OperationLogs: React.FC = () => {
         title={
           <Space>
             <AuditOutlined />
-            <span>操作审计日志</span>
+            <span>{t('operations.title')}</span>
           </Space>
         }
         extra={
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-            刷新
+            {t('common:actions.refresh')}
           </Button>
         }
         bordered={false}
@@ -419,7 +421,7 @@ const OperationLogs: React.FC = () => {
         {/* 筛选区域 */}
         <Space wrap style={{ marginBottom: 16 }}>
           <Select
-            placeholder="模块"
+            placeholder={t('operations.moduleFilter')}
             allowClear
             style={{ width: 140 }}
             value={module || undefined}
@@ -434,7 +436,7 @@ const OperationLogs: React.FC = () => {
             ))}
           </Select>
           <Select
-            placeholder="操作"
+            placeholder={t('audit:operations.actionFilter')}
             allowClear
             style={{ width: 120 }}
             value={action || undefined}
@@ -449,22 +451,22 @@ const OperationLogs: React.FC = () => {
             ))}
           </Select>
           <Select
-            placeholder="状态"
+            placeholder={t('operations.statusFilter')}
             allowClear
             style={{ width: 100 }}
             value={success || undefined}
             onChange={(v) => setSuccess(v || '')}
           >
-            <Select.Option value="true">成功</Select.Option>
-            <Select.Option value="false">失败</Select.Option>
+            <Select.Option value="true">{t('audit:operations.success')}</Select.Option>
+            <Select.Option value="false">{t('audit:operations.failed')}</Select.Option>
           </Select>
           <RangePicker
             value={dateRange}
             onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
-            placeholder={['开始日期', '结束日期']}
+            placeholder={[t('audit:operations.startDate'), t('audit:operations.endDate')]}
           />
           <Input.Search
-            placeholder="搜索用户/资源/路径"
+            placeholder={t('audit:operations.searchPlaceholder')}
             style={{ width: 220 }}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -486,7 +488,7 @@ const OperationLogs: React.FC = () => {
             total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条记录`,
+            showTotal: (total) => t('audit:operations.totalCount', { total }),
             onChange: (page, size) => {
               setCurrentPage(page);
               setPageSize(size);
@@ -501,7 +503,7 @@ const OperationLogs: React.FC = () => {
         title={
           <Space>
             <AuditOutlined />
-            <span>操作详情</span>
+            <span>{t('audit:operations.operationDetail')}</span>
           </Space>
         }
         placement="right"
@@ -514,79 +516,79 @@ const OperationLogs: React.FC = () => {
             <>
               {/* 基本信息 */}
               <Descriptions
-                title="基本信息"
+                title={t('audit:operations.basicInfo')}
                 bordered
                 size="small"
                 column={2}
                 style={{ marginBottom: 24 }}
               >
-                <Descriptions.Item label="操作ID">{selectedLog.id}</Descriptions.Item>
-                <Descriptions.Item label="时间">
+                <Descriptions.Item label={t('operations.operationId')}>{selectedLog.id}</Descriptions.Item>
+                <Descriptions.Item label={t('operations.time')}>
                   {dayjs(selectedLog.created_at).format('YYYY-MM-DD HH:mm:ss')}
                 </Descriptions.Item>
-                <Descriptions.Item label="用户">
+                <Descriptions.Item label={t('audit:operations.user')}>
                   {selectedLog.username || '-'}
                 </Descriptions.Item>
-                <Descriptions.Item label="客户端IP">
+                <Descriptions.Item label={t('audit:operations.clientIp')}>
                   {selectedLog.client_ip}
                 </Descriptions.Item>
-                <Descriptions.Item label="模块">
+                <Descriptions.Item label={t('audit:operations.module')}>
                   <Tag color={moduleColorMap[selectedLog.module] || 'default'}>
                     {selectedLog.module_name || selectedLog.module}
                   </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="操作">
+                <Descriptions.Item label={t('common:table.actions')}>
                   <Space>
                     {actionIconMap[selectedLog.action] || <InfoCircleOutlined />}
                     <span>{selectedLog.action_name || selectedLog.action}</span>
                   </Space>
                 </Descriptions.Item>
-                <Descriptions.Item label="状态">
+                <Descriptions.Item label={t('common:table.status')}>
                   {selectedLog.success ? (
-                    <Badge status="success" text="成功" />
+                    <Badge status="success" text={t('audit:operations.statusSuccess')} />
                   ) : (
-                    <Badge status="error" text="失败" />
+                    <Badge status="error" text={t('audit:operations.statusFailed')} />
                   )}
                 </Descriptions.Item>
-                <Descriptions.Item label="状态码">
+                <Descriptions.Item label={t('audit:operations.statusCode')}>
                   <Tag color={selectedLog.status_code < 400 ? 'green' : 'red'}>
                     {selectedLog.status_code}
                   </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="耗时">{selectedLog.duration}ms</Descriptions.Item>
-                <Descriptions.Item label="集群">
+                <Descriptions.Item label={t('audit:operations.duration')}>{selectedLog.duration}ms</Descriptions.Item>
+                <Descriptions.Item label={t('audit:operations.cluster')}>
                   {selectedLog.cluster_name || '-'}
                 </Descriptions.Item>
               </Descriptions>
 
               {/* 请求信息 */}
               <Descriptions
-                title="请求信息"
+                title={t('operations.requestInfo')}
                 bordered
                 size="small"
                 column={1}
                 style={{ marginBottom: 24 }}
               >
-                <Descriptions.Item label="方法">
+                <Descriptions.Item label={t('audit:operations.method')}>
                   <Tag color={methodColorMap[selectedLog.method] || 'default'}>
                     {selectedLog.method}
                   </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="路径">
+                <Descriptions.Item label={t('audit:operations.path')}>
                   <Text code copyable>{selectedLog.path}</Text>
                 </Descriptions.Item>
                 {selectedLog.namespace && (
-                  <Descriptions.Item label="命名空间">
+                  <Descriptions.Item label={t('audit:operations.namespace')}>
                     {selectedLog.namespace}
                   </Descriptions.Item>
                 )}
                 {selectedLog.resource_type && (
-                  <Descriptions.Item label="资源类型">
+                  <Descriptions.Item label={t('audit:operations.resourceType')}>
                     {selectedLog.resource_type}
                   </Descriptions.Item>
                 )}
                 {selectedLog.resource_name && (
-                  <Descriptions.Item label="资源名称">
+                  <Descriptions.Item label={t('audit:operations.resourceName')}>
                     {selectedLog.resource_name}
                   </Descriptions.Item>
                 )}
@@ -595,7 +597,7 @@ const OperationLogs: React.FC = () => {
               {/* 请求体 */}
               {selectedLog.request_body && (
                 <Card
-                  title="请求体"
+                  title={t('operations.requestBody')}
                   size="small"
                   style={{ marginBottom: 24 }}
                 >
@@ -628,7 +630,7 @@ const OperationLogs: React.FC = () => {
               {/* 错误信息 */}
               {!selectedLog.success && selectedLog.error_message && (
                 <Card
-                  title="错误信息"
+                  title={t('audit:operations.errorInfo')}
                   size="small"
                   style={{ borderColor: '#ff4d4f' }}
                 >

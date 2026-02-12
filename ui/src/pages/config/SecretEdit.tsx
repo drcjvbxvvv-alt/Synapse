@@ -23,6 +23,7 @@ import { secretService, type SecretDetail } from '../../services/configService';
 import { ResourceService } from '../../services/resourceService';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
+import { useTranslation } from 'react-i18next';
 
 const { Text, Title } = Typography;
 
@@ -35,7 +36,8 @@ const SecretEdit: React.FC = () => {
     name: string;
   }>();
 
-  const [loading, setLoading] = useState(true);
+const { t } = useTranslation(['config', 'common']);
+const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [secret, setSecret] = useState<SecretDetail | null>(null);
   const [yamlContent, setYamlContent] = useState('');
@@ -82,7 +84,7 @@ const SecretEdit: React.FC = () => {
       setOriginalYaml(yamlStr);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
-      message.error(err.response?.data?.error || '加载Secret详情失败');
+      message.error(err.response?.data?.error || t('config:edit.messages.loadSecretError'));
       navigate(`/clusters/${clusterId}/configs`);
     } finally {
       setLoading(false);
@@ -101,7 +103,7 @@ const SecretEdit: React.FC = () => {
     try {
       YAML.parse(yamlContent);
     } catch (error) {
-      message.error('YAML 格式错误: ' + (error instanceof Error ? error.message : '未知错误'));
+      message.error(t('config:edit.messages.yamlFormatError', { error: error instanceof Error ? error.message : t('config:edit.messages.unknownError') }));
       return;
     }
 
@@ -112,13 +114,13 @@ const SecretEdit: React.FC = () => {
       await ResourceService.applyYAML(clusterId, 'Secret', yamlContent, true);
       setDryRunResult({
         success: true,
-        message: '预检通过！YAML 配置有效，可以安全应用。',
+        message: t('config:edit.messages.dryRunPassed'),
       });
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
       setDryRunResult({
         success: false,
-        message: err.response?.data?.error || '预检失败',
+        message: err.response?.data?.error || t('config:edit.messages.dryRunFailed'),
       });
     } finally {
       setDryRunning(false);
@@ -132,12 +134,12 @@ const SecretEdit: React.FC = () => {
     setSubmitting(true);
     try {
       await ResourceService.applyYAML(clusterId, 'Secret', pendingYaml, false);
-      message.success('Secret 更新成功');
+      message.success(t('config:edit.messages.secretUpdateSuccess'));
       setDiffModalVisible(false);
       navigate(`/clusters/${clusterId}/configs/secret/${namespace}/${name}`);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
-      message.error(err.response?.data?.error || '更新失败');
+      message.error(err.response?.data?.error || t('config:edit.messages.updateError'));
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +153,7 @@ const SecretEdit: React.FC = () => {
     try {
       YAML.parse(yamlContent);
     } catch (error) {
-      message.error('YAML 格式错误: ' + (error instanceof Error ? error.message : '未知错误'));
+      message.error(t('config:edit.messages.yamlFormatError', { error: error instanceof Error ? error.message : t('config:edit.messages.unknownError') }));
       return;
     }
 
@@ -164,7 +166,7 @@ const SecretEdit: React.FC = () => {
       setDiffModalVisible(true);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
-      message.error('预检失败: ' + (err.response?.data?.error || '未知错误'));
+      message.error(t('config:edit.messages.dryRunFailedWithError', { error: err.response?.data?.error || t('config:edit.messages.unknownError') }));
     } finally {
       setSubmitting(false);
     }
@@ -174,10 +176,10 @@ const SecretEdit: React.FC = () => {
   const handleBack = () => {
     if (yamlContent !== originalYaml) {
       modal.confirm({
-        title: '确认离开',
-        content: '您有未保存的更改，确定要离开吗？',
-        okText: '确定',
-        cancelText: '取消',
+        title: t('config:edit.confirmLeaveTitle'),
+        content: t('config:edit.confirmLeaveContent'),
+        okText: t('common:actions.confirm'),
+        cancelText: t('common:actions.cancel'),
         onOk: () => navigate(`/clusters/${clusterId}/configs/secret/${namespace}/${name}`),
       });
     } else {
@@ -207,14 +209,14 @@ const SecretEdit: React.FC = () => {
           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
             <Space>
               <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
-                返回
+                {t('common:actions.back')}
               </Button>
               <Title level={4} style={{ margin: 0 }}>
-                编辑 Secret: {secret.name}
+                {t('config:edit.editSecret', { name: secret.name })}
               </Title>
-              <Tag color="orange">敏感数据</Tag>
+              <Tag color="orange">{t('config:edit.sensitiveData')}</Tag>
               {hasChanges && (
-                <Text type="warning">• 有未保存的更改</Text>
+                <Text type="warning">{t('config:edit.unsavedChanges')}</Text>
               )}
             </Space>
             <Space>
@@ -223,10 +225,10 @@ const SecretEdit: React.FC = () => {
                 loading={dryRunning}
                 onClick={handleDryRun}
               >
-                预检 (Dry Run)
+                {t('config:edit.dryRun')}
               </Button>
               <Button onClick={handleBack}>
-                取消
+                {t('common:actions.cancel')}
               </Button>
               <Button
                 type="primary"
@@ -235,7 +237,7 @@ const SecretEdit: React.FC = () => {
                 onClick={handleSubmit}
                 disabled={!hasChanges}
               >
-                保存
+                {t('common:actions.save')}
               </Button>
             </Space>
           </Space>
@@ -244,7 +246,7 @@ const SecretEdit: React.FC = () => {
         {/* 预检结果提示 */}
         {dryRunResult && (
           <Alert
-            message={dryRunResult.success ? '预检通过' : '预检失败'}
+            message={dryRunResult.success ? t('config:edit.dryRunPassedTitle') : t('config:edit.dryRunFailedTitle')}
             description={dryRunResult.message}
             type={dryRunResult.success ? 'success' : 'error'}
             showIcon
@@ -256,14 +258,14 @@ const SecretEdit: React.FC = () => {
 
         {/* 敏感数据警告 */}
         <Alert
-          message="敏感数据提示"
-          description="此资源包含敏感数据（如密码、密钥等），请谨慎编辑并确保安全存储。"
+          message={t('config:edit.sensitiveWarningTitle')}
+          description={t('config:edit.sensitiveWarningDesc')}
           type="warning"
           showIcon
         />
 
         {/* YAML 编辑器 */}
-        <Card title="YAML 编辑">
+        <Card title={t('config:edit.yamlEditor')}>
           <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
             <MonacoEditor
               height="600px"
@@ -296,7 +298,7 @@ const SecretEdit: React.FC = () => {
         title={
           <Space>
             <DiffOutlined />
-            <span>确认更改 - YAML Diff 对比</span>
+            <span>{t('config:edit.confirmDiffTitle')}</span>
           </Space>
         }
         open={diffModalVisible}
@@ -304,7 +306,7 @@ const SecretEdit: React.FC = () => {
         width={1200}
         footer={[
           <Button key="cancel" onClick={() => setDiffModalVisible(false)}>
-            取消
+            {t('common:actions.cancel')}
           </Button>,
           <Button
             key="submit"
@@ -312,23 +314,23 @@ const SecretEdit: React.FC = () => {
             loading={submitting}
             onClick={handleConfirmDiff}
           >
-            确认更新
+            {t('config:edit.confirmUpdate')}
           </Button>,
         ]}
       >
         <Alert
-          message="请仔细检查以下更改"
-          description="左侧为原始配置，右侧为修改后的配置。注意：此资源包含敏感数据，确认无误后点击「确认更新」按钮应用更改。"
+          message={t('config:edit.reviewChanges')}
+          description={t('config:edit.reviewChangesSecretDesc')}
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
         />
         <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
           <div style={{ flex: 1 }}>
-            <Text strong style={{ color: '#cf1322' }}>原始配置</Text>
+            <Text strong style={{ color: '#cf1322' }}>{t('config:edit.originalConfig')}</Text>
           </div>
           <div style={{ flex: 1 }}>
-            <Text strong style={{ color: '#389e0d' }}>修改后配置</Text>
+            <Text strong style={{ color: '#389e0d' }}>{t('config:edit.modifiedConfig')}</Text>
           </div>
         </div>
         <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>

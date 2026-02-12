@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Button, Space, message, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { WorkloadService } from '../../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 
 interface ReplicaSetInfo {
   name: string;
@@ -35,7 +36,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
   jobName,
   cronJobName
 }) => {
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(['workload', 'common']);
+const [loading, setLoading] = useState(false);
   const [replicaSets, setReplicaSets] = useState<ReplicaSetInfo[]>([]);
 
   // 获取工作负载名称和类型
@@ -64,11 +66,11 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       if (response.code === 200 && response.data) {
         setReplicaSets(((response.data as { items?: unknown[] }).items || []) as ReplicaSetInfo[]);
       } else {
-        message.error(response.message || '获取版本记录失败');
+        message.error(response.message || t('messages.fetchHistoryError'));
       }
     } catch (error) {
       console.error('获取版本记录失败:', error);
-      message.error('获取版本记录失败');
+      message.error(t('messages.fetchHistoryError'));
     } finally {
       setLoading(false);
     }
@@ -95,20 +97,20 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
 
   const columns: ColumnsType<ReplicaSetInfo> = [
     {
-      title: 'ReplicaSet名称',
+      title: t('history.rsName'),
       dataIndex: 'name',
       key: 'name',
       width: 300,
     },
     {
-      title: '版本号',
+      title: t('history.revision'),
       dataIndex: 'revision',
       key: 'revision',
       width: 100,
       render: (revision: string) => <Tag color="blue">Revision {revision}</Tag>,
     },
     {
-      title: '实例数',
+      title: t('history.replicas'),
       key: 'replicas',
       width: 120,
       render: (_, record: ReplicaSetInfo) => (
@@ -118,21 +120,21 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       ),
     },
     {
-      title: '状态',
+      title: t('history.status'),
       key: 'status',
       width: 100,
       render: (_, record: ReplicaSetInfo) => {
         if (record.replicas === 0) {
-          return <Tag color="default">历史版本</Tag>;
+          return <Tag color="default">{t('history.historicalVersion')}</Tag>;
         }
         if (record.readyReplicas === record.replicas) {
-          return <Tag color="success">当前版本</Tag>;
+          return <Tag color="success">{t('history.currentVersion')}</Tag>;
         }
-        return <Tag color="processing">更新中</Tag>;
+        return <Tag color="processing">{t('history.updating')}</Tag>;
       },
     },
     {
-      title: '镜像',
+      title: t('history.image'),
       dataIndex: 'images',
       key: 'images',
       width: 300,
@@ -147,7 +149,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
       },
     },
     {
-      title: '创建时间',
+      title: t('history.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -159,7 +161,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
     <Spin spinning={loading}>
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button onClick={loadReplicaSets}>刷新</Button>
+          <Button onClick={loadReplicaSets}>{t('history.refresh')}</Button>
         </Space>
       </div>
       <Table
@@ -170,7 +172,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
           total: replicaSets.length,
           pageSize: 10,
           showSizeChanger: true,
-          showTotal: (total) => `总共 ${total} 条`,
+          showTotal: (total) => t('history.total', { count: total }),
         }}
       />
     </Spin>

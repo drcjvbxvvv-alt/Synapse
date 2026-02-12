@@ -1,0 +1,30 @@
+{
+  "kubectl": {
+    "title": "Kubectl Terminal",
+    "cluster": "Cluster",
+    "selectNamespace": "Select Namespace",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "clear": "Clear",
+    "fullscreen": "Fullscreen",
+    "connectedTo": "Connected to cluster {{clusterId}} - Namespace: {{namespace}}",
+    "clusterNotFound": "Cluster ID not found",
+    "welcomeMessage": "Select a namespace and click \"Connect\" to start...",
+    "connecting": "Connecting to terminal..."
+  },
+  "messages": {
+    "connectFirst": "Please connect to terminal first",
+    "pasteFailed": "Paste failed, please check browser permissions",
+    "initFailed": "Failed to initialize terminal",
+    "missingClusterId": "Missing Cluster ID",
+    "notLoggedIn": "Not logged in, please login first",
+    "connectSuccess": "Terminal connected successfully",
+    "connectError": "Terminal connection error",
+    "connectionLost": "Terminal connection lost",
+    "createFailed": "Failed to create terminal connection",
+    "disconnected": "Manually disconnected",
+    "connectionError": "Connection error",
+    "connectionClosed": "Connection closed",
+    "createConnectionFailed": "Failed to create connection"
+  }
+}

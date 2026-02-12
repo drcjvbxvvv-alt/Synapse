@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Button, Space, message, Spin, Tabs, Empty } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { WorkloadService } from '../../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 
 interface ServiceInfo {
   name: string;
@@ -59,7 +60,8 @@ const AccessTab: React.FC<AccessTabProps> = ({
   jobName,
   cronJobName
 }) => {
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(['workload', 'common']);
+const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<ServiceInfo[]>([]);
   const [ingresses, setIngresses] = useState<IngressInfo[]>([]);
 
@@ -89,11 +91,11 @@ const AccessTab: React.FC<AccessTabProps> = ({
       if (response.code === 200 && response.data) {
         setServices(((response.data as { items?: unknown[] }).items || []) as ServiceInfo[]);
       } else {
-        message.error(response.message || '获取Service列表失败');
+        message.error(response.message || t('messages.fetchServiceError'));
       }
     } catch (error) {
       console.error('获取Service列表失败:', error);
-      message.error('获取Service列表失败');
+      message.error(t('messages.fetchServiceError'));
     } finally {
       setLoading(false);
     }
@@ -115,11 +117,11 @@ const AccessTab: React.FC<AccessTabProps> = ({
       if (response.code === 200 && response.data) {
         setIngresses(((response.data as { items?: unknown[] }).items || []) as IngressInfo[]);
       } else {
-        message.error(response.message || '获取Ingress列表失败');
+        message.error(response.message || t('messages.fetchIngressError'));
       }
     } catch (error) {
       console.error('获取Ingress列表失败:', error);
-      message.error('获取Ingress列表失败');
+      message.error(t('messages.fetchIngressError'));
     } finally {
       setLoading(false);
     }
@@ -148,13 +150,13 @@ const AccessTab: React.FC<AccessTabProps> = ({
   // Service表格列
   const serviceColumns: ColumnsType<ServiceInfo> = [
     {
-      title: '服务名称',
+      title: t('access.serviceName'),
       dataIndex: 'name',
       key: 'name',
       width: 200,
     },
     {
-      title: '访问类型',
+      title: t('access.accessType'),
       dataIndex: 'type',
       key: 'type',
       width: 150,
@@ -169,13 +171,13 @@ const AccessTab: React.FC<AccessTabProps> = ({
       },
     },
     {
-      title: '命名空间',
+      title: t('access.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 150,
     },
     {
-      title: '访问地址',
+      title: t('access.accessAddress'),
       key: 'access',
       width: 200,
       render: (_, record: ServiceInfo) => {
@@ -186,7 +188,7 @@ const AccessTab: React.FC<AccessTabProps> = ({
       },
     },
     {
-      title: '端口映射',
+      title: t('access.portMapping'),
       key: 'ports',
       width: 200,
       render: (_, record: ServiceInfo) => {
@@ -204,7 +206,7 @@ const AccessTab: React.FC<AccessTabProps> = ({
       },
     },
     {
-      title: '创建时间',
+      title: t('access.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -215,7 +217,7 @@ const AccessTab: React.FC<AccessTabProps> = ({
   // Ingress表格列
   const ingressColumns: ColumnsType<IngressInfo> = [
     {
-      title: '路由名称',
+      title: t('access.routeName'),
       dataIndex: 'name',
       key: 'name',
       width: 200,
@@ -228,13 +230,13 @@ const AccessTab: React.FC<AccessTabProps> = ({
       render: (className?: string) => className || '-',
     },
     {
-      title: '命名空间',
+      title: t('access.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 150,
     },
     {
-      title: '规则',
+      title: t('access.rules'),
       key: 'rules',
       width: 400,
       render: (_, record: IngressInfo) => {
@@ -256,7 +258,7 @@ const AccessTab: React.FC<AccessTabProps> = ({
       },
     },
     {
-      title: '创建时间',
+      title: t('access.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -267,12 +269,12 @@ const AccessTab: React.FC<AccessTabProps> = ({
   const tabItems = [
     {
       key: 'service',
-      label: `服务 (${services.length})`,
+      label: t('access.service') + ` (${services.length})`,
       children: (
         <div>
           <div style={{ marginBottom: 16 }}>
             <Space>
-              <Button onClick={loadServices}>刷新</Button>
+              <Button onClick={loadServices}>{t('access.refresh')}</Button>
             </Space>
           </div>
           {services.length > 0 ? (
@@ -284,23 +286,23 @@ const AccessTab: React.FC<AccessTabProps> = ({
                 total: services.length,
                 pageSize: 10,
                 showSizeChanger: true,
-                showTotal: (total) => `总共 ${total} 条`,
+                showTotal: (total) => t('access.total', { count: total }),
               }}
             />
           ) : (
-            <Empty description="暂无服务" />
+            <Empty description={t("access.noService")} />
           )}
         </div>
       ),
     },
     {
       key: 'ingress',
-      label: `路由 (${ingresses.length})`,
+      label: t('access.ingress') + ` (${ingresses.length})`,
       children: (
         <div>
           <div style={{ marginBottom: 16 }}>
             <Space>
-              <Button onClick={loadIngresses}>刷新</Button>
+              <Button onClick={loadIngresses}>{t('access.refresh')}</Button>
             </Space>
           </div>
           {ingresses.length > 0 ? (
@@ -312,11 +314,11 @@ const AccessTab: React.FC<AccessTabProps> = ({
                 total: ingresses.length,
                 pageSize: 10,
                 showSizeChanger: true,
-                showTotal: (total) => `总共 ${total} 条`,
+                showTotal: (total) => t('access.total', { count: total }),
               }}
             />
           ) : (
-            <Empty description="暂无路由" />
+            <Empty description={t("access.noIngress")} />
           )}
         </div>
       ),

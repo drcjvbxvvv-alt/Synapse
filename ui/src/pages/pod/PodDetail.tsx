@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Descriptions,
@@ -43,6 +44,8 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation('pod');
+  const { t: tc } = useTranslation('common');
   const initialTab = searchParams.get('tab') || 'overview';
   
   const [pod, setPod] = useState<PodInfo | null>(null);
@@ -62,11 +65,11 @@ const PodDetail: React.FC<PodDetailProps> = () => {
         setPod(response.data.pod);
         setRawPod(response.data.raw);
       } else {
-        message.error(response.message || '获取Pod详情失败');
+        message.error(response.message || t('detail.fetchError'));
       }
     } catch (error) {
-      console.error('获取Pod详情失败:', error);
-      message.error('获取Pod详情失败');
+      console.error('Failed to fetch pod details:', error);
+      message.error(t('detail.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -80,14 +83,14 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       const response = await PodService.deletePod(clusterId, namespace, name);
       
       if (response.code === 200) {
-        message.success('删除成功');
+        message.success(tc('messages.deleteSuccess'));
         navigate(`/clusters/${clusterId}/pods`);
       } else {
-        message.error(response.message || '删除失败');
+        message.error(response.message || tc('messages.deleteError'));
       }
     } catch (error) {
-      console.error('删除失败:', error);
-      message.error('删除失败');
+      console.error('Failed to delete pod:', error);
+      message.error(tc('messages.deleteError'));
     }
   };
 
@@ -115,14 +118,14 @@ const PodDetail: React.FC<PodDetailProps> = () => {
           setClusterName(response.data.name);
         }
       } catch (error) {
-        console.error('获取集群信息失败:', error);
+        console.error('Failed to fetch cluster info:', error);
       }
     };
     fetchClusterName();
   }, [clusterId]);
 
   if (!pod) {
-    return <div>加载中...</div>;
+    return <div>{tc('messages.loading')}</div>;
   }
 
   const { status, color } = PodService.formatStatus(pod);
@@ -130,18 +133,18 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   // 容器表格列
   const containerColumns = [
     {
-      title: '名称',
+      title: t('container.name'),
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: '镜像',
+      title: t('container.image'),
       dataIndex: 'image',
       key: 'image',
       ellipsis: true,
     },
     {
-      title: '状态',
+      title: tc('table.status'),
       key: 'status',
       render: (container: ContainerInfo) => (
         <Badge
@@ -151,15 +154,15 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       ),
     },
     {
-      title: '就绪',
+      title: t('container.ready'),
       dataIndex: 'ready',
       key: 'ready',
       render: (ready: boolean) => (
-        <Tag color={ready ? 'green' : 'red'}>{ready ? '是' : '否'}</Tag>
+        <Tag color={ready ? 'green' : 'red'}>{ready ? 'Yes' : 'No'}</Tag>
       ),
     },
     {
-      title: '重启次数',
+      title: t('container.restarts'),
       dataIndex: 'restartCount',
       key: 'restartCount',
       render: (count: number) => (
@@ -167,7 +170,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       ),
     },
     {
-      title: '端口',
+      title: t('container.ports'),
       dataIndex: 'ports',
       key: 'ports',
       render: (ports: Array<{ containerPort: number; protocol: string; name?: string }>) => {
@@ -190,12 +193,12 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   // 条件表格列
   const conditionColumns = [
     {
-      title: '类型',
+      title: tc('table.type'),
       dataIndex: 'type',
       key: 'type',
     },
     {
-      title: '状态',
+      title: tc('table.status'),
       dataIndex: 'status',
       key: 'status',
       render: (text: string) => (
@@ -203,18 +206,18 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       ),
     },
     {
-      title: '原因',
+      title: t('detail.reason'),
       dataIndex: 'reason',
       key: 'reason',
     },
     {
-      title: '消息',
+      title: t('detail.message'),
       dataIndex: 'message',
       key: 'message',
       ellipsis: true,
     },
     {
-      title: '最后更新时间',
+      title: tc('table.updatedAt'),
       dataIndex: 'lastTransitionTime',
       key: 'lastTransitionTime',
       render: (text: string) => new Date(text).toLocaleString(),
@@ -230,7 +233,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/clusters/${clusterId}/pods`)}
           >
-            返回
+            {tc('actions.back')}
           </Button>
           <Title level={3} style={{ margin: 0 }}>
             {pod.name}
@@ -247,14 +250,14 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               onClick={fetchPodDetail}
               loading={loading}
             >
-              刷新
+              {tc('actions.refresh')}
             </Button>
             
             <Button
               icon={<FileTextOutlined />}
               onClick={handleViewLogs}
             >
-              查看日志
+              {t('actions.viewLogs')}
             </Button>
             
             <Button
@@ -262,18 +265,18 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               onClick={handleTerminal}
               disabled={pod.status !== 'Running'}
             >
-              进入终端
+              {t('actions.terminal')}
             </Button>
             
             <Popconfirm
-              title="确认删除"
-              description={`确定要删除Pod ${pod.name} 吗？`}
+              title={tc('messages.confirmDelete')}
+              description={t('actions.confirmDeleteContent', { name: pod.name })}
               onConfirm={handleDelete}
-              okText="确定"
-              cancelText="取消"
+              okText={tc('actions.confirm')}
+              cancelText={tc('actions.cancel')}
             >
               <Button danger icon={<DeleteOutlined />}>
-                删除
+                {tc('actions.delete')}
               </Button>
             </Popconfirm>
           </Space>
@@ -282,24 +285,24 @@ const PodDetail: React.FC<PodDetailProps> = () => {
 
       {/* 详情内容 */}
       <Tabs defaultActiveKey={initialTab}>
-        <TabPane tab="概览" key="overview">
+        <TabPane tab={t('detail.overview')} key="overview">
           <Row gutter={[16, 16]}>
             <Col span={12}>
-              <Card title="基本信息" size="small">
+              <Card title={t('detail.info')} size="small">
                 <Descriptions column={1} size="small">
-                  <Descriptions.Item label="名称">{pod.name}</Descriptions.Item>
-                  <Descriptions.Item label="命名空间">{pod.namespace}</Descriptions.Item>
-                  <Descriptions.Item label="状态">
+                  <Descriptions.Item label={tc('table.name')}>{pod.name}</Descriptions.Item>
+                  <Descriptions.Item label={tc('table.namespace')}>{pod.namespace}</Descriptions.Item>
+                  <Descriptions.Item label={tc('table.status')}>
                     <Badge status={color as 'success' | 'error' | 'default' | 'processing' | 'warning'} text={status} />
                   </Descriptions.Item>
-                  <Descriptions.Item label="阶段">{pod.phase}</Descriptions.Item>
-                  <Descriptions.Item label="节点">{pod.nodeName || '-'}</Descriptions.Item>
+                  <Descriptions.Item label={t('detail.phase')}>{pod.phase}</Descriptions.Item>
+                  <Descriptions.Item label={t('detail.nodeName')}>{pod.nodeName || '-'}</Descriptions.Item>
                   <Descriptions.Item label="Pod IP">{pod.podIP || '-'}</Descriptions.Item>
                   <Descriptions.Item label="Host IP">{pod.hostIP || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="创建时间">
+                  <Descriptions.Item label={tc('table.createdAt')}>
                     {new Date(pod.createdAt).toLocaleString()}
                   </Descriptions.Item>
-                  <Descriptions.Item label="年龄">
+                  <Descriptions.Item label={t('detail.age')}>
                     {PodService.getAge(pod.createdAt)}
                   </Descriptions.Item>
                 </Descriptions>
@@ -307,13 +310,13 @@ const PodDetail: React.FC<PodDetailProps> = () => {
             </Col>
             
             <Col span={12}>
-              <Card title="资源信息" size="small">
+              <Card title={t('detail.resourceInfo')} size="small">
                 <Descriptions column={1} size="small">
-                  <Descriptions.Item label="QoS类别">{pod.qosClass || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="服务账户">{pod.serviceAccount || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="优先级">{pod.priority || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="优先级类别">{pod.priorityClassName || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="重启次数">
+                  <Descriptions.Item label={t('detail.qosClass')}>{pod.qosClass || '-'}</Descriptions.Item>
+                  <Descriptions.Item label={t('detail.serviceAccount')}>{pod.serviceAccount || '-'}</Descriptions.Item>
+                  <Descriptions.Item label={t('detail.priority')}>{pod.priority || '-'}</Descriptions.Item>
+                  <Descriptions.Item label={t('detail.priorityClass')}>{pod.priorityClassName || '-'}</Descriptions.Item>
+                  <Descriptions.Item label={t('columns.restarts')}>
                     <Tag color={pod.restartCount > 0 ? 'orange' : 'green'}>
                       {pod.restartCount}
                     </Tag>
@@ -325,7 +328,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
 
           <Divider />
 
-          <Card title="标签" size="small" style={{ marginBottom: 16 }}>
+          <Card title={t('detail.labels')} size="small" style={{ marginBottom: 16 }}>
             <Space wrap>
               {Object.entries(pod.labels || {}).map(([key, value]) => (
                 <Tag key={key} color="green">{key}={value}</Tag>
@@ -333,7 +336,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
             </Space>
           </Card>
 
-          <Card title="注解" size="small" style={{ marginBottom: 16 }}>
+          <Card title={t('detail.annotations')} size="small" style={{ marginBottom: 16 }}>
             <Space wrap>
               {Object.entries(pod.annotations || {}).slice(0, 10).map(([key, value]) => (
                 <Tooltip key={key} title={`${key}=${value}`}>
@@ -341,13 +344,13 @@ const PodDetail: React.FC<PodDetailProps> = () => {
                 </Tooltip>
               ))}
               {Object.keys(pod.annotations || {}).length > 10 && (
-                <Tag>+{Object.keys(pod.annotations || {}).length - 10} 更多</Tag>
+                <Tag>+{Object.keys(pod.annotations || {}).length - 10} {tc('actions.more')}</Tag>
               )}
             </Space>
           </Card>
 
           {pod.ownerReferences && pod.ownerReferences.length > 0 && (
-            <Card title="所有者引用" size="small">
+            <Card title={t('detail.ownerReferences')} size="small">
               <Space wrap>
                 {pod.ownerReferences.map((owner, index) => (
                   <Tag key={index} color="purple">
@@ -359,8 +362,8 @@ const PodDetail: React.FC<PodDetailProps> = () => {
           )}
         </TabPane>
 
-        <TabPane tab="容器" key="containers">
-          <Card title="容器" style={{ marginBottom: 16 }}>
+        <TabPane tab={t('detail.containers')} key="containers">
+          <Card title={t('detail.containers')} style={{ marginBottom: 16 }}>
             <Table
               columns={containerColumns}
               dataSource={pod.containers}
@@ -371,7 +374,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
           </Card>
 
           {pod.initContainers && pod.initContainers.length > 0 && (
-            <Card title="初始化容器">
+            <Card title={t('detail.initContainers')}>
               <Table
                 columns={containerColumns}
                 dataSource={pod.initContainers}
@@ -383,7 +386,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
           )}
         </TabPane>
 
-        <TabPane tab="条件" key="conditions">
+        <TabPane tab={t('detail.conditions')} key="conditions">
           <Table
             columns={conditionColumns}
             dataSource={pod.conditions || []}
@@ -411,7 +414,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
           tab={
             <span>
               <LineChartOutlined style={{ marginRight: 4 }} />
-              监控
+              {tc('menu.monitoring')}
             </span>
           } 
           key="monitoring"

@@ -31,11 +31,12 @@ import ClusterMonitoringPanels from '../../components/ClusterMonitoringPanels';
 import type { ColumnsType } from 'antd/es/table';
 import type { Cluster, K8sEvent, ClusterOverview } from '../../types';
 import { clusterService } from '../../services/clusterService';
-
+import { useTranslation } from 'react-i18next';
 const { Text } = Typography;
 
 const ClusterDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+const { t } = useTranslation(['cluster', 'common']);
+const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -55,9 +56,9 @@ const ClusterDetail: React.FC = () => {
       const response = await clusterService.getCluster(id);
       setCluster(response.data);
     } catch (error) {
-      message.error('获取集群详情失败');
-      console.error('获取集群详情失败:', error);
-    } finally {
+message.error(t('detail.fetchError'));
+      console.error('Failed to fetch cluster detail:', error);
+} finally {
       setLoading(false);
     }
   };
@@ -71,9 +72,9 @@ const ClusterDetail: React.FC = () => {
       const response = await clusterService.getClusterOverview(id);
       setClusterOverview(response.data as ClusterOverview);
     } catch (error) {
-      message.error('获取集群概览信息失败');
-      console.error('获取集群概览信息失败:', error);
-    } finally {
+message.error(t('detail.fetchOverviewError'));
+      console.error('Failed to fetch cluster overview:', error);
+} finally {
       setLoadingOverview(false);
     }
   };
@@ -86,15 +87,15 @@ const ClusterDetail: React.FC = () => {
 
   // 获取状态标签
   const getStatusTag = (status: string) => {
-    const statusConfig = {
-      healthy: { color: 'success', icon: <CheckCircleOutlined />, text: '健康' },
-      Ready: { color: 'success', icon: <CheckCircleOutlined />, text: '就绪' },
-      Running: { color: 'success', icon: <CheckCircleOutlined />, text: '运行中' },
-      unhealthy: { color: 'error', icon: <ExclamationCircleOutlined />, text: '异常' },
-      NotReady: { color: 'error', icon: <ExclamationCircleOutlined />, text: '未就绪' },
-      unknown: { color: 'default', icon: <ExclamationCircleOutlined />, text: '未知' },
+const statusConfig = {
+      healthy: { color: 'success', icon: <CheckCircleOutlined />, text: t('status.healthy') },
+      Ready: { color: 'success', icon: <CheckCircleOutlined />, text: t('status.ready') },
+      Running: { color: 'success', icon: <CheckCircleOutlined />, text: t('common:status.running') },
+      unhealthy: { color: 'error', icon: <ExclamationCircleOutlined />, text: t('status.unhealthy') },
+      NotReady: { color: 'error', icon: <ExclamationCircleOutlined />, text: t('status.notReady') },
+      unknown: { color: 'default', icon: <ExclamationCircleOutlined />, text: t('status.unknown') },
     };
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.unknown;
+const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.unknown;
     return (
       <Tag color={config.color} icon={config.icon}>
         {config.text}
@@ -115,9 +116,9 @@ const ClusterDetail: React.FC = () => {
       const response = await clusterService.getClusterEvents(id, keyword ? { search: keyword } : undefined);
       setEvents(response.data || []);
     } catch (error) {
-      message.error('获取K8s事件失败');
-      console.error('获取K8s事件失败:', error);
-    } finally {
+message.error(t('detail.fetchEventsError'));
+      console.error('Failed to fetch K8s events:', error);
+} finally {
       setLoadingEvents(false);
     }
   };
@@ -129,14 +130,14 @@ const ClusterDetail: React.FC = () => {
 
   const exportEventsCSV = () => {
     if (!events.length) return;
-    const header = ['对象','类型','事件名称','K8s事件','发生时间'];
-    const rows = events.map((e) => {
+const header = [t('events.object'), t('events.type'), t('events.eventName'), t('events.k8sEvent'), t('events.time')];
+const rows = events.map((e) => {
       const obj = `${e.involvedObject.kind} ${e.involvedObject.namespace ? e.involvedObject.namespace + '/' : ''}${e.involvedObject.name}`;
-      const typeText = e.type === 'Normal' ? '正常' : e.type === 'Warning' ? '告警' : (e.type || '');
-      const reason = e.reason || '';
+const typeText = e.type === 'Normal' ? t('events.normal') : e.type === 'Warning' ? t('events.warning') : (e.type || '');
+const reason = e.reason || '';
       const messageText = (e.message || '');
-      const t = e.lastTimestamp || e.eventTime || e.metadata?.creationTimestamp || e.firstTimestamp || '';
-      const time = t ? new Date(t).toLocaleString() : '';
+      const ts = e.lastTimestamp || e.eventTime || e.metadata?.creationTimestamp || e.firstTimestamp || '';
+      const time = ts ? new Date(ts).toLocaleString() : '';
       return [obj, typeText, reason, messageText, time].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
     });
     const csv = [header.join(','), ...rows].join('\n');
@@ -149,9 +150,9 @@ const ClusterDetail: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const eventColumns: ColumnsType<K8sEvent> = [
+const eventColumns: ColumnsType<K8sEvent> = [
     {
-      title: '对象',
+      title: t('events.object'),
       dataIndex: 'involvedObject',
       key: 'object',
       render: (obj: K8sEvent['involvedObject']) => (
@@ -162,31 +163,31 @@ const ClusterDetail: React.FC = () => {
       ),
     },
     {
-      title: '类型',
+      title: t('events.type'),
       dataIndex: 'type',
       key: 'type',
       render: (type: string) => (
-        <Badge status={type === 'Normal' ? 'success' : 'warning'} text={type === 'Normal' ? '正常' : '告警'} />
+        <Badge status={type === 'Normal' ? 'success' : 'warning'} text={type === 'Normal' ? t('events.normal') : t('events.warning')} />
       ),
       filters: [
-        { text: '正常', value: 'Normal' },
-        { text: '告警', value: 'Warning' },
+        { text: t('events.normal'), value: 'Normal' },
+        { text: t('events.warning'), value: 'Warning' },
       ],
       onFilter: (value, record) => record.type === value,
     },
     {
-      title: '事件名称',
+      title: t('events.eventName'),
       dataIndex: 'reason',
       key: 'reason',
     },
     {
-      title: 'K8s事件',
+      title: t('events.k8sEvent'),
       dataIndex: 'message',
       key: 'message',
     },
     {
-      title: '发生时间',
-      dataIndex: 'lastTimestamp',
+      title: t('events.time'),
+dataIndex: 'lastTimestamp',
       key: 'time',
       render: (_: unknown, ev: K8sEvent) => {
         const t = ev.lastTimestamp || ev.eventTime || ev.metadata?.creationTimestamp || ev.firstTimestamp;
@@ -216,40 +217,40 @@ const ClusterDetail: React.FC = () => {
       label: (
         <span>
           <BarChartOutlined />
-          监控概览
+          {t('detail.monitoringOverview')}
         </span>
       ),
       children: activeTab === 'monitoring' ? <ClusterMonitoring /> : null,
     },
     {
       key: 'events',
-      label: 'K8S 事件',
-      children: (
+label: t('detail.k8sEvents'),
+children: (
         <div>
           <Alert
-            message="K8S 事件是集群内资源事件，包含负载、服务、存储等。事件保存时间较短，请及时导出留存。"
-            type="info"
+message={t('detail.eventsAlert')}
+type="info"
             showIcon
             style={{ marginBottom: 12 }}
           />
           <Space style={{ marginBottom: 12 }} wrap>
             <Input.Search
               allowClear
-              placeholder="选择属性筛选，或输入关键字搜索"
+placeholder={t('common:search.placeholder')}
               onSearch={handleSearchEvents}
-              enterButton="搜索"
-              loading={loadingEvents}
+              enterButton={t('common:actions.search')}
+loading={loadingEvents}
               style={{ width: 420 }}
             />
-            <Button onClick={exportEventsCSV} disabled={!events.length}>导出</Button>
+            <Button onClick={exportEventsCSV} disabled={!events.length}>{t('common:actions.export')}</Button>
           </Space>
           <Table
             rowKey={(e) => (e as K8sEvent).metadata?.uid || `${(e as K8sEvent).involvedObject.kind}/${(e as K8sEvent).involvedObject.namespace || 'default'}/${(e as K8sEvent).involvedObject.name}/${(e as K8sEvent).reason}/${(e as K8sEvent).lastTimestamp || (e as K8sEvent).eventTime || (e as K8sEvent).metadata?.creationTimestamp || ''}`}
             columns={eventColumns}
             dataSource={events}
             loading={loadingEvents}
-            pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }}
-          />
+pagination={{ pageSize: 20, showTotal: (total) => t('events.totalEvents', { count: total }) }}
+/>
         </div>
       ),
     },
@@ -272,9 +273,9 @@ const ClusterDetail: React.FC = () => {
   if (!cluster && !loading) {
     return (
       <Alert
-        message="集群不存在"
-        description="请检查集群ID是否正确"
-        type="error"
+message={t('detail.notFound')}
+        description={t('detail.notFoundDesc')}
+type="error"
         showIcon
       />
     );
@@ -286,11 +287,11 @@ const ClusterDetail: React.FC = () => {
         <>
           {/* 集群基本信息 */}
           <Card style={{ marginBottom: 24 }}>
-            <Descriptions title="基本信息" column={3}>
-              <Descriptions.Item label="集群名称">{cluster.name}</Descriptions.Item>
-              <Descriptions.Item label="版本">{cluster.version}</Descriptions.Item>
-              <Descriptions.Item label="状态">
-                {getStatusTag(cluster.status)}
+<Descriptions title={t('detail.info')} column={3}>
+              <Descriptions.Item label={t('detail.clusterName')}>{cluster.name}</Descriptions.Item>
+              <Descriptions.Item label={t('detail.version')}>{cluster.version}</Descriptions.Item>
+              <Descriptions.Item label={t('detail.status')}>
+{getStatusTag(cluster.status)}
               </Descriptions.Item>
               <Descriptions.Item label="API Server">
                 <Space>
@@ -298,21 +299,21 @@ const ClusterDetail: React.FC = () => {
                   <Text code>{cluster.apiServer}</Text>
                 </Space>
               </Descriptions.Item>
-              <Descriptions.Item label="创建时间">
+              <Descriptions.Item label={t('detail.createdAt')}>
                 <Space>
                   <CalendarOutlined />
                   {new Date(cluster.createdAt).toLocaleString()}
                 </Space>
               </Descriptions.Item>
-              <Descriptions.Item label="容器子网">
+<Descriptions.Item label={t('detail.containerSubnet')}>
                 {clusterOverview?.containerSubnetIPs ? (
                   <span>
-                    CIDR（可用/总IP数：{clusterOverview.containerSubnetIPs.available_ips}/{clusterOverview.containerSubnetIPs.total_ips}）
+                    {t('detail.cidrAvailable', { available: clusterOverview.containerSubnetIPs.available_ips, total: clusterOverview.containerSubnetIPs.total_ips })}
                   </span>
                 ) : (
-                  <span>CIDR（IP信息不可用）</span>
+                  <span>{t('detail.cidrUnavailable')}</span>
                 )}
-              </Descriptions.Item>
+</Descriptions.Item>
             </Descriptions>
           </Card>
 
@@ -326,7 +327,7 @@ const ClusterDetail: React.FC = () => {
                         onClick={() => navigate(`/clusters/${id}/nodes`)}
                         onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/nodes`); }}
                         style={{ background: 'linear-gradient(135deg,#20d6b5,#18b47b)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                        <div style={{ opacity: 0.9, marginBottom: 4 }}>总节点</div>
+                        <div style={{ opacity: 0.9, marginBottom: 4 }}>{t('detail.totalNodes')}</div>
                         <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                           <DesktopOutlined />
                           {clusterOverview?.nodes || 0}
@@ -340,7 +341,7 @@ const ClusterDetail: React.FC = () => {
                         onClick={() => navigate(`/clusters/${id}/namespaces`)}
                         onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/namespaces`); }}
                         style={{ background: 'linear-gradient(135deg,#ff8a00,#e52e71)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                        <div style={{ opacity: 0.9, marginBottom: 4 }}>命名空间总数</div>
+                        <div style={{ opacity: 0.9, marginBottom: 4 }}>{t('detail.totalNamespaces')}</div>
                         <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                           <FolderFilled />
                           {clusterOverview?.namespace || 0}
@@ -358,7 +359,7 @@ const ClusterDetail: React.FC = () => {
                   onClick={() => navigate(`/clusters/${id}/workloads`)}
                   onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/workloads`); }}
                   style={{ background: 'linear-gradient(135deg,#6a11cb,#2575fc)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                  <div style={{ opacity: 0.9, marginBottom: 4 }}>工作负载总数</div>
+                  <div style={{ opacity: 0.9, marginBottom: 4 }}>{t('detail.totalWorkloads')}</div>
                   <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <AppstoreOutlined />
                     {
@@ -378,7 +379,7 @@ const ClusterDetail: React.FC = () => {
                   onClick={() => navigate(`/clusters/${id}/pods`)}
                   onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/pods`); }}
                   style={{ background: 'linear-gradient(135deg,#36d1dc,#5b86e5)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                  <div style={{ opacity: 0.9, marginBottom: 4 }}>Pod总数</div>
+                  <div style={{ opacity: 0.9, marginBottom: 4 }}>{t('detail.totalPods')}</div>
                   <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <CloudServerOutlined />
                     {clusterOverview?.pods || 0}

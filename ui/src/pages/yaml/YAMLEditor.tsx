@@ -24,6 +24,7 @@ import {
 import { Editor, DiffEditor, loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { WorkloadService } from '../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 import * as YAML from 'yaml';
 
 // 配置Monaco Editor使用本地资源
@@ -33,7 +34,8 @@ const { Title, Text } = Typography;
 
 const YAMLEditor: React.FC = () => {
   const { modal } = App.useApp();
-  const { clusterId } = useParams<{ clusterId: string }>();
+const { t } = useTranslation(["yaml", "common"]);
+const { clusterId } = useParams<{ clusterId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -101,13 +103,13 @@ const YAMLEditor: React.FC = () => {
         setYaml(yamlContent);
         setOriginalYaml(yamlContent);
       } else {
-        const errorMsg = response.message || '加载YAML失败';
+        const errorMsg = response.message || t('messages.loadFailed');
         setError(errorMsg);
         message.error(errorMsg);
       }
     } catch (error) {
       console.error('加载YAML失败:', error);
-      const errorMsg = '加载YAML失败: ' + (error instanceof Error ? error.message : '未知错误');
+      const errorMsg = t('messages.loadError') + ': ' + (error instanceof Error ? error.message : t('messages.unknownError'));
       setError(errorMsg);
       message.error(errorMsg);
     } finally {
@@ -118,7 +120,7 @@ const YAMLEditor: React.FC = () => {
   // 应用YAML
   const handleApply = async (isDryRun = false) => {
     if (!clusterId || !yaml.trim()) {
-      message.error('YAML内容不能为空');
+      message.error(t('messages.emptyContent'));
       return;
     }
     
@@ -132,11 +134,11 @@ const YAMLEditor: React.FC = () => {
           setPreviewResult(response.data as Record<string, unknown>);
           setDryRunResult({
             success: true,
-            message: '预检通过！YAML 配置有效，可以安全应用。',
+            message: t('messages.dryRunPassed'),
           });
-          message.success('YAML验证成功');
+          message.success(t('messages.validateSuccess'));
         } else {
-          message.success('YAML应用成功');
+          message.success(t('messages.applySuccess'));
           // 更新原始YAML
           setOriginalYaml(yaml);
           setDiffModalVisible(false);
@@ -174,7 +176,7 @@ const YAMLEditor: React.FC = () => {
   // 保存并应用YAML - 先预检，再展示 diff 对比
   const handleSave = async () => {
     if (!clusterId || !yaml.trim()) {
-      message.error('YAML内容不能为空');
+      message.error(t('messages.emptyContent'));
       return;
     }
 
@@ -188,21 +190,21 @@ const YAMLEditor: React.FC = () => {
           setPendingYaml(yaml);
           setDiffModalVisible(true);
         } else {
-          message.error('预检失败: ' + (response.message || '未知错误'));
+          message.error(t('messages.preCheckFailed') + ': ' + (response.message || t('messages.unknownError')));
         }
       } catch (error) {
         console.error('预检失败:', error);
-        message.error('预检失败');
+        message.error(t('messages.preCheckFailed'));
       } finally {
         setApplying(false);
       }
     } else {
       // 创建模式，直接确认应用
       modal.confirm({
-        title: '确认应用YAML',
-        content: '确定要应用这些YAML配置吗？这将在集群中创建资源。',
-        okText: '确定',
-        cancelText: '取消',
+        title: t('confirm.applyYaml'),
+        content: t('confirm.applyYamlDesc'),
+        okText: t('common:actions.confirm'),
+        cancelText: t('common:actions.cancel'),
         onOk: () => handleApply(false),
       });
     }
@@ -216,14 +218,14 @@ const YAMLEditor: React.FC = () => {
   // 重置YAML
   const handleReset = () => {
     modal.confirm({
-      title: '确认重置',
-      content: '确定要重置YAML内容吗？未保存的更改将丢失。',
-      okText: '确定',
-      cancelText: '取消',
+      title: t('confirm.resetTitle'),
+      content: t('confirm.resetDesc'),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       centered: true,
       onOk: () => {
         setYaml(originalYaml);
-        message.success('已重置YAML内容');
+        message.success(t('messages.resetSuccess'));
       },
     });
   };
@@ -370,7 +372,7 @@ spec: {}
   useEffect(() => {
     // 检查必要参数
     if (!clusterId || !workloadType) {
-      setError('缺少必要参数：集群ID或工作负载类型');
+      setError(t('messages.missingParams'));
       return;
     }
     
@@ -409,10 +411,10 @@ spec: {}
             onClick={() => {
               if (hasUnsavedChanges) {
                 modal.confirm({
-                  title: '确认离开',
-                  content: '您有未保存的更改，确定要离开吗？',
-                  okText: '确定',
-                  cancelText: '取消',
+                  title: t('confirm.leave'),
+                  content: t('confirm.leaveDesc'),
+                  okText: t('common:actions.confirm'),
+                  cancelText: t('common:actions.cancel'),
                   onOk: () => navigate(-1),
                 });
               } else {
@@ -420,10 +422,10 @@ spec: {}
               }
             }}
           >
-            返回
+            {t('editor.back')}
           </Button>
           <Title level={3} style={{ margin: 0 }}>
-            YAML 编辑器
+            {t('editor.title')}
           </Title>
           {workloadRef && (
             <Text type="secondary">
@@ -431,7 +433,7 @@ spec: {}
             </Text>
           )}
           {hasUnsavedChanges && (
-            <Text type="warning">• 有未保存的更改</Text>
+            <Text type="warning">{t('alert.hasUnsavedChanges')}</Text>
           )}
         </Space>
         
@@ -444,7 +446,7 @@ spec: {}
               loading={applying}
               disabled={!hasUnsavedChanges}
             >
-              应用
+              {t('editor.apply')}
             </Button>
             
             <Button
@@ -452,7 +454,7 @@ spec: {}
               onClick={handlePreview}
               loading={applying}
             >
-              预览
+              {t('editor.preview')}
             </Button>
             
             <Button
@@ -460,17 +462,17 @@ spec: {}
               onClick={handleReset}
               disabled={!hasUnsavedChanges}
             >
-              重置
+              {t('editor.reset')}
             </Button>
             
             <div style={{ marginLeft: 16 }}>
               <Space>
-                <Text>DryRun模式:</Text>
+                <Text>{t('editor.dryRunMode')}:</Text>
                 <Switch
                   checked={dryRun}
                   onChange={setDryRun}
-                  checkedChildren="开"
-                  unCheckedChildren="关"
+                  checkedChildren={t("editor.on")}
+                  unCheckedChildren={t("editor.off")}
                 />
               </Space>
             </div>
@@ -481,14 +483,14 @@ spec: {}
       {/* 提示信息 */}
       {error && (
         <Alert
-          message="加载失败"
+          message={t('alert.loadFailed')}
           description={error}
           type="error"
           showIcon
           style={{ marginBottom: 16 }}
           action={
             <Button size="small" onClick={loadWorkloadYAML}>
-              重试
+              {t('alert.retry')}
             </Button>
           }
         />
@@ -497,7 +499,7 @@ spec: {}
       {/* 预检结果提示 */}
       {dryRunResult && (
         <Alert
-          message={dryRunResult.success ? '预检通过' : '预检失败'}
+          message={dryRunResult.success ? t('messages.dryRunCheckPassed') : t('messages.dryRunCheckFailed')}
           description={dryRunResult.message}
           type={dryRunResult.success ? 'success' : 'error'}
           showIcon
@@ -510,8 +512,8 @@ spec: {}
       
       {hasUnsavedChanges && !error && !dryRunResult && (
         <Alert
-          message="您有未保存的更改"
-          description="请记得保存您的更改，或点击重置按钮恢复原始内容。"
+          message={t('alert.unsavedChanges')}
+          description={t('alert.unsavedChangesDesc')}
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
@@ -520,7 +522,7 @@ spec: {}
 
       {/* YAML编辑器 */}
       <Card style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
-        <Spin spinning={loading || editorLoading} tip={loading ? "加载YAML中..." : "初始化编辑器..."}>
+        <Spin spinning={loading || editorLoading} tip={loading ? t('messages.loadingYaml') : t('messages.initEditor')}>
           <div style={{ height: '500px', width: '100%' }}>
             {yaml ? (
               <Editor
@@ -529,7 +531,7 @@ spec: {}
                 defaultLanguage="yaml"
                 value={yaml}
                 onChange={(value) => setYaml(value || '')}
-                loading={<div style={{ padding: '20px', textAlign: 'center' }}>编辑器加载中...</div>}
+                loading={<div style={{ padding: '20px', textAlign: 'center' }}>{t('messages.editorLoading')}</div>}
                 beforeMount={handleEditorWillMount}
                 onMount={handleEditorDidMount}
                 onValidate={handleEditorValidation}
@@ -558,7 +560,7 @@ spec: {}
                 color: '#666',
                 fontSize: '16px'
               }}>
-                {loading ? '加载中...' : '暂无YAML内容'}
+                {loading ? t('messages.loading') : t('messages.noContent')}
               </div>
             )}
           </div>
@@ -567,12 +569,12 @@ spec: {}
 
       {/* 预览模态框 */}
       <Modal
-        title="YAML 预览结果"
+        title={t('preview.title')}
         open={previewVisible}
         onCancel={() => setPreviewVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setPreviewVisible(false)}>
-            关闭
+            {t('editor.close')}
           </Button>,
           <Button
             key="apply"
@@ -582,7 +584,7 @@ spec: {}
               handleSave();
             }}
           >
-            确认应用
+            {t('editor.confirmApply')}
           </Button>,
         ]}
         width={800}
@@ -590,8 +592,8 @@ spec: {}
         {previewResult && (
           <div>
             <Alert
-              message="验证成功"
-              description="YAML格式正确，可以安全应用到集群。"
+              message={t('preview.validationSuccess')}
+              description={t('preview.validationSuccessDesc')}
               type="success"
               showIcon
               style={{ marginBottom: 16 }}
@@ -614,7 +616,7 @@ spec: {}
         title={
           <Space>
             <DiffOutlined />
-            <span>确认更改 - YAML Diff 对比</span>
+            <span>{t('diff.title')}</span>
           </Space>
         }
         open={diffModalVisible}
@@ -622,7 +624,7 @@ spec: {}
         width={1200}
         footer={[
           <Button key="cancel" onClick={() => setDiffModalVisible(false)}>
-            取消
+            {t('editor.cancel')}
           </Button>,
           <Button
             key="submit"
@@ -630,23 +632,23 @@ spec: {}
             loading={applying}
             onClick={handleConfirmDiff}
           >
-            确认更新
+            {t('editor.confirmUpdate')}
           </Button>,
         ]}
       >
         <Alert
-          message="请仔细检查以下更改"
-          description="左侧为原始配置，右侧为修改后的配置。确认无误后点击「确认更新」按钮应用更改。"
+          message={t('diff.reviewChanges')}
+          description={t('diff.reviewChangesDesc')}
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
         />
         <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
           <div style={{ flex: 1 }}>
-            <Text strong style={{ color: '#cf1322' }}>原始配置</Text>
+            <Text strong style={{ color: '#cf1322' }}>{t('diff.originalConfig')}</Text>
           </div>
           <div style={{ flex: 1 }}>
-            <Text strong style={{ color: '#389e0d' }}>修改后配置</Text>
+            <Text strong style={{ color: '#389e0d' }}>{t('diff.modifiedConfig')}</Text>
           </div>
         </div>
         <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>

@@ -36,6 +36,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { auditService } from '../../services/auditService';
+import { useTranslation } from 'react-i18next';
 import type {
   TerminalSessionItem,
   SessionDetailResponse,
@@ -56,16 +57,17 @@ const terminalTypeConfig: Record<string, { label: string; color: string; icon: R
 
 // 状态配置
 const statusConfig: Record<string, { label: string; status: 'processing' | 'success' | 'error' | 'default' }> = {
-  active: { label: '进行中', status: 'processing' },
-  closed: { label: '已结束', status: 'success' },
-  error: { label: '异常', status: 'error' },
+  active: { label: 'active', status: 'processing' },
+  closed: { label: 'closed', status: 'success' },
+  error: { label: 'error', status: 'error' },
 };
 
 const CommandHistory: React.FC = () => {
   const { message } = App.useApp();
 
   // 数据状态
-  const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
+const { t } = useTranslation(['audit', 'common']);
+const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<SessionStats | null>(null);
@@ -121,7 +123,7 @@ const CommandHistory: React.FC = () => {
         setTotal(res.data.total);
       }
     } catch {
-      message.error('获取会话列表失败');
+      message.error(t('audit:commands.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -144,7 +146,7 @@ const CommandHistory: React.FC = () => {
         setCommandsTotal(commandsRes.data.total);
       }
     } catch {
-      message.error('获取会话详情失败');
+      message.error(t('commands.fetchDetailFailed'));
     } finally {
       setCommandsLoading(false);
     }
@@ -194,7 +196,7 @@ const CommandHistory: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<TerminalSessionItem> = [
     {
-      title: '用户',
+      title: t('audit:commands.user'),
       key: 'user',
       width: 140,
       render: (_, record) => (
@@ -216,7 +218,7 @@ const CommandHistory: React.FC = () => {
       ),
     },
     {
-      title: '终端类型',
+      title: t('audit:commands.terminalType'),
       dataIndex: 'target_type',
       width: 120,
       render: (type: string) => {
@@ -229,7 +231,7 @@ const CommandHistory: React.FC = () => {
       },
     },
     {
-      title: '目标',
+      title: t('audit:commands.target'),
       key: 'target',
       width: 200,
       ellipsis: true,
@@ -242,7 +244,7 @@ const CommandHistory: React.FC = () => {
       ),
     },
     {
-      title: '开始时间',
+      title: t('audit:commands.startTime'),
       dataIndex: 'start_at',
       width: 170,
       render: (time: string) => (
@@ -253,7 +255,7 @@ const CommandHistory: React.FC = () => {
       ),
     },
     {
-      title: '命令数',
+      title: t('audit:commands.commandCount'),
       dataIndex: 'command_count',
       width: 100,
       align: 'center',
@@ -262,7 +264,7 @@ const CommandHistory: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('common:table.status'),
       dataIndex: 'status',
       width: 100,
       render: (statusKey: string) => {
@@ -271,7 +273,7 @@ const CommandHistory: React.FC = () => {
       },
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       width: 100,
       fixed: 'right',
@@ -282,7 +284,7 @@ const CommandHistory: React.FC = () => {
           icon={<HistoryOutlined />}
           onClick={() => handleViewCommands(record)}
         >
-          查看
+          {t('audit:commands.viewBtn')}
         </Button>
       ),
     },
@@ -295,7 +297,7 @@ const CommandHistory: React.FC = () => {
         <Col span={4}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="总会话数"
+              title={t('audit:commands.totalSessions')}
               value={stats?.total_sessions || 0}
               prefix={<HistoryOutlined style={{ color: '#1890ff' }} />}
             />
@@ -304,7 +306,7 @@ const CommandHistory: React.FC = () => {
         <Col span={4}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="活跃会话"
+              title={t('audit:commands.activeSessions')}
               value={stats?.active_sessions || 0}
               valueStyle={{ color: '#52c41a' }}
               prefix={<Badge status="processing" />}
@@ -314,7 +316,7 @@ const CommandHistory: React.FC = () => {
         <Col span={4}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="总命令数"
+              title={t('audit:commands.totalCommands')}
               value={stats?.total_commands || 0}
               prefix={<CodeOutlined style={{ color: '#722ed1' }} />}
             />
@@ -354,12 +356,12 @@ const CommandHistory: React.FC = () => {
         title={
           <Space>
             <HistoryOutlined />
-            <span>命令历史记录</span>
+            <span>{t('audit:commands.title')}</span>
           </Space>
         }
         extra={
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-            刷新
+            {t('common:actions.refresh')}
           </Button>
         }
         bordered={false}
@@ -367,7 +369,7 @@ const CommandHistory: React.FC = () => {
         {/* 筛选区域 */}
         <Space wrap style={{ marginBottom: 16 }}>
           <Select
-            placeholder="终端类型"
+            placeholder={t('audit:commands.terminalTypeFilter')}
             allowClear
             style={{ width: 140 }}
             value={targetType || undefined}
@@ -378,23 +380,23 @@ const CommandHistory: React.FC = () => {
             <Select.Option value="node">Node SSH</Select.Option>
           </Select>
           <Select
-            placeholder="状态"
+            placeholder={t('audit:commands.status')}
             allowClear
             style={{ width: 120 }}
             value={status || undefined}
             onChange={(v) => setStatus(v || '')}
           >
-            <Select.Option value="active">进行中</Select.Option>
-            <Select.Option value="closed">已结束</Select.Option>
-            <Select.Option value="error">异常</Select.Option>
+            <Select.Option value="active">{t('audit:commands.statusActive')}</Select.Option>
+            <Select.Option value="closed">{t('audit:commands.statusClosed')}</Select.Option>
+            <Select.Option value="error">{t('audit:commands.statusError')}</Select.Option>
           </Select>
           <RangePicker
             value={dateRange}
             onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
-            placeholder={['开始日期', '结束日期']}
+            placeholder={[t('audit:commands.startDatePlaceholder'), t('audit:commands.endDatePlaceholder')]}
           />
           <Input.Search
-            placeholder="搜索用户/集群/Pod/节点"
+            placeholder={t('audit:commands.searchPlaceholder')}
             style={{ width: 240 }}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -416,7 +418,7 @@ const CommandHistory: React.FC = () => {
             total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条记录`,
+            showTotal: (total) => t('commands.totalCount', { total }),
             onChange: (page, size) => {
               setCurrentPage(page);
               setPageSize(size);
@@ -430,7 +432,7 @@ const CommandHistory: React.FC = () => {
         title={
           <Space>
             <HistoryOutlined />
-            <span>命令记录详情</span>
+            <span>{t('audit:commands.commandDetail')}</span>
           </Space>
         }
         placement="right"
@@ -454,7 +456,7 @@ const CommandHistory: React.FC = () => {
               URL.revokeObjectURL(url);
             }}
           >
-            导出
+            {t('audit:commands.exportBtn')}
           </Button>
         }
       >
@@ -463,42 +465,42 @@ const CommandHistory: React.FC = () => {
             <>
               {/* 会话信息 */}
               <Descriptions
-                title="会话信息"
+                title={t('audit:commands.sessionInfo')}
                 bordered
                 size="small"
                 column={2}
                 style={{ marginBottom: 24 }}
               >
-                <Descriptions.Item label="用户">
+                <Descriptions.Item label={t('audit:commands.user')}>
                   {selectedSession.display_name || selectedSession.username}
                 </Descriptions.Item>
-                <Descriptions.Item label="集群">
+                <Descriptions.Item label={t('audit:commands.cluster')}>
                   {selectedSession.cluster_name}
                 </Descriptions.Item>
-                <Descriptions.Item label="终端类型">
+                <Descriptions.Item label={t('audit:commands.terminalType')}>
                   {terminalTypeConfig[selectedSession.target_type]?.label || selectedSession.target_type}
                 </Descriptions.Item>
-                <Descriptions.Item label="状态">
+                <Descriptions.Item label={t('audit:commands.status')}>
                   <Badge
                     status={statusConfig[selectedSession.status]?.status || 'default'}
                     text={statusConfig[selectedSession.status]?.label || selectedSession.status}
                   />
                 </Descriptions.Item>
-                <Descriptions.Item label="目标" span={2}>
+                <Descriptions.Item label={t('audit:commands.target')} span={2}>
                   {selectedSession.target_type === 'pod'
                     ? `${selectedSession.namespace}/${selectedSession.pod}`
                     : selectedSession.node || selectedSession.namespace}
                 </Descriptions.Item>
-                <Descriptions.Item label="开始时间">
+                <Descriptions.Item label={t('audit:commands.startTime')}>
                   {dayjs(selectedSession.start_at).format('YYYY-MM-DD HH:mm:ss')}
                 </Descriptions.Item>
-                <Descriptions.Item label="持续时间">
+                <Descriptions.Item label={t('audit:commands.elapsedTime')}>
                   {selectedSession.duration}
                 </Descriptions.Item>
-                <Descriptions.Item label="命令数">
+                <Descriptions.Item label={t('audit:commands.commandCount')}>
                   {selectedSession.command_count}
                 </Descriptions.Item>
-                <Descriptions.Item label="输入大小">
+                <Descriptions.Item label={t('audit:commands.inputSize')}>
                   {(selectedSession.input_size / 1024).toFixed(2)} KB
                 </Descriptions.Item>
               </Descriptions>
@@ -507,7 +509,7 @@ const CommandHistory: React.FC = () => {
               <div style={{ marginBottom: 16 }}>
                 <Space>
                   <CodeOutlined />
-                  <Text strong>命令记录</Text>
+                  <Text strong>{t('audit:commands.commandRecords')}</Text>
                   <Tag>{commandsTotal} 条</Tag>
                 </Space>
               </div>
@@ -560,7 +562,7 @@ const CommandHistory: React.FC = () => {
                   />
                 </div>
               ) : (
-                <Empty description="暂无命令记录" />
+                <Empty description={t('audit:commands.noCommands')} />
               )}
             </>
           )}

@@ -1,0 +1,29 @@
+{
+  "title": "全局搜索",
+  "searchPlaceholder": "搜索集群、节点、容器组、工作负载...",
+  "searchFailed": "搜索失败，请稍后重试",
+  "enterKeyword": "请输入搜索关键词开始搜索",
+  "noResults": "暂无搜索结果",
+  "viewDetails": "查看详情",
+  "tabs": {
+    "all": "全部",
+    "cluster": "集群",
+    "node": "节点",
+    "pod": "容器组",
+    "workload": "工作负载"
+  },
+  "noResultsFor": {
+    "all": "暂无搜索结果",
+    "cluster": "暂无集群搜索结果",
+    "node": "暂无节点搜索结果",
+    "pod": "暂无容器组搜索结果",
+    "workload": "暂无工作负载搜索结果"
+  },
+  "description": {
+    "node": "节点",
+    "replicas": "副本数",
+    "cluster": "集群",
+    "namespace": "命名空间",
+    "clusterId": "集群ID"
+  }
+}

@@ -41,6 +41,7 @@ import {
   QuestionCircleOutlined,
 } from '@ant-design/icons';
 import { argoCDService } from '../../services/argoCDService';
+import { useTranslation } from 'react-i18next';
 import type { 
   ArgoCDApplication, 
   CreateApplicationRequest,
@@ -51,7 +52,8 @@ const ArgoCDApplicationsPage: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
   
-  const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
+const { t } = useTranslation(['plugins', 'common']);
+const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
   const [loading, setLoading] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
@@ -124,15 +126,15 @@ const ArgoCDApplicationsPage: React.FC = () => {
       
       const response = await argoCDService.createApplication(clusterId!, req);
       if (response.code === 200) {
-        message.success('应用创建成功');
+        message.success(t('plugins:argocd.createSuccess'));
         setCreateModalVisible(false);
         form.resetFields();
         loadApplications();
       } else {
-        message.error(response.message || '创建失败');
+        message.error(response.message || t('plugins:argocd.createFailed'));
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '创建失败';
+      const errorMessage = error instanceof Error ? error.message : t('plugins:argocd.createFailed');
       message.error(errorMessage);
     } finally {
       setCreating(false);
@@ -142,16 +144,16 @@ const ArgoCDApplicationsPage: React.FC = () => {
   // 同步应用
   const handleSync = async (appName: string) => {
     try {
-      message.loading({ content: '正在同步...', key: 'sync' });
+      message.loading({ content: t('plugins:argocd.syncing'), key: 'sync' });
       const response = await argoCDService.syncApplication(clusterId!, appName);
       if (response.code === 200) {
-        message.success({ content: '同步已触发', key: 'sync' });
+        message.success({ content: t('plugins:argocd.syncTriggered'), key: 'sync' });
         loadApplications();
       } else {
-        message.error({ content: response.message || '同步失败', key: 'sync' });
+        message.error({ content: response.message || t('plugins:argocd.syncFailed'), key: 'sync' });
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '同步失败';
+      const errorMessage = error instanceof Error ? error.message : t('plugins:argocd.syncFailed');
       message.error({ content: errorMessage, key: 'sync' });
     }
   };
@@ -159,16 +161,16 @@ const ArgoCDApplicationsPage: React.FC = () => {
   // 删除应用
   const handleDelete = async (appName: string) => {
     try {
-      message.loading({ content: '正在删除...', key: 'delete' });
+      message.loading({ content: t('plugins:argocd.deleting'), key: 'delete' });
       const response = await argoCDService.deleteApplication(clusterId!, appName, true);
       if (response.code === 200) {
-        message.success({ content: '删除成功', key: 'delete' });
+        message.success({ content: t('plugins:argocd.deleteSuccess'), key: 'delete' });
         loadApplications();
       } else {
-        message.error({ content: response.message || '删除失败', key: 'delete' });
+        message.error({ content: response.message || t('plugins:argocd.deleteFailed'), key: 'delete' });
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '删除失败';
+      const errorMessage = error instanceof Error ? error.message : t('plugins:argocd.deleteFailed');
       message.error({ content: errorMessage, key: 'delete' });
     }
   };
@@ -182,17 +184,17 @@ const ArgoCDApplicationsPage: React.FC = () => {
   // 回滚应用
   const handleRollback = async (appName: string, revisionId: number) => {
     try {
-      message.loading({ content: '正在回滚...', key: 'rollback' });
+      message.loading({ content: t('plugins:argocd.rolling'), key: 'rollback' });
       const response = await argoCDService.rollbackApplication(clusterId!, appName, { revision_id: revisionId });
       if (response.code === 200) {
-        message.success({ content: '回滚成功', key: 'rollback' });
+        message.success({ content: t('plugins:argocd.rollbackSuccess'), key: 'rollback' });
         loadApplications();
         setDetailDrawerVisible(false);
       } else {
-        message.error({ content: response.message || '回滚失败', key: 'rollback' });
+        message.error({ content: response.message || t('plugins:argocd.rollbackFailed'), key: 'rollback' });
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '回滚失败';
+      const errorMessage = error instanceof Error ? error.message : t('plugins:argocd.rollbackFailed');
       message.error({ content: errorMessage, key: 'rollback' });
     }
   };
@@ -234,7 +236,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<ArgoCDApplication> = [
     {
-      title: '应用名称',
+      title: t('plugins:argocd.appName'),
       dataIndex: 'name',
       key: 'name',
       fixed: 'left',
@@ -246,28 +248,28 @@ const ArgoCDApplicationsPage: React.FC = () => {
       ),
     },
     {
-      title: '项目',
+      title: t('plugins:argocd.project'),
       dataIndex: 'project',
       key: 'project',
       width: 120,
       render: (text: string) => <Tag>{text || 'default'}</Tag>,
     },
     {
-      title: '同步状态',
+      title: t('plugins:argocd.syncStatus'),
       dataIndex: 'sync_status',
       key: 'sync_status',
       width: 120,
       render: getSyncStatusTag,
     },
     {
-      title: '健康状态',
+      title: t('plugins:argocd.healthStatus'),
       dataIndex: 'health_status',
       key: 'health_status',
       width: 120,
       render: getHealthStatusBadge,
     },
     {
-      title: 'Git 路径',
+      title: t('plugins:argocd.gitPath'),
       dataIndex: ['source', 'path'],
       key: 'path',
       width: 200,
@@ -282,7 +284,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
       ),
     },
     {
-      title: '版本',
+      title: t('common:table.version'),
       dataIndex: 'synced_revision',
       key: 'revision',
       width: 100,
@@ -293,20 +295,20 @@ const ArgoCDApplicationsPage: React.FC = () => {
       ),
     },
     {
-      title: '目标命名空间',
+      title: t('plugins:argocd.destNamespace'),
       dataIndex: ['destination', 'namespace'],
       key: 'dest_namespace',
       width: 130,
       render: (text: string) => <Tag color="blue">{text || '-'}</Tag>,
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right',
       width: 200,
       render: (_: unknown, record: ArgoCDApplication) => (
         <Space size="small">
-          <Tooltip title="同步">
+          <Tooltip title={t('plugins:argocd.sync')}>
             <Button
               type="primary"
               size="small"
@@ -314,7 +316,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
               onClick={() => handleSync(record.name)}
             />
           </Tooltip>
-          <Tooltip title="详情">
+          <Tooltip title={t('plugins:argocd.appDetail')}>
             <Button 
               size="small" 
               icon={<EyeOutlined />}
@@ -322,13 +324,13 @@ const ArgoCDApplicationsPage: React.FC = () => {
             />
           </Tooltip>
           <Popconfirm
-            title="确定删除这个应用吗？"
-            description="删除后将同时清理集群中的相关资源"
+            title={t('plugins:argocd.deleteConfirm')}
+            description={t('plugins:argocd.deleteConfirmDesc')}
             onConfirm={() => handleDelete(record.name)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
-            <Tooltip title="删除">
+            <Tooltip title={t('common:actions.delete')}>
               <Button size="small" danger icon={<DeleteOutlined />} />
             </Tooltip>
           </Popconfirm>
@@ -360,8 +362,8 @@ const ArgoCDApplicationsPage: React.FC = () => {
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={
               <Space direction="vertical">
-                <span>ArgoCD 未配置</span>
-                <span style={{ color: '#999' }}>请先在配置中心配置 ArgoCD 连接信息</span>
+                <span>{t('plugins:argocd.notConfigured')}</span>
+                <span style={{ color: '#999' }}>{t('plugins:argocd.notConfiguredDesc')}</span>
               </Space>
             }
           >
@@ -371,10 +373,10 @@ const ArgoCDApplicationsPage: React.FC = () => {
                 icon={<SettingOutlined />}
                 onClick={() => navigate(`/clusters/${clusterId}/config-center?tab=argocd`)}
               >
-                前往配置
+                {t('plugins:argocd.goToConfig')}
               </Button>
               <Button onClick={() => navigate(-1)}>
-                返回
+                {t('plugins:argocd.back')}
               </Button>
             </Space>
           </Empty>
@@ -389,27 +391,27 @@ const ArgoCDApplicationsPage: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={4}>
           <Card size="small">
-            <Statistic title="总应用数" value={stats.total} />
+            <Statistic title={t('plugins:argocd.totalApps')} value={stats.total} />
           </Card>
         </Col>
         <Col span={4}>
           <Card size="small">
-            <Statistic title="已同步" value={stats.synced} valueStyle={{ color: '#52c41a' }} />
+            <Statistic title={t('plugins:argocd.synced')} value={stats.synced} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col span={4}>
           <Card size="small">
-            <Statistic title="未同步" value={stats.outOfSync} valueStyle={{ color: '#faad14' }} />
+            <Statistic title={t('plugins:argocd.outOfSync')} value={stats.outOfSync} valueStyle={{ color: '#faad14' }} />
           </Card>
         </Col>
         <Col span={4}>
           <Card size="small">
-            <Statistic title="健康" value={stats.healthy} valueStyle={{ color: '#52c41a' }} />
+            <Statistic title={t('plugins:argocd.healthy')} value={stats.healthy} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col span={4}>
           <Card size="small">
-            <Statistic title="异常" value={stats.degraded} valueStyle={{ color: '#ff4d4f' }} />
+            <Statistic title={t('plugins:argocd.degraded')} value={stats.degraded} valueStyle={{ color: '#ff4d4f' }} />
           </Card>
         </Col>
         <Col span={4}>
@@ -419,7 +421,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
               icon={<SettingOutlined />}
               onClick={() => navigate(`/clusters/${clusterId}/config-center?tab=argocd`)}
             >
-              配置管理
+              {t('plugins:argocd.configManagement')}
             </Button>
           </Card>
         </Col>
@@ -427,14 +429,14 @@ const ArgoCDApplicationsPage: React.FC = () => {
 
       {/* 应用列表 */}
       <Card
-        title="ArgoCD 应用"
+        title={t('plugins:argocd.title')}
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={loadApplications}>
-              刷新
+              {t('common:actions.refresh')}
             </Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
-              创建应用
+              {t('plugins:argocd.createApp')}
             </Button>
           </Space>
         }
@@ -445,16 +447,16 @@ const ArgoCDApplicationsPage: React.FC = () => {
             dataSource={applications}
             rowKey="name"
             loading={loading}
-            pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => `共 ${total} 条` }}
+            pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => t('plugins:argocd.totalCount', { total }) }}
             scroll={{ x: 1200 }}
           />
         ) : (
           <Empty 
             description={
               <span>
-                暂无应用，
+                {t('plugins:argocd.noApps')}
                 <Button type="link" onClick={() => setCreateModalVisible(true)}>
-                  点击创建
+                  {t('plugins:argocd.clickToCreate')}
                 </Button>
               </span>
             }
@@ -464,7 +466,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
 
       {/* 创建应用弹窗 */}
       <Modal
-        title="创建 ArgoCD 应用"
+        title={t('plugins:argocd.createAppTitle')}
         open={createModalVisible}
         onOk={handleCreate}
         onCancel={() => {
@@ -473,16 +475,16 @@ const ArgoCDApplicationsPage: React.FC = () => {
         }}
         confirmLoading={creating}
         width={600}
-        okText="创建"
-        cancelText="取消"
+        okText={t('plugins:argocd.createBtn')}
+        cancelText={t('common:actions.cancel')}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="应用名称"
+            label={t('plugins:argocd.appName')}
             rules={[
-              { required: true, message: '请输入应用名称' },
-              { pattern: /^[a-z0-9-]+$/, message: '只能包含小写字母、数字和连字符' }
+              { required: true, message: t('plugins:argocd.appNameRequired') },
+              { pattern: /^[a-z0-9-]+$/, message: t('plugins:argocd.appNamePattern') }
             ]}
           >
             <Input placeholder="my-app" />
@@ -490,42 +492,42 @@ const ArgoCDApplicationsPage: React.FC = () => {
 
           <Form.Item
             name="path"
-            label="Git 路径"
-            rules={[{ required: true, message: '请输入 Git 路径' }]}
-            extra="相对于配置的 Git 仓库根目录的路径"
+            label={t('plugins:argocd.gitPath')}
+            rules={[{ required: true, message: t('plugins:argocd.gitPathRequired') }]}
+            extra={t('plugins:argocd.gitPathExtra')}
           >
             <Input placeholder="apps/my-app 或 environments/prod/my-app" />
           </Form.Item>
 
           <Form.Item
             name="target_revision"
-            label="目标版本"
+            label={t('plugins:argocd.targetRevision')}
             initialValue="HEAD"
-            extra="可以是分支名、Tag 或 Commit SHA"
+            extra={t('plugins:argocd.targetRevisionExtra')}
           >
             <Input placeholder="HEAD, main, v1.0.0, 或 commit SHA" />
           </Form.Item>
 
           <Form.Item
             name="dest_namespace"
-            label="目标命名空间"
-            rules={[{ required: true, message: '请输入目标命名空间' }]}
-            extra="应用将部署到此 Kubernetes 命名空间"
+            label={t('plugins:argocd.destNamespace')}
+            rules={[{ required: true, message: t('plugins:argocd.destNamespaceRequired') }]}
+            extra={t('plugins:argocd.destNamespaceExtra')}
           >
             <Input placeholder="production" />
           </Form.Item>
 
           <Form.Item
             name="helm_values"
-            label="Helm Values (可选)"
-            extra="如果是 Helm Chart，可以在此覆盖 values (YAML 格式)"
+            label={t('plugins:argocd.helmValues')}
+            extra={t('plugins:argocd.helmValuesExtra')}
           >
             <Input.TextArea rows={4} placeholder="replicaCount: 3&#10;image:&#10;  tag: latest" />
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="auto_sync" label="自动同步" valuePropName="checked">
+              <Form.Item name="auto_sync" label={t('plugins:argocd.autoSync')} valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Col>
@@ -539,9 +541,9 @@ const ArgoCDApplicationsPage: React.FC = () => {
                     <Col span={8}>
                       <Form.Item 
                         name="self_heal" 
-                        label="自动修复" 
+                        label={t('plugins:argocd.selfHeal')} 
                         valuePropName="checked"
-                        tooltip="当集群状态偏离 Git 时自动修复"
+                        tooltip={t('plugins:argocd.selfHealTooltip')}
                       >
                         <Switch />
                       </Form.Item>
@@ -549,9 +551,9 @@ const ArgoCDApplicationsPage: React.FC = () => {
                     <Col span={8}>
                       <Form.Item 
                         name="prune" 
-                        label="自动清理" 
+                        label={t('plugins:argocd.autoPrune')} 
                         valuePropName="checked"
-                        tooltip="自动删除 Git 中不存在的资源"
+                        tooltip={t('plugins:argocd.autoPruneTooltip')}
                       >
                         <Switch />
                       </Form.Item>
@@ -566,7 +568,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
 
       {/* 应用详情抽屉 */}
       <Drawer
-        title={`应用详情: ${selectedApp?.name || ''}`}
+        title={`${t('plugins:argocd.appDetail')}: ${selectedApp?.name || ''}`}
         open={detailDrawerVisible}
         onClose={() => setDetailDrawerVisible(false)}
         width={700}
@@ -577,7 +579,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
               icon={<SyncOutlined />}
               onClick={() => selectedApp && handleSync(selectedApp.name)}
             >
-              同步
+              {t('plugins:argocd.sync')}
             </Button>
           </Space>
         }
@@ -587,36 +589,36 @@ const ArgoCDApplicationsPage: React.FC = () => {
             items={[
               {
                 key: 'overview',
-                label: '概览',
+                label: t('plugins:argocd.overview'),
                 children: (
                   <div>
                     <Descriptions column={2} bordered size="small">
-                      <Descriptions.Item label="应用名称">{selectedApp.name}</Descriptions.Item>
-                      <Descriptions.Item label="项目">{selectedApp.project}</Descriptions.Item>
-                      <Descriptions.Item label="同步状态">{getSyncStatusTag(selectedApp.sync_status)}</Descriptions.Item>
-                      <Descriptions.Item label="健康状态">{getHealthStatusBadge(selectedApp.health_status)}</Descriptions.Item>
-                      <Descriptions.Item label="Git 仓库" span={2}>
+                      <Descriptions.Item label={t('plugins:argocd.appName')}>{selectedApp.name}</Descriptions.Item>
+                      <Descriptions.Item label={t('plugins:argocd.project')}>{selectedApp.project}</Descriptions.Item>
+                      <Descriptions.Item label={t('plugins:argocd.syncStatus')}>{getSyncStatusTag(selectedApp.sync_status)}</Descriptions.Item>
+                      <Descriptions.Item label={t('plugins:argocd.healthStatus')}>{getHealthStatusBadge(selectedApp.health_status)}</Descriptions.Item>
+                      <Descriptions.Item label={t('plugins:argocd.gitRepo')} span={2}>
                         <a href={selectedApp.source?.repo_url} target="_blank" rel="noopener noreferrer">
                           {selectedApp.source?.repo_url}
                         </a>
                       </Descriptions.Item>
-                      <Descriptions.Item label="Git 路径">{selectedApp.source?.path}</Descriptions.Item>
-                      <Descriptions.Item label="目标版本">{selectedApp.target_revision}</Descriptions.Item>
-                      <Descriptions.Item label="当前版本">
+                      <Descriptions.Item label={t('plugins:argocd.gitPath')}>{selectedApp.source?.path}</Descriptions.Item>
+                      <Descriptions.Item label={t('plugins:argocd.targetRevision')}>{selectedApp.target_revision}</Descriptions.Item>
+                      <Descriptions.Item label={t('plugins:argocd.currentVersion')}>
                         <code>{selectedApp.synced_revision?.substring(0, 12)}</code>
                       </Descriptions.Item>
-                      <Descriptions.Item label="目标命名空间">
+                      <Descriptions.Item label={t('plugins:argocd.destNamespace')}>
                         <Tag color="blue">{selectedApp.destination?.namespace}</Tag>
                       </Descriptions.Item>
-                      <Descriptions.Item label="创建时间">{selectedApp.created_at}</Descriptions.Item>
-                      <Descriptions.Item label="最后同步">{selectedApp.reconciled_at}</Descriptions.Item>
+                      <Descriptions.Item label={t('common:table.createdAt')}>{selectedApp.created_at}</Descriptions.Item>
+                      <Descriptions.Item label={t('plugins:argocd.lastSync')}>{selectedApp.reconciled_at}</Descriptions.Item>
                     </Descriptions>
                   </div>
                 ),
               },
               {
                 key: 'resources',
-                label: '资源列表',
+                label: t('plugins:argocd.resourceList'),
                 children: (
                   <Table
                     size="small"
@@ -624,10 +626,10 @@ const ArgoCDApplicationsPage: React.FC = () => {
                     rowKey={(record: ArgoCDResource) => `${record.kind}-${record.namespace}-${record.name}`}
                     columns={[
                       { title: 'Kind', dataIndex: 'kind', key: 'kind', width: 120 },
-                      { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120 },
-                      { title: '名称', dataIndex: 'name', key: 'name' },
+                      { title: t('common:table.namespace'), dataIndex: 'namespace', key: 'namespace', width: 120 },
+                      { title: t('common:table.name'), dataIndex: 'name', key: 'name' },
                       { 
-                        title: '健康状态', 
+                        title: t('plugins:argocd.healthStatus'), 
                         dataIndex: 'health', 
                         key: 'health', 
                         width: 100,
@@ -640,7 +642,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
               },
               {
                 key: 'history',
-                label: '同步历史',
+                label: t('plugins:argocd.syncHistory'),
                 children: (
                   <Timeline
                     items={(selectedApp.history || []).slice(0, 10).map((h) => ({
@@ -648,18 +650,18 @@ const ArgoCDApplicationsPage: React.FC = () => {
                       children: (
                         <div>
                           <div>
-                            <strong>版本:</strong> <code>{h.revision?.substring(0, 12)}</code>
+                            <strong>{t('plugins:argocd.version')}:</strong> <code>{h.revision?.substring(0, 12)}</code>
                             <Button 
                               type="link" 
                               size="small"
                               icon={<RollbackOutlined />}
                               onClick={() => handleRollback(selectedApp.name, h.id)}
                             >
-                              回滚到此版本
+                              {t('plugins:argocd.rollbackToVersion')}
                             </Button>
                           </div>
                           <div style={{ color: '#999', fontSize: 12 }}>
-                            部署时间: {h.deployed_at}
+                            {t('plugins:argocd.deployTime')}: {h.deployed_at}
                           </div>
                         </div>
                       ),

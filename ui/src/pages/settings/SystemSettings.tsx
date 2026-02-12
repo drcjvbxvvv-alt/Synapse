@@ -10,11 +10,13 @@ import {
 import { Link } from 'react-router-dom';
 import LDAPSettings from './LDAPSettings';
 import SSHSettings from './SSHSettings';
+import { useTranslation } from 'react-i18next';
 
 const { Title } = Typography;
 
 const SystemSettings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('ssh');
+const { t } = useTranslation(['settings', 'common']);
+const [activeTab, setActiveTab] = useState('ssh');
 
   const tabItems = [
     {
@@ -22,7 +24,7 @@ const SystemSettings: React.FC = () => {
       label: (
         <span>
           <KeyOutlined />
-          SSH 凭据
+          {t('settings:tabs.ssh')}
         </span>
       ),
       children: <SSHSettings />,
@@ -32,7 +34,7 @@ const SystemSettings: React.FC = () => {
       label: (
         <span>
           <CloudServerOutlined />
-          LDAP 设置
+          {t('settings:tabs.ldap')}
         </span>
       ),
       children: <LDAPSettings />,
@@ -42,12 +44,12 @@ const SystemSettings: React.FC = () => {
       label: (
         <span>
           <SafetyCertificateOutlined />
-          安全设置
+          {t('settings:tabs.security')}
         </span>
       ),
       children: (
         <div style={{ padding: 24, textAlign: 'center', color: '#999' }}>
-          安全设置功能开发中...
+          {t('settings:featureInDev', { feature: t('settings:tabs.security') })}
         </div>
       ),
     },
@@ -56,12 +58,12 @@ const SystemSettings: React.FC = () => {
       label: (
         <span>
           <BellOutlined />
-          通知设置
+          {t('settings:tabs.notification')}
         </span>
       ),
       children: (
         <div style={{ padding: 24, textAlign: 'center', color: '#999' }}>
-          通知设置功能开发中...
+          {t('settings:featureInDev', { feature: t('settings:tabs.notification') })}
         </div>
       ),
     },
@@ -71,8 +73,8 @@ const SystemSettings: React.FC = () => {
     <div>
       <Breadcrumb
         items={[
-          { title: <Link to="/">首页</Link> },
-          { title: '系统设置' },
+          { title: <Link to="/">{t('settings:breadcrumb.home')}</Link> },
+          { title: t('settings:title') },
         ]}
         style={{ marginBottom: 16 }}
       />
@@ -80,7 +82,7 @@ const SystemSettings: React.FC = () => {
       <div style={{ marginBottom: 24 }}>
         <Title level={3} style={{ margin: 0 }}>
           <SettingOutlined style={{ marginRight: 8 }} />
-          系统设置
+          {t('settings:title')}
         </Title>
       </div>
 

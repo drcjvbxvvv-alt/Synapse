@@ -28,6 +28,7 @@ import {
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 import MonitoringCharts from '../../components/MonitoringCharts';
 
 
@@ -43,7 +44,8 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
     name: string;
   }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+const { t } = useTranslation(["workload", "common"]);
+const navigate = useNavigate();
   
   const workloadType = searchParams.get('type') || 'deployment';
   
@@ -73,11 +75,11 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
         setPods(response.data.pods || []);
         setScaleReplicas(response.data.workload.replicas || 1);
       } else {
-        message.error(response.message || '获取工作负载详情失败');
+        message.error(response.message || t('detail.fetchError'));
       }
     } catch (error) {
       console.error('获取工作负载详情失败:', error);
-      message.error('获取工作负载详情失败');
+      message.error(t('detail.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -97,15 +99,15 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
       );
       
       if (response.code === 200) {
-        message.success('扩缩容成功');
+        message.success(t('messages.scaleSuccess'));
         setScaleModalVisible(false);
         fetchWorkloadDetail();
       } else {
-        message.error(response.message || '扩缩容失败');
+        message.error(response.message || t('messages.scaleError'));
       }
     } catch (error) {
       console.error('扩缩容失败:', error);
-      message.error('扩缩容失败');
+      message.error(t('messages.scaleError'));
     }
   };
 
@@ -122,14 +124,14 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
       );
       
       if (response.code === 200) {
-        message.success('删除成功');
+        message.success(t('messages.deleteSuccess'));
         navigate(`/clusters/${clusterId}/workloads`);
       } else {
-        message.error(response.message || '删除失败');
+        message.error(response.message || t('messages.deleteError'));
       }
     } catch (error) {
       console.error('删除失败:', error);
-      message.error('删除失败');
+      message.error(t('messages.deleteError'));
     }
   };
 
@@ -138,7 +140,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
   }, [fetchWorkloadDetail]);
 
   if (!workloadInfo) {
-    return <div>加载中...</div>;
+    return <div>{t('common:messages.loading')}</div>;
   }
 
   const canScale = ['deployment', 'statefulset'].includes(workloadType);
@@ -147,12 +149,12 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
   // 条件表格列
   const conditionColumns = [
     {
-      title: '类型',
+      title: t('condition.type'),
       dataIndex: 'type',
       key: 'type',
     },
     {
-      title: '状态',
+      title: t('condition.status'),
       dataIndex: 'status',
       key: 'status',
       render: (text: string) => (
@@ -160,18 +162,18 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
       ),
     },
     {
-      title: '原因',
+      title: t('condition.reason'),
       dataIndex: 'reason',
       key: 'reason',
     },
     {
-      title: '消息',
+      title: t('condition.message'),
       dataIndex: 'message',
       key: 'message',
       ellipsis: true,
     },
     {
-      title: '最后更新时间',
+      title: t('condition.lastUpdateTime'),
       dataIndex: 'lastUpdateTime',
       key: 'lastUpdateTime',
       render: (text: string) => new Date(text).toLocaleString(),
@@ -186,9 +188,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/clusters/${clusterId}/workloads`)}
-          >
-            返回
-          </Button>
+          >{t('common:actions.back')}</Button>
           <Title level={3} style={{ margin: 0 }}>
             {workloadInfo.name}
           </Title>
@@ -206,36 +206,28 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
               icon={<ReloadOutlined />}
               onClick={fetchWorkloadDetail}
               loading={loading}
-            >
-              刷新
-            </Button>
+            >{t('common:actions.refresh')}</Button>
             
             {canScale && (
               <Button
                 icon={<ExpandAltOutlined />}
                 onClick={() => setScaleModalVisible(true)}
-              >
-                扩缩容
-              </Button>
+              >{t('actions.scale')}</Button>
             )}
             
             <Button
               icon={<EditOutlined />}
               onClick={() => navigate(`/clusters/${clusterId}/yaml/apply?workload=${namespace}/${name}&type=${workloadType}`)}
-            >
-              编辑YAML
-            </Button>
+            >{t('actions.editYAML')}</Button>
             
             <Popconfirm
-              title="确认删除"
-              description={`确定要删除工作负载 ${workloadInfo.name} 吗？`}
-              onConfirm={handleDelete}
-              okText="确定"
-              cancelText="取消"
+              title={t("common:actions.delete")}
+description={t('actions.confirmDeleteWorkload', { name: workloadInfo.name })}
+onConfirm={handleDelete}
+              okText={t("common:actions.confirm")}
+              cancelText={t("common:actions.cancel")}
             >
-              <Button danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
+              <Button danger icon={<DeleteOutlined />}>{t('actions.delete')}</Button>
             </Popconfirm>
           </Space>
         </div>
@@ -246,9 +238,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
         <TabPane 
           tab={
             <span>
-              <BarChartOutlined />
-              监控
-            </span>
+              <BarChartOutlined />{t("detail.monitoring")}</span>
           } 
           key="monitoring"
         >
@@ -262,18 +252,18 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
           )}
         </TabPane>
 
-        <TabPane tab="概览" key="overview">
+        <TabPane tab={t("detail.overview")} key="overview">
           <Row gutter={[16, 16]}>
             <Col span={12}>
-              <Card title="基本信息" size="small">
+              <Card title={t("detail.basicInfo")} size="small">
                 <Descriptions column={1} size="small">
-                  <Descriptions.Item label="名称">{workloadInfo.name}</Descriptions.Item>
-                  <Descriptions.Item label="命名空间">{workloadInfo.namespace}</Descriptions.Item>
-                  <Descriptions.Item label="类型">{workloadType}</Descriptions.Item>
-                  <Descriptions.Item label="创建时间">
+                  <Descriptions.Item label={t("detail.name")}>{workloadInfo.name}</Descriptions.Item>
+                  <Descriptions.Item label={t("detail.namespace")}>{workloadInfo.namespace}</Descriptions.Item>
+                  <Descriptions.Item label={t("detail.type")}>{workloadType}</Descriptions.Item>
+                  <Descriptions.Item label={t("detail.createdAt")}>
                     {new Date(workloadInfo.createdAt).toLocaleString()}
                   </Descriptions.Item>
-                  <Descriptions.Item label="状态">
+                  <Descriptions.Item label={t("detail.status")}>
                     <Badge status={color as 'success' | 'error' | 'default' | 'processing' | 'warning'} text={status} />
                   </Descriptions.Item>
                 </Descriptions>
@@ -281,18 +271,18 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
             </Col>
             
             <Col span={12}>
-              <Card title="副本信息" size="small">
+              <Card title={t("detail.replicaInfo")} size="small">
                 <Descriptions column={1} size="small">
                   {workloadType !== 'daemonset' && (
                     <>
-                      <Descriptions.Item label="期望副本数">{workloadInfo.replicas || 0}</Descriptions.Item>
-                      <Descriptions.Item label="就绪副本数">{workloadInfo.readyReplicas || 0}</Descriptions.Item>
-                      <Descriptions.Item label="可用副本数">{workloadInfo.availableReplicas || 0}</Descriptions.Item>
-                      <Descriptions.Item label="更新副本数">{workloadInfo.updatedReplicas || 0}</Descriptions.Item>
+                      <Descriptions.Item label={t("detail.desiredReplicas")}>{workloadInfo.replicas || 0}</Descriptions.Item>
+                      <Descriptions.Item label={t("detail.readyReplicas")}>{workloadInfo.readyReplicas || 0}</Descriptions.Item>
+                      <Descriptions.Item label={t("detail.availableReplicas")}>{workloadInfo.availableReplicas || 0}</Descriptions.Item>
+                      <Descriptions.Item label={t("detail.updatedReplicas")}>{workloadInfo.updatedReplicas || 0}</Descriptions.Item>
                     </>
                   )}
                   {workloadType === 'daemonset' && (
-                    <Descriptions.Item label="状态">DaemonSet 在所有节点上运行</Descriptions.Item>
+                    <Descriptions.Item label={t("detail.status")}>{t("detail.daemonsetRunning")}</Descriptions.Item>
                   )}
                 </Descriptions>
               </Card>
@@ -301,7 +291,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
 
           <Divider />
 
-          <Card title="镜像信息" size="small" style={{ marginBottom: 16 }}>
+          <Card title={t("detail.imageInfo")} size="small" style={{ marginBottom: 16 }}>
             <Space wrap>
               {(workloadInfo.images || []).map((image, index) => (
                 <Tag key={index} color="blue">{image}</Tag>
@@ -309,7 +299,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
             </Space>
           </Card>
 
-          <Card title="选择器" size="small" style={{ marginBottom: 16 }}>
+          <Card title={t("detail.selector")} size="small" style={{ marginBottom: 16 }}>
             <Space wrap>
               {Object.entries(workloadInfo.selector || {}).map(([key, value]) => (
                 <Tag key={key} color="purple">{key}={value}</Tag>
@@ -317,7 +307,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
             </Space>
           </Card>
 
-          <Card title="标签" size="small" style={{ marginBottom: 16 }}>
+          <Card title={t("detail.labels")} size="small" style={{ marginBottom: 16 }}>
             <Space wrap>
               {Object.entries(workloadInfo.labels || {}).map(([key, value]) => (
                 <Tag key={key} color="green">{key}={value}</Tag>
@@ -326,16 +316,16 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
           </Card>
         </TabPane>
 
-        <TabPane tab="Pods" key="pods">
+        <TabPane tab={t("detail.pods")} key="pods">
           <Table
             columns={[
               {
-                title: '名称',
+                title: t('pod.name'),
                 dataIndex: 'name',
                 key: 'name',
               },
               {
-                title: '状态',
+                title: t('condition.status'),
                 dataIndex: 'status',
                 key: 'status',
                 render: (text: string) => (
@@ -345,25 +335,25 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
                 ),
               },
               {
-                title: '节点',
+                title: t('pod.node'),
                 dataIndex: 'nodeName',
                 key: 'nodeName',
               },
               {
-                title: '创建时间',
+                title: t('pod.createdAt'),
                 dataIndex: 'createdAt',
                 key: 'createdAt',
                 render: (text: string) => new Date(text).toLocaleString(),
               },
               {
-                title: '容器',
+                title: t('pod.containers'),
                 dataIndex: 'containers',
                 key: 'containers',
                 render: (containers: Array<{ name: string; image: string; ready?: boolean; restartCount?: number }>) => (
                   <Space wrap>
                     {containers.map((container, index) => (
                       <Tag key={index} color={container.ready ? 'green' : 'red'}>
-                        {container.name} ({container.restartCount || 0} 重启)
+                        {container.name} ({container.restartCount || 0} {t("pod.restarts")})
                       </Tag>
                     ))}
                   </Space>
@@ -377,7 +367,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
           />
         </TabPane>
 
-        <TabPane tab="条件" key="conditions">
+        <TabPane tab={t("detail.conditions")} key="conditions">
           <Table
             columns={conditionColumns}
             dataSource={workloadInfo.conditions || []}
@@ -387,7 +377,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
           />
         </TabPane>
 
-        <TabPane tab="YAML" key="yaml">
+        <TabPane tab={t("detail.yaml")} key="yaml">
           <Card>
             <pre style={{ 
               background: '#f5f5f5', 
@@ -404,19 +394,19 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
 
       {/* 扩缩容模态框 */}
       <Modal
-        title="扩缩容工作负载"
+        title={t("scale.title", { type: workloadType })}
         open={scaleModalVisible}
         onOk={handleScale}
         onCancel={() => setScaleModalVisible(false)}
-        okText="确定"
-        cancelText="取消"
+        okText={t("common:actions.confirm")}
+        cancelText={t("common:actions.cancel")}
       >
         <div>
-          <p>工作负载: <strong>{workloadInfo.name}</strong></p>
-          <p>命名空间: <strong>{workloadInfo.namespace}</strong></p>
-          <p>当前副本数: <strong>{workloadInfo.replicas || 0}</strong></p>
+          <p>{t("detail.name")}: <strong>{workloadInfo.name}</strong></p>
+          <p>{t("detail.namespace")}: <strong>{workloadInfo.namespace}</strong></p>
+          <p>{t("scale.currentReplicas")}: <strong>{workloadInfo.replicas || 0}</strong></p>
           <div style={{ marginTop: 16 }}>
-            <label>目标副本数: </label>
+            <label>{t("scale.targetReplicas")}: </label>
             <InputNumber
               min={0}
               max={100}

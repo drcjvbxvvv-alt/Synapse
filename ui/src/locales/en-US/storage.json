@@ -1,0 +1,92 @@
+{
+  "title": "Storage Management",
+  "tabs": {
+    "pvc": "PersistentVolumeClaim (PVC)",
+    "pv": "PersistentVolume (PV)",
+    "storageClass": "StorageClass"
+  },
+  "columns": {
+    "name": "Name",
+    "pvName": "PV Name",
+    "pvcName": "PVC Name",
+    "provisioner": "Provisioner",
+    "reclaimPolicy": "Reclaim Policy",
+    "volumeBindingMode": "Binding Mode",
+    "allowVolumeExpansion": "Allow Expansion",
+    "isDefault": "Default Class",
+    "default": "Default",
+    "volumeName": "Volume",
+    "storageClassName": "Storage Class",
+    "capacity": "Capacity",
+    "accessModes": "Access Modes",
+    "claimRef": "Claim",
+    "persistentVolumeSource": "Source Type"
+  },
+  "search": {
+    "fieldName": "Name",
+    "fieldPVName": "PV Name",
+    "fieldPVCName": "PVC Name",
+    "fieldProvisioner": "Provisioner",
+    "fieldReclaimPolicy": "Reclaim Policy",
+    "fieldVolumeBindingMode": "Binding Mode",
+    "fieldNamespace": "Namespace",
+    "fieldStatus": "Status",
+    "fieldStorageClassName": "Storage Class",
+    "fieldVolumeName": "Volume",
+    "fieldPersistentVolumeSource": "Source Type"
+  },
+  "messages": {
+    "fetchStorageClassError": "Failed to fetch StorageClass list",
+    "fetchPVCError": "Failed to fetch PVC list",
+    "fetchPVError": "Failed to fetch PV list",
+    "fetchYAMLError": "Failed to fetch YAML",
+    "deleteError": "Failed to delete",
+    "batchDeleteError": "Batch delete failed",
+    "selectDeleteStorageClass": "Please select StorageClasses to delete",
+    "selectDeletePVC": "Please select PVCs to delete",
+    "selectDeletePV": "Please select PVs to delete",
+    "confirmDeleteStorageClass": "Are you sure you want to delete {{count}} selected StorageClasses?",
+    "confirmDeletePVC": "Are you sure you want to delete {{count}} selected PVCs?",
+    "confirmDeletePV": "Are you sure you want to delete {{count}} selected PVs?",
+    "batchDeleteSuccess": "Successfully deleted {{count}} {{type}}",
+    "batchDeletePartial": "Completed: {{success}} succeeded, {{fail}} failed",
+    "loadNamespacesError": "Failed to load namespaces",
+    "confirmDeleteSC": "Are you sure you want to delete this StorageClass?",
+    "confirmDeleteSCDesc": "Are you sure you want to delete {{name}}?",
+    "confirmDeletePVCItem": "Are you sure you want to delete this PVC?",
+    "confirmDeletePVCDesc": "Are you sure you want to delete {{name}}?",
+    "confirmDeletePVItem": "Are you sure you want to delete this PV?",
+    "confirmDeletePVDesc": "Are you sure you want to delete {{name}}?"
+  },
+  "export": {
+    "nameLabel": "Name",
+    "provisionerLabel": "Provisioner",
+    "reclaimPolicyLabel": "Reclaim Policy",
+    "bindingModeLabel": "Binding Mode",
+    "allowExpansionLabel": "Allow Expansion",
+    "defaultLabel": "Default Class",
+    "pvcNameLabel": "PVC Name",
+    "namespaceLabel": "Namespace",
+    "statusLabel": "Status",
+    "volumeNameLabel": "Volume",
+    "storageClassLabel": "Storage Class",
+    "capacityLabel": "Capacity",
+    "accessModesLabel": "Access Modes",
+    "createdAtLabel": "Created At",
+    "pvNameLabel": "PV Name",
+    "claimRefLabel": "Claim",
+    "sourceTypeLabel": "Source Type"
+  },
+  "columnSettings": {
+    "title": "Column Settings",
+    "selectColumns": "Select columns to display:",
+    "confirm": "OK"
+  },
+  "pagination": {
+    "totalStorageClass": "Total {{total}} StorageClasses",
+    "totalPVC": "Total {{total}} PVCs",
+    "totalPV": "Total {{total}} PVs"
+  },
+  "yes": "Yes",
+  "no": "No"
+}

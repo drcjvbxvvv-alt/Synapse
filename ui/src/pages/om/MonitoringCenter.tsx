@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Row,
@@ -77,7 +78,8 @@ const MonitoringCenter: React.FC = () => {
   // const navigate = useNavigate(); // 未使用
 
   // 健康诊断状态
-  const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse | null>(null);
+const { t } = useTranslation(['om', 'common']);
+const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
 
   // 资源 Top N 状态
@@ -99,7 +101,7 @@ const MonitoringCenter: React.FC = () => {
       setHealthDiagnosis(response.data);
     } catch (error) {
       console.error('加载健康诊断失败:', error);
-      message.error('加载健康诊断失败');
+      message.error(t('common:messages.fetchError'));
     } finally {
       setHealthLoading(false);
     }
@@ -118,7 +120,7 @@ const MonitoringCenter: React.FC = () => {
       setResourceTop(response.data);
     } catch (error) {
       console.error('加载资源 Top N 失败:', error);
-      message.error('加载资源 Top N 失败');
+      message.error(t('common:messages.fetchError'));
     } finally {
       setResourceLoading(false);
     }
@@ -133,7 +135,7 @@ const MonitoringCenter: React.FC = () => {
       setControlPlaneStatus(response.data);
     } catch (error) {
       console.error('加载控制面状态失败:', error);
-      message.error('加载控制面状态失败');
+      message.error(t('common:messages.fetchError'));
     } finally {
       setControlPlaneLoading(false);
     }
@@ -175,11 +177,11 @@ const MonitoringCenter: React.FC = () => {
   const getSeverityTag = (severity: string) => {
     switch (severity) {
       case 'critical':
-        return <Tag icon={<CloseCircleOutlined />} color="error">严重</Tag>;
+        return <Tag icon={<CloseCircleOutlined />} color="error">{t('om:health.severityCritical')}</Tag>;
       case 'warning':
-        return <Tag icon={<WarningOutlined />} color="warning">警告</Tag>;
+        return <Tag icon={<WarningOutlined />} color="warning">{t('om:health.severityWarning')}</Tag>;
       case 'info':
-        return <Tag icon={<InfoCircleOutlined />} color="processing">提示</Tag>;
+        return <Tag icon={<InfoCircleOutlined />} color="processing">{t('om:health.severityInfo')}</Tag>;
       default:
         return <Tag>{severity}</Tag>;
     }
@@ -206,12 +208,12 @@ const MonitoringCenter: React.FC = () => {
   // 获取分类名称
   const getCategoryName = (category: string): string => {
     const names: Record<string, string> = {
-      node: '节点',
-      workload: '工作负载',
-      resource: '资源',
-      storage: '存储',
-      control_plane: '控制面',
-      network: '网络',
+      node: t('om:health.categoryNode'),
+      workload: t('om:health.categoryWorkload'),
+      resource: t('om:health.categoryResource'),
+      storage: t('om:health.categoryStorage'),
+      control_plane: t('om:health.categoryControlPlane'),
+      network: t('om:health.categoryNetwork'),
     };
     return names[category] || category;
   };
@@ -220,7 +222,7 @@ const MonitoringCenter: React.FC = () => {
   const HealthScoreCard: React.FC = () => {
     if (healthLoading) {
       return (
-        <Card title="集群健康诊断" extra={<Button icon={<SyncOutlined spin />} disabled>刷新中</Button>}>
+        <Card title={t('om:health.title')} extra={<Button icon={<SyncOutlined spin />} disabled>{t('om:refreshing')}</Button>}>
           <div style={{ textAlign: 'center', padding: 40 }}>
             <Spin size="large" />
           </div>
@@ -230,8 +232,8 @@ const MonitoringCenter: React.FC = () => {
 
     if (!healthDiagnosis) {
       return (
-        <Card title="集群健康诊断">
-          <Empty description="暂无诊断数据" />
+        <Card title={t('om:health.title')}>
+          <Empty description={t('om:health.noDiagnosisData')} />
         </Card>
       );
     }
@@ -252,13 +254,13 @@ const MonitoringCenter: React.FC = () => {
         title={
           <Space>
             <ThunderboltOutlined style={{ color: getHealthColor(status) }} />
-            <span>集群健康诊断</span>
+            <span>{t('om:health.title')}</span>
           </Space>
         }
         extra={
           <Space>
-            <Text type="secondary">诊断时间: {formatTime(diagnosis_time)}</Text>
-            <Button icon={<SyncOutlined />} onClick={loadHealthDiagnosis}>刷新</Button>
+            <Text type="secondary">{t('om:health.diagnosisTime')}: {formatTime(diagnosis_time)}</Text>
+            <Button icon={<SyncOutlined />} onClick={loadHealthDiagnosis}>{t('common:actions.refresh')}</Button>
           </Space>
         }
       >
@@ -275,7 +277,7 @@ const MonitoringCenter: React.FC = () => {
                     <div style={{ fontSize: 32, fontWeight: 'bold', color: getHealthColor(status) }}>
                       {percent}
                     </div>
-                    <div style={{ fontSize: 14, color: '#666' }}>健康评分</div>
+                    <div style={{ fontSize: 14, color: '#666' }}>{t('om:health.healthScore')}</div>
                   </div>
                 )}
                 size={180}
@@ -285,7 +287,7 @@ const MonitoringCenter: React.FC = () => {
                   color={getHealthColor(status)}
                   style={{ fontSize: 14, padding: '4px 16px' }}
                 >
-                  {status === 'healthy' ? '健康' : status === 'warning' ? '警告' : '严重'}
+                  {status === 'healthy' ? t('om:health.statusHealthy') : status === 'warning' ? t('om:health.statusWarning') : t('om:health.statusCritical')}
                 </Tag>
               </div>
             </div>
@@ -293,7 +295,7 @@ const MonitoringCenter: React.FC = () => {
 
           {/* 分类评分 */}
           <Col xs={24} md={8}>
-            <Title level={5}>分类评分</Title>
+            <Title level={5}>{t('om:health.categoryScores')}</Title>
             {Object.entries(category_scores).map(([category, score]) => (
               <div key={category} style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -302,7 +304,7 @@ const MonitoringCenter: React.FC = () => {
                     <span>{getCategoryName(category)}</span>
                   </Space>
                   <span style={{ color: score >= 80 ? '#52c41a' : score >= 60 ? '#faad14' : '#ff4d4f' }}>
-                    {score}分
+                    {score}{t('om:health.score')}
                   </span>
                 </div>
                 <Progress
@@ -317,7 +319,7 @@ const MonitoringCenter: React.FC = () => {
 
           {/* 诊断建议 */}
           <Col xs={24} md={8}>
-            <Title level={5}>诊断建议</Title>
+            <Title level={5}>{t('om:health.suggestions')}</Title>
             {suggestions.length > 0 ? (
               <List
                 size="small"
@@ -332,7 +334,7 @@ const MonitoringCenter: React.FC = () => {
                 )}
               />
             ) : (
-              <Alert message="集群运行健康，无需特别关注" type="success" showIcon />
+              <Alert message={t('om:health.noSuggestions')} type="success" showIcon />
             )}
           </Col>
         </Row>
@@ -342,7 +344,7 @@ const MonitoringCenter: React.FC = () => {
           <div style={{ marginTop: 24 }}>
             <Title level={5}>
               <WarningOutlined style={{ marginRight: 8, color: '#faad14' }} />
-              风险项 ({risk_items.length})
+              {t('om:health.riskItems')} ({risk_items.length})
             </Title>
             <Collapse accordion>
               {Object.entries(groupedRisks).map(([category, items]) => (
@@ -369,14 +371,14 @@ const MonitoringCenter: React.FC = () => {
                               <Paragraph style={{ marginBottom: 8 }}>{item.description}</Paragraph>
                               {item.namespace && (
                                 <Text type="secondary" style={{ marginRight: 16 }}>
-                                  命名空间: {item.namespace}
+                                  {t('om:health.namespace')}: {item.namespace}
                                 </Text>
                               )}
                               {item.resource && (
-                                <Text type="secondary">资源: {item.resource}</Text>
+                                <Text type="secondary">{t('om:health.resource')}: {item.resource}</Text>
                               )}
                               <div style={{ marginTop: 8 }}>
-                                <Text strong>解决方案: </Text>
+                                <Text strong>{t('om:health.solution')}: </Text>
                                 <Text>{item.solution}</Text>
                               </div>
                             </div>
@@ -398,7 +400,7 @@ const MonitoringCenter: React.FC = () => {
   const ResourceTopCard: React.FC = () => {
     const columns = [
       {
-        title: '排名',
+        title: t('om:resourceTop.rank'),
         dataIndex: 'rank',
         key: 'rank',
         width: 70,
@@ -412,7 +414,7 @@ const MonitoringCenter: React.FC = () => {
         ),
       },
       {
-        title: '名称',
+        title: t('common:table.name'),
         dataIndex: 'name',
         key: 'name',
         ellipsis: true,
@@ -426,7 +428,7 @@ const MonitoringCenter: React.FC = () => {
         ),
       },
       {
-        title: '使用量',
+        title: t('om:resourceTop.usage'),
         dataIndex: 'usage',
         key: 'usage',
         render: (usage: number, record: ResourceTopItem) => {
@@ -439,7 +441,7 @@ const MonitoringCenter: React.FC = () => {
         },
       },
       {
-        title: '使用率',
+        title: t('om:resourceTop.usageRate'),
         dataIndex: 'usage_rate',
         key: 'usage_rate',
         width: 150,
@@ -459,7 +461,7 @@ const MonitoringCenter: React.FC = () => {
         title={
           <Space>
             <BarChartOutlined />
-            <span>资源消耗 Top 10</span>
+            <span>{t('om:resourceTop.title')}</span>
           </Space>
         }
         extra={
@@ -470,9 +472,9 @@ const MonitoringCenter: React.FC = () => {
               style={{ width: 100 }}
               options={[
                 { label: 'CPU', value: 'cpu' },
-                { label: '内存', value: 'memory' },
-                { label: '磁盘', value: 'disk' },
-                { label: '网络', value: 'network' },
+                { label: t('om:resourceTop.memory'), value: 'memory' },
+                { label: t('om:resourceTop.disk'), value: 'disk' },
+                { label: t('om:resourceTop.network'), value: 'network' },
               ]}
             />
             <Select
@@ -480,13 +482,13 @@ const MonitoringCenter: React.FC = () => {
               onChange={setResourceLevel}
               style={{ width: 110 }}
               options={[
-                { label: '命名空间', value: 'namespace' },
-                { label: '工作负载', value: 'workload' },
+                { label: t('om:resourceTop.namespaceLevel'), value: 'namespace' },
+                { label: t('om:resourceTop.workloadLevel'), value: 'workload' },
                 { label: 'Pod', value: 'pod' },
               ]}
             />
             <Button icon={<SyncOutlined spin={resourceLoading} />} onClick={loadResourceTop}>
-              刷新
+              {t('common:actions.refresh')}
             </Button>
           </Space>
         }
@@ -498,11 +500,11 @@ const MonitoringCenter: React.FC = () => {
           rowKey="rank"
           pagination={false}
           size="small"
-          locale={{ emptyText: <Empty description="暂无数据" /> }}
+          locale={{ emptyText: <Empty description={t('common:messages.noData')} /> }}
         />
         {resourceTop && (
           <div style={{ marginTop: 12, textAlign: 'right' }}>
-            <Text type="secondary">查询时间: {formatTime(resourceTop.query_time)}</Text>
+            <Text type="secondary">{t('om:resourceTop.queryTime')}: {formatTime(resourceTop.query_time)}</Text>
           </div>
         )}
       </Card>
@@ -514,11 +516,11 @@ const MonitoringCenter: React.FC = () => {
     const getStatusBadge = (status: string) => {
       switch (status) {
         case 'healthy':
-          return <Badge status="success" text="健康" />;
+          return <Badge status="success" text={t('om:controlPlane.statusHealthy')} />;
         case 'unhealthy':
-          return <Badge status="error" text="异常" />;
+          return <Badge status="error" text={t('om:controlPlane.statusUnhealthy')} />;
         case 'unknown':
-          return <Badge status="default" text="未知" />;
+          return <Badge status="default" text={t('om:controlPlane.statusUnknown')} />;
         default:
           return <Badge status="processing" text={status} />;
       }
@@ -541,7 +543,7 @@ const MonitoringCenter: React.FC = () => {
 
     if (controlPlaneLoading) {
       return (
-        <Card title="控制面组件状态" extra={<Button icon={<SyncOutlined spin />} disabled>刷新中</Button>}>
+        <Card title={t('om:controlPlane.title')} extra={<Button icon={<SyncOutlined spin />} disabled>{t('om:refreshing')}</Button>}>
           <div style={{ textAlign: 'center', padding: 40 }}>
             <Spin size="large" />
           </div>
@@ -551,8 +553,8 @@ const MonitoringCenter: React.FC = () => {
 
     if (!controlPlaneStatus) {
       return (
-        <Card title="控制面组件状态">
-          <Empty description="暂无数据" />
+        <Card title={t('om:controlPlane.title')}>
+          <Empty description={t('common:messages.noData')} />
         </Card>
       );
     }
@@ -562,13 +564,13 @@ const MonitoringCenter: React.FC = () => {
         title={
           <Space>
             <CloudServerOutlined />
-            <span>控制面组件状态</span>
+            <span>{t('om:controlPlane.title')}</span>
           </Space>
         }
         extra={
           <Space>
             {getStatusBadge(controlPlaneStatus.overall)}
-            <Button icon={<SyncOutlined />} onClick={loadControlPlaneStatus}>刷新</Button>
+            <Button icon={<SyncOutlined />} onClick={loadControlPlaneStatus}>{t('common:actions.refresh')}</Button>
           </Space>
         }
       >
@@ -597,7 +599,7 @@ const MonitoringCenter: React.FC = () => {
                   <div style={{ marginTop: 12, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
                     {component.metrics.request_rate !== undefined && (
                       <Statistic
-                        title="请求速率"
+                        title={t('om:controlPlane.requestRate')}
                         value={component.metrics.request_rate}
                         suffix="/s"
                         valueStyle={{ fontSize: 14 }}
@@ -605,7 +607,7 @@ const MonitoringCenter: React.FC = () => {
                     )}
                     {component.metrics.error_rate !== undefined && (
                       <Statistic
-                        title="错误率"
+                        title={t('om:controlPlane.errorRate')}
                         value={component.metrics.error_rate}
                         suffix="%"
                         valueStyle={{ fontSize: 14, color: component.metrics.error_rate > 1 ? '#ff4d4f' : '#52c41a' }}
@@ -623,13 +625,13 @@ const MonitoringCenter: React.FC = () => {
                     )}
                     {component.metrics.db_size !== undefined && (
                       <div>
-                        <Text type="secondary">数据库大小: </Text>
+                        <Text type="secondary">{t('om:controlPlane.dbSize')}: </Text>
                         <Text>{formatBytes(component.metrics.db_size)}</Text>
                       </div>
                     )}
                     {component.metrics.queue_length !== undefined && (
                       <div>
-                        <Text type="secondary">队列长度: </Text>
+                        <Text type="secondary">{t('om:controlPlane.queueLength')}: </Text>
                         <Text>{component.metrics.queue_length}</Text>
                       </div>
                     )}
@@ -638,7 +640,7 @@ const MonitoringCenter: React.FC = () => {
 
                 {component.instances && component.instances.length > 0 && (
                   <div style={{ marginTop: 12, borderTop: '1px solid #f0f0f0', paddingTop: 12 }}>
-                    <Text type="secondary">实例数: {component.instances.length}</Text>
+                    <Text type="secondary">{t('om:controlPlane.instanceCount')}: {component.instances.length}</Text>
                   </div>
                 )}
               </Card>
@@ -647,7 +649,7 @@ const MonitoringCenter: React.FC = () => {
         </Row>
 
         <div style={{ marginTop: 12, textAlign: 'right' }}>
-          <Text type="secondary">检查时间: {formatTime(controlPlaneStatus.check_time)}</Text>
+          <Text type="secondary">{t('om:controlPlane.checkTime')}: {formatTime(controlPlaneStatus.check_time)}</Text>
         </div>
       </Card>
     );
@@ -661,13 +663,13 @@ const MonitoringCenter: React.FC = () => {
           <Col>
             <Title level={3} style={{ margin: 0 }}>
               <DashboardOutlined style={{ marginRight: 12 }} />
-              监控中心
+              {t('om:title')}
             </Title>
-            <Text type="secondary">集群健康诊断、资源消耗分析、控制面状态监控</Text>
+            <Text type="secondary">{t('om:subtitle')}</Text>
           </Col>
           <Col>
             <Button type="primary" icon={<SyncOutlined />} onClick={handleRefreshAll}>
-              刷新全部
+              {t('om:refreshAll')}
             </Button>
           </Col>
         </Row>

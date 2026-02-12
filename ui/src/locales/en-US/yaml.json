@@ -1,0 +1,65 @@
+{
+  "editor": {
+    "title": "YAML Editor",
+    "apply": "Apply",
+    "preview": "Preview",
+    "reset": "Reset",
+    "dryRunMode": "DryRun Mode",
+    "on": "On",
+    "off": "Off",
+    "back": "Back",
+    "close": "Close",
+    "confirmApply": "Confirm Apply",
+    "confirmUpdate": "Confirm Update",
+    "cancel": "Cancel"
+  },
+  "messages": {
+    "loadFailed": "Failed to load YAML",
+    "loadError": "Failed to load YAML",
+    "unknownError": "Unknown error",
+    "emptyContent": "YAML content cannot be empty",
+    "dryRunPassed": "Pre-check passed! YAML configuration is valid and can be safely applied.",
+    "validateSuccess": "YAML validation successful",
+    "applySuccess": "YAML applied successfully",
+    "validateFailed": "validation",
+    "applyFailed": "apply",
+    "yamlFailed": "YAML {{action}} failed",
+    "dryRunCheckPassed": "Pre-check Passed",
+    "dryRunCheckFailed": "Pre-check Failed",
+    "preCheckFailed": "Pre-check failed",
+    "missingParams": "Missing required parameters: Cluster ID or workload type",
+    "resetSuccess": "YAML content has been reset",
+    "loadingYaml": "Loading YAML...",
+    "initEditor": "Initializing editor...",
+    "editorLoading": "Editor loading...",
+    "loading": "Loading...",
+    "noContent": "No YAML content"
+  },
+  "confirm": {
+    "leave": "Confirm Leave",
+    "leaveDesc": "You have unsaved changes. Are you sure you want to leave?",
+    "applyYaml": "Confirm Apply YAML",
+    "applyYamlDesc": "Are you sure you want to apply this YAML configuration? This will create resources in the cluster.",
+    "resetTitle": "Confirm Reset",
+    "resetDesc": "Are you sure you want to reset YAML content? Unsaved changes will be lost."
+  },
+  "alert": {
+    "loadFailed": "Load Failed",
+    "retry": "Retry",
+    "unsavedChanges": "You have unsaved changes",
+    "unsavedChangesDesc": "Remember to save your changes, or click the reset button to restore original content.",
+    "hasUnsavedChanges": "• Has unsaved changes"
+  },
+  "preview": {
+    "title": "YAML Preview Result",
+    "validationSuccess": "Validation Successful",
+    "validationSuccessDesc": "YAML format is correct and can be safely applied to the cluster."
+  },
+  "diff": {
+    "title": "Confirm Changes - YAML Diff",
+    "reviewChanges": "Please review the following changes carefully",
+    "reviewChangesDesc": "Left side shows original configuration, right side shows modified configuration. Click 'Confirm Update' to apply changes after review.",
+    "originalConfig": "Original Configuration",
+    "modifiedConfig": "Modified Configuration"
+  }
+}

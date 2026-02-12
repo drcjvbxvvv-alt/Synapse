@@ -29,11 +29,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { secretService, getNamespaces } from '../../services/configService';
 import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
+import { useTranslation } from 'react-i18next';
 
 const SecretCreate: React.FC = () => {
   const navigate = useNavigate();
   const { clusterId } = useParams<{ clusterId: string }>();
-  const [form] = Form.useForm();
+const { t } = useTranslation(['config', 'common']);
+const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [editMode, setEditMode] = useState<'form' | 'yaml'>('form');
   
@@ -218,7 +220,7 @@ data: {}`);
 
       return true;
     } catch (error) {
-      message.error('YAML 格式错误: ' + (error instanceof Error ? error.message : '未知错误'));
+      message.error(t('config:create.messages.yamlFormatError', { error: error instanceof Error ? error.message : t('config:create.messages.unknownError') }));
       return false;
     }
   };
@@ -263,17 +265,17 @@ data: {}`);
         dataObj = yamlObj.data || {};
         
         if (!secretName) {
-          message.error('Secret 名称不能为空');
+          message.error(t('config:create.messages.secretNameRequired'));
           return;
         }
       } catch (error) {
-        message.error('YAML 格式错误: ' + (error instanceof Error ? error.message : '未知错误'));
+        message.error(t('config:create.messages.yamlFormatError', { error: error instanceof Error ? error.message : t('config:create.messages.unknownError') }));
         return;
       }
     } else {
       // 表单模式：验证和构建数据
       if (!name) {
-        message.error('Secret 名称不能为空');
+        message.error(t('config:create.messages.secretNameRequired'));
         return;
       }
       
@@ -285,7 +287,7 @@ data: {}`);
       for (const label of labels) {
         if (label.key) {
           if (labelsObj[label.key]) {
-            message.error(`标签键 "${label.key}" 重复`);
+            message.error(t('config:create.messages.labelKeyDuplicate', { key: label.key }));
             return;
           }
           labelsObj[label.key] = label.value;
@@ -295,7 +297,7 @@ data: {}`);
       for (const annotation of annotations) {
         if (annotation.key) {
           if (annotationsObj[annotation.key]) {
-            message.error(`注解键 "${annotation.key}" 重复`);
+            message.error(t('config:create.messages.annotationKeyDuplicate', { key: annotation.key }));
             return;
           }
           annotationsObj[annotation.key] = annotation.value;
@@ -305,11 +307,11 @@ data: {}`);
       // 验证数据项
       for (const item of dataItems) {
         if (!item.key) {
-          message.error('数据项键不能为空');
+          message.error(t('config:create.messages.dataKeyRequired'));
           return;
         }
         if (dataObj[item.key]) {
-          message.error(`数据项键 "${item.key}" 重复`);
+          message.error(t('config:create.messages.dataKeyDuplicate', { key: item.key }));
           return;
         }
         dataObj[item.key] = item.value;
@@ -326,11 +328,11 @@ data: {}`);
         annotations: annotationsObj,
         data: dataObj,
       });
-      message.success('Secret创建成功');
+      message.success(t('config:create.messages.secretCreateSuccess'));
       navigate(`/clusters/${clusterId}/configs`);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
-      message.error(err.response?.data?.error || '创建Secret失败');
+      message.error(err.response?.data?.error || t('config:create.messages.secretCreateError'));
     } finally {
       setSubmitting(false);
     }
@@ -347,21 +349,21 @@ data: {}`);
                 icon={<ArrowLeftOutlined />}
                 onClick={() => navigate(`/clusters/${clusterId}/configs`)}
               >
-                返回
+                {t('common:actions.back')}
               </Button>
-              <h2 style={{ margin: 0 }}>创建 Secret</h2>
-              <Tag color="orange">敏感数据</Tag>
+              <h2 style={{ margin: 0 }}>{t('config:create.createSecret')}</h2>
+              <Tag color="orange">{t('config:create.sensitiveData')}</Tag>
               <Segmented
                 value={editMode}
                 onChange={(value) => handleModeChange(value as 'form' | 'yaml')}
                 options={[
                   {
-                    label: '表单模式',
+                    label: t('config:create.formMode'),
                     value: 'form',
                     icon: <FormOutlined />,
                   },
                   {
-                    label: 'YAML模式',
+                    label: t('config:create.yamlMode'),
                     value: 'yaml',
                     icon: <CodeOutlined />,
                   },
@@ -370,7 +372,7 @@ data: {}`);
             </Space>
             <Space>
               <Button onClick={() => navigate(`/clusters/${clusterId}/configs`)}>
-                取消
+                {t('common:actions.cancel')}
               </Button>
               <Button
                 type="primary"
@@ -378,7 +380,7 @@ data: {}`);
                 loading={submitting}
                 onClick={handleSubmit}
               >
-                创建
+                {t('common:actions.create')}
               </Button>
             </Space>
           </Space>
@@ -386,7 +388,7 @@ data: {}`);
 
         {/* YAML 编辑模式 */}
         {editMode === 'yaml' ? (
-          <Card title="YAML 编辑" extra={<Tag color="orange">包含敏感数据</Tag>}>
+          <Card title={t('config:create.yamlEditor')} extra={<Tag color="orange">{t('config:create.yamlEditorSensitive')}</Tag>}>
             <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
               <MonacoEditor
                 height="600px"
@@ -413,17 +415,17 @@ data: {}`);
           /* 表单编辑模式 */
           <>
             {/* 基本信息 */}
-            <Card title="基本信息">
+            <Card title={t('config:create.basicInfo')}>
               <Form form={form} layout="vertical">
                 <Row gutter={16}>
                   <Col span={8}>
                     <Form.Item 
-                      label="名称" 
+                      label={t('config:create.name')} 
                       required
-                      help="Secret 的唯一标识名称"
+                      help={t('config:create.secretNameHelp')}
                     >
                       <Input 
-                        placeholder="例如: app-secret" 
+                        placeholder={t('config:create.secretNamePlaceholder')} 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                       />
@@ -431,13 +433,13 @@ data: {}`);
                   </Col>
                   <Col span={8}>
                     <Form.Item 
-                      label="命名空间"
-                      help="Secret 所属的命名空间"
+                      label={t('config:create.namespace')}
+                      help={t('config:create.secretNamespaceHelp')}
                     >
                       <Select
                         value={namespace}
                         onChange={setNamespace}
-                        placeholder="选择命名空间"
+                        placeholder={t('config:create.namespacePlaceholder')}
                         loading={loadingNamespaces}
                         showSearch
                         filterOption={(input, option) => {
@@ -456,13 +458,13 @@ data: {}`);
                   </Col>
                   <Col span={8}>
                     <Form.Item 
-                      label="类型"
-                      help="Secret 的类型"
+                      label={t('config:create.type')}
+                      help={t('config:create.secretTypeHelp')}
                     >
                       <Select
                         value={secretType}
                         onChange={setSecretType}
-                        placeholder="选择类型"
+                        placeholder={t('config:create.typePlaceholder')}
                       >
                         <Select.Option value="Opaque">Opaque</Select.Option>
                         <Select.Option value="kubernetes.io/service-account-token">
@@ -491,15 +493,15 @@ data: {}`);
             <Card
               title={
                 <Space>
-                  <span>标签 (Labels)</span>
-                  <Tooltip title="标签用于组织和选择资源">
+                  <span>{t('config:create.labels')}</span>
+                  <Tooltip title={t('config:create.labelsTooltip')}>
                     <QuestionCircleOutlined style={{ color: '#999' }} />
                   </Tooltip>
                 </Space>
               }
               extra={
                 <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={handleAddLabel}>
-                  添加标签
+                  {t('config:create.addLabel')}
                 </Button>
               }
             >
@@ -508,14 +510,14 @@ data: {}`);
                   <Row key={index} gutter={8} align="middle">
                     <Col span={10}>
                       <Input
-                        placeholder="键 (key)"
+                        placeholder={t('config:create.keyPlaceholder')}
                         value={label.key}
                         onChange={(e) => handleLabelChange(index, 'key', e.target.value)}
                       />
                     </Col>
                     <Col span={10}>
                       <Input
-                        placeholder="值 (value)"
+                        placeholder={t('config:create.valuePlaceholder')}
                         value={label.value}
                         onChange={(e) => handleLabelChange(index, 'value', e.target.value)}
                       />
@@ -527,14 +529,14 @@ data: {}`);
                         icon={<DeleteOutlined />}
                         onClick={() => handleRemoveLabel(index)}
                       >
-                        删除
+                        {t('common:actions.delete')}
                       </Button>
                     </Col>
                   </Row>
                 ))}
                 {labels.length === 0 && (
                   <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                    暂无标签，点击上方按钮添加
+                    {t('config:create.noLabels')}
                   </div>
                 )}
               </Space>
@@ -544,15 +546,15 @@ data: {}`);
             <Card
               title={
                 <Space>
-                  <span>注解 (Annotations)</span>
-                  <Tooltip title="注解用于存储额外的元数据信息">
+                  <span>{t('config:create.annotations')}</span>
+                  <Tooltip title={t('config:create.annotationsTooltip')}>
                     <QuestionCircleOutlined style={{ color: '#999' }} />
                   </Tooltip>
                 </Space>
               }
               extra={
                 <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={handleAddAnnotation}>
-                  添加注解
+                  {t('config:create.addAnnotation')}
                 </Button>
               }
             >
@@ -561,14 +563,14 @@ data: {}`);
                   <Row key={index} gutter={8} align="middle">
                     <Col span={10}>
                       <Input
-                        placeholder="键 (key)"
+                        placeholder={t('config:create.keyPlaceholder')}
                         value={annotation.key}
                         onChange={(e) => handleAnnotationChange(index, 'key', e.target.value)}
                       />
                     </Col>
                     <Col span={10}>
                       <Input
-                        placeholder="值 (value)"
+                        placeholder={t('config:create.valuePlaceholder')}
                         value={annotation.value}
                         onChange={(e) => handleAnnotationChange(index, 'value', e.target.value)}
                       />
@@ -580,14 +582,14 @@ data: {}`);
                         icon={<DeleteOutlined />}
                         onClick={() => handleRemoveAnnotation(index)}
                       >
-                        删除
+                        {t('common:actions.delete')}
                       </Button>
                     </Col>
                   </Row>
                 ))}
                 {annotations.length === 0 && (
                   <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                    暂无注解，点击上方按钮添加
+                    {t('config:create.noAnnotations')}
                   </div>
                 )}
               </Space>
@@ -597,16 +599,16 @@ data: {}`);
             <Card
               title={
                 <Space>
-                  <span>数据内容 (Data)</span>
-                  <Tag color="orange">敏感数据</Tag>
-                  <Tooltip title="存储敏感数据的键值对">
+                  <span>{t('config:create.dataContent')}</span>
+                  <Tag color="orange">{t('config:create.sensitiveData')}</Tag>
+                  <Tooltip title={t('config:create.sensitiveDataTooltip')}>
                     <QuestionCircleOutlined style={{ color: '#999' }} />
                   </Tooltip>
                 </Space>
               }
               extra={
                 <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={handleAddDataItem}>
-                  添加数据项
+                  {t('config:create.addDataItem')}
                 </Button>
               }
             >
@@ -618,12 +620,12 @@ data: {}`);
                     title={
                       <Space>
                         <Input
-                          placeholder="数据项键 (例如: username, password)"
+                          placeholder={t('config:create.secretDataKeyPlaceholder')}
                           value={item.key}
                           onChange={(e) => handleDataKeyChange(index, e.target.value)}
                           style={{ width: '400px' }}
                         />
-                        <Tooltip title={item.visible ? '隐藏内容' : '显示内容'}>
+                        <Tooltip title={item.visible ? t('config:create.hideContent') : t('config:create.showContent')}>
                           <Switch
                             checkedChildren={<EyeOutlined />}
                             unCheckedChildren={<EyeInvisibleOutlined />}
@@ -641,7 +643,7 @@ data: {}`);
                         icon={<DeleteOutlined />}
                         onClick={() => handleRemoveDataItem(index)}
                       >
-                        删除
+                        {t('common:actions.delete')}
                       </Button>
                     }
                   >
@@ -672,7 +674,7 @@ data: {}`);
                       }}>
                         <EyeInvisibleOutlined style={{ fontSize: '24px', color: '#999', marginBottom: '8px' }} />
                         <div style={{ color: '#999' }}>
-                          敏感数据已隐藏，点击上方开关查看或编辑
+                          {t('config:create.sensitiveDataHidden')}
                         </div>
                       </div>
                     )}
@@ -680,7 +682,7 @@ data: {}`);
                 ))}
                 {dataItems.length === 0 && (
                   <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                    暂无数据项，点击上方按钮添加
+                    {t('config:create.noDataItems')}
                   </div>
                 )}
               </Space>

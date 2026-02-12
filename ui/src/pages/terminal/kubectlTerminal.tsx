@@ -23,12 +23,14 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 import { ClipboardAddon } from '@xterm/addon-clipboard';
 import 'xterm/css/xterm.css';
 import { namespaceService } from '../../services/namespaceService';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const KubectlTerminalPage: React.FC = () => {
-  const { id: clusterId } = useParams<{ id: string }>();
+const { t } = useTranslation(["terminal", "common"]);
+const { id: clusterId } = useParams<{ id: string }>();
   
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
@@ -91,7 +93,7 @@ const KubectlTerminalPage: React.FC = () => {
   // 粘贴剪贴板内容
   const pasteFromClipboard = useCallback(() => {
     if (!connectedRef.current) {
-      message.error('请先连接终端');
+      message.error(t('messages.connectFirst'));
       return;
     }
     
@@ -107,7 +109,7 @@ const KubectlTerminalPage: React.FC = () => {
       })
       .catch((err) => {
         console.error('粘贴失败:', err);
-        message.error('粘贴失败，请检查浏览器权限');
+        message.error(t('messages.pasteFailed'));
       });
   }, []);
 
@@ -123,7 +125,7 @@ const KubectlTerminalPage: React.FC = () => {
     terminal.current.writeln(`\x1b[36mCluster:\x1b[0m ${clusterId}`);
     terminal.current.writeln(`\x1b[36mNamespace:\x1b[0m ${selectedNamespace}`);
     terminal.current.writeln('');
-    terminal.current.writeln('\x1b[33m请选择命名空间并点击"连接终端"开始...\x1b[0m');
+    terminal.current.writeln('\x1b[33m' + t('kubectl.welcomeMessage') + '\x1b[0m');
     terminal.current.writeln('');
   }, [clusterId, selectedNamespace]);
 
@@ -215,7 +217,7 @@ const KubectlTerminalPage: React.FC = () => {
 
         } catch (error) {
           console.error('初始化终端失败:', error);
-          message.error('初始化终端失败');
+          message.error(t('messages.initFailed'));
         }
       }
     };
@@ -276,14 +278,14 @@ const KubectlTerminalPage: React.FC = () => {
   // 连接终端
   const connectTerminal = () => {
     if (!clusterId) {
-      message.error('缺少集群ID');
+      message.error(t('messages.missingClusterId'));
       return;
     }
     
     // 获取认证 token
     const token = localStorage.getItem('token');
     if (!token) {
-      message.error('未登录，请先登录');
+      message.error(t('messages.notLoggedIn'));
       return;
     }
     
@@ -291,7 +293,7 @@ const KubectlTerminalPage: React.FC = () => {
     
     if (terminal.current) {
       terminal.current.clear();
-      terminal.current.writeln('\x1b[33m正在连接终端...\x1b[0m');
+      terminal.current.writeln('\x1b[33m' + t('kubectl.connecting') + '\x1b[0m');
     }
     
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -306,7 +308,7 @@ const KubectlTerminalPage: React.FC = () => {
         setConnected(true);
         setConnecting(false);
         connectedRef.current = true;
-        message.success('终端连接成功');
+        message.success(t('messages.connectSuccess'));
         
         if (terminal.current) {
           terminal.current.clear();
@@ -337,13 +339,13 @@ const KubectlTerminalPage: React.FC = () => {
       
       ws.onerror = (error) => {
         console.error('WebSocket错误:', error);
-        message.error('终端连接出错');
+        message.error(t('messages.connectError'));
         setConnected(false);
         setConnecting(false);
         connectedRef.current = false;
         
         if (terminal.current) {
-          terminal.current.writeln('\x1b[31m连接出错\x1b[0m');
+          terminal.current.writeln('\x1b[31m' + t('messages.connectionError') + '\x1b[0m');
         }
       };
       
@@ -351,20 +353,20 @@ const KubectlTerminalPage: React.FC = () => {
         setConnected(false);
         setConnecting(false);
         connectedRef.current = false;
-        message.info('终端连接已断开');
+        message.info(t('messages.connectionLost'));
         
         if (terminal.current) {
-          terminal.current.writeln('\x1b[31m\r\n连接已断开\x1b[0m');
+          terminal.current.writeln('\x1b[31m\r\n' + t('messages.connectionClosed') + '\x1b[0m');
         }
       };
       
     } catch (error) {
       console.error('创建WebSocket连接失败:', error);
-      message.error('创建终端连接失败');
+      message.error(t('messages.createFailed'));
       setConnecting(false);
       
       if (terminal.current) {
-        terminal.current.writeln('\x1b[31m创建连接失败\x1b[0m');
+        terminal.current.writeln('\x1b[31m' + t('messages.createConnectionFailed') + '\x1b[0m');
       }
     }
   };
@@ -380,7 +382,7 @@ const KubectlTerminalPage: React.FC = () => {
     currentLineRef.current = '';
     
     if (terminal.current) {
-      terminal.current.writeln('\x1b[33m\r\n手动断开连接\x1b[0m');
+      terminal.current.writeln('\x1b[33m\r\n' + t('messages.disconnected') + '\x1b[0m');
     }
   };
 
@@ -444,7 +446,7 @@ const KubectlTerminalPage: React.FC = () => {
   }, []);
 
   if (!clusterId) {
-    return <div>集群ID不存在</div>;
+    return <div>{t('messages.clusterNotFound')}</div>;
   }
 
   return (
@@ -453,17 +455,17 @@ const KubectlTerminalPage: React.FC = () => {
       <div style={{ marginBottom: 16, flexShrink: 0 }}>
         <Space>
           <Title level={3} style={{ margin: 0 }}>
-            Kubectl 终端
+            {t('kubectl.title')}
           </Title>
           <Text type="secondary">
-            集群: {clusterId}
+            {t('kubectl.cluster')}: {clusterId}
           </Text>
         </Space>
         
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col span={4}>
             <Select
-              placeholder="选择命名空间"
+              placeholder={t("kubectl.selectNamespace")}
               value={selectedNamespace}
               onChange={handleNamespaceChange}
               style={{ width: '100%' }}
@@ -486,7 +488,7 @@ const KubectlTerminalPage: React.FC = () => {
                   onClick={connectTerminal}
                   loading={connecting}
                 >
-                  连接终端
+                  {t('kubectl.connect')}
                 </Button>
               ) : (
                 <Button
@@ -494,7 +496,7 @@ const KubectlTerminalPage: React.FC = () => {
                   icon={<StopOutlined />}
                   onClick={disconnectTerminal}
                 >
-                  断开连接
+                  {t('kubectl.disconnect')}
                 </Button>
               )}
               
@@ -502,14 +504,14 @@ const KubectlTerminalPage: React.FC = () => {
                 icon={<ClearOutlined />}
                 onClick={clearTerminal}
               >
-                清空
+                {t('kubectl.clear')}
               </Button>
               
               <Button
                 icon={<FullscreenOutlined />}
                 onClick={toggleFullscreen}
               >
-                全屏
+                {t('kubectl.fullscreen')}
               </Button>
             </Space>
           </Col>
@@ -519,7 +521,7 @@ const KubectlTerminalPage: React.FC = () => {
       {/* 连接状态提示 */}
       {connected && (
         <Alert
-          message={`已连接到集群 ${clusterId} - 命名空间: ${selectedNamespace}`}
+          message={t('kubectl.connectedTo', { clusterId, namespace: selectedNamespace })}
           type="success"
           showIcon
           style={{ marginBottom: 16, flexShrink: 0 }}

@@ -25,6 +25,7 @@ import { ClipboardAddon } from '@xterm/addon-clipboard';
 import 'xterm/css/xterm.css';
 import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -43,7 +44,8 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
   const fitAddon = useRef<FitAddon | null>(null);
   const websocket = useRef<WebSocket | null>(null);
   
-  const [pod, setPod] = useState<PodInfo | null>(null);
+const { t } = useTranslation(['pod', 'common']);
+const [pod, setPod] = useState<PodInfo | null>(null);
   const [selectedContainer, setSelectedContainer] = useState<string>('');
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -96,11 +98,11 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
           setSelectedContainer(response.data.pod.containers[0].name);
         }
       } else {
-        message.error(response.message || '获取Pod详情失败');
+        message.error(response.message || t('pod:terminal.fetchPodError'));
       }
     } catch (error) {
       console.error('获取Pod详情失败:', error);
-      message.error('获取Pod详情失败');
+      message.error(t('pod:terminal.fetchPodError'));
     } finally {
       setLoading(false);
     }
@@ -185,7 +187,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
 
         } catch (error) {
           console.error('初始化终端失败:', error);
-          message.error('初始化终端失败');
+          message.error(t('pod:terminal.initFailed'));
         }
       }
     };
@@ -209,19 +211,19 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
   // 连接终端
   const connectTerminal = () => {
     if (!clusterId || !namespace || !name || !selectedContainer) {
-      message.error('缺少必要参数');
+      message.error(t('pod:terminal.missingParams'));
       return;
     }
     
     if (pod?.status !== 'Running') {
-      message.error('Pod必须处于Running状态才能连接终端');
+      message.error(t('pod:terminal.mustBeRunning'));
       return;
     }
     
     // 获取认证 token
     const token = localStorage.getItem('token');
     if (!token) {
-      message.error('未登录，请先登录');
+      message.error(t('pod:terminal.notLoggedIn'));
       return;
     }
     
@@ -244,7 +246,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
         setConnected(true);
         setConnecting(false);
         connectedRef.current = true;
-        message.success('终端连接成功');
+        message.success(t('pod:terminal.connectSuccess'));
         
         if (terminal.current) {
           terminal.current.clear();
@@ -305,7 +307,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
       
       ws.onerror = (error) => {
         console.error('WebSocket错误:', error);
-        message.error('终端连接出错');
+        message.error(t('pod:terminal.connectError'));
         setConnected(false);
         setConnecting(false);
         connectedRef.current = false;
@@ -319,7 +321,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
         setConnected(false);
         setConnecting(false);
         connectedRef.current = false;
-        message.info('终端连接已断开');
+        message.info(t('pod:terminal.disconnectedMsg'));
         
         if (terminal.current) {
           terminal.current.writeln('\x1b[31m\r\n连接已断开\x1b[0m');
@@ -328,7 +330,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
       
     } catch (error) {
       console.error('创建WebSocket连接失败:', error);
-      message.error('创建终端连接失败');
+      message.error(t('pod:terminal.createFailed'));
       setConnecting(false);
       
       if (terminal.current) {
@@ -415,8 +417,8 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
         gap: 16
       }}>
         <Alert
-          message="参数错误"
-          description="缺少必要的路由参数（clusterId、namespace 或 name）"
+          message={t('pod:terminal.paramError')}
+          description={t('pod:terminal.paramErrorDesc')}
           type="error"
           showIcon
         />
@@ -432,7 +434,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
         alignItems: 'center', 
         height: '100vh' 
       }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip={t('common:messages.loading')} />
       </div>
     );
   }
@@ -443,7 +445,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
       <div style={{ marginBottom: 16, flexShrink: 0 }}>
         <Space>
           <Title level={3} style={{ margin: 0 }}>
-            Pod 终端
+            {t('pod:terminal.title')}
           </Title>
           <Text type="secondary">
             {namespace}/{name}
@@ -453,7 +455,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col span={4}>
             <Select
-              placeholder="选择容器"
+              placeholder={t('pod:terminal.selectContainer')}
               value={selectedContainer}
               onChange={setSelectedContainer}
               style={{ width: '100%' }}
@@ -477,7 +479,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
                   loading={connecting}
                   disabled={!selectedContainer || pod.status !== 'Running'}
                 >
-                  连接终端
+                  {t('pod:terminal.connect')}
                 </Button>
               ) : (
                 <Button
@@ -485,7 +487,7 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
                   icon={<StopOutlined />}
                   onClick={disconnectTerminal}
                 >
-                  断开连接
+                  {t('pod:terminal.disconnect')}
                 </Button>
               )}
               
@@ -493,14 +495,14 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
                 icon={<ClearOutlined />}
                 onClick={clearTerminal}
               >
-                清空
+                {t('pod:terminal.clearBtn')}
               </Button>
               
               <Button
                 icon={<FullscreenOutlined />}
                 onClick={toggleFullscreen}
               >
-                全屏
+                {t('pod:terminal.fullscreen')}
               </Button>
             </Space>
           </Col>
@@ -510,8 +512,8 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
       {/* 状态提示 */}
       {pod.status !== 'Running' && (
         <Alert
-          message="Pod状态异常"
-          description={`Pod当前状态为 ${pod.status}，只有Running状态的Pod才能连接终端。`}
+          message={t('pod:terminal.podStatusAbnormal')}
+          description={t('pod:terminal.podStatusAbnormalDesc', { status: pod.status })}
           type="warning"
           showIcon
           style={{ marginBottom: 16, flexShrink: 0 }}

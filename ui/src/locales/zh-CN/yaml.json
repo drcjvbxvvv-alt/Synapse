@@ -1,0 +1,65 @@
+{
+  "editor": {
+    "title": "YAML 编辑器",
+    "apply": "应用",
+    "preview": "预览",
+    "reset": "重置",
+    "dryRunMode": "DryRun模式",
+    "on": "开",
+    "off": "关",
+    "back": "返回",
+    "close": "关闭",
+    "confirmApply": "确认应用",
+    "confirmUpdate": "确认更新",
+    "cancel": "取消"
+  },
+  "messages": {
+    "loadFailed": "加载YAML失败",
+    "loadError": "加载YAML失败",
+    "unknownError": "未知错误",
+    "emptyContent": "YAML内容不能为空",
+    "dryRunPassed": "预检通过！YAML 配置有效，可以安全应用。",
+    "validateSuccess": "YAML验证成功",
+    "applySuccess": "YAML应用成功",
+    "validateFailed": "验证",
+    "applyFailed": "应用",
+    "yamlFailed": "YAML{{action}}失败",
+    "dryRunCheckPassed": "预检通过",
+    "dryRunCheckFailed": "预检失败",
+    "preCheckFailed": "预检失败",
+    "missingParams": "缺少必要参数：集群ID或工作负载类型",
+    "resetSuccess": "已重置YAML内容",
+    "loadingYaml": "加载YAML中...",
+    "initEditor": "初始化编辑器...",
+    "editorLoading": "编辑器加载中...",
+    "loading": "加载中...",
+    "noContent": "暂无YAML内容"
+  },
+  "confirm": {
+    "leave": "确认离开",
+    "leaveDesc": "您有未保存的更改，确定要离开吗？",
+    "applyYaml": "确认应用YAML",
+    "applyYamlDesc": "确定要应用这些YAML配置吗？这将在集群中创建资源。",
+    "resetTitle": "确认重置",
+    "resetDesc": "确定要重置YAML内容吗？未保存的更改将丢失。"
+  },
+  "alert": {
+    "loadFailed": "加载失败",
+    "retry": "重试",
+    "unsavedChanges": "您有未保存的更改",
+    "unsavedChangesDesc": "请记得保存您的更改，或点击重置按钮恢复原始内容。",
+    "hasUnsavedChanges": "• 有未保存的更改"
+  },
+  "preview": {
+    "title": "YAML 预览结果",
+    "validationSuccess": "验证成功",
+    "validationSuccessDesc": "YAML格式正确，可以安全应用到集群。"
+  },
+  "diff": {
+    "title": "确认更改 - YAML Diff 对比",
+    "reviewChanges": "请仔细检查以下更改",
+    "reviewChangesDesc": "左侧为原始配置，右侧为修改后的配置。确认无误后点击「确认更新」按钮应用更改。",
+    "originalConfig": "原始配置",
+    "modifiedConfig": "修改后配置"
+  }
+}

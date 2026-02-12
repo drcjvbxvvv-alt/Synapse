@@ -11,13 +11,13 @@ import StatefulSetTab from './StatefulSetTab';
 import DaemonSetTab from './DaemonSetTab';
 import JobTab from './JobTab';
 import CronJobTab from './CronJobTab';
-
+import { useTranslation } from 'react-i18next';
 const WorkloadList: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const loading = false;
-  
-  // 从URL读取当前Tab
+const { t } = useTranslation(['workload']);
+// 从URL读取当前Tab
   const activeTab = searchParams.get('tab') || 'deployment';
 
   // 统计信息状态（保留用于回调，但不显示）
@@ -40,10 +40,10 @@ const WorkloadList: React.FC = () => {
   };
 
   // Tab项配置
-  const tabItems = [
+const tabItems = [
     {
       key: 'deployment',
-      label: '无状态负载（Deployment）',
+      label: t('tabs.deployment'),
       children: (
         <DeploymentTab
           clusterId={clusterId || ''}
@@ -53,7 +53,7 @@ const WorkloadList: React.FC = () => {
     },
     {
       key: 'rollout',
-      label: '无状态负载（Argo Rollout）',
+      label: t('tabs.rollout'),
       children: (
         <ArgoRolloutTab
           clusterId={clusterId || ''}
@@ -63,7 +63,7 @@ const WorkloadList: React.FC = () => {
     },
     {
       key: 'statefulset',
-      label: '有状态负载（StatefulSet）',
+      label: t('tabs.statefulset'),
       children: (
         <StatefulSetTab
           clusterId={clusterId || ''}
@@ -73,7 +73,7 @@ const WorkloadList: React.FC = () => {
     },
     {
       key: 'daemonset',
-      label: '守护进程集（DaemonSet）',
+      label: t('tabs.daemonset'),
       children: (
         <DaemonSetTab
           clusterId={clusterId || ''}
@@ -83,7 +83,7 @@ const WorkloadList: React.FC = () => {
     },
     {
       key: 'job',
-      label: '普通任务（Job）',
+      label: t('tabs.job'),
       children: (
         <JobTab
           clusterId={clusterId || ''}
@@ -93,7 +93,7 @@ const WorkloadList: React.FC = () => {
     },
     {
       key: 'cronjob',
-      label: '定时任务（CronJob）',
+      label: t('tabs.cronjob'),
       children: (
         <CronJobTab
           clusterId={clusterId || ''}
@@ -102,8 +102,7 @@ const WorkloadList: React.FC = () => {
       ),
     },
   ];
-
-  return (
+return (
     <div style={{ padding: '24px' }}>
       <Card bordered={false}>
         <Spin spinning={loading}>

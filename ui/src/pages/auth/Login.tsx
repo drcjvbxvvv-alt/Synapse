@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import kubernetesLogo from '../../assets/kubernetes.png';
 import {
   Form,
@@ -127,6 +128,7 @@ const Login: React.FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation('common');
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [ldapEnabled, setLdapEnabled] = useState(false);
@@ -162,7 +164,7 @@ const Login: React.FC = () => {
           setLdapEnabled(response.data.ldap_enabled);
         }
       } catch (error) {
-        console.error('获取认证状态失败:', error);
+        console.error('Failed to fetch auth status:', error);
       } finally {
         setCheckingStatus(false);
       }
@@ -192,14 +194,14 @@ const Login: React.FC = () => {
           tokenManager.setPermissions(response.data.permissions);
         }
 
-        message.success('登录成功');
+        message.success(t('auth.loginSuccess'));
         navigate(from, { replace: true });
       } else {
-        message.error(response.message || '登录失败');
+        message.error(response.message || t('auth.loginError'));
       }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
-      message.error(err.response?.data?.message || '登录失败，请检查网络连接');
+      message.error(err.response?.data?.message || t('messages.networkError'));
     } finally {
       setLoading(false);
     }
@@ -225,7 +227,7 @@ const Login: React.FC = () => {
       label: (
         <Space>
           <UserOutlined />
-          密码登录
+          {t('auth.passwordLogin')}
         </Space>
       ),
     },
@@ -234,7 +236,7 @@ const Login: React.FC = () => {
       label: (
         <Space>
           <CloudServerOutlined />
-          LDAP登录
+          {t('auth.ldapLogin')}
         </Space>
       ),
     }] : []),
@@ -335,7 +337,7 @@ const Login: React.FC = () => {
               fontWeight: 500,
             }}
           >
-            Kubernetes 集群管理平台
+            {t('app.tagline')}
           </Text>
         </div>
 
@@ -359,11 +361,11 @@ const Login: React.FC = () => {
         >
           <Form.Item
             name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            rules={[{ required: true, message: t('auth.usernameRequired') }]}
           >
             <Input
               prefix={<UserOutlined style={{ color: '#9ca3af' }} />}
-              placeholder="用户名"
+              placeholder={t('auth.username')}
               size="large"
               autoComplete="username"
               style={{
@@ -377,12 +379,12 @@ const Login: React.FC = () => {
 
           <Form.Item
             name="password"
-            rules={[{ required: true, message: '请输入密码' }]}
+            rules={[{ required: true, message: t('auth.passwordRequired') }]}
             style={{ marginBottom: 32 }}
           >
             <Input.Password
               prefix={<LockOutlined style={{ color: '#9ca3af' }} />}
-              placeholder="密码"
+              placeholder={t('auth.password')}
               size="large"
               autoComplete="current-password"
               style={{
@@ -421,7 +423,7 @@ const Login: React.FC = () => {
                 e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
               }}
             >
-              登录
+              {t('auth.login')}
             </Button>
           </Form.Item>
         </Form>
@@ -445,8 +447,8 @@ const Login: React.FC = () => {
             }}
           >
             {activeTab === 'ldap' 
-              ? '🔐 使用企业账号登录' 
-              : '👤 默认管理员: admin / KubePolaris@2026'}
+              ? t('auth.ldapHint')
+              : t('auth.defaultAdminHint')}
           </Text>
         </div>
 

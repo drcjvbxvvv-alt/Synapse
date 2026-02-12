@@ -329,7 +329,7 @@ const ClusterList: React.FC = () => {
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 个集群`,
+            showTotal: (total) => t('list.totalClusters', { total }),
             className: 'tencent-pagination'
           }}
           locale={{

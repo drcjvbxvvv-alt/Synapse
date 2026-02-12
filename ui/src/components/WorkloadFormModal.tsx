@@ -15,6 +15,7 @@ import {
   App,
 } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -80,6 +81,7 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const { t } = useTranslation('components');
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const { message: messageApi } = App.useApp();
@@ -90,7 +92,6 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
         form.setFieldsValue(initialData);
       } else {
         form.resetFields();
-        // Set default values
         form.setFieldsValue({
           namespace: 'default',
           replicas: workloadType === 'DaemonSet' ? undefined : 1,
@@ -115,21 +116,20 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
       const values = await form.validateFields();
       setSubmitting(true);
 
-      // Process form data
       const formData: WorkloadFormData = {
         ...values,
         env: values.env?.filter((item: { name?: string; value?: string }) => item.name && item.value),
       };
 
       await onSubmit(formData);
-      messageApi.success(mode === 'create' ? '创建成功' : '更新成功');
+      messageApi.success(mode === 'create' ? t('workloadForm.createSuccess') : t('workloadForm.updateSuccess'));
       form.resetFields();
     } catch (error: unknown) {
       const err = error as { errorFields?: unknown[]; message?: string };
       if (err.errorFields) {
-        messageApi.error('请检查表单填写是否完整');
+        messageApi.error(t('workloadForm.checkForm'));
       } else {
-        messageApi.error(err.message || '操作失败');
+        messageApi.error(err.message || t('workloadForm.operationFailed'));
       }
     } finally {
       setSubmitting(false);
@@ -137,31 +137,31 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
   };
 
   const renderBasicFields = () => (
-    <Card title="基本信息" style={{ marginBottom: 16 }}>
+    <Card title={t('workloadForm.basicInfo')} style={{ marginBottom: 16 }}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
             name="name"
-            label="名称"
+            label={t('workloadForm.name')}
             rules={[
-              { required: true, message: '请输入名称' },
+              { required: true, message: t('workloadForm.nameRequired') },
               {
                 pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/,
-                message: '名称只能包含小写字母、数字和连字符',
+                message: t('workloadForm.namePattern'),
               },
             ]}
           >
-            <Input placeholder="请输入名称" disabled={mode === 'update'} />
+            <Input placeholder={t('workloadForm.namePlaceholder')} disabled={mode === 'update'} />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
             name="namespace"
-            label="命名空间"
-            rules={[{ required: true, message: '请选择命名空间' }]}
+            label={t('workloadForm.namespace')}
+            rules={[{ required: true, message: t('workloadForm.namespaceRequired') }]}
           >
             <Select
-              placeholder="请选择命名空间"
+              placeholder={t('workloadForm.namespacePlaceholder')}
               showSearch
               disabled={mode === 'update'}
             >
@@ -180,8 +180,8 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
           <Col span={12}>
             <Form.Item
               name="replicas"
-              label="副本数"
-              rules={[{ required: true, message: '请输入副本数' }]}
+              label={t('workloadForm.replicas')}
+              rules={[{ required: true, message: t('workloadForm.replicasRequired') }]}
             >
               <InputNumber min={0} max={100} style={{ width: '100%' }} />
             </Form.Item>
@@ -194,10 +194,10 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
           <Col span={12}>
             <Form.Item
               name="serviceName"
-              label="Headless Service"
-              rules={[{ required: true, message: '请输入Service名称' }]}
+              label={t('workloadForm.headlessService')}
+              rules={[{ required: true, message: t('workloadForm.headlessServiceRequired') }]}
             >
-              <Input placeholder="请输入Headless Service名称" />
+              <Input placeholder={t('workloadForm.headlessServicePlaceholder')} />
             </Form.Item>
           </Col>
         </Row>
@@ -208,14 +208,14 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
           <Col span={12}>
             <Form.Item
               name="schedule"
-              label="Cron表达式"
-              rules={[{ required: true, message: '请输入Cron表达式' }]}
+              label={t('workloadForm.cronExpression')}
+              rules={[{ required: true, message: t('workloadForm.cronRequired') }]}
             >
               <Input placeholder="例如: 0 0 * * *" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="suspend" label="暂停" valuePropName="checked">
+            <Form.Item name="suspend" label={t('workloadForm.suspend')} valuePropName="checked">
               <Switch />
             </Form.Item>
           </Col>
@@ -225,17 +225,17 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
       {workloadType === 'Job' && (
         <Row gutter={16}>
           <Col span={8}>
-            <Form.Item name="completions" label="完成次数">
+            <Form.Item name="completions" label={t('workloadForm.completions')}>
               <InputNumber min={1} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="parallelism" label="并行度">
+            <Form.Item name="parallelism" label={t('workloadForm.parallelism')}>
               <InputNumber min={1} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="backoffLimit" label="重试次数">
+            <Form.Item name="backoffLimit" label={t('workloadForm.backoffLimit')}>
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
@@ -245,22 +245,22 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
   );
 
   const renderContainerFields = () => (
-    <Card title="容器配置" style={{ marginBottom: 16 }}>
+    <Card title={t('workloadForm.containerConfig')} style={{ marginBottom: 16 }}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
             name="containerName"
-            label="容器名称"
-            rules={[{ required: true, message: '请输入容器名称' }]}
+            label={t('containerConfig.containerName')}
+            rules={[{ required: true, message: t('containerConfig.containerNameRequired') }]}
           >
-            <Input placeholder="请输入容器名称" />
+            <Input placeholder={t('containerConfig.containerNamePlaceholder')} />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
             name="image"
-            label="镜像"
-            rules={[{ required: true, message: '请输入镜像地址' }]}
+            label={t('containerConfig.image')}
+            rules={[{ required: true, message: t('containerConfig.imageRequired') }]}
           >
             <Input placeholder="例如: nginx:latest" />
           </Form.Item>
@@ -269,7 +269,7 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
 
       <Row gutter={16}>
         <Col span={12}>
-          <Form.Item name="containerPort" label="容器端口">
+          <Form.Item name="containerPort" label={t('workloadForm.containerPort')}>
             <InputNumber
               min={1}
               max={65535}
@@ -280,7 +280,7 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
         </Col>
       </Row>
 
-      <Form.Item label="环境变量">
+      <Form.Item label={t('workloadForm.envVars')}>
         <Form.List name="env">
           {(fields, { add, remove }) => (
             <>
@@ -289,24 +289,24 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
                   <Form.Item
                     {...field}
                     name={[field.name, 'name']}
-                    rules={[{ required: true, message: '请输入环境变量名' }]}
+                    rules={[{ required: true, message: t('workloadForm.envVarNameRequired') }]}
                     style={{ marginBottom: 0 }}
                   >
-                    <Input placeholder="变量名" style={{ width: 200 }} />
+                    <Input placeholder={t('workloadForm.envVarName')} style={{ width: 200 }} />
                   </Form.Item>
                   <Form.Item
                     {...field}
                     name={[field.name, 'value']}
-                    rules={[{ required: true, message: '请输入环境变量值' }]}
+                    rules={[{ required: true, message: t('workloadForm.envVarValueRequired') }]}
                     style={{ marginBottom: 0 }}
                   >
-                    <Input placeholder="变量值" style={{ width: 300 }} />
+                    <Input placeholder={t('workloadForm.envVarValue')} style={{ width: 300 }} />
                   </Form.Item>
                   <MinusCircleOutlined onClick={() => remove(field.name)} />
                 </Space>
               ))}
               <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                添加环境变量
+                {t('workloadForm.addEnvVar')}
               </Button>
             </>
           )}
@@ -316,23 +316,23 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
   );
 
   const renderResourceFields = () => (
-    <Card title="资源配置" style={{ marginBottom: 16 }}>
+    <Card title={t('workloadForm.resourceConfig')} style={{ marginBottom: 16 }}>
       <Row gutter={16}>
         <Col span={12}>
-          <h4 style={{ marginBottom: 16 }}>请求资源 (Requests)</h4>
+          <h4 style={{ marginBottom: 16 }}>{t('workloadForm.requestResources')}</h4>
           <Form.Item name={['resources', 'requests', 'cpu']} label="CPU">
             <Input placeholder="例如: 100m" />
           </Form.Item>
-          <Form.Item name={['resources', 'requests', 'memory']} label="内存">
+          <Form.Item name={['resources', 'requests', 'memory']} label={t('containerConfig.memory')}>
             <Input placeholder="例如: 128Mi" />
           </Form.Item>
         </Col>
         <Col span={12}>
-          <h4 style={{ marginBottom: 16 }}>限制资源 (Limits)</h4>
+          <h4 style={{ marginBottom: 16 }}>{t('workloadForm.limitResources')}</h4>
           <Form.Item name={['resources', 'limits', 'cpu']} label="CPU">
             <Input placeholder="例如: 500m" />
           </Form.Item>
-          <Form.Item name={['resources', 'limits', 'memory']} label="内存">
+          <Form.Item name={['resources', 'limits', 'memory']} label={t('containerConfig.memory')}>
             <Input placeholder="例如: 512Mi" />
           </Form.Item>
         </Col>
@@ -341,17 +341,17 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
   );
 
   const renderLabelsFields = () => (
-    <Card title="标签和注解" style={{ marginBottom: 16 }}>
-      <Form.Item name="labels" label="标签 (Labels)">
+    <Card title={t('workloadForm.labelsAndAnnotations')} style={{ marginBottom: 16 }}>
+      <Form.Item name="labels" label={t('workloadForm.labels')}>
         <TextArea
           rows={3}
-          placeholder="格式: key1=value1,key2=value2"
+          placeholder={t('workloadForm.labelsFormat')}
         />
       </Form.Item>
-      <Form.Item name="annotations" label="注解 (Annotations)">
+      <Form.Item name="annotations" label={t('workloadForm.annotations')}>
         <TextArea
           rows={3}
-          placeholder="格式: key1=value1,key2=value2"
+          placeholder={t('workloadForm.labelsFormat')}
         />
       </Form.Item>
     </Card>
@@ -360,36 +360,36 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
   const tabItems = [
     {
       key: 'basic',
-      label: '基本信息',
+      label: t('workloadForm.basicInfoTab'),
       children: renderBasicFields(),
     },
     {
       key: 'container',
-      label: '容器配置',
+      label: t('workloadForm.containerConfigTab'),
       children: renderContainerFields(),
     },
     {
       key: 'resources',
-      label: '资源配置',
+      label: t('workloadForm.resourceConfigTab'),
       children: renderResourceFields(),
     },
     {
       key: 'labels',
-      label: '标签注解',
+      label: t('workloadForm.labelsTab'),
       children: renderLabelsFields(),
     },
   ];
 
   return (
     <Modal
-      title={`${mode === 'create' ? '创建' : '更新'} ${workloadType}`}
+      title={`${mode === 'create' ? t('workloadForm.create') : t('workloadForm.update')} ${workloadType}`}
       open={visible}
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={submitting}
       width={900}
-      okText="确定"
-      cancelText="取消"
+      okText={t('workloadForm.ok')}
+      cancelText={t('workloadForm.cancel')}
       destroyOnClose
     >
       <Form
@@ -404,4 +404,3 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
 };
 
 export default WorkloadFormModal;
-

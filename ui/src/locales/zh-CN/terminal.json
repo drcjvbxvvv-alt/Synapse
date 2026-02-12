@@ -1,0 +1,30 @@
+{
+  "kubectl": {
+    "title": "Kubectl 终端",
+    "cluster": "集群",
+    "selectNamespace": "选择命名空间",
+    "connect": "连接终端",
+    "disconnect": "断开连接",
+    "clear": "清空",
+    "fullscreen": "全屏",
+    "connectedTo": "已连接到集群 {{clusterId}} - 命名空间: {{namespace}}",
+    "clusterNotFound": "集群ID不存在",
+    "welcomeMessage": "请选择命名空间并点击\"连接终端\"开始...",
+    "connecting": "正在连接终端..."
+  },
+  "messages": {
+    "connectFirst": "请先连接终端",
+    "pasteFailed": "粘贴失败，请检查浏览器权限",
+    "initFailed": "初始化终端失败",
+    "missingClusterId": "缺少集群ID",
+    "notLoggedIn": "未登录，请先登录",
+    "connectSuccess": "终端连接成功",
+    "connectError": "终端连接出错",
+    "connectionLost": "终端连接已断开",
+    "createFailed": "创建终端连接失败",
+    "disconnected": "手动断开连接",
+    "connectionError": "连接出错",
+    "connectionClosed": "连接已断开",
+    "createConnectionFailed": "创建连接失败"
+  }
+}

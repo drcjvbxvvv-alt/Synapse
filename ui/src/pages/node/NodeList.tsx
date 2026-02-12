@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Table,
@@ -51,6 +52,8 @@ const NodeList: React.FC = () => {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
   const { message: appMessage } = App.useApp();
+  const { t } = useTranslation('node');
+  const { t: tc } = useTranslation('common');
   
   const [loading, setLoading] = useState(false);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -96,8 +99,8 @@ const NodeList: React.FC = () => {
       // 保存原始数据
       setAllNodes(response.data.items || []);
     } catch (error) {
-      console.error('获取节点列表失败:', error);
-      message.error('获取节点列表失败');
+      console.error('Failed to fetch nodes:', error);
+      message.error(t('list.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -113,7 +116,7 @@ const NodeList: React.FC = () => {
       const response = await nodeService.getNodeOverview(selectedClusterId);
       setOverview(response.data);
     } catch (error) {
-      console.error('获取节点概览失败:', error);
+      console.error('Failed to fetch node overview:', error);
     }
   }, [selectedClusterId]);
 
@@ -136,17 +139,17 @@ const NodeList: React.FC = () => {
 
   // 批量操作
   const handleBatchCordon = () => {
-    message.info(`批量封锁 ${selectedNodes.length} 个节点`);
+    message.info(`${t('actions.cordon')} ${selectedNodes.length} nodes`);
     // TODO: 实现批量封锁逻辑
   };
 
   const handleBatchUncordon = () => {
-    message.info(`批量解封 ${selectedNodes.length} 个节点`);
+    message.info(`${t('actions.uncordon')} ${selectedNodes.length} nodes`);
     // TODO: 实现批量解封逻辑
   };
 
   const handleBatchLabel = () => {
-    message.info(`批量添加标签到 ${selectedNodes.length} 个节点`);
+    message.info(`Add labels to ${selectedNodes.length} nodes`);
     // TODO: 实现批量添加标签逻辑
   };
 
@@ -163,31 +166,31 @@ const NodeList: React.FC = () => {
   const handleCordon = async (name: string) => {
     try {
       await nodeService.cordonNode(selectedClusterId, name);
-      message.success(`节点 ${name} 封锁成功`);
+      message.success(t('messages.cordonSuccess'));
       handleRefresh();
     } catch (error) {
-      console.error('节点封锁失败:', error);
-      message.error(`节点 ${name} 封锁失败`);
+      console.error('Failed to cordon node:', error);
+      message.error(t('messages.cordonError'));
     }
   };
 
   const handleUncordon = async (name: string) => {
     try {
       await nodeService.uncordonNode(selectedClusterId, name);
-      message.success(`节点 ${name} 解封成功`);
+      message.success(t('messages.uncordonSuccess'));
       handleRefresh();
     } catch (error) {
-      console.error('节点解封失败:', error);
-      message.error(`节点 ${name} 解封失败`);
+      console.error('Failed to uncordon node:', error);
+      message.error(t('messages.uncordonError'));
     }
   };
 
   const handleDrain = async (name: string) => {
     Modal.confirm({
-      title: '确认驱逐节点',
-      content: `确定要驱逐节点 ${name} 上的所有 Pod 吗？此操作可能导致服务中断。`,
-      okText: '确认驱逐',
-      cancelText: '取消',
+      title: t('actions.drain'),
+      content: t('actions.confirmDrain', { name }),
+      okText: tc('actions.confirm'),
+      cancelText: tc('actions.cancel'),
       okType: 'danger',
       onOk: async () => {
         try {
@@ -196,11 +199,11 @@ const NodeList: React.FC = () => {
             deleteLocalData: true,
             gracePeriodSeconds: 30,
           });
-          message.success(`节点 ${name} 驱逐成功`);
+          message.success(t('messages.drainSuccess'));
           handleRefresh();
         } catch (error) {
-          console.error('节点驱逐失败:', error);
-          message.error(`节点 ${name} 驱逐失败`);
+          console.error('Failed to drain node:', error);
+          message.error(t('messages.drainError'));
         }
       },
     });
@@ -211,11 +214,11 @@ const NodeList: React.FC = () => {
   const getStatusTag = (status: string) => {
     switch (status) {
       case 'Ready':
-        return <Tag icon={<CheckCircleOutlined />} color="success">就绪</Tag>;
+        return <Tag icon={<CheckCircleOutlined />} color="success">{t('status.ready')}</Tag>;
       case 'NotReady':
-        return <Tag icon={<CloseCircleOutlined />} color="error">未就绪</Tag>;
+        return <Tag icon={<CloseCircleOutlined />} color="error">{t('status.notReady')}</Tag>;
       default:
-        return <Tag icon={<ExclamationCircleOutlined />} color="default">未知</Tag>;
+        return <Tag icon={<ExclamationCircleOutlined />} color="default">{t('status.unknown')}</Tag>;
     }
   };
 
@@ -263,12 +266,12 @@ const NodeList: React.FC = () => {
   // 获取污点提示
   const getTaintTooltip = (taints: NodeTaint[]) => {
     if (!taints || taints.length === 0) {
-      return '无污点';
+      return t('detail.taints') + ': 0';
     }
     
     return (
       <div>
-        <div>污点信息:</div>
+        <div>{t('detail.taints')}:</div>
         {taints.map((taint, index) => (
           <div key={index}>
             {taint.key}{taint.value ? `=${taint.value}` : ''}:{taint.effect}
@@ -305,10 +308,10 @@ const NodeList: React.FC = () => {
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '节点名称',
-      status: '状态',
-      version: '版本',
-      roles: '角色',
+      name: t('columns.name'),
+      status: t('columns.status'),
+      version: t('columns.version'),
+      roles: t('columns.roles'),
     };
     return labels[field] || field;
   };
@@ -353,29 +356,21 @@ const NodeList: React.FC = () => {
       const filteredData = filterNodes(allNodes);
       
       if (filteredData.length === 0) {
-        appMessage.warning('没有数据可导出');
+        appMessage.warning(tc('messages.noData'));
         return;
       }
 
       // 导出筛选后的所有数据
       const dataToExport = filteredData.map(node => ({
-        '节点名称': node.name,
-        '状态': node.status,
-        '角色': node.roles?.join(', ') || '-',
-        '版本': node.version || '-',
-        'CPU使用率': `${node.cpuUsage || 0}%`,
-        '内存使用率': `${node.memoryUsage || 0}%`,
-        'Pod数量': `${node.podCount || 0}/${node.maxPods || 0}`,
-        '污点数量': node.taints?.length || 0,
-        '创建时间': node.creationTimestamp ? new Date(node.creationTimestamp).toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        }).replace(/\//g, '-') : '-',
+        [t('columns.name')]: node.name,
+        [t('columns.status')]: node.status,
+        [t('columns.roles')]: node.roles?.join(', ') || '-',
+        [t('columns.version')]: node.version || '-',
+        [t('columns.cpu')]: `${node.cpuUsage || 0}%`,
+        [t('columns.memory')]: `${node.memoryUsage || 0}%`,
+        [t('columns.pods')]: `${node.podCount || 0}/${node.maxPods || 0}`,
+        [t('detail.taints')]: node.taints?.length || 0,
+        [tc('table.createdAt')]: node.creationTimestamp ? new Date(node.creationTimestamp).toLocaleString() : '-',
       }));
 
       // 导出为CSV
@@ -395,17 +390,17 @@ const NodeList: React.FC = () => {
       link.href = URL.createObjectURL(blob);
       link.download = `node-list-${Date.now()}.csv`;
       link.click();
-      appMessage.success(`成功导出 ${filteredData.length} 条数据`);
+      appMessage.success(tc('messages.exportSuccess'));
     } catch (error) {
-      console.error('导出失败:', error);
-      appMessage.error('导出失败');
+      console.error('Failed to export:', error);
+      appMessage.error(tc('messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    appMessage.success('列设置已保存');
+    appMessage.success(tc('messages.saveSuccess'));
   };
 
   // 当搜索条件改变时重置到第一页
@@ -464,13 +459,13 @@ const NodeList: React.FC = () => {
   // 表格列定义
   const allColumns: ColumnsType<Node> = [
     {
-      title: '状态',
+      title: t('columns.status'),
       key: 'status',
       width: 60,
       render: (_, record) => getStatusIcon(record),
     },
     {
-      title: '节点名称',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 180,
@@ -497,13 +492,13 @@ const NodeList: React.FC = () => {
       ),
     },
     {
-      title: '角色',
+      title: t('columns.roles'),
       key: 'roles',
       width: 80,
       render: (_, record) => getRoleTags(record.roles),
     },
     {
-      title: '版本',
+      title: t('columns.version'),
       dataIndex: 'version',
       key: 'version',
       width: 100,
@@ -511,13 +506,13 @@ const NodeList: React.FC = () => {
       sortOrder: sortField === 'version' ? sortOrder : null,
     },
     {
-      title: '就绪状态',
+      title: t('columns.readyStatus'),
       key: 'readyStatus',
       width: 80,
       render: (_, record) => getStatusTag(record.status),
     },
     {
-      title: 'CPU使用率',
+      title: t('columns.cpu'),
       key: 'cpuUsage',
       dataIndex: 'cpuUsage',
       width: 120,
@@ -539,7 +534,7 @@ const NodeList: React.FC = () => {
       ),
     },
     {
-      title: '内存使用率',
+      title: t('columns.memory'),
       key: 'memoryUsage',
       dataIndex: 'memoryUsage',
       width: 120,
@@ -561,7 +556,7 @@ const NodeList: React.FC = () => {
       ),
     },
     {
-      title: 'Pod数量',
+      title: t('columns.pods'),
       key: 'podCount',
       width: 100,
       sorter: true,
@@ -569,19 +564,19 @@ const NodeList: React.FC = () => {
       render: (_, record) => `${record.podCount}/${record.maxPods}`,
     },
     {
-      title: '污点',
+      title: t('columns.taints'),
       key: 'taints',
       width: 80,
       render: (_, record) => (
         <Tooltip title={getTaintTooltip(record.taints)}>
           <Tag color={record.taints?.length ? 'orange' : 'default'}>
-            {record.taints?.length || 0}个
+            {record.taints?.length || 0}
           </Tag>
         </Tooltip>
       ),
     },
     {
-      title: '创建时间',
+      title: tc('table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -590,20 +585,11 @@ const NodeList: React.FC = () => {
       render: (text) => {
         if (!text) return '-';
         const date = new Date(text);
-        const formatted = date.toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        }).replace(/\//g, '-');
-        return <span>{formatted}</span>;
+        return <span>{date.toLocaleString()}</span>;
       },
     },
     {
-      title: '操作',
+      title: tc('table.actions'),
       key: 'action',
       width: 150,
       fixed: 'right' as const,
@@ -613,29 +599,29 @@ const NodeList: React.FC = () => {
             type="text"
             icon={<EyeOutlined />}
             onClick={() => handleViewDetail(record.name)}
-            title="查看详情"
+            title={tc('actions.view')}
           />
           <Button
             type="text"
             icon={<CodeOutlined />}
             onClick={() => handleNodeTerminal(record.name)}
-            title="节点终端"
+            title={t('actions.terminal')}
           />
           <Dropdown
             menu={{
               items: [
                 ...(record.taints?.some(t => t.effect === 'NoSchedule') ? [{
                   key: 'uncordon',
-                  label: '解除封锁 (Uncordon)',
+                  label: t('actions.uncordon'),
                   onClick: () => handleUncordon(record.name)
                 }] : [{
                   key: 'cordon',
-                  label: '封锁节点 (Cordon)',
+                  label: t('actions.cordon'),
                   onClick: () => handleCordon(record.name)
                 }]),
                 {
                   key: 'drain',
-                  label: '驱逐节点 (Drain)',
+                  label: t('actions.drain'),
                   onClick: () => handleDrain(record.name)
                 }
               ]
@@ -703,7 +689,7 @@ const NodeList: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #00d4aa 0%, #00b894 100%)' }}>
               <Statistic
-                title="总节点"
+                title={t('overview.total')}
                 value={totalNodes}
                 prefix={<DesktopOutlined />}
               />
@@ -712,7 +698,7 @@ const NodeList: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #006eff 0%, #1a7aff 100%)' }}>
               <Statistic
-                title="就绪节点"
+                title={t('overview.ready')}
                 value={readyNodes}
                 prefix={<CheckCircleOutlined />}
               />
@@ -721,7 +707,7 @@ const NodeList: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #ff9f43 0%, #ff7675 100%)' }}>
               <Statistic
-                title="异常节点"
+                title={t('overview.notReady')}
                 value={notReadyNodes}
                 prefix={<ExclamationCircleOutlined />}
               />
@@ -730,7 +716,7 @@ const NodeList: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #a55eea 0%, #8e44ad 100%)' }}>
               <Statistic
-                title="维护节点"
+                title={t('overview.maintenance')}
                 value={maintenanceNodes}
                 prefix={<Badge status="processing" />}
               />
@@ -747,22 +733,22 @@ const NodeList: React.FC = () => {
                 disabled={selectedNodes.length === 0}
                 onClick={handleBatchCordon}
               >
-                批量封锁
+                {t('actions.batchCordon')}
               </Button>
               <Button
                 disabled={selectedNodes.length === 0}
                 onClick={handleBatchUncordon}
               >
-                批量解封
+                {t('actions.batchUncordon')}
               </Button>
               <Button
                 disabled={selectedNodes.length === 0}
                 onClick={handleBatchLabel}
               >
-                批量添加标签
+                {t('actions.batchLabel')}
               </Button>
               <Button onClick={handleExport}>
-                导出
+                {tc('actions.export')}
               </Button>
             </Space>
           </div>
@@ -773,7 +759,7 @@ const NodeList: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
               <Input
                 prefix={<SearchOutlined />}
-                placeholder="选择属性筛选，或输入关键字搜索"
+                placeholder={t('list.searchPlaceholder')}
                 style={{ flex: 1 }}
                 value={currentSearchValue}
                 onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -785,10 +771,10 @@ const NodeList: React.FC = () => {
                     onChange={setCurrentSearchField} 
                     style={{ width: 120 }}
                   >
-                    <Option value="name">节点名称</Option>
-                    <Option value="status">状态</Option>
-                    <Option value="version">版本</Option>
-                    <Option value="roles">角色</Option>
+                    <Option value="name">{t('columns.name')}</Option>
+                    <Option value="status">{t('columns.status')}</Option>
+                    <Option value="version">{t('columns.version')}</Option>
+                    <Option value="roles">{t('columns.roles')}</Option>
                   </Select>
                 }
               />
@@ -822,7 +808,7 @@ const NodeList: React.FC = () => {
                     onClick={clearAllConditions}
                     style={{ padding: 0 }}
                   >
-                    清空全部
+                    {tc('actions.clearAll')}
                   </Button>
                 </Space>
               </div>
@@ -848,7 +834,7 @@ const NodeList: React.FC = () => {
               total: total,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: (total) => `共 ${total} 个节点`,
+              showTotal: (total) => `${tc('table.total')} ${total} ${t('list.nodes')}`,
               onChange: (page, size) => {
                 setCurrentPage(page);
                 setPageSize(size || 20);
@@ -859,9 +845,9 @@ const NodeList: React.FC = () => {
               emptyText: (
                 <div style={{ padding: '48px 0', textAlign: 'center' }}>
                   <DatabaseOutlined style={{ fontSize: 48, color: '#ccc', marginBottom: 16 }} />
-                  <div style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>暂无节点数据</div>
+                  <div style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>{t('list.noData')}</div>
                   <div style={{ fontSize: 14, color: '#999', marginBottom: 16 }}>
-                    {searchConditions.length > 0 ? '没有找到符合条件的节点' : '请先选择集群'}
+                    {searchConditions.length > 0 ? tc('messages.noData') : t('list.selectCluster')}
                   </div>
                 </div>
               )
@@ -883,13 +869,13 @@ const NodeList: React.FC = () => {
           >
             <Row justify="space-between" align="middle">
               <Col>
-                已选中 {selectedNodes.length} 个节点
+                {tc('table.selected')} {selectedNodes.length} {t('list.nodes')}
               </Col>
               <Col>
                 <Space>
-                  <Button onClick={handleBatchCordon}>批量封锁</Button>
-                  <Button onClick={handleBatchUncordon}>批量解封</Button>
-                  <Button onClick={handleBatchLabel}>批量添加标签</Button>
+                  <Button onClick={handleBatchCordon}>{t('actions.batchCordon')}</Button>
+                  <Button onClick={handleBatchUncordon}>{t('actions.batchUncordon')}</Button>
+                  <Button onClick={handleBatchLabel}>{t('actions.batchLabel')}</Button>
                 </Space>
               </Col>
             </Row>
@@ -898,7 +884,7 @@ const NodeList: React.FC = () => {
 
         {/* 列设置抽屉 */}
         <Drawer
-          title="列设置"
+          title={t('list.columnSettings')}
           placement="right"
           width={400}
           open={columnSettingsVisible}
@@ -906,14 +892,14 @@ const NodeList: React.FC = () => {
           footer={
             <div style={{ textAlign: 'right' }}>
               <Space>
-                <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-                <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+                <Button onClick={() => setColumnSettingsVisible(false)}>{tc('actions.cancel')}</Button>
+                <Button type="primary" onClick={handleColumnSettingsSave}>{tc('actions.confirm')}</Button>
               </Space>
             </div>
           }
         >
           <div style={{ marginBottom: 16 }}>
-            <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+            <p style={{ marginBottom: 8, color: '#666' }}>{t('list.selectColumns')}:</p>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Checkbox
                 checked={visibleColumns.includes('status')}
@@ -925,7 +911,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                状态
+                {t('columns.status')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('name')}
@@ -937,7 +923,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                节点名称
+                {t('columns.name')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('roles')}
@@ -949,7 +935,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                角色
+                {t('columns.roles')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('version')}
@@ -961,7 +947,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                版本
+                {t('columns.version')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('readyStatus')}
@@ -973,7 +959,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                就绪状态
+                {t('columns.readyStatus')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('cpuUsage')}
@@ -985,7 +971,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                CPU使用率
+                {t('columns.cpu')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('memoryUsage')}
@@ -997,7 +983,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                内存使用率
+                {t('columns.memory')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('podCount')}
@@ -1009,7 +995,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                Pod数量
+                {t('columns.pods')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('taints')}
@@ -1021,7 +1007,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                污点
+                {t('columns.taints')}
               </Checkbox>
               <Checkbox
                 checked={visibleColumns.includes('createdAt')}
@@ -1033,7 +1019,7 @@ const NodeList: React.FC = () => {
                   }
                 }}
               >
-                创建时间
+                {tc('table.createdAt')}
               </Checkbox>
             </Space>
           </div>

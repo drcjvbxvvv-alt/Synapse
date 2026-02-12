@@ -17,6 +17,7 @@ import {
   RightOutlined,
 } from '@ant-design/icons';
 import { Pie, Line } from '@ant-design/charts';
+import { useTranslation } from 'react-i18next';
 import { overviewService } from '../../services/overviewService';
 import type { 
   OverviewStatsResponse, 
@@ -52,7 +53,8 @@ const CHART_COLORS = [
 ];
 
 const Overview: React.FC = () => {
-  const navigate = useNavigate();
+const { t } = useTranslation(['overview', 'common']);
+const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [podTimeRange, setPodTimeRange] = useState<'7d' | '30d'>('7d');
   const [nodeTimeRange, setNodeTimeRange] = useState<'7d' | '30d'>('7d');
@@ -87,9 +89,9 @@ const Overview: React.FC = () => {
       setAlertStats(alertStatsRes.data);
       setLastRefreshTime(new Date());
     } catch (error) {
-      console.error('获取总览数据失败:', error);
-      message.error('获取总览数据失败');
-    } finally {
+console.error('Failed to fetch overview data:', error);
+      message.error(t('common:messages.fetchError'));
+} finally {
       setLoading(false);
     }
   }, []);
@@ -106,7 +108,7 @@ const Overview: React.FC = () => {
         nodeTrends: trendsRes.data?.nodeTrends || [],
       });
     } catch (error) {
-      console.error('获取趋势数据失败:', error);
+      console.error('Failed to fetch trend data:', error);
     }
   }, []);
 
@@ -210,9 +212,9 @@ const Overview: React.FC = () => {
     statistic: { title: false as const, content: false as const },
     interactions: [{ type: 'element-active' }, { type: 'pie-legend-active' }],
     state: { active: { style: { lineWidth: 2, stroke: '#fff' } } },
-    tooltip: {
+tooltip: {
       showTitle: true,
-      title: () => title || '集群分布',
+      title: () => title || t('distribution.clusterDistribution'),
       customContent: (_: string, items: Array<{ name: string; value: string; color: string; data: ChartDistribution }>) => {
         if (!items || items.length === 0) return '';
         const item = items[0];
@@ -225,16 +227,16 @@ const Overview: React.FC = () => {
             </div>
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
               <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${item.color};"></span>
-              <span style="color: #6b7280;">集群:</span>
+              <span style="color: #6b7280;">${t('distribution.cluster')}:</span>
               <span style="font-weight: 600; color: #1f2937;">${item.name}</span>
             </div>
             <div style="padding-left: 18px; color: #6b7280;">
-              数量: <span style="font-weight: 600; color: #3b82f6;">${item.value}${labelSuffix}</span>
+              ${t('distribution.quantity')}: <span style="font-weight: 600; color: #3b82f6;">${item.value}${labelSuffix}</span>
               <span style="margin-left: 8px; color: #9ca3af;">(${percent}%)</span>
             </div>
           </div>
         `;
-      },
+},
     },
     onReady: (plot: { on: (event: string, callback: (evt: { data?: { data?: ChartDistribution } }) => void) => void }) => {
       plot.on('element:click', (evt: { data?: { data?: ChartDistribution } }) => {
@@ -266,16 +268,15 @@ const Overview: React.FC = () => {
     colorField: 'cluster',
   });
 
-  // 格式化数字
+// 格式化数字
   const formatNumber = (num: number, unit: string = '') => {
-    if (num >= 10000) return `${(num / 10000).toFixed(2)}万${unit}`;
+    if (num >= 10000) return `${(num / 10000).toFixed(2)}w${unit}`;
     return `${num}${unit}`;
   };
-
-  // 版本分布表格列
+// 版本分布表格列
   const versionColumns = [
     {
-      title: '版本名称',
+      title: t('distribution.versionName'),
       dataIndex: 'version',
       key: 'version',
       render: (text: string) => (
@@ -285,7 +286,7 @@ const Overview: React.FC = () => {
       ),
     },
     {
-      title: '集群数量',
+      title: t('distribution.clusterCount'),
       dataIndex: 'count',
       key: 'count',
       align: 'right' as const,
@@ -302,7 +303,7 @@ const Overview: React.FC = () => {
   // 异常工作负载表格列
   const abnormalColumns = [
     {
-      title: '工作负载',
+      title: t('abnormal.workload'),
       dataIndex: 'name',
       key: 'name',
       width: 180,
@@ -338,7 +339,7 @@ const Overview: React.FC = () => {
       },
     },
     {
-      title: '命名空间',
+      title: t('abnormal.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 120,
@@ -349,19 +350,19 @@ const Overview: React.FC = () => {
       ),
     },
     {
-      title: '集群',
+      title: t('abnormal.cluster'),
       dataIndex: 'clusterName',
       key: 'clusterName',
       width: 100,
     },
     {
-      title: '类型',
+      title: t('abnormal.type'),
       dataIndex: 'type',
       key: 'type',
       render: (text: string) => <Tag>{text}</Tag>,
     },
     {
-      title: '异常原因',
+      title: t('abnormal.reason'),
       dataIndex: 'reason',
       key: 'reason',
       render: (text: string, record: AbnormalWorkload) => (
@@ -374,7 +375,7 @@ const Overview: React.FC = () => {
       ),
     },
     {
-      title: '持续时间',
+      title: t('abnormal.duration'),
       dataIndex: 'duration',
       key: 'duration',
     },
@@ -398,7 +399,7 @@ const Overview: React.FC = () => {
   if (loading && !stats) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 200px)' }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip={t('common:messages.loading')} />
       </div>
     );
   }
@@ -417,13 +418,13 @@ const Overview: React.FC = () => {
         boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
       }}>
         <div>
-          <span style={{ fontSize: 18, fontWeight: 600, color: '#1f2937' }}>总览大盘</span>
+          <span style={{ fontSize: 18, fontWeight: 600, color: '#1f2937' }}>{t('title')}</span>
           <span style={{ marginLeft: 16, color: '#9ca3af', fontSize: 13 }}>
-            最后更新: {lastRefreshTime.toLocaleTimeString()}
+            {t('common:time.lastUpdate')}: {lastRefreshTime.toLocaleTimeString()}
           </span>
         </div>
         <Space>
-          <span style={{ color: '#6b7280' }}>自动刷新:</span>
+          <span style={{ color: '#6b7280' }}>{t('autoRefresh')}:</span>
           <Switch 
             checked={autoRefresh} 
             onChange={setAutoRefresh}
@@ -436,9 +437,9 @@ const Overview: React.FC = () => {
               size="small"
               style={{ width: 90 }}
             >
-              <Select.Option value={30}>30秒</Select.Option>
-              <Select.Option value={60}>1分钟</Select.Option>
-              <Select.Option value={300}>5分钟</Select.Option>
+              <Select.Option value={30}>{t('common:units.second30')}</Select.Option>
+              <Select.Option value={60}>{t('common:units.minute1')}</Select.Option>
+              <Select.Option value={300}>{t('common:units.minute5')}</Select.Option>
             </Select>
           )}
           <Button 
@@ -447,7 +448,7 @@ const Overview: React.FC = () => {
             loading={loading}
             size="small"
           >
-            刷新
+            {t('common:actions.refresh')}
           </Button>
         </Space>
       </div>
@@ -457,7 +458,7 @@ const Overview: React.FC = () => {
         <Col span={4}>
           <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><ClusterOutlined /> 集群总数</span>}
+              title={<span style={{ color: '#6b7280' }}><ClusterOutlined /> {t('stats.clusterTotal')}</span>}
               value={clusterStats.total}
               valueStyle={{ color: '#1f2937', fontSize: 32, fontWeight: 700 }}
             />
@@ -467,7 +468,7 @@ const Overview: React.FC = () => {
           <Card bordered={false} style={{ ...cardStyle, height: 140, cursor: 'pointer' }} bodyStyle={{ padding: '20px 16px' }}
             onClick={() => navigate('/clusters')}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><CheckCircleOutlined style={{ color: '#10b981' }} /> 健康集群</span>}
+              title={<span style={{ color: '#6b7280' }}><CheckCircleOutlined style={{ color: '#10b981' }} /> {t('stats.clusterHealthy')}</span>}
               value={clusterStats.healthy}
               valueStyle={{ color: '#10b981', fontSize: 32, fontWeight: 700 }}
               suffix={<span style={{ fontSize: 14, color: '#9ca3af' }}>/ {clusterStats.total}</span>}
@@ -480,7 +481,7 @@ const Overview: React.FC = () => {
             onClick={() => clusterStats.unhealthy > 0 && navigate('/clusters')}>
             <Badge dot={clusterStats.unhealthy > 0} offset={[8, 0]}>
               <Statistic
-                title={<span style={{ color: '#6b7280' }}><ExclamationCircleOutlined style={{ color: '#ef4444' }} /> 异常集群</span>}
+                title={<span style={{ color: '#6b7280' }}><ExclamationCircleOutlined style={{ color: '#ef4444' }} /> {t('stats.clusterUnhealthy')}</span>}
                 value={clusterStats.unhealthy}
                 valueStyle={{ color: clusterStats.unhealthy > 0 ? '#ef4444' : '#9ca3af', fontSize: 32, fontWeight: 700 }}
               />
@@ -490,14 +491,14 @@ const Overview: React.FC = () => {
         <Col span={4}>
           <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><DesktopOutlined /> 节点状态</span>}
+              title={<span style={{ color: '#6b7280' }}><DesktopOutlined /> {t('stats.nodeStatus')}</span>}
               value={nodeStats.ready}
               valueStyle={{ color: '#1f2937', fontSize: 32, fontWeight: 700 }}
               suffix={<span style={{ fontSize: 14, color: '#9ca3af' }}>/ {nodeStats.total}</span>}
             />
             {nodeStats.notReady > 0 && (
               <div style={{ marginTop: 4, color: '#ef4444', fontSize: 12 }}>
-                <WarningOutlined /> {nodeStats.notReady} 个节点异常
+                <WarningOutlined /> {t('stats.nodeAbnormal', { count: nodeStats.notReady })}
               </div>
             )}
           </Card>
@@ -505,7 +506,7 @@ const Overview: React.FC = () => {
         <Col span={4}>
           <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><CloudServerOutlined /> Pod 运行中</span>}
+              title={<span style={{ color: '#6b7280' }}><CloudServerOutlined /> {t('stats.podRunning')}</span>}
               value={podStats.running}
               valueStyle={{ color: '#1f2937', fontSize: 32, fontWeight: 700 }}
               suffix={<span style={{ fontSize: 14, color: '#9ca3af' }}>/ {formatNumber(podStats.total)}</span>}
@@ -526,14 +527,14 @@ const Overview: React.FC = () => {
             onClick={() => (alertStats?.firing || 0) > 0 && navigate('/alerts')}
           >
             <Statistic
-              title={<span style={{ color: '#6b7280' }}><WarningOutlined style={{ color: '#f59e0b' }} /> 告警</span>}
+              title={<span style={{ color: '#6b7280' }}><WarningOutlined style={{ color: '#f59e0b' }} /> {t('stats.alerts')}</span>}
               value={alertStats?.firing || 0}
               valueStyle={{ color: (alertStats?.firing || 0) > 0 ? '#f59e0b' : '#9ca3af', fontSize: 32, fontWeight: 700 }}
-              suffix={<span style={{ fontSize: 14, color: '#9ca3af' }}>个触发中</span>}
+              suffix={<span style={{ fontSize: 14, color: '#9ca3af' }}>{t('stats.alertFiring')}</span>}
             />
             {alertStats && alertStats.enabledCount > 0 && (
               <div style={{ marginTop: 4, fontSize: 12, color: '#9ca3af' }}>
-                {alertStats.enabledCount} 个集群已配置告警
+                {t('stats.alertConfigured', { count: alertStats.enabledCount })}
               </div>
             )}
           </Card>
@@ -544,7 +545,7 @@ const Overview: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={8}>
           <Card 
-            title={<span><ThunderboltOutlined style={{ color: '#3b82f6' }} /> CPU 使用率</span>}
+            title={<span><ThunderboltOutlined style={{ color: '#3b82f6' }} /> {t('resource.cpuUsage')}</span>}
             bordered={false} 
             style={{ ...cardStyle, height: 160 }}
             headStyle={{ ...cardHeadStyle, padding: '10px 16px' }}
@@ -558,14 +559,14 @@ const Overview: React.FC = () => {
               )}
             />
             <div style={{ marginTop: 8, color: '#6b7280', fontSize: 13 }}>
-              已用: {formatNumber(Math.floor(totalCPU * cpuUsage / 100), '核')} / 
-              总量: {formatNumber(totalCPU, '核')}
+              {t('common:resources.used')}: {formatNumber(Math.floor(totalCPU * cpuUsage / 100), t('common:units.cores'))} / 
+              {t('common:resources.total')}: {formatNumber(totalCPU, t('common:units.cores'))}
             </div>
           </Card>
         </Col>
         <Col span={8}>
           <Card 
-            title={<span><DatabaseOutlined style={{ color: '#10b981' }} /> 内存使用率</span>}
+            title={<span><DatabaseOutlined style={{ color: '#10b981' }} /> {t('resource.memoryUsage')}</span>}
             bordered={false} 
             style={{ ...cardStyle, height: 160 }}
             headStyle={{ ...cardHeadStyle, padding: '10px 16px' }}
@@ -579,14 +580,14 @@ const Overview: React.FC = () => {
               )}
             />
             <div style={{ marginTop: 8, color: '#6b7280', fontSize: 13 }}>
-              已用: {(totalMemory * memoryUsage / 100 / 1024).toFixed(2)}TB / 
-              总量: {(totalMemory / 1024).toFixed(2)}TB
+              {t('common:resources.used')}: {(totalMemory * memoryUsage / 100 / 1024).toFixed(2)}TB / 
+              {t('common:resources.total')}: {(totalMemory / 1024).toFixed(2)}TB
             </div>
           </Card>
         </Col>
         <Col span={8}>
           <Card 
-            title={<span><DatabaseOutlined style={{ color: '#8b5cf6' }} /> 存储使用率</span>}
+            title={<span><DatabaseOutlined style={{ color: '#8b5cf6' }} /> {t('resource.storageUsage')}</span>}
             bordered={false} 
             style={{ ...cardStyle, height: 160 }}
             headStyle={{ ...cardHeadStyle, padding: '10px 16px' }}
@@ -600,8 +601,8 @@ const Overview: React.FC = () => {
               )}
             />
             <div style={{ marginTop: 8, color: '#6b7280', fontSize: 13 }}>
-              已用: {resourceUsage?.storage?.used?.toFixed(0) || 0}{resourceUsage?.storage?.unit || 'GB'} / 
-              总量: {resourceUsage?.storage?.total?.toFixed(0) || 0}{resourceUsage?.storage?.unit || 'GB'}
+              {t('common:resources.used')}: {resourceUsage?.storage?.used?.toFixed(0) || 0}{resourceUsage?.storage?.unit || 'GB'} / 
+              {t('common:resources.total')}: {resourceUsage?.storage?.total?.toFixed(0) || 0}{resourceUsage?.storage?.unit || 'GB'}
             </div>
           </Card>
         </Col>
@@ -611,7 +612,7 @@ const Overview: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card
-            title="集群版本分布"
+            title={t('distribution.clusterVersion')}
             bordered={false}
             style={{ ...cardStyle, height: 320 }}
             headStyle={cardHeadStyle}
@@ -631,9 +632,9 @@ const Overview: React.FC = () => {
           <Card
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span><WarningOutlined style={{ color: '#ef4444', marginRight: 8 }} />异常工作负载</span>
+                <span><WarningOutlined style={{ color: '#ef4444', marginRight: 8 }} />{t('abnormal.title')}</span>
                 <Button type="link" size="small" onClick={() => navigate('/clusters')}>
-                  查看全部 <RightOutlined />
+                  {t('common:actions.viewAll')} <RightOutlined />
                 </Button>
               </div>
             }
@@ -654,7 +655,7 @@ const Overview: React.FC = () => {
             ) : (
               <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
                 <CheckCircleOutlined style={{ fontSize: 48, color: '#10b981', marginBottom: 16 }} />
-                <div>所有工作负载运行正常</div>
+                <div>{t('abnormal.allNormal')}</div>
               </div>
             )}
           </Card>
@@ -667,9 +668,9 @@ const Overview: React.FC = () => {
           <Card
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Pod 分布</span>
+                <span>{t('distribution.podDistribution')}</span>
                 <span style={{ fontSize: 16, color: '#3b82f6', fontWeight: 'bold' }}>
-                  {formatNumber(totalPods, '个')}
+                  {formatNumber(totalPods, t('common:units.count'))}
                 </span>
               </div>
             }
@@ -679,9 +680,9 @@ const Overview: React.FC = () => {
             bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
           >
             {podDistribution.length > 0 ? (
-              <Pie {...getPieConfig(podDistribution, '个', 'Pod 分布')} height={300} />
+              <Pie {...getPieConfig(podDistribution, t('common:units.count'), t('distribution.podDistribution'))} height={300} />
             ) : (
-              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>暂无数据</div>
+              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>{t('common:messages.noData')}</div>
             )}
           </Card>
         </Col>
@@ -689,9 +690,9 @@ const Overview: React.FC = () => {
           <Card
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Node 分布</span>
+                <span>{t('distribution.nodeDistribution')}</span>
                 <span style={{ fontSize: 16, color: '#3b82f6', fontWeight: 'bold' }}>
-                  {totalNodes}个
+                  {totalNodes}{t('common:units.count')}
                 </span>
               </div>
             }
@@ -701,9 +702,9 @@ const Overview: React.FC = () => {
             bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
           >
             {nodeDistribution.length > 0 ? (
-              <Pie {...getPieConfig(nodeDistribution, '个', 'Node 分布')} height={300} />
+              <Pie {...getPieConfig(nodeDistribution, t('common:units.count'), t('distribution.nodeDistribution'))} height={300} />
             ) : (
-              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>暂无数据</div>
+              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>{t('common:messages.noData')}</div>
             )}
           </Card>
         </Col>
@@ -715,9 +716,9 @@ const Overview: React.FC = () => {
           <Card
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>CPU 分布</span>
+                <span>{t('distribution.cpuDistribution')}</span>
                 <span style={{ fontSize: 16, color: '#3b82f6', fontWeight: 'bold' }}>
-                  {formatNumber(totalCPU, '核')}
+                  {formatNumber(totalCPU, t('common:units.cores'))}
                 </span>
               </div>
             }
@@ -727,9 +728,9 @@ const Overview: React.FC = () => {
             bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
           >
             {cpuDistribution.length > 0 ? (
-              <Pie {...getPieConfig(cpuDistribution, '核', 'CPU 分布')} height={300} />
+              <Pie {...getPieConfig(cpuDistribution, t('common:units.cores'), t('distribution.cpuDistribution'))} height={300} />
             ) : (
-              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>暂无数据</div>
+              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>{t('common:messages.noData')}</div>
             )}
           </Card>
         </Col>
@@ -737,7 +738,7 @@ const Overview: React.FC = () => {
           <Card
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>内存分布</span>
+                <span>{t('distribution.memoryDistribution')}</span>
                 <span style={{ fontSize: 16, color: '#3b82f6', fontWeight: 'bold' }}>
                   {(totalMemory / 1024).toFixed(2)}TB
                 </span>
@@ -749,9 +750,9 @@ const Overview: React.FC = () => {
             bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
           >
             {memoryDistribution.length > 0 ? (
-              <Pie {...getPieConfig(memoryDistribution, 'GB', '内存分布')} height={300} />
+              <Pie {...getPieConfig(memoryDistribution, 'GB', t('distribution.memoryDistribution'))} height={300} />
             ) : (
-              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>暂无数据</div>
+              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>{t('common:messages.noData')}</div>
             )}
           </Card>
         </Col>
@@ -761,43 +762,43 @@ const Overview: React.FC = () => {
       <Row gutter={16}>
         <Col span={12}>
           <Card
-            title="Pod 数量趋势（按集群）"
+            title={t('trend.podTrend')}
             bordered={false}
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
             bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
             extra={
               <Select value={podTimeRange} onChange={setPodTimeRange} size="small" style={{ width: 100 }}>
-                <Select.Option value="7d">最近7天</Select.Option>
-                <Select.Option value="30d">最近30天</Select.Option>
+                <Select.Option value="7d">{t('common:units.last7Days')}</Select.Option>
+                <Select.Option value="30d">{t('common:units.last30Days')}</Select.Option>
               </Select>
             }
           >
             {podTrendData.length > 0 ? (
               <Line {...getTrendConfig(podTrendData, 'Pod')} height={300} />
             ) : (
-              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>暂无数据</div>
+              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>{t('common:messages.noData')}</div>
             )}
           </Card>
         </Col>
         <Col span={12}>
           <Card
-            title="Node 数量趋势（按集群）"
+            title={t('trend.nodeTrend')}
             bordered={false}
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
             bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
             extra={
               <Select value={nodeTimeRange} onChange={setNodeTimeRange} size="small" style={{ width: 100 }}>
-                <Select.Option value="7d">最近7天</Select.Option>
-                <Select.Option value="30d">最近30天</Select.Option>
+                <Select.Option value="7d">{t('common:units.last7Days')}</Select.Option>
+                <Select.Option value="30d">{t('common:units.last30Days')}</Select.Option>
               </Select>
             }
           >
             {nodeTrendData.length > 0 ? (
               <Line {...getTrendConfig(nodeTrendData, 'Node')} height={300} />
             ) : (
-              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>暂无数据</div>
+              <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>{t('common:messages.noData')}</div>
             )}
           </Card>
         </Col>

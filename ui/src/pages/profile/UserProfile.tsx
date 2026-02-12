@@ -3,57 +3,54 @@ import { Card, Descriptions, Button, Modal, Form, Input, Space, Tag, Spin, App }
 import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
 import { authService, tokenManager } from '../../services/authService';
 import type { User } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 const UserProfile: React.FC = () => {
   const { message } = App.useApp();
-  const [user, setUser] = useState<User | null>(null);
+const { t } = useTranslation(['profile', 'common']);
+const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
   const [form] = Form.useForm();
 
-  // 加载用户信息
   const loadUserProfile = useCallback(async () => {
     setLoading(true);
     try {
       const response = await authService.getProfile();
       if (response.code === 200) {
         setUser(response.data);
-        // 更新本地存储的用户信息
         tokenManager.setUser(response.data);
       } else {
-        message.error(response.message || '获取用户信息失败');
+        message.error(response.message || t('profile:fetchProfileFailed'));
       }
     } catch (error) {
-      message.error('获取用户信息失败');
-      console.error('加载用户信息失败:', error);
+      message.error(t('profile:fetchProfileFailed'));
+      console.error(error);
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, [message, t]);
 
   useEffect(() => {
     loadUserProfile();
   }, [loadUserProfile]);
 
-  // 打开修改密码对话框
   const handleOpenChangePassword = () => {
     if (user?.auth_type === 'ldap') {
-      message.warning('LDAP用户不能在此修改密码，请联系管理员');
+      message.warning(t('profile:ldapCannotChange'));
       return;
     }
     setChangePasswordModalVisible(true);
     form.resetFields();
   };
 
-  // 处理修改密码
   const handleChangePassword = async () => {
     try {
       const values = await form.validateFields();
       
-      // 验证新密码和确认密码是否一致
       if (values.new_password !== values.confirm_password) {
-        message.error('两次输入的新密码不一致');
+        message.error(t('profile:passwordNewMismatch'));
         return;
       }
 
@@ -65,34 +62,30 @@ const UserProfile: React.FC = () => {
       });
 
       if (response.code === 200) {
-        message.success('密码修改成功');
+        message.success(t('profile:changePasswordSuccess'));
         setChangePasswordModalVisible(false);
         form.resetFields();
       } else {
-        message.error(response.message || '密码修改失败');
+        message.error(response.message || t('profile:changePasswordFailed'));
       }
     } catch (error: unknown) {
       const err = error as { errorFields?: unknown[]; response?: { data?: { message?: string } }; message?: string };
       if (err.errorFields) {
-        // 表单验证错误
         return;
       }
-      // 处理HTTP错误响应
-      const errorMessage = err?.response?.data?.message || err?.message || '密码修改失败，请稍后重试';
+      const errorMessage = err?.response?.data?.message || err?.message || t('profile:changePasswordRetry');
       message.error(errorMessage);
-      console.error('修改密码失败:', error);
+      console.error(error);
     } finally {
       setChangePasswordLoading(false);
     }
   };
 
-  // 取消修改密码
   const handleCancelChangePassword = () => {
     setChangePasswordModalVisible(false);
     form.resetFields();
   };
 
-  // 格式化日期时间
   const formatDateTime = (dateString?: string | null) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleString('zh-CN', {
@@ -119,7 +112,7 @@ const UserProfile: React.FC = () => {
         title={
           <Space>
             <UserOutlined />
-            <span>个人资料</span>
+            <span>{t('profile:title')}</span>
           </Space>
         }
         extra={
@@ -130,41 +123,41 @@ const UserProfile: React.FC = () => {
               onClick={handleOpenChangePassword}
               disabled={user?.auth_type === 'ldap'}
             >
-              修改密码
+              {t('profile:changePassword')}
             </Button>
           </Space>
         }
       >
         <Descriptions bordered column={2}>
-          <Descriptions.Item label="用户ID">
+          <Descriptions.Item label={t('profile:userId')}>
             {user?.id}
           </Descriptions.Item>
-          <Descriptions.Item label="用户名">
+          <Descriptions.Item label={t('profile:username')}>
             {user?.username}
           </Descriptions.Item>
-          <Descriptions.Item label="显示名称">
+          <Descriptions.Item label={t('profile:displayName')}>
             {user?.display_name || '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="邮箱">
+          <Descriptions.Item label={t('profile:email')}>
             {user?.email || '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="认证类型">
+          <Descriptions.Item label={t('profile:authType')}>
             <Tag color={user?.auth_type === 'local' ? 'blue' : 'green'}>
-              {user?.auth_type === 'local' ? '本地认证' : 'LDAP认证'}
+              {user?.auth_type === 'local' ? t('profile:localAuth') : t('profile:ldapAuth')}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="账号状态">
+          <Descriptions.Item label={t('profile:accountStatus')}>
             <Tag color={user?.status === 'active' ? 'success' : 'error'}>
-              {user?.status === 'active' ? '正常' : '禁用'}
+              {user?.status === 'active' ? t('profile:statusActive') : t('profile:statusDisabled')}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="创建时间">
+          <Descriptions.Item label={t('profile:createdAt')}>
             {formatDateTime(user?.created_at)}
           </Descriptions.Item>
-          <Descriptions.Item label="最后登录时间">
+          <Descriptions.Item label={t('profile:lastLoginAt')}>
             {formatDateTime(user?.last_login_at)}
           </Descriptions.Item>
-          <Descriptions.Item label="最后登录IP" span={2}>
+          <Descriptions.Item label={t('profile:lastLoginIp')} span={2}>
             {user?.last_login_ip || '-'}
           </Descriptions.Item>
         </Descriptions>
@@ -173,18 +166,17 @@ const UserProfile: React.FC = () => {
           <div style={{ marginTop: '16px', padding: '12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: '4px' }}>
             <SafetyOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
             <span style={{ color: '#1890ff' }}>
-              您使用的是LDAP认证，密码修改请联系系统管理员
+              {t('profile:ldapPasswordHint')}
             </span>
           </div>
         )}
       </Card>
 
-      {/* 修改密码对话框 */}
       <Modal
         title={
           <Space>
             <LockOutlined />
-            <span>修改密码</span>
+            <span>{t('profile:changePasswordTitle')}</span>
           </Space>
         }
         open={changePasswordModalVisible}
@@ -192,8 +184,8 @@ const UserProfile: React.FC = () => {
         onCancel={handleCancelChangePassword}
         confirmLoading={changePasswordLoading}
         width={500}
-        okText="确定修改"
-        cancelText="取消"
+        okText={t('profile:confirmChange')}
+        cancelText={t('common:actions.cancel')}
       >
         <Form
           form={form}
@@ -201,66 +193,66 @@ const UserProfile: React.FC = () => {
           autoComplete="off"
         >
           <Form.Item
-            label="原密码"
+            label={t('profile:oldPassword')}
             name="old_password"
             rules={[
-              { required: true, message: '请输入原密码' },
+              { required: true, message: t('profile:oldPasswordRequired') },
             ]}
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="请输入原密码"
+              placeholder={t('profile:oldPasswordPlaceholder')}
               autoComplete="current-password"
             />
           </Form.Item>
 
           <Form.Item
-            label="新密码"
+            label={t('profile:newPassword')}
             name="new_password"
             rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 6, message: '密码长度不能少于6位' },
-              { max: 32, message: '密码长度不能超过32位' },
+              { required: true, message: t('profile:newPasswordRequired') },
+              { min: 6, message: t('profile:newPasswordMinLength') },
+              { max: 32, message: t('profile:newPasswordMaxLength') },
             ]}
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="请输入新密码（6-32位）"
+              placeholder={t('profile:newPasswordPlaceholder')}
               autoComplete="new-password"
             />
           </Form.Item>
 
           <Form.Item
-            label="确认新密码"
+            label={t('profile:confirmPassword')}
             name="confirm_password"
             dependencies={['new_password']}
             rules={[
-              { required: true, message: '请再次输入新密码' },
+              { required: true, message: t('profile:confirmPasswordRequired') },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('new_password') === value) {
                     return Promise.resolve();
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'));
+                  return Promise.reject(new Error(t('profile:passwordMismatch')));
                 },
               }),
             ]}
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="请再次输入新密码"
+              placeholder={t('profile:confirmPasswordPlaceholder')}
               autoComplete="new-password"
             />
           </Form.Item>
 
           <div style={{ padding: '12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: '4px', marginTop: '8px' }}>
             <p style={{ margin: 0, color: '#d46b08' }}>
-              <strong>提示：</strong>
+              <strong>{t('profile:passwordTip')}</strong>
             </p>
             <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px', color: '#d46b08' }}>
-              <li>密码长度为6-32位</li>
-              <li>请妥善保管您的密码</li>
-              <li>建议定期修改密码以提高安全性</li>
+              <li>{t('profile:passwordTip1')}</li>
+              <li>{t('profile:passwordTip2')}</li>
+              <li>{t('profile:passwordTip3')}</li>
             </ul>
           </div>
         </Form>

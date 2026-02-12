@@ -33,6 +33,7 @@ import type { Service } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import ServiceCreateModal from './ServiceCreateModal';
+import { useTranslation } from 'react-i18next';
 
 const { Text, Link } = Typography;
 
@@ -74,7 +75,8 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   const { message } = App.useApp();
   
   // 数据状态
-  const [allServices, setAllServices] = useState<Service[]>([]); // 所有原始数据
+const { t } = useTranslation(['network', 'common']);
+const [allServices, setAllServices] = useState<Service[]>([]); // 所有原始数据
   const [services, setServices] = useState<Service[]>([]); // 当前页显示的数据
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -164,11 +166,11 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '服务名称',
-      namespace: '命名空间',
-      type: '类型',
-      clusterIP: 'ClusterIP',
-      selector: '选择器',
+      name: t('network:service.search.name'),
+      namespace: t('network:service.search.namespace'),
+      type: t('network:service.search.type'),
+      clusterIP: t('network:service.search.clusterIP'),
+      selector: t('network:service.search.selector'),
     };
     return labels[field] || field;
   };
@@ -245,11 +247,11 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         // 保存原始数据，筛选和分页会在useEffect中自动处理
         setAllServices(items);
       } else {
-        message.error(response.message || '获取Service列表失败');
+        message.error(response.message || t('network:service.messages.fetchError'));
       }
     } catch (error) {
-      console.error('获取Service列表失败:', error);
-      message.error('获取Service列表失败');
+      console.error('Failed to fetch Service list:', error);
+      message.error(t('network:service.messages.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -324,11 +326,11 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       if (response.code === 200) {
         setCurrentYaml(response.data.yaml);
       } else {
-        message.error(response.message || '获取YAML失败');
+        message.error(response.message || t('network:service.messages.fetchYAMLError'));
       }
     } catch (error) {
-      console.error('获取YAML失败:', error);
-      message.error('获取YAML失败');
+      console.error('Failed to fetch YAML:', error);
+      message.error(t('network:service.messages.fetchYAMLError'));
     } finally {
       setYamlLoading(false);
     }
@@ -348,11 +350,11 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       if (response.code === 200) {
         setCurrentEndpoints(response.data);
       } else {
-        message.error(response.message || '获取Endpoints失败');
+        message.error(response.message || t('network:service.messages.fetchEndpointsError'));
       }
     } catch (error) {
-      console.error('获取Endpoints失败:', error);
-      message.error('获取Endpoints失败');
+      console.error('Failed to fetch Endpoints:', error);
+      message.error(t('network:service.messages.fetchEndpointsError'));
     } finally {
       setEndpointsLoading(false);
     }
@@ -368,29 +370,29 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       );
       
       if (response.code === 200) {
-        message.success('删除成功');
+        message.success(t('common:messages.deleteSuccess'));
         loadServices();
       } else {
-        message.error(response.message || '删除失败');
+        message.error(response.message || t('network:service.messages.deleteError'));
       }
     } catch (error) {
-      console.error('删除失败:', error);
-      message.error('删除失败');
+      console.error('Failed to delete:', error);
+      message.error(t('common:messages.deleteError'));
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的Service');
+      message.warning(t('network:service.messages.selectDelete'));
       return;
     }
 
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 个Service吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('common:messages.confirmDelete'),
+      content: t('network:service.messages.confirmDeleteBatch', { count: selectedRowKeys.length }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       onOk: async () => {
         try {
           const selectedServices = services.filter(s => 
@@ -406,16 +408,16 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
           const failCount = results.length - successCount;
           
           if (failCount === 0) {
-            message.success(`成功删除 ${successCount} 个Service`);
+            message.success(t('network:service.messages.batchDeleteSuccess', { count: successCount }));
           } else {
-            message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+            message.warning(t('network:service.messages.batchDeletePartial', { success: successCount, fail: failCount }));
           }
           
           setSelectedRowKeys([]);
           loadServices();
         } catch (error) {
-          console.error('批量删除失败:', error);
-          message.error('批量删除失败');
+          console.error('Batch delete failed:', error);
+          message.error(t('network:service.messages.batchDeleteError'));
         }
       }
     });
@@ -428,19 +430,19 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       const filteredData = filterServices(allServices);
       
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
+        message.warning(t('common:messages.noExportData'));
         return;
       }
 
       // 导出筛选后的所有数据（包含所有列）
       const dataToExport = filteredData.map(s => ({
-        '服务名称': s.name,
-        '命名空间': s.namespace,
-        '类型': s.type,
+        [t('network:service.export.name')]: s.name,
+        [t('network:service.export.namespace')]: s.namespace,
+        [t('network:service.export.type')]: s.type,
         'ClusterIP': s.clusterIP || '-',
-        '端口': ServiceService.formatPorts(s),
-        '选择器': ServiceService.formatSelector(s.selector),
-        '创建时间': s.createdAt ? new Date(s.createdAt).toLocaleString('zh-CN', {
+        [t('network:service.export.ports')]: ServiceService.formatPorts(s),
+        [t('network:service.export.selector')]: ServiceService.formatSelector(s.selector),
+        [t('network:service.export.createdAt')]: s.createdAt ? new Date(s.createdAt).toLocaleString(undefined, {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -468,17 +470,17 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       link.href = URL.createObjectURL(blob);
       link.download = `service-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+      message.success(t('common:messages.exportCount', { count: filteredData.length }));
     } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败');
+      console.error('Export failed:', error);
+      message.error(t('common:messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
+    message.success(t('common:messages.columnSettingsSaved'));
   };
 
   // 编辑Service - 跳转到独立的编辑页面
@@ -505,14 +507,14 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         );
         
         if (response.code === 200) {
-          message.success('更新成功');
+          message.success(t('common:messages.saveSuccess'));
           setEditModalVisible(false);
           setEditYaml('');
           setEditingService(null);
           setEditMode('yaml');
           loadServices();
         } else {
-          message.error(response.message || '更新失败');
+          message.error(response.message || t('network:service.messages.updateError'));
         }
       } else {
         // 表单方式更新
@@ -576,7 +578,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         );
         
         if (response.code === 200) {
-          message.success('更新成功');
+          message.success(t('common:messages.saveSuccess'));
           setEditModalVisible(false);
           setEditYaml('');
           setEditingService(null);
@@ -584,12 +586,12 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
           editForm.resetFields();
           loadServices();
         } else {
-          message.error(response.message || '更新失败');
+          message.error(response.message || t('network:service.messages.updateError'));
         }
       }
     } catch (error) {
-      console.error('更新失败:', error);
-      message.error('更新失败');
+      console.error('Failed to update:', error);
+      message.error(t('common:messages.saveError'));
     } finally {
       setSaveLoading(false);
     }
@@ -606,7 +608,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   // 定义所有可用列
   const allColumns: ColumnsType<Service> = [
     {
-      title: '服务名称',
+      title: t('network:service.columns.name'),
       dataIndex: 'name',
       key: 'name',
       fixed: 'left' as const,
@@ -625,7 +627,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       ),
     },
     {
-      title: '命名空间',
+      title: t('common:table.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 130,
@@ -634,7 +636,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       render: (text: string) => <Tag color="blue">{text}</Tag>,
     },
     {
-      title: '类型',
+      title: t('common:table.type'),
       dataIndex: 'type',
       key: 'type',
       width: 150,
@@ -645,7 +647,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       ),
     },
     {
-      title: '访问地址',
+      title: t('network:service.columns.access'),
       key: 'access',
       width: 200,
       render: (_: unknown, record: Service) => {
@@ -660,7 +662,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
             {addresses.length > 2 && (
               <Tooltip title={addresses.slice(2).join(', ')}>
                 <Text type="secondary" style={{ fontSize: 12, cursor: 'pointer' }}>
-                  +{addresses.length - 2} 更多
+                  +{addresses.length - 2} {t('network:service.columns.more')}
                 </Text>
               </Tooltip>
             )}
@@ -669,7 +671,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       },
     },
     {
-      title: '端口',
+      title: t('network:service.columns.ports'),
       key: 'ports',
       width: 180,
       render: (_: unknown, record: Service) => (
@@ -681,7 +683,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       ),
     },
     {
-      title: '选择器',
+      title: t('network:service.columns.selector'),
       key: 'selector',
       width: 200,
       render: (_: unknown, record: Service) => (
@@ -693,7 +695,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       ),
     },
     {
-      title: '创建时间',
+      title: t('common:table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -715,7 +717,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       },
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       fixed: 'right' as const,
       width: 180,
@@ -733,7 +735,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
             size="small"
             onClick={() => handleEdit(record)}
           >
-            编辑
+            {t('common:actions.edit')}
           </Button>
           <Button
             type="link"
@@ -743,18 +745,18 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
             Endpoints
           </Button>
           <Popconfirm
-            title="确定要删除这个Service吗？"
-            description={`确定要删除 ${record.name} 吗？`}
+            title={t('network:service.messages.confirmDeleteItem')}
+            description={t('network:service.messages.confirmDeleteDesc', { name: record.name })}
             onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button
               type="link"
               size="small"
               danger
             >
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -797,10 +799,10 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
             onClick={handleBatchDelete}
             danger
           >
-            批量删除
+            {t('common:actions.batchDelete')}
           </Button>
           <Button onClick={handleExport}>
-            导出
+            {t('common:actions.export')}
           </Button>
         </Space>
         <Button
@@ -808,7 +810,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
           icon={<PlusOutlined />}
           onClick={() => setCreateModalVisible(true)}
         >
-          创建Service
+          {t('network:service.createService')}
         </Button>
       </div>
 
@@ -818,7 +820,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="选择属性筛选，或输入关键字搜索"
+            placeholder={t('common:search.placeholder')}
             style={{ flex: 1 }}
             value={currentSearchValue}
             onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -830,11 +832,11 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 onChange={setCurrentSearchField} 
                 style={{ width: 120 }}
               >
-                <Select.Option value="name">服务名称</Select.Option>
-                <Select.Option value="namespace">命名空间</Select.Option>
-                <Select.Option value="type">类型</Select.Option>
-                <Select.Option value="clusterIP">ClusterIP</Select.Option>
-                <Select.Option value="selector">选择器</Select.Option>
+                <Select.Option value="name">{t('network:service.search.name')}</Select.Option>
+                <Select.Option value="namespace">{t('network:service.search.namespace')}</Select.Option>
+                <Select.Option value="type">{t('network:service.search.type')}</Select.Option>
+                <Select.Option value="clusterIP">{t('network:service.search.clusterIP')}</Select.Option>
+                <Select.Option value="selector">{t('network:service.search.selector')}</Select.Option>
               </Select>
             }
           />
@@ -868,7 +870,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 onClick={clearAllConditions}
                 style={{ padding: 0 }}
               >
-                清空全部
+                {t('common:actions.clearAll')}
               </Button>
             </Space>
           </div>
@@ -890,7 +892,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 个服务`,
+          showTotal: (total) => t('network:service.pagination.total', { total }),
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size || 20);
@@ -909,7 +911,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       >
         {yamlLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <span>加载中...</span>
+            <span>{t('common:messages.loading')}</span>
           </div>
         ) : (
           <pre style={{ maxHeight: 600, overflow: 'auto', background: '#f5f5f5', padding: 16 }}>
@@ -928,23 +930,23 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       >
         {endpointsLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <span>加载中...</span>
+            <span>{t('common:messages.loading')}</span>
           </div>
         ) : currentEndpoints ? (
           <Descriptions column={1} bordered>
-            <Descriptions.Item label="名称">{currentEndpoints.name}</Descriptions.Item>
-            <Descriptions.Item label="命名空间">{currentEndpoints.namespace}</Descriptions.Item>
-            <Descriptions.Item label="子网">
+            <Descriptions.Item label={t('network:service.endpoints.name')}>{currentEndpoints.name}</Descriptions.Item>
+            <Descriptions.Item label={t('network:service.endpoints.namespace')}>{currentEndpoints.namespace}</Descriptions.Item>
+            <Descriptions.Item label={t('network:service.endpoints.subsets')}>
               {currentEndpoints.subsets && currentEndpoints.subsets.length > 0 ? (
                 currentEndpoints.subsets.map((subset: { addresses?: Array<{ ip: string; nodeName?: string }>; ports?: Array<{ name?: string; port: number; protocol: string }> }, idx: number) => (
                   <div key={idx} style={{ marginBottom: 16 }}>
-                    <Text strong>地址:</Text>
+                    <Text strong>{t('network:service.endpoints.addresses')}:</Text>
                     {subset.addresses?.map((addr, addrIdx: number) => (
                       <div key={addrIdx} style={{ marginLeft: 16 }}>
-                        {addr.ip} {addr.nodeName && `(节点: ${addr.nodeName})`}
+                        {addr.ip} {addr.nodeName && `(${t('network:service.endpoints.node')}: ${addr.nodeName})`}
                       </div>
                     ))}
-                    <Text strong style={{ marginTop: 8, display: 'block' }}>端口:</Text>
+                    <Text strong style={{ marginTop: 8, display: 'block' }}>{t('network:service.endpoints.ports')}:</Text>
                     {subset.ports?.map((port, portIdx: number) => (
                       <div key={portIdx} style={{ marginLeft: 16 }}>
                         {port.name && `${port.name}: `}{port.port}/{port.protocol}
@@ -953,13 +955,13 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                   </div>
                 ))
               ) : (
-                <Text type="secondary">无</Text>
+                <Text type="secondary">{t('network:service.endpoints.none')}</Text>
               )}
             </Descriptions.Item>
           </Descriptions>
         ) : (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <Text type="secondary">无Endpoints信息</Text>
+            <Text type="secondary">{t('network:service.messages.noEndpoints')}</Text>
           </div>
         )}
       </Modal>
@@ -974,7 +976,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
 
       {/* 编辑Modal */}
       <Modal
-        title={`编辑 Service: ${editingService?.name}`}
+        title={t('network:service.edit.title', { name: editingService?.name })}
         open={editModalVisible}
         onCancel={() => {
           setEditModalVisible(false);
@@ -986,18 +988,18 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         onOk={handleSaveEdit}
         confirmLoading={saveLoading}
         width={1000}
-        okText="保存"
-        cancelText="取消"
+        okText={t('common:actions.save')}
+        cancelText={t('common:actions.cancel')}
       >
         <Tabs activeKey={editMode} onChange={(key) => setEditMode(key as 'form' | 'yaml')}>
-          <Tabs.TabPane tab="表单编辑" key="form">
+          <Tabs.TabPane tab={t('network:service.edit.formTab')} key="form">
             <Form form={editForm} layout="vertical">
-              <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入名称' }]}>
-                <Input disabled placeholder="服务名称" />
+              <Form.Item label={t('network:service.edit.name')} name="name" rules={[{ required: true, message: t('network:service.edit.nameRequired') }]}>
+                <Input disabled placeholder={t('network:service.edit.namePlaceholder')} />
               </Form.Item>
               
-              <Form.Item label="命名空间" name="namespace" rules={[{ required: true, message: '请选择命名空间' }]}>
-                <Select disabled placeholder="选择命名空间">
+              <Form.Item label={t('network:service.edit.namespace')} name="namespace" rules={[{ required: true, message: t('network:service.edit.namespaceRequired') }]}>
+                <Select disabled placeholder={t('network:service.edit.namespacePlaceholder')}>
                   {namespaces.map((ns) => (
                     <Select.Option key={ns.name} value={ns.name}>
                       {ns.name}
@@ -1006,7 +1008,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 </Select>
               </Form.Item>
               
-              <Form.Item label="类型" name="type" rules={[{ required: true }]}>
+              <Form.Item label={t('network:service.edit.type')} name="type" rules={[{ required: true }]}>
                 <Select>
                   <Select.Option value="ClusterIP">ClusterIP</Select.Option>
                   <Select.Option value="NodePort">NodePort</Select.Option>
@@ -1015,37 +1017,37 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 </Select>
               </Form.Item>
               
-              <Form.Item label="选择器">
+              <Form.Item label={t('network:service.edit.selector')}>
                 <Form.List name="selectors">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map((field) => (
                         <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }}>
                           <Form.Item {...field} name={[field.name, 'key']} noStyle>
-                            <Input placeholder="键" style={{ width: 150 }} />
+                            <Input placeholder={t('network:service.edit.key')} style={{ width: 150 }} />
                           </Form.Item>
                           <Form.Item {...field} name={[field.name, 'value']} noStyle>
-                            <Input placeholder="值" style={{ width: 150 }} />
+                            <Input placeholder={t('network:service.edit.value')} style={{ width: 150 }} />
                           </Form.Item>
                           <MinusCircleOutlined onClick={() => remove(field.name)} />
                         </Space>
                       ))}
                       <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        添加选择器
+                        {t('network:service.edit.addSelector')}
                       </Button>
                     </>
                   )}
                 </Form.List>
               </Form.Item>
               
-              <Form.Item label="端口">
+              <Form.Item label={t('network:service.edit.port')}>
                 <Form.List name="ports">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map((field) => (
                         <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
                           <Form.Item {...field} name={[field.name, 'name']} noStyle>
-                            <Input placeholder="名称" style={{ width: 100 }} />
+                            <Input placeholder={t('network:service.edit.portName')} style={{ width: 100 }} />
                           </Form.Item>
                           <Form.Item {...field} name={[field.name, 'protocol']} noStyle initialValue="TCP">
                             <Select style={{ width: 80 }}>
@@ -1054,69 +1056,69 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                             </Select>
                           </Form.Item>
                           <Form.Item {...field} name={[field.name, 'port']} noStyle>
-                            <InputNumber placeholder="端口" min={1} max={65535} style={{ width: 100 }} />
+                            <InputNumber placeholder={t('network:service.edit.portNumber')} min={1} max={65535} style={{ width: 100 }} />
                           </Form.Item>
                           <Form.Item {...field} name={[field.name, 'targetPort']} noStyle>
-                            <InputNumber placeholder="目标端口" min={1} max={65535} style={{ width: 100 }} />
+                            <InputNumber placeholder={t('network:service.edit.targetPort')} min={1} max={65535} style={{ width: 100 }} />
                           </Form.Item>
                           <MinusCircleOutlined onClick={() => remove(field.name)} />
                         </Space>
                       ))}
                       <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        添加端口
+                        {t('network:service.edit.addPort')}
                       </Button>
                     </>
                   )}
                 </Form.List>
               </Form.Item>
               
-              <Form.Item label="会话亲和性" name="sessionAffinity" initialValue="None">
+              <Form.Item label={t('network:service.edit.sessionAffinity')} name="sessionAffinity" initialValue="None">
                 <Select>
                   <Select.Option value="None">None</Select.Option>
                   <Select.Option value="ClientIP">ClientIP</Select.Option>
                 </Select>
               </Form.Item>
               
-              <Form.Item label="标签">
+              <Form.Item label={t('network:service.edit.labels')}>
                 <Form.List name="labels">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map((field) => (
                         <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }}>
                           <Form.Item {...field} name={[field.name, 'key']} noStyle>
-                            <Input placeholder="键" style={{ width: 150 }} />
+                            <Input placeholder={t('network:service.edit.key')} style={{ width: 150 }} />
                           </Form.Item>
                           <Form.Item {...field} name={[field.name, 'value']} noStyle>
-                            <Input placeholder="值" style={{ width: 150 }} />
+                            <Input placeholder={t('network:service.edit.value')} style={{ width: 150 }} />
                           </Form.Item>
                           <MinusCircleOutlined onClick={() => remove(field.name)} />
                         </Space>
                       ))}
                       <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        添加标签
+                        {t('network:service.edit.addLabel')}
                       </Button>
                     </>
                   )}
                 </Form.List>
               </Form.Item>
               
-              <Form.Item label="注解">
+              <Form.Item label={t('network:service.edit.annotations')}>
                 <Form.List name="annotations">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map((field) => (
                         <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }}>
                           <Form.Item {...field} name={[field.name, 'key']} noStyle>
-                            <Input placeholder="键" style={{ width: 150 }} />
+                            <Input placeholder={t('network:service.edit.key')} style={{ width: 150 }} />
                           </Form.Item>
                           <Form.Item {...field} name={[field.name, 'value']} noStyle>
-                            <Input placeholder="值" style={{ width: 150 }} />
+                            <Input placeholder={t('network:service.edit.value')} style={{ width: 150 }} />
                           </Form.Item>
                           <MinusCircleOutlined onClick={() => remove(field.name)} />
                         </Space>
                       ))}
                       <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        添加注解
+                        {t('network:service.edit.addAnnotation')}
                       </Button>
                     </>
                   )}
@@ -1125,7 +1127,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
             </Form>
           </Tabs.TabPane>
           
-          <Tabs.TabPane tab="YAML编辑" key="yaml">
+          <Tabs.TabPane tab={t('network:service.edit.yamlTab')} key="yaml">
             <MonacoEditor
               height="600px"
               language="yaml"
@@ -1144,7 +1146,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
 
       {/* 列设置抽屉 */}
       <Drawer
-        title="列设置"
+        title={t('common:search.columnSettings')}
         placement="right"
         width={400}
         open={columnSettingsVisible}
@@ -1152,14 +1154,14 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+              <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>{t('common:actions.confirm')}</Button>
             </Space>
           </div>
         }
       >
         <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <p style={{ marginBottom: 8, color: '#666' }}>{t('common:search.selectColumns')}</p>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Checkbox
               checked={visibleColumns.includes('namespace')}
@@ -1171,7 +1173,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              命名空间
+              {t('network:service.columnSettings.namespace')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('type')}
@@ -1183,7 +1185,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              类型
+              {t('network:service.columnSettings.type')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('access')}
@@ -1195,7 +1197,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              访问地址
+              {t('network:service.columnSettings.access')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('ports')}
@@ -1207,7 +1209,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              端口
+              {t('network:service.columnSettings.ports')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('selector')}
@@ -1219,7 +1221,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              选择器
+              {t('network:service.columnSettings.selector')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('createdAt')}
@@ -1231,7 +1233,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              创建时间
+              {t('network:service.columnSettings.createdAt')}
             </Checkbox>
           </Space>
         </div>

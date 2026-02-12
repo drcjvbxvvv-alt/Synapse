@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Typography,
@@ -55,6 +56,8 @@ const NodeDetail: React.FC = () => {
   const { clusterId, nodeName } = useParams<{ clusterId: string; nodeName: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation('node');
+  const { t: tc } = useTranslation('common');
   
   // 从 URL 参数读取默认标签页
   const defaultTab = searchParams.get('tab') || 'overview';
@@ -88,12 +91,12 @@ const NodeDetail: React.FC = () => {
       const response = await nodeService.getNode(clusterId, nodeName);
       setNode(response.data);
     } catch (error) {
-      console.error('获取节点详情失败:', error);
-      message.error('获取节点详情失败');
+      console.error('Failed to fetch node details:', error);
+      message.error(t('messages.fetchError'));
     } finally {
       setLoading(false);
     }
-  }, [clusterId, nodeName]);
+  }, [clusterId, nodeName, t]);
 
   // 获取节点上的Pod列表
   const fetchNodePods = useCallback(async () => {
@@ -192,7 +195,7 @@ const NodeDetail: React.FC = () => {
         setPods([]);
       }
     } catch (error) {
-      console.error('获取节点Pod列表失败:', error);
+      console.error('Failed to fetch node pods:', error);
       setPods([]);
     } finally {
       setLoadingPods(false);
@@ -208,12 +211,12 @@ const NodeDetail: React.FC = () => {
   // 导出 Pod 列表为 CSV
   const handleExportPods = () => {
     if (pods.length === 0) {
-      message.warning('暂无数据可导出');
+      message.warning(tc('messages.noData'));
       return;
     }
 
-    // CSV 表头
-    const headers = ['Pod名称', '命名空间', '状态', '重启次数', 'CPU Limit', '内存 Limit', '创建时间'];
+    // CSV 表头 - 使用翻译键
+    const headers = [tc('table.name'), tc('table.namespace'), tc('table.status'), t('columns.restarts'), t('resources.cpu'), t('resources.memory'), tc('table.createdAt')];
     
     // 构建 CSV 数据
     const csvData = pods.map((pod) => [
@@ -246,52 +249,52 @@ const NodeDetail: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     
-    message.success(`成功导出 ${pods.length} 条 Pod 数据`);
+    message.success(tc('messages.exportSuccess'));
   };
 
   // 处理节点操作
   const handleCordon = async () => {
     try {
       await nodeService.cordonNode(clusterId || '', nodeName || '');
-      message.success(`节点 ${nodeName} 封锁成功`);
+      message.success(t('messages.cordonSuccess'));
       fetchNodeDetail();
     } catch (error) {
-      console.error('节点封锁失败:', error);
-      message.error(`节点 ${nodeName} 封锁失败`);
+      console.error('Failed to cordon node:', error);
+      message.error(t('messages.cordonError'));
     }
   };
 
   const handleUncordon = async () => {
     try {
       await nodeService.uncordonNode(clusterId || '', nodeName || '');
-      message.success(`节点 ${nodeName} 解封成功`);
+      message.success(t('messages.uncordonSuccess'));
       fetchNodeDetail();
     } catch (error) {
-      console.error('节点解封失败:', error);
-      message.error(`节点 ${nodeName} 解封失败`);
+      console.error('Failed to uncordon node:', error);
+      message.error(t('messages.uncordonError'));
     }
   };
 
   const handleDrain = async () => {
     try {
       await nodeService.drainNode(clusterId || '', nodeName || '', drainOptions);
-      message.success(`节点 ${nodeName} 驱逐成功`);
+      message.success(t('messages.drainSuccess'));
       setDrainModalVisible(false);
       fetchNodeDetail();
     } catch (error) {
-      console.error('节点驱逐失败:', error);
-      message.error(`节点 ${nodeName} 驱逐失败`);
+      console.error('Failed to drain node:', error);
+      message.error(t('messages.drainError'));
     }
   };
 
   // 处理标签操作
   const handleAddLabel = () => {
     if (!newLabelKey || !newLabelValue) {
-      message.warning('标签的键和值不能为空');
+      message.warning(t('messages.labelKeyValueRequired'));
       return;
     }
     
-    message.success(`添加标签: ${newLabelKey}=${newLabelValue}`);
+    message.success(tc('messages.success'));
     // TODO: 实现添加标签的API调用
     setNewLabelKey('');
     setNewLabelValue('');
@@ -299,18 +302,19 @@ const NodeDetail: React.FC = () => {
   };
 
   const handleRemoveLabel = (key: string) => {
-    message.success(`移除标签: ${key}`);
+    message.success(tc('messages.success'));
+    console.log('Remove label:', key);
     // TODO: 实现移除标签的API调用
   };
 
   // 处理污点操作
   const handleAddTaint = () => {
     if (!newTaintKey) {
-      message.warning('污点的键不能为空');
+      message.warning(t('messages.taintKeyRequired'));
       return;
     }
     
-    message.success(`添加污点: ${newTaintKey}=${newTaintValue}:${newTaintEffect}`);
+    message.success(tc('messages.success'));
     // TODO: 实现添加污点的API调用
     setNewTaintKey('');
     setNewTaintValue('');
@@ -319,7 +323,8 @@ const NodeDetail: React.FC = () => {
   };
 
   const handleRemoveTaint = (taint: NodeTaint) => {
-    message.success(`移除污点: ${taint.key}`);
+    message.success(tc('messages.success'));
+    console.log('Remove taint:', taint.key);
     // TODO: 实现移除污点的API调用
   };
 
@@ -327,33 +332,33 @@ const NodeDetail: React.FC = () => {
   const getStatusTag = (status: string) => {
     switch (status) {
       case 'Ready':
-        return <Tag icon={<CheckCircleOutlined />} color="success">就绪</Tag>;
+        return <Tag icon={<CheckCircleOutlined />} color="success">{t('status.ready')}</Tag>;
       case 'NotReady':
-        return <Tag icon={<CloseCircleOutlined />} color="error">未就绪</Tag>;
+        return <Tag icon={<CloseCircleOutlined />} color="error">{t('status.notReady')}</Tag>;
       default:
-        return <Tag icon={<ExclamationCircleOutlined />} color="default">未知</Tag>;
+        return <Tag icon={<ExclamationCircleOutlined />} color="default">{t('status.unknown')}</Tag>;
     }
   };
 
   // 获取节点条件状态
   const getConditionStatus = (condition: NodeCondition) => {
     if (condition.status === 'True') {
-      return <Badge status="success" text="正常" />;
+      return <Badge status="success" text={tc('status.healthy')} />;
     } else if (condition.status === 'False') {
       // 对于某些条件，False是正常的（如DiskPressure, MemoryPressure等）
       if (['DiskPressure', 'MemoryPressure', 'PIDPressure', 'NetworkUnavailable'].includes(condition.type)) {
-        return <Badge status="success" text="正常" />;
+        return <Badge status="success" text={tc('status.healthy')} />;
       }
-      return <Badge status="error" text="异常" />;
+      return <Badge status="error" text={tc('status.unhealthy')} />;
     } else {
-      return <Badge status="default" text="未知" />;
+      return <Badge status="default" text={t('status.unknown')} />;
     }
   };
 
   // Pod表格列定义
   const podColumns: ColumnsType<Pod> = [
     {
-      title: '状态',
+      title: tc('table.status'),
       key: 'status',
       width: 60,
       render: (_, record) => {
@@ -369,7 +374,7 @@ const NodeDetail: React.FC = () => {
       },
     },
     {
-      title: 'Pod名称',
+      title: tc('table.name'),
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
@@ -379,44 +384,44 @@ const NodeDetail: React.FC = () => {
       ),
     },
     {
-      title: '命名空间',
+      title: tc('table.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       render: (namespace) => <Tag color="blue">{namespace}</Tag>,
     },
     {
-      title: '状态',
+      title: tc('table.status'),
       dataIndex: 'status',
       key: 'podStatus',
       render: (status) => {
         if (status === 'Running') {
-          return <Tag color="success">运行中</Tag>;
+          return <Tag color="success">{tc('status.running')}</Tag>;
         } else if (status === 'Pending') {
-          return <Tag color="processing">等待中</Tag>;
+          return <Tag color="processing">{tc('status.pending')}</Tag>;
         } else if (status === 'Succeeded') {
-          return <Tag color="default">已完成</Tag>;
+          return <Tag color="default">{tc('status.succeeded')}</Tag>;
         } else {
-          return <Tag color="error">异常</Tag>;
+          return <Tag color="error">{tc('status.failed')}</Tag>;
         }
       },
     },
     {
-      title: '重启次数',
+      title: t('columns.restarts'),
       dataIndex: 'restartCount',
       key: 'restartCount',
     },
     {
-      title: 'CPU Limit',
+      title: t('resources.cpu'),
       key: 'cpuLimit',
       render: (_, record) => record.cpuUsage > 0 ? `${Math.round(record.cpuUsage)}m` : '-',
     },
     {
-      title: '内存 Limit',
+      title: t('resources.memory'),
       key: 'memoryLimit',
       render: (_, record) => record.memoryUsage > 0 ? `${Math.round(record.memoryUsage)}Mi` : '-',
     },
     {
-      title: '创建时间',
+      title: tc('table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (time) => new Date(time).toLocaleString(),
@@ -427,13 +432,13 @@ const NodeDetail: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const moreActionsMenu = (
     <Menu>
-      {node?.taints?.some(t => t.effect === 'NoSchedule') ? (
+      {node?.taints?.some(taint => taint.effect === 'NoSchedule') ? (
         <Menu.Item key="uncordon" onClick={handleUncordon} icon={<CheckCircleOutlined />}>
-          解除封锁 (Uncordon)
+          {t('actions.uncordon')}
         </Menu.Item>
       ) : (
         <Menu.Item key="cordon" onClick={handleCordon} icon={<PauseCircleOutlined />}>
-          封锁节点 (Cordon)
+          {t('actions.cordon')}
         </Menu.Item>
       )}
       <Menu.Item 
@@ -442,17 +447,17 @@ const NodeDetail: React.FC = () => {
         icon={<WarningOutlined />}
         danger
       >
-        驱逐节点 (Drain)
+        {t('actions.drain')}
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key="labels" onClick={() => setLabelModalVisible(true)} icon={<EditOutlined />}>
-        编辑标签
+        {t('detail.editLabels')}
       </Menu.Item>
       <Menu.Item key="taints" onClick={() => setTaintModalVisible(true)} icon={<SettingOutlined />}>
-        管理污点
+        {t('detail.manageTaints')}
       </Menu.Item>
       <Menu.Item key="events" icon={<InfoCircleOutlined />}>
-        查看事件
+        {t('detail.viewEvents')}
       </Menu.Item>
     </Menu>
   );
@@ -470,11 +475,11 @@ const NodeDetail: React.FC = () => {
       <Card>
         <Result
           status="404"
-          title="节点不存在"
-          subTitle="请检查节点名称是否正确"
+          title={t('messages.nodeNotFound')}
+          subTitle={t('messages.checkNodeName')}
           extra={
             <Button type="primary" onClick={() => navigate(`/clusters/${clusterId}/nodes`)}>
-              返回节点列表
+              {t('actions.backToList')}
             </Button>
           }
         />
@@ -493,14 +498,14 @@ const NodeDetail: React.FC = () => {
             onClick={() => navigate(`/clusters/${clusterId}/nodes`)}
             style={{ marginRight: 16 }}
           >
-            返回节点列表
+            {t('actions.backToList')}
           </Button>
           <div style={{ flex: 1 }}>
             <Title level={2} style={{ margin: 0 }}>
               <DesktopOutlined style={{ marginRight: 8, color: '#1890ff' }} />
               {nodeName}
             </Title>
-            <Text type="secondary">节点详细信息和监控数据</Text>
+            <Text type="secondary">{t('detail.subtitle')}</Text>
           </div>
           <Space>
             <Button
@@ -508,14 +513,14 @@ const NodeDetail: React.FC = () => {
               onClick={refreshAllData}
               loading={loading}
             >
-              刷新
+              {tc('actions.refresh')}
             </Button>
             <Button 
               icon={<BarChartOutlined />} 
               type="primary"
               onClick={() => setActiveTab('monitoring')}
             >
-              监控面板
+              {tc('menu.monitoring')}
             </Button>
           </Space>
         </div>
@@ -525,13 +530,13 @@ const NodeDetail: React.FC = () => {
         <>
           {/* 节点基本信息 */}
           <Card style={{ marginBottom: 24 }}>
-            <Descriptions title="基本信息" column={3}>
-              <Descriptions.Item label="节点名称">{node.name}</Descriptions.Item>
-              <Descriptions.Item label="版本">{node.kubeletVersion}</Descriptions.Item>
-              <Descriptions.Item label="状态">
+            <Descriptions title={t('detail.info')} column={3}>
+              <Descriptions.Item label={t('columns.name')}>{node.name}</Descriptions.Item>
+              <Descriptions.Item label={t('detail.kubeletVersion')}>{node.kubeletVersion}</Descriptions.Item>
+              <Descriptions.Item label={t('columns.status')}>
                 {getStatusTag(node.status)}
               </Descriptions.Item>
-              <Descriptions.Item label="角色">
+              <Descriptions.Item label={t('columns.roles')}>
                 <Space>
                   {node.roles.map(role => {
                     const isMaster = role.toLowerCase().includes('master') || role.toLowerCase().includes('control-plane');
@@ -543,13 +548,13 @@ const NodeDetail: React.FC = () => {
                   })}
                 </Space>
               </Descriptions.Item>
-              <Descriptions.Item label="操作系统">{node.osImage}</Descriptions.Item>
-              <Descriptions.Item label="内核版本">{node.kernelVersion}</Descriptions.Item>
-              <Descriptions.Item label="容器运行时">{node.containerRuntime}</Descriptions.Item>
-              <Descriptions.Item label="CPU容量">{node.resources?.cpu}m</Descriptions.Item>
-              <Descriptions.Item label="内存容量">{node.resources?.memory}Mi</Descriptions.Item>
-              <Descriptions.Item label="最大Pod数">{node.resources?.pods}</Descriptions.Item>
-              <Descriptions.Item label="创建时间">
+              <Descriptions.Item label={t('detail.osImage')}>{node.osImage}</Descriptions.Item>
+              <Descriptions.Item label={t('detail.kernelVersion')}>{node.kernelVersion}</Descriptions.Item>
+              <Descriptions.Item label={t('detail.containerRuntime')}>{node.containerRuntime}</Descriptions.Item>
+              <Descriptions.Item label={t('resources.cpuCapacity')}>{node.resources?.cpu}m</Descriptions.Item>
+              <Descriptions.Item label={t('resources.memoryCapacity')}>{node.resources?.memory}Mi</Descriptions.Item>
+              <Descriptions.Item label={t('resources.maxPods')}>{node.resources?.pods}</Descriptions.Item>
+              <Descriptions.Item label={tc('table.createdAt')}>
                 {new Date(node.creationTimestamp).toLocaleString()}
               </Descriptions.Item>
             </Descriptions>
@@ -569,7 +574,7 @@ const NodeDetail: React.FC = () => {
               label: (
                 <span>
                   <BarChartOutlined />
-                  监控概览
+                  {tc('menu.monitoring')}
                 </span>
               ),
               children: (
@@ -585,28 +590,28 @@ const NodeDetail: React.FC = () => {
               label: (
                 <span>
                   <DesktopOutlined />
-                  节点状态
+                  {t('detail.nodeStatus')}
                 </span>
               ),
               children: (
-                <Card title="节点状态">
+                <Card title={t('detail.nodeStatus')}>
                   <Statistic
-                    title="状态"
+                    title={t('columns.status')}
                     value={node?.status || 'Unknown'}
                     valueStyle={{ color: node?.status === 'Ready' ? '#3f8600' : '#cf1322' }}
                     prefix={node?.status === 'Ready' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
                   />
                   <Divider />
                   <div>
-                    <Text strong>调度状态: </Text>
-                    {node?.unschedulable || node?.taints?.some(t => t.effect === 'NoSchedule') ? (
-                      <Tag icon={<PauseCircleOutlined />} color="warning">已禁用调度</Tag>
+                    <Text strong>{t('detail.schedulingStatus')}: </Text>
+                    {node?.unschedulable || node?.taints?.some(taint => taint.effect === 'NoSchedule') ? (
+                      <Tag icon={<PauseCircleOutlined />} color="warning">{t('status.unschedulable')}</Tag>
                     ) : (
-                      <Tag icon={<CheckCircleOutlined />} color="success">可调度</Tag>
+                      <Tag icon={<CheckCircleOutlined />} color="success">{t('status.schedulable')}</Tag>
                     )}
                   </div>
                   <div style={{ marginTop: 8 }}>
-                    <Text strong>节点条件: </Text>
+                    <Text strong>{t('detail.conditions')}: </Text>
                     <div style={{ marginTop: 8 }}>
                       {node?.conditions?.map((condition, index) => (
                         <div key={index} style={{ marginBottom: 4 }}>
@@ -637,7 +642,7 @@ const NodeDetail: React.FC = () => {
                       onClick={handleExportPods}
                       disabled={pods.length === 0}
                     >
-                      导出列表
+                      {tc('actions.export')}
                     </Button>
                   </div>
                   <Table
@@ -648,10 +653,10 @@ const NodeDetail: React.FC = () => {
                       pageSize: 10,
                       showSizeChanger: true,
                       showQuickJumper: true,
-                      showTotal: (total) => `共 ${total} 个Pod`,
+                      showTotal: (total) => `${tc('table.total')} ${total} Pod`,
                     }}
                     loading={loadingPods}
-                    locale={{ emptyText: '暂无Pod数据' }}
+                    locale={{ emptyText: tc('messages.noData') }}
                   />
                 </div>
               ),
@@ -661,12 +666,12 @@ const NodeDetail: React.FC = () => {
               label: (
                 <span>
                   <EditOutlined />
-                  标签
+                  {t('detail.labels')}
                 </span>
               ),
               children: (
                 <div>
-                  <Card title="系统标签" style={{ marginBottom: 16 }}>
+                  <Card title={t('detail.systemLabels')} style={{ marginBottom: 16 }}>
                     <Space wrap>
                       {node?.labels && Array.isArray(node.labels) && node.labels
                         .filter(label => label.key.startsWith('kubernetes.io/') || label.key.startsWith('node.kubernetes.io/') || label.key.startsWith('topology.kubernetes.io/'))
@@ -678,7 +683,7 @@ const NodeDetail: React.FC = () => {
                     </Space>
                   </Card>
 
-                  <Card title="自定义标签">
+                  <Card title={t('detail.customLabels')}>
                     <Space wrap style={{ marginBottom: 16 }}>
                       {node?.labels && Array.isArray(node.labels) && node.labels
                         .filter(label => !label.key.startsWith('kubernetes.io/') && !label.key.startsWith('node.kubernetes.io/') && !label.key.startsWith('topology.kubernetes.io/'))
@@ -698,7 +703,7 @@ const NodeDetail: React.FC = () => {
                       icon={<PlusOutlined />}
                       onClick={() => setLabelModalVisible(true)}
                     >
-                      添加标签
+                      {t('detail.addLabel')}
                     </Button>
                   </Card>
                 </div>
@@ -709,11 +714,11 @@ const NodeDetail: React.FC = () => {
               label: (
                 <span>
                   <SettingOutlined />
-                  污点
+                  {t('detail.taints')}
                 </span>
               ),
               children: (
-                <Card title="当前污点">
+                <Card title={t('detail.currentTaints')}>
                   {node?.taints && node.taints.length > 0 ? (
                     node.taints.map((taint, index) => (
                       <Card
@@ -728,14 +733,14 @@ const NodeDetail: React.FC = () => {
                             icon={<DeleteOutlined />}
                             onClick={() => handleRemoveTaint(taint)}
                           >
-                            删除
+                            {tc('actions.delete')}
                           </Button>
                         }
                       >
                         <Descriptions column={1}>
-                          <Descriptions.Item label="键">{taint.key}</Descriptions.Item>
-                          {taint.value && <Descriptions.Item label="值">{taint.value}</Descriptions.Item>}
-                          <Descriptions.Item label="效果">
+                          <Descriptions.Item label={t('detail.taintKey')}>{taint.key}</Descriptions.Item>
+                          {taint.value && <Descriptions.Item label={t('detail.taintValue')}>{taint.value}</Descriptions.Item>}
+                          <Descriptions.Item label={t('detail.taintEffect')}>
                             <Tag color={
                               taint.effect === 'NoSchedule' ? 'orange' :
                               taint.effect === 'PreferNoSchedule' ? 'blue' : 'red'
@@ -743,16 +748,16 @@ const NodeDetail: React.FC = () => {
                               {taint.effect}
                             </Tag>
                           </Descriptions.Item>
-                          <Descriptions.Item label="说明">
-                            {taint.effect === 'NoSchedule' && '不调度新Pod到此节点'}
-                            {taint.effect === 'PreferNoSchedule' && '尽量不调度新Pod到此节点'}
-                            {taint.effect === 'NoExecute' && '驱逐不能容忍此污点的现有Pod'}
+                          <Descriptions.Item label={t('detail.description')}>
+                            {taint.effect === 'NoSchedule' && t('detail.noScheduleDesc')}
+                            {taint.effect === 'PreferNoSchedule' && t('detail.preferNoScheduleDesc')}
+                            {taint.effect === 'NoExecute' && t('detail.noExecuteDesc')}
                           </Descriptions.Item>
                         </Descriptions>
                       </Card>
                     ))
                   ) : (
-                    <Empty description="暂无污点" />
+                    <Empty description={t('detail.noTaints')} />
                   )}
 
                   <Button
@@ -761,7 +766,7 @@ const NodeDetail: React.FC = () => {
                     onClick={() => setTaintModalVisible(true)}
                     style={{ marginTop: 16 }}
                   >
-                    添加污点
+                    {t('detail.addTaint')}
                   </Button>
                 </Card>
               ),
@@ -771,7 +776,7 @@ const NodeDetail: React.FC = () => {
               label: (
                 <span>
                   <CodeOutlined />
-                  SSH终端
+                  {t('actions.ssh')}
                 </span>
               ),
               children: (
@@ -788,20 +793,20 @@ const NodeDetail: React.FC = () => {
 
       {/* 标签编辑模态框 */}
       <Modal
-        title="编辑节点标签"
+        title={t('detail.editLabels')}
         open={labelModalVisible}
         onCancel={() => setLabelModalVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setLabelModalVisible(false)}>
-            取消
+            {tc('actions.cancel')}
           </Button>,
           <Button key="submit" type="primary" onClick={handleAddLabel}>
-            添加标签
+            {t('detail.addLabel')}
           </Button>,
         ]}
       >
         <div style={{ marginBottom: 16 }}>
-          <Text>系统标签 (只读):</Text>
+          <Text>{t('detail.systemLabelsReadOnly')}:</Text>
           <div style={{ marginTop: 8 }}>
             <Space wrap>
               {node?.labels && Array.isArray(node.labels) && node.labels
@@ -816,7 +821,7 @@ const NodeDetail: React.FC = () => {
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <Text>自定义标签:</Text>
+          <Text>{t('detail.customLabels')}:</Text>
           <div style={{ marginTop: 8 }}>
             <Space wrap>
               {node?.labels && Array.isArray(node.labels) && node.labels
@@ -837,16 +842,16 @@ const NodeDetail: React.FC = () => {
         <Divider />
 
         <div>
-          <Text>添加新标签:</Text>
+          <Text>{t('detail.addNewLabel')}:</Text>
           <div style={{ marginTop: 8 }}>
             <Input
-              placeholder="键"
+              placeholder={t('detail.taintKey')}
               value={newLabelKey}
               onChange={(e) => setNewLabelKey(e.target.value)}
               style={{ width: '45%', marginRight: '5%' }}
             />
             <Input
-              placeholder="值"
+              placeholder={t('detail.taintValue')}
               value={newLabelValue}
               onChange={(e) => setNewLabelValue(e.target.value)}
               style={{ width: '45%' }}
@@ -857,42 +862,42 @@ const NodeDetail: React.FC = () => {
 
       {/* 污点编辑模态框 */}
       <Modal
-        title="管理节点污点"
+        title={t('detail.manageTaints')}
         open={taintModalVisible}
         onCancel={() => setTaintModalVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setTaintModalVisible(false)}>
-            取消
+            {tc('actions.cancel')}
           </Button>,
           <Button key="submit" type="primary" onClick={handleAddTaint}>
-            添加污点
+            {t('detail.addTaint')}
           </Button>,
         ]}
       >
         <div style={{ marginBottom: 16 }}>
-          <Text>添加新污点:</Text>
+          <Text>{t('detail.addNewTaint')}:</Text>
           <div style={{ marginTop: 8 }}>
             <Input
-              placeholder="键"
+              placeholder={t('detail.taintKey')}
               value={newTaintKey}
               onChange={(e) => setNewTaintKey(e.target.value)}
               style={{ width: '100%', marginBottom: 8 }}
             />
             <Input
-              placeholder="值 (可选)"
+              placeholder={t('detail.taintValueOptional')}
               value={newTaintValue}
               onChange={(e) => setNewTaintValue(e.target.value)}
               style={{ width: '100%', marginBottom: 8 }}
             />
             <Select
-              placeholder="效果"
+              placeholder={t('detail.taintEffect')}
               value={newTaintEffect}
               onChange={(value) => setNewTaintEffect(value as 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute')}
               style={{ width: '100%' }}
             >
-              <Select.Option value="NoSchedule">NoSchedule (不调度新Pod)</Select.Option>
-              <Select.Option value="PreferNoSchedule">PreferNoSchedule (尽量不调度)</Select.Option>
-              <Select.Option value="NoExecute">NoExecute (驱逐现有Pod)</Select.Option>
+              <Select.Option value="NoSchedule">{t('detail.noScheduleOption')}</Select.Option>
+              <Select.Option value="PreferNoSchedule">{t('detail.preferNoScheduleOption')}</Select.Option>
+              <Select.Option value="NoExecute">{t('detail.noExecuteOption')}</Select.Option>
             </Select>
           </div>
         </div>
@@ -900,45 +905,45 @@ const NodeDetail: React.FC = () => {
         <Divider />
 
         <div>
-          <Text>污点效果说明:</Text>
+          <Text>{t('detail.taintEffectInfo')}:</Text>
           <ul>
-            <li><Text strong>NoSchedule:</Text> 不会调度新的Pod到此节点，但现有Pod不受影响</li>
-            <li><Text strong>PreferNoSchedule:</Text> 尽量不调度新的Pod到此节点，但不保证</li>
-            <li><Text strong>NoExecute:</Text> 不仅不会调度新Pod，还会驱逐不能容忍此污点的现有Pod</li>
+            <li><Text strong>NoSchedule:</Text> {t('detail.noScheduleDesc')}</li>
+            <li><Text strong>PreferNoSchedule:</Text> {t('detail.preferNoScheduleDesc')}</li>
+            <li><Text strong>NoExecute:</Text> {t('detail.noExecuteDesc')}</li>
           </ul>
         </div>
       </Modal>
 
       {/* 驱逐节点模态框 */}
       <Modal
-        title="驱逐节点"
+        title={t('actions.drain')}
         open={drainModalVisible}
         onCancel={() => setDrainModalVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setDrainModalVisible(false)}>
-            取消
+            {tc('actions.cancel')}
           </Button>,
           <Button key="submit" type="primary" danger onClick={handleDrain}>
-            确认驱逐
+            {tc('actions.confirm')}
           </Button>,
         ]}
       >
         <Alert
-          message="警告"
-          description={`您确定要对节点 "${nodeName}" 执行驱逐操作吗？此操作将禁用节点调度并驱逐所有非系统Pod，可能影响正在运行的服务。`}
+          message={t('detail.drainWarningTitle')}
+          description={t('detail.drainWarningDesc', { name: nodeName })}
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
         />
 
         <div style={{ marginBottom: 16 }}>
-          <Text strong>高级选项:</Text>
+          <Text strong>{t('detail.advancedOptions')}:</Text>
           <div style={{ marginTop: 8 }}>
             <Checkbox
               checked={drainOptions.ignoreDaemonSets}
               onChange={(e) => setDrainOptions({ ...drainOptions, ignoreDaemonSets: e.target.checked })}
             >
-              忽略DaemonSet Pod
+              {t('detail.ignoreDaemonSets')}
             </Checkbox>
           </div>
           <div style={{ marginTop: 8 }}>
@@ -946,7 +951,7 @@ const NodeDetail: React.FC = () => {
               checked={drainOptions.deleteLocalData}
               onChange={(e) => setDrainOptions({ ...drainOptions, deleteLocalData: e.target.checked })}
             >
-              删除本地存储的Pod
+              {t('detail.deleteLocalData')}
             </Checkbox>
           </div>
           <div style={{ marginTop: 8 }}>
@@ -954,11 +959,11 @@ const NodeDetail: React.FC = () => {
               checked={drainOptions.force}
               onChange={(e) => setDrainOptions({ ...drainOptions, force: e.target.checked })}
             >
-              强制删除 (--force)
+              {t('detail.forceDelete')}
             </Checkbox>
           </div>
           <div style={{ marginTop: 8 }}>
-            <Text>宽限期:</Text>
+            <Text>{t('detail.gracePeriod')}:</Text>
             <InputNumber
               min={0}
               max={3600}
@@ -966,7 +971,7 @@ const NodeDetail: React.FC = () => {
               onChange={(value) => setDrainOptions({ ...drainOptions, gracePeriodSeconds: value as number })}
               style={{ marginLeft: 8 }}
             />
-            <Text style={{ marginLeft: 8 }}>秒</Text>
+            <Text style={{ marginLeft: 8 }}>{tc('time.seconds')}</Text>
           </div>
         </div>
       </Modal>

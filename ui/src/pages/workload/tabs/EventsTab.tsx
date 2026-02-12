@@ -3,6 +3,7 @@ import { Table, Tag, Button, Space, message, Spin, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SearchOutlined } from '@ant-design/icons';
 import { WorkloadService } from '../../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 
 interface EventInfo {
   type: string;
@@ -43,7 +44,8 @@ const EventsTab: React.FC<EventsTabProps> = ({
   jobName,
   cronJobName
 }) => {
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(['workload', 'common']);
+const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<EventInfo[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<EventInfo[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -76,11 +78,11 @@ const EventsTab: React.FC<EventsTabProps> = ({
         setEvents(eventList);
         setFilteredEvents(eventList);
       } else {
-        message.error(response.message || '获取事件列表失败');
+        message.error(response.message || t('messages.fetchEventsError'));
       }
     } catch (error) {
       console.error('获取事件列表失败:', error);
-      message.error('获取事件列表失败');
+      message.error(t('messages.fetchEventsError'));
     } finally {
       setLoading(false);
     }
@@ -134,21 +136,21 @@ const EventsTab: React.FC<EventsTabProps> = ({
 
   const columns: ColumnsType<EventInfo> = [
     {
-      title: '类型',
+      title: t('events.type'),
       dataIndex: 'type',
       key: 'type',
       width: 100,
       render: (type: string) => renderTypeTag(type),
     },
     {
-      title: '原因',
+      title: t('events.reason'),
       dataIndex: 'reason',
       key: 'reason',
       width: 150,
       render: (reason: string) => <Tag>{reason}</Tag>,
     },
     {
-      title: '对象',
+      title: t('events.object'),
       key: 'object',
       width: 200,
       render: (_, record: EventInfo) => (
@@ -158,39 +160,39 @@ const EventsTab: React.FC<EventsTabProps> = ({
       ),
     },
     {
-      title: '消息',
+      title: t('events.message'),
       dataIndex: 'message',
       key: 'message',
       width: 400,
       ellipsis: true,
     },
     {
-      title: '来源',
+      title: t('events.source'),
       key: 'source',
       width: 200,
       render: (_, record: EventInfo) => (
         <div>
-          <div>组件: {record.source.component}</div>
-          {record.source.host && <div>主机: {record.source.host}</div>}
+          <div>{t('events.component')}: {record.source.component}</div>
+          {record.source.host && <div>{t('events.host')}: {record.source.host}</div>}
         </div>
       ),
     },
     {
-      title: '次数',
+      title: t('events.count'),
       dataIndex: 'count',
       key: 'count',
       width: 80,
       render: (count: number) => count || 1,
     },
     {
-      title: '首次出现',
+      title: t('events.firstSeen'),
       dataIndex: 'firstTimestamp',
       key: 'firstTimestamp',
       width: 180,
       render: (time: string) => formatTime(time),
     },
     {
-      title: '最后出现',
+      title: t('events.lastSeen'),
       dataIndex: 'lastTimestamp',
       key: 'lastTimestamp',
       width: 180,
@@ -202,10 +204,10 @@ const EventsTab: React.FC<EventsTabProps> = ({
     <Spin spinning={loading}>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <Space>
-          <Button onClick={loadEvents}>刷新</Button>
+          <Button onClick={loadEvents}>{t('events.refresh')}</Button>
         </Space>
         <Input
-          placeholder="搜索事件（类型、原因、消息）"
+          placeholder={t("events.searchPlaceholder")}
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => handleSearch(e.target.value)}
@@ -221,7 +223,7 @@ const EventsTab: React.FC<EventsTabProps> = ({
           total: filteredEvents.length,
           pageSize: 10,
           showSizeChanger: true,
-          showTotal: (total) => `总共 ${total} 条`,
+          showTotal: (total) => t('events.total', { count: total }),
         }}
         scroll={{ x: 1600 }}
       />

@@ -31,6 +31,7 @@ import dayjs from 'dayjs';
 import { useParams } from 'react-router-dom';
 import { logService } from '../../services/logService';
 import type { EventLogEntry } from '../../services/logService';
+import { useTranslation } from 'react-i18next';
 
 const { Text, Paragraph } = Typography;
 
@@ -58,7 +59,8 @@ const reasonCategories: Record<string, { color: string; icon: React.ReactNode }>
 const EventLogs: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   
-  const [events, setEvents] = useState<EventLogEntry[]>([]);
+const { t } = useTranslation(['logs', 'common']);
+const [events, setEvents] = useState<EventLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaces, setNamespaces] = useState<string[]>([]);
   
@@ -131,7 +133,7 @@ const EventLogs: React.FC = () => {
       }
     } catch (error) {
       console.error('获取事件日志失败', error);
-      message.error('获取事件日志失败');
+      message.error(t('logs:events.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -157,7 +159,7 @@ const EventLogs: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<EventLogEntry> = [
     {
-      title: '时间',
+      title: t('logs:events.time'),
       dataIndex: 'last_timestamp',
       width: 170,
       sorter: (a, b) => new Date(a.last_timestamp).getTime() - new Date(b.last_timestamp).getTime(),
@@ -170,7 +172,7 @@ const EventLogs: React.FC = () => {
       ),
     },
     {
-      title: '类型',
+      title: t('common:table.type'),
       dataIndex: 'type',
       width: 90,
       filters: [
@@ -186,7 +188,7 @@ const EventLogs: React.FC = () => {
       ),
     },
     {
-      title: '原因',
+      title: t('logs:events.reason'),
       dataIndex: 'reason',
       width: 140,
       render: (reason: string) => {
@@ -200,7 +202,7 @@ const EventLogs: React.FC = () => {
       },
     },
     {
-      title: '资源',
+      title: t('logs:events.resource'),
       key: 'resource',
       width: 220,
       render: (_, record) => (
@@ -215,13 +217,13 @@ const EventLogs: React.FC = () => {
       ),
     },
     {
-      title: '命名空间',
+      title: t('common:table.namespace'),
       dataIndex: 'namespace',
       width: 120,
       render: (ns: string) => <Tag>{ns}</Tag>,
     },
     {
-      title: '消息',
+      title: t('logs:events.message'),
       dataIndex: 'message',
       ellipsis: true,
       render: (message: string, record) => (
@@ -239,7 +241,7 @@ const EventLogs: React.FC = () => {
       ),
     },
     {
-      title: '次数',
+      title: t('logs:events.count'),
       dataIndex: 'count',
       width: 70,
       align: 'center',
@@ -254,7 +256,7 @@ const EventLogs: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       width: 80,
       fixed: 'right',
@@ -265,7 +267,7 @@ const EventLogs: React.FC = () => {
           icon={<InfoCircleOutlined />}
           onClick={() => viewDetail(record)}
         >
-          详情
+          {t('logs:events.detail')}
         </Button>
       ),
     },
@@ -278,7 +280,7 @@ const EventLogs: React.FC = () => {
         <Col span={6}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="事件总数"
+              title={t('logs:events.totalEvents')}
               value={stats.total}
               prefix={<InfoCircleOutlined style={{ color: '#1890ff' }} />}
             />
@@ -287,7 +289,7 @@ const EventLogs: React.FC = () => {
         <Col span={6}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="正常事件"
+              title={t('logs:events.normalEvents')}
               value={stats.normal}
               valueStyle={{ color: '#52c41a' }}
               prefix={<CheckCircleOutlined />}
@@ -297,7 +299,7 @@ const EventLogs: React.FC = () => {
         <Col span={6}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="警告事件"
+              title={t('logs:events.warningEvents')}
               value={stats.warning}
               valueStyle={{ color: '#faad14' }}
               prefix={<WarningOutlined />}
@@ -307,7 +309,7 @@ const EventLogs: React.FC = () => {
         <Col span={6}>
           <Card size="small" bordered={false}>
             <Statistic
-              title="警告比例"
+              title={t('logs:events.warningRatio')}
               value={stats.total > 0 ? ((stats.warning / stats.total) * 100).toFixed(1) : 0}
               suffix="%"
               valueStyle={{ color: stats.warning / stats.total > 0.3 ? '#ff4d4f' : '#52c41a' }}
@@ -321,12 +323,12 @@ const EventLogs: React.FC = () => {
         title={
           <Space>
             <WarningOutlined />
-            <span>Kubernetes 事件日志</span>
+            <span>{t('logs:events.title')}</span>
           </Space>
         }
         extra={
           <Button icon={<ReloadOutlined />} onClick={fetchEvents} loading={loading}>
-            刷新
+            {t('common:actions.refresh')}
           </Button>
         }
         bordered={false}
@@ -334,7 +336,7 @@ const EventLogs: React.FC = () => {
         {/* 筛选区域 */}
         <Space wrap style={{ marginBottom: 16 }}>
           <Select
-            placeholder="命名空间"
+            placeholder={t('logs:events.namespace')}
             allowClear
             style={{ width: 180 }}
             value={namespace || undefined}
@@ -343,7 +345,7 @@ const EventLogs: React.FC = () => {
             options={namespaces.map((ns) => ({ label: ns, value: ns }))}
           />
           <Select
-            placeholder="事件类型"
+            placeholder={t('logs:events.eventType')}
             allowClear
             style={{ width: 120 }}
             value={eventType}
@@ -354,7 +356,7 @@ const EventLogs: React.FC = () => {
             ]}
           />
           <Select
-            placeholder="资源类型"
+            placeholder={t('logs:events.resourceKind')}
             allowClear
             style={{ width: 140 }}
             value={resourceKind || undefined}
@@ -363,7 +365,7 @@ const EventLogs: React.FC = () => {
             options={resourceKinds.map((kind) => ({ label: kind, value: kind }))}
           />
           <Input.Search
-            placeholder="搜索消息/资源名/原因"
+            placeholder={t('logs:events.searchPlaceholder')}
             style={{ width: 250 }}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
@@ -383,7 +385,7 @@ const EventLogs: React.FC = () => {
             pageSize: 20,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条事件`,
+            showTotal: (total) => t('logs:events.totalCountEvents', { total }),
           }}
           rowClassName={(record) => 
             record.type === 'Warning' ? 'warning-row' : ''
@@ -396,7 +398,7 @@ const EventLogs: React.FC = () => {
         title={
           <Space>
             <InfoCircleOutlined />
-            <span>事件详情</span>
+            <span>{t('logs:events.eventDetail')}</span>
           </Space>
         }
         placement="right"
@@ -408,74 +410,74 @@ const EventLogs: React.FC = () => {
           <>
             {/* 基本信息 */}
             <Descriptions
-              title="基本信息"
+              title={t('logs:events.basicInfo')}
               bordered
               size="small"
               column={2}
               style={{ marginBottom: 24 }}
             >
-              <Descriptions.Item label="类型">
+              <Descriptions.Item label={t('logs:events.type')}>
                 <Tag color={eventTypeColors[selectedEvent.type]}>
                   {selectedEvent.type}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="原因">
+              <Descriptions.Item label={t('logs:events.reason')}>
                 <Tag color={reasonCategories[selectedEvent.reason]?.color || 'default'}>
                   {selectedEvent.reason}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="发生次数" span={2}>
+              <Descriptions.Item label={t('logs:events.occurrences')} span={2}>
                 <Badge 
                   count={selectedEvent.count} 
                   style={{ backgroundColor: '#1890ff' }}
                   showZero
                 />
               </Descriptions.Item>
-              <Descriptions.Item label="首次发生">
+              <Descriptions.Item label={t('logs:events.firstOccurrence')}>
                 {dayjs(selectedEvent.first_timestamp).format('YYYY-MM-DD HH:mm:ss')}
               </Descriptions.Item>
-              <Descriptions.Item label="最后发生">
+              <Descriptions.Item label={t('logs:events.lastOccurrence')}>
                 {dayjs(selectedEvent.last_timestamp).format('YYYY-MM-DD HH:mm:ss')}
               </Descriptions.Item>
             </Descriptions>
 
             {/* 关联资源 */}
             <Descriptions
-              title="关联资源"
+              title={t('logs:events.relatedResource')}
               bordered
               size="small"
               column={1}
               style={{ marginBottom: 24 }}
             >
-              <Descriptions.Item label="命名空间">
+              <Descriptions.Item label={t('logs:events.namespace')}>
                 <Tag>{selectedEvent.namespace}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="资源类型">
+              <Descriptions.Item label={t('logs:events.resourceType')}>
                 <Tag color="cyan">{selectedEvent.involved_kind}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="资源名称">
+              <Descriptions.Item label={t('logs:events.resourceName')}>
                 <Text copyable>{selectedEvent.involved_name}</Text>
               </Descriptions.Item>
             </Descriptions>
 
             {/* 事件来源 */}
             <Descriptions
-              title="事件来源"
+              title={t('logs:events.eventSource')}
               bordered
               size="small"
               column={1}
               style={{ marginBottom: 24 }}
             >
-              <Descriptions.Item label="组件">
+              <Descriptions.Item label={t('logs:events.component')}>
                 {selectedEvent.source_component || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="主机">
+              <Descriptions.Item label={t('logs:events.host')}>
                 {selectedEvent.source_host || '-'}
               </Descriptions.Item>
             </Descriptions>
 
             {/* 事件消息 */}
-            <Card title="事件消息" size="small">
+            <Card title={t('logs:events.eventMessage')} size="small">
               <Paragraph
                 style={{
                   background: '#fafafa',

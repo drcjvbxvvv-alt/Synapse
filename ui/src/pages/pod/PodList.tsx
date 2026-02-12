@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Table,
@@ -122,6 +123,8 @@ const PodList: React.FC = () => {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const { t } = useTranslation('pod');
+  const { t: tc } = useTranslation('common');
   
   const clusterId = routeClusterId || '1';
   
@@ -184,11 +187,11 @@ const PodList: React.FC = () => {
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '实例名称',
-      namespace: '命名空间',
-      status: '状态',
-      podIP: '实例IP',
-      nodeName: '所在节点',
+      name: t('columns.name'),
+      namespace: tc('table.namespace'),
+      status: tc('table.status'),
+      podIP: t('columns.podIP'),
+      nodeName: t('columns.nodeName'),
       cpuRequest: 'CPU Request',
       cpuLimit: 'CPU Limit',
       memoryRequest: 'MEM Request',
@@ -270,15 +273,15 @@ const PodList: React.FC = () => {
         // 保存原始数据，筛选和分页会在useEffect中自动处理
         setAllPods(items);
       } else {
-        message.error(response.message || '获取Pod列表失败');
+        message.error(response.message || t('list.fetchError'));
       }
     } catch (error) {
-      console.error('获取Pod列表失败:', error);
-      message.error('获取Pod列表失败');
+      console.error('Failed to fetch pods:', error);
+      message.error(t('list.fetchError'));
     } finally {
       setLoading(false);
     }
-  }, [clusterId, message]);
+  }, [clusterId, message, t]);
 
   // 删除Pod
   const handleDelete = async (pod: PodInfo) => {
@@ -288,29 +291,29 @@ const PodList: React.FC = () => {
       const response = await PodService.deletePod(clusterId, pod.namespace, pod.name);
       
       if (response.code === 200) {
-        message.success('删除成功');
+        message.success(tc('messages.deleteSuccess'));
         loadPods();
       } else {
-        message.error(response.message || '删除失败');
+        message.error(response.message || tc('messages.deleteError'));
       }
     } catch (error) {
-      console.error('删除失败:', error);
-      message.error('删除失败');
+      console.error('Failed to delete pod:', error);
+      message.error(tc('messages.deleteError'));
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的Pod');
+      message.warning(t('messages.selectPodsFirst'));
       return;
     }
 
     Modal.confirm({
-      title: '确认批量删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 个Pod吗？此操作不可恢复。`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('actions.confirmBatchDelete'),
+      content: t('actions.batchDeleteContent', { count: selectedRowKeys.length }),
+      okText: tc('actions.confirm'),
+      cancelText: tc('actions.cancel'),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -324,16 +327,16 @@ const PodList: React.FC = () => {
           const failCount = results.length - successCount;
           
           if (failCount === 0) {
-            message.success(`成功删除 ${successCount} 个Pod`);
+            message.success(t('messages.batchDeleteSuccess', { count: successCount }));
           } else {
-            message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+            message.warning(t('messages.batchDeletePartial', { success: successCount, fail: failCount }));
           }
           
           setSelectedRowKeys([]);
           loadPods();
         } catch (error) {
-          console.error('批量删除失败:', error);
-          message.error('批量删除失败');
+          console.error('Failed to batch delete pods:', error);
+          message.error(t('messages.batchDeleteError'));
         }
       }
     });
@@ -346,7 +349,7 @@ const PodList: React.FC = () => {
       const filteredData = filterPods(allPods);
       
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
+        message.warning(tc('messages.noData'));
         return;
       }
 
@@ -354,26 +357,18 @@ const PodList: React.FC = () => {
       const dataToExport = filteredData.map(pod => {
         const resources = getPodResources(pod);
         return {
-          '实例名称': pod.name,
-          '状态': pod.status,
-          '命名空间': pod.namespace,
-          '实例IP': pod.podIP || '-',
-          '所在节点': pod.nodeName || '-',
-          '重启次数': pod.restartCount,
+          [t('columns.name')]: pod.name,
+          [tc('table.status')]: pod.status,
+          [tc('table.namespace')]: pod.namespace,
+          [t('columns.podIP')]: pod.podIP || '-',
+          [t('columns.nodeName')]: pod.nodeName || '-',
+          [t('columns.restarts')]: pod.restartCount,
           'CPU Request': resources.cpuRequest,
           'CPU Limit': resources.cpuLimit,
           'MEM Request': resources.memoryRequest,
           'MEM Limit': resources.memoryLimit,
-          '创建时间': pod.createdAt ? new Date(pod.createdAt).toLocaleString('zh-CN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-          }).replace(/\//g, '-') : '-',
-          '创建时长': PodService.getAge(pod.createdAt),
+          [tc('table.createdAt')]: pod.createdAt ? new Date(pod.createdAt).toLocaleString() : '-',
+          [t('columns.age')]: PodService.getAge(pod.createdAt),
         };
       });
 
@@ -394,17 +389,17 @@ const PodList: React.FC = () => {
       link.href = URL.createObjectURL(blob);
       link.download = `pod-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+      message.success(tc('messages.exportSuccess'));
     } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败');
+      console.error('Failed to export:', error);
+      message.error(tc('messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
+    message.success(tc('messages.saveSuccess'));
   };
 
   // 查看Pod日志
@@ -518,12 +513,12 @@ const PodList: React.FC = () => {
   const getActionMenuItems = (record: PodInfo): MenuProps['items'] => [
     {
       key: 'monitor',
-      label: '监控',
+      label: tc('menu.monitoring'),
       onClick: () => handleViewDetail(record),
     },
     {
       key: 'events',
-      label: '事件',
+      label: t('detail.events'),
       onClick: () => handleViewEvents(record),
     },
     {
@@ -531,14 +526,14 @@ const PodList: React.FC = () => {
     },
     {
       key: 'delete',
-      label: '删除',
+      label: tc('actions.delete'),
       danger: true,
       onClick: () => {
         Modal.confirm({
-          title: '确认删除',
-          content: `确定要删除Pod ${record.name} 吗？`,
-          okText: '确定',
-          cancelText: '取消',
+          title: tc('messages.confirmDelete'),
+          content: t('actions.confirmDeleteContent', { name: record.name }),
+          okText: tc('actions.confirm'),
+          cancelText: tc('actions.cancel'),
           okButtonProps: { danger: true },
           onOk: () => handleDelete(record),
         });
@@ -549,7 +544,7 @@ const PodList: React.FC = () => {
   // 定义所有可用列
   const allColumns: ColumnsType<PodInfo> = [
     {
-      title: '实例名称',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 220,
@@ -573,7 +568,7 @@ const PodList: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: tc('table.status'),
       dataIndex: 'status',
       key: 'status',
       width: 120,
@@ -600,7 +595,7 @@ const PodList: React.FC = () => {
       },
     },
     {
-      title: '命名空间',
+      title: tc('table.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 130,
@@ -609,14 +604,14 @@ const PodList: React.FC = () => {
       render: (text: string) => <Tag color="blue">{text}</Tag>,
     },
     {
-      title: '实例IP',
+      title: t('columns.podIP'),
       dataIndex: 'podIP',
       key: 'podIP',
       width: 130,
       render: (text: string) => text || '-',
     },
     {
-      title: '所在节点',
+      title: t('columns.nodeName'),
       dataIndex: 'nodeName',
       key: 'nodeName',
       width: 150,
@@ -625,7 +620,7 @@ const PodList: React.FC = () => {
       render: (text: string) => text || '-',
     },
     {
-      title: '重启次数',
+      title: t('columns.restarts'),
       dataIndex: 'restartCount',
       key: 'restartCount',
       width: 80,
@@ -672,7 +667,7 @@ const PodList: React.FC = () => {
       },
     },
     {
-      title: '创建时间',
+      title: tc('table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 150,
@@ -681,49 +676,39 @@ const PodList: React.FC = () => {
       render: (text: string) => {
         if (!text) return '-';
         const date = new Date(text);
-        // 格式化为：YYYY-MM-DD HH:mm:ss
-        const formatted = date.toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        }).replace(/\//g, '-');
-        return <span>{formatted}</span>;
+        return <span>{date.toLocaleString()}</span>;
       },
     },
     {
-      title: '创建时长',
+      title: t('columns.age'),
       key: 'age',
       width: 100,
       render: (_: unknown, record: PodInfo) => PodService.getAge(record.createdAt),
     },
     {
-      title: '操作',
+      title: tc('table.actions'),
       key: 'actions',
       width: 180,
       fixed: 'right' as const,
       render: (_: unknown, record: PodInfo) => (
         <Space size="small">
-          <Tooltip title="登录终端">
+          <Tooltip title={t('actions.terminal')}>
             <Button
               type="link"
               size="small"
               onClick={() => handleTerminal(record)}
               disabled={record.status !== 'Running'}
             >
-              登录
+              {t('actions.login')}
             </Button>
           </Tooltip>
-          <Tooltip title="查看日志">
+          <Tooltip title={t('actions.viewLogs')}>
             <Button
               type="link"
               size="small"
               onClick={() => handleViewLogs(record)}
             >
-              日志
+              {t('actions.logs')}
             </Button>
           </Tooltip>
           <Dropdown
@@ -731,7 +716,7 @@ const PodList: React.FC = () => {
             trigger={['click']}
           >
             <Button type="link" size="small">
-              更多
+              {tc('actions.more')}
             </Button>
           </Dropdown>
         </Space>
@@ -767,25 +752,25 @@ const PodList: React.FC = () => {
 
   // 列设置选项
   const columnOptions = [
-    { key: 'name', label: '实例名称' },
-    { key: 'status', label: '状态' },
-    { key: 'namespace', label: '命名空间' },
-    { key: 'podIP', label: '实例IP' },
-    { key: 'nodeName', label: '所在节点' },
-    { key: 'restartCount', label: '重启次数' },
+    { key: 'name', label: t('columns.name') },
+    { key: 'status', label: tc('table.status') },
+    { key: 'namespace', label: tc('table.namespace') },
+    { key: 'podIP', label: t('columns.podIP') },
+    { key: 'nodeName', label: t('columns.nodeName') },
+    { key: 'restartCount', label: t('columns.restarts') },
     { key: 'cpuRequest', label: 'CPU Request' },
     { key: 'cpuLimit', label: 'CPU Limit' },
     { key: 'memoryRequest', label: 'MEM Request' },
     { key: 'memoryLimit', label: 'MEM Limit' },
-    { key: 'createdAt', label: '创建时间' },
-    { key: 'age', label: '创建时长' },
+    { key: 'createdAt', label: tc('table.createdAt') },
+    { key: 'age', label: t('columns.age') },
   ];
 
   // Tab项配置
   const tabItems = [
     {
       key: 'pod',
-      label: '容器组（Pod）',
+      label: t('list.tabTitle'),
       children: (
         <div>
           {/* 操作按钮栏 */}
@@ -796,10 +781,10 @@ const PodList: React.FC = () => {
                 disabled={selectedRowKeys.length === 0}
                 onClick={handleBatchDelete}
               >
-                批量删除
+                {t('actions.batchDelete')}
               </Button>
               <Button onClick={handleExport}>
-                导出
+                {tc('actions.export')}
               </Button>
             </Space>
           </div>
@@ -810,7 +795,7 @@ const PodList: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
               <Input
                 prefix={<SearchOutlined />}
-                placeholder="选择属性筛选，或输入关键字搜索"
+                placeholder={t('list.searchPlaceholder')}
                 style={{ flex: 1 }}
                 value={currentSearchValue}
                 onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -822,11 +807,11 @@ const PodList: React.FC = () => {
                     onChange={setCurrentSearchField} 
                     style={{ width: 130 }}
                   >
-                    <Option value="name">实例名称</Option>
-                    <Option value="namespace">命名空间</Option>
-                    <Option value="status">状态</Option>
-                    <Option value="podIP">实例IP</Option>
-                    <Option value="nodeName">所在节点</Option>
+                    <Option value="name">{t('columns.name')}</Option>
+                    <Option value="namespace">{tc('table.namespace')}</Option>
+                    <Option value="status">{tc('table.status')}</Option>
+                    <Option value="podIP">{t('columns.podIP')}</Option>
+                    <Option value="nodeName">{t('columns.nodeName')}</Option>
                     <Option value="cpuRequest">CPU Request</Option>
                     <Option value="cpuLimit">CPU Limit</Option>
                     <Option value="memoryRequest">MEM Request</Option>
@@ -864,7 +849,7 @@ const PodList: React.FC = () => {
                     onClick={clearAllConditions}
                     style={{ padding: 0 }}
                   >
-                    清空全部
+                    {tc('actions.clearAll')}
                   </Button>
                 </Space>
               </div>
@@ -886,7 +871,7 @@ const PodList: React.FC = () => {
               total: total,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: (total) => `共 ${total} 个Pod`,
+              showTotal: (total) => `${tc('table.total')} ${total} Pod`,
               onChange: (page, size) => {
                 setCurrentPage(page);
                 setPageSize(size || 20);
@@ -897,7 +882,7 @@ const PodList: React.FC = () => {
 
           {/* 列设置抽屉 */}
           <Drawer
-            title="列设置"
+            title={t('list.columnSettings')}
             placement="right"
             width={400}
             open={columnSettingsVisible}
@@ -905,14 +890,14 @@ const PodList: React.FC = () => {
             footer={
               <div style={{ textAlign: 'right' }}>
                 <Space>
-                  <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-                  <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+                  <Button onClick={() => setColumnSettingsVisible(false)}>{tc('actions.cancel')}</Button>
+                  <Button type="primary" onClick={handleColumnSettingsSave}>{tc('actions.confirm')}</Button>
                 </Space>
               </div>
             }
           >
             <div style={{ marginBottom: 16 }}>
-              <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+              <p style={{ marginBottom: 8, color: '#666' }}>{t('list.selectColumns')}:</p>
               <Space direction="vertical" style={{ width: '100%' }}>
                 {columnOptions.map(option => (
                   <Checkbox

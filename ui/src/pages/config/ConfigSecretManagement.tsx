@@ -3,10 +3,12 @@ import { Card, Tabs, Spin } from 'antd';
 import { useParams, useSearchParams } from 'react-router-dom';
 import ConfigMapList from './ConfigMapList';
 import SecretList from './SecretList';
+import { useTranslation } from 'react-i18next';
 
 const ConfigSecretManagement: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+const { t } = useTranslation(['config', 'common']);
+const [searchParams, setSearchParams] = useSearchParams();
   const loading = false;
 
   // 从URL读取当前Tab
@@ -21,7 +23,7 @@ const ConfigSecretManagement: React.FC = () => {
   const tabItems = [
     {
       key: 'configmap',
-      label: '配置项（ConfigMap）',
+      label: t('config:tabs.configmap'),
       children: (
         <ConfigMapList
           clusterId={clusterId || ''}
@@ -30,7 +32,7 @@ const ConfigSecretManagement: React.FC = () => {
     },
     {
       key: 'secret',
-      label: '密钥（Secret）',
+      label: t('config:tabs.secret'),
       children: (
         <SecretList
           clusterId={clusterId || ''}

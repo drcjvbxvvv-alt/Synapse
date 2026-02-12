@@ -24,18 +24,19 @@ import {
 } from '@ant-design/icons';
 import { systemSettingService } from '../../services/authService';
 import type { SSHConfig } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 
 const SSHSettings: React.FC = () => {
-  const [form] = Form.useForm();
+const { t } = useTranslation(['settings', 'common']);
+const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasPassword, setHasPassword] = useState(false);
   const [hasPrivateKey, setHasPrivateKey] = useState(false);
   const { message } = App.useApp();
 
-  // 加载SSH配置
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -43,20 +44,19 @@ const SSHSettings: React.FC = () => {
         if (response.code === 200) {
           const config = response.data;
           
-          // 检查是否已配置密码/私钥（后端返回 "******" 表示已配置）
           if (config.password === '******') {
             setHasPassword(true);
-            config.password = ''; // 清空，不显示占位符
+            config.password = '';
           }
           if (config.private_key === '******') {
             setHasPrivateKey(true);
-            config.private_key = ''; // 清空，不显示占位符
+            config.private_key = '';
           }
           
           form.setFieldsValue(config);
         }
       } catch (error) {
-        message.error('加载SSH配置失败');
+        message.error(t('settings:ssh.loadConfigFailed'));
         console.error(error);
       } finally {
         setLoading(false);
@@ -64,15 +64,13 @@ const SSHSettings: React.FC = () => {
     };
 
     fetchConfig();
-  }, [form, message]);
+  }, [form, message, t]);
 
-  // 保存配置
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
       setSaving(true);
       
-      // 如果密码/私钥为空且之前已配置，发送占位符表示保持原值
       const submitData = { ...values };
       if (!submitData.password && hasPassword) {
         submitData.password = '******';
@@ -83,8 +81,7 @@ const SSHSettings: React.FC = () => {
       
       const response = await systemSettingService.updateSSHConfig(submitData as SSHConfig);
       if (response.code === 200) {
-        message.success('SSH配置保存成功');
-        // 更新状态
+        message.success(t('settings:ssh.saveConfigSuccess'));
         if (values.password) {
           setHasPassword(true);
           form.setFieldValue('password', '');
@@ -94,10 +91,10 @@ const SSHSettings: React.FC = () => {
           form.setFieldValue('private_key', '');
         }
       } else {
-        message.error(response.message || '保存失败');
+        message.error(response.message || t('settings:ssh.saveFailed'));
       }
     } catch (error) {
-      message.error('保存SSH配置失败');
+      message.error(t('settings:ssh.saveConfigFailed'));
       console.error(error);
     } finally {
       setSaving(false);
@@ -118,16 +115,16 @@ const SSHSettings: React.FC = () => {
         <div style={{ marginBottom: 24 }}>
           <Title level={4} style={{ margin: 0 }}>
             <KeyOutlined style={{ marginRight: 8 }} />
-            全局 SSH 凭据
+            {t('settings:ssh.title')}
           </Title>
           <Text type="secondary">
-            配置全局 SSH 凭据后，Node 终端点击"连接"按钮将自动使用此凭据连接
+            {t('settings:ssh.description')}
           </Text>
         </div>
 
         <Alert
-          message="安全提示"
-          description="SSH 凭据将加密存储在数据库中。建议使用 SSH 密钥认证方式，更加安全。"
+          message={t('settings:ssh.securityTip')}
+          description={t('settings:ssh.securityTipDesc')}
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
@@ -145,52 +142,52 @@ const SSHSettings: React.FC = () => {
         >
           <Form.Item
             name="enabled"
-            label="启用全局 SSH 凭据"
+            label={t('settings:ssh.enableGlobalSsh')}
             valuePropName="checked"
-            tooltip="启用后，Node SSH 终端点击连接按钮将自动使用此凭据连接"
+            tooltip={t('settings:ssh.enableGlobalSshTooltip')}
           >
-            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+            <Switch checkedChildren={t('settings:ssh.enabled')} unCheckedChildren={t('settings:ssh.disabled')} />
           </Form.Item>
 
-          <Divider>连接配置</Divider>
+          <Divider>{t('settings:ssh.connectionConfig')}</Divider>
 
           <Form.Item
             name="username"
-            label="用户名"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            label={t('settings:ssh.username')}
+            rules={[{ required: true, message: t('settings:ssh.usernameRequired') }]}
           >
             <Input 
               prefix={<UserOutlined />} 
-              placeholder="SSH 登录用户名，默认 root" 
+              placeholder={t('settings:ssh.usernamePlaceholder')} 
             />
           </Form.Item>
 
           <Form.Item
             name="port"
-            label="SSH 端口"
-            rules={[{ required: true, message: '请输入端口号' }]}
+            label={t('settings:ssh.sshPort')}
+            rules={[{ required: true, message: t('settings:ssh.sshPortRequired') }]}
           >
             <InputNumber 
               min={1} 
               max={65535} 
               style={{ width: '100%' }} 
-              placeholder="默认 22"
+              placeholder={t('settings:ssh.sshPortPlaceholder')}
             />
           </Form.Item>
 
-          <Divider>认证方式</Divider>
+          <Divider>{t('settings:ssh.authMethod')}</Divider>
 
           <Form.Item
             name="auth_type"
-            label="认证方式"
-            rules={[{ required: true, message: '请选择认证方式' }]}
+            label={t('settings:ssh.authMethod')}
+            rules={[{ required: true, message: t('settings:ssh.authMethodRequired') }]}
           >
             <Radio.Group>
               <Radio.Button value="password">
-                <LockOutlined /> 密码认证
+                <LockOutlined /> {t('settings:ssh.passwordAuth')}
               </Radio.Button>
               <Radio.Button value="key">
-                <KeyOutlined /> 密钥认证
+                <KeyOutlined /> {t('settings:ssh.keyAuth')}
               </Radio.Button>
             </Radio.Group>
           </Form.Item>
@@ -210,18 +207,18 @@ const SSHSettings: React.FC = () => {
                     name="password"
                     label={
                       <Space>
-                        <span>密码</span>
+                        <span>{t('settings:ssh.passwordLabel')}</span>
                         {hasPassword && (
                           <Tag color="green" icon={<CheckCircleOutlined />}>
-                            已配置
+                            {t('settings:ssh.configured')}
                           </Tag>
                         )}
                       </Space>
                     }
-                    tooltip="留空则保持原密码不变"
+                    tooltip={t('settings:ssh.keepOriginalPassword')}
                   >
                     <Input.Password 
-                      placeholder={hasPassword ? "已配置密码，留空保持不变，输入新值则覆盖" : "请输入 SSH 登录密码"}
+                      placeholder={hasPassword ? t('settings:ssh.passwordConfiguredPlaceholder') : t('settings:ssh.passwordPlaceholder')}
                     />
                   </Form.Item>
                 );
@@ -233,24 +230,21 @@ const SSHSettings: React.FC = () => {
                     name="private_key"
                     label={
                       <Space>
-                        <span>私钥内容</span>
+                        <span>{t('settings:ssh.privateKeyLabel')}</span>
                         {hasPrivateKey && (
                           <Tag color="green" icon={<CheckCircleOutlined />}>
-                            已配置
+                            {t('settings:ssh.configured')}
                           </Tag>
                         )}
                       </Space>
                     }
-                    tooltip="留空则保持原私钥不变"
+                    tooltip={t('settings:ssh.keepOriginalKey')}
                   >
                     <Input.TextArea
                       rows={8}
                       placeholder={hasPrivateKey 
-                        ? "已配置私钥，留空保持不变，输入新值则覆盖" 
-                        : `请粘贴私钥内容（PEM格式），例如：
------BEGIN OPENSSH PRIVATE KEY-----
-...
------END OPENSSH PRIVATE KEY-----`}
+                        ? t('settings:ssh.privateKeyConfiguredPlaceholder') 
+                        : t('settings:ssh.privateKeyPlaceholder')}
                       style={{ fontFamily: 'monospace' }}
                     />
                   </Form.Item>
@@ -271,7 +265,7 @@ const SSHSettings: React.FC = () => {
                 loading={saving}
                 onClick={handleSave}
               >
-                保存配置
+                {t('settings:ssh.saveConfig')}
               </Button>
             </Space>
           </Form.Item>

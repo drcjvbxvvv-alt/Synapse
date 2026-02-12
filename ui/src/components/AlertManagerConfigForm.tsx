@@ -25,6 +25,7 @@ import {
   CloseCircleOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { alertService } from '../services/alertService';
 import type { AlertManagerConfig, AlertManagerStatus } from '../services/alertService';
 
@@ -40,6 +41,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
   clusterId,
   onConfigChange,
 }) => {
+  const { t } = useTranslation('components');
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -61,8 +63,8 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
         auth: config.auth || { type: 'none' },
       });
     } catch (error: unknown) {
-      console.error('加载 Alertmanager 配置失败:', error);
-      message.error('加载 Alertmanager 配置失败');
+      console.error('Failed to load Alertmanager config:', error);
+      message.error(t('alertManagerConfig.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
       const response = await alertService.getStatus(clusterId);
       setStatus(response.data);
     } catch (error: unknown) {
-      console.error('获取 Alertmanager 状态失败:', error);
+      console.error('Failed to get Alertmanager status:', error);
       setStatus(null);
     } finally {
       setStatusLoading(false);
@@ -111,7 +113,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
 
       await alertService.updateConfig(clusterId, config);
 
-      const successMsg = 'Alertmanager 配置保存成功';
+      const successMsg = t('alertManagerConfig.saveSuccess');
       message.success(successMsg);
       setSaveResult({ success: true, message: successMsg });
       onConfigChange?.();
@@ -121,16 +123,16 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
         loadStatus();
       }
     } catch (error: unknown) {
-      console.error('保存 Alertmanager 配置失败:', error);
+      console.error('Failed to save Alertmanager config:', error);
 
       if (error && typeof error === 'object' && 'errorFields' in error) {
-        const errorMsg = '请检查表单填写是否正确';
+        const errorMsg = t('alertManagerConfig.checkForm');
         message.error(errorMsg);
         setSaveResult({ success: false, message: errorMsg });
         return;
       }
 
-      let errorMsg = '保存 Alertmanager 配置失败';
+      let errorMsg = t('alertManagerConfig.saveFailed');
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { data?: { message?: string } } };
         errorMsg = axiosError.response?.data?.message || errorMsg;
@@ -153,8 +155,8 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
       const values = await form.validateFields();
 
       if (!values.enabled) {
-        message.warning('请先启用 Alertmanager');
-        setTestResult({ success: false, message: 'Alertmanager 未启用，无法测试连接' });
+        message.warning(t('alertManagerConfig.enableFirst'));
+        setTestResult({ success: false, message: t('alertManagerConfig.notEnabled') });
         return;
       }
 
@@ -166,20 +168,20 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
 
       await alertService.testConnection(clusterId, config);
 
-      const successMsg = '连接测试成功';
+      const successMsg = t('alertManagerConfig.testSuccess');
       message.success(successMsg);
       setTestResult({ success: true, message: successMsg });
     } catch (error: unknown) {
-      console.error('连接测试失败:', error);
+      console.error('Connection test failed:', error);
 
       if (error && typeof error === 'object' && 'errorFields' in error) {
-        const errorMsg = '请检查表单填写是否正确';
+        const errorMsg = t('alertManagerConfig.checkForm');
         message.error(errorMsg);
         setTestResult({ success: false, message: errorMsg });
         return;
       }
 
-      let errorMsg = '连接测试失败';
+      let errorMsg = t('alertManagerConfig.testFailed');
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { data?: { message?: string } } };
         errorMsg = axiosError.response?.data?.message || errorMsg;
@@ -198,15 +200,15 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
     const authType = form.getFieldValue(['auth', 'type']);
 
     return (
-      <Card title="认证配置" size="small">
+      <Card title={t('alertManagerConfig.authConfig')} size="small">
         <Form.Item
           name={['auth', 'type']}
-          label="认证类型"
-          rules={[{ required: enabled, message: '请选择认证类型' }]}
+          label={t('alertManagerConfig.authType')}
+          rules={[{ required: enabled, message: t('alertManagerConfig.authTypeRequired') }]}
           initialValue="none"
         >
-          <Select placeholder="选择认证类型">
-            <Option value="none">无需认证</Option>
+          <Select placeholder={t('alertManagerConfig.selectAuthType')}>
+            <Option value="none">{t('alertManagerConfig.noAuth')}</Option>
             <Option value="basic">Basic Auth</Option>
             <Option value="bearer">Bearer Token</Option>
           </Select>
@@ -214,8 +216,8 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
 
         {authType === 'none' && (
           <Alert
-            message="无需认证"
-            description="将直接访问 Alertmanager 端点，不进行任何身份验证。"
+            message={t('alertManagerConfig.noAuth')}
+            description={t('alertManagerConfig.noAuthDesc')}
             type="info"
             showIcon
             style={{ marginTop: 16 }}
@@ -226,17 +228,17 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
           <>
             <Form.Item
               name={['auth', 'username']}
-              label="用户名"
-              rules={[{ required: true, message: '请输入用户名' }]}
+              label={t('alertManagerConfig.username')}
+              rules={[{ required: true, message: t('alertManagerConfig.usernameRequired') }]}
             >
-              <Input placeholder="请输入用户名" />
+              <Input placeholder={t('alertManagerConfig.usernamePlaceholder')} />
             </Form.Item>
             <Form.Item
               name={['auth', 'password']}
-              label="密码"
-              rules={[{ required: true, message: '请输入密码' }]}
+              label={t('alertManagerConfig.password')}
+              rules={[{ required: true, message: t('alertManagerConfig.passwordRequired') }]}
             >
-              <Input.Password placeholder="请输入密码" />
+              <Input.Password placeholder={t('alertManagerConfig.passwordPlaceholder')} />
             </Form.Item>
           </>
         )}
@@ -244,10 +246,10 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
         {authType === 'bearer' && (
           <Form.Item
             name={['auth', 'token']}
-            label="Token"
-            rules={[{ required: true, message: '请输入Token' }]}
+            label={t('alertManagerConfig.token')}
+            rules={[{ required: true, message: t('alertManagerConfig.tokenRequired') }]}
           >
-            <Input.Password placeholder="请输入 Bearer Token" />
+            <Input.Password placeholder={t('alertManagerConfig.tokenPlaceholder')} />
           </Form.Item>
         )}
       </Card>
@@ -259,7 +261,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
 
     return (
       <Card
-        title="Alertmanager 状态"
+        title={t('alertManagerConfig.status')}
         size="small"
         style={{ marginTop: 16 }}
         extra={
@@ -269,7 +271,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
             onClick={loadStatus}
             loading={statusLoading}
           >
-            刷新
+            {t('alertManagerConfig.refresh')}
           </Button>
         }
       >
@@ -279,31 +281,31 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
           </div>
         ) : status ? (
           <Descriptions column={2} size="small">
-            <Descriptions.Item label="版本">
+            <Descriptions.Item label={t('alertManagerConfig.version')}>
               {status.versionInfo?.version || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="集群状态">
+            <Descriptions.Item label={t('alertManagerConfig.clusterStatus')}>
               <Tag color={status.cluster?.status === 'ready' ? 'green' : 'orange'}>
-                {status.cluster?.status || '未知'}
+                {status.cluster?.status || t('alertManagerConfig.unknown')}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="集群名称">
+            <Descriptions.Item label={t('alertManagerConfig.clusterName')}>
               {status.cluster?.name || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="节点数">
+            <Descriptions.Item label={t('alertManagerConfig.nodeCount')}>
               {status.cluster?.peers?.length || 0}
             </Descriptions.Item>
-            <Descriptions.Item label="Go 版本">
+            <Descriptions.Item label={t('alertManagerConfig.goVersion')}>
               {status.versionInfo?.goVersion || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="构建时间">
+            <Descriptions.Item label={t('alertManagerConfig.buildDate')}>
               {status.versionInfo?.buildDate || '-'}
             </Descriptions.Item>
           </Descriptions>
         ) : (
           <Alert
-            message="无法获取状态"
-            description="请确保 Alertmanager 配置正确且服务可访问。"
+            message={t('alertManagerConfig.cannotGetStatus')}
+            description={t('alertManagerConfig.ensureConfigCorrect')}
             type="warning"
             showIcon
           />
@@ -316,7 +318,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
     <div>
       <Spin spinning={loading}>
         <Card
-          title="Alertmanager 配置"
+          title={t('alertManagerConfig.title')}
           extra={
             <Space>
               <Button
@@ -325,7 +327,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
                 loading={testing}
                 disabled={!enabled}
               >
-                测试连接
+                {t('alertManagerConfig.testConnection')}
               </Button>
               <Button
                 type="primary"
@@ -333,7 +335,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
                 onClick={handleSave}
                 loading={loading}
               >
-                保存配置
+                {t('alertManagerConfig.saveConfig')}
               </Button>
             </Space>
           }
@@ -348,13 +350,13 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
                 ) : (
                   <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
                 )}
-                <span>{testResult?.success ? '连接测试成功' : '连接测试失败'}</span>
+                <span>{testResult?.success ? t('alertManagerConfig.testSuccess') : t('alertManagerConfig.testFailed')}</span>
               </Space>
             }
             onCancel={() => setTestResult(null)}
             footer={[
               <Button key="ok" type="primary" onClick={() => setTestResult(null)}>
-                确定
+                {t('alertManagerConfig.ok')}
               </Button>,
             ]}
           >
@@ -371,13 +373,13 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
                 ) : (
                   <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
                 )}
-                <span>{saveResult?.success ? '配置保存成功' : '配置保存失败'}</span>
+                <span>{saveResult?.success ? t('alertManagerConfig.configSaveSuccess') : t('alertManagerConfig.configSaveFailed')}</span>
               </Space>
             }
             onCancel={() => setSaveResult(null)}
             footer={[
               <Button key="ok" type="primary" onClick={() => setSaveResult(null)}>
-                确定
+                {t('alertManagerConfig.ok')}
               </Button>,
             ]}
           >
@@ -387,12 +389,12 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
           <Form form={form} layout="vertical" initialValues={{ enabled: false }}>
             <Row gutter={16}>
               <Col span={24}>
-                <Form.Item name="enabled" label="启用 Alertmanager" valuePropName="checked">
+                <Form.Item name="enabled" label={t('alertManagerConfig.enableLabel')} valuePropName="checked">
                   <Switch
                     checked={enabled}
                     onChange={handleEnabledChange}
-                    checkedChildren="启用"
-                    unCheckedChildren="禁用"
+                    checkedChildren={t('alertManagerConfig.enabled')}
+                    unCheckedChildren={t('alertManagerConfig.disabled')}
                   />
                 </Form.Item>
               </Col>
@@ -404,10 +406,10 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
                   <Col span={24}>
                     <Form.Item
                       name="endpoint"
-                      label="Alertmanager 地址"
+                      label={t('alertManagerConfig.endpoint')}
                       rules={[
-                        { required: enabled, message: '请输入 Alertmanager 地址' },
-                        { type: 'url', message: '请输入有效的 URL' },
+                        { required: enabled, message: t('alertManagerConfig.endpointRequired') },
+                        { type: 'url', message: t('alertManagerConfig.urlInvalid') },
                       ]}
                     >
                       <Input placeholder="http://alertmanager:9093" />
@@ -424,25 +426,25 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
 
         {renderStatusCard()}
 
-        <Card title="配置说明" style={{ marginTop: 16 }}>
+        <Card title={t('alertManagerConfig.configGuide')} style={{ marginTop: 16 }}>
           <Alert
-            message="Alertmanager 配置说明"
+            message={t('alertManagerConfig.configGuideTitle')}
             description={
               <div>
-                <Text strong>端点地址：</Text>
+                <Text strong>{t('alertManagerConfig.endpointLabel')}</Text>
                 <ul style={{ marginTop: 8 }}>
                   <li>
-                    集群内访问：<Text code>http://alertmanager.monitoring:9093</Text>
+                    {t('alertManagerConfig.inClusterAccess')}<Text code>http://alertmanager.monitoring:9093</Text>
                   </li>
                   <li>
-                    集群外访问：<Text code>http://alertmanager.example.com:9093</Text>
+                    {t('alertManagerConfig.externalAccess')}<Text code>http://alertmanager.example.com:9093</Text>
                   </li>
                 </ul>
-                <Text strong>认证配置：</Text>
+                <Text strong>{t('alertManagerConfig.authConfigLabel')}</Text>
                 <ul style={{ marginTop: 8 }}>
-                  <li>无需认证：直接访问 Alertmanager</li>
-                  <li>Basic Auth：使用用户名和密码认证</li>
-                  <li>Bearer Token：使用 Token 认证</li>
+                  <li>{t('alertManagerConfig.noAuthGuide')}</li>
+                  <li>{t('alertManagerConfig.basicAuthGuide')}</li>
+                  <li>{t('alertManagerConfig.bearerTokenGuide')}</li>
                 </ul>
               </div>
             }

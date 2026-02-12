@@ -24,7 +24,25 @@
     "settings": "Settings",
     "profile": "Profile",
     "plugins": "Plugins",
-    "argocd": "ArgoCD"
+    "argocd": "ArgoCD",
+    "kubernetesResources": "Kubernetes Resources",
+    "serviceAndRoutes": "Services & Routes",
+    "configsAndSecrets": "Configs & Secrets",
+    "clusterSection": "Cluster",
+    "nodeManagement": "Node Management",
+    "configCenter": "Config Center",
+    "clusterUpgrade": "Cluster Upgrade",
+    "gitopsApps": "GitOps Apps",
+    "observability": "Observability",
+    "costGovernance": "Cost Governance",
+    "costInsights": "Cost Insights",
+    "backToClusterList": "Back to Clusters",
+    "currentCluster": "Current Cluster:",
+    "readonlyMode": "(Read-only)",
+    "readonlyNoTerminal": "Read-only access cannot use terminal",
+    "kubectlTerminal": "Kubectl Terminal",
+    "cannotGetClusterId": "Cannot get cluster ID",
+    "pods": "Pods"
   },
   "actions": {
     "create": "Create",
@@ -47,9 +65,22 @@
     "copy": "Copy",
     "download": "Download",
     "upload": "Upload",
-    "more": "More"
+    "more": "More",
+    "clearAll": "Clear All",
+    "clearAllConditions": "Clear All Conditions",
+    "nextStep": "Next",
+    "prevStep": "Previous",
+    "viewAll": "View All",
+    "batchDelete": "Batch Delete",
+    "batchRedeploy": "Batch Redeploy",
+    "scale": "Scale",
+    "monitoring": "Monitoring",
+    "restart": "Redeploy",
+    "reconfigure": "Reconfigure",
+    "confirmImport": "Confirm Import"
   },
   "status": {
+    "all": "All Status",
     "healthy": "Healthy",
     "unhealthy": "Unhealthy",
     "unknown": "Unknown",
@@ -62,7 +93,10 @@
     "online": "Online",
     "offline": "Offline",
     "enabled": "Enabled",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "normal": "Normal",
+    "warning": "Warning",
+    "active": "Active"
   },
   "messages": {
     "success": "Operation successful",
@@ -76,9 +110,31 @@
     "saveError": "Failed to save",
     "copySuccess": "Copied successfully",
     "copyError": "Failed to copy",
+    "exportSuccess": "Exported successfully",
+    "exportError": "Failed to export",
     "networkError": "Network error, please try again later",
     "unauthorized": "Unauthorized, please login again",
-    "forbidden": "Permission denied"
+    "forbidden": "Permission denied",
+    "scaleSuccess": "Scaled successfully",
+    "scaleError": "Failed to scale",
+    "redeploySuccess": "Redeployed successfully",
+    "redeployError": "Failed to redeploy",
+    "createSuccess": "Created successfully",
+    "createError": "Failed to create",
+    "fetchError": "Failed to fetch data",
+    "noExportData": "No data to export",
+    "columnSettingsSaved": "Column settings saved",
+    "connectionTestSuccess": "Connection test successful!",
+    "connectionTestFailed": "Connection test failed",
+    "importSuccess": "Import successful",
+    "importFailed": "Import failed",
+    "selectFirst": "Please select items first",
+    "batchDeleteSuccess": "Successfully deleted {{count}} items",
+    "batchDeletePartial": "Completed: {{success}} succeeded, {{fail}} failed",
+    "batchRedeploySuccess": "Successfully redeployed {{count}} items",
+    "batchRedeployPartial": "Completed: {{success}} succeeded, {{fail}} failed",
+    "exportCount": "Successfully exported {{count}} records",
+    "cannotDeleteSystem": "Cannot delete system resources"
   },
   "time": {
     "justNow": "Just now",
@@ -88,7 +144,8 @@
     "seconds": "seconds",
     "minutes": "minutes",
     "hours": "hours",
-    "days": "days"
+    "days": "days",
+    "lastUpdate": "Last updated"
   },
   "table": {
     "name": "Name",
@@ -99,7 +156,14 @@
     "description": "Description",
     "type": "Type",
     "namespace": "Namespace",
-    "labels": "Labels"
+    "labels": "Labels",
+    "annotations": "Annotations",
+    "total": "Total",
+    "selected": "Selected",
+    "totalCount": "Total {{count}} items",
+    "version": "Version",
+    "image": "Image",
+    "images": "Images"
   },
   "language": {
     "switch": "Switch Language",
@@ -116,6 +180,52 @@
     "loginSuccess": "Login successful",
     "loginError": "Login failed",
     "logoutSuccess": "Logout successful",
-    "sessionExpired": "Session expired, please login again"
-  }
+    "sessionExpired": "Session expired, please login again",
+    "passwordLogin": "Password Login",
+    "ldapLogin": "LDAP Login",
+    "usernameRequired": "Please enter username",
+    "passwordRequired": "Please enter password",
+    "ldapHint": "🔐 Login with enterprise account",
+    "defaultAdminHint": "👤 Default admin: admin / KubePolaris@2026"
+  },
+  "search": {
+    "placeholder": "Select attribute to filter, or enter keyword to search",
+    "columnSettings": "Column Settings",
+    "selectColumns": "Select columns to display",
+    "fieldName": "Workload Name",
+    "fieldNamespace": "Namespace",
+    "fieldImage": "Image",
+    "fieldStatus": "Status",
+    "fieldLabel": "Label",
+    "fieldCpuLimit": "CPU Limit",
+    "fieldCpuRequest": "CPU Request",
+    "fieldMemoryLimit": "Memory Limit",
+    "fieldMemoryRequest": "Memory Request"
+  },
+  "resources": {
+    "cpu": "CPU",
+    "memory": "Memory",
+    "storage": "Storage",
+    "used": "Used",
+    "total": "Total",
+    "available": "Available",
+    "quota": "Quota"
+  },
+  "units": {
+    "count": "",
+    "cores": " cores",
+    "items": " items",
+    "second30": "30s",
+    "minute1": "1 min",
+    "minute5": "5 min",
+    "last7Days": "Last 7 days",
+    "last30Days": "Last 30 days"
+  },
+  "info": {
+    "basicInfo": "Basic Info",
+    "detailInfo": "Detail Info",
+    "systemInfo": "System Info"
+  },
+  "featureInDev": "This feature is under active development",
+  "featureInDevDesc": "We are working hard to build powerful features for you. Stay tuned."
 }

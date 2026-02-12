@@ -3,6 +3,7 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { Card, Button, Space, Input, Modal, Form, message, Select, Spin } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { 
   ReloadOutlined, 
   DisconnectOutlined,
@@ -28,6 +29,7 @@ interface SSHConnection {
 }
 
 const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
+  const { t } = useTranslation('components');
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
@@ -42,7 +44,6 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
   const initTerminal = () => {
     if (!terminalRef.current) return;
 
-    // 创建终端实例
     terminal.current = new Terminal({
       cursorBlink: true,
       fontSize: 14,
@@ -73,21 +74,17 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
       rows: 24,
     });
 
-    // 添加插件
     fitAddon.current = new FitAddon();
     terminal.current.loadAddon(fitAddon.current);
     terminal.current.loadAddon(new WebLinksAddon());
 
-    // 打开终端
     terminal.current.open(terminalRef.current);
     fitAddon.current.fit();
 
-    // 显示欢迎信息
-    terminal.current.writeln('\x1b[1;32m欢迎使用 SSH 终端\x1b[0m');
-    terminal.current.writeln('\x1b[1;33m请点击"连接"按钮连接到服务器\x1b[0m');
+    terminal.current.writeln(`\x1b[1;32m${t('sshTerminal.welcome')}\x1b[0m`);
+    terminal.current.writeln(`\x1b[1;33m${t('sshTerminal.clickConnect')}\x1b[0m`);
     terminal.current.writeln('');
 
-    // 监听终端输入
     terminal.current.onData((data) => {
       if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
         websocket.current.send(JSON.stringify({
@@ -97,7 +94,6 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
       }
     });
 
-    // 监听窗口大小变化
     const handleResize = () => {
       if (fitAddon.current) {
         fitAddon.current.fit();
@@ -120,27 +116,23 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
   const connectSSH = async (connection: SSHConnection) => {
     if (!terminal.current) return;
 
-    // 获取认证 token
     const token = localStorage.getItem('token');
     if (!token) {
-      message.error('未登录，请先登录');
+      message.error(t('sshTerminal.notLoggedIn'));
       return;
     }
 
     setIsConnecting(true);
     terminal.current.clear();
-    terminal.current.writeln('\x1b[1;33m正在连接SSH服务器...\x1b[0m');
+    terminal.current.writeln(`\x1b[1;33m${t('sshTerminal.connecting')}\x1b[0m`);
 
     try {
-      // 创建WebSocket连接到后端SSH代理
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // 在 URL 中添加 token 参数用于 WebSocket 认证
       const wsUrl = `${wsProtocol}//${window.location.hostname}:8080/ws/ssh/terminal?token=${encodeURIComponent(token)}`;
       
       websocket.current = new WebSocket(wsUrl);
 
       websocket.current.onopen = () => {
-        // 发送连接配置
         websocket.current!.send(JSON.stringify({
           type: 'connect',
           config: connection
@@ -155,10 +147,10 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
             setIsConnected(true);
             setIsConnecting(false);
             terminal.current!.clear();
-            terminal.current!.writeln('\x1b[1;32m✓ SSH连接成功\x1b[0m');
-            terminal.current!.writeln(`\x1b[1;36m连接到: ${connection.username}@${connection.host}:${connection.port}\x1b[0m`);
+            terminal.current!.writeln(`\x1b[1;32m✓ ${t('sshTerminal.connectSuccess')}\x1b[0m`);
+            terminal.current!.writeln(`\x1b[1;36m${t('sshTerminal.connectedTo')}: ${connection.username}@${connection.host}:${connection.port}\x1b[0m`);
             terminal.current!.writeln('');
-            message.success('SSH连接成功');
+            message.success(t('sshTerminal.connectSuccess'));
             break;
             
           case 'data':
@@ -168,13 +160,13 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
           case 'error':
             setIsConnecting(false);
             setIsConnected(false);
-            terminal.current!.writeln(`\x1b[1;31m✗ 连接失败: ${msg.error}\x1b[0m`);
-            message.error(`SSH连接失败: ${msg.error}`);
+            terminal.current!.writeln(`\x1b[1;31m✗ ${t('sshTerminal.connectFailed')}: ${msg.error}\x1b[0m`);
+            message.error(`${t('sshTerminal.connectFailed')}: ${msg.error}`);
             break;
             
           case 'disconnected':
             setIsConnected(false);
-            terminal.current!.writeln('\x1b[1;33m连接已断开\x1b[0m');
+            terminal.current!.writeln(`\x1b[1;33m${t('sshTerminal.disconnected')}\x1b[0m`);
             break;
         }
       };
@@ -182,20 +174,20 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
       websocket.current.onerror = () => {
         setIsConnecting(false);
         setIsConnected(false);
-        terminal.current!.writeln('\x1b[1;31m✗ WebSocket连接失败\x1b[0m');
-        message.error('WebSocket连接失败');
+        terminal.current!.writeln(`\x1b[1;31m✗ ${t('sshTerminal.wsFailed')}\x1b[0m`);
+        message.error(t('sshTerminal.wsFailed'));
       };
 
       websocket.current.onclose = () => {
         setIsConnected(false);
         setIsConnecting(false);
-        terminal.current!.writeln('\x1b[1;33m连接已关闭\x1b[0m');
+        terminal.current!.writeln(`\x1b[1;33m${t('sshTerminal.connectionClosed')}\x1b[0m`);
       };
 
     } catch (error) {
       setIsConnecting(false);
-      terminal.current.writeln(`\x1b[1;31m✗ 连接失败: ${error}\x1b[0m`);
-      message.error('SSH连接失败');
+      terminal.current.writeln(`\x1b[1;31m✗ ${t('sshTerminal.connectFailed')}: ${error}\x1b[0m`);
+      message.error(t('sshTerminal.connectFailed'));
     }
   };
 
@@ -207,7 +199,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
     }
     setIsConnected(false);
     if (terminal.current) {
-      terminal.current.writeln('\x1b[1;33m连接已断开\x1b[0m');
+      terminal.current.writeln(`\x1b[1;33m${t('sshTerminal.disconnected')}\x1b[0m`);
     }
   };
 
@@ -218,27 +210,25 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
     }
   };
 
-  // 点击连接按钮 - 优先使用全局配置，否则弹出表单
+  // 点击连接按钮
   const handleConnectClick = async () => {
     if (!nodeIP) {
-      message.error('节点 IP 未知');
+      message.error(t('sshTerminal.nodeIPUnknown'));
       return;
     }
 
     setIsConnecting(true);
     terminal.current?.clear();
-    terminal.current?.writeln('\x1b[1;36m正在检查全局 SSH 配置...\x1b[0m');
+    terminal.current?.writeln(`\x1b[1;36m${t('sshTerminal.checkingGlobalConfig')}\x1b[0m`);
 
     try {
-      // 获取全局 SSH 凭据
       const response = await systemSettingService.getSSHCredentials();
       
       if (response.code === 200 && response.data?.enabled) {
         const sshConfig = response.data;
         
-        terminal.current?.writeln('\x1b[1;32m✓ 已启用全局 SSH 配置，正在连接...\x1b[0m');
+        terminal.current?.writeln(`\x1b[1;32m✓ ${t('sshTerminal.globalConfigEnabled')}\x1b[0m`);
         
-        // 使用全局配置连接
         const connection: SSHConnection = {
           host: nodeIP,
           port: sshConfig.port || 22,
@@ -249,19 +239,17 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
           clusterId: clusterId ? parseInt(clusterId, 10) : undefined,
         };
         
-        // 连接
         await connectSSH(connection);
       } else {
-        // 全局配置未启用，弹出表单让用户手动配置
         setIsConnecting(false);
-        terminal.current?.writeln('\x1b[1;33m全局 SSH 配置未启用，请手动配置连接信息\x1b[0m');
+        terminal.current?.writeln(`\x1b[1;33m${t('sshTerminal.globalConfigDisabled')}\x1b[0m`);
         terminal.current?.writeln('');
         setConnectionModalVisible(true);
       }
     } catch (error) {
-      console.error('获取全局SSH配置失败:', error);
+      console.error('Failed to get SSH config:', error);
       setIsConnecting(false);
-      terminal.current?.writeln('\x1b[1;33m获取全局 SSH 配置失败，请手动配置连接信息\x1b[0m');
+      terminal.current?.writeln(`\x1b[1;33m${t('sshTerminal.globalConfigFailed')}\x1b[0m`);
       terminal.current?.writeln('');
       setConnectionModalVisible(true);
     }
@@ -321,7 +309,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
             onClick={handleConnectClick}
             disabled={isConnecting}
           >
-            {isConnected ? '重新连接' : '连接'}
+            {isConnected ? t('sshTerminal.reconnect') : t('sshTerminal.connect')}
           </Button>
           
           <Button
@@ -330,26 +318,26 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
             disabled={!isConnected}
             danger
           >
-            断开连接
+            {t('sshTerminal.disconnectBtn')}
           </Button>
           
           <Button
             icon={<ReloadOutlined />}
             onClick={clearTerminal}
           >
-            清空
+            {t('sshTerminal.clearBtn')}
           </Button>
 
           {isConnecting && (
             <Space>
               <Spin size="small" />
-              <span>连接中...</span>
+              <span>{t('sshTerminal.connectingStatus')}</span>
             </Space>
           )}
 
           {isConnected && (
             <span style={{ color: '#52c41a' }}>
-              ✓ 已连接到 {nodeIP}
+              ✓ {t('sshTerminal.connectedToNode', { ip: nodeIP })}
             </span>
           )}
         </Space>
@@ -379,9 +367,9 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
         />
       </Card>
 
-      {/* SSH连接配置模态框（仅在全局配置未启用时使用） */}
+      {/* SSH连接配置模态框 */}
       <Modal
-        title="SSH连接配置"
+        title={t('sshTerminal.sshConfig')}
         open={connectionModalVisible}
         onCancel={() => setConnectionModalVisible(false)}
         footer={null}
@@ -399,37 +387,37 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
           }}
         >
           <Form.Item
-            label="主机地址"
+            label={t('sshTerminal.host')}
             name="host"
-            rules={[{ required: true, message: '请输入主机地址' }]}
+            rules={[{ required: true, message: t('sshTerminal.hostRequired') }]}
           >
-            <Input placeholder="请输入SSH服务器地址" />
+            <Input placeholder={t('sshTerminal.hostPlaceholder')} />
           </Form.Item>
 
           <Form.Item
-            label="端口"
+            label={t('sshTerminal.port')}
             name="port"
-            rules={[{ required: true, message: '请输入端口号' }]}
+            rules={[{ required: true, message: t('sshTerminal.portRequired') }]}
           >
             <Input type="number" placeholder="22" />
           </Form.Item>
 
           <Form.Item
-            label="用户名"
+            label={t('sshTerminal.username')}
             name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            rules={[{ required: true, message: t('sshTerminal.usernameRequired') }]}
           >
-            <Input placeholder="请输入用户名" />
+            <Input placeholder={t('sshTerminal.usernamePlaceholder')} />
           </Form.Item>
 
           <Form.Item
-            label="认证方式"
+            label={t('sshTerminal.authType')}
             name="authType"
-            rules={[{ required: true, message: '请选择认证方式' }]}
+            rules={[{ required: true, message: t('sshTerminal.authTypeRequired') }]}
           >
             <Select>
-              <Select.Option value="password">密码认证</Select.Option>
-              <Select.Option value="key">私钥认证</Select.Option>
+              <Select.Option value="password">{t('sshTerminal.passwordAuth')}</Select.Option>
+              <Select.Option value="key">{t('sshTerminal.keyAuth')}</Select.Option>
             </Select>
           </Form.Item>
 
@@ -445,11 +433,11 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
               if (authType === 'password') {
                 return (
                   <Form.Item
-                    label="密码"
+                    label={t('sshTerminal.password')}
                     name="password"
-                    rules={[{ required: true, message: '请输入密码' }]}
+                    rules={[{ required: true, message: t('sshTerminal.passwordRequired') }]}
                   >
-                    <Input.Password placeholder="请输入密码" />
+                    <Input.Password placeholder={t('sshTerminal.passwordPlaceholder')} />
                   </Form.Item>
                 );
               }
@@ -457,13 +445,13 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
               if (authType === 'key') {
                 return (
                   <Form.Item
-                    label="私钥"
+                    label={t('sshTerminal.privateKey')}
                     name="privateKey"
-                    rules={[{ required: true, message: '请输入私钥内容' }]}
+                    rules={[{ required: true, message: t('sshTerminal.privateKeyRequired') }]}
                   >
                     <Input.TextArea
                       rows={6}
-                      placeholder="请粘贴私钥内容（PEM格式）"
+                      placeholder={t('sshTerminal.privateKeyPlaceholder')}
                     />
                   </Form.Item>
                 );
@@ -476,10 +464,10 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
               <Button onClick={() => setConnectionModalVisible(false)}>
-                取消
+                {t('sshTerminal.cancel')}
               </Button>
               <Button type="primary" htmlType="submit" loading={isConnecting}>
-                连接
+                {t('sshTerminal.connect')}
               </Button>
             </Space>
           </Form.Item>

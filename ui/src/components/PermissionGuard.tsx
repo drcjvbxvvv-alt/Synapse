@@ -6,6 +6,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Result, Button } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { tokenManager } from '../services/authService';
 import { usePermission } from '../hooks/usePermission';
 import { 
@@ -36,6 +37,7 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   requiredPermission,
   fallback,
 }) => {
+  const { t } = useTranslation('components');
   const currentUser = tokenManager.getUser();
   const { currentClusterPermission, loading } = usePermission();
 
@@ -51,11 +53,11 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
       return (
         <Result
           status="403"
-          title="无权访问"
-          subTitle="此页面仅限平台管理员访问"
+          title={t('permissionGuard.noAccess')}
+          subTitle={t('permissionGuard.platformAdminOnly')}
           extra={
             <Button type="primary" onClick={() => window.history.back()}>
-              返回上一页
+              {t('permissionGuard.goBack')}
             </Button>
           }
         />
@@ -71,11 +73,11 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
       return (
         <Result
           status="403"
-          title="权限不足"
-          subTitle={`访问此页面需要 ${getPermissionLabel(requiredPermission)} 或更高权限`}
+          title={t('permissionGuard.insufficientPermission')}
+          subTitle={t('permissionGuard.requirePermission', { permission: getPermissionLabel(requiredPermission, t) })}
           extra={
             <Button type="primary" onClick={() => window.history.back()}>
-              返回上一页
+              {t('permissionGuard.goBack')}
             </Button>
           }
         />
@@ -109,6 +111,7 @@ export const PlatformAdminGuard: React.FC<{ children: React.ReactNode }> = ({ ch
  * 自动检测当前集群路由是否需要特定权限
  */
 export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useTranslation('components');
   const location = useLocation();
   const { currentClusterPermission, loading } = usePermission();
 
@@ -128,11 +131,11 @@ export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = (
         return (
           <Result
             status="403"
-            title="权限不足"
-            subTitle={`访问此页面需要 ${getPermissionLabel(requiredPermission)} 或更高权限`}
+            title={t('permissionGuard.insufficientPermission')}
+            subTitle={t('permissionGuard.requirePermission', { permission: getPermissionLabel(requiredPermission, t) })}
             extra={
               <Button type="primary" onClick={() => window.history.back()}>
-                返回上一页
+                {t('permissionGuard.goBack')}
               </Button>
             }
           />
@@ -146,16 +149,16 @@ export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = (
 };
 
 // 获取权限类型的显示名称
-const getPermissionLabel = (type: PermissionType): string => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getPermissionLabel = (type: PermissionType, t: any): string => {
   const labels: Record<PermissionType, string> = {
-    admin: '管理员权限',
-    ops: '运维权限',
-    dev: '开发权限',
-    readonly: '只读权限',
-    custom: '自定义权限',
+    admin: t('permissionGuard.adminPermission'),
+    ops: t('permissionGuard.opsPermission'),
+    dev: t('permissionGuard.devPermission'),
+    readonly: t('permissionGuard.readonlyPermission'),
+    custom: t('permissionGuard.customPermission'),
   };
   return labels[type] || type;
 };
 
 export default PermissionGuard;
-

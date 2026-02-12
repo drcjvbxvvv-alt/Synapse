@@ -27,9 +27,8 @@ i18n
     },
     fallbackLng: defaultLanguage,
     defaultNS: 'common',
-    ns: ['common', 'cluster', 'node', 'pod'],
-    
-    // 语言检测选项
+ns: ['common', 'cluster', 'node', 'pod', 'overview', 'workload', 'namespace', 'yaml', 'search', 'terminal', 'storage', 'permission', 'nodeOps', 'settings', 'profile', 'om', 'plugins', 'logs', 'audit', 'alert', 'network', 'config', 'components'],
+// 语言检测选项
     detection: {
       // 检测顺序
       order: ['localStorage', 'navigator', 'htmlTag'],

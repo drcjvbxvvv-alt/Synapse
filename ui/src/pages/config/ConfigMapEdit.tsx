@@ -22,6 +22,7 @@ import { configMapService, type ConfigMapDetail } from '../../services/configSer
 import { ResourceService } from '../../services/resourceService';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
+import { useTranslation } from 'react-i18next';
 
 const { Text, Title } = Typography;
 
@@ -34,7 +35,8 @@ const ConfigMapEdit: React.FC = () => {
     name: string;
   }>();
 
-  const [loading, setLoading] = useState(true);
+const { t } = useTranslation(['config', 'common']);
+const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [configMap, setConfigMap] = useState<ConfigMapDetail | null>(null);
   const [yamlContent, setYamlContent] = useState('');
@@ -80,7 +82,7 @@ const ConfigMapEdit: React.FC = () => {
       setOriginalYaml(yamlStr);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
-      message.error(err.response?.data?.error || '加载ConfigMap详情失败');
+      message.error(err.response?.data?.error || t('config:edit.messages.loadConfigMapError'));
       navigate(`/clusters/${clusterId}/configs`);
     } finally {
       setLoading(false);
@@ -99,7 +101,7 @@ const ConfigMapEdit: React.FC = () => {
     try {
       YAML.parse(yamlContent);
     } catch (error) {
-      message.error('YAML 格式错误: ' + (error instanceof Error ? error.message : '未知错误'));
+      message.error(t('config:edit.messages.yamlFormatError', { error: error instanceof Error ? error.message : t('config:edit.messages.unknownError') }));
       return;
     }
 
@@ -110,13 +112,13 @@ const ConfigMapEdit: React.FC = () => {
       await ResourceService.applyYAML(clusterId, 'ConfigMap', yamlContent, true);
       setDryRunResult({
         success: true,
-        message: '预检通过！YAML 配置有效，可以安全应用。',
+        message: t('config:edit.messages.dryRunPassed'),
       });
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
       setDryRunResult({
         success: false,
-        message: err.response?.data?.error || '预检失败',
+        message: err.response?.data?.error || t('config:edit.messages.dryRunFailed'),
       });
     } finally {
       setDryRunning(false);
@@ -130,12 +132,12 @@ const ConfigMapEdit: React.FC = () => {
     setSubmitting(true);
     try {
       await ResourceService.applyYAML(clusterId, 'ConfigMap', pendingYaml, false);
-      message.success('ConfigMap 更新成功');
+      message.success(t('config:edit.messages.configMapUpdateSuccess'));
       setDiffModalVisible(false);
       navigate(`/clusters/${clusterId}/configs/configmap/${namespace}/${name}`);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
-      message.error(err.response?.data?.error || '更新失败');
+      message.error(err.response?.data?.error || t('config:edit.messages.updateError'));
     } finally {
       setSubmitting(false);
     }
@@ -149,7 +151,7 @@ const ConfigMapEdit: React.FC = () => {
     try {
       YAML.parse(yamlContent);
     } catch (error) {
-      message.error('YAML 格式错误: ' + (error instanceof Error ? error.message : '未知错误'));
+      message.error(t('config:edit.messages.yamlFormatError', { error: error instanceof Error ? error.message : t('config:edit.messages.unknownError') }));
       return;
     }
 
@@ -162,7 +164,7 @@ const ConfigMapEdit: React.FC = () => {
       setDiffModalVisible(true);
     } catch (error) {
       const err = error as { response?: { data?: { error?: string } } };
-      message.error('预检失败: ' + (err.response?.data?.error || '未知错误'));
+      message.error(t('config:edit.messages.dryRunFailedWithError', { error: err.response?.data?.error || t('config:edit.messages.unknownError') }));
     } finally {
       setSubmitting(false);
     }
@@ -172,10 +174,10 @@ const ConfigMapEdit: React.FC = () => {
   const handleBack = () => {
     if (yamlContent !== originalYaml) {
       modal.confirm({
-        title: '确认离开',
-        content: '您有未保存的更改，确定要离开吗？',
-        okText: '确定',
-        cancelText: '取消',
+        title: t('config:edit.confirmLeaveTitle'),
+        content: t('config:edit.confirmLeaveContent'),
+        okText: t('common:actions.confirm'),
+        cancelText: t('common:actions.cancel'),
         onOk: () => navigate(`/clusters/${clusterId}/configs/configmap/${namespace}/${name}`),
       });
     } else {
@@ -205,13 +207,13 @@ const ConfigMapEdit: React.FC = () => {
           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
             <Space>
               <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
-                返回
+                {t('common:actions.back')}
               </Button>
               <Title level={4} style={{ margin: 0 }}>
-                编辑 ConfigMap: {configMap.name}
+                {t('config:edit.editConfigMap', { name: configMap.name })}
               </Title>
               {hasChanges && (
-                <Text type="warning">• 有未保存的更改</Text>
+                <Text type="warning">{t('config:edit.unsavedChanges')}</Text>
               )}
             </Space>
             <Space>
@@ -220,10 +222,10 @@ const ConfigMapEdit: React.FC = () => {
                 loading={dryRunning}
                 onClick={handleDryRun}
               >
-                预检 (Dry Run)
+                {t('config:edit.dryRun')}
               </Button>
               <Button onClick={handleBack}>
-                取消
+                {t('common:actions.cancel')}
               </Button>
               <Button
                 type="primary"
@@ -232,7 +234,7 @@ const ConfigMapEdit: React.FC = () => {
                 onClick={handleSubmit}
                 disabled={!hasChanges}
               >
-                保存
+                {t('common:actions.save')}
               </Button>
             </Space>
           </Space>
@@ -241,7 +243,7 @@ const ConfigMapEdit: React.FC = () => {
         {/* 预检结果提示 */}
         {dryRunResult && (
           <Alert
-            message={dryRunResult.success ? '预检通过' : '预检失败'}
+            message={dryRunResult.success ? t('config:edit.dryRunPassedTitle') : t('config:edit.dryRunFailedTitle')}
             description={dryRunResult.message}
             type={dryRunResult.success ? 'success' : 'error'}
             showIcon
@@ -252,7 +254,7 @@ const ConfigMapEdit: React.FC = () => {
         )}
 
         {/* YAML 编辑器 */}
-        <Card title="YAML 编辑">
+        <Card title={t('config:edit.yamlEditor')}>
           <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
             <MonacoEditor
               height="600px"
@@ -285,7 +287,7 @@ const ConfigMapEdit: React.FC = () => {
         title={
           <Space>
             <DiffOutlined />
-            <span>确认更改 - YAML Diff 对比</span>
+            <span>{t('config:edit.confirmDiffTitle')}</span>
           </Space>
         }
         open={diffModalVisible}
@@ -293,7 +295,7 @@ const ConfigMapEdit: React.FC = () => {
         width={1200}
         footer={[
           <Button key="cancel" onClick={() => setDiffModalVisible(false)}>
-            取消
+            {t('common:actions.cancel')}
           </Button>,
           <Button
             key="submit"
@@ -301,23 +303,23 @@ const ConfigMapEdit: React.FC = () => {
             loading={submitting}
             onClick={handleConfirmDiff}
           >
-            确认更新
+            {t('config:edit.confirmUpdate')}
           </Button>,
         ]}
       >
         <Alert
-          message="请仔细检查以下更改"
-          description="左侧为原始配置，右侧为修改后的配置。确认无误后点击「确认更新」按钮应用更改。"
+          message={t('config:edit.reviewChanges')}
+          description={t('config:edit.reviewChangesConfigMapDesc')}
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
         />
         <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
           <div style={{ flex: 1 }}>
-            <Text strong style={{ color: '#cf1322' }}>原始配置</Text>
+            <Text strong style={{ color: '#cf1322' }}>{t('config:edit.originalConfig')}</Text>
           </div>
           <div style={{ flex: 1 }}>
-            <Text strong style={{ color: '#389e0d' }}>修改后配置</Text>
+            <Text strong style={{ color: '#389e0d' }}>{t('config:edit.modifiedConfig')}</Text>
           </div>
         </div>
         <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>

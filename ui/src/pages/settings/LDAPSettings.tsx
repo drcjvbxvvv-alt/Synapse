@@ -27,11 +27,13 @@ import {
 } from '@ant-design/icons';
 import { systemSettingService } from '../../services/authService';
 import type { LDAPConfig } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 
 const LDAPSettings: React.FC = () => {
-  const [form] = Form.useForm();
+const { t } = useTranslation(['settings', 'common']);
+const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -48,7 +50,6 @@ const LDAPSettings: React.FC = () => {
   const [testAuthForm] = Form.useForm();
   const { message } = App.useApp();
 
-  // 加载LDAP配置
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -57,7 +58,7 @@ const LDAPSettings: React.FC = () => {
           form.setFieldsValue(response.data);
         }
       } catch (error) {
-        message.error('加载LDAP配置失败');
+        message.error(t('settings:ldap.loadConfigFailed'));
         console.error(error);
       } finally {
         setLoading(false);
@@ -65,9 +66,8 @@ const LDAPSettings: React.FC = () => {
     };
 
     fetchConfig();
-  }, [form, message]);
+  }, [form, message, t]);
 
-  // 保存配置
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
@@ -75,44 +75,41 @@ const LDAPSettings: React.FC = () => {
       
       const response = await systemSettingService.updateLDAPConfig(values as LDAPConfig);
       if (response.code === 200) {
-        message.success('LDAP配置保存成功');
+        message.success(t('settings:ldap.saveConfigSuccess'));
       } else {
-        message.error(response.message || '保存失败');
+        message.error(response.message || t('settings:ldap.saveFailed'));
       }
     } catch (error) {
-      message.error('保存LDAP配置失败');
+      message.error(t('settings:ldap.saveConfigFailed'));
       console.error(error);
     } finally {
       setSaving(false);
     }
   };
 
-  // 测试连接
   const handleTestConnection = async () => {
     try {
       const values = await form.validateFields();
       setTesting(true);
       
       const response = await systemSettingService.testLDAPConnection(values as LDAPConfig);
-      console.log('测试连接响应:', response);
       
       if (response.code === 200 && response.data?.success) {
-        message.success('LDAP连接测试成功');
+        message.success(t('settings:ldap.testConnectionSuccess'));
       } else {
-        const errorMsg = response.data?.error || response.message || '连接测试失败';
+        const errorMsg = response.data?.error || response.message || t('settings:ldap.testConnectionFailed');
         message.error(errorMsg);
       }
     } catch (error: unknown) {
-      console.error('测试连接错误:', error);
+      console.error(error);
       const err = error as { response?: { data?: { message?: string } }; message?: string };
-      const errorMsg = err.response?.data?.message || err.message || 'LDAP连接测试失败';
+      const errorMsg = err.response?.data?.message || err.message || t('settings:ldap.testConnectionFailed');
       message.error(errorMsg);
     } finally {
       setTesting(false);
     }
   };
 
-  // 测试用户认证
   const handleTestAuth = async () => {
     try {
       const values = await testAuthForm.validateFields();
@@ -138,22 +135,20 @@ const LDAPSettings: React.FC = () => {
         group_attr: ldapConfig.group_attr,
       });
       
-      console.log('测试认证响应:', response);
-      
       if (response.code === 200 && response.data) {
         setTestAuthResult(response.data);
       } else {
         setTestAuthResult({
           success: false,
-          error: response.message || '认证测试失败',
+          error: response.message || t('settings:ldap.testAuthFailed'),
         });
       }
     } catch (error: unknown) {
-      console.error('测试认证错误:', error);
+      console.error(error);
       const err = error as { response?: { data?: { message?: string } }; message?: string };
       setTestAuthResult({
         success: false,
-        error: err.response?.data?.message || err.message || '认证测试失败',
+        error: err.response?.data?.message || err.message || t('settings:ldap.testAuthFailed'),
       });
     } finally {
       setTestingAuth(false);
@@ -174,10 +169,10 @@ const LDAPSettings: React.FC = () => {
         <div style={{ marginBottom: 24 }}>
           <Title level={4} style={{ margin: 0 }}>
             <CloudServerOutlined style={{ marginRight: 8 }} />
-            LDAP 配置
+            {t('settings:ldap.title')}
           </Title>
           <Text type="secondary">
-            配置 LDAP/Active Directory 以启用企业统一身份认证
+            {t('settings:ldap.description')}
           </Text>
         </div>
 
@@ -199,29 +194,29 @@ const LDAPSettings: React.FC = () => {
         >
           <Form.Item
             name="enabled"
-            label="启用 LDAP"
+            label={t('settings:ldap.enableLdap')}
             valuePropName="checked"
           >
-            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+            <Switch checkedChildren={t('settings:ldap.enabled')} unCheckedChildren={t('settings:ldap.disabled')} />
           </Form.Item>
 
-          <Divider>服务器配置</Divider>
+          <Divider>{t('settings:ldap.serverConfig')}</Divider>
 
           <Row gutter={16}>
             <Col span={16}>
               <Form.Item
                 name="server"
-                label="LDAP 服务器地址"
-                rules={[{ required: true, message: '请输入服务器地址' }]}
+                label={t('settings:ldap.serverAddress')}
+                rules={[{ required: true, message: t('settings:ldap.serverAddressRequired') }]}
               >
-                <Input placeholder="例如: ldap.example.com" />
+                <Input placeholder={t('settings:ldap.serverAddressPlaceholder')} />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item
                 name="port"
-                label="端口"
-                rules={[{ required: true, message: '请输入端口' }]}
+                label={t('settings:ldap.port')}
+                rules={[{ required: true, message: t('settings:ldap.portRequired') }]}
               >
                 <InputNumber min={1} max={65535} style={{ width: '100%' }} />
               </Form.Item>
@@ -232,7 +227,7 @@ const LDAPSettings: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="use_tls"
-                label="使用 TLS"
+                label={t('settings:ldap.useTls')}
                 valuePropName="checked"
               >
                 <Switch />
@@ -241,63 +236,63 @@ const LDAPSettings: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="skip_tls_verify"
-                label="跳过 TLS 验证"
+                label={t('settings:ldap.skipTlsVerify')}
                 valuePropName="checked"
-                tooltip="不建议在生产环境启用"
+                tooltip={t('settings:ldap.skipTlsVerifyTooltip')}
               >
                 <Switch />
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider>绑定配置</Divider>
+          <Divider>{t('settings:ldap.bindConfig')}</Divider>
 
           <Form.Item
             name="bind_dn"
-            label="绑定 DN"
-            rules={[{ required: true, message: '请输入绑定 DN' }]}
-            tooltip="用于搜索用户的管理员 DN"
+            label={t('settings:ldap.bindDn')}
+            rules={[{ required: true, message: t('settings:ldap.bindDnRequired') }]}
+            tooltip={t('settings:ldap.bindDnTooltip')}
           >
-            <Input placeholder="例如: cn=admin,dc=example,dc=com" />
+            <Input placeholder={t('settings:ldap.bindDnPlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="bind_password"
-            label="绑定密码"
-            rules={[{ required: true, message: '请输入绑定密码' }]}
+            label={t('settings:ldap.bindPassword')}
+            rules={[{ required: true, message: t('settings:ldap.bindPasswordRequired') }]}
           >
-            <Input.Password placeholder="输入绑定密码" />
+            <Input.Password placeholder={t('settings:ldap.bindPasswordPlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="base_dn"
-            label="Base DN"
-            rules={[{ required: true, message: '请输入 Base DN' }]}
-            tooltip="用户搜索的基础 DN"
+            label={t('settings:ldap.baseDn')}
+            rules={[{ required: true, message: t('settings:ldap.baseDnRequired') }]}
+            tooltip={t('settings:ldap.baseDnTooltip')}
           >
-            <Input placeholder="例如: dc=example,dc=com" />
+            <Input placeholder={t('settings:ldap.baseDnPlaceholder')} />
           </Form.Item>
 
-          <Divider>用户属性映射</Divider>
+          <Divider>{t('settings:ldap.userAttrMapping')}</Divider>
 
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="user_filter"
-                label="用户过滤器"
-                rules={[{ required: true, message: '请输入用户过滤器' }]}
-                tooltip="%s 会被替换为用户名"
+                label={t('settings:ldap.userFilter')}
+                rules={[{ required: true, message: t('settings:ldap.userFilterRequired') }]}
+                tooltip={t('settings:ldap.userFilterTooltip')}
               >
-                <Input placeholder="例如: (uid=%s)" />
+                <Input placeholder={t('settings:ldap.userFilterPlaceholder')} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="username_attr"
-                label="用户名属性"
-                rules={[{ required: true, message: '请输入用户名属性' }]}
+                label={t('settings:ldap.usernameAttr')}
+                rules={[{ required: true, message: t('settings:ldap.usernameAttrRequired') }]}
               >
-                <Input placeholder="例如: uid 或 sAMAccountName" />
+                <Input placeholder={t('settings:ldap.usernameAttrPlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
@@ -306,41 +301,41 @@ const LDAPSettings: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="email_attr"
-                label="邮箱属性"
-                rules={[{ required: true, message: '请输入邮箱属性' }]}
+                label={t('settings:ldap.emailAttr')}
+                rules={[{ required: true, message: t('settings:ldap.emailAttrRequired') }]}
               >
-                <Input placeholder="例如: mail" />
+                <Input placeholder={t('settings:ldap.emailAttrPlaceholder')} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="display_name_attr"
-                label="显示名称属性"
-                rules={[{ required: true, message: '请输入显示名称属性' }]}
+                label={t('settings:ldap.displayNameAttr')}
+                rules={[{ required: true, message: t('settings:ldap.displayNameAttrRequired') }]}
               >
-                <Input placeholder="例如: cn 或 displayName" />
+                <Input placeholder={t('settings:ldap.displayNameAttrPlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider>组配置（可选）</Divider>
+          <Divider>{t('settings:ldap.groupConfig')}</Divider>
 
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="group_filter"
-                label="组过滤器"
-                tooltip="%s 会被替换为用户名"
+                label={t('settings:ldap.groupFilter')}
+                tooltip={t('settings:ldap.groupFilterTooltip')}
               >
-                <Input placeholder="例如: (memberUid=%s)" />
+                <Input placeholder={t('settings:ldap.groupFilterPlaceholder')} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="group_attr"
-                label="组属性"
+                label={t('settings:ldap.groupAttr')}
               >
-                <Input placeholder="例如: cn" />
+                <Input placeholder={t('settings:ldap.groupAttrPlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
@@ -355,14 +350,14 @@ const LDAPSettings: React.FC = () => {
                 loading={saving}
                 onClick={handleSave}
               >
-                保存配置
+                {t('settings:ldap.saveConfig')}
               </Button>
               <Button
                 icon={<ApiOutlined />}
                 loading={testing}
                 onClick={handleTestConnection}
               >
-                测试连接
+                {t('settings:ldap.testConnection')}
               </Button>
               <Button
                 icon={<UserOutlined />}
@@ -372,7 +367,7 @@ const LDAPSettings: React.FC = () => {
                   testAuthForm.resetFields();
                 }}
               >
-                测试用户认证
+                {t('settings:ldap.testUserAuth')}
               </Button>
             </Space>
           </Form.Item>
@@ -380,7 +375,7 @@ const LDAPSettings: React.FC = () => {
       </Card>
 
       <Modal
-        title="测试 LDAP 用户认证"
+        title={t('settings:ldap.testLdapAuth')}
         open={testAuthModalOpen}
         onCancel={() => setTestAuthModalOpen(false)}
         footer={null}
@@ -393,18 +388,18 @@ const LDAPSettings: React.FC = () => {
         >
           <Form.Item
             name="username"
-            label="用户名"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            label={t('settings:ldap.username')}
+            rules={[{ required: true, message: t('settings:ldap.usernameRequired') }]}
           >
-            <Input prefix={<UserOutlined />} placeholder="LDAP 用户名" />
+            <Input prefix={<UserOutlined />} placeholder={t('settings:ldap.ldapUsername')} />
           </Form.Item>
 
           <Form.Item
             name="password"
-            label="密码"
-            rules={[{ required: true, message: '请输入密码' }]}
+            label={t('settings:ldap.password')}
+            rules={[{ required: true, message: t('settings:ldap.passwordRequired') }]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="LDAP 密码" />
+            <Input.Password prefix={<LockOutlined />} placeholder={t('settings:ldap.ldapPassword')} />
           </Form.Item>
 
           <Form.Item>
@@ -414,7 +409,7 @@ const LDAPSettings: React.FC = () => {
               loading={testingAuth}
               block
             >
-              测试认证
+              {t('settings:ldap.testAuth')}
             </Button>
           </Form.Item>
         </Form>
@@ -425,14 +420,14 @@ const LDAPSettings: React.FC = () => {
               <Alert
                 type="success"
                 icon={<CheckCircleOutlined />}
-                message="认证成功"
+                message={t('settings:ldap.authSuccess')}
                 description={
                   <div>
-                    <p><strong>用户名:</strong> {testAuthResult.username}</p>
-                    <p><strong>邮箱:</strong> {testAuthResult.email}</p>
-                    <p><strong>显示名称:</strong> {testAuthResult.display_name}</p>
+                    <p><strong>{t('settings:ldap.username')}:</strong> {testAuthResult.username}</p>
+                    <p><strong>{t('settings:ldap.email')}:</strong> {testAuthResult.email}</p>
+                    <p><strong>{t('settings:ldap.displayName')}:</strong> {testAuthResult.display_name}</p>
                     {testAuthResult.groups && testAuthResult.groups.length > 0 && (
-                      <p><strong>用户组:</strong> {testAuthResult.groups.join(', ')}</p>
+                      <p><strong>{t('settings:ldap.userGroups')}:</strong> {testAuthResult.groups.join(', ')}</p>
                     )}
                   </div>
                 }
@@ -441,7 +436,7 @@ const LDAPSettings: React.FC = () => {
               <Alert
                 type="error"
                 icon={<CloseCircleOutlined />}
-                message="认证失败"
+                message={t('settings:ldap.authFailed')}
                 description={testAuthResult.error}
               />
             )}

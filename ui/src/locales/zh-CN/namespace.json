@@ -1,0 +1,78 @@
+{
+  "title": "命名空间管理",
+  "list": {
+    "title": "命名空间列表",
+    "fetchError": "获取命名空间列表失败",
+    "createNamespace": "创建命名空间",
+    "totalNamespaces": "共 {{count}} 个命名空间",
+    "fieldName": "名称",
+    "fieldStatus": "状态",
+    "fieldLabel": "标签"
+  },
+  "columns": {
+    "name": "命名空间",
+    "status": "状态",
+    "labels": "标签",
+    "createdAt": "创建时间",
+    "actions": "操作",
+    "moreLabels": "还有 {{count}} 个标签"
+  },
+  "actions": {
+    "viewDetail": "详情",
+    "delete": "删除",
+    "batchDelete": "批量删除",
+    "export": "导出",
+    "confirmDelete": "确认删除",
+    "confirmDeleteDesc": "确定要删除命名空间 \"{{name}}\" 吗？此操作将删除该命名空间下的所有资源。",
+    "confirmBatchDelete": "确认批量删除",
+    "confirmBatchDeleteDesc": "确定要删除选中的 {{count}} 个命名空间吗？此操作将删除这些命名空间下的所有资源。",
+    "selectDeleteFirst": "请先选择要删除的命名空间",
+    "cannotDeleteSystem": "不能删除系统命名空间"
+  },
+  "create": {
+    "title": "创建命名空间",
+    "name": "命名空间名称",
+    "nameRequired": "请输入命名空间名称",
+    "namePattern": "名称只能包含小写字母、数字和连字符，且必须以字母或数字开头和结尾",
+    "namePlaceholder": "例如: my-namespace",
+    "description": "描述（可选）",
+    "descriptionPlaceholder": "输入命名空间的描述信息"
+  },
+  "detail": {
+    "title": "命名空间详情",
+    "subtitle": "命名空间详情: {{name}}",
+    "notFound": "命名空间不存在",
+    "resourceStats": "资源统计",
+    "services": "服务",
+    "basicInfo": "基本信息",
+    "name": "名称",
+    "status": "状态",
+    "createdAt": "创建时间",
+    "resourceQuota": "资源配额",
+    "usedQuota": "已使用",
+    "totalQuota": "总配额",
+    "labels": "标签",
+    "annotations": "注解",
+    "noLabels": "暂无标签",
+    "noAnnotations": "暂无注解"
+  },
+  "create": {
+    "title": "创建命名空间",
+    "name": "命名空间名称",
+    "nameLabel": "命名空间名称",
+    "nameRequired": "请输入命名空间名称",
+    "namePattern": "名称只能包含小写字母、数字和连字符，且必须以字母或数字开头和结尾",
+    "namePlaceholder": "例如: my-namespace",
+    "description": "描述（可选）",
+    "descriptionLabel": "描述（可选）",
+    "descriptionPlaceholder": "输入命名空间的描述信息"
+  },
+  "messages": {
+    "createSuccess": "命名空间创建成功",
+    "createError": "创建命名空间失败",
+    "deleteSuccess": "命名空间删除成功",
+    "deleteError": "删除命名空间失败",
+    "fetchDetailError": "获取命名空间详情失败",
+    "batchDeleteError": "批量删除失败"
+  }
+}

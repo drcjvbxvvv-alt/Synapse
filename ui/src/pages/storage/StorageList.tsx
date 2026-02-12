@@ -8,10 +8,12 @@ import {
 import PVCTab from './PVCTab';
 import PVTab from './PVTab';
 import StorageClassTab from './StorageClassTab';
+import { useTranslation } from 'react-i18next';
 
 const StorageList: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+const { t } = useTranslation(['storage', 'common']);
+const [searchParams, setSearchParams] = useSearchParams();
   const loading = false;
   
   // 从URL读取当前Tab
@@ -34,7 +36,7 @@ const StorageList: React.FC = () => {
   const tabItems = [
     {
       key: 'pvc',
-      label: '存储卷声明（PVC）',
+      label: t('storage:tabs.pvc'),
       children: (
         <PVCTab
           clusterId={clusterId || ''}
@@ -44,7 +46,7 @@ const StorageList: React.FC = () => {
     },
     {
       key: 'pv',
-      label: '存储卷（PV）',
+      label: t('storage:tabs.pv'),
       children: (
         <PVTab
           clusterId={clusterId || ''}
@@ -54,7 +56,7 @@ const StorageList: React.FC = () => {
     },
     {
       key: 'storageclass',
-      label: '存储类（StorageClass）',
+      label: t('storage:tabs.storageClass'),
       children: (
         <StorageClassTab
           clusterId={clusterId || ''}

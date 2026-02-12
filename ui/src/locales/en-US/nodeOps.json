@@ -1,0 +1,121 @@
+{
+  "title": "Node Operations",
+  "steps": {
+    "selectOperation": "Select Operation",
+    "configParams": "Configure",
+    "executeOperation": "Execute",
+    "complete": "Complete"
+  },
+  "operationType": {
+    "title": "Select Operation Type",
+    "cordon": "Cordon Node",
+    "uncordon": "Uncordon Node",
+    "drain": "Drain Node",
+    "nodeOperation": "Node Operation",
+    "selectRequired": "Please select an operation type"
+  },
+  "cordon": {
+    "title": "Cordon Node Configuration",
+    "titleShort": "Cordon Node",
+    "description": "Cordoning a node will prevent new Pods from being scheduled to it, but existing Pods will continue to run.",
+    "instructions": "Instructions",
+    "rule1": "Node will be marked as \"SchedulingDisabled\"",
+    "rule2": "Existing Pods continue to run normally",
+    "rule3": "New Pods will not be scheduled to these nodes",
+    "rule4": "DaemonSet Pods are not affected"
+  },
+  "uncordon": {
+    "title": "Uncordon Node Configuration",
+    "titleShort": "Uncordon Node",
+    "description": "Uncordoning a node will restore its ability to accept new Pod scheduling.",
+    "instructions": "Instructions",
+    "rule1": "Remove the \"SchedulingDisabled\" mark from the node",
+    "rule2": "Node resumes accepting new Pod scheduling",
+    "rule3": "Takes effect immediately, no restart needed"
+  },
+  "drain": {
+    "title": "Drain Node Configuration",
+    "titleShort": "Drain Node",
+    "description": "Draining a node will first cordon it, then safely evict all Pods, making it safe for maintenance.",
+    "warning": "Warning",
+    "warningDesc": "Draining a node is a potentially destructive operation that will evict all Pods, which may cause service interruption. Make sure you understand the impact.",
+    "advancedOptions": "Advanced Options",
+    "ignoreDaemonSets": "Ignore DaemonSet Pods",
+    "deleteLocalData": "Delete Pods with local storage",
+    "forceDelete": "Force delete (--force) ⚠️ Dangerous",
+    "gracePeriod": "Grace Period (seconds)",
+    "timeout": "Timeout (seconds)",
+    "confirmRisk": "Confirm Risks",
+    "riskServiceInterruption": "I understand this operation may cause service interruption",
+    "riskReplicaConfirmed": "I have confirmed sufficient replicas are running on other nodes",
+    "riskTeamNotified": "I have notified the relevant team about this maintenance",
+    "confirmAllRisks": "Please confirm all risk items",
+    "podCount": "{{count}} Pods"
+  },
+  "common": {
+    "selectedNodes": "{{count}} nodes selected:",
+    "targetNodes": "Target Nodes:",
+    "schedulingDisabled": "Scheduling Disabled",
+    "schedulable": "Schedulable",
+    "executionStrategy": "Execution Strategy",
+    "parallel": "Parallel (operate all nodes simultaneously)",
+    "serial": "Serial (operate one by one, 1s interval)",
+    "failureHandling": "Failure Handling",
+    "stopOnError": "Stop on error",
+    "continueOnError": "Continue on error",
+    "operationReason": "Reason (optional)",
+    "reasonPlaceholder": "Enter reason, e.g. planned maintenance, system upgrade",
+    "reasonPlaceholderRestore": "Enter reason, e.g. maintenance completed, back to normal",
+    "reasonPlaceholderDrain": "Enter reason, e.g. node maintenance, system upgrade",
+    "sendNotification": "Send notification to team",
+    "sendRecoveryNotification": "Send recovery notification",
+    "recordLog": "Record operation log",
+    "checkStatusAfter": "Check node status after enabling"
+  },
+  "execution": {
+    "executing": "Executing: {{title}}",
+    "overallProgress": "Overall Progress:",
+    "realtimeLog": "Real-time Log:",
+    "waitingOperation": "Waiting",
+    "executingOperation": "Executing",
+    "operationSuccess": "Succeeded",
+    "operationFailed": "Failed: {{error}}",
+    "cordoning": "Cordoning node",
+    "cordonSuccess": "Node cordoned",
+    "uncordoning": "Uncordoning node",
+    "uncordonSuccess": "Node uncordoned",
+    "draining": "Draining Pods from node",
+    "drainSuccess": "Node drained",
+    "unsupportedType": "Unsupported operation type",
+    "executeFailed": "Failed to execute node operation",
+    "operationTypeSuccess": "{{type}} succeeded",
+    "operationTypeFailed": "{{type}} failed: {{error}}"
+  },
+  "result": {
+    "title": "Operation Complete",
+    "completed": "Operation completed",
+    "operationType": "Operation: {{title}}",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "totalDuration": "Duration",
+    "success": "Succeeded",
+    "failed": "Failed",
+    "skipped": "Skipped",
+    "detailResult": "Details:",
+    "suggestion": "Suggestion",
+    "suggestionDesc": "Some node operations failed. Please check failure reasons and consider retrying or manual handling.",
+    "nodeOperationComplete": "Node operations completed",
+    "durationFormat": "{{minutes}}m {{seconds}}s"
+  },
+  "cancel": {
+    "title": "Confirm Cancel",
+    "content": "Are you sure you want to cancel? All configured parameters will be lost."
+  },
+  "buttons": {
+    "previous": "Previous",
+    "next": "Next",
+    "startExecution": "Start",
+    "finish": "Done",
+    "cancel": "Cancel"
+  }
+}

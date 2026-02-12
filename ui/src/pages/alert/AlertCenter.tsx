@@ -46,6 +46,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import { alertService } from '../../services/alertService';
+import { useTranslation } from 'react-i18next';
 import type {
   Alert,
   Silence,
@@ -67,7 +68,8 @@ const AlertCenter: React.FC = () => {
   const navigate = useNavigate();
 
   // 状态
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(['alert', 'common']);
+const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [silences, setSilences] = useState<Silence[]>([]);
   const [stats, setStats] = useState<AlertStats | null>(null);
@@ -110,13 +112,13 @@ const AlertCenter: React.FC = () => {
       setStats(statsRes.data);
     } catch (error) {
       console.error('加载告警失败:', error);
-      message.error('加载告警失败');
+      message.error(t('alert:center.loadFailed'));
     } finally {
       setLoading(false);
     }
   }, [clusterId, configEnabled, severityFilter]);
 
-  // 加载静默规则
+  // 加载{t('alert:center.silenceRules')}
   const loadSilences = useCallback(async () => {
     if (!clusterId || !configEnabled) return;
     try {
@@ -158,7 +160,7 @@ const AlertCenter: React.FC = () => {
       silenceForm.setFieldsValue({
         matchers,
         timeRange: [dayjs(), dayjs().add(2, 'hour')],
-        comment: `静默告警: ${alert.labels.alertname || '未知'}`,
+        comment: `${t('alert:center.createSilence')}: ${alert.labels.alertname || t('alert:center.unknownAlert')}`,
       });
     } else {
       silenceForm.resetFields();
@@ -184,13 +186,13 @@ const AlertCenter: React.FC = () => {
       };
 
       await alertService.createSilence(clusterId!, silenceReq);
-      message.success('静默规则创建成功');
+      message.success(t('alert:center.silenceCreateSuccess'));
       setSilenceModalVisible(false);
       loadSilences();
       loadAlerts();
     } catch (error: unknown) {
       console.error('创建静默规则失败:', error);
-      let errorMsg = '创建静默规则失败';
+      let errorMsg = t('alert:center.silenceCreateFailed');
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { data?: { message?: string } } };
         errorMsg = axiosError.response?.data?.message || errorMsg;
@@ -203,12 +205,12 @@ const AlertCenter: React.FC = () => {
   const handleDeleteSilence = async (silenceId: string) => {
     try {
       await alertService.deleteSilence(clusterId!, silenceId);
-      message.success('静默规则删除成功');
+      message.success(t('alert:center.silenceDeleteSuccess'));
       loadSilences();
       loadAlerts();
     } catch (error: unknown) {
       console.error('删除静默规则失败:', error);
-      message.error('删除静默规则失败');
+      message.error(t('alert:center.silenceDeleteFailed'));
     }
   };
 
@@ -270,18 +272,18 @@ const AlertCenter: React.FC = () => {
   // 告警表格列
   const alertColumns: ColumnsType<Alert> = [
     {
-      title: '告警名称',
+      title: t('alert:center.alertName'),
       key: 'alertname',
       width: 200,
       render: (_, record) => (
         <Space>
           {getSeverityIcon(record.labels.severity)}
-          <Text strong>{record.labels.alertname || '未知告警'}</Text>
+          <Text strong>{record.labels.alertname || t('alert:center.unknownAlert')}</Text>
         </Space>
       ),
     },
     {
-      title: '严重程度',
+      title: t('alert:center.severity'),
       key: 'severity',
       width: 100,
       render: (_, record) => (
@@ -291,7 +293,7 @@ const AlertCenter: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('common:table.status'),
       key: 'status',
       width: 100,
       render: (_, record) => (
@@ -300,17 +302,17 @@ const AlertCenter: React.FC = () => {
           text={
             <Tag color={getStatusColor(record.status.state)}>
               {record.status.state === 'active'
-                ? '触发中'
+                ? t('alert:center.statusFiring')
                 : record.status.state === 'suppressed'
-                ? '已静默'
-                : '已恢复'}
+                ? t('alert:center.statusSuppressed')
+                : t('alert:center.statusResolved')}
             </Tag>
           }
         />
       ),
     },
     {
-      title: '描述',
+      title: t('common:table.description'),
       key: 'description',
       ellipsis: true,
       render: (_, record) => (
@@ -322,7 +324,7 @@ const AlertCenter: React.FC = () => {
       ),
     },
     {
-      title: '触发时间',
+      title: t('alert:center.triggerTime'),
       key: 'startsAt',
       width: 180,
       render: (_, record) => (
@@ -335,12 +337,12 @@ const AlertCenter: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       width: 120,
       render: (_, record) => (
         <Space>
-          <Tooltip title="创建静默">
+          <Tooltip title={t('alert:center.createSilence')}>
             <Button
               type="link"
               size="small"
@@ -350,7 +352,7 @@ const AlertCenter: React.FC = () => {
             />
           </Tooltip>
           {record.generatorURL && (
-            <Tooltip title="查看详情">
+            <Tooltip title={t('common:actions.detail')}>
               <Button
                 type="link"
                 size="small"
@@ -367,7 +369,7 @@ const AlertCenter: React.FC = () => {
   // 静默规则表格列
   const silenceColumns: ColumnsType<Silence> = [
     {
-      title: '匹配规则',
+      title: t('alert:center.matchRules'),
       key: 'matchers',
       render: (_, record) => (
         <Space direction="vertical" size="small">
@@ -383,7 +385,7 @@ const AlertCenter: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('common:table.status'),
       key: 'status',
       width: 100,
       render: (_, record) => (
@@ -397,33 +399,33 @@ const AlertCenter: React.FC = () => {
           }
         >
           {record.status.state === 'active'
-            ? '生效中'
+            ? t('alert:center.statusEffective')
             : record.status.state === 'pending'
-            ? '等待中'
-            : '已过期'}
+            ? t('alert:center.statusPending')
+            : t('alert:center.statusExpired')}
         </Tag>
       ),
     },
     {
-      title: '生效时间',
+      title: t('alert:center.effectiveTime'),
       key: 'startsAt',
       width: 180,
       render: (_, record) => dayjs(record.startsAt).format('YYYY-MM-DD HH:mm'),
     },
     {
-      title: '结束时间',
+      title: t('alert:center.endTime'),
       key: 'endsAt',
       width: 180,
       render: (_, record) => dayjs(record.endsAt).format('YYYY-MM-DD HH:mm'),
     },
     {
-      title: '创建者',
+      title: t('alert:center.creator'),
       key: 'createdBy',
       width: 120,
       render: (_, record) => record.createdBy || '-',
     },
     {
-      title: '备注',
+      title: t('alert:center.remark'),
       key: 'comment',
       ellipsis: true,
       render: (_, record) => (
@@ -435,15 +437,15 @@ const AlertCenter: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       width: 80,
       render: (_, record) => (
         <Popconfirm
-          title="确定要删除此静默规则吗？"
+          title={t('alert:center.deleteSilenceConfirm')}
           onConfirm={() => handleDeleteSilence(record.id)}
-          okText="确定"
-          cancelText="取消"
+          okText={t('common:actions.confirm')}
+          cancelText={t('common:actions.cancel')}
         >
           <Button type="link" danger size="small" icon={<DeleteOutlined />} />
         </Popconfirm>
@@ -457,7 +459,7 @@ const AlertCenter: React.FC = () => {
       <Col xs={12} sm={6}>
         <Card hoverable>
           <Statistic
-            title="总告警数"
+            title={t('alert:center.totalAlerts')}
             value={stats?.total || 0}
             prefix={<AlertOutlined style={{ color: '#1890ff' }} />}
           />
@@ -466,7 +468,7 @@ const AlertCenter: React.FC = () => {
       <Col xs={12} sm={6}>
         <Card hoverable>
           <Statistic
-            title="触发中"
+            title={t('alert:center.firing')}
             value={stats?.firing || 0}
             prefix={<FireOutlined style={{ color: '#ff4d4f' }} />}
             valueStyle={{ color: '#ff4d4f' }}
@@ -476,7 +478,7 @@ const AlertCenter: React.FC = () => {
       <Col xs={12} sm={6}>
         <Card hoverable>
           <Statistic
-            title="已静默"
+            title={t('alert:center.suppressed')}
             value={stats?.suppressed || 0}
             prefix={<StopOutlined style={{ color: '#faad14' }} />}
             valueStyle={{ color: '#faad14' }}
@@ -486,7 +488,7 @@ const AlertCenter: React.FC = () => {
       <Col xs={12} sm={6}>
         <Card hoverable>
           <Statistic
-            title="严重告警"
+            title={t('alert:center.criticalAlerts')}
             value={stats?.bySeverity?.critical || 0}
             prefix={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
             valueStyle={{ color: '#ff4d4f' }}
@@ -496,21 +498,21 @@ const AlertCenter: React.FC = () => {
     </Row>
   );
 
-  // 告警列表 Tab
+  // {t('alert:center.alertList')} Tab
   const AlertsTab = () => (
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col flex="auto">
           <Space>
             <Search
-              placeholder="搜索告警名称或描述"
+              placeholder={t('alert:center.searchPlaceholder')}
               allowClear
               style={{ width: 300 }}
               onSearch={(value) => setSearchText(value)}
               onChange={(e) => setSearchText(e.target.value)}
             />
             <Select
-              placeholder="严重程度"
+              placeholder={t('alert:center.severityFilter')}
               allowClear
               style={{ width: 120 }}
               value={severityFilter || undefined}
@@ -521,20 +523,20 @@ const AlertCenter: React.FC = () => {
               <Option value="info">Info</Option>
             </Select>
             <Select
-              placeholder="状态"
+              placeholder={t('alert:center.statusFilter')}
               allowClear
               style={{ width: 120 }}
               value={statusFilter || undefined}
               onChange={(value) => setStatusFilter(value || '')}
             >
-              <Option value="active">触发中</Option>
-              <Option value="suppressed">已静默</Option>
+              <Option value="active">{t('alert:center.statusFiring')}</Option>
+              <Option value="suppressed">{t('alert:center.statusSuppressed')}</Option>
             </Select>
           </Space>
         </Col>
         <Col>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-            刷新
+            {t('common:actions.refresh')}
           </Button>
         </Col>
       </Row>
@@ -547,28 +549,28 @@ const AlertCenter: React.FC = () => {
         pagination={{
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条告警`,
+          showTotal: (total) => t('alert:center.totalCountAlerts', { total }),
         }}
         expandable={{
           expandedRowRender: (record) => (
             <Descriptions size="small" column={2}>
-              <Descriptions.Item label="实例">
+              <Descriptions.Item label={t('alert:center.instance')}>
                 {record.labels.instance || '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Job">
                 {record.labels.job || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="命名空间">
+              <Descriptions.Item label={t('common:table.namespace')}>
                 {record.labels.namespace || '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Pod">
                 {record.labels.pod || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="详细描述" span={2}>
+              <Descriptions.Item label={t('alert:center.detailDescription')} span={2}>
                 {record.annotations?.description || '-'}
               </Descriptions.Item>
               {record.status.silencedBy?.length > 0 && (
-                <Descriptions.Item label="静默规则" span={2}>
+                <Descriptions.Item label={t('alert:center.silenceRule')} span={2}>
                   {record.status.silencedBy.join(', ')}
                 </Descriptions.Item>
               )}
@@ -585,7 +587,7 @@ const AlertCenter: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col flex="auto">
           <Text type="secondary">
-            静默规则用于临时抑制特定告警的通知。
+            {t('alert:center.silenceRulesDesc')}
           </Text>
         </Col>
         <Col>
@@ -595,10 +597,10 @@ const AlertCenter: React.FC = () => {
               icon={<PlusOutlined />}
               onClick={() => handleOpenSilenceModal()}
             >
-              创建静默规则
+              {t('alert:center.createSilenceRule')}
             </Button>
             <Button icon={<ReloadOutlined />} onClick={loadSilences}>
-              刷新
+              {t('common:actions.refresh')}
             </Button>
           </Space>
         </Col>
@@ -612,7 +614,7 @@ const AlertCenter: React.FC = () => {
         pagination={{
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条规则`,
+          showTotal: (total) => t('alert:center.totalCountRules', { total }),
         }}
       />
     </div>
@@ -668,8 +670,8 @@ const AlertCenter: React.FC = () => {
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={
               <Space direction="vertical">
-                <Text>Alertmanager 未配置</Text>
-                <Text type="secondary">请先在配置中心配置 Alertmanager 地址</Text>
+                <Text>{t('alert:center.notConfigured')}</Text>
+                <Text type="secondary">{t('alert:center.notConfiguredDesc')}</Text>
               </Space>
             }
           >
@@ -679,10 +681,10 @@ const AlertCenter: React.FC = () => {
                 icon={<SettingOutlined />}
                 onClick={() => navigate(`/clusters/${clusterId}/config-center?tab=alertmanager`)}
               >
-                前往配置
+                {t('alert:center.goToConfig')}
               </Button>
               <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-                返回
+                {t('common:actions.back')}
               </Button>
             </Space>
           </Empty>
@@ -698,7 +700,7 @@ const AlertCenter: React.FC = () => {
           <Space>
             <AlertOutlined />
             <Title level={4} style={{ margin: 0 }}>
-              告警中心
+              {t('alert:center.title')}
             </Title>
           </Space>
         }
@@ -708,10 +710,10 @@ const AlertCenter: React.FC = () => {
               icon={<SettingOutlined />}
               onClick={() => navigate(`/clusters/${clusterId}/config-center?tab=alertmanager`)}
             >
-              配置
+              {t('alert:center.config')}
             </Button>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-              刷新
+              {t('common:actions.refresh')}
             </Button>
           </Space>
         }
@@ -723,19 +725,19 @@ const AlertCenter: React.FC = () => {
 
       {/* 创建静默规则弹窗 */}
       <Modal
-        title="创建静默规则"
+        title={t('alert:center.createSilenceTitle')}
         open={silenceModalVisible}
         onOk={handleCreateSilence}
         onCancel={() => setSilenceModalVisible(false)}
         width={600}
-        okText="创建"
-        cancelText="取消"
+        okText={t('alert:center.createBtn')}
+        cancelText={t('common:actions.cancel')}
       >
         <Form form={silenceForm} layout="vertical">
           <Form.Item
-            label="生效时间"
+            label={t('alert:center.effectiveTimeRange')}
             name="timeRange"
-            rules={[{ required: true, message: '请选择生效时间' }]}
+            rules={[{ required: true, message: t('alert:center.effectiveTimeRequired') }]}
           >
             <RangePicker
               showTime
@@ -744,10 +746,10 @@ const AlertCenter: React.FC = () => {
             />
           </Form.Item>
 
-          <Form.Item label="匹配规则" required>
+          <Form.Item label={t('alert:center.matchRulesLabel')} required>
             <AntAlert
-              message="匹配规则说明"
-              description="静默规则会匹配所有满足以下条件的告警。至少需要一条匹配规则。"
+              message={t('alert:center.matchRulesLabel')}
+              description={t('alert:center.matchRulesDesc')}
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
@@ -764,9 +766,9 @@ const AlertCenter: React.FC = () => {
                       <Form.Item
                         {...restField}
                         name={[name, 'name']}
-                        rules={[{ required: true, message: '请输入标签名' }]}
+                        rules={[{ required: true, message: t('alert:center.labelNameRequired') }]}
                       >
-                        <Input placeholder="标签名" style={{ width: 120 }} />
+                        <Input placeholder={t('alert:center.labelName')} style={{ width: 120 }} />
                       </Form.Item>
                       <Form.Item {...restField} name={[name, 'isEqual']} initialValue={true}>
                         <Select style={{ width: 80 }}>
@@ -777,14 +779,14 @@ const AlertCenter: React.FC = () => {
                       <Form.Item
                         {...restField}
                         name={[name, 'value']}
-                        rules={[{ required: true, message: '请输入值' }]}
+                        rules={[{ required: true, message: t('alert:center.valueRequired') }]}
                       >
-                        <Input placeholder="值" style={{ width: 150 }} />
+                        <Input placeholder={t('alert:center.value')} style={{ width: 150 }} />
                       </Form.Item>
                       <Form.Item {...restField} name={[name, 'isRegex']} valuePropName="checked">
                         <Select style={{ width: 80 }} defaultValue={false}>
-                          <Option value={false}>精确</Option>
-                          <Option value={true}>正则</Option>
+                          <Option value={false}>{t('alert:center.exact')}</Option>
+                          <Option value={true}>{t('alert:center.regex')}</Option>
                         </Select>
                       </Form.Item>
                       <Button
@@ -796,7 +798,7 @@ const AlertCenter: React.FC = () => {
                     </Space>
                   ))}
                   <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                    添加匹配规则
+                    {t('alert:center.addMatchRule')}
                   </Button>
                 </>
               )}
@@ -804,11 +806,11 @@ const AlertCenter: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            label="备注"
+            label={t('alert:center.remarkLabel')}
             name="comment"
-            rules={[{ required: true, message: '请输入备注' }]}
+            rules={[{ required: true, message: t('alert:center.remarkRequired') }]}
           >
-            <Input.TextArea rows={3} placeholder="请输入静默原因" />
+            <Input.TextArea rows={3} placeholder={t('alert:center.remarkPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>

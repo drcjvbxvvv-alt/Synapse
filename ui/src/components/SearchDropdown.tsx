@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Input,
   Dropdown,
@@ -30,6 +31,7 @@ interface SearchDropdownProps {
 
 const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation('components');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -79,7 +81,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
       setResults(searchResults);
       setVisible(searchResults.length > 0);
     } catch (error) {
-      console.error('搜索失败:', error);
+      console.error('Search failed:', error);
       setResults([]);
       setVisible(false);
     } finally {
@@ -225,16 +227,16 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
                 <Text style={{ fontSize: '13px', color: '#595959' }}>
                   {item.type === 'cluster' && `API Server: ${item.description}`}
                   {item.type === 'node' && `Pod CIDR: ${item.description}`}
-                  {item.type === 'pod' && `节点: ${item.description}`}
-                  {item.type === 'workload' && `副本数: ${item.description}`}
+                  {item.type === 'pod' && `${t('searchDropdown.nodeLabel')}: ${item.description}`}
+                  {item.type === 'workload' && `${t('searchDropdown.replicas')}: ${item.description}`}
                 </Text>
                 <Space>
                   <Text style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                    集群: {item.clusterName}
+                    {t('searchDropdown.clusterLabel')}: {item.clusterName}
                   </Text>
                   {item.namespace && (
                     <Text style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                      命名空间: {item.namespace}
+                      {t('searchDropdown.namespaceLabel')}: {item.namespace}
                     </Text>
                   )}
                   {item.ip && (
@@ -255,27 +257,27 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
   const tabItems = [
     {
       key: 'all',
-      label: `全部 (${results.length})`,
+      label: `${t('searchDropdown.all')} (${results.length})`,
       children: renderResultsList(getFilteredResults('all')),
     },
     {
       key: 'cluster',
-      label: `集群 (${stats.cluster})`,
+      label: `${t('searchDropdown.cluster')} (${stats.cluster})`,
       children: renderResultsList(getFilteredResults('cluster')),
     },
     {
       key: 'node',
-      label: `节点 (${stats.node})`,
+      label: `${t('searchDropdown.node')} (${stats.node})`,
       children: renderResultsList(getFilteredResults('node')),
     },
     {
       key: 'pod',
-      label: `容器组 (${stats.pod})`,
+      label: `${t('searchDropdown.pod')} (${stats.pod})`,
       children: renderResultsList(getFilteredResults('pod')),
     },
     {
       key: 'workload',
-      label: `工作负载 (${stats.workload})`,
+      label: `${t('searchDropdown.workload')} (${stats.workload})`,
       children: renderResultsList(getFilteredResults('workload')),
     },
   ];
@@ -302,7 +304,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
           backgroundColor: '#ffffff'
         }}>
           <Spin size="small" />
-          <div style={{ marginTop: 8, color: '#666' }}>搜索中...</div>
+          <div style={{ marginTop: 8, color: '#666' }}>{t('searchDropdown.searching')}</div>
         </div>
       ) : results.length > 0 ? (
         <>
@@ -343,7 +345,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
               }}
               onClick={() => handleSearch(query)}
             >
-              查看全部搜索结果 →
+              {t('searchDropdown.viewAllResults')}
             </Text>
           </div>
         </>
@@ -355,7 +357,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
         }}>
           <Empty 
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="未找到相关资源"
+            description={t('searchDropdown.noResults')}
             style={{ margin: 0 }}
           />
         </div>
@@ -373,7 +375,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     >
       <Input.Search
         ref={searchRef}
-        placeholder="搜索Pod、Deployment、Service..."
+        placeholder={t('searchDropdown.placeholder')}
         allowClear
         enterButton={<SearchOutlined />}
         size="middle"

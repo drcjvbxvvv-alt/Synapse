@@ -17,6 +17,7 @@ import {
   Tooltip,
 } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import ContainerConfigForm from './ContainerConfigForm';
 import SchedulingConfigForm from './SchedulingConfigForm';
 import type { WorkloadFormData } from '../../types/workload';
@@ -48,6 +49,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
   form: externalForm,
   isEdit = false,
 }) => {
+  const { t } = useTranslation('components');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [form] = Form.useForm<WorkloadFormData>(externalForm as any);
 
@@ -106,32 +108,32 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
       onValuesChange={onValuesChange}
     >
       {/* 基本信息 */}
-      <Card title="基本信息" style={{ marginBottom: 16 }}>
+      <Card title={t('workloadForm.basicInfo')} style={{ marginBottom: 16 }}>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="name"
-              label="名称"
+              label={t('workloadForm.name')}
               rules={[
-                { required: true, message: '请输入名称' },
+                { required: true, message: t('workloadForm.nameRequired') },
                 {
                   pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/,
-                  message: '名称只能包含小写字母、数字和连字符',
+                  message: t('workloadForm.namePattern'),
                 },
               ]}
-              tooltip={isEdit ? '资源名称创建后不可修改' : undefined}
+              tooltip={isEdit ? t('workloadForm.nameEditTooltip') : undefined}
             >
-              <Input placeholder="请输入名称" disabled={isEdit} />
+              <Input placeholder={t('workloadForm.namePlaceholder')} disabled={isEdit} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="namespace"
-              label="命名空间"
-              rules={[{ required: true, message: '请选择命名空间' }]}
-              tooltip={isEdit ? '命名空间创建后不可修改' : undefined}
+              label={t('workloadForm.namespace')}
+              rules={[{ required: true, message: t('workloadForm.namespaceRequired') }]}
+              tooltip={isEdit ? t('workloadForm.namespaceEditTooltip') : undefined}
             >
-              <Select placeholder="请选择命名空间" showSearch disabled={isEdit}>
+              <Select placeholder={t('workloadForm.namespacePlaceholder')} showSearch disabled={isEdit}>
                 {namespaces.map((ns) => (
                   <Option key={ns} value={ns}>
                     {ns}
@@ -144,10 +146,10 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
 
         <Row gutter={16}>
           <Col span={24}>
-            <Form.Item name="description" label="描述">
+            <Form.Item name="description" label={t('workloadForm.description')}>
               <TextArea 
                 rows={2} 
-                placeholder="支持200个字符" 
+                placeholder={t('workloadForm.descriptionPlaceholder')} 
                 maxLength={200}
                 showCount
               />
@@ -160,8 +162,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
             <Col span={12}>
               <Form.Item
                 name="replicas"
-                label="副本数"
-                rules={[{ required: true, message: '请输入副本数' }]}
+                label={t('workloadForm.replicas')}
+                rules={[{ required: true, message: t('workloadForm.replicasRequired') }]}
               >
                 <InputNumber min={0} max={100} style={{ width: '100%' }} />
               </Form.Item>
@@ -174,10 +176,10 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
             <Col span={12}>
               <Form.Item
                 name="serviceName"
-                label="Headless Service"
-                rules={[{ required: true, message: '请输入Service名称' }]}
+                label={t('workloadForm.headlessService')}
+                rules={[{ required: true, message: t('workloadForm.headlessServiceRequired') }]}
               >
-                <Input placeholder="请输入Headless Service名称" />
+                <Input placeholder={t('workloadForm.headlessServicePlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
@@ -188,23 +190,23 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
             <Col span={12}>
               <Form.Item
                 name="schedule"
-                label="Cron表达式"
-                rules={[{ required: true, message: '请输入Cron表达式' }]}
+                label={t('workloadForm.cronExpression')}
+                rules={[{ required: true, message: t('workloadForm.cronRequired') }]}
               >
                 <Input placeholder="例如: 0 0 * * * (每天0点执行)" />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item name="suspend" label="暂停" valuePropName="checked">
+              <Form.Item name="suspend" label={t('workloadForm.suspend')} valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item name="concurrencyPolicy" label="并发策略">
+              <Form.Item name="concurrencyPolicy" label={t('workloadForm.concurrencyPolicy')}>
                 <Select defaultValue="Allow">
-                  <Option value="Allow">Allow (允许并发)</Option>
-                  <Option value="Forbid">Forbid (禁止并发)</Option>
-                  <Option value="Replace">Replace (替换)</Option>
+                  <Option value="Allow">{t('workloadForm.allowConcurrent')}</Option>
+                  <Option value="Forbid">{t('workloadForm.forbidConcurrent')}</Option>
+                  <Option value="Replace">{t('workloadForm.replaceConcurrent')}</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -214,22 +216,22 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
         {workloadType === 'Job' && (
           <Row gutter={16}>
             <Col span={6}>
-              <Form.Item name="completions" label="完成次数">
+              <Form.Item name="completions" label={t('workloadForm.completions')}>
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item name="parallelism" label="并行度">
+              <Form.Item name="parallelism" label={t('workloadForm.parallelism')}>
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item name="backoffLimit" label="重试次数">
+              <Form.Item name="backoffLimit" label={t('workloadForm.backoffLimit')}>
                 <InputNumber min={0} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item name="activeDeadlineSeconds" label="超时时间(秒)">
+              <Form.Item name="activeDeadlineSeconds" label={t('workloadForm.activeDeadlineSeconds')}>
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -241,9 +243,9 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
       <Card 
         title={
           <Space>
-            <span>容器配置</span>
+            <span>{t('workloadForm.containerConfigMulti')}</span>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              (支持多容器)
+              {t('workloadForm.multiContainerHint')}
             </Text>
           </Space>
         }
@@ -271,14 +273,14 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                 icon={<PlusOutlined />}
                 style={{ marginBottom: 16 }}
               >
-                添加容器
+                {t('workloadForm.addContainer')}
               </Button>
             </>
           )}
         </Form.List>
 
         <Divider orientation="left">
-          <Text type="secondary">Init 容器 (可选)</Text>
+          <Text type="secondary">{t('workloadForm.initContainerOptional')}</Text>
         </Divider>
 
         {/* Init容器 */}
@@ -301,7 +303,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                 })}
                 icon={<PlusOutlined />}
               >
-                添加Init容器
+                {t('workloadForm.addInitContainer')}
               </Button>
             </>
           )}
@@ -309,7 +311,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
       </Card>
 
       {/* 数据卷配置 */}
-      <Card title="数据卷配置" style={{ marginBottom: 16 }}>
+      <Card title={t('workloadForm.volumeConfig')} style={{ marginBottom: 16 }}>
         <Form.List name="volumes">
           {(fields, { add, remove }) => (
             <>
@@ -319,8 +321,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     <Col span={6}>
                       <Form.Item
                         name={[field.name, 'name']}
-                        label="数据卷名称"
-                        rules={[{ required: true, message: '请输入名称' }]}
+                        label={t('workloadForm.volumeName')}
+                        rules={[{ required: true, message: t('workloadForm.nameRequired') }]}
                       >
                         <Input placeholder="volume-name" />
                       </Form.Item>
@@ -328,12 +330,12 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     <Col span={6}>
                       <Form.Item
                         name={[field.name, 'type']}
-                        label="类型"
-                        rules={[{ required: true, message: '请选择类型' }]}
+                        label={t('workloadForm.volumeType')}
+                        rules={[{ required: true, message: t('workloadForm.selectType') }]}
                       >
-                        <Select placeholder="选择类型">
-                          <Option value="emptyDir">EmptyDir (临时目录)</Option>
-                          <Option value="hostPath">HostPath (主机路径)</Option>
+                        <Select placeholder={t('workloadForm.selectType')}>
+                          <Option value="emptyDir">{t('workloadForm.emptyDir')}</Option>
+                          <Option value="hostPath">{t('workloadForm.hostPath')}</Option>
                           <Option value="configMap">ConfigMap</Option>
                           <Option value="secret">Secret</Option>
                           <Option value="persistentVolumeClaim">PVC</Option>
@@ -350,8 +352,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                               <Col span={10}>
                                 <Form.Item
                                   name={[field.name, 'hostPath', 'path']}
-                                  label="主机路径"
-                                  rules={[{ required: true, message: '请输入路径' }]}
+                                  label={t('workloadForm.hostPathLabel')}
+                                  rules={[{ required: true, message: t('workloadForm.pathRequired') }]}
                                 >
                                   <Input placeholder="/data/host-path" />
                                 </Form.Item>
@@ -361,8 +363,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                               <Col span={10}>
                                 <Form.Item
                                   name={[field.name, 'configMap', 'name']}
-                                  label="ConfigMap名称"
-                                  rules={[{ required: true, message: '请输入名称' }]}
+                                  label={t('workloadForm.configMapName')}
+                                  rules={[{ required: true, message: t('workloadForm.nameRequired') }]}
                                 >
                                   <Input placeholder="configmap-name" />
                                 </Form.Item>
@@ -372,8 +374,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                               <Col span={10}>
                                 <Form.Item
                                   name={[field.name, 'secret', 'secretName']}
-                                  label="Secret名称"
-                                  rules={[{ required: true, message: '请输入名称' }]}
+                                  label={t('workloadForm.secretName')}
+                                  rules={[{ required: true, message: t('workloadForm.nameRequired') }]}
                                 >
                                   <Input placeholder="secret-name" />
                                 </Form.Item>
@@ -383,8 +385,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                               <Col span={10}>
                                 <Form.Item
                                   name={[field.name, 'persistentVolumeClaim', 'claimName']}
-                                  label="PVC名称"
-                                  rules={[{ required: true, message: '请输入名称' }]}
+                                  label={t('workloadForm.pvcName')}
+                                  rules={[{ required: true, message: t('workloadForm.nameRequired') }]}
                                 >
                                   <Input placeholder="pvc-name" />
                                 </Form.Item>
@@ -409,7 +411,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                 </Card>
               ))}
               <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                添加数据卷
+                {t('workloadForm.addVolume')}
               </Button>
             </>
           )}
@@ -417,14 +419,14 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
       </Card>
 
       {/* 镜像拉取凭证 - 常用功能，放在外面 */}
-      <Card title="镜像拉取凭证" style={{ marginBottom: 16 }}>
+      <Card title={t('workloadForm.imagePullSecrets')} style={{ marginBottom: 16 }}>
         <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-          选择用于拉取私有镜像的 Secret 凭证
+          {t('workloadForm.imagePullSecretsDesc')}
         </Text>
         <Form.Item name="imagePullSecrets">
           <Select
             mode="multiple"
-            placeholder="选择镜像拉取凭证 (可多选)"
+            placeholder={t('workloadForm.imagePullSecretsPlaceholder')}
             style={{ width: '100%' }}
             allowClear
           >
@@ -437,23 +439,23 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
         </Form.Item>
         {imagePullSecretsList.length === 0 && (
           <Text type="warning">
-            当前命名空间下没有找到 kubernetes.io/dockerconfigjson 类型的 Secret
+            {t('workloadForm.noDockerSecretWarning')}
           </Text>
         )}
       </Card>
 
       {/* 高级配置 */}
-      <Card title="高级配置" style={{ marginBottom: 16 }}>
+      <Card title={t('workloadForm.advancedConfig')} style={{ marginBottom: 16 }}>
         <Collapse defaultActiveKey={workloadType === 'Rollout' ? ['rolloutStrategy'] : []} ghost>
           {/* Deployment 升级策略 */}
           {workloadType === 'Deployment' && (
-            <Panel header="升级策略" key="strategy">
+            <Panel header={t('workloadForm.upgradeStrategy')} key="strategy">
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item name={['strategy', 'type']} label="策略类型">
+                  <Form.Item name={['strategy', 'type']} label={t('workloadForm.strategyType')}>
                     <Select defaultValue="RollingUpdate">
-                      <Option value="RollingUpdate">滚动更新</Option>
-                      <Option value="Recreate">重建</Option>
+                      <Option value="RollingUpdate">{t('workloadForm.rollingUpdate')}</Option>
+                      <Option value="Recreate">{t('workloadForm.recreate')}</Option>
                     </Select>
                   </Form.Item>
                 </Col>
@@ -464,13 +466,13 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     return (
                       <>
                         <Col span={8}>
-                          <Form.Item name={['strategy', 'rollingUpdate', 'maxUnavailable']} label="最大不可用">
-                            <Input placeholder="25% 或 1" />
+                          <Form.Item name={['strategy', 'rollingUpdate', 'maxUnavailable']} label={t('workloadForm.maxUnavailable')}>
+                            <Input placeholder={t('workloadForm.maxUnavailablePlaceholder')} />
                           </Form.Item>
                         </Col>
                         <Col span={8}>
-                          <Form.Item name={['strategy', 'rollingUpdate', 'maxSurge']} label="最大超量">
-                            <Input placeholder="25% 或 1" />
+                          <Form.Item name={['strategy', 'rollingUpdate', 'maxSurge']} label={t('workloadForm.maxSurge')}>
+                            <Input placeholder={t('workloadForm.maxSurgePlaceholder')} />
                           </Form.Item>
                         </Col>
                       </>
@@ -480,17 +482,17 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
               </Row>
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item name="minReadySeconds" label="最小就绪时间(秒)">
+                  <Form.Item name="minReadySeconds" label={t('workloadForm.minReadySeconds')}>
                     <InputNumber min={0} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="revisionHistoryLimit" label="历史版本保留数">
+                  <Form.Item name="revisionHistoryLimit" label={t('workloadForm.revisionHistoryLimit')}>
                     <InputNumber min={0} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="progressDeadlineSeconds" label="进度超时(秒)">
+                  <Form.Item name="progressDeadlineSeconds" label={t('workloadForm.progressDeadlineSeconds')}>
                     <InputNumber min={0} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
@@ -503,8 +505,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
             <Panel 
               header={
                 <Space>
-                  <span>发布策略</span>
-                  <Tooltip title="Argo Rollout 支持金丝雀发布和蓝绿发布两种高级发布策略">
+                  <span>{t('workloadForm.rolloutStrategy')}</span>
+                  <Tooltip title={t('workloadForm.rolloutStrategyTooltip')}>
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </Space>
@@ -512,11 +514,11 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
               key="rolloutStrategy"
             >
               <Alert
-                message="Argo Rollout 发布策略说明"
+                message={t('workloadForm.rolloutStrategyDesc')}
                 description={
                   <ul style={{ margin: 0, paddingLeft: 20 }}>
-                    <li><strong>金丝雀发布 (Canary)</strong>: 逐步将流量从旧版本切换到新版本，可设置多个步骤控制发布节奏</li>
-                    <li><strong>蓝绿发布 (Blue-Green)</strong>: 同时运行两个版本，通过切换服务实现零停机发布</li>
+                    <li><strong>{t('workloadForm.canaryLabel')}</strong>: {t('workloadForm.canaryDesc')}</li>
+                    <li><strong>{t('workloadForm.blueGreenLabel')}</strong>: {t('workloadForm.blueGreenDesc')}</li>
                   </ul>
                 }
                 type="info"
@@ -528,19 +530,19 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                 <Col span={8}>
                   <Form.Item 
                     name={['rolloutStrategy', 'type']} 
-                    label="发布策略类型"
-                    rules={[{ required: true, message: '请选择发布策略类型' }]}
+                    label={t('workloadForm.rolloutStrategyType')}
+                    rules={[{ required: true, message: t('workloadForm.rolloutStrategyTypeRequired') }]}
                     initialValue="Canary"
                   >
                     <Select>
                       <Option value="Canary">
                         <Space>
-                          🐤 金丝雀发布 (Canary)
+                          {t('workloadForm.canaryOption')}
                         </Space>
                       </Option>
                       <Option value="BlueGreen">
                         <Space>
-                          🔵🟢 蓝绿发布 (Blue-Green)
+                          {t('workloadForm.blueGreenOption')}
                         </Space>
                       </Option>
                     </Select>
@@ -558,7 +560,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                   
                   return (
                     <>
-                      <Divider orientation="left">金丝雀发布配置</Divider>
+                      <Divider orientation="left">{t('workloadForm.canaryConfig')}</Divider>
                       
                       {/* 服务配置 */}
                       <Row gutter={16}>
@@ -567,8 +569,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                             name={['rolloutStrategy', 'canary', 'stableService']} 
                             label={
                               <Space>
-                                稳定版本 Service
-                                <Tooltip title="接收生产流量的 Service 名称">
+                                {t('workloadForm.stableService')}
+                                <Tooltip title={t('workloadForm.stableServiceTooltip')}>
                                   <QuestionCircleOutlined />
                                 </Tooltip>
                               </Space>
@@ -582,8 +584,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                             name={['rolloutStrategy', 'canary', 'canaryService']} 
                             label={
                               <Space>
-                                金丝雀 Service
-                                <Tooltip title="接收金丝雀流量的 Service 名称">
+                                {t('workloadForm.canaryService')}
+                                <Tooltip title={t('workloadForm.canaryServiceTooltip')}>
                                   <QuestionCircleOutlined />
                                 </Tooltip>
                               </Space>
@@ -599,17 +601,17 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                         <Col span={8}>
                           <Form.Item 
                             name={['rolloutStrategy', 'canary', 'maxSurge']} 
-                            label="最大超量"
+                            label={t('workloadForm.maxSurge')}
                           >
-                            <Input placeholder="25% 或 1" />
+                            <Input placeholder={t('workloadForm.maxSurgePlaceholder')} />
                           </Form.Item>
                         </Col>
                         <Col span={8}>
                           <Form.Item 
                             name={['rolloutStrategy', 'canary', 'maxUnavailable']} 
-                            label="最大不可用"
+                            label={t('workloadForm.maxUnavailable')}
                           >
-                            <Input placeholder="25% 或 1" />
+                            <Input placeholder={t('workloadForm.maxUnavailablePlaceholder')} />
                           </Form.Item>
                         </Col>
                       </Row>
@@ -617,8 +619,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                       {/* 发布步骤 */}
                       <Divider orientation="left">
                         <Space>
-                          发布步骤
-                          <Tooltip title="定义金丝雀发布的每个阶段，可以设置流量权重和暂停时间">
+                          {t('workloadForm.releaseSteps')}
+                          <Tooltip title={t('workloadForm.releaseStepsTooltip')}>
                             <QuestionCircleOutlined />
                           </Tooltip>
                         </Space>
@@ -632,7 +634,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                                 key={field.key} 
                                 size="small" 
                                 style={{ marginBottom: 8 }}
-                                title={`步骤 ${index + 1}`}
+                                title={t('workloadForm.stepIndex', { index: index + 1 })}
                                 extra={
                                   <Button
                                     type="text"
@@ -646,13 +648,13 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                                   <Col span={8}>
                                     <Form.Item 
                                       name={[field.name, 'setWeight']} 
-                                      label="流量权重 (%)"
+                                      label={t('workloadForm.trafficWeight')}
                                     >
                                       <InputNumber 
                                         min={0} 
                                         max={100} 
                                         style={{ width: '100%' }} 
-                                        placeholder="例如: 20" 
+                                        placeholder={t('workloadForm.trafficWeightPlaceholder')} 
                                       />
                                     </Form.Item>
                                   </Col>
@@ -661,14 +663,14 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                                       name={[field.name, 'pause', 'duration']} 
                                       label={
                                         <Space>
-                                          暂停时长
-                                          <Tooltip title="留空表示无限期暂停，需要手动确认后继续">
+                                          {t('workloadForm.pauseDuration')}
+                                          <Tooltip title={t('workloadForm.pauseDurationTooltip')}>
                                             <QuestionCircleOutlined />
                                           </Tooltip>
                                         </Space>
                                       }
                                     >
-                                      <Input placeholder="例如: 10m, 1h (留空则需手动确认)" />
+                                      <Input placeholder={t('workloadForm.pauseDurationPlaceholder')} />
                                     </Form.Item>
                                   </Col>
                                 </Row>
@@ -680,12 +682,12 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                               icon={<PlusOutlined />}
                               style={{ marginBottom: 16 }}
                             >
-                              添加发布步骤
+                              {t('workloadForm.addReleaseStep')}
                             </Button>
                             {fields.length === 0 && (
                               <Alert
-                                message="建议添加发布步骤"
-                                description="例如: 20% → 暂停 → 50% → 暂停 → 100%"
+                                message={t('workloadForm.addReleaseStepSuggestion')}
+                                description={t('workloadForm.addReleaseStepExample')}
                                 type="warning"
                                 showIcon
                                 style={{ marginBottom: 16 }}
@@ -697,15 +699,15 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
 
                       {/* 流量路由 */}
                       <Collapse ghost>
-                        <Panel header="流量路由配置 (可选)" key="trafficRouting">
+                        <Panel header={t('workloadForm.trafficRouting')} key="trafficRouting">
                           <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-                            配置流量路由可以实现更精细的流量控制，支持 Nginx Ingress、Istio 等
+                            {t('workloadForm.trafficRoutingDesc')}
                           </Text>
                           <Row gutter={16}>
                             <Col span={12}>
                               <Form.Item 
                                 name={['rolloutStrategy', 'canary', 'trafficRouting', 'nginx', 'stableIngress']} 
-                                label="Nginx Ingress 名称"
+                                label={t('workloadForm.nginxIngressName')}
                               >
                                 <Input placeholder="my-app-ingress" />
                               </Form.Item>
@@ -728,7 +730,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                   
                   return (
                     <>
-                      <Divider orientation="left">蓝绿发布配置</Divider>
+                      <Divider orientation="left">{t('workloadForm.blueGreenConfig')}</Divider>
                       
                       {/* 服务配置 */}
                       <Row gutter={16}>
@@ -737,13 +739,13 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                             name={['rolloutStrategy', 'blueGreen', 'activeService']} 
                             label={
                               <Space>
-                                活跃 Service
-                                <Tooltip title="接收生产流量的 Service 名称（必填）">
+                                {t('workloadForm.activeService')}
+                                <Tooltip title={t('workloadForm.activeServiceTooltip')}>
                                   <QuestionCircleOutlined />
                                 </Tooltip>
                               </Space>
                             }
-                            rules={[{ required: true, message: '请输入活跃 Service 名称' }]}
+                            rules={[{ required: true, message: t('workloadForm.activeServiceRequired') }]}
                           >
                             <Input placeholder="my-app-active" />
                           </Form.Item>
@@ -753,8 +755,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                             name={['rolloutStrategy', 'blueGreen', 'previewService']} 
                             label={
                               <Space>
-                                预览 Service
-                                <Tooltip title="用于预览新版本的 Service 名称">
+                                {t('workloadForm.previewService')}
+                                <Tooltip title={t('workloadForm.previewServiceTooltip')}>
                                   <QuestionCircleOutlined />
                                 </Tooltip>
                               </Space>
@@ -772,8 +774,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                             name={['rolloutStrategy', 'blueGreen', 'autoPromotionEnabled']} 
                             label={
                               <Space>
-                                自动晋升
-                                <Tooltip title="启用后新版本就绪后会自动晋升为活跃版本">
+                                {t('workloadForm.autoPromotion')}
+                                <Tooltip title={t('workloadForm.autoPromotionTooltip')}>
                                   <QuestionCircleOutlined />
                                 </Tooltip>
                               </Space>
@@ -791,7 +793,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                               <Col span={8}>
                                 <Form.Item 
                                   name={['rolloutStrategy', 'blueGreen', 'autoPromotionSeconds']} 
-                                  label="自动晋升延迟(秒)"
+                                  label={t('workloadForm.autoPromotionDelay')}
                                 >
                                   <InputNumber min={0} style={{ width: '100%' }} placeholder="30" />
                                 </Form.Item>
@@ -808,8 +810,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                             name={['rolloutStrategy', 'blueGreen', 'scaleDownDelaySeconds']} 
                             label={
                               <Space>
-                                缩容延迟(秒)
-                                <Tooltip title="晋升后旧版本的缩容延迟时间">
+                                {t('workloadForm.scaleDownDelay')}
+                                <Tooltip title={t('workloadForm.scaleDownDelayTooltip')}>
                                   <QuestionCircleOutlined />
                                 </Tooltip>
                               </Space>
@@ -821,7 +823,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                         <Col span={8}>
                           <Form.Item 
                             name={['rolloutStrategy', 'blueGreen', 'scaleDownDelayRevisionLimit']} 
-                            label="保留旧版本数量"
+                            label={t('workloadForm.keepOldVersions')}
                           >
                             <InputNumber min={0} style={{ width: '100%' }} placeholder="2" />
                           </Form.Item>
@@ -829,7 +831,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                         <Col span={8}>
                           <Form.Item 
                             name={['rolloutStrategy', 'blueGreen', 'previewReplicaCount']} 
-                            label="预览副本数"
+                            label={t('workloadForm.previewReplicaCount')}
                           >
                             <InputNumber min={1} style={{ width: '100%' }} placeholder="1" />
                           </Form.Item>
@@ -841,20 +843,20 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
               </Form.Item>
 
               {/* 通用配置 */}
-              <Divider orientation="left">通用配置</Divider>
+              <Divider orientation="left">{t('workloadForm.generalConfig')}</Divider>
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item name="minReadySeconds" label="最小就绪时间(秒)">
+                  <Form.Item name="minReadySeconds" label={t('workloadForm.minReadySeconds')}>
                     <InputNumber min={0} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="revisionHistoryLimit" label="历史版本保留数">
+                  <Form.Item name="revisionHistoryLimit" label={t('workloadForm.revisionHistoryLimit')}>
                     <InputNumber min={0} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item name="progressDeadlineSeconds" label="进度超时(秒)">
+                  <Form.Item name="progressDeadlineSeconds" label={t('workloadForm.progressDeadlineSeconds')}>
                     <InputNumber min={0} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
@@ -863,12 +865,12 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
           )}
 
           {/* 调度策略 */}
-          <Panel header="调度策略" key="scheduling">
+          <Panel header={t('workloadForm.scheduling')} key="scheduling">
             <SchedulingConfigForm />
           </Panel>
 
           {/* 容忍策略 */}
-          <Panel header="容忍策略 (Tolerations)" key="tolerations">
+          <Panel header={t('workloadForm.tolerations')} key="tolerations">
             <Form.List name="tolerations">
               {(fields, { add, remove }) => (
                 <>
@@ -876,12 +878,12 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     <Card key={field.key} size="small" style={{ marginBottom: 8 }}>
                       <Row gutter={16}>
                         <Col span={5}>
-                          <Form.Item name={[field.name, 'key']} label="键">
+                          <Form.Item name={[field.name, 'key']} label={t('workloadForm.key')}>
                             <Input placeholder="node.kubernetes.io/not-ready" />
                           </Form.Item>
                         </Col>
                         <Col span={4}>
-                          <Form.Item name={[field.name, 'operator']} label="操作符">
+                          <Form.Item name={[field.name, 'operator']} label={t('workloadForm.operator')}>
                             <Select defaultValue="Equal">
                               <Option value="Equal">Equal</Option>
                               <Option value="Exists">Exists</Option>
@@ -889,14 +891,14 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                           </Form.Item>
                         </Col>
                         <Col span={5}>
-                          <Form.Item name={[field.name, 'value']} label="值">
-                            <Input placeholder="值" />
+                          <Form.Item name={[field.name, 'value']} label={t('workloadForm.value')}>
+                            <Input placeholder={t('workloadForm.value')} />
                           </Form.Item>
                         </Col>
                         <Col span={4}>
-                          <Form.Item name={[field.name, 'effect']} label="效果">
+                          <Form.Item name={[field.name, 'effect']} label={t('workloadForm.effect')}>
                             <Select>
-                              <Option value="">所有</Option>
+                              <Option value="">{t('workloadForm.all')}</Option>
                               <Option value="NoSchedule">NoSchedule</Option>
                               <Option value="PreferNoSchedule">PreferNoSchedule</Option>
                               <Option value="NoExecute">NoExecute</Option>
@@ -904,7 +906,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                           </Form.Item>
                         </Col>
                         <Col span={4}>
-                          <Form.Item name={[field.name, 'tolerationSeconds']} label="容忍时间(秒)">
+                          <Form.Item name={[field.name, 'tolerationSeconds']} label={t('workloadForm.tolerationSeconds')}>
                             <InputNumber min={0} style={{ width: '100%' }} />
                           </Form.Item>
                         </Col>
@@ -917,7 +919,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     </Card>
                   ))}
                   <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                    添加容忍
+                    {t('workloadForm.addToleration')}
                   </Button>
                 </>
               )}
@@ -925,8 +927,8 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
           </Panel>
 
           {/* 标签与注解 */}
-          <Panel header="标签与注解" key="labels">
-            <Divider orientation="left">标签 (Labels)</Divider>
+          <Panel header={t('workloadForm.labelsAnnotations')} key="labels">
+            <Divider orientation="left">{t('workloadForm.labels')}</Divider>
             <Form.List name="labels">
               {(fields, { add, remove }) => (
                 <>
@@ -934,12 +936,12 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     <Row key={field.key} gutter={16} style={{ marginBottom: 8 }}>
                       <Col span={10}>
                         <Form.Item name={[field.name, 'key']} noStyle>
-                          <Input placeholder="键" />
+                          <Input placeholder={t('workloadForm.key')} />
                         </Form.Item>
                       </Col>
                       <Col span={10}>
                         <Form.Item name={[field.name, 'value']} noStyle>
-                          <Input placeholder="值" />
+                          <Input placeholder={t('workloadForm.value')} />
                         </Form.Item>
                       </Col>
                       <Col span={4}>
@@ -948,13 +950,13 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     </Row>
                   ))}
                   <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                    添加标签
+                    {t('workloadForm.addLabel')}
                   </Button>
                 </>
               )}
             </Form.List>
 
-            <Divider orientation="left">注解 (Annotations)</Divider>
+            <Divider orientation="left">{t('workloadForm.annotations')}</Divider>
             <Form.List name="annotations">
               {(fields, { add, remove }) => (
                 <>
@@ -962,12 +964,12 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     <Row key={field.key} gutter={16} style={{ marginBottom: 8 }}>
                       <Col span={10}>
                         <Form.Item name={[field.name, 'key']} noStyle>
-                          <Input placeholder="键" />
+                          <Input placeholder={t('workloadForm.key')} />
                         </Form.Item>
                       </Col>
                       <Col span={10}>
                         <Form.Item name={[field.name, 'value']} noStyle>
-                          <Input placeholder="值" />
+                          <Input placeholder={t('workloadForm.value')} />
                         </Form.Item>
                       </Col>
                       <Col span={4}>
@@ -976,7 +978,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     </Row>
                   ))}
                   <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                    添加注解
+                    {t('workloadForm.addAnnotation')}
                   </Button>
                 </>
               )}
@@ -984,10 +986,10 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
           </Panel>
 
           {/* DNS配置 */}
-          <Panel header="DNS配置" key="dns">
+          <Panel header={t('workloadForm.dnsConfig')} key="dns">
             <Row gutter={16}>
               <Col span={8}>
-                <Form.Item name="dnsPolicy" label="DNS策略">
+                <Form.Item name="dnsPolicy" label={t('workloadForm.dnsPolicy')}>
                   <Select defaultValue="ClusterFirst">
                     <Option value="ClusterFirst">ClusterFirst</Option>
                     <Option value="ClusterFirstWithHostNet">ClusterFirstWithHostNet</Option>
@@ -999,7 +1001,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
             </Row>
             <Row gutter={16}>
               <Col span={12}>
-                <Form.Item name={['dnsConfig', 'nameservers']} label="DNS服务器 (逗号分隔)">
+                <Form.Item name={['dnsConfig', 'nameservers']} label={t('workloadForm.dnsServers')}>
                   <Input placeholder="8.8.8.8, 8.8.4.4" />
                 </Form.Item>
               </Col>
@@ -1013,15 +1015,15 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
 
 
           {/* 其他配置 */}
-          <Panel header="其他配置" key="other">
+          <Panel header={t('workloadForm.otherConfig')} key="other">
             <Row gutter={16}>
               <Col span={8}>
-                <Form.Item name="terminationGracePeriodSeconds" label="优雅终止时间(秒)">
+                <Form.Item name="terminationGracePeriodSeconds" label={t('workloadForm.terminationGracePeriod')}>
                   <InputNumber min={0} style={{ width: '100%' }} placeholder="30" />
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item name="hostNetwork" label="使用主机网络" valuePropName="checked">
+                <Form.Item name="hostNetwork" label={t('workloadForm.hostNetwork')} valuePropName="checked">
                   <Switch />
                 </Form.Item>
               </Col>

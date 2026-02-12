@@ -33,6 +33,7 @@ import type { Ingress } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import IngressCreateModal from './IngressCreateModal';
+import { useTranslation } from 'react-i18next';
 
 const { Text, Link } = Typography;
 
@@ -103,7 +104,8 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
   const { message } = App.useApp();
   
   // 数据状态
-  const [allIngresses, setAllIngresses] = useState<Ingress[]>([]); // 所有原始数据
+const { t } = useTranslation(['network', 'common']);
+const [allIngresses, setAllIngresses] = useState<Ingress[]>([]); // 所有原始数据
   const [ingresses, setIngresses] = useState<Ingress[]>([]); // 当前页显示的数据
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -181,10 +183,10 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '路由名称',
-      namespace: '命名空间',
-      ingressClassName: 'IngressClass',
-      host: 'Host',
+      name: t('network:ingress.search.name'),
+      namespace: t('network:ingress.search.namespace'),
+      ingressClassName: t('network:ingress.search.ingressClassName'),
+      host: t('network:ingress.search.host'),
     };
     return labels[field] || field;
   };
@@ -267,11 +269,11 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         // 保存原始数据，筛选和分页会在useEffect中自动处理
         setAllIngresses(items);
       } else {
-        message.error(response.message || '获取Ingress列表失败');
+        message.error(response.message || t('network:ingress.messages.fetchError'));
       }
     } catch (error) {
-      console.error('获取Ingress列表失败:', error);
-      message.error('获取Ingress列表失败');
+      console.error('Failed to fetch Ingress list:', error);
+      message.error(t('network:ingress.messages.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -346,11 +348,11 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       if (response.code === 200) {
         setCurrentYaml(response.data.yaml);
       } else {
-        message.error(response.message || '获取YAML失败');
+        message.error(response.message || t('network:ingress.messages.fetchYAMLError'));
       }
     } catch (error) {
-      console.error('获取YAML失败:', error);
-      message.error('获取YAML失败');
+      console.error('Failed to fetch YAML:', error);
+      message.error(t('network:ingress.messages.fetchYAMLError'));
     } finally {
       setYamlLoading(false);
     }
@@ -366,29 +368,29 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       );
       
       if (response.code === 200) {
-        message.success('删除成功');
+        message.success(t('common:messages.deleteSuccess'));
         loadIngresses();
       } else {
-        message.error(response.message || '删除失败');
+        message.error(response.message || t('network:ingress.messages.deleteError'));
       }
     } catch (error) {
-      console.error('删除失败:', error);
-      message.error('删除失败');
+      console.error('Failed to delete:', error);
+      message.error(t('common:messages.deleteError'));
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的Ingress');
+      message.warning(t('network:ingress.messages.selectDelete'));
       return;
     }
 
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 个Ingress吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('common:messages.confirmDelete'),
+      content: t('network:ingress.messages.confirmDeleteBatch', { count: selectedRowKeys.length }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       onOk: async () => {
         try {
           const selectedIngresses = ingresses.filter(i => 
@@ -404,16 +406,16 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
           const failCount = results.length - successCount;
           
           if (failCount === 0) {
-            message.success(`成功删除 ${successCount} 个Ingress`);
+            message.success(t('network:ingress.messages.batchDeleteSuccess', { count: successCount }));
           } else {
-            message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+            message.warning(t('network:ingress.messages.batchDeletePartial', { success: successCount, fail: failCount }));
           }
           
           setSelectedRowKeys([]);
           loadIngresses();
         } catch (error) {
-          console.error('批量删除失败:', error);
-          message.error('批量删除失败');
+          console.error('Batch delete failed:', error);
+          message.error(t('network:ingress.messages.batchDeleteError'));
         }
       }
     });
@@ -426,20 +428,20 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       const filteredData = filterIngresses(allIngresses);
       
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
+        message.warning(t('common:messages.noExportData'));
         return;
       }
 
       // 导出筛选后的所有数据（包含所有列）
       const dataToExport = filteredData.map(i => ({
-        '路由名称': i.name,
-        '命名空间': i.namespace,
-        'IngressClass': IngressService.formatIngressClass(i.ingressClassName),
-        '访问入口': IngressService.formatLoadBalancers(i).join('; '),
-        'Hosts': IngressService.getHosts(i).join('; '),
-        '转发策略': IngressService.formatBackends(i).join('; '),
-        'TLS': IngressService.hasTLS(i) ? '是' : '否',
-        '创建时间': i.createdAt ? new Date(i.createdAt).toLocaleString('zh-CN', {
+        [t('network:ingress.export.name')]: i.name,
+        [t('network:ingress.export.namespace')]: i.namespace,
+        [t('network:ingress.export.ingressClass')]: IngressService.formatIngressClass(i.ingressClassName),
+        [t('network:ingress.export.loadBalancer')]: IngressService.formatLoadBalancers(i).join('; '),
+        [t('network:ingress.export.hosts')]: IngressService.getHosts(i).join('; '),
+        [t('network:ingress.export.backends')]: IngressService.formatBackends(i).join('; '),
+        [t('network:ingress.export.tls')]: IngressService.hasTLS(i) ? t('storage:yes') : t('storage:no'),
+        [t('network:ingress.export.createdAt')]: i.createdAt ? new Date(i.createdAt).toLocaleString(undefined, {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -467,17 +469,17 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       link.href = URL.createObjectURL(blob);
       link.download = `ingress-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+      message.success(t('common:messages.exportCount', { count: filteredData.length }));
     } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败');
+      console.error('Export failed:', error);
+      message.error(t('common:messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
+    message.success(t('common:messages.columnSettingsSaved'));
   };
 
   // 编辑Ingress - 跳转到独立的编辑页面
@@ -504,14 +506,14 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         );
         
         if (response.code === 200) {
-          message.success('更新成功');
+          message.success(t('common:messages.saveSuccess'));
           setEditModalVisible(false);
           setEditYaml('');
           setEditingIngress(null);
           setEditMode('yaml');
           loadIngresses();
         } else {
-          message.error(response.message || '更新失败');
+          message.error(response.message || t('network:ingress.messages.updateError'));
         }
       } else {
         // 表单方式更新
@@ -594,7 +596,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         );
         
         if (response.code === 200) {
-          message.success('更新成功');
+          message.success(t('common:messages.saveSuccess'));
           setEditModalVisible(false);
           setEditYaml('');
           setEditingIngress(null);
@@ -602,12 +604,12 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
           editForm.resetFields();
           loadIngresses();
         } else {
-          message.error(response.message || '更新失败');
+          message.error(response.message || t('network:ingress.messages.updateError'));
         }
       }
     } catch (error) {
-      console.error('更新失败:', error);
-      message.error('更新失败');
+      console.error('Failed to update:', error);
+      message.error(t('common:messages.saveError'));
     } finally {
       setSaveLoading(false);
     }
@@ -624,7 +626,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
   // 定义所有可用列
   const allColumns: ColumnsType<Ingress> = [
     {
-      title: '路由名称',
+      title: t('network:ingress.columns.name'),
       dataIndex: 'name',
       key: 'name',
       fixed: 'left' as const,
@@ -638,7 +640,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
               {name}
             </Link>
             {IngressService.hasTLS(record) && (
-              <Tooltip title="已启用TLS">
+              <Tooltip title={t('network:ingress.columns.tlsEnabled')}>
                 <SafetyCertificateOutlined style={{ color: '#52c41a' }} />
               </Tooltip>
             )}
@@ -650,7 +652,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       ),
     },
     {
-      title: '命名空间',
+      title: t('common:table.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 130,
@@ -670,7 +672,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       ),
     },
     {
-      title: '访问入口',
+      title: t('network:ingress.columns.loadBalancer'),
       key: 'loadBalancer',
       width: 200,
       render: (_: unknown, record: Ingress) => {
@@ -685,7 +687,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
             {lbs.length > 2 && (
               <Tooltip title={lbs.slice(2).join(', ')}>
                 <Text type="secondary" style={{ fontSize: 12, cursor: 'pointer' }}>
-                  +{lbs.length - 2} 更多
+                  +{lbs.length - 2} {t('network:ingress.columns.more')}
                 </Text>
               </Tooltip>
             )}
@@ -709,7 +711,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
             {hosts.length > 2 && (
               <Tooltip title={hosts.slice(2).join(', ')}>
                 <Text type="secondary" style={{ fontSize: 12, cursor: 'pointer' }}>
-                  +{hosts.length - 2} 更多
+                  +{hosts.length - 2} {t('network:ingress.columns.more')}
                 </Text>
               </Tooltip>
             )}
@@ -718,7 +720,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       },
     },
     {
-      title: '转发策略',
+      title: t('network:ingress.columns.backends'),
       key: 'backends',
       width: 300,
       render: (_: unknown, record: Ingress) => {
@@ -735,7 +737,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       },
     },
     {
-      title: '创建时间',
+      title: t('common:table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -757,7 +759,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       },
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       fixed: 'right' as const,
       width: 150,
@@ -775,21 +777,21 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
             size="small"
             onClick={() => handleEdit(record)}
           >
-            编辑
+            {t('common:actions.edit')}
           </Button>
           <Popconfirm
-            title="确定要删除这个Ingress吗？"
-            description={`确定要删除 ${record.name} 吗？`}
+            title={t('network:ingress.messages.confirmDeleteItem')}
+            description={t('network:ingress.messages.confirmDeleteDesc', { name: record.name })}
             onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button
               type="link"
               size="small"
               danger
             >
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -832,10 +834,10 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
             onClick={handleBatchDelete}
             danger
           >
-            批量删除
+            {t('common:actions.batchDelete')}
           </Button>
           <Button onClick={handleExport}>
-            导出
+            {t('common:actions.export')}
           </Button>
         </Space>
         <Button
@@ -843,7 +845,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
           icon={<PlusOutlined />}
           onClick={() => setCreateModalVisible(true)}
         >
-          创建Ingress
+          {t('network:ingress.createIngress')}
         </Button>
       </div>
 
@@ -853,7 +855,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="选择属性筛选，或输入关键字搜索"
+            placeholder={t('common:search.placeholder')}
             style={{ flex: 1 }}
             value={currentSearchValue}
             onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -865,10 +867,10 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                 onChange={setCurrentSearchField} 
                 style={{ width: 130 }}
               >
-                <Select.Option value="name">路由名称</Select.Option>
-                <Select.Option value="namespace">命名空间</Select.Option>
-                <Select.Option value="ingressClassName">IngressClass</Select.Option>
-                <Select.Option value="host">Host</Select.Option>
+                <Select.Option value="name">{t('network:ingress.search.name')}</Select.Option>
+                <Select.Option value="namespace">{t('network:ingress.search.namespace')}</Select.Option>
+                <Select.Option value="ingressClassName">{t('network:ingress.search.ingressClassName')}</Select.Option>
+                <Select.Option value="host">{t('network:ingress.search.host')}</Select.Option>
               </Select>
             }
           />
@@ -902,7 +904,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                 onClick={clearAllConditions}
                 style={{ padding: 0 }}
               >
-                清空全部
+                {t('common:actions.clearAll')}
               </Button>
             </Space>
           </div>
@@ -924,7 +926,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 个路由`,
+          showTotal: (total) => t('network:ingress.pagination.total', { total }),
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size || 20);
@@ -943,7 +945,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       >
         {yamlLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <span>加载中...</span>
+            <span>{t('common:messages.loading')}</span>
           </div>
         ) : (
           <pre style={{ maxHeight: 600, overflow: 'auto', background: '#f5f5f5', padding: 16 }}>
@@ -962,7 +964,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
 
       {/* 编辑Modal */}
       <Modal
-        title={`编辑 Ingress: ${editingIngress?.name}`}
+        title={t('network:ingress.edit.title', { name: editingIngress?.name })}
         open={editModalVisible}
         onCancel={() => {
           setEditModalVisible(false);
@@ -974,18 +976,18 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         onOk={handleSaveEdit}
         confirmLoading={saveLoading}
         width={1000}
-        okText="保存"
-        cancelText="取消"
+        okText={t('common:actions.save')}
+        cancelText={t('common:actions.cancel')}
       >
         <Tabs activeKey={editMode} onChange={(key) => setEditMode(key as 'form' | 'yaml')}>
-          <Tabs.TabPane tab="表单编辑" key="form">
+          <Tabs.TabPane tab={t('network:ingress.edit.formTab')} key="form">
             <Form form={editForm} layout="vertical">
-              <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入名称' }]}>
-                <Input disabled placeholder="Ingress名称" />
+              <Form.Item label={t('network:ingress.edit.name')} name="name" rules={[{ required: true, message: t('network:ingress.edit.nameRequired') }]}>
+                <Input disabled placeholder={t('network:ingress.edit.namePlaceholder')} />
               </Form.Item>
               
-              <Form.Item label="命名空间" name="namespace" rules={[{ required: true, message: '请选择命名空间' }]}>
-                <Select disabled placeholder="选择命名空间">
+              <Form.Item label={t('network:ingress.edit.namespace')} name="namespace" rules={[{ required: true, message: t('network:ingress.edit.namespaceRequired') }]}>
+                <Select disabled placeholder={t('network:ingress.edit.namespacePlaceholder')}>
                   {namespaces.map((ns) => (
                     <Select.Option key={ns.name} value={ns.name}>
                       {ns.name}
@@ -994,21 +996,21 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                 </Select>
               </Form.Item>
               
-              <Form.Item label="Ingress Class" name="ingressClass">
-                <Input placeholder="例如: nginx" />
+              <Form.Item label={t('network:ingress.edit.ingressClass')} name="ingressClass">
+                <Input placeholder={t('network:ingress.edit.ingressClassPlaceholder')} />
               </Form.Item>
               
-              <Form.Item label="规则">
+              <Form.Item label={t('network:ingress.edit.rules')}>
                 <Form.List name="rules">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map((field) => (
                         <div key={field.key} style={{ marginBottom: 16, padding: 16, border: '1px solid #d9d9d9', borderRadius: 4 }}>
-                          <Form.Item {...field} name={[field.name, 'host']} label="主机">
+                          <Form.Item {...field} name={[field.name, 'host']} label={t('network:ingress.edit.host')}>
                             <Input placeholder="example.com" />
                           </Form.Item>
                           
-                          <Form.Item label="路径">
+                          <Form.Item label={t('network:ingress.edit.paths')}>
                             <Form.List name={[field.name, 'paths']}>
                               {(pathFields, { add: addPath, remove: removePath }) => (
                                 <>
@@ -1024,16 +1026,16 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                                         </Select>
                                       </Form.Item>
                                       <Form.Item {...pathField} name={[pathField.name, 'serviceName']} noStyle>
-                                        <Input placeholder="服务名" style={{ width: 120 }} />
+                                        <Input placeholder={t('network:ingress.edit.serviceName')} style={{ width: 120 }} />
                                       </Form.Item>
                                       <Form.Item {...pathField} name={[pathField.name, 'servicePort']} noStyle>
-                                        <InputNumber placeholder="端口" min={1} max={65535} style={{ width: 100 }} />
+                                        <InputNumber placeholder={t('network:ingress.edit.servicePort')} min={1} max={65535} style={{ width: 100 }} />
                                       </Form.Item>
                                       <MinusCircleOutlined onClick={() => removePath(pathField.name)} />
                                     </Space>
                                   ))}
                                   <Button type="dashed" onClick={() => addPath()} block icon={<PlusOutlined />}>
-                                    添加路径
+                                    {t('network:ingress.edit.addPath')}
                                   </Button>
                                 </>
                               )}
@@ -1041,58 +1043,58 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                           </Form.Item>
                           
                           <Button type="link" danger onClick={() => remove(field.name)}>
-                            删除此规则
+                            {t('network:ingress.edit.deleteRule')}
                           </Button>
                         </div>
                       ))}
                       <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        添加规则
+                        {t('network:ingress.edit.addRule')}
                       </Button>
                     </>
                   )}
                 </Form.List>
               </Form.Item>
               
-              <Form.Item label="标签">
+              <Form.Item label={t('network:ingress.edit.labels')}>
                 <Form.List name="labels">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map((field) => (
                         <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }}>
                           <Form.Item {...field} name={[field.name, 'key']} noStyle>
-                            <Input placeholder="键" style={{ width: 150 }} />
+                            <Input placeholder={t('network:ingress.edit.key')} style={{ width: 150 }} />
                           </Form.Item>
                           <Form.Item {...field} name={[field.name, 'value']} noStyle>
-                            <Input placeholder="值" style={{ width: 150 }} />
+                            <Input placeholder={t('network:ingress.edit.value')} style={{ width: 150 }} />
                           </Form.Item>
                           <MinusCircleOutlined onClick={() => remove(field.name)} />
                         </Space>
                       ))}
                       <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        添加标签
+                        {t('network:ingress.edit.addLabel')}
                       </Button>
                     </>
                   )}
                 </Form.List>
               </Form.Item>
               
-              <Form.Item label="注解">
+              <Form.Item label={t('network:ingress.edit.annotations')}>
                 <Form.List name="annotations">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map((field) => (
                         <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }}>
                           <Form.Item {...field} name={[field.name, 'key']} noStyle>
-                            <Input placeholder="键" style={{ width: 150 }} />
+                            <Input placeholder={t('network:ingress.edit.key')} style={{ width: 150 }} />
                           </Form.Item>
                           <Form.Item {...field} name={[field.name, 'value']} noStyle>
-                            <Input placeholder="值" style={{ width: 150 }} />
+                            <Input placeholder={t('network:ingress.edit.value')} style={{ width: 150 }} />
                           </Form.Item>
                           <MinusCircleOutlined onClick={() => remove(field.name)} />
                         </Space>
                       ))}
                       <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        添加注解
+                        {t('network:ingress.edit.addAnnotation')}
                       </Button>
                     </>
                   )}
@@ -1101,7 +1103,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
             </Form>
           </Tabs.TabPane>
           
-          <Tabs.TabPane tab="YAML编辑" key="yaml">
+          <Tabs.TabPane tab={t('network:ingress.edit.yamlTab')} key="yaml">
             <MonacoEditor
               height="600px"
               language="yaml"
@@ -1120,7 +1122,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
 
       {/* 列设置抽屉 */}
       <Drawer
-        title="列设置"
+        title={t('common:search.columnSettings')}
         placement="right"
         width={400}
         open={columnSettingsVisible}
@@ -1128,14 +1130,14 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+              <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>{t('common:actions.confirm')}</Button>
             </Space>
           </div>
         }
       >
         <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <p style={{ marginBottom: 8, color: '#666' }}>{t('common:search.selectColumns')}</p>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Checkbox
               checked={visibleColumns.includes('namespace')}
@@ -1147,7 +1149,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              命名空间
+              {t('network:ingress.columnSettings.namespace')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('ingressClassName')}
@@ -1159,7 +1161,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              IngressClass
+              {t('network:ingress.columnSettings.ingressClassName')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('loadBalancer')}
@@ -1171,7 +1173,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              访问入口
+              {t('network:ingress.columnSettings.loadBalancer')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('hosts')}
@@ -1195,7 +1197,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              转发策略
+              {t('network:ingress.columnSettings.backends')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('createdAt')}
@@ -1207,7 +1209,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
                 }
               }}
             >
-              创建时间
+              {t('network:ingress.columnSettings.createdAt')}
             </Checkbox>
           </Space>
         </div>

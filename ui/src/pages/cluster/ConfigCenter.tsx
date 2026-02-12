@@ -6,13 +6,13 @@ import MonitoringConfigForm from '../../components/MonitoringConfigForm';
 import AlertManagerConfigForm from '../../components/AlertManagerConfigForm';
 import ArgoCDConfigForm from '../../components/ArgoCDConfigForm';
 import type { TabsProps } from 'antd';
-
+import { useTranslation } from 'react-i18next';
 const ConfigCenter: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'monitoring';
-
-  const handleTabChange = (key: string) => {
+const { t } = useTranslation(['cluster']);
+const handleTabChange = (key: string) => {
     setSearchParams({ tab: key });
   };
 
@@ -22,7 +22,7 @@ const ConfigCenter: React.FC = () => {
       label: (
         <span>
           <BarChartOutlined />
-          监控配置
+          {t('configCenter.monitoringConfig')}
         </span>
       ),
       children: (
@@ -39,7 +39,7 @@ const ConfigCenter: React.FC = () => {
       label: (
         <span>
           <AlertOutlined />
-          告警配置
+          {t('configCenter.alertConfig')}
         </span>
       ),
       children: (
@@ -56,7 +56,7 @@ const ConfigCenter: React.FC = () => {
       label: (
         <span>
           <BranchesOutlined />
-          ArgoCD 配置
+          {t('configCenter.argocdConfig')}
         </span>
       ),
       children: (

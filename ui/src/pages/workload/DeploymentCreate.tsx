@@ -22,6 +22,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { WorkloadService } from '../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 import { getNamespaces } from '../../services/namespaceService';
 import { secretService } from '../../services/configService';
 import WorkloadForm from '../../components/workload/WorkloadForm';
@@ -40,8 +41,8 @@ const DeploymentCreate: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const [searchParams] = useSearchParams();
   const { message: messageApi, modal } = App.useApp();
-  
-  const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
+const { t } = useTranslation(["workload", "common"]);
+const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
   const editNamespace = searchParams.get('namespace');
   const editName = searchParams.get('name');
   const isEdit = !!(editNamespace && editName);
@@ -184,7 +185,7 @@ const DeploymentCreate: React.FC = () => {
         }
       } catch (error) {
         console.error('加载工作负载失败:', error);
-        messageApi.error('加载工作负载失败');
+        messageApi.error(t('messages.loadWorkloadFailed'));
       } finally {
         setLoading(false);
       }
@@ -251,7 +252,7 @@ const DeploymentCreate: React.FC = () => {
       }
       return false;
     } catch (err) {
-      messageApi.error('YAML 格式错误: ' + (err instanceof Error ? err.message : '未知错误'));
+      messageApi.error(t('messages.yamlFormatError') + ': ' + (err instanceof Error ? err.message : ''));
       return false;
     }
   }, [yamlContent, form, messageApi]);
@@ -305,18 +306,18 @@ const DeploymentCreate: React.FC = () => {
       if (response.code === 200) {
         setDryRunResult({
           success: true,
-          message: '预检通过！YAML 定义符合规范，可以正常创建。',
+          message: t('create.dryRunPassed'),
         });
       } else {
         setDryRunResult({
           success: false,
-          message: response.message || '预检失败',
+          message: response.message || t('create.dryRunFailed'),
         });
       }
     } catch (error: unknown) {
       setDryRunResult({
         success: false,
-        message: error instanceof Error ? error.message : '预检请求失败',
+        message: error instanceof Error ? error.message : t('create.dryRunRequestFailed'),
       });
     } finally {
       setDryRunning(false);
@@ -326,7 +327,7 @@ const DeploymentCreate: React.FC = () => {
   // 提交创建/更新
   const submitYaml = async (yaml: string) => {
     if (!clusterId) {
-      messageApi.error('集群ID不存在');
+      messageApi.error(t('messages.clusterNotFound'));
       return;
     }
     
@@ -335,14 +336,14 @@ const DeploymentCreate: React.FC = () => {
       const response = await WorkloadService.applyYAML(clusterId, yaml, false);
       
       if (response.code === 200) {
-        messageApi.success(isEdit ? '更新成功' : '创建成功');
+        messageApi.success(isEdit ? t('messages.updateSuccess') : t('messages.createSuccess'));
         navigate(`/clusters/${clusterId}/workloads`);
       } else {
-        messageApi.error(response.message || '操作失败');
+        messageApi.error(response.message || t('messages.operationFailed'));
       }
     } catch (error: unknown) {
       console.error('提交失败:', error);
-      messageApi.error(error instanceof Error ? error.message : '操作失败');
+      messageApi.error(error instanceof Error ? error.message : t('messages.operationFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -358,7 +359,7 @@ const DeploymentCreate: React.FC = () => {
         await form.validateFields();
         yaml = formToYaml();
       } catch {
-        messageApi.error('请检查表单填写是否完整');
+        messageApi.error(t('messages.checkForm'));
         return;
       }
     } else {
@@ -369,7 +370,7 @@ const DeploymentCreate: React.FC = () => {
     try {
       YAML.parse(yaml);
     } catch (err) {
-      messageApi.error('YAML 格式错误: ' + (err instanceof Error ? err.message : '未知错误'));
+      messageApi.error(t('messages.yamlFormatError') + ': ' + (err instanceof Error ? err.message : ''));
       return;
     }
     
@@ -380,15 +381,15 @@ const DeploymentCreate: React.FC = () => {
     } else {
       // 创建模式直接确认
       modal.confirm({
-        title: '确认创建',
+        title: t('create.confirmCreate'),
         content: (
           <div>
-            <p>确定要创建该工作负载吗？</p>
-            <p style={{ color: '#666', fontSize: 12 }}>建议先点击"预检"按钮验证配置是否正确。</p>
+            <p>{t('create.confirmCreateDesc')}</p>
+            <p style={{ color: '#666', fontSize: 12 }}>{t('create.confirmCreateHint')}</p>
           </div>
         ),
-        okText: '确认',
-        cancelText: '取消',
+        okText: t('common:actions.confirm'),
+        cancelText: t('common:actions.cancel'),
         onOk: () => submitYaml(yaml),
       });
     }
@@ -409,7 +410,7 @@ const DeploymentCreate: React.FC = () => {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip={t("common:messages.loading")} />
       </div>
     );
   }
@@ -423,17 +424,17 @@ const DeploymentCreate: React.FC = () => {
             icon={<ArrowLeftOutlined />} 
             onClick={() => navigate(-1)}
           >
-            返回
+            {t('create.back')}
           </Button>
           <h2 style={{ margin: 0 }}>
-            {isEdit ? '编辑' : '创建'} {workloadType}
+            {isEdit ? t('create.edit') : t('create.create')} {workloadType}
           </h2>
           {/* 编辑模式只支持 YAML 编辑，避免表单格式化导致复杂字段丢失 */}
           {isEdit ? (
-            <Tooltip title="编辑模式仅支持 YAML 编辑，以保留原始配置格式">
+            <Tooltip title={t("create.yamlModeOnly")}>
               <Space>
                 <CodeOutlined />
-                <span>YAML模式</span>
+                <span>{t('create.yamlMode')}</span>
               </Space>
             </Tooltip>
           ) : (
@@ -441,25 +442,25 @@ const DeploymentCreate: React.FC = () => {
               value={editMode}
               onChange={handleModeChange}
               options={[
-                { value: 'form', icon: <FormOutlined />, label: '表单模式' },
-                { value: 'yaml', icon: <CodeOutlined />, label: 'YAML模式' },
+                { value: 'form', icon: <FormOutlined />, label: t('create.formMode') },
+                { value: 'yaml', icon: <CodeOutlined />, label: t('create.yamlMode') },
               ]}
             />
           )}
         </Space>
         
         <Space>
-          <Tooltip title="预检会通过 dry-run 验证 YAML 是否符合 Kubernetes 规范">
+          <Tooltip title={t("create.preCheckTooltip")}>
             <Button
               onClick={handleDryRun}
               loading={dryRunning}
               icon={dryRunResult?.success ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
             >
-              预检
+              {t('create.preCheck')}
             </Button>
           </Tooltip>
           <Button onClick={() => navigate(-1)}>
-            取消
+            {t('create.cancel')}
           </Button>
           <Button
             type="primary"
@@ -467,7 +468,7 @@ const DeploymentCreate: React.FC = () => {
             onClick={handleSubmit}
             loading={submitting}
           >
-            {isEdit ? '更新' : '创建'}
+            {isEdit ? t('create.update') : t('create.create')}
           </Button>
         </Space>
       </div>
@@ -475,7 +476,7 @@ const DeploymentCreate: React.FC = () => {
       {/* 预检结果 */}
       {dryRunResult && (
         <Alert
-          message={dryRunResult.success ? '预检通过' : '预检失败'}
+          message={dryRunResult.success ? t('create.dryRunCheckPassed') : t('create.dryRunCheckFailed')}
           description={dryRunResult.message}
           type={dryRunResult.success ? 'success' : 'error'}
           showIcon
@@ -497,7 +498,7 @@ const DeploymentCreate: React.FC = () => {
           isEdit={isEdit}
         />
       ) : (
-        <Card title="YAML 编辑">
+        <Card title={t('create.yamlEdit')}>
           <MonacoEditor
             height="600px"
             language="yaml"
@@ -523,7 +524,7 @@ const DeploymentCreate: React.FC = () => {
         title={
           <Space>
             <DiffOutlined />
-            <span>YAML 变更对比</span>
+            <span>{t('create.diffTitle')}</span>
           </Space>
         }
         open={diffModalVisible}
@@ -531,14 +532,14 @@ const DeploymentCreate: React.FC = () => {
         onOk={handleConfirmDiff}
         width="90%"
         style={{ top: 20 }}
-        okText="确认更新"
-        cancelText="取消"
+        okText={t("create.confirmUpdate")}
+        cancelText={t("create.cancel")}
         destroyOnClose
       >
         <div style={{ marginBottom: 16 }}>
           <Space>
             <Text type="secondary">
-              左侧为原始配置，右侧为修改后的配置。红色表示删除，绿色表示新增。
+              {t('create.diffDesc')}
             </Text>
           </Space>
         </div>

@@ -1,0 +1,46 @@
+{
+  "title": "Overview Dashboard",
+  "autoRefresh": "Auto Refresh",
+  "stats": {
+    "clusterTotal": "Total Clusters",
+    "clusterHealthy": "Healthy Clusters",
+    "clusterUnhealthy": "Unhealthy Clusters",
+    "nodeStatus": "Node Status",
+    "podRunning": "Running Pods",
+    "alerts": "Alerts",
+    "alertFiring": " firing",
+    "alertConfigured": "{{count}} clusters with alerts configured",
+    "nodeAbnormal": "{{count}} nodes abnormal"
+  },
+  "resource": {
+    "cpuUsage": "CPU Usage",
+    "memoryUsage": "Memory Usage",
+    "storageUsage": "Storage Usage"
+  },
+  "distribution": {
+    "clusterVersion": "Cluster Version Distribution",
+    "versionName": "Version",
+    "clusterCount": "Cluster Count",
+    "podDistribution": "Pod Distribution",
+    "nodeDistribution": "Node Distribution",
+    "cpuDistribution": "CPU Distribution",
+    "memoryDistribution": "Memory Distribution",
+    "clusterDistribution": "Cluster Distribution",
+    "cluster": "Cluster",
+    "quantity": "Count"
+  },
+  "abnormal": {
+    "title": "Abnormal Workloads",
+    "workload": "Workload",
+    "namespace": "Namespace",
+    "cluster": "Cluster",
+    "type": "Type",
+    "reason": "Reason",
+    "duration": "Duration",
+    "allNormal": "All workloads are running normally"
+  },
+  "trend": {
+    "podTrend": "Pod Count Trend (by Cluster)",
+    "nodeTrend": "Node Count Trend (by Cluster)"
+  }
+}

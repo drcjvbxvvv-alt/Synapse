@@ -25,7 +25,7 @@ import {
   TagsOutlined,
 } from '@ant-design/icons';
 import { getNamespaceDetail, type NamespaceDetailData } from '../../services/namespaceService';
-
+import { useTranslation } from 'react-i18next';
 const { Title, Text } = Typography;
 
 const NamespaceDetail: React.FC = () => {
@@ -33,8 +33,8 @@ const NamespaceDetail: React.FC = () => {
   const navigate = useNavigate();
   const [namespaceDetail, setNamespaceDetail] = useState<NamespaceDetailData | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
+const { t } = useTranslation(["namespace", "common"]);
+useEffect(() => {
     fetchNamespaceDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId, namespace]);
@@ -46,7 +46,7 @@ const NamespaceDetail: React.FC = () => {
       const data = await getNamespaceDetail(Number(clusterId), namespace);
       setNamespaceDetail(data);
     } catch (error) {
-      message.error('获取命名空间详情失败');
+      message.error(t('messages.fetchDetailError'));
       console.error('Error fetching namespace detail:', error);
     } finally {
       setLoading(false);
@@ -60,7 +60,7 @@ const NamespaceDetail: React.FC = () => {
   if (loading) {
     return (
       <div style={{ padding: 24, textAlign: 'center' }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip={t("common:messages.loading")} />
       </div>
     );
   }
@@ -68,7 +68,7 @@ const NamespaceDetail: React.FC = () => {
   if (!namespaceDetail) {
     return (
       <div style={{ padding: 24 }}>
-        <Empty description="命名空间不存在" />
+        <Empty description={t("detail.notFound")} />
       </div>
     );
   }
@@ -79,24 +79,20 @@ const NamespaceDetail: React.FC = () => {
         {/* 头部操作栏 */}
         <Card>
           <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
-              返回
-            </Button>
+            <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>{t('common:actions.back')}</Button>
             <Divider type="vertical" />
             <Title level={4} style={{ margin: 0 }}>
-              命名空间详情: {namespace}
+              {t('detail.subtitle', { name: namespace })}
             </Title>
             <Tag color={namespaceDetail.status === 'Active' ? 'green' : 'orange'}>
-              {namespaceDetail.status === 'Active' ? '运行中' : namespaceDetail.status}
+              {namespaceDetail.status === 'Active' ? t('common:status.active') : namespaceDetail.status}
             </Tag>
-            <Button icon={<ReloadOutlined />} onClick={fetchNamespaceDetail}>
-              刷新
-            </Button>
+            <Button icon={<ReloadOutlined />} onClick={fetchNamespaceDetail}>{t('common:actions.refresh')}</Button>
           </Space>
         </Card>
 
         {/* 资源统计卡片 */}
-        <Card title="资源统计" bordered={false}>
+        <Card title={t("detail.resourceStats")} bordered={false}>
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={6}>
               <Card>
@@ -111,7 +107,7 @@ const NamespaceDetail: React.FC = () => {
             <Col xs={24} sm={12} md={6}>
               <Card>
                 <Statistic
-                  title="服务"
+                  title={t("detail.services")}
                   value={namespaceDetail.resourceCount.services}
                   prefix={<CloudServerOutlined />}
                   valueStyle={{ color: '#52c41a' }}
@@ -142,17 +138,17 @@ const NamespaceDetail: React.FC = () => {
         </Card>
 
         {/* 基本信息 */}
-        <Card title="基本信息">
+        <Card title={t("detail.basicInfo")}>
           <Descriptions bordered column={2}>
-            <Descriptions.Item label="名称" span={2}>
+            <Descriptions.Item label={t("detail.name")} span={2}>
               {namespaceDetail.name}
             </Descriptions.Item>
-            <Descriptions.Item label="状态">
+            <Descriptions.Item label={t("detail.status")}>
               <Tag color={namespaceDetail.status === 'Active' ? 'green' : 'orange'}>
-                {namespaceDetail.status === 'Active' ? '运行中' : namespaceDetail.status}
+                {namespaceDetail.status === 'Active' ? t('common:status.active') : namespaceDetail.status}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="创建时间">
+            <Descriptions.Item label={t("detail.createdAt")}>
               {namespaceDetail.creationTimestamp}
             </Descriptions.Item>
           </Descriptions>
@@ -160,31 +156,31 @@ const NamespaceDetail: React.FC = () => {
 
         {/* 资源配额 */}
         {namespaceDetail.resourceQuota && (
-          <Card title="资源配额">
+          <Card title={t("detail.resourceQuota")}>
             <Row gutter={[16, 16]}>
               <Col span={12}>
                 <Card type="inner" title="CPU">
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <div>
-                      <Text type="secondary">已使用: </Text>
+                      <Text type="secondary">{t("detail.usedQuota")}: </Text>
                       <Text strong>{namespaceDetail.resourceQuota.used.cpu || '0'}</Text>
                     </div>
                     <div>
-                      <Text type="secondary">总配额: </Text>
+                      <Text type="secondary">{t("detail.totalQuota")}: </Text>
                       <Text strong>{namespaceDetail.resourceQuota.hard.cpu || '0'}</Text>
                     </div>
                   </Space>
                 </Card>
               </Col>
               <Col span={12}>
-                <Card type="inner" title="内存">
+                <Card type="inner" title={t("common:resources.memory")}>
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <div>
-                      <Text type="secondary">已使用: </Text>
+                      <Text type="secondary">{t("detail.usedQuota")}: </Text>
                       <Text strong>{namespaceDetail.resourceQuota.used.memory || '0'}</Text>
                     </div>
                     <div>
-                      <Text type="secondary">总配额: </Text>
+                      <Text type="secondary">{t("detail.totalQuota")}: </Text>
                       <Text strong>{namespaceDetail.resourceQuota.hard.memory || '0'}</Text>
                     </div>
                   </Space>
@@ -195,7 +191,7 @@ const NamespaceDetail: React.FC = () => {
         )}
 
         {/* 标签 */}
-        <Card title="标签">
+        <Card title={t("detail.labels")}>
           {namespaceDetail.labels && Object.keys(namespaceDetail.labels).length > 0 ? (
             <Space size={[8, 8]} wrap>
               {Object.entries(namespaceDetail.labels).map(([key, value]) => (
@@ -205,12 +201,12 @@ const NamespaceDetail: React.FC = () => {
               ))}
             </Space>
           ) : (
-            <Text type="secondary">暂无标签</Text>
+            <Text type="secondary">{t("detail.noLabels")}</Text>
           )}
         </Card>
 
         {/* 注解 */}
-        <Card title="注解">
+        <Card title={t("detail.annotations")}>
           {namespaceDetail.annotations && Object.keys(namespaceDetail.annotations).length > 0 ? (
             <Descriptions bordered column={1}>
               {Object.entries(namespaceDetail.annotations).map(([key, value]) => (
@@ -220,7 +216,7 @@ const NamespaceDetail: React.FC = () => {
               ))}
             </Descriptions>
           ) : (
-            <Text type="secondary">暂无注解</Text>
+            <Text type="secondary">{t("detail.noAnnotations")}</Text>
           )}
         </Card>
       </Space>

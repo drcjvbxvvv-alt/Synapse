@@ -18,6 +18,7 @@ import {
   DiffOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { ResourceService } from '../../services/resourceService';
@@ -30,7 +31,7 @@ export interface ResourceYAMLEditorProps {
   kind: ResourceKind;
   namespace?: string;
   name?: string;
-  isEdit?: boolean; // 是否为编辑模式
+  isEdit?: boolean;
   onSuccess?: () => void;
   onCancel?: () => void;
   title?: string;
@@ -38,10 +39,6 @@ export interface ResourceYAMLEditorProps {
 
 /**
  * 通用资源 YAML 编辑器组件
- * 支持：
- * 1. 编辑前预检 (dry-run)
- * 2. 更新时 YAML diff 比对
- * 3. 创建/更新资源
  */
 const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
   clusterId,
@@ -53,26 +50,22 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
   onCancel,
   title,
 }) => {
+  const { t } = useTranslation('components');
   const { message: messageApi, modal } = App.useApp();
   
-  // 状态
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dryRunning, setDryRunning] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<{ success: boolean; message: string } | null>(null);
   
-  // YAML 内容
   const [yamlContent, setYamlContent] = useState('');
   const [originalYaml, setOriginalYaml] = useState('');
   
-  // Diff 弹窗状态
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState('');
 
-  // 加载现有资源的 YAML
   const loadResourceYAML = useCallback(async () => {
     if (!isEdit || !name) {
-      // 创建模式，使用默认模板
       const defaultYAML = ResourceService.getDefaultYAML(kind, namespace || 'default');
       setYamlContent(defaultYAML);
       setOriginalYaml('');
@@ -86,30 +79,27 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         setYamlContent(response.data.yaml);
         setOriginalYaml(response.data.yaml);
       } else {
-        messageApi.error(response.message || '加载 YAML 失败');
+        messageApi.error(response.message || t('resourceYAMLEditor.loadFailed'));
       }
     } catch (error) {
-      console.error('加载 YAML 失败:', error);
-      messageApi.error('加载 YAML 失败');
+      console.error('Failed to load YAML:', error);
+      messageApi.error(t('resourceYAMLEditor.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [clusterId, kind, namespace, name, isEdit, messageApi]);
+  }, [clusterId, kind, namespace, name, isEdit, messageApi, t]);
 
-  // 初始化
   useEffect(() => {
     loadResourceYAML();
   }, [loadResourceYAML]);
 
-  // 预检 (dry-run)
   const handleDryRun = async () => {
-    // 验证 YAML 格式
     try {
       YAML.parse(yamlContent);
     } catch (err) {
       setDryRunResult({
         success: false,
-        message: 'YAML 格式错误: ' + (err instanceof Error ? err.message : '未知错误'),
+        message: t('resourceYAMLEditor.yamlError', { error: err instanceof Error ? err.message : t('resourceYAMLEditor.unknownError') }),
       });
       return;
     }
@@ -122,81 +112,78 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
       if (response.code === 200) {
         setDryRunResult({
           success: true,
-          message: `预检通过！${response.data.isCreated ? '将创建' : '将更新'} ${ResourceService.getKindDisplayName(kind)}: ${response.data.name}`,
+          message: t('resourceYAMLEditor.dryRunPass', {
+            action: response.data.isCreated ? t('resourceYAMLEditor.willCreate') : t('resourceYAMLEditor.willUpdate'),
+            kind: ResourceService.getKindDisplayName(kind),
+            name: response.data.name,
+          }),
         });
       } else {
         setDryRunResult({
           success: false,
-          message: response.message || '预检失败',
+          message: response.message || t('resourceYAMLEditor.dryRunFailed'),
         });
       }
     } catch (error: unknown) {
       setDryRunResult({
         success: false,
-        message: error instanceof Error ? error.message : '预检请求失败',
+        message: error instanceof Error ? error.message : t('resourceYAMLEditor.dryRunRequestFailed'),
       });
     } finally {
       setDryRunning(false);
     }
   };
 
-  // 提交 YAML
   const submitYaml = async (yaml: string) => {
     setSubmitting(true);
     try {
       const response = await ResourceService.applyYAML(clusterId, kind, yaml, false);
       if (response.code === 200) {
-        messageApi.success(response.data.isCreated ? '创建成功' : '更新成功');
+        messageApi.success(response.data.isCreated ? t('resourceYAMLEditor.createSuccess') : t('resourceYAMLEditor.updateSuccess'));
         onSuccess?.();
       } else {
-        messageApi.error(response.message || '操作失败');
+        messageApi.error(response.message || t('resourceYAMLEditor.operationFailed'));
       }
     } catch (error: unknown) {
-      console.error('提交失败:', error);
-      messageApi.error(error instanceof Error ? error.message : '操作失败');
+      console.error('Submit failed:', error);
+      messageApi.error(error instanceof Error ? error.message : t('resourceYAMLEditor.operationFailed'));
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 处理提交
   const handleSubmit = async () => {
-    // 验证 YAML 格式
     try {
       YAML.parse(yamlContent);
     } catch (err) {
-      messageApi.error('YAML 格式错误: ' + (err instanceof Error ? err.message : '未知错误'));
+      messageApi.error(t('resourceYAMLEditor.yamlError', { error: err instanceof Error ? err.message : t('resourceYAMLEditor.unknownError') }));
       return;
     }
 
-    // 编辑模式下显示 diff 对比弹窗
     if (isEdit && originalYaml) {
       setPendingYaml(yamlContent);
       setDiffModalVisible(true);
     } else {
-      // 创建模式直接确认
       modal.confirm({
-        title: `确认创建 ${ResourceService.getKindDisplayName(kind)}`,
+        title: t('resourceYAMLEditor.confirmCreate', { kind: ResourceService.getKindDisplayName(kind) }),
         content: (
           <div>
-            <p>确定要创建该资源吗？</p>
-            <p style={{ color: '#666', fontSize: 12 }}>建议先点击"预检"按钮验证配置是否正确。</p>
+            <p>{t('resourceYAMLEditor.confirmCreateContent')}</p>
+            <p style={{ color: '#666', fontSize: 12 }}>{t('resourceYAMLEditor.dryRunSuggestion')}</p>
           </div>
         ),
-        okText: '确认',
-        cancelText: '取消',
+        okText: t('resourceYAMLEditor.confirm'),
+        cancelText: t('resourceYAMLEditor.cancel'),
         onOk: () => submitYaml(yamlContent),
       });
     }
   };
 
-  // 确认 diff 后提交
   const handleConfirmDiff = () => {
     setDiffModalVisible(false);
     submitYaml(pendingYaml);
   };
 
-  // 重置
   const handleReset = () => {
     if (isEdit && originalYaml) {
       setYamlContent(originalYaml);
@@ -204,15 +191,15 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
       setYamlContent(ResourceService.getDefaultYAML(kind, namespace || 'default'));
     }
     setDryRunResult(null);
-    messageApi.success('已重置');
+    messageApi.success(t('resourceYAMLEditor.resetDone'));
   };
 
-  const displayTitle = title || `${isEdit ? '编辑' : '创建'} ${ResourceService.getKindDisplayName(kind)}`;
+  const displayTitle = title || `${isEdit ? t('resourceYAMLEditor.edit') : t('resourceYAMLEditor.create')} ${ResourceService.getKindDisplayName(kind)}`;
 
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip={t('resourceYAMLEditor.loading')} />
       </div>
     );
   }
@@ -224,7 +211,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         <Space>
           {onCancel && (
             <Button icon={<ArrowLeftOutlined />} onClick={onCancel}>
-              返回
+              {t('resourceYAMLEditor.back')}
             </Button>
           )}
           <h2 style={{ margin: 0 }}>{displayTitle}</h2>
@@ -236,26 +223,26 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         </Space>
 
         <Space>
-          <Tooltip title="预检会通过 dry-run 验证 YAML 是否符合 Kubernetes 规范">
+          <Tooltip title={t('resourceYAMLEditor.dryRunTooltip')}>
             <Button
               onClick={handleDryRun}
               loading={dryRunning}
               icon={dryRunResult?.success ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
             >
-              预检
+              {t('resourceYAMLEditor.dryRun')}
             </Button>
           </Tooltip>
           <Button icon={<ReloadOutlined />} onClick={handleReset}>
-            重置
+            {t('resourceYAMLEditor.reset')}
           </Button>
-          {onCancel && <Button onClick={onCancel}>取消</Button>}
+          {onCancel && <Button onClick={onCancel}>{t('resourceYAMLEditor.cancelBtn')}</Button>}
           <Button
             type="primary"
             icon={<SaveOutlined />}
             onClick={handleSubmit}
             loading={submitting}
           >
-            {isEdit ? '更新' : '创建'}
+            {isEdit ? t('resourceYAMLEditor.update') : t('resourceYAMLEditor.create')}
           </Button>
         </Space>
       </div>
@@ -263,7 +250,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
       {/* 预检结果 */}
       {dryRunResult && (
         <Alert
-          message={dryRunResult.success ? '预检通过' : '预检失败'}
+          message={dryRunResult.success ? t('resourceYAMLEditor.dryRunPassTitle') : t('resourceYAMLEditor.dryRunFailTitle')}
           description={dryRunResult.message}
           type={dryRunResult.success ? 'success' : 'error'}
           showIcon
@@ -274,7 +261,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
       )}
 
       {/* YAML 编辑器 */}
-      <Card title="YAML 编辑">
+      <Card title={t('resourceYAMLEditor.yamlEdit')}>
         <MonacoEditor
           height="600px"
           language="yaml"
@@ -300,7 +287,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         title={
           <Space>
             <DiffOutlined />
-            <span>YAML 变更对比</span>
+            <span>{t('resourceYAMLEditor.diffTitle')}</span>
           </Space>
         }
         open={diffModalVisible}
@@ -308,14 +295,14 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         onOk={handleConfirmDiff}
         width="90%"
         style={{ top: 20 }}
-        okText="确认更新"
-        cancelText="取消"
+        okText={t('resourceYAMLEditor.confirmUpdate')}
+        cancelText={t('resourceYAMLEditor.cancel')}
         destroyOnClose
       >
         <div style={{ marginBottom: 16 }}>
           <Space>
             <Text type="secondary">
-              左侧为原始配置，右侧为修改后的配置。红色表示删除，绿色表示新增。
+              {t('resourceYAMLEditor.diffHint')}
             </Text>
           </Space>
         </div>
@@ -344,4 +331,3 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
 };
 
 export default ResourceYAMLEditor;
-

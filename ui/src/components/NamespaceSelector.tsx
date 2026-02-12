@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Select, Tag, Tooltip } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { usePermission } from '../hooks/usePermission';
 import { namespaceService } from '../services/namespaceService';
 
@@ -26,12 +27,13 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
   clusterId,
   value,
   onChange,
-  placeholder = '请选择命名空间',
+  placeholder,
   allowAll = true,
   style,
   disabled = false,
   showPermissionHint = true,
 }) => {
+  const { t } = useTranslation('components');
   const [allNamespaces, setAllNamespaces] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { filterNamespaces, hasAllNamespaceAccess, getAllowedNamespaces } = usePermission();
@@ -51,7 +53,7 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
           setAllNamespaces(names.filter(Boolean));
         }
       } catch (error) {
-        console.error('获取命名空间列表失败:', error);
+        console.error('Failed to fetch namespaces:', error);
       } finally {
         setLoading(false);
       }
@@ -74,12 +76,12 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
   // 权限提示文案
   const getPermissionHint = () => {
     if (hasFullAccess) {
-      return '您有全部命名空间的访问权限';
+      return t('namespaceSelector.fullAccessHint');
     }
     if (allowedConfig.length === 0) {
-      return '您没有任何命名空间的访问权限';
+      return t('namespaceSelector.noAccessHint');
     }
-    return `您有权限访问: ${allowedConfig.join(', ')}`;
+    return t('namespaceSelector.limitedAccessHint', { namespaces: allowedConfig.join(', ') });
   };
 
   return (
@@ -87,7 +89,7 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
       <Select
         value={value}
         onChange={onChange}
-        placeholder={placeholder}
+        placeholder={placeholder || t('namespaceSelector.placeholder')}
         loading={loading}
         disabled={disabled}
         style={{ minWidth: 180 }}
@@ -98,7 +100,7 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
         }
       >
         {allowAll && hasFullAccess && (
-          <Option value="">全部命名空间</Option>
+          <Option value="">{t('namespaceSelector.allNamespaces')}</Option>
         )}
         {filteredNamespaces.map((ns) => (
           <Option key={ns} value={ns}>
@@ -110,7 +112,7 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
       {showPermissionHint && !hasFullAccess && (
         <Tooltip title={getPermissionHint()}>
           <Tag icon={<LockOutlined />} color="warning" style={{ margin: 0 }}>
-            受限
+            {t('namespaceSelector.restricted')}
           </Tag>
         </Tooltip>
       )}
@@ -119,4 +121,3 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
 };
 
 export default NamespaceSelector;
-

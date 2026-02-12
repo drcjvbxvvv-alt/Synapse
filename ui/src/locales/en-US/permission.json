@@ -1,0 +1,96 @@
+{
+  "title": "Permission Management",
+  "tooltip": "Configure user/group access permissions in clusters",
+  "syncPermissions": "Sync Permissions",
+  "addPermission": "Add Permission",
+  "editPermission": "Edit Permission",
+  "types": {
+    "admin": {
+      "name": "Admin",
+      "description": "Read/write access to all resources in all namespaces (must select all namespaces)."
+    },
+    "ops": {
+      "name": "Operations",
+      "description": "Read/write access to most resources in all namespaces (must select all namespaces)."
+    },
+    "dev": {
+      "name": "Developer",
+      "description": "Read/write access to most resources in selected namespaces (can select partial namespaces)."
+    },
+    "readonly": {
+      "name": "Read-only",
+      "description": "Read-only access to most resources in selected namespaces (can select partial namespaces)."
+    },
+    "custom": {
+      "name": "Custom",
+      "description": "Permissions are determined by the ClusterRole or Role you select."
+    }
+  },
+  "columns": {
+    "subject": "User / Group",
+    "clusterName": "Cluster Name",
+    "permissionType": "Permission Type",
+    "user": "User",
+    "userGroup": "Group"
+  },
+  "actions": {
+    "editTooltip": "Edit Permission",
+    "confirmDeletePermission": "Are you sure you want to delete this permission?",
+    "confirmBatchDelete": "Are you sure you want to batch delete selected permissions?",
+    "selectDeleteFirst": "Please select permissions to delete",
+    "batchDeleteSuccess": "Batch delete successful",
+    "batchDeleteError": "Batch delete failed",
+    "addSuccess": "Added successfully",
+    "operationError": "Operation failed"
+  },
+  "filter": {
+    "selectCluster": "Select Cluster",
+    "namespace": "Namespace",
+    "all": "All",
+    "keyword": "Enter keyword"
+  },
+  "form": {
+    "selectCluster": "Select Cluster",
+    "selectClusterRequired": "Please select a cluster",
+    "selectClusterPlaceholder": "Please select a cluster",
+    "permissionType": "Permission Type",
+    "customRoleName": "ClusterRole/Role Name",
+    "customRoleRequired": "Please enter role name",
+    "noSuitableRole": "No suitable role?",
+    "selectClusterFirst": "Please select a cluster first",
+    "createClusterRole": "Create new ClusterRole now",
+    "customRolePlaceholder": "e.g. view, edit, cluster-admin or custom role name",
+    "assignTo": "Assign To",
+    "selectUser": "Select User",
+    "selectUserRequired": "Please select a user",
+    "selectUserPlaceholder": "Please select a user",
+    "selectUserGroup": "Select User Group",
+    "selectUserGroupRequired": "Please select a user group",
+    "selectUserGroupPlaceholder": "Please select a user group",
+    "memberCount": "{{count}} members",
+    "namespaceScope": "Namespace Scope",
+    "allNamespacesRequired": "This permission type requires all namespaces",
+    "allNamespaces": "All Namespaces",
+    "selectNamespace": "Select Namespace",
+    "selectNamespaceRequired": "Please select namespaces",
+    "namespacePlaceholder": "Enter namespace name (supports wildcards, e.g. app-*)"
+  },
+  "sync": {
+    "title": "Sync KubePolaris Permission Resources",
+    "description": "Sync will create RBAC resources (ClusterRole, ServiceAccount, ClusterRoleBinding) required by KubePolaris in the target cluster to support different permission types for kubectl terminal access.",
+    "clusterName": "Cluster Name",
+    "syncStatus": "Sync Status",
+    "notChecked": "Not Checked",
+    "synced": "Synced",
+    "notSynced": "Not Synced",
+    "syncBtn": "Sync",
+    "resyncBtn": "Re-sync",
+    "syncSuccess": "Sync successful",
+    "syncFailed": "Sync failed",
+    "resourcesTitle": "Resources to be created:"
+  },
+  "loadError": "Failed to load data",
+  "pagination": {
+    "total": "Total {{total}} items"
+  }
+}

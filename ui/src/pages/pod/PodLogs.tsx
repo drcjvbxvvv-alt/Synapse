@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -45,7 +46,8 @@ const PodLogs: React.FC<PodLogsProps> = () => {
   }>();
   const navigate = useNavigate();
   
-  const [pod, setPod] = useState<PodInfo | null>(null);
+const { t } = useTranslation(['pod', 'common']);
+const [pod, setPod] = useState<PodInfo | null>(null);
   const [logs, setLogs] = useState('');
   const [loading, setLoading] = useState(false);
   const [following, setFollowing] = useState(false);
@@ -74,11 +76,11 @@ const PodLogs: React.FC<PodLogsProps> = () => {
           setSelectedContainer(response.data.pod.containers[0].name);
         }
       } else {
-        message.error(response.message || '获取Pod详情失败');
+        message.error(response.message || t('pod:logs.fetchPodError'));
       }
     } catch (error) {
       console.error('获取Pod详情失败:', error);
-      message.error('获取Pod详情失败');
+      message.error(t('pod:logs.fetchPodError'));
     }
   }, [clusterId, namespace, name, selectedContainer]);
 
@@ -115,11 +117,11 @@ const PodLogs: React.FC<PodLogsProps> = () => {
           }
         }, 100);
       } else {
-        message.error(response.message || '获取日志失败');
+        message.error(response.message || t('pod:logs.fetchError'));
       }
     } catch (error) {
       console.error('获取日志失败:', error);
-      message.error('获取日志失败');
+      message.error(t('pod:logs.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -138,7 +140,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
     } else {
       // 开始跟踪 - 建立WebSocket连接
       if (!clusterId || !namespace || !name) {
-        message.error('缺少必要参数');
+        message.error(t('pod:logs.missingParams'));
         return;
       }
       
@@ -169,7 +171,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
             
             switch (msg.type) {
               case 'connected':
-                message.success('已连接到日志流');
+                message.success(t('pod:logs.connectedToStream'));
                 break;
                 
               case 'start':
@@ -190,13 +192,13 @@ const PodLogs: React.FC<PodLogsProps> = () => {
                 break;
                 
               case 'end':
-                message.info('日志流已结束');
+                message.info(t('pod:logs.streamEnded'));
                 setFollowing(false);
                 setConnected(false);
                 break;
                 
               case 'error':
-                message.error(msg.message || '日志流错误');
+                message.error(msg.message || t('pod:logs.streamError'));
                 setFollowing(false);
                 setConnected(false);
                 break;
@@ -213,7 +215,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
         
         ws.onerror = (error) => {
           console.error('WebSocket错误:', error);
-          message.error('WebSocket连接错误');
+          message.error(t('pod:logs.wsConnectionError'));
           setFollowing(false);
           setConnected(false);
           setLoading(false);
@@ -226,7 +228,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
         };
       } catch (error) {
         console.error('创建WebSocket连接失败:', error);
-        message.error('创建连接失败');
+        message.error(t('pod:logs.createConnectionFailed'));
         setFollowing(false);
         setLoading(false);
       }
@@ -241,7 +243,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
   // 下载日志
   const downloadLogs = () => {
     if (!logs) {
-      message.warning('没有日志内容可下载');
+      message.warning(t('pod:logs.noContentToDownload'));
       return;
     }
     
@@ -255,7 +257,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    message.success('日志下载成功');
+    message.success(t('pod:logs.downloadSuccess'));
   };
 
   // 刷新日志
@@ -284,7 +286,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
   }, []);
 
   if (!pod) {
-    return <div>加载中...</div>;
+    return <div>{t('pod:logs.loading')}</div>;
   }
 
   return (
@@ -296,10 +298,10 @@ const PodLogs: React.FC<PodLogsProps> = () => {
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/clusters/${clusterId}/pods/${namespace}/${name}`)}
           >
-            返回
+            {t('pod:logs.back')}
           </Button>
           <Title level={3} style={{ margin: 0 }}>
-            Pod 日志
+            {t('pod:logs.title')}
           </Title>
           <Text type="secondary">
             {namespace}/{name}
@@ -309,7 +311,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col span={4}>
             <Select
-              placeholder="选择容器"
+              placeholder={t('pod:logs.selectContainer')}
               value={selectedContainer}
               onChange={setSelectedContainer}
               style={{ width: '100%' }}
@@ -324,7 +326,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
           
           <Col span={3}>
             <Space>
-              <Text>显示行数:</Text>
+              <Text>{t('pod:logs.tailLines')}:</Text>
               <InputNumber
                 min={10}
                 max={10000}
@@ -337,10 +339,10 @@ const PodLogs: React.FC<PodLogsProps> = () => {
           
           <Col span={3}>
             <Space>
-              <Text>时间范围(秒):</Text>
+              <Text>{t('pod:logs.sinceSeconds')}:</Text>
               <InputNumber
                 min={1}
-                placeholder="全部"
+                placeholder={t('pod:logs.allTime')}
                 value={sinceSeconds}
                 onChange={(value) => setSinceSeconds(value ?? undefined)}
                 style={{ width: 100 }}
@@ -350,7 +352,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
           
           <Col span={3}>
             <Space>
-              <Text>前一个容器:</Text>
+              <Text>{t('pod:logs.previousContainer')}:</Text>
               <Switch
                 checked={previous}
                 onChange={setPrevious}
@@ -367,7 +369,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
                 onClick={refreshLogs}
                 loading={loading}
               >
-                刷新
+                {t('pod:logs.refresh')}
               </Button>
               
               <Button
@@ -375,7 +377,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
                 onClick={toggleFollow}
                 type={following ? 'default' : 'primary'}
               >
-                {following ? '停止跟踪' : '跟踪日志'}
+                {following ? t('pod:logs.stopFollow') : t('pod:logs.startFollow')}
               </Button>
               
               <Button
@@ -383,7 +385,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
                 onClick={downloadLogs}
                 disabled={!logs}
               >
-                下载
+                {t('pod:logs.downloadBtn')}
               </Button>
               
               <Button
@@ -391,7 +393,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
                 onClick={clearLogs}
                 disabled={!logs}
               >
-                清空
+                {t('pod:logs.clearBtn')}
               </Button>
             </Space>
           </Col>
@@ -401,8 +403,8 @@ const PodLogs: React.FC<PodLogsProps> = () => {
       {/* 状态提示 */}
       {following && connected && (
         <Alert
-          message="正在实时跟踪日志"
-          description="通过WebSocket实时接收日志流，点击'停止跟踪'按钮可停止接收。"
+          message={t('pod:logs.followingAlert')}
+          description={t('pod:logs.followingAlertDesc')}
           type="success"
           showIcon
           style={{ marginBottom: 16 }}
@@ -411,8 +413,8 @@ const PodLogs: React.FC<PodLogsProps> = () => {
       
       {following && !connected && (
         <Alert
-          message="正在连接..."
-          description="正在建立WebSocket连接，请稍候..."
+          message={t('pod:logs.connectingAlert')}
+          description={t('pod:logs.connectingAlertDesc')}
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -421,7 +423,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
 
       {/* 日志内容 */}
       <Card style={{ height: 'calc(100% - 140px)' }}>
-        <Spin spinning={loading} tip="加载日志中...">
+        <Spin spinning={loading} tip={t('pod:logs.loadingLogs')}>
           <pre
             ref={logsRef}
             style={{
@@ -438,7 +440,7 @@ const PodLogs: React.FC<PodLogsProps> = () => {
               wordBreak: 'break-all',
             }}
           >
-            {logs || '暂无日志内容'}
+            {logs || t('pod:logs.noLogContent')}
           </pre>
         </Spin>
       </Card>

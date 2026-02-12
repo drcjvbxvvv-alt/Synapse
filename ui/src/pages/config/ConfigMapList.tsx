@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { configMapService, type ConfigMapListItem, type NamespaceItem } from '../../services/configService';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
+import { useTranslation } from 'react-i18next';
 
 const { Option } = Select;
 
@@ -37,7 +38,8 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
   const { message } = App.useApp();
   
   // 数据状态
-  const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
+const { t } = useTranslation(['config', 'common']);
+const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
   const [configMaps, setConfigMaps] = useState<ConfigMapListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -96,9 +98,9 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '名称',
-      namespace: '命名空间',
-      label: '标签',
+      name: t('config:list.searchFields.name'),
+      namespace: t('config:list.searchFields.namespace'),
+      label: t('config:list.searchFields.label'),
     };
     return labels[field] || field;
   };
@@ -157,7 +159,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       setAllConfigMaps(response.items || []);
     } catch (error) {
       console.error('获取ConfigMap列表失败:', error);
-      message.error('获取ConfigMap列表失败');
+      message.error(t('config:list.messages.fetchConfigMapError'));
     } finally {
       setLoading(false);
     }
@@ -168,38 +170,38 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
     if (!clusterId) return;
     try {
       await configMapService.deleteConfigMap(Number(clusterId), namespace, name);
-      message.success('删除成功');
+      message.success(t('common:messages.deleteSuccess'));
       loadConfigMaps();
     } catch (error) {
       console.error('删除失败:', error);
-      message.error('删除失败');
+      message.error(t('common:messages.deleteError'));
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的ConfigMap');
+      message.warning(t('config:list.messages.selectDeleteConfigMap'));
       return;
     }
 
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 个ConfigMap吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('common:messages.confirmDelete'),
+      content: t('config:list.messages.confirmBatchDeleteConfigMap', { count: selectedRowKeys.length }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       onOk: async () => {
         try {
           for (const key of selectedRowKeys) {
             const [namespace, name] = key.split('/');
             await configMapService.deleteConfigMap(Number(clusterId), namespace, name);
           }
-          message.success('批量删除成功');
+          message.success(t('config:list.messages.batchDeleteSuccess'));
           setSelectedRowKeys([]);
           loadConfigMaps();
         } catch (error) {
           console.error('批量删除失败:', error);
-          message.error('批量删除失败');
+          message.error(t('config:list.messages.batchDeleteError'));
         }
       },
     });
@@ -211,16 +213,16 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       const filteredData = filterConfigMaps(allConfigMaps);
       
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
+        message.warning(t('common:messages.noExportData'));
         return;
       }
 
       const dataToExport = filteredData.map(item => ({
-        '名称': item.name,
-        '命名空间': item.namespace,
-        '标签': Object.entries(item.labels || {}).map(([k, v]) => `${k}=${v}`).join(', ') || '-',
-        '数据项数量': item.dataCount,
-        '创建时间': item.creationTimestamp ? new Date(item.creationTimestamp).toLocaleString('zh-CN', {
+        [t('config:list.export.name')]: item.name,
+        [t('config:list.export.namespace')]: item.namespace,
+        [t('config:list.export.labels')]: Object.entries(item.labels || {}).map(([k, v]) => `${k}=${v}`).join(', ') || '-',
+        [t('config:list.export.dataCount')]: item.dataCount,
+        [t('config:list.export.createdAt')]: item.creationTimestamp ? new Date(item.creationTimestamp).toLocaleString('zh-CN', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -229,7 +231,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
           second: '2-digit',
           hour12: false
         }).replace(/\//g, '-') : '-',
-        '存在时间': item.age || '-',
+        [t('config:list.export.age')]: item.age || '-',
       }));
 
       const headers = Object.keys(dataToExport[0]);
@@ -248,17 +250,17 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       link.href = URL.createObjectURL(blob);
       link.download = `configmap-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+      message.success(t('config:list.messages.exportSuccess', { count: filteredData.length }));
     } catch (error) {
       console.error('导出失败:', error);
-      message.error('导出失败');
+      message.error(t('common:messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
+    message.success(t('config:list.messages.columnSettingsSaved'));
   };
 
   // 当搜索条件改变时重置到第一页
@@ -330,7 +332,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
   // 定义所有可用列
   const allColumns: ColumnsType<ConfigMapListItem> = [
     {
-      title: '名称',
+      title: t('common:table.name'),
       dataIndex: 'name',
       key: 'name',
       width: 250,
@@ -354,7 +356,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       ),
     },
     {
-      title: '命名空间',
+      title: t('common:table.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 150,
@@ -363,7 +365,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       render: (text: string) => <Tag color="blue">{text}</Tag>,
     },
     {
-      title: '标签',
+      title: t('common:table.labels'),
       dataIndex: 'labels',
       key: 'labels',
       width: 250,
@@ -385,7 +387,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       ),
     },
     {
-      title: '数据项数量',
+      title: t('config:list.columns.dataCount'),
       dataIndex: 'dataCount',
       key: 'dataCount',
       width: 120,
@@ -395,7 +397,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       render: (count: number) => <Tag color="green">{count}</Tag>,
     },
     {
-      title: '创建时间',
+      title: t('common:table.createdAt'),
       dataIndex: 'creationTimestamp',
       key: 'creationTimestamp',
       width: 180,
@@ -416,13 +418,13 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       },
     },
     {
-      title: '存在时间',
+      title: t('config:list.columns.age'),
       dataIndex: 'age',
       key: 'age',
       width: 100,
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'actions',
       width: 150,
       fixed: 'right' as const,
@@ -433,28 +435,28 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
             size="small"
             onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}`)}
           >
-            查看
+            {t('common:actions.view')}
           </Button>
           <Button
             type="link"
             size="small"
             onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}/edit`)}
           >
-            编辑
+            {t('common:actions.edit')}
           </Button>
           <Popconfirm
-            title="确定要删除这个ConfigMap吗？"
-            description={`确定要删除 ${record.name} 吗？`}
+            title={t('config:list.messages.confirmDeleteConfigMap')}
+            description={t('config:list.messages.confirmDeleteDesc', { name: record.name })}
             onConfirm={() => handleDelete(record.namespace, record.name)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button
               type="link"
               size="small"
               danger
             >
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -497,10 +499,10 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
             icon={<DeleteOutlined />}
             onClick={handleBatchDelete}
           >
-            批量删除 {selectedRowKeys.length > 0 && `(${selectedRowKeys.length})`}
+            {t('common:actions.batchDelete')} {selectedRowKeys.length > 0 && `(${selectedRowKeys.length})`}
           </Button>
           <Button onClick={handleExport}>
-            导出
+            {t('common:actions.export')}
           </Button>
         </Space>
         <Button
@@ -508,7 +510,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
           icon={<PlusOutlined />}
           onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/create`)}
         >
-          创建ConfigMap
+          {t('config:list.createConfigMap')}
         </Button>
       </div>
 
@@ -517,7 +519,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="选择属性筛选，或输入关键字搜索"
+            placeholder={t('common:search.placeholder')}
             style={{ flex: 1 }}
             value={currentSearchValue}
             onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -529,9 +531,9 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
                 onChange={setCurrentSearchField} 
                 style={{ width: 120 }}
               >
-                <Option value="name">名称</Option>
-                <Option value="namespace">命名空间</Option>
-                <Option value="label">标签</Option>
+                <Option value="name">{t('config:list.searchFields.name')}</Option>
+                <Option value="namespace">{t('config:list.searchFields.namespace')}</Option>
+                <Option value="label">{t('config:list.searchFields.label')}</Option>
               </Select>
             }
           />
@@ -565,7 +567,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
                 onClick={clearAllConditions}
                 style={{ padding: 0 }}
               >
-                清空全部
+                {t('common:actions.clearAll')}
               </Button>
             </Space>
           </div>
@@ -587,7 +589,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 个ConfigMap`,
+          showTotal: (total) => t('config:list.pagination.totalConfigMap', { total }),
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size || 20);
@@ -598,7 +600,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
 
       {/* 列设置抽屉 */}
       <Drawer
-        title="列设置"
+        title={t('common:search.columnSettings')}
         placement="right"
         width={400}
         open={columnSettingsVisible}
@@ -606,14 +608,14 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+              <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>{t('common:actions.confirm')}</Button>
             </Space>
           </div>
         }
       >
         <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <p style={{ marginBottom: 8, color: '#666' }}>{t('common:search.selectColumns')}</p>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Checkbox
               checked={visibleColumns.includes('name')}
@@ -625,7 +627,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              名称
+              {t('config:list.columnSettings.name')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('namespace')}
@@ -637,7 +639,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              命名空间
+              {t('config:list.columnSettings.namespace')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('labels')}
@@ -649,7 +651,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              标签
+              {t('config:list.columnSettings.labels')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('dataCount')}
@@ -661,7 +663,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              数据项数量
+              {t('config:list.columnSettings.dataCount')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('creationTimestamp')}
@@ -673,7 +675,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              创建时间
+              {t('config:list.columnSettings.createdAt')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('age')}
@@ -685,7 +687,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              存在时间
+              {t('config:list.columnSettings.age')}
             </Checkbox>
           </Space>
         </div>

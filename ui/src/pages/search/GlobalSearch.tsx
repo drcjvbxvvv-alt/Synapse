@@ -25,13 +25,15 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import type { SearchResult } from '../../types';
+import { useTranslation } from 'react-i18next';
 import { searchService } from '../../services/searchService';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
 const GlobalSearch: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+const { t } = useTranslation(["search", "common"]);
+const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -65,7 +67,7 @@ const GlobalSearch: React.FC = () => {
       const response = await searchService.globalSearch(searchQuery);
       setSearchResults(response.data.results || []);
     } catch (error) {
-      message.error('搜索失败，请稍后重试');
+      message.error(t('searchFailed'));
       console.error('搜索失败:', error);
     } finally {
       setLoading(false);
@@ -159,12 +161,12 @@ const GlobalSearch: React.FC = () => {
   const tabItems = [
     {
       key: 'all',
-      label: `全部 (${searchResults.length})`,
+      label: t('tabs.all') + ` (${searchResults.length})`,
       children: (
         <List
           dataSource={getFilteredResults('all')}
           loading={loading}
-          locale={{ emptyText: <Empty description="暂无搜索结果" /> }}
+          locale={{ emptyText: <Empty description={t("noResultsFor.all")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -173,7 +175,7 @@ const GlobalSearch: React.FC = () => {
                   icon={<EyeOutlined />}
                   onClick={() => handleResourceClick(item)}
                 >
-                  查看详情
+                  {t('viewDetails')}
                 </Button>,
               ]}
             >
@@ -193,13 +195,13 @@ const GlobalSearch: React.FC = () => {
                     <Text type="secondary">
                       {item.type === 'cluster' && `API Server: ${item.description}`}
                       {item.type === 'node' && `Pod CIDR: ${item.description}`}
-                      {item.type === 'pod' && `节点: ${item.description}`}
-                      {item.type === 'workload' && `副本数: ${item.description}`}
+                      {item.type === 'pod' && `${t('description.node')}: ${item.description}`}
+                      {item.type === 'workload' && `${t('description.replicas')}: ${item.description}`}
                     </Text>
                     <Space>
-                      <Text type="secondary">集群: {item.clusterName}</Text>
+                      <Text type="secondary">{t('description.cluster')}: {item.clusterName}</Text>
                       {item.namespace && (
-                        <Text type="secondary">命名空间: {item.namespace}</Text>
+                        <Text type="secondary">{t('description.namespace')}: {item.namespace}</Text>
                       )}
                       {item.ip && <Text type="secondary">IP: {item.ip}</Text>}
                     </Space>
@@ -213,12 +215,12 @@ const GlobalSearch: React.FC = () => {
     },
     {
       key: 'cluster',
-      label: `集群 (${stats.cluster})`,
+      label: t('tabs.cluster') + ` (${stats.cluster})`,
       children: (
         <List
           dataSource={getFilteredResults('cluster')}
           loading={loading}
-          locale={{ emptyText: <Empty description="暂无集群搜索结果" /> }}
+          locale={{ emptyText: <Empty description={t("noResultsFor.cluster")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -227,7 +229,7 @@ const GlobalSearch: React.FC = () => {
                   icon={<EyeOutlined />}
                   onClick={() => handleResourceClick(item)}
                 >
-                  查看详情
+                  {t('viewDetails')}
                 </Button>,
               ]}
             >
@@ -244,7 +246,7 @@ const GlobalSearch: React.FC = () => {
                 description={
                   <Space direction="vertical" size="small">
                     <Text type="secondary">API Server: {item.description}</Text>
-                    <Text type="secondary">集群ID: {item.clusterId}</Text>
+                    <Text type="secondary">{t('description.clusterId')}: {item.clusterId}</Text>
                   </Space>
                 }
               />
@@ -255,12 +257,12 @@ const GlobalSearch: React.FC = () => {
     },
     {
       key: 'node',
-      label: `节点 (${stats.node})`,
+      label: t('tabs.node') + ` (${stats.node})`,
       children: (
         <List
           dataSource={getFilteredResults('node')}
           loading={loading}
-          locale={{ emptyText: <Empty description="暂无节点搜索结果" /> }}
+          locale={{ emptyText: <Empty description={t("noResultsFor.node")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -269,7 +271,7 @@ const GlobalSearch: React.FC = () => {
                   icon={<EyeOutlined />}
                   onClick={() => handleResourceClick(item)}
                 >
-                  查看详情
+                  {t('viewDetails')}
                 </Button>,
               ]}
             >
@@ -287,7 +289,7 @@ const GlobalSearch: React.FC = () => {
                   <Space direction="vertical" size="small">
                     <Text type="secondary">Pod CIDR: {item.description}</Text>
                     <Space>
-                      <Text type="secondary">集群: {item.clusterName}</Text>
+                      <Text type="secondary">{t('description.cluster')}: {item.clusterName}</Text>
                       {item.ip && <Text type="secondary">IP: {item.ip}</Text>}
                     </Space>
                   </Space>
@@ -300,12 +302,12 @@ const GlobalSearch: React.FC = () => {
     },
     {
       key: 'pod',
-      label: `容器组 (${stats.pod})`,
+      label: t('tabs.pod') + ` (${stats.pod})`,
       children: (
         <List
           dataSource={getFilteredResults('pod')}
           loading={loading}
-          locale={{ emptyText: <Empty description="暂无容器组搜索结果" /> }}
+          locale={{ emptyText: <Empty description={t("noResultsFor.pod")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -314,7 +316,7 @@ const GlobalSearch: React.FC = () => {
                   icon={<EyeOutlined />}
                   onClick={() => handleResourceClick(item)}
                 >
-                  查看详情
+                  {t('viewDetails')}
                 </Button>,
               ]}
             >
@@ -330,10 +332,10 @@ const GlobalSearch: React.FC = () => {
                 }
                 description={
                   <Space direction="vertical" size="small">
-                    <Text type="secondary">节点: {item.description}</Text>
+                    <Text type="secondary">{t('description.node')}: {item.description}</Text>
                     <Space>
-                      <Text type="secondary">集群: {item.clusterName}</Text>
-                      <Text type="secondary">命名空间: {item.namespace}</Text>
+                      <Text type="secondary">{t('description.cluster')}: {item.clusterName}</Text>
+                      <Text type="secondary">{t('description.namespace')}: {item.namespace}</Text>
                       {item.ip && <Text type="secondary">IP: {item.ip}</Text>}
                     </Space>
                   </Space>
@@ -346,12 +348,12 @@ const GlobalSearch: React.FC = () => {
     },
     {
       key: 'workload',
-      label: `工作负载 (${stats.workload})`,
+      label: t('tabs.workload') + ` (${stats.workload})`,
       children: (
         <List
           dataSource={getFilteredResults('workload')}
           loading={loading}
-          locale={{ emptyText: <Empty description="暂无工作负载搜索结果" /> }}
+          locale={{ emptyText: <Empty description={t("noResultsFor.workload")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -360,7 +362,7 @@ const GlobalSearch: React.FC = () => {
                   icon={<EyeOutlined />}
                   onClick={() => handleResourceClick(item)}
                 >
-                  查看详情
+                  {t('viewDetails')}
                 </Button>,
               ]}
             >
@@ -377,10 +379,10 @@ const GlobalSearch: React.FC = () => {
                 }
                 description={
                   <Space direction="vertical" size="small">
-                    <Text type="secondary">副本数: {item.description}</Text>
+                    <Text type="secondary">{t('description.replicas')}: {item.description}</Text>
                     <Space>
-                      <Text type="secondary">集群: {item.clusterName}</Text>
-                      <Text type="secondary">命名空间: {item.namespace}</Text>
+                      <Text type="secondary">{t('description.cluster')}: {item.clusterName}</Text>
+                      <Text type="secondary">{t('description.namespace')}: {item.namespace}</Text>
                     </Space>
                   </Space>
                 }
@@ -395,9 +397,9 @@ const GlobalSearch: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ marginBottom: '24px' }}>
-        <Title level={2}>全局搜索</Title>
+        <Title level={2}>{t('title')}</Title>
         <Search
-          placeholder="搜索集群、节点、容器组、工作负载..."
+          placeholder={t("searchPlaceholder")}
           allowClear
           enterButton={<SearchOutlined />}
           size="large"
@@ -415,7 +417,7 @@ const GlobalSearch: React.FC = () => {
             <Col span={6}>
               <Card>
                 <Statistic
-                  title="集群"
+                  title={t("tabs.cluster")}
                   value={stats.cluster}
                   prefix={<ClusterOutlined />}
                   valueStyle={{ color: '#1890ff' }}
@@ -425,7 +427,7 @@ const GlobalSearch: React.FC = () => {
             <Col span={6}>
               <Card>
                 <Statistic
-                  title="节点"
+                  title={t("tabs.node")}
                   value={stats.node}
                   prefix={<DesktopOutlined />}
                   valueStyle={{ color: '#52c41a' }}
@@ -435,7 +437,7 @@ const GlobalSearch: React.FC = () => {
             <Col span={6}>
               <Card>
                 <Statistic
-                  title="容器组"
+                  title={t("tabs.pod")}
                   value={stats.pod}
                   prefix={<ContainerOutlined />}
                   valueStyle={{ color: '#faad14' }}
@@ -445,7 +447,7 @@ const GlobalSearch: React.FC = () => {
             <Col span={6}>
               <Card>
                 <Statistic
-                  title="工作负载"
+                  title={t("tabs.workload")}
                   value={stats.workload}
                   prefix={<RocketOutlined />}
                   valueStyle={{ color: '#722ed1' }}
@@ -486,7 +488,7 @@ const GlobalSearch: React.FC = () => {
       {!query && (
         <Card>
           <Empty
-            description="请输入搜索关键词开始搜索"
+            description={t("enterKeyword")}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </Card>

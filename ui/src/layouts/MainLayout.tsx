@@ -270,7 +270,7 @@ const MainLayout: React.FC = () => {
   const clusterDetailMenuItems: MenuItem[] = [
     {
       key: 'cluster-overview',
-      label: '概览',
+      label: t('menu.overview'),
       onClick: () => {
         const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
         if (clusterMatch) {
@@ -280,12 +280,12 @@ const MainLayout: React.FC = () => {
     },
     {
       key: 'kubernetes-resources',
-      label: 'Kubernetes资源',
+      label: t('menu.kubernetesResources'),
       children: [
         {
           key: 'k8s-workloads',
           icon: <RocketOutlined />,
-          label: '工作负载',
+          label: t('menu.workloads'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -296,7 +296,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'k8s-pods',
           icon: <ContainerOutlined />,
-          label: '容器组',
+          label: t('menu.pods'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -307,7 +307,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'k8s-network',
           icon: <ApiOutlined />,
-          label: '服务与路由',
+          label: t('menu.serviceAndRoutes'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -318,7 +318,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'k8s-storage',
           icon: <HddOutlined />,
-          label: '存储',
+          label: t('menu.storage'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -329,7 +329,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'k8s-configs',
           icon: <KeyOutlined />,
-          label: '配置与密钥',
+          label: t('menu.configsAndSecrets'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -340,7 +340,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'k8s-namespaces',
           icon: <TagsOutlined />,
-          label: '命名空间',
+          label: t('menu.namespaces'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -352,12 +352,12 @@ const MainLayout: React.FC = () => {
     },
     {
       key: 'cluster',
-      label: '集群',
+      label: t('menu.clusterSection'),
       children: [
         {
           key: 'cluster-nodes',
           icon: <DesktopOutlined />,
-          label: '节点管理',
+          label: t('menu.nodeManagement'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -368,7 +368,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'cluster-config',
           icon: <SettingOutlined />,
-          label: '配置中心',
+          label: t('menu.configCenter'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -379,7 +379,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'cluster-upgrade',
           icon: <UploadOutlined />,
-          label: '集群升级',
+          label: t('menu.clusterUpgrade'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -390,7 +390,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'cluster-plugins',
           icon: <BranchesOutlined />,
-          label: 'GitOps 应用',
+          label: t('menu.gitopsApps'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -402,12 +402,12 @@ const MainLayout: React.FC = () => {
     },
     {
       key: 'cloud-native-observability',
-      label: '云原生观测',
+      label: t('menu.observability'),
       children: [
         {
           key: 'observability-monitoring',
           icon: <BarChartOutlined />,
-          label: '监控中心',
+          label: t('menu.monitoring'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -418,7 +418,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'observability-logs',
           icon: <FileTextOutlined />,
-          label: '日志中心',
+          label: t('menu.logs'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -429,7 +429,7 @@ const MainLayout: React.FC = () => {
         {
           key: 'observability-alerts',
           icon: <AlertOutlined />,
-          label: '告警中心',
+          label: t('menu.alerts'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -441,12 +441,12 @@ const MainLayout: React.FC = () => {
     },
     {
       key: 'cloud-native-cost',
-      label: '云原生成本治理',
+      label: t('menu.costGovernance'),
       children: [
         {
           key: 'cost-insights',
           icon: <EyeOutlined />,
-          label: '成本洞察',
+          label: t('menu.costInsights'),
           onClick: () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
@@ -597,7 +597,7 @@ const MainLayout: React.FC = () => {
       if (currentClusterId) {
         window.open(`/clusters/${currentClusterId}/terminal`);
       } else {
-        message.error('无法获取集群ID');
+        message.error(t('menu.cannotGetClusterId'));
       }
     };
 
@@ -608,7 +608,7 @@ const MainLayout: React.FC = () => {
         const response = await clusterService.getClusters();
         setClusters(response.data.items || []);
       } catch (error) {
-        console.error('获取集群列表失败:', error);
+        console.error('Failed to fetch clusters:', error);
       }
     }, []);
     useEffect(() => {
@@ -623,10 +623,10 @@ const MainLayout: React.FC = () => {
           onClick={() => navigate('/clusters')}
           style={{ marginRight: 16 }}
         >
-          返回集群列表
+          {t('menu.backToClusterList')}
         </Button>
         <ClusterOutlined style={{ color: '#1890ff' }} />
-        <span>当前集群：</span>
+        <span>{t('menu.currentCluster')}</span>
 
         <Select
           value={currentClusterId}
@@ -653,7 +653,7 @@ const MainLayout: React.FC = () => {
         )}
         {!hasWritePermission && permissionType && (
           <span style={{ color: '#ff4d4f', fontSize: '12px' }}>
-            （只读模式）
+            {t('menu.readonlyMode')}
           </span>
         )}
         </div>
@@ -663,9 +663,9 @@ const MainLayout: React.FC = () => {
             icon={<CodeOutlined />}
             onClick={() => openTerminal()}  // 调用已有的终端功能
             disabled={!hasWritePermission}
-            title={!hasWritePermission ? '只读权限无法使用终端' : undefined}
+            title={!hasWritePermission ? t('menu.readonlyNoTerminal') : undefined}
           >
-              kubectl终端
+              {t('menu.kubectlTerminal')}
           </Button>
         </Space>
       </div>

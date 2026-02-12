@@ -1,0 +1,69 @@
+{
+  "title": "Namespace Management",
+  "list": {
+    "title": "Namespace List",
+    "fetchError": "Failed to fetch namespace list",
+    "createNamespace": "Create Namespace",
+    "totalNamespaces": "Total {{count}} namespaces",
+    "fieldName": "Name",
+    "fieldStatus": "Status",
+    "fieldLabel": "Label"
+  },
+  "columns": {
+    "name": "Namespace",
+    "status": "Status",
+    "labels": "Labels",
+    "createdAt": "Created At",
+    "actions": "Actions",
+    "moreLabels": "{{count}} more labels"
+  },
+  "actions": {
+    "viewDetail": "Details",
+    "delete": "Delete",
+    "batchDelete": "Batch Delete",
+    "export": "Export",
+    "confirmDelete": "Confirm Delete",
+    "confirmDeleteDesc": "Are you sure you want to delete namespace \"{{name}}\"? This will delete all resources under this namespace.",
+    "confirmBatchDelete": "Confirm Batch Delete",
+    "confirmBatchDeleteDesc": "Are you sure you want to delete {{count}} selected namespaces? This will delete all resources under these namespaces.",
+    "selectDeleteFirst": "Please select namespaces to delete first",
+    "cannotDeleteSystem": "Cannot delete system namespaces"
+  },
+  "create": {
+    "title": "Create Namespace",
+    "name": "Namespace Name",
+    "nameLabel": "Namespace Name",
+    "nameRequired": "Please enter namespace name",
+    "namePattern": "Name can only contain lowercase letters, numbers and hyphens, and must start and end with a letter or number",
+    "namePlaceholder": "e.g. my-namespace",
+    "description": "Description (optional)",
+    "descriptionLabel": "Description (optional)",
+    "descriptionPlaceholder": "Enter namespace description"
+  },
+  "detail": {
+    "title": "Namespace Detail",
+    "subtitle": "Namespace Detail: {{name}}",
+    "notFound": "Namespace not found",
+    "resourceStats": "Resource Statistics",
+    "services": "Services",
+    "basicInfo": "Basic Info",
+    "name": "Name",
+    "status": "Status",
+    "createdAt": "Created At",
+    "resourceQuota": "Resource Quota",
+    "usedQuota": "Used",
+    "totalQuota": "Total Quota",
+    "labels": "Labels",
+    "annotations": "Annotations",
+    "noLabels": "No labels",
+    "noAnnotations": "No annotations"
+  },
+  "messages": {
+    "createSuccess": "Namespace created successfully",
+    "createError": "Failed to create namespace",
+    "deleteSuccess": "Namespace deleted successfully",
+    "deleteError": "Failed to delete namespace",
+    "fetchDetailError": "Failed to fetch namespace detail",
+    "batchDeleteError": "Failed to batch delete"
+  }
+}

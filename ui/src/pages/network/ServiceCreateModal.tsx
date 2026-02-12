@@ -5,6 +5,7 @@ import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { ServiceService } from '../../services/serviceService';
 import { getNamespaces } from '../../services/configService';
+import { useTranslation } from 'react-i18next';
 
 interface ServiceCreateModalProps {
   visible: boolean;
@@ -38,7 +39,8 @@ const ServiceCreateModal: React.FC<ServiceCreateModalProps> = ({
   onSuccess,
 }) => {
   const { message } = App.useApp();
-  const [form] = Form.useForm();
+const { t } = useTranslation(['network', 'common']);
+const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('form');
   const [yamlContent, setYamlContent] = useState(`apiVersion: v1
 kind: Service
@@ -89,11 +91,11 @@ spec:
         });
         
         if (response.code === 200) {
-          message.success('Service创建成功');
+          message.success(t('network:create.serviceSuccess'));
           onSuccess();
           onClose();
         } else {
-          message.error(response.message || 'Service创建失败');
+          message.error(response.message || t('network:create.serviceFailed'));
         }
       } else {
         // 表单方式创建
@@ -128,17 +130,17 @@ spec:
         });
         
         if (response.code === 200) {
-          message.success('Service创建成功');
+          message.success(t('network:create.serviceSuccess'));
           form.resetFields();
           onSuccess();
           onClose();
         } else {
-          message.error(response.message || 'Service创建失败');
+          message.error(response.message || t('network:create.serviceFailed'));
         }
       }
     } catch (error: unknown) {
-      console.error('创建Service失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '创建Service失败';
+      console.error('Failed to create Service:', error);
+      const errorMessage = error instanceof Error ? error.message : t('network:create.serviceFailed');
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -286,7 +288,7 @@ spec:
       });
     } catch (error) {
       console.error('YAML转表单失败:', error);
-      message.error('YAML格式错误，无法解析');
+      message.error(t('network:create.yamlParseError'));
     }
   };
 
@@ -314,12 +316,12 @@ spec:
       }}
     >
       <Form.Item
-        label="命名空间"
+        label={t('network:create.namespace')}
         name="namespace"
-        rules={[{ required: true, message: '请选择命名空间' }]}
+        rules={[{ required: true, message: t('network:create.namespaceRequired') }]}
       >
         <Select
-          placeholder="选择命名空间"
+          placeholder={t('network:create.namespacePlaceholder')}
           loading={loadingNamespaces}
           showSearch
           filterOption={(input, option) => {
@@ -337,17 +339,17 @@ spec:
       </Form.Item>
 
       <Form.Item
-        label="服务名称"
+        label={t('network:create.serviceName')}
         name="name"
-        rules={[{ required: true, message: '请输入服务名称' }]}
+        rules={[{ required: true, message: t('network:create.serviceNameRequired') }]}
       >
         <Input placeholder="my-service" />
       </Form.Item>
 
       <Form.Item
-        label="服务类型"
+        label={t('network:create.serviceType')}
         name="type"
-        rules={[{ required: true, message: '请选择服务类型' }]}
+        rules={[{ required: true, message: t('network:create.serviceTypeRequired') }]}
       >
         <Select>
           <Select.Option value="ClusterIP">ClusterIP</Select.Option>
@@ -366,7 +368,7 @@ spec:
                   <Form.Item
                     {...field}
                     name={[field.name, 'key']}
-                    rules={[{ required: true, message: '请输入Key' }]}
+                    rules={[{ required: true, message: t('network:create.keyRequired') }]}
                     noStyle
                   >
                     <Input placeholder="key" style={{ width: 200 }} />
@@ -374,7 +376,7 @@ spec:
                   <Form.Item
                     {...field}
                     name={[field.name, 'value']}
-                    rules={[{ required: true, message: '请输入Value' }]}
+                    rules={[{ required: true, message: t('network:create.valueRequired') }]}
                     noStyle
                   >
                     <Input placeholder="value" style={{ width: 200 }} />
@@ -383,14 +385,14 @@ spec:
                 </Space>
               ))}
               <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                添加Selector
+                {t('network:create.addSelector')}
               </Button>
             </>
           )}
         </Form.List>
       </Form.Item>
 
-      <Form.Item label="端口配置" required>
+      <Form.Item label={t('network:create.portConfig')} required>
         <Form.List name="ports">
           {(fields, { add, remove }) => (
             <>
@@ -401,14 +403,14 @@ spec:
                     name={[field.name, 'name']}
                     noStyle
                   >
-                    <Input placeholder="端口名称" style={{ width: 120 }} />
+                    <Input placeholder={t('network:create.portName')} style={{ width: 120 }} />
                   </Form.Item>
                   <Form.Item
                     {...field}
                     name={[field.name, 'protocol']}
                     noStyle
                   >
-                    <Select placeholder="协议" style={{ width: 100 }}>
+                    <Select placeholder={t('network:create.protocol')} style={{ width: 100 }}>
                       <Select.Option value="TCP">TCP</Select.Option>
                       <Select.Option value="UDP">UDP</Select.Option>
                       <Select.Option value="SCTP">SCTP</Select.Option>
@@ -417,7 +419,7 @@ spec:
                   <Form.Item
                     {...field}
                     name={[field.name, 'port']}
-                    rules={[{ required: true, message: '必填' }]}
+                    rules={[{ required: true, message: t('network:create.required') }]}
                     noStyle
                   >
                     <InputNumber placeholder="Port" style={{ width: 100 }} min={1} max={65535} />
@@ -433,7 +435,7 @@ spec:
                 </Space>
               ))}
               <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                添加端口
+                {t('network:create.addPort')}
               </Button>
             </>
           )}
@@ -466,14 +468,14 @@ spec:
 
   return (
     <Modal
-      title="创建Service"
+      title={t('network:create.serviceTitle')}
       open={visible}
       onCancel={handleCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
       width={800}
-      okText="创建"
-      cancelText="取消"
+      okText={t('network:create.createBtn')}
+      cancelText={t('common:actions.cancel')}
     >
       <Tabs
         activeKey={activeTab}
@@ -481,12 +483,12 @@ spec:
         items={[
           {
             key: 'form',
-            label: '表单模式',
+            label: t('network:create.formMode'),
             children: formItems,
           },
           {
             key: 'yaml',
-            label: 'YAML模式',
+            label: t('network:create.yamlMode'),
             children: yamlEditor,
           },
         ]}

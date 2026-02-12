@@ -35,14 +35,15 @@ import {
   type NamespaceData,
   type CreateNamespaceRequest,
 } from '../../services/namespaceService';
-
+import { useTranslation } from 'react-i18next';
 const { Option } = Select;
 
 const NamespaceList: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
   const { message } = App.useApp();
-  const [form] = Form.useForm();
+const { t } = useTranslation(["namespace", "common"]);
+const [form] = Form.useForm();
 
   // 数据状态
   const [allNamespaces, setAllNamespaces] = useState<NamespaceData[]>([]); // 所有原始数据
@@ -104,9 +105,9 @@ const NamespaceList: React.FC = () => {
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '名称',
-      status: '状态',
-      label: '标签',
+      name: t('list.fieldName'),
+      status: t('list.fieldStatus'),
+      label: t('list.fieldLabel'),
     };
     return labels[field] || field;
   };
@@ -155,7 +156,7 @@ const NamespaceList: React.FC = () => {
       setAllNamespaces(data);
     } catch (error) {
       console.error('获取命名空间列表失败:', error);
-      message.error('获取命名空间列表失败');
+      message.error(t('list.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -166,12 +167,12 @@ const NamespaceList: React.FC = () => {
     if (!clusterId) return;
     try {
       await createNamespace(Number(clusterId), values);
-      message.success('命名空间创建成功');
+      message.success(t('messages.createSuccess'));
       setCreateModalVisible(false);
       form.resetFields();
       loadNamespaces();
     } catch (error) {
-      message.error('创建命名空间失败');
+      message.error(t('messages.createError'));
       console.error('Error creating namespace:', error);
     }
   };
@@ -181,10 +182,10 @@ const NamespaceList: React.FC = () => {
     if (!clusterId) return;
     try {
       await deleteNamespace(Number(clusterId), namespace);
-      message.success('命名空间删除成功');
+      message.success(t('messages.deleteSuccess'));
       loadNamespaces();
     } catch (error) {
-      message.error('删除命名空间失败');
+      message.error(t('messages.deleteError'));
       console.error('Error deleting namespace:', error);
     }
   };
@@ -192,7 +193,7 @@ const NamespaceList: React.FC = () => {
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的命名空间');
+      message.warning(t('common:messages.selectFirst'));
       return;
     }
 
@@ -201,15 +202,15 @@ const NamespaceList: React.FC = () => {
     const toDelete = selectedRowKeys.filter(ns => !systemNamespaces.includes(ns));
 
     if (toDelete.length === 0) {
-      message.warning('不能删除系统命名空间');
+      message.warning(t('common:messages.cannotDeleteSystem'));
       return;
     }
 
     Modal.confirm({
-      title: '确认批量删除',
-      content: `确定要删除选中的 ${toDelete.length} 个命名空间吗？此操作将删除这些命名空间下的所有资源。`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('actions.confirmBatchDelete'),
+      content: t('actions.confirmBatchDeleteDesc', { count: toDelete.length }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -219,16 +220,16 @@ const NamespaceList: React.FC = () => {
           const failCount = results.length - successCount;
 
           if (failCount === 0) {
-            message.success(`成功删除 ${successCount} 个命名空间`);
+            message.success(t('common:messages.batchDeleteSuccess', { count: successCount }));
           } else {
-            message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+            message.warning(t('common:messages.batchDeletePartial', { success: successCount, fail: failCount }));
           }
 
           setSelectedRowKeys([]);
           loadNamespaces();
         } catch (error) {
           console.error('批量删除失败:', error);
-          message.error('批量删除失败');
+          message.error(t('messages.batchDeleteError'));
         }
       }
     });
@@ -241,16 +242,16 @@ const NamespaceList: React.FC = () => {
       const filteredData = filterNamespaces(allNamespaces);
 
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
+        message.warning(t('common:messages.noExportData'));
         return;
       }
 
       // 导出筛选后的所有数据
       const dataToExport = filteredData.map(ns => ({
-        '命名空间': ns.name,
-        '状态': ns.status === 'Active' ? '运行中' : ns.status,
-        '标签': ns.labels ? Object.entries(ns.labels).map(([k, v]) => `${k}=${v}`).join('; ') : '-',
-        '创建时间': ns.creationTimestamp ? new Date(ns.creationTimestamp).toLocaleString('zh-CN', {
+        [t('columns.name')]: ns.name,
+        [t('columns.status')]: ns.status === 'Active' ? t('common:status.active') : ns.status,
+        [t('columns.labels')]: ns.labels ? Object.entries(ns.labels).map(([k, v]) => `${k}=${v}`).join('; ') : '-',
+        [t('columns.createdAt')]: ns.creationTimestamp ? new Date(ns.creationTimestamp).toLocaleString('zh-CN', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -278,17 +279,17 @@ const NamespaceList: React.FC = () => {
       link.href = URL.createObjectURL(blob);
       link.download = `namespace-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+      message.success(t('common:messages.exportCount', { count: filteredData.length }));
     } catch (error) {
       console.error('导出失败:', error);
-      message.error('导出失败');
+      message.error(t('common:messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
+    message.success(t('common:messages.columnSettingsSaved'));
   };
 
   // 查看详情
@@ -360,7 +361,7 @@ const NamespaceList: React.FC = () => {
   // 定义所有可用列
   const allColumns: ColumnsType<NamespaceData> = [
     {
-      title: '命名空间',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 200,
@@ -384,7 +385,7 @@ const NamespaceList: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('columns.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -395,13 +396,13 @@ const NamespaceList: React.FC = () => {
         return (
           <Badge
             status={isActive ? 'success' : 'warning'}
-            text={isActive ? '运行中' : status}
+            text={isActive ? t('common:status.active') : status}
           />
         );
       },
     },
     {
-      title: '标签',
+      title: t('columns.labels'),
       dataIndex: 'labels',
       key: 'labels',
       width: 250,
@@ -419,7 +420,7 @@ const NamespaceList: React.FC = () => {
               </Tooltip>
             ))}
             {moreCount > 0 && (
-              <Tooltip title={`还有 ${moreCount} 个标签`}>
+              <Tooltip title={t('columns.moreLabels', { count: moreCount })}>
                 <Tag>+{moreCount}</Tag>
               </Tooltip>
             )}
@@ -428,7 +429,7 @@ const NamespaceList: React.FC = () => {
       },
     },
     {
-      title: '创建时间',
+      title: t('columns.createdAt'),
       dataIndex: 'creationTimestamp',
       key: 'creationTimestamp',
       width: 180,
@@ -450,7 +451,7 @@ const NamespaceList: React.FC = () => {
       },
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'actions',
       width: 150,
       fixed: 'right' as const,
@@ -461,25 +462,21 @@ const NamespaceList: React.FC = () => {
             size="small"
             icon={<EyeOutlined />}
             onClick={() => handleViewDetail(record.name)}
-          >
-            详情
-          </Button>
+          >{t('common:actions.viewDetails')}</Button>
           {!['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(record.name) && (
             <Popconfirm
-              title="确认删除"
+              title={t('common:actions.delete')}
               description={`确定要删除命名空间 "${record.name}" 吗？此操作将删除该命名空间下的所有资源。`}
               onConfirm={() => handleDelete(record.name)}
-              okText="确定"
-              cancelText="取消"
+              okText={t("common:actions.confirm")}
+              cancelText={t("common:actions.cancel")}
             >
               <Button
                 type="link"
                 size="small"
                 danger
                 icon={<DeleteOutlined />}
-              >
-                删除
-              </Button>
+              >{t('common:actions.delete')}</Button>
             </Popconfirm>
           )}
         </Space>
@@ -521,20 +518,14 @@ const NamespaceList: React.FC = () => {
               danger
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchDelete}
-            >
-              批量删除
-            </Button>
-            <Button onClick={handleExport}>
-              导出
-            </Button>
+            >{t('common:actions.batchDelete')}</Button>
+            <Button onClick={handleExport}>{t('common:actions.export')}</Button>
           </Space>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setCreateModalVisible(true)}
-          >
-            创建命名空间
-          </Button>
+          >{t('list.createNamespace')}</Button>
         </div>
 
         {/* 多条件搜索栏 */}
@@ -543,7 +534,7 @@ const NamespaceList: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
             <Input
               prefix={<SearchOutlined />}
-              placeholder="选择属性筛选，或输入关键字搜索"
+              placeholder={t("common:search.placeholder")}
               style={{ flex: 1 }}
               value={currentSearchValue}
               onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -555,9 +546,9 @@ const NamespaceList: React.FC = () => {
                   onChange={setCurrentSearchField}
                   style={{ width: 100 }}
                 >
-                  <Option value="name">名称</Option>
-                  <Option value="status">状态</Option>
-                  <Option value="label">标签</Option>
+                  <Option value="name">{t('list.fieldName')}</Option>
+                  <Option value="status">{t('list.fieldStatus')}</Option>
+                  <Option value="label">{t('list.fieldLabel')}</Option>
                 </Select>
               }
             />
@@ -590,9 +581,7 @@ const NamespaceList: React.FC = () => {
                   type="link"
                   onClick={clearAllConditions}
                   style={{ padding: 0 }}
-                >
-                  清空全部
-                </Button>
+                >{t('common:actions.clearAll')}</Button>
               </Space>
             </div>
           )}
@@ -613,7 +602,7 @@ const NamespaceList: React.FC = () => {
             total: total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 个命名空间`,
+            showTotal: (total) => t("list.totalNamespaces", { count: total }),
             onChange: (page, size) => {
               setCurrentPage(page);
               setPageSize(size || 20);
@@ -625,15 +614,15 @@ const NamespaceList: React.FC = () => {
 
       {/* 创建命名空间模态框 */}
       <Modal
-        title="创建命名空间"
+        title={t("list.createNamespace")}
         open={createModalVisible}
         onCancel={() => {
           setCreateModalVisible(false);
           form.resetFields();
         }}
         onOk={() => form.submit()}
-        okText="确定"
-        cancelText="取消"
+        okText={t("common:actions.confirm")}
+        cancelText={t("common:actions.cancel")}
         width={600}
       >
         <Form
@@ -644,25 +633,25 @@ const NamespaceList: React.FC = () => {
         >
           <Form.Item
             name="name"
-            label="命名空间名称"
+            label={t("create.nameLabel")}
             rules={[
-              { required: true, message: '请输入命名空间名称' },
+              { required: true, message: t('create.nameRequired') },
               {
                 pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/,
-                message: '名称只能包含小写字母、数字和连字符，且必须以字母或数字开头和结尾',
+                message: t('create.namePattern'),
               },
             ]}
           >
-            <Input placeholder="例如: my-namespace" />
+            <Input placeholder={t('namespace:create.namePlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name={['labels', 'description']}
-            label="描述（可选）"
+            label={t("create.descriptionLabel")}
           >
             <Input.TextArea
               rows={3}
-              placeholder="输入命名空间的描述信息"
+              placeholder={t("create.descriptionPlaceholder")}
             />
           </Form.Item>
         </Form>
@@ -670,7 +659,7 @@ const NamespaceList: React.FC = () => {
 
       {/* 列设置抽屉 */}
       <Drawer
-        title="列设置"
+        title={t("common:table.columnSettings")}
         placement="right"
         width={400}
         open={columnSettingsVisible}
@@ -678,14 +667,14 @@ const NamespaceList: React.FC = () => {
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+              <Button onClick={() => setColumnSettingsVisible(false)}>{t("common:actions.cancel")}</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>{t("common:actions.confirm")}</Button>
             </Space>
           </div>
         }
       >
         <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <p style={{ marginBottom: 8, color: '#666' }}>{t("common:table.selectColumns")}</p>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Checkbox
               checked={visibleColumns.includes('name')}
@@ -696,9 +685,7 @@ const NamespaceList: React.FC = () => {
                   setVisibleColumns(visibleColumns.filter(c => c !== 'name'));
                 }
               }}
-            >
-              命名空间
-            </Checkbox>
+            >{t('columns.name')}</Checkbox>
             <Checkbox
               checked={visibleColumns.includes('status')}
               onChange={(e) => {
@@ -708,9 +695,7 @@ const NamespaceList: React.FC = () => {
                   setVisibleColumns(visibleColumns.filter(c => c !== 'status'));
                 }
               }}
-            >
-              状态
-            </Checkbox>
+            >{t('columns.status')}</Checkbox>
             <Checkbox
               checked={visibleColumns.includes('labels')}
               onChange={(e) => {
@@ -720,9 +705,7 @@ const NamespaceList: React.FC = () => {
                   setVisibleColumns(visibleColumns.filter(c => c !== 'labels'));
                 }
               }}
-            >
-              标签
-            </Checkbox>
+            >{t('columns.labels')}</Checkbox>
             <Checkbox
               checked={visibleColumns.includes('creationTimestamp')}
               onChange={(e) => {
@@ -732,9 +715,7 @@ const NamespaceList: React.FC = () => {
                   setVisibleColumns(visibleColumns.filter(c => c !== 'creationTimestamp'));
                 }
               }}
-            >
-              创建时间
-            </Checkbox>
+            >{t('columns.createdAt')}</Checkbox>
           </Space>
         </div>
       </Drawer>

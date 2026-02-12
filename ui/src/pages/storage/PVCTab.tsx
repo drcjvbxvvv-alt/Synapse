@@ -23,6 +23,7 @@ import { StorageService } from '../../services/storageService';
 import type { PVC } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
+import { useTranslation } from 'react-i18next';
 
 const { Link } = Typography;
 
@@ -35,7 +36,8 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   
   // 数据状态
-  const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
+const { t } = useTranslation(['storage', 'common']);
+const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
   const [pvcs, setPVCs] = useState<PVC[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -101,11 +103,11 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: 'PVC名称',
-      namespace: '命名空间',
-      status: '状态',
-      storageClassName: '存储类',
-      volumeName: '存储卷',
+      name: t('storage:search.fieldPVCName'),
+      namespace: t('storage:search.fieldNamespace'),
+      status: t('storage:search.fieldStatus'),
+      storageClassName: t('storage:search.fieldStorageClassName'),
+      volumeName: t('storage:search.fieldVolumeName'),
     };
     return labels[field] || field;
   };
@@ -141,7 +143,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
           setNamespaces(response.data);
         }
       } catch (error) {
-        console.error('加载命名空间失败:', error);
+        console.error('Failed to load namespaces:', error);
       }
     };
 
@@ -167,11 +169,11 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
         const items = response.data.items || [];
         setAllPVCs(items);
       } else {
-        message.error(response.message || '获取PVC列表失败');
+        message.error(response.message || t('storage:messages.fetchPVCError'));
       }
     } catch (error) {
-      console.error('获取PVC列表失败:', error);
-      message.error('获取PVC列表失败');
+      console.error('Failed to fetch PVC list:', error);
+      message.error(t('storage:messages.fetchPVCError'));
     } finally {
       setLoading(false);
     }
@@ -241,11 +243,11 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       if (response.code === 200) {
         setCurrentYaml(response.data.yaml);
       } else {
-        message.error(response.message || '获取YAML失败');
+        message.error(response.message || t('storage:messages.fetchYAMLError'));
       }
     } catch (error) {
-      console.error('获取YAML失败:', error);
-      message.error('获取YAML失败');
+      console.error('Failed to fetch YAML:', error);
+      message.error(t('storage:messages.fetchYAMLError'));
     } finally {
       setYamlLoading(false);
     }
@@ -261,29 +263,29 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       );
       
       if (response.code === 200) {
-        message.success('删除成功');
+        message.success(t('common:messages.deleteSuccess'));
         loadPVCs();
       } else {
-        message.error(response.message || '删除失败');
+        message.error(response.message || t('storage:messages.deleteError'));
       }
     } catch (error) {
       console.error('删除失败:', error);
-      message.error('删除失败');
+      message.error(t('common:messages.deleteError'));
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的PVC');
+      message.warning(t('storage:messages.selectDeletePVC'));
       return;
     }
 
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 个PVC吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('common:messages.confirmDelete'),
+      content: t('storage:messages.confirmDeletePVC', { count: selectedRowKeys.length }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       onOk: async () => {
         try {
           const selectedPVCs = pvcs.filter(p => 
@@ -299,16 +301,16 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
           const failCount = results.length - successCount;
           
           if (failCount === 0) {
-            message.success(`成功删除 ${successCount} 个PVC`);
+            message.success(t('storage:messages.batchDeleteSuccess', { count: successCount, type: 'PVC' }));
           } else {
-            message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+            message.warning(t('storage:messages.batchDeletePartial', { success: successCount, fail: failCount }));
           }
           
           setSelectedRowKeys([]);
           loadPVCs();
         } catch (error) {
-          console.error('批量删除失败:', error);
-          message.error('批量删除失败');
+          console.error('Batch delete failed:', error);
+          message.error(t('storage:messages.batchDeleteError'));
         }
       }
     });
@@ -320,19 +322,19 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       const filteredData = filterPVCs(allPVCs);
       
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
+        message.warning(t('common:messages.noExportData'));
         return;
       }
 
       const dataToExport = filteredData.map(p => ({
-        'PVC名称': p.name,
-        '命名空间': p.namespace,
-        '状态': p.status,
-        '存储卷': p.volumeName || '-',
-        '存储类': p.storageClassName || '-',
-        '容量': p.capacity || '-',
-        '访问模式': StorageService.formatAccessModes(p.accessModes),
-        '创建时间': p.createdAt ? new Date(p.createdAt).toLocaleString('zh-CN') : '-',
+        [t('storage:export.pvcNameLabel')]: p.name,
+        [t('storage:export.namespaceLabel')]: p.namespace,
+        [t('storage:export.statusLabel')]: p.status,
+        [t('storage:export.volumeNameLabel')]: p.volumeName || '-',
+        [t('storage:export.storageClassLabel')]: p.storageClassName || '-',
+        [t('storage:export.capacityLabel')]: p.capacity || '-',
+        [t('storage:export.accessModesLabel')]: StorageService.formatAccessModes(p.accessModes),
+        [t('storage:export.createdAtLabel')]: p.createdAt ? new Date(p.createdAt).toLocaleString() : '-',
       }));
 
       const headers = Object.keys(dataToExport[0]);
@@ -351,17 +353,17 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       link.href = URL.createObjectURL(blob);
       link.download = `pvc-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+      message.success(t('common:messages.exportCount', { count: filteredData.length }));
     } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败');
+      console.error('Export failed:', error);
+      message.error(t('common:messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
+    message.success(t('common:messages.columnSettingsSaved'));
   };
 
   // 行选择配置
@@ -375,7 +377,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
   // 定义所有可用列
   const allColumns: ColumnsType<PVC> = [
     {
-      title: 'PVC名称',
+      title: t('storage:columns.pvcName'),
       dataIndex: 'name',
       key: 'name',
       fixed: 'left' as const,
@@ -394,7 +396,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       ),
     },
     {
-      title: '命名空间',
+      title: t('common:table.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 130,
@@ -403,7 +405,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       render: (text: string) => <Tag color="blue">{text}</Tag>,
     },
     {
-      title: '状态',
+      title: t('common:table.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -414,28 +416,28 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       ),
     },
     {
-      title: '存储卷',
+      title: t('storage:columns.volumeName'),
       dataIndex: 'volumeName',
       key: 'volumeName',
       width: 200,
       render: (volumeName: string) => volumeName || '-',
     },
     {
-      title: '存储类',
+      title: t('storage:columns.storageClassName'),
       dataIndex: 'storageClassName',
       key: 'storageClassName',
       width: 150,
       render: (name: string) => name ? <Tag>{name}</Tag> : '-',
     },
     {
-      title: '容量',
+      title: t('storage:columns.capacity'),
       dataIndex: 'capacity',
       key: 'capacity',
       width: 100,
       render: (capacity: string) => StorageService.formatCapacity(capacity),
     },
     {
-      title: '访问模式',
+      title: t('storage:columns.accessModes'),
       dataIndex: 'accessModes',
       key: 'accessModes',
       width: 120,
@@ -446,7 +448,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       ),
     },
     {
-      title: '创建时间',
+      title: t('common:table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -459,7 +461,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       },
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       fixed: 'right' as const,
       width: 120,
@@ -473,18 +475,18 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
             YAML
           </Button>
           <Popconfirm
-            title="确定要删除这个PVC吗？"
-            description={`确定要删除 ${record.name} 吗？`}
+            title={t('storage:messages.confirmDeletePVCItem')}
+            description={t('storage:messages.confirmDeletePVCDesc', { name: record.name })}
             onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button
               type="link"
               size="small"
               danger
             >
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -527,10 +529,10 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
             onClick={handleBatchDelete}
             danger
           >
-            批量删除
+            {t('common:actions.batchDelete')}
           </Button>
           <Button onClick={handleExport}>
-            导出
+            {t('common:actions.export')}
           </Button>
         </Space>
       </div>
@@ -540,7 +542,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="选择属性筛选，或输入关键字搜索"
+            placeholder={t('common:search.placeholder')}
             style={{ flex: 1 }}
             value={currentSearchValue}
             onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -552,11 +554,11 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
                 onChange={setCurrentSearchField} 
                 style={{ width: 120 }}
               >
-                <Select.Option value="name">PVC名称</Select.Option>
-                <Select.Option value="namespace">命名空间</Select.Option>
-                <Select.Option value="status">状态</Select.Option>
-                <Select.Option value="storageClassName">存储类</Select.Option>
-                <Select.Option value="volumeName">存储卷</Select.Option>
+                <Select.Option value="name">{t('storage:search.fieldPVCName')}</Select.Option>
+                <Select.Option value="namespace">{t('storage:search.fieldNamespace')}</Select.Option>
+                <Select.Option value="status">{t('storage:search.fieldStatus')}</Select.Option>
+                <Select.Option value="storageClassName">{t('storage:search.fieldStorageClassName')}</Select.Option>
+                <Select.Option value="volumeName">{t('storage:search.fieldVolumeName')}</Select.Option>
               </Select>
             }
           />
@@ -588,7 +590,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
                 onClick={clearAllConditions}
                 style={{ padding: 0 }}
               >
-                清空全部
+                {t('common:actions.clearAll')}
               </Button>
             </Space>
           </div>
@@ -610,7 +612,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 个PVC`,
+          showTotal: (total) => t('storage:pagination.totalPVC', { total }),
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size || 20);
@@ -629,7 +631,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
       >
         {yamlLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <span>加载中...</span>
+            <span>{t('common:messages.loading')}</span>
           </div>
         ) : (
           <pre style={{ maxHeight: 600, overflow: 'auto', background: '#f5f5f5', padding: 16 }}>
@@ -640,7 +642,7 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
 
       {/* 列设置抽屉 */}
       <Drawer
-        title="列设置"
+        title={t('storage:columnSettings.title')}
         placement="right"
         width={400}
         open={columnSettingsVisible}
@@ -648,23 +650,23 @@ const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+              <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>{t('storage:columnSettings.confirm')}</Button>
             </Space>
           </div>
         }
       >
         <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <p style={{ marginBottom: 8, color: '#666' }}>{t('storage:columnSettings.selectColumns')}</p>
           <Space direction="vertical" style={{ width: '100%' }}>
             {[
-              { key: 'namespace', label: '命名空间' },
-              { key: 'status', label: '状态' },
-              { key: 'volumeName', label: '存储卷' },
-              { key: 'storageClassName', label: '存储类' },
-              { key: 'capacity', label: '容量' },
-              { key: 'accessModes', label: '访问模式' },
-              { key: 'createdAt', label: '创建时间' },
+              { key: 'namespace', label: t('common:table.namespace') },
+              { key: 'status', label: t('common:table.status') },
+              { key: 'volumeName', label: t('storage:columns.volumeName') },
+              { key: 'storageClassName', label: t('storage:columns.storageClassName') },
+              { key: 'capacity', label: t('storage:columns.capacity') },
+              { key: 'accessModes', label: t('storage:columns.accessModes') },
+              { key: 'createdAt', label: t('common:table.createdAt') },
             ].map(item => (
               <Checkbox
                 key={item.key}

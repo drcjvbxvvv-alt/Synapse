@@ -26,7 +26,7 @@ import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
-
+import { useTranslation } from 'react-i18next';
 const { Option } = Select;
 
 interface DeploymentTabProps {
@@ -37,8 +37,8 @@ interface DeploymentTabProps {
 const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
-  
-  // 数据状态
+const { t } = useTranslation(['workload', 'common']);
+// 数据状态
   const [allWorkloads, setAllWorkloads] = useState<WorkloadInfo[]>([]); // 所有原始数据
   const [workloads, setWorkloads] = useState<WorkloadInfo[]>([]); // 当前页显示的数据
   const [loading, setLoading] = useState(false);
@@ -99,22 +99,21 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
     setCurrentSearchValue('');
   };
 
-  // 获取搜索字段的显示名称
+// 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '工作负载名称',
-      namespace: '命名空间',
-      image: '镜像',
-      status: '状态',
-      cpuLimit: 'CPU限制值',
-      cpuRequest: 'CPU申请值',
-      memoryLimit: '内存限制值',
-      memoryRequest: '内存申请值',
+      name: t('search.workloadName'),
+      namespace: t('search.namespace'),
+      image: t('search.image'),
+      status: t('search.status'),
+      cpuLimit: t('search.cpuLimit'),
+      cpuRequest: t('search.cpuRequest'),
+      memoryLimit: t('search.memoryLimit'),
+      memoryRequest: t('search.memoryRequest'),
     };
     return labels[field] || field;
   };
-
-  // 客户端过滤工作负载列表
+// 客户端过滤工作负载列表
   const filterWorkloads = useCallback((items: WorkloadInfo[]): WorkloadInfo[] => {
     if (searchConditions.length === 0) return items;
 
@@ -177,12 +176,12 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
         // 保存原始数据，筛选和分页会在useEffect中自动处理
         setAllWorkloads(items);
       } else {
-        message.error(response.message || '获取Deployment列表失败');
-      }
+message.error(response.message || t('messages.fetchError', { type: 'Deployment' }));
+}
     } catch (error) {
       console.error('获取Deployment列表失败:', error);
-      message.error('获取Deployment列表失败');
-    } finally {
+message.error(t('messages.fetchError', { type: 'Deployment' }));
+} finally {
       setLoading(false);
     }
   }, [clusterId, message]);
@@ -201,16 +200,16 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       );
       
       if (response.code === 200) {
-        message.success('扩缩容成功');
-        setScaleModalVisible(false);
+message.success(t('messages.scaleSuccess'));
+setScaleModalVisible(false);
         loadWorkloads();
       } else {
-        message.error(response.message || '扩缩容失败');
-      }
+message.error(response.message || t('messages.scaleError'));
+}
     } catch (error) {
       console.error('扩缩容失败:', error);
-      message.error('扩缩容失败');
-    }
+message.error(t('messages.scaleError'));
+}
   };
 
   // 删除
@@ -226,30 +225,30 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       );
       
       if (response.code === 200) {
-        message.success('删除成功');
-        loadWorkloads();
+message.success(t('messages.deleteSuccess'));
+loadWorkloads();
       } else {
-        message.error(response.message || '删除失败');
-      }
+message.error(response.message || t('messages.deleteError'));
+}
     } catch (error) {
       console.error('删除失败:', error);
-      message.error('删除失败');
-    }
+message.error(t('messages.deleteError'));
+}
   };
 
   // 批量重新部署
   const handleBatchRedeploy = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要重新部署的Deployment');
-      return;
+message.warning(t('actions.selectRedeploy', { type: 'Deployment' }));
+return;
     }
 
     Modal.confirm({
-      title: '确认重新部署',
-      content: `确定要重新部署选中的 ${selectedRowKeys.length} 个Deployment吗？`,
-      okText: '确定',
-      cancelText: '取消',
-      onOk: async () => {
+title: t('actions.confirmRedeploy'),
+      content: t('actions.confirmRedeployDesc', { count: selectedRowKeys.length, type: 'Deployment' }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
+onOk: async () => {
         try {
     const selectedWorkloads = workloads.filter(w => 
             selectedRowKeys.includes(`${w.namespace}/${w.name}`)
@@ -265,17 +264,17 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       const failCount = results.length - successCount;
       
       if (failCount === 0) {
-            message.success(`成功重新部署 ${successCount} 个Deployment`);
+message.success(t('common:messages.batchRedeploySuccess', { count: successCount }));
       } else {
-            message.warning(`重新部署完成：成功 ${successCount} 个，失败 ${failCount} 个`);
-      }
+            message.warning(t('common:messages.batchRedeployPartial', { success: successCount, fail: failCount }));
+}
       
       setSelectedRowKeys([]);
       loadWorkloads();
     } catch (error) {
           console.error('批量重新部署失败:', error);
-          message.error('批量重新部署失败');
-    }
+message.error(t('messages.redeployError'));
+}
       }
     });
   };
@@ -287,23 +286,23 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       const filteredData = filterWorkloads(allWorkloads);
       
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
-        return;
+message.warning(t('messages.noExportData'));
+return;
       }
 
-      // 导出筛选后的所有数据（包含所有列）
+// 导出筛选后的所有数据（包含所有列）
       const dataToExport = filteredData.map(w => ({
-        '名称': w.name,
-        '命名空间': w.namespace,
-        '状态': w.status,
-        '实例个数': `="${w.readyReplicas || 0}/${w.replicas || 0}"`, // 使用公式格式防止Excel转换为日期
-        'CPU限制值': w.cpuLimit || '-',
-        'CPU申请值': w.cpuRequest || '-',
-        '内存限制值': w.memoryLimit || '-',
-        '内存申请值': w.memoryRequest || '-',
-        '镜像': w.images?.join(', ') || '-',
-        '创建时间': w.createdAt ? new Date(w.createdAt).toLocaleString('zh-CN', {
-          year: 'numeric',
+        [t('columns.name')]: w.name,
+        [t('columns.namespace')]: w.namespace,
+        [t('columns.status')]: w.status,
+        [t('columns.replicas')]: `="${w.readyReplicas || 0}/${w.replicas || 0}"`,
+        [t('columns.cpuLimit')]: w.cpuLimit || '-',
+        [t('columns.cpuRequest')]: w.cpuRequest || '-',
+        [t('columns.memoryLimit')]: w.memoryLimit || '-',
+        [t('columns.memoryRequest')]: w.memoryRequest || '-',
+        [t('columns.images')]: w.images?.join(', ') || '-',
+        [t('columns.createdAt')]: w.createdAt ? new Date(w.createdAt).toLocaleString('zh-CN', {
+year: 'numeric',
           month: '2-digit',
           day: '2-digit',
           hour: '2-digit',
@@ -334,18 +333,18 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       link.href = URL.createObjectURL(blob);
       link.download = `deployment-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+message.success(t('messages.exportSuccess', { count: filteredData.length }));
     } catch (error) {
       console.error('导出失败:', error);
-      message.error('导出失败');
-    }
+      message.error(t('messages.exportError'));
+}
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
-  };
+message.success(t('messages.columnSettingsSaved'));
+};
 
   // 当搜索条件改变时重置到第一页
   useEffect(() => {
@@ -410,10 +409,10 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
     },
   };
 
-  // 定义所有可用列
+// 定义所有可用列
   const allColumns: ColumnsType<WorkloadInfo> = [
     {
-      title: '名称',
+      title: t('columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 200,
@@ -437,7 +436,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       ),
     },
     {
-      title: '命名空间',
+      title: t('columns.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 130,
@@ -446,7 +445,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       render: (text: string) => <Tag color="blue">{text}</Tag>,
     },
     {
-      title: '状态',
+      title: t('columns.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -463,7 +462,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       },
     },
     {
-      title: '实例个数(正常/全部)',
+      title: t('columns.replicas'),
       dataIndex: 'replicas',
       key: 'replicas',
       width: 150,
@@ -476,35 +475,35 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       ),
     },
     {
-      title: 'CPU限制值',
+      title: t('columns.cpuLimit'),
       dataIndex: 'cpuLimit',
       key: 'cpuLimit',
       width: 120,
       render: (value: string) => <span>{value || '-'}</span>,
     },
     {
-      title: 'CPU申请值',
+      title: t('columns.cpuRequest'),
       dataIndex: 'cpuRequest',
       key: 'cpuRequest',
       width: 120,
       render: (value: string) => <span>{value || '-'}</span>,
     },
     {
-      title: '内存限制值',
+      title: t('columns.memoryLimit'),
       dataIndex: 'memoryLimit',
       key: 'memoryLimit',
       width: 120,
       render: (value: string) => <span>{value || '-'}</span>,
     },
     {
-      title: '内存申请值',
+      title: t('columns.memoryRequest'),
       dataIndex: 'memoryRequest',
       key: 'memoryRequest',
       width: 120,
       render: (value: string) => <span>{value || '-'}</span>,
     },
     {
-      title: '镜像',
+      title: t('columns.images'),
       dataIndex: 'images',
       key: 'images',
       width: 250,
@@ -534,7 +533,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       },
     },
     {
-      title: '创建时间',
+      title: t('columns.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -557,7 +556,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       },
     },
     {
-      title: '操作',
+      title: t('columns.actions'),
       key: 'actions',
       width: 220,
       fixed: 'right' as const,
@@ -568,14 +567,14 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
             size="small"
             onClick={() => navigate(`/clusters/${clusterId}/workloads/deployment/${record.namespace}/${record.name}?tab=monitoring`)}
           >
-            监控
+            {t('actions.monitoring')}
           </Button>
           <Button
             type="link"
             size="small"
             onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=Deployment&namespace=${record.namespace}&name=${record.name}`)}
           >
-            编辑
+            {t('actions.edit')}
           </Button>
           <Button
             type="link"
@@ -586,29 +585,28 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
               setScaleModalVisible(true);
             }}
           >
-            扩缩容
+            {t('actions.scale')}
           </Button>
           <Popconfirm
-            title="确定要删除这个Deployment吗？"
-            description={`确定要删除 ${record.name} 吗？`}
+            title={t('actions.confirmDelete', { type: 'Deployment' })}
+            description={t('actions.confirmDeleteDesc', { name: record.name })}
             onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button
               type="link"
               size="small"
               danger
             >
-              删除
+              {t('actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
       ),
     },
   ];
-
-  // 根据可见性过滤列
+// 根据可见性过滤列
   const columns = allColumns.filter(col => {
     if (col.key === 'actions') return true; // 操作列始终显示
     return visibleColumns.includes(col.key as string);
@@ -640,14 +638,14 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       {/* 操作按钮栏 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          <Button
+<Button
             disabled={selectedRowKeys.length === 0}
             onClick={handleBatchRedeploy}
           >
-            批量重新部署
+            {t('actions.batchRedeploy')}
           </Button>
           <Button onClick={handleExport}>
-            导出
+            {t('actions.export')}
             </Button>
         </Space>
           <Button
@@ -655,9 +653,9 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
             icon={<PlusOutlined />}
           onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=Deployment`)}
           >
-            创建Deployment
+            {t('actions.create', { type: 'Deployment' })}
           </Button>
-      </div>
+</div>
 
       {/* 多条件搜索栏 */}
       <div style={{ marginBottom: 16 }}>
@@ -665,8 +663,8 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="选择属性筛选，或输入关键字搜索"
-            style={{ flex: 1 }}
+placeholder={t('search.placeholder')}
+style={{ flex: 1 }}
             value={currentSearchValue}
             onChange={(e) => setCurrentSearchValue(e.target.value)}
             onPressEnter={addSearchCondition}
@@ -677,14 +675,14 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 onChange={setCurrentSearchField} 
                 style={{ width: 140 }}
               >
-                <Option value="name">工作负载名称</Option>
-                <Option value="namespace">命名空间</Option>
-                <Option value="image">镜像</Option>
-                <Option value="status">状态</Option>
-                <Option value="cpuLimit">CPU限制值</Option>
-                <Option value="cpuRequest">CPU申请值</Option>
-                <Option value="memoryLimit">内存限制值</Option>
-                <Option value="memoryRequest">内存申请值</Option>
+                <Option value="name">{t('search.workloadName')}</Option>
+                <Option value="namespace">{t('search.namespace')}</Option>
+                <Option value="image">{t('search.image')}</Option>
+                <Option value="status">{t('search.status')}</Option>
+                <Option value="cpuLimit">{t('search.cpuLimit')}</Option>
+                <Option value="cpuRequest">{t('search.cpuRequest')}</Option>
+                <Option value="memoryLimit">{t('search.memoryLimit')}</Option>
+                <Option value="memoryRequest">{t('search.memoryRequest')}</Option>
               </Select>
             }
           />
@@ -718,7 +716,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 onClick={clearAllConditions}
                 style={{ padding: 0 }}
               >
-                清空全部
+                {t('common:actions.clearAll')}
           </Button>
         </Space>
           </div>
@@ -740,8 +738,8 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 个Deployment`,
-          onChange: (page, size) => {
+showTotal: (total) => t('messages.totalItems', { count: total, type: 'Deployment' }),
+onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size || 20);
           },
@@ -750,22 +748,22 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       />
 
       {/* 扩缩容模态框 */}
-      <Modal
-        title="扩缩容Deployment"
+<Modal
+        title={t('scale.title', { type: 'Deployment' })}
         open={scaleModalVisible}
         onOk={handleScale}
         onCancel={() => setScaleModalVisible(false)}
-        okText="确定"
-        cancelText="取消"
+        okText={t('common:actions.confirm')}
+        cancelText={t('common:actions.cancel')}
       >
         {scaleWorkload && (
           <div>
-            <p>Deployment: <strong>{scaleWorkload.name}</strong></p>
-            <p>命名空间: <strong>{scaleWorkload.namespace}</strong></p>
-            <p>当前副本数: <strong>{scaleWorkload.replicas || 0}</strong></p>
+            <p>{t('scale.workloadName', { type: 'Deployment' })}: <strong>{scaleWorkload.name}</strong></p>
+            <p>{t('scale.namespace')}: <strong>{scaleWorkload.namespace}</strong></p>
+            <p>{t('scale.currentReplicas')}: <strong>{scaleWorkload.replicas || 0}</strong></p>
             <div style={{ marginTop: 16 }}>
-              <label>目标副本数: </label>
-              <InputNumber
+              <label>{t('scale.targetReplicas')}: </label>
+<InputNumber
                 min={0}
                 max={100}
                 value={scaleReplicas}
@@ -778,8 +776,8 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
       </Modal>
 
       {/* 列设置抽屉 */}
-      <Drawer
-        title="列设置"
+<Drawer
+        title={t('columnSettings.title')}
         placement="right"
         width={400}
         open={columnSettingsVisible}
@@ -787,14 +785,14 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+              <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>{t('common:actions.confirm')}</Button>
             </Space>
           </div>
         }
       >
         <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <p style={{ marginBottom: 8, color: '#666' }}>{t('columnSettings.selectColumns')}</p>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Checkbox
               checked={visibleColumns.includes('name')}
@@ -806,7 +804,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              名称
+              {t('columns.name')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('namespace')}
@@ -818,7 +816,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              命名空间
+              {t('columns.namespace')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('status')}
@@ -830,7 +828,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              状态
+              {t('columns.status')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('replicas')}
@@ -842,7 +840,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              实例个数(正常/全部)
+              {t('columns.replicas')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('cpuLimit')}
@@ -854,7 +852,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              CPU限制值
+              {t('columns.cpuLimit')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('cpuRequest')}
@@ -866,7 +864,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              CPU申请值
+              {t('columns.cpuRequest')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('memoryLimit')}
@@ -878,7 +876,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              内存限制值
+              {t('columns.memoryLimit')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('memoryRequest')}
@@ -890,7 +888,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              内存申请值
+              {t('columns.memoryRequest')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('images')}
@@ -902,7 +900,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              镜像
+              {t('columns.images')}
             </Checkbox>
             <Checkbox
               checked={visibleColumns.includes('createdAt')}
@@ -914,12 +912,12 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 }
               }}
             >
-              创建时间
+              {t('columns.createdAt')}
             </Checkbox>
           </Space>
         </div>
       </Drawer>
-    </div>
+</div>
   );
 };
 

@@ -19,14 +19,15 @@ import {
   CloudServerOutlined,
 } from '@ant-design/icons';
 import { clusterService } from '../../services/clusterService';
-
+import { useTranslation } from 'react-i18next';
 const { Step } = Steps;
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
 
 const ClusterImport: React.FC = () => {
-  const navigate = useNavigate();
+const { t } = useTranslation(['cluster', 'common']);
+const navigate = useNavigate();
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -63,12 +64,12 @@ const ClusterImport: React.FC = () => {
         nodeCount?: number;
         status?: string;
       });
-      message.success('连接测试成功！');
-      setCurrentStep(2);
+message.success(t('common:messages.connectionTestSuccess'));
+setCurrentStep(2);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
-      message.error(`连接测试失败: ${err.response?.data?.message || err.message || '未知错误'}`);
-      setTestResult(null);
+message.error(`${t('common:messages.connectionTestFailed')}: ${err.response?.data?.message || err.message || t('common:status.unknown')}`);
+setTestResult(null);
     } finally {
       setTestLoading(false);
     }
@@ -91,36 +92,35 @@ const ClusterImport: React.FC = () => {
       };
 
       await clusterService.importCluster(importData);
-      message.success('集群导入成功！');
-      navigate('/clusters');
+message.success(t('import.importSuccess'));
+navigate('/clusters');
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
-      message.error(`集群导入失败: ${err.response?.data?.message || err.message || '未知错误'}`);
-    } finally {
+message.error(`${t('import.importFailed')}: ${err.response?.data?.message || err.message || t('common:status.unknown')}`);
+} finally {
       setLoading(false);
     }
   };
 
-  const steps = [
+const steps = [
     {
-      title: '基本信息',
-      description: '填写集群基本信息',
+      title: t('import.steps.basicInfo'),
+      description: t('import.steps.basicInfoDesc'),
     },
     {
-      title: '连接配置',
-      description: '配置集群连接方式',
+      title: t('import.steps.connectionConfig'),
+      description: t('import.steps.connectionConfigDesc'),
     },
     {
-      title: '测试连接',
-      description: '验证连接配置',
+      title: t('import.steps.testConnection'),
+      description: t('import.steps.testConnectionDesc'),
     },
     {
-      title: '完成导入',
-      description: '确认并导入集群',
+      title: t('import.steps.complete'),
+      description: t('import.steps.completeDesc'),
     },
   ];
-
-  return (
+return (
     <div>
       {/* 页面头部 */}
       <div className="page-header">
@@ -130,14 +130,14 @@ const ClusterImport: React.FC = () => {
             onClick={() => navigate('/clusters')}
             style={{ marginRight: 16 }}
           >
-            返回
+            {t('common:actions.back')}
           </Button>
           <div>
             <Title level={2} style={{ margin: 0 }}>
               <CloudServerOutlined style={{ marginRight: 8 }} />
-              导入集群
+              {t('import.title')}
             </Title>
-            <Text type="secondary">将现有的Kubernetes集群导入到管理平台</Text>
+            <Text type="secondary">{t('import.subtitle')}</Text>
           </div>
         </div>
       </div>
@@ -169,116 +169,116 @@ const ClusterImport: React.FC = () => {
         >
           {/* 步骤1: 基本信息 */}
           <div style={{ display: currentStep === 0 ? 'block' : 'none' }}>
-            <Title level={4}>集群基本信息</Title>
+<Title level={4}>{t('import.clusterBasicInfo')}</Title>
             <Form.Item
               name="name"
-              label="集群名称"
+              label={t('import.name')}
               rules={[
-                { required: true, message: '请输入集群名称' },
-                { min: 2, max: 50, message: '集群名称长度为2-50个字符' },
+                { required: true, message: t('import.nameRequired') },
+                { min: 2, max: 50, message: t('import.nameLength') },
               ]}
             >
-              <Input placeholder="请输入集群名称，如：production-cluster" />
+              <Input placeholder={t('import.nameSample')} />
             </Form.Item>
 
-            <Form.Item name="description" label="集群描述">
+            <Form.Item name="description" label={t('import.clusterDescription')}>
               <TextArea
                 rows={3}
-                placeholder="请输入集群描述信息（可选）"
-                maxLength={200}
+                placeholder={t('import.descriptionPlaceholder')}
+maxLength={200}
               />
             </Form.Item>
 
             <div style={{ textAlign: 'right' }}>
               <Button type="primary" onClick={() => setCurrentStep(1)}>
-                下一步
+                {t('common:actions.nextStep')}
               </Button>
             </div>
           </div>
 
           {/* 步骤2: 连接配置 */}
           <div style={{ display: currentStep === 1 ? 'block' : 'none' }}>
-            <Title level={4}>连接配置</Title>
-            <Form.Item name="connectionType" label="连接方式">
+<Title level={4}>{t('import.steps.connectionConfig')}</Title>
+            <Form.Item name="connectionType" label={t('import.connectionType')}>
               <Radio.Group
                 value={connectionType}
                 onChange={(e) => setConnectionType(e.target.value)}
               >
-                <Radio.Button value="kubeconfig">Kubeconfig文件</Radio.Button>
-                <Radio.Button value="token">Token认证</Radio.Button>
-              </Radio.Group>
+                <Radio.Button value="kubeconfig">{t('import.kubeconfigFile')}</Radio.Button>
+                <Radio.Button value="token">{t('import.tokenAuth')}</Radio.Button>
+</Radio.Group>
             </Form.Item>
 
             {connectionType === 'kubeconfig' && (
-              <Form.Item
+<Form.Item
                 name="kubeconfig"
-                label="Kubeconfig内容"
-                rules={[{ required: true, message: '请输入kubeconfig内容' }]}
+                label={t('import.kubeconfigContent')}
+                rules={[{ required: true, message: t('import.kubeconfigContentRequired') }]}
               >
                 <TextArea
                   rows={12}
-                  placeholder="请粘贴完整的kubeconfig文件内容..."
-                  style={{ fontFamily: 'monospace' }}
+                  placeholder={t('import.kubeconfigContentPlaceholder')}
+style={{ fontFamily: 'monospace' }}
                 />
               </Form.Item>
             )}
 
             {connectionType === 'token' && (
               <>
-                <Form.Item
+<Form.Item
                   name="apiServer"
-                  label="API Server地址"
+                  label={t('import.apiServerAddress')}
                   rules={[
-                    { required: true, message: '请输入API Server地址' },
-                    { type: 'url', message: '请输入有效的URL地址' },
+                    { required: true, message: t('import.apiServerRequired') },
+                    { type: 'url', message: t('import.apiServerValid') },
                   ]}
-                >
+>
                   <Input placeholder="https://your-cluster-api-server:6443" />
                 </Form.Item>
 
-                <Form.Item
+<Form.Item
                   name="token"
-                  label="访问令牌"
-                  rules={[{ required: true, message: '请输入访问令牌' }]}
+                  label={t('import.accessToken')}
+                  rules={[{ required: true, message: t('import.accessTokenRequired') }]}
                 >
                   <TextArea
                     rows={4}
-                    placeholder="请输入ServiceAccount Token或其他访问令牌..."
+                    placeholder={t('import.accessTokenPlaceholder')}
                     style={{ fontFamily: 'monospace' }}
                   />
                 </Form.Item>
 
-                <Form.Item name="caCert" label="CA证书（可选）">
+                <Form.Item name="caCert" label={t('import.caCert')}>
                   <TextArea
                     rows={6}
-                    placeholder="请输入CA证书内容（PEM格式），如果集群使用自签名证书则必填..."
+                    placeholder={t('import.caCertPlaceholder')}
                     style={{ fontFamily: 'monospace' }}
                   />
                 </Form.Item>
-              </>
+</>
             )}
 
             <div style={{ textAlign: 'right' }}>
               <Space>
-                <Button onClick={() => setCurrentStep(0)}>上一步</Button>
+<Button onClick={() => setCurrentStep(0)}>{t('common:actions.prevStep')}</Button>
                 <Button type="primary" onClick={handleTestConnection} loading={testLoading}>
-                  测试连接
+                  {t('import.testConnection')}
                 </Button>
-              </Space>
+</Space>
             </div>
           </div>
 
           {/* 步骤3: 测试连接 */}
           <div style={{ display: currentStep === 2 ? 'block' : 'none' }}>
-            <Title level={4}>连接测试结果</Title>
+<Title level={4}>{t('import.testResult')}</Title>
             {testResult && (
               <Alert
-                message="连接测试成功"
+                message={t('import.testResultSuccess')}
                 description={
                   <div>
-                    <p><strong>集群版本:</strong> {testResult.version}</p>
-                    <p><strong>节点数量:</strong> {testResult.readyNodes}/{testResult.nodeCount}</p>
-                    <p><strong>集群状态:</strong> {testResult.status}</p>
+                    <p><strong>{t('import.clusterVersion')}:</strong> {testResult.version}</p>
+                    <p><strong>{t('import.nodeCount')}:</strong> {testResult.readyNodes}/{testResult.nodeCount}</p>
+                    <p><strong>{t('import.clusterStatus')}:</strong> {testResult.status}</p>
                   </div>
                 }
                 type="success"
@@ -289,46 +289,46 @@ const ClusterImport: React.FC = () => {
 
             <div style={{ textAlign: 'right' }}>
               <Space>
-                <Button onClick={() => setCurrentStep(1)}>重新配置</Button>
+                <Button onClick={() => setCurrentStep(1)}>{t('common:actions.reconfigure')}</Button>
                 <Button type="primary" onClick={() => setCurrentStep(3)}>
-                  确认导入
+                  {t('import.confirmImport')}
                 </Button>
               </Space>
             </div>
-          </div>
+</div>
 
           {/* 步骤4: 完成导入 */}
           <div style={{ display: currentStep === 3 ? 'block' : 'none' }}>
-            <Title level={4}>确认导入</Title>
+<Title level={4}>{t('import.confirmImport')}</Title>
             <Alert
-              message="请确认以下信息无误后点击导入"
+              message={t('import.confirmImportAlert')}
               type="info"
               style={{ marginBottom: 24 }}
             />
 
             <div style={{ background: '#fafafa', padding: 16, borderRadius: 6, marginBottom: 24 }}>
-              <p><strong>集群名称:</strong> {form.getFieldValue('name')}</p>
-              <p><strong>连接方式:</strong> {connectionType === 'kubeconfig' ? 'Kubeconfig文件' : 'Token认证'}</p>
+              <p><strong>{t('detail.clusterName')}:</strong> {form.getFieldValue('name')}</p>
+              <p><strong>{t('import.connectionMethod')}:</strong> {connectionType === 'kubeconfig' ? t('import.kubeconfigFile') : t('import.tokenAuth')}</p>
               {connectionType === 'token' && (
                 <p><strong>API Server:</strong> {form.getFieldValue('apiServer')}</p>
               )}
               {testResult && (
                 <>
-                  <p><strong>集群版本:</strong> {testResult.version}</p>
-                  <p><strong>节点状态:</strong> {testResult.readyNodes}/{testResult.nodeCount} 就绪</p>
+                  <p><strong>{t('import.clusterVersion')}:</strong> {testResult.version}</p>
+                  <p><strong>{t('detail.nodeCount')}:</strong> {testResult.readyNodes}/{testResult.nodeCount} {t('import.nodeStatusReady')}</p>
                 </>
               )}
             </div>
 
             <div style={{ textAlign: 'right' }}>
               <Space>
-                <Button onClick={() => setCurrentStep(2)}>上一步</Button>
+                <Button onClick={() => setCurrentStep(2)}>{t('common:actions.prevStep')}</Button>
                 <Button type="primary" onClick={handleImport} loading={loading}>
-                  导入集群
+                  {t('import.title')}
                 </Button>
               </Space>
             </div>
-          </div>
+</div>
         </Form>
       </Card>
     </div>

@@ -41,6 +41,7 @@ import { List as VirtualList } from 'react-window';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { logService } from '../../services/logService';
+import { useTranslation } from 'react-i18next';
 import type {
   LogEntry,
   EventLogEntry,
@@ -72,11 +73,12 @@ const levelTagColors: Record<string, string> = {
 
 const LogCenter: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
-  const [activeTab, setActiveTab] = useState('stream');
+const { t } = useTranslation(['logs', 'common']);
+const [activeTab, setActiveTab] = useState('stream');
   const [stats, setStats] = useState<LogStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  // ===== 实时日志流状态 =====
+  // ===== {t('logs:center.realTimeLogs')}流状态 =====
   const [streaming, setStreaming] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [targets, setTargets] = useState<LogStreamTarget[]>([]);
@@ -85,7 +87,7 @@ const LogCenter: React.FC = () => {
   const [showSource, setShowSource] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [levelFilter, setLevelFilter] = useState<string[]>([]);
-  const [logSearchKeyword, setLogSearchKeyword] = useState(''); // 实时日志搜索关键字
+  const [logSearchKeyword, setLogSearchKeyword] = useState(''); // 实时{t('logs:center.logSearch')}关键字
   const wsRef = useRef<WebSocket | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -229,7 +231,7 @@ const LogCenter: React.FC = () => {
       }
     } catch (error) {
       console.error('获取事件日志失败', error);
-      message.error('获取事件日志失败');
+      message.error(t('logs:center.fetchEventsFailed'));
     } finally {
       setEventsLoading(false);
     }
@@ -257,7 +259,7 @@ const LogCenter: React.FC = () => {
       }
     } catch (error) {
       console.error('日志搜索失败', error);
-      message.error('日志搜索失败');
+      message.error(t('logs:center.searchFailed'));
     } finally {
       setSearchLoading(false);
     }
@@ -291,7 +293,7 @@ const LogCenter: React.FC = () => {
       setStreaming(false);
     } else {
       if (targets.length === 0) {
-        message.warning('请先选择要监控的Pod');
+        message.warning(t('logs:center.selectPodForMonitor'));
         return;
       }
 
@@ -308,7 +310,7 @@ const LogCenter: React.FC = () => {
         // 连接成功后发送配置
         ws.send(JSON.stringify(config));
         setStreaming(true);
-        message.success(`已连接到 ${targets.length} 个日志源`);
+        message.success(t('logs:center.connectedToSources', { count: targets.length }));
       };
 
       ws.onmessage = (event) => {
@@ -331,7 +333,7 @@ const LogCenter: React.FC = () => {
       };
 
       ws.onerror = () => {
-        message.error('连接错误');
+        message.error(t('logs:center.connectionError'));
         setStreaming(false);
       };
 
@@ -365,7 +367,7 @@ const LogCenter: React.FC = () => {
     a.download = `logs-${new Date().toISOString()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    message.success('日志下载成功');
+    message.success(t('logs:center.downloadSuccess'));
   };
 
   // 移除目标
@@ -389,7 +391,7 @@ const LogCenter: React.FC = () => {
   // 事件表格列
   const eventColumns: ColumnsType<EventLogEntry> = [
     {
-      title: '时间',
+      title: t('logs:center.time'),
       dataIndex: 'last_timestamp',
       width: 170,
       render: (time: string) => (
@@ -399,7 +401,7 @@ const LogCenter: React.FC = () => {
       ),
     },
     {
-      title: '类型',
+      title: t('common:table.type'),
       dataIndex: 'type',
       width: 80,
       render: (type: string) => (
@@ -407,12 +409,12 @@ const LogCenter: React.FC = () => {
       ),
     },
     {
-      title: '原因',
+      title: t('logs:center.reason'),
       dataIndex: 'reason',
       width: 120,
     },
     {
-      title: '资源',
+      title: t('logs:center.resource'),
       key: 'resource',
       width: 200,
       render: (_, record) => (
@@ -425,12 +427,12 @@ const LogCenter: React.FC = () => {
       ),
     },
     {
-      title: '消息',
+      title: t('logs:center.message'),
       dataIndex: 'message',
       ellipsis: true,
     },
     {
-      title: '次数',
+      title: t('logs:center.count'),
       dataIndex: 'count',
       width: 60,
       align: 'center',
@@ -440,7 +442,7 @@ const LogCenter: React.FC = () => {
   // 搜索结果表格列
   const searchColumns: ColumnsType<LogEntry> = [
     {
-      title: '时间',
+      title: t('logs:center.time'),
       dataIndex: 'timestamp',
       width: 180,
       render: (time: string) => (
@@ -450,7 +452,7 @@ const LogCenter: React.FC = () => {
       ),
     },
     {
-      title: '级别',
+      title: t('logs:center.level'),
       dataIndex: 'level',
       width: 80,
       render: (level: string) => (
@@ -460,7 +462,7 @@ const LogCenter: React.FC = () => {
       ),
     },
     {
-      title: '来源',
+      title: t('logs:center.source'),
       key: 'source',
       width: 250,
       render: (_, record) => (
@@ -473,7 +475,7 @@ const LogCenter: React.FC = () => {
       ),
     },
     {
-      title: '日志内容',
+      title: t('logs:center.logContent'),
       dataIndex: 'message',
       render: (message: string) => (
         <Text
@@ -497,7 +499,7 @@ const LogCenter: React.FC = () => {
           <Col span={4}>
             <Card size="small" bordered={false}>
               <Statistic
-                title="事件总数 (1h)"
+                title={t('logs:center.totalCount1h')}
                 value={stats?.total_count || 0}
                 prefix={<FileTextOutlined style={{ color: '#1890ff' }} />}
               />
@@ -506,7 +508,7 @@ const LogCenter: React.FC = () => {
           <Col span={4}>
             <Card size="small" bordered={false}>
               <Statistic
-                title="错误事件"
+                title={t('logs:center.errorEvents')}
                 value={stats?.error_count || 0}
                 valueStyle={{ color: '#ff4d4f' }}
                 prefix={<CloseCircleOutlined />}
@@ -516,7 +518,7 @@ const LogCenter: React.FC = () => {
           <Col span={4}>
             <Card size="small" bordered={false}>
               <Statistic
-                title="警告事件"
+                title={t('logs:center.warningEvents')}
                 value={stats?.warn_count || 0}
                 valueStyle={{ color: '#faad14' }}
                 prefix={<WarningOutlined />}
@@ -532,7 +534,7 @@ const LogCenter: React.FC = () => {
                   alignItems: 'center',
                 }}
               >
-                <span style={{ fontWeight: 500 }}>命名空间分布</span>
+                <span style={{ fontWeight: 500 }}>{t('logs:center.namespaceDistribution')}</span>
                 <Space wrap size="small">
                   {stats?.namespace_stats?.slice(0, 5).map((ns) => (
                     <Tag key={ns.namespace} color="blue">
@@ -554,7 +556,7 @@ const LogCenter: React.FC = () => {
           tabBarExtraContent={
             <Space>
               <Button icon={<SyncOutlined />} onClick={fetchStats}>
-                刷新统计
+                {t('logs:center.refreshStats')}
               </Button>
             </Space>
           }
@@ -584,56 +586,56 @@ const LogCenter: React.FC = () => {
                   onClick={toggleStream}
                   danger={streaming}
                 >
-                  {streaming ? '停止' : '开始监控'}
+                  {streaming ? t('logs:center.stop') : t('logs:center.startMonitor')}
                 </Button>
                 <Button icon={<ClearOutlined />} onClick={clearLogs}>
-                  清空
+                  {t('logs:center.clear')}
                 </Button>
                 <Button
                   icon={<DownloadOutlined />}
                   onClick={downloadLogs}
                   disabled={logs.length === 0}
                 >
-                  下载
+                  {t('logs:center.download')}
                 </Button>
               </Space>
 
               <Space>
                 <Select
                   mode="multiple"
-                  placeholder="日志级别过滤"
+                  placeholder={t('logs:center.logLevelFilter')}
                   style={{ width: 200 }}
                   value={levelFilter}
                   onChange={setLevelFilter}
                   options={[
-                    { label: '错误', value: 'error' },
-                    { label: '警告', value: 'warn' },
-                    { label: '信息', value: 'info' },
-                    { label: '调试', value: 'debug' },
+                    { label: t('logs:center.error'), value: 'error' },
+                    { label: t('logs:center.warning'), value: 'warn' },
+                    { label: t('logs:center.info'), value: 'info' },
+                    { label: t('logs:center.debug'), value: 'debug' },
                   ]}
                 />
-                <Tooltip title="显示时间戳">
+                <Tooltip title={t('logs:center.showTimestamp')}>
                   <Switch
                     checked={showTimestamp}
                     onChange={setShowTimestamp}
-                    checkedChildren="时间"
-                    unCheckedChildren="时间"
+                    checkedChildren={t('logs:center.timestamp')}
+                    unCheckedChildren={t('logs:center.timestamp')}
                   />
                 </Tooltip>
-                <Tooltip title="显示来源">
+                <Tooltip title={t('logs:center.showSource')}>
                   <Switch
                     checked={showSource}
                     onChange={setShowSource}
-                    checkedChildren="来源"
-                    unCheckedChildren="来源"
+                    checkedChildren={t('logs:center.source')}
+                    unCheckedChildren={t('logs:center.source')}
                   />
                 </Tooltip>
-                <Tooltip title="自动滚动">
+                <Tooltip title={t('logs:center.autoScroll')}>
                   <Switch
                     checked={autoScroll}
                     onChange={setAutoScroll}
-                    checkedChildren="滚动"
-                    unCheckedChildren="滚动"
+                    checkedChildren={t('logs:center.scroll')}
+                    unCheckedChildren={t('logs:center.scroll')}
                   />
                 </Tooltip>
               </Space>
@@ -642,7 +644,7 @@ const LogCenter: React.FC = () => {
             {/* Pod选择器 */}
             <Card size="small" style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 500 }}>监控目标：</span>
+                <span style={{ fontWeight: 500 }}>{t('logs:center.monitorTarget')}</span>
                 {targets.map((t, i) => (
                   <Tag
                     key={i}
@@ -660,12 +662,12 @@ const LogCenter: React.FC = () => {
                   icon={<PlusOutlined />}
                   onClick={openPodSelector}
                 >
-                  添加Pod
+                  {t('logs:center.addPod')}
                 </Button>
                 {streaming && (
                   <Badge
                     status="processing"
-                    text="实时监控中"
+                    text={t('logs:center.monitoring')}
                     style={{ marginLeft: 'auto' }}
                   />
                 )}
@@ -675,7 +677,7 @@ const LogCenter: React.FC = () => {
             {/* 日志搜索框 */}
             <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Input
-                placeholder="搜索日志内容、Pod名称、命名空间..."
+                placeholder={t('logs:center.searchLogPlaceholder')}
                 prefix={<SearchOutlined />}
                 allowClear
                 value={logSearchKeyword}
@@ -684,7 +686,7 @@ const LogCenter: React.FC = () => {
               />
               {logSearchKeyword && (
                 <Text type="secondary">
-                  匹配 {filteredLogs.length} / {logs.length} 条日志
+                  {t('logs:center.matchCount', { filtered: filteredLogs.length, total: logs.length })}
                 </Text>
               )}
             </div>
@@ -714,7 +716,7 @@ const LogCenter: React.FC = () => {
                 >
                   <Empty
                     description={
-                      streaming ? '等待日志...' : '选择Pod后点击开始监控'
+                      streaming ? t('logs:center.waitingLogs') : t('logs:center.selectPodFirst')
                     }
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                   />
@@ -767,12 +769,12 @@ const LogCenter: React.FC = () => {
                 fontSize: 12,
               }}
             >
-              <span>共 {filteredLogs.length} 条日志</span>
-              <span>最大保留 {maxLines} 条</span>
+              <span>{t('logs:center.totalLogs', { count: filteredLogs.length })}</span>
+              <span>{t('logs:center.maxRetain', { max: maxLines })}</span>
             </div>
           </TabPane>
 
-          {/* K8s事件 Tab */}
+          {/* {t('logs:center.k8sEvents')} Tab */}
           <TabPane
             tab={
               <span>
@@ -785,7 +787,7 @@ const LogCenter: React.FC = () => {
             {/* 筛选 */}
             <Space wrap style={{ marginBottom: 16 }}>
               <Select
-                placeholder="命名空间"
+                placeholder={t('common:table.namespace')}
                 allowClear
                 style={{ width: 180 }}
                 value={eventNamespace || undefined}
@@ -794,7 +796,7 @@ const LogCenter: React.FC = () => {
                 options={namespaces.map((ns) => ({ label: ns, value: ns }))}
               />
               <Select
-                placeholder="事件类型"
+                placeholder={t('logs:events.eventType')}
                 allowClear
                 style={{ width: 120 }}
                 value={eventType}
@@ -810,7 +812,7 @@ const LogCenter: React.FC = () => {
                 onClick={fetchEvents}
                 loading={eventsLoading}
               >
-                查询
+                {t('logs:center.query')}
               </Button>
             </Space>
 
@@ -822,7 +824,7 @@ const LogCenter: React.FC = () => {
               pagination={{
                 pageSize: 20,
                 showSizeChanger: true,
-                showTotal: (t) => `共 ${t} 条`,
+                showTotal: (total) => t('logs:center.totalCount', { total }),
               }}
               size="small"
               scroll={{ y: 'calc(100vh - 500px)' }}
@@ -843,7 +845,7 @@ const LogCenter: React.FC = () => {
             <Card size="small" style={{ marginBottom: 16 }}>
               <Space wrap style={{ width: '100%' }}>
                 <Input.Search
-                  placeholder="输入搜索关键词..."
+                  placeholder={t('logs:center.searchKeywordPlaceholder')}
                   style={{ width: 300 }}
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
@@ -853,7 +855,7 @@ const LogCenter: React.FC = () => {
 
                 <Select
                   mode="multiple"
-                  placeholder="命名空间"
+                  placeholder={t('common:table.namespace')}
                   style={{ width: 200 }}
                   value={searchNamespaces}
                   onChange={setSearchNamespaces}
@@ -862,7 +864,7 @@ const LogCenter: React.FC = () => {
 
                 <Select
                   mode="multiple"
-                  placeholder="日志级别"
+                  placeholder={t('logs:center.logLevel')}
                   style={{ width: 150 }}
                   value={searchLevels}
                   onChange={setSearchLevels}
@@ -880,7 +882,7 @@ const LogCenter: React.FC = () => {
                   onChange={(dates) =>
                     setSearchDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)
                   }
-                  placeholder={['开始时间', '结束时间']}
+                  placeholder={[t('logs:center.startTime'), t('logs:center.endTime')]}
                 />
 
                 <Button
@@ -889,7 +891,7 @@ const LogCenter: React.FC = () => {
                   onClick={handleSearch}
                   loading={searchLoading}
                 >
-                  搜索
+                  {t('logs:center.searchBtn')}
                 </Button>
               </Space>
             </Card>
@@ -897,7 +899,7 @@ const LogCenter: React.FC = () => {
             {/* 搜索结果 */}
             <Card
               size="small"
-              title={`搜索结果 (${searchResults.length} 条)`}
+              title={t('logs:center.searchResults', { count: searchResults.length })}
             >
               <Table
                 columns={searchColumns}
@@ -907,7 +909,7 @@ const LogCenter: React.FC = () => {
                 pagination={{
                   pageSize: 50,
                   showSizeChanger: true,
-                  showTotal: (t) => `共 ${t} 条`,
+                  showTotal: (total) => t('common:table.totalCount', { count: total }),
                 }}
                 size="small"
                 scroll={{ y: 'calc(100vh - 550px)' }}
@@ -919,7 +921,7 @@ const LogCenter: React.FC = () => {
 
       {/* Pod选择器弹窗 */}
       <Modal
-        title="选择Pod"
+        title={t('logs:center.selectPod')}
         open={podSelectorVisible}
         onOk={confirmPodSelection}
         onCancel={() => {
@@ -927,12 +929,12 @@ const LogCenter: React.FC = () => {
           setPodSearchKeyword(''); // 关闭时清空搜索
         }}
         width={700}
-        okText="确认添加"
-        cancelText="取消"
+        okText={t('logs:center.confirmAdd')}
+        cancelText={t('common:actions.cancel')}
       >
         <Space direction="vertical" style={{ width: '100%' }}>
           <Select
-            placeholder="选择命名空间"
+            placeholder={t('logs:center.selectNamespace')}
             style={{ width: '100%' }}
             value={selectedNamespace || undefined}
             onChange={(v) => {
@@ -947,7 +949,7 @@ const LogCenter: React.FC = () => {
           {/* Pod 搜索框 */}
           {pods.length > 0 && (
             <Input
-              placeholder="搜索 Pod 名称或容器名..."
+              placeholder={t('logs:center.searchPodPlaceholder')}
               prefix={<SearchOutlined />}
               allowClear
               value={podSearchKeyword}
@@ -958,17 +960,17 @@ const LogCenter: React.FC = () => {
 
           <Spin spinning={podsLoading}>
             {pods.length === 0 ? (
-              <Empty description="请先选择命名空间" />
+              <Empty description={t('logs:center.selectNamespaceFirst')} />
             ) : filteredPods.length === 0 ? (
-              <Empty description="没有匹配的 Pod" />
+              <Empty description={t('logs:center.noMatchingPods')} />
             ) : (
               <>
                 {/* 显示过滤结果统计和全选按钮 */}
                 <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: '#888' }}>
-                    共 {pods.length} 个 Pod
-                    {podSearchKeyword && `, 匹配 ${filteredPods.length} 个`}
-                    ，已选 {selectedPods.length} 个
+                    {t('logs:center.totalPods', { total: pods.length })}
+                    {podSearchKeyword && `, ${t('logs:center.matchingPods', { filtered: filteredPods.length })}`}
+                    {t('logs:center.selectedPods', { count: selectedPods.length })}
                   </span>
                   <Checkbox
                     indeterminate={
@@ -997,7 +999,7 @@ const LogCenter: React.FC = () => {
                       }
                     }}
                   >
-                    全选{podSearchKeyword ? '匹配项' : ''}
+                    {podSearchKeyword ? t('logs:center.selectAllMatching') : t('logs:center.selectAll')}
                   </Checkbox>
                 </div>
                 
@@ -1060,7 +1062,7 @@ const LogCenter: React.FC = () => {
                               {pod.name}
                             </Text>
                             <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              容器: {pod.containers.join(', ')}
+                              {t('logs:center.container')}: {pod.containers.join(', ')}
                             </Text>
                           </div>
                           <Space style={{ flexShrink: 0 }}>
@@ -1080,7 +1082,7 @@ const LogCenter: React.FC = () => {
 
           {selectedPods.length > 0 && (
             <Alert
-              message={`已选择 ${selectedPods.length} 个Pod`}
+              message={t('logs:center.selectedPodsCount', { count: selectedPods.length })}
               type="info"
               showIcon
             />

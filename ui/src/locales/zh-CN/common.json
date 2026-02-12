@@ -24,7 +24,25 @@
     "settings": "系统设置",
     "profile": "个人资料",
     "plugins": "插件管理",
-    "argocd": "ArgoCD"
+    "argocd": "ArgoCD",
+    "kubernetesResources": "Kubernetes资源",
+    "serviceAndRoutes": "服务与路由",
+    "configsAndSecrets": "配置与密钥",
+    "clusterSection": "集群",
+    "nodeManagement": "节点管理",
+    "configCenter": "配置中心",
+    "clusterUpgrade": "集群升级",
+    "gitopsApps": "GitOps 应用",
+    "observability": "云原生观测",
+    "costGovernance": "云原生成本治理",
+    "costInsights": "成本洞察",
+    "backToClusterList": "返回集群列表",
+    "currentCluster": "当前集群：",
+    "readonlyMode": "（只读模式）",
+    "readonlyNoTerminal": "只读权限无法使用终端",
+    "kubectlTerminal": "kubectl终端",
+    "cannotGetClusterId": "无法获取集群ID",
+    "pods": "容器组"
   },
   "actions": {
     "create": "创建",
@@ -47,9 +65,22 @@
     "copy": "复制",
     "download": "下载",
     "upload": "上传",
-    "more": "更多"
+    "more": "更多",
+    "clearAll": "清空全部",
+    "clearAllConditions": "清空所有条件",
+    "nextStep": "下一步",
+    "prevStep": "上一步",
+    "viewAll": "查看全部",
+    "batchDelete": "批量删除",
+    "batchRedeploy": "批量重新部署",
+    "scale": "扩缩容",
+    "monitoring": "监控",
+    "restart": "重新部署",
+    "reconfigure": "重新配置",
+    "confirmImport": "确认导入"
   },
   "status": {
+    "all": "全部状态",
     "healthy": "健康",
     "unhealthy": "异常",
     "unknown": "未知",
@@ -62,7 +93,10 @@
     "online": "在线",
     "offline": "离线",
     "enabled": "启用",
-    "disabled": "禁用"
+    "disabled": "禁用",
+    "normal": "正常",
+    "warning": "告警",
+    "active": "运行中"
   },
   "messages": {
     "success": "操作成功",
@@ -76,9 +110,31 @@
     "saveError": "保存失败",
     "copySuccess": "复制成功",
     "copyError": "复制失败",
+    "exportSuccess": "导出成功",
+    "exportError": "导出失败",
     "networkError": "网络错误，请稍后重试",
     "unauthorized": "未授权，请重新登录",
-    "forbidden": "权限不足"
+    "forbidden": "权限不足",
+    "scaleSuccess": "扩缩容成功",
+    "scaleError": "扩缩容失败",
+    "redeploySuccess": "重新部署成功",
+    "redeployError": "重新部署失败",
+    "createSuccess": "创建成功",
+    "createError": "创建失败",
+    "fetchError": "获取数据失败",
+    "noExportData": "没有数据可导出",
+    "columnSettingsSaved": "列设置已保存",
+    "connectionTestSuccess": "连接测试成功！",
+    "connectionTestFailed": "连接测试失败",
+    "importSuccess": "导入成功",
+    "importFailed": "导入失败",
+    "selectFirst": "请先选择项目",
+    "batchDeleteSuccess": "成功删除 {{count}} 个",
+    "batchDeletePartial": "删除完成：成功 {{success}} 个，失败 {{fail}} 个",
+    "batchRedeploySuccess": "成功重新部署 {{count}} 个",
+    "batchRedeployPartial": "重新部署完成：成功 {{success}} 个，失败 {{fail}} 个",
+    "exportCount": "成功导出 {{count}} 条数据",
+    "cannotDeleteSystem": "不能删除系统资源"
   },
   "time": {
     "justNow": "刚刚",
@@ -88,7 +144,8 @@
     "seconds": "秒",
     "minutes": "分钟",
     "hours": "小时",
-    "days": "天"
+    "days": "天",
+    "lastUpdate": "最后更新"
   },
   "table": {
     "name": "名称",
@@ -99,7 +156,14 @@
     "description": "描述",
     "type": "类型",
     "namespace": "命名空间",
-    "labels": "标签"
+    "labels": "标签",
+    "annotations": "注解",
+    "total": "共",
+    "selected": "已选中",
+    "totalCount": "共 {{count}} 条",
+    "version": "版本",
+    "image": "镜像",
+    "images": "镜像"
   },
   "language": {
     "switch": "切换语言",
@@ -116,6 +180,52 @@
     "loginSuccess": "登录成功",
     "loginError": "登录失败",
     "logoutSuccess": "退出成功",
-    "sessionExpired": "会话已过期，请重新登录"
-  }
+    "sessionExpired": "会话已过期，请重新登录",
+    "passwordLogin": "密码登录",
+    "ldapLogin": "LDAP登录",
+    "usernameRequired": "请输入用户名",
+    "passwordRequired": "请输入密码",
+    "ldapHint": "🔐 使用企业账号登录",
+    "defaultAdminHint": "👤 默认管理员: admin / KubePolaris@2026"
+  },
+  "search": {
+    "placeholder": "选择属性筛选，或输入关键字搜索",
+    "columnSettings": "列设置",
+    "selectColumns": "选择要显示的列",
+    "fieldName": "工作负载名称",
+    "fieldNamespace": "命名空间",
+    "fieldImage": "镜像",
+    "fieldStatus": "状态",
+    "fieldLabel": "标签",
+    "fieldCpuLimit": "CPU限制值",
+    "fieldCpuRequest": "CPU申请值",
+    "fieldMemoryLimit": "内存限制值",
+    "fieldMemoryRequest": "内存申请值"
+  },
+  "resources": {
+    "cpu": "CPU",
+    "memory": "内存",
+    "storage": "存储",
+    "used": "已使用",
+    "total": "总量",
+    "available": "可用",
+    "quota": "配额"
+  },
+  "units": {
+    "count": "个",
+    "cores": "核",
+    "items": "条",
+    "second30": "30秒",
+    "minute1": "1分钟",
+    "minute5": "5分钟",
+    "last7Days": "最近7天",
+    "last30Days": "最近30天"
+  },
+  "info": {
+    "basicInfo": "基本信息",
+    "detailInfo": "详细信息",
+    "systemInfo": "系统信息"
+  },
+  "featureInDev": "该功能正在积极开发中",
+  "featureInDevDesc": "我们正在努力为您打造强大的功能，敬请期待。"
 }

@@ -20,6 +20,7 @@ import {
   FileTextOutlined
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 import { clusterService } from '../../services/clusterService';
 import InstancesTab from './tabs/InstancesTab';
 import AccessTab from './tabs/AccessTab';
@@ -65,7 +66,8 @@ const DeploymentDetail: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(["workload", "common"]);
+const [loading, setLoading] = useState(false);
   const [deployment, setDeployment] = useState<DeploymentDetailData | null>(null);
   // 从 URL 参数获取默认 Tab，支持通过 ?tab=monitoring 直接跳转到监控页
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'instances');
@@ -87,11 +89,11 @@ const DeploymentDetail: React.FC = () => {
       if (response.code === 200 && response.data) {
         setDeployment(response.data.workload);
       } else {
-        message.error(response.message || '获取Deployment详情失败');
+        message.error(response.message || t('messages.fetchDetailError', { type: 'Deployment' }));
       }
     } catch (error) {
       console.error('获取Deployment详情失败:', error);
-      message.error('获取Deployment详情失败');
+      message.error(t('messages.fetchDetailError', { type: 'Deployment' }));
     } finally {
       setLoading(false);
     }
@@ -131,10 +133,10 @@ const DeploymentDetail: React.FC = () => {
   // 渲染状态标签
   const renderStatusTag = (status: string) => {
     const statusMap: Record<string, { color: string; text: string }> = {
-      'Running': { color: 'success', text: '运行中' },
-      'Stopped': { color: 'default', text: '已停止' },
-      'Degraded': { color: 'warning', text: '降级' },
-      'Failed': { color: 'error', text: '失败' },
+      'Running': { color: 'success', text: t('detailPage.statusMap.running') },
+      'Stopped': { color: 'default', text: t('detailPage.statusMap.stopped') },
+      'Degraded': { color: 'warning', text: t('detailPage.statusMap.degraded') },
+      'Failed': { color: 'error', text: t('detailPage.statusMap.failed') },
     };
     
     const statusInfo = statusMap[status] || { color: 'default', text: status };
@@ -159,7 +161,7 @@ const DeploymentDetail: React.FC = () => {
   if (loading && !deployment) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 0' }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip={t("common:messages.loading")} />
       </div>
     );
   }
@@ -167,7 +169,7 @@ const DeploymentDetail: React.FC = () => {
   if (!deployment) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 0' }}>
-        <Text type="secondary">未找到Deployment信息</Text>
+        <Text type="secondary">{t("messages.notFound", { type: "Deployment" })}</Text>
       </div>
     );
   }
@@ -175,7 +177,7 @@ const DeploymentDetail: React.FC = () => {
   const tabItems = [
     {
       key: 'instances',
-      label: '实例列表',
+      label: t('detailTabs.instances'),
       children: (
         <InstancesTab 
           clusterId={clusterId!}
@@ -186,7 +188,7 @@ const DeploymentDetail: React.FC = () => {
     },
     {
       key: 'access',
-      label: '访问方式',
+      label: t('detailTabs.access'),
       children: (
         <AccessTab 
           clusterId={clusterId!}
@@ -197,7 +199,7 @@ const DeploymentDetail: React.FC = () => {
     },
     {
       key: 'container',
-      label: '容器管理',
+      label: t('detailTabs.container'),
       children: (
         <ContainerTab 
           clusterId={clusterId!}
@@ -208,7 +210,7 @@ const DeploymentDetail: React.FC = () => {
     },
     {
       key: 'scaling',
-      label: '弹性伸缩',
+      label: t('detailTabs.scaling'),
       children: (
         <ScalingTab 
           clusterId={clusterId!}
@@ -219,7 +221,7 @@ const DeploymentDetail: React.FC = () => {
     },
     {
       key: 'scheduling',
-      label: '调度策略',
+      label: t('detailTabs.scheduling'),
       children: (
         <SchedulingTab 
           clusterId={clusterId!}
@@ -230,7 +232,7 @@ const DeploymentDetail: React.FC = () => {
     },
     {
       key: 'history',
-      label: '版本记录',
+      label: t('detailTabs.history'),
       children: (
         <HistoryTab 
           clusterId={clusterId!}
@@ -241,7 +243,7 @@ const DeploymentDetail: React.FC = () => {
     },
     {
       key: 'events',
-      label: '事件列表',
+      label: t('detailTabs.events'),
       children: (
         <EventsTab 
           clusterId={clusterId!}
@@ -255,7 +257,7 @@ const DeploymentDetail: React.FC = () => {
       label: (
         <span>
           <LineChartOutlined style={{ marginRight: 4 }} />
-          监控
+          {t('detailTabs.monitoring')}
         </span>
       ),
       children: (
@@ -280,7 +282,7 @@ const DeploymentDetail: React.FC = () => {
             onClick={handleBack}
             type="text"
           >
-            返回工作负载列表
+            {t('detailPage.backToList')}
           </Button>
         </Space>
       </div>
@@ -309,58 +311,58 @@ const DeploymentDetail: React.FC = () => {
             onClick={() => setActiveTab('monitoring')}
             type={activeTab === 'monitoring' ? 'primary' : 'default'}
           >
-            监控
+            {t('detailPage.monitoring')}
           </Button>
-          <Button icon={<FileTextOutlined />}>日志</Button>
+          <Button icon={<FileTextOutlined />}>{t('detailPage.logs')}</Button>
           <Button icon={<SyncOutlined />} onClick={handleRefresh}>
-            刷新
+            {t('detailPage.refresh')}
           </Button>
         </Space>
       </div>
 
       {/* 基础信息卡片 */}
       <Card 
-        title="基础信息" 
+        title={t('detailPage.basicInfo')} 
         style={{ marginBottom: 16 }}
         bordered={false}
       >
         <Row gutter={[48, 16]}>
           <Col span={12}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="负载名称">
+              <Descriptions.Item label={t('detailPage.loadName')}>
                 {deployment.name}
               </Descriptions.Item>
-              <Descriptions.Item label="状态">
+              <Descriptions.Item label={t('detailPage.status')}>
                 {renderStatusTag(deployment.status)}
               </Descriptions.Item>
-              <Descriptions.Item label="实例个数(正常/全部)">
+              <Descriptions.Item label={t('detailPage.instanceCount')}>
                 <Text strong>
                   {deployment.readyReplicas || 0}/{deployment.replicas || 0}
                 </Text>
               </Descriptions.Item>
-              <Descriptions.Item label="容器运行时">
-                普通运行时
+              <Descriptions.Item label={t('detailPage.containerRuntime')}>
+                {t('detailPage.normalRuntime')}
               </Descriptions.Item>
-              <Descriptions.Item label="描述">
+              <Descriptions.Item label={t('detailPage.description')}>
                 {deployment.annotations?.['description'] || '-'}
               </Descriptions.Item>
             </Descriptions>
           </Col>
           <Col span={12}>
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="命名空间">
+              <Descriptions.Item label={t('detailPage.namespace')}>
                 {deployment.namespace}
               </Descriptions.Item>
-              <Descriptions.Item label="创建时间">
+              <Descriptions.Item label={t('detailPage.createdAt')}>
                 {formatTime(deployment.createdAt)}
               </Descriptions.Item>
-              <Descriptions.Item label="升级策略">
-                {deployment.strategy || '滚动升级'}
+              <Descriptions.Item label={t('detailPage.upgradeStrategy')}>
+                {deployment.strategy || t('detailPage.rollingUpgrade')}
               </Descriptions.Item>
-              <Descriptions.Item label="可用实例">
+              <Descriptions.Item label={t('detailPage.availableInstances')}>
                 {deployment.availableReplicas || 0}
               </Descriptions.Item>
-              <Descriptions.Item label="更新实例">
+              <Descriptions.Item label={t('detailPage.updatedInstances')}>
                 {deployment.updatedReplicas || 0}
               </Descriptions.Item>
             </Descriptions>

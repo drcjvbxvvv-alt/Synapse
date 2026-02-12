@@ -14,6 +14,7 @@ import {
   message,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, CodeOutlined, FormOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import type { PolicyRule } from '../services/rbacService';
 import rbacService from '../services/rbacService';
 
@@ -21,9 +22,9 @@ const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-// 常用 API Groups
-const commonApiGroups = [
-  { value: '', label: 'core (空字符串)' },
+// 常用 API Groups - labels will be translated dynamically
+const commonApiGroupValues = [
+  { value: '', labelKey: 'coreApiGroup' },
   { value: 'apps', label: 'apps' },
   { value: 'batch', label: 'batch' },
   { value: 'networking.k8s.io', label: 'networking.k8s.io' },
@@ -31,7 +32,7 @@ const commonApiGroups = [
   { value: 'policy', label: 'policy' },
   { value: 'rbac.authorization.k8s.io', label: 'rbac.authorization.k8s.io' },
   { value: 'argoproj.io', label: 'argoproj.io' },
-  { value: '*', label: '* (全部)' },
+  { value: '*', labelKey: 'allApiGroup' },
 ];
 
 // 常用资源
@@ -55,17 +56,17 @@ const commonResources = [
   '*',
 ];
 
-// 常用动作
-const allVerbs = [
-  { value: 'get', label: '查看 (get)' },
-  { value: 'list', label: '列表 (list)' },
-  { value: 'watch', label: '监听 (watch)' },
-  { value: 'create', label: '创建 (create)' },
-  { value: 'update', label: '更新 (update)' },
-  { value: 'patch', label: '补丁 (patch)' },
-  { value: 'delete', label: '删除 (delete)' },
-  { value: 'deletecollection', label: '批量删除 (deletecollection)' },
-  { value: '*', label: '* (全部)' },
+// 常用动作 - labels will be translated dynamically
+const allVerbValues = [
+  { value: 'get', labelKey: 'verbGet' },
+  { value: 'list', labelKey: 'verbList' },
+  { value: 'watch', labelKey: 'verbWatch' },
+  { value: 'create', labelKey: 'verbCreate' },
+  { value: 'update', labelKey: 'verbUpdate' },
+  { value: 'patch', labelKey: 'verbPatch' },
+  { value: 'delete', labelKey: 'verbDelete' },
+  { value: 'deletecollection', labelKey: 'verbDeleteCollection' },
+  { value: '*', labelKey: 'verbAll' },
 ];
 
 interface CustomRoleEditorProps {
@@ -83,6 +84,7 @@ const CustomRoleEditor: React.FC<CustomRoleEditorProps> = ({
   onCancel,
   onSuccess,
 }) => {
+  const { t } = useTranslation('components');
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [rules, setRules] = useState<PolicyRule[]>([
@@ -99,7 +101,7 @@ const CustomRoleEditor: React.FC<CustomRoleEditorProps> = ({
   // 删除规则
   const removeRule = (index: number) => {
     if (rules.length <= 1) {
-      message.warning('至少需要一条规则');
+      message.warning(t('customRoleEditor.atLeastOneRule'));
       return;
     }
     setRules(rules.filter((_, i) => i !== index));
@@ -138,11 +140,11 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
       // 验证规则
       for (const rule of rules) {
         if (rule.resources.length === 0) {
-          message.error('每条规则必须指定至少一个资源');
+          message.error(t('customRoleEditor.resourceRequired'));
           return;
         }
         if (rule.verbs.length === 0) {
-          message.error('每条规则必须指定至少一个动作');
+          message.error(t('customRoleEditor.verbRequired'));
           return;
         }
       }
@@ -150,11 +152,11 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
       setLoading(true);
       const res = await rbacService.createCustomClusterRole(Number(clusterId), name, rules);
       if (res.code === 200) {
-        message.success('创建成功');
+        message.success(t('customRoleEditor.createSuccess'));
         onSuccess(name);
         handleClose();
       } else {
-        message.error(res.message || '创建失败');
+        message.error(res.message || t('customRoleEditor.createFailed'));
       }
     } catch (err) {
       console.error(err);
@@ -174,19 +176,19 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
 
   return (
     <Modal
-      title={`创建自定义 ClusterRole - ${clusterName}`}
+      title={t('customRoleEditor.title', { clusterName })}
       open={visible}
       onCancel={handleClose}
       width={900}
       footer={[
         <Button key="cancel" onClick={handleClose}>
-          取消
+          {t('customRoleEditor.cancel')}
         </Button>,
         <Button key="yaml" icon={<CodeOutlined />} onClick={generateYaml}>
-          预览 YAML
+          {t('customRoleEditor.previewYaml')}
         </Button>,
         <Button key="submit" type="primary" loading={loading} onClick={handleSubmit}>
-          创建
+          {t('customRoleEditor.create')}
         </Button>,
       ]}
     >
@@ -198,7 +200,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
             key: 'form',
             label: (
               <span>
-                <FormOutlined /> 表单编辑
+                <FormOutlined /> {t('customRoleEditor.formEdit')}
               </span>
             ),
             children: (
@@ -206,19 +208,19 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
                 <Form form={form} layout="vertical">
                   <Form.Item
                     name="name"
-                    label="ClusterRole 名称"
+                    label={t('customRoleEditor.roleName')}
                     rules={[
-                      { required: true, message: '请输入名称' },
-                      { pattern: /^[a-z0-9][a-z0-9-]*[a-z0-9]$/, message: '名称只能包含小写字母、数字和连字符' },
+                      { required: true, message: t('customRoleEditor.nameRequired') },
+                      { pattern: /^[a-z0-9][a-z0-9-]*[a-z0-9]$/, message: t('customRoleEditor.namePattern') },
                     ]}
                   >
                     <Input placeholder="例如: custom-developer-role" />
                   </Form.Item>
                 </Form>
 
-                <Divider orientation="left">权限规则</Divider>
+                <Divider orientation="left">{t('customRoleEditor.permissionRules')}</Divider>
                 <Paragraph type="secondary" style={{ marginBottom: 16 }}>
-                  定义此 ClusterRole 可以访问的资源和操作。每条规则指定一组 API Groups、Resources 和允许的 Verbs。
+                  {t('customRoleEditor.permissionRulesDesc')}
                 </Paragraph>
 
                 {rules.map((rule, index) => (
@@ -226,7 +228,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
                     key={index}
                     size="small"
                     style={{ marginBottom: 16 }}
-                    title={`规则 ${index + 1}`}
+                    title={t('customRoleEditor.ruleIndex', { index: index + 1 })}
                     extra={
                       <Button
                         type="text"
@@ -243,13 +245,13 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
                         <Select
                           mode="tags"
                           style={{ width: '100%', marginTop: 8 }}
-                          placeholder="选择或输入 API Group"
+                          placeholder={t('customRoleEditor.selectApiGroup')}
                           value={rule.apiGroups}
                           onChange={(value) => updateRule(index, 'apiGroups', value)}
                         >
-                          {commonApiGroups.map((g) => (
+                          {commonApiGroupValues.map((g) => (
                             <Option key={g.value} value={g.value}>
-                              {g.label}
+                              {g.labelKey ? t(`customRoleEditor.${g.labelKey}`) : g.label}
                             </Option>
                           ))}
                         </Select>
@@ -259,7 +261,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
                         <Select
                           mode="tags"
                           style={{ width: '100%', marginTop: 8 }}
-                          placeholder="选择或输入资源"
+                          placeholder={t('customRoleEditor.selectResource')}
                           value={rule.resources}
                           onChange={(value) => updateRule(index, 'resources', value)}
                         >
@@ -271,17 +273,17 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
                         </Select>
                       </Col>
                       <Col span={8}>
-                        <Text strong>Verbs (操作)</Text>
+                        <Text strong>{t('customRoleEditor.verbsLabel')}</Text>
                         <Select
                           mode="multiple"
                           style={{ width: '100%', marginTop: 8 }}
-                          placeholder="选择操作"
+                          placeholder={t('customRoleEditor.selectVerb')}
                           value={rule.verbs}
                           onChange={(value) => updateRule(index, 'verbs', value)}
                         >
-                          {allVerbs.map((v) => (
+                          {allVerbValues.map((v) => (
                             <Option key={v.value} value={v.value}>
-                              {v.label}
+                              {t(`customRoleEditor.${v.labelKey}`)}
                             </Option>
                           ))}
                         </Select>
@@ -296,7 +298,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
                   icon={<PlusOutlined />}
                   onClick={addRule}
                 >
-                  添加规则
+                  {t('customRoleEditor.addRule')}
                 </Button>
               </div>
             ),
@@ -305,7 +307,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
             key: 'yaml',
             label: (
               <span>
-                <CodeOutlined /> YAML 预览
+                <CodeOutlined /> {t('customRoleEditor.yamlPreview')}
               </span>
             ),
             children: (
@@ -314,7 +316,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
                 onChange={(e) => setYamlContent(e.target.value)}
                 rows={20}
                 style={{ fontFamily: 'monospace', fontSize: 12 }}
-                placeholder="点击 '预览 YAML' 按钮生成"
+                placeholder={t('customRoleEditor.yamlPlaceholder')}
               />
             ),
           },

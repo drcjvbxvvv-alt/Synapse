@@ -1,0 +1,29 @@
+{
+  "title": "Global Search",
+  "searchPlaceholder": "Search clusters, nodes, pods, workloads...",
+  "searchFailed": "Search failed, please try again later",
+  "enterKeyword": "Enter search keywords to start searching",
+  "noResults": "No search results",
+  "viewDetails": "View Details",
+  "tabs": {
+    "all": "All",
+    "cluster": "Clusters",
+    "node": "Nodes",
+    "pod": "Pods",
+    "workload": "Workloads"
+  },
+  "noResultsFor": {
+    "all": "No search results",
+    "cluster": "No cluster results",
+    "node": "No node results",
+    "pod": "No pod results",
+    "workload": "No workload results"
+  },
+  "description": {
+    "node": "Node",
+    "replicas": "Replicas",
+    "cluster": "Cluster",
+    "namespace": "Namespace",
+    "clusterId": "Cluster ID"
+  }
+}

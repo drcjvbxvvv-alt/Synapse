@@ -1,11 +1,12 @@
 import React from 'react';
 import { Result, Typography } from 'antd';
 import { CloudServerOutlined } from '@ant-design/icons';
-
+import { useTranslation } from 'react-i18next';
 const { Paragraph } = Typography;
 
 const ClusterUpgrade: React.FC = () => {
-  return (
+const { t } = useTranslation(['cluster']);
+return (
     <div style={{ 
       display: 'flex',
       justifyContent: 'center',
@@ -15,15 +16,15 @@ const ClusterUpgrade: React.FC = () => {
       <Result
         icon={<CloudServerOutlined style={{ color: '#1890ff', fontSize: '64px' }} />}
         title={
-          <span style={{ fontSize: '24px', fontWeight: 500 }}>
-            该功能正在积极开发中
+<span style={{ fontSize: '24px', fontWeight: 500 }}>
+            {t('upgrade.inDev')}
           </span>
-        }
+}
         subTitle={
-          <Paragraph style={{ color: '#666', maxWidth: '400px', margin: '0 auto', fontSize: '14px' }}>
-            我们正在努力为您打造强大的 Kubernetes 集群升级功能，帮助您安全、高效地完成集群版本升级。
+<Paragraph style={{ color: '#666', maxWidth: '400px', margin: '0 auto', fontSize: '14px' }}>
+            {t('upgrade.inDevDesc')}
           </Paragraph>
-        }
+}
       />
     </div>
   );

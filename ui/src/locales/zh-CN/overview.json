@@ -1,0 +1,46 @@
+{
+  "title": "总览大盘",
+  "autoRefresh": "自动刷新",
+  "stats": {
+    "clusterTotal": "集群总数",
+    "clusterHealthy": "健康集群",
+    "clusterUnhealthy": "异常集群",
+    "nodeStatus": "节点状态",
+    "podRunning": "Pod 运行中",
+    "alerts": "告警",
+    "alertFiring": "个触发中",
+    "alertConfigured": "{{count}} 个集群已配置告警",
+    "nodeAbnormal": "{{count}} 个节点异常"
+  },
+  "resource": {
+    "cpuUsage": "CPU 使用率",
+    "memoryUsage": "内存使用率",
+    "storageUsage": "存储使用率"
+  },
+  "distribution": {
+    "clusterVersion": "集群版本分布",
+    "versionName": "版本名称",
+    "clusterCount": "集群数量",
+    "podDistribution": "Pod 分布",
+    "nodeDistribution": "Node 分布",
+    "cpuDistribution": "CPU 分布",
+    "memoryDistribution": "内存分布",
+    "clusterDistribution": "集群分布",
+    "cluster": "集群",
+    "quantity": "数量"
+  },
+  "abnormal": {
+    "title": "异常工作负载",
+    "workload": "工作负载",
+    "namespace": "命名空间",
+    "cluster": "集群",
+    "type": "类型",
+    "reason": "异常原因",
+    "duration": "持续时间",
+    "allNormal": "所有工作负载运行正常"
+  },
+  "trend": {
+    "podTrend": "Pod 数量趋势（按集群）",
+    "nodeTrend": "Node 数量趋势（按集群）"
+  }
+}

@@ -24,6 +24,7 @@ import { StorageService } from '../../services/storageService';
 import type { StorageClass } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
+import { useTranslation } from 'react-i18next';
 
 const { Link } = Typography;
 
@@ -36,7 +37,8 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
   const { message } = App.useApp();
   
   // 数据状态
-  const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
+const { t } = useTranslation(['storage', 'common']);
+const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
   const [storageClasses, setStorageClasses] = useState<StorageClass[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -99,10 +101,10 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: '名称',
-      provisioner: '供应商',
-      reclaimPolicy: '回收策略',
-      volumeBindingMode: '绑定模式',
+      name: t('storage:search.fieldName'),
+      provisioner: t('storage:search.fieldProvisioner'),
+      reclaimPolicy: t('storage:search.fieldReclaimPolicy'),
+      volumeBindingMode: t('storage:search.fieldVolumeBindingMode'),
     };
     return labels[field] || field;
   };
@@ -145,11 +147,11 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
         const items = response.data.items || [];
         setAllStorageClasses(items);
       } else {
-        message.error(response.message || '获取StorageClass列表失败');
+        message.error(response.message || t('storage:messages.fetchStorageClassError'));
       }
     } catch (error) {
-      console.error('获取StorageClass列表失败:', error);
-      message.error('获取StorageClass列表失败');
+      console.error('Failed to fetch StorageClass list:', error);
+      message.error(t('storage:messages.fetchStorageClassError'));
     } finally {
       setLoading(false);
     }
@@ -218,11 +220,11 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       if (response.code === 200) {
         setCurrentYaml(response.data.yaml);
       } else {
-        message.error(response.message || '获取YAML失败');
+        message.error(response.message || t('storage:messages.fetchYAMLError'));
       }
     } catch (error) {
-      console.error('获取YAML失败:', error);
-      message.error('获取YAML失败');
+      console.error('Failed to fetch YAML:', error);
+      message.error(t('storage:messages.fetchYAMLError'));
     } finally {
       setYamlLoading(false);
     }
@@ -237,29 +239,29 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       );
       
       if (response.code === 200) {
-        message.success('删除成功');
+        message.success(t('common:messages.deleteSuccess'));
         loadStorageClasses();
       } else {
-        message.error(response.message || '删除失败');
+        message.error(response.message || t('storage:messages.deleteError'));
       }
     } catch (error) {
-      console.error('删除失败:', error);
-      message.error('删除失败');
+      console.error('Failed to delete:', error);
+      message.error(t('common:messages.deleteError'));
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的StorageClass');
+      message.warning(t('storage:messages.selectDeleteStorageClass'));
       return;
     }
 
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 个StorageClass吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('common:messages.confirmDelete'),
+      content: t('storage:messages.confirmDeleteStorageClass', { count: selectedRowKeys.length }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       onOk: async () => {
         try {
           const selectedSCs = storageClasses.filter(s => 
@@ -275,16 +277,16 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
           const failCount = results.length - successCount;
           
           if (failCount === 0) {
-            message.success(`成功删除 ${successCount} 个StorageClass`);
+            message.success(t('storage:messages.batchDeleteSuccess', { count: successCount, type: 'StorageClass' }));
           } else {
-            message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+            message.warning(t('storage:messages.batchDeletePartial', { success: successCount, fail: failCount }));
           }
           
           setSelectedRowKeys([]);
           loadStorageClasses();
         } catch (error) {
-          console.error('批量删除失败:', error);
-          message.error('批量删除失败');
+          console.error('Batch delete failed:', error);
+          message.error(t('storage:messages.batchDeleteError'));
         }
       }
     });
@@ -296,18 +298,18 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       const filteredData = filterStorageClasses(allStorageClasses);
       
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
+        message.warning(t('common:messages.noExportData'));
         return;
       }
 
       const dataToExport = filteredData.map(s => ({
-        '名称': s.name,
-        '供应商': s.provisioner,
-        '回收策略': s.reclaimPolicy || '-',
-        '绑定模式': s.volumeBindingMode || '-',
-        '允许扩展': s.allowVolumeExpansion ? '是' : '否',
-        '默认存储类': s.isDefault ? '是' : '否',
-        '创建时间': s.createdAt ? new Date(s.createdAt).toLocaleString('zh-CN') : '-',
+        [t('storage:export.nameLabel')]: s.name,
+        [t('storage:export.provisionerLabel')]: s.provisioner,
+        [t('storage:export.reclaimPolicyLabel')]: s.reclaimPolicy || '-',
+        [t('storage:export.bindingModeLabel')]: s.volumeBindingMode || '-',
+        [t('storage:export.allowExpansionLabel')]: s.allowVolumeExpansion ? t('storage:yes') : t('storage:no'),
+        [t('storage:export.defaultLabel')]: s.isDefault ? t('storage:yes') : t('storage:no'),
+        [t('storage:export.createdAtLabel')]: s.createdAt ? new Date(s.createdAt).toLocaleString() : '-',
       }));
 
       const headers = Object.keys(dataToExport[0]);
@@ -326,17 +328,17 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       link.href = URL.createObjectURL(blob);
       link.download = `storageclass-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+      message.success(t('common:messages.exportCount', { count: filteredData.length }));
     } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败');
+      console.error('Export failed:', error);
+      message.error(t('common:messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
+    message.success(t('common:messages.columnSettingsSaved'));
   };
 
   // 行选择配置
@@ -350,7 +352,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
   // 定义所有可用列
   const allColumns: ColumnsType<StorageClass> = [
     {
-      title: '名称',
+      title: t('common:table.name'),
       dataIndex: 'name',
       key: 'name',
       fixed: 'left' as const,
@@ -364,14 +366,14 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
           </Link>
           {record.isDefault && (
             <Tag color="green" icon={<CheckCircleOutlined />}>
-              默认
+              {t('storage:columns.default')}
             </Tag>
           )}
         </div>
       ),
     },
     {
-      title: '供应商',
+      title: t('storage:columns.provisioner'),
       dataIndex: 'provisioner',
       key: 'provisioner',
       width: 250,
@@ -383,7 +385,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       ),
     },
     {
-      title: '回收策略',
+      title: t('storage:columns.reclaimPolicy'),
       dataIndex: 'reclaimPolicy',
       key: 'reclaimPolicy',
       width: 100,
@@ -394,7 +396,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       ),
     },
     {
-      title: '绑定模式',
+      title: t('storage:columns.volumeBindingMode'),
       dataIndex: 'volumeBindingMode',
       key: 'volumeBindingMode',
       width: 150,
@@ -411,31 +413,31 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       },
     },
     {
-      title: '允许扩展',
+      title: t('storage:columns.allowVolumeExpansion'),
       dataIndex: 'allowVolumeExpansion',
       key: 'allowVolumeExpansion',
       width: 100,
       render: (allow: boolean) => (
         <Tag color={allow ? 'green' : 'default'}>
-          {allow ? '是' : '否'}
+          {allow ? t('storage:yes') : t('storage:no')}
         </Tag>
       ),
     },
     {
-      title: '默认存储类',
+      title: t('storage:columns.isDefault'),
       dataIndex: 'isDefault',
       key: 'isDefault',
       width: 100,
       render: (isDefault: boolean) => (
         isDefault ? (
-          <Tag color="green" icon={<CheckCircleOutlined />}>是</Tag>
+          <Tag color="green" icon={<CheckCircleOutlined />}>{t('storage:yes')}</Tag>
         ) : (
-          <Tag color="default">否</Tag>
+          <Tag color="default">{t('storage:no')}</Tag>
         )
       ),
     },
     {
-      title: '创建时间',
+      title: t('common:table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -444,11 +446,11 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       render: (createdAt: string) => {
         if (!createdAt) return '-';
         const date = new Date(createdAt);
-        return date.toLocaleString('zh-CN');
+        return date.toLocaleString();
       },
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       fixed: 'right' as const,
       width: 120,
@@ -462,18 +464,18 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
             YAML
           </Button>
           <Popconfirm
-            title="确定要删除这个StorageClass吗？"
-            description={`确定要删除 ${record.name} 吗？`}
+            title={t('storage:messages.confirmDeleteSC')}
+            description={t('storage:messages.confirmDeleteSCDesc', { name: record.name })}
             onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button
               type="link"
               size="small"
               danger
             >
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -516,10 +518,10 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
             onClick={handleBatchDelete}
             danger
           >
-            批量删除
+            {t('common:actions.batchDelete')}
           </Button>
           <Button onClick={handleExport}>
-            导出
+            {t('common:actions.export')}
           </Button>
         </Space>
       </div>
@@ -529,7 +531,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="选择属性筛选，或输入关键字搜索"
+            placeholder={t('common:search.placeholder')}
             style={{ flex: 1 }}
             value={currentSearchValue}
             onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -541,10 +543,10 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
                 onChange={setCurrentSearchField} 
                 style={{ width: 120 }}
               >
-                <Select.Option value="name">名称</Select.Option>
-                <Select.Option value="provisioner">供应商</Select.Option>
-                <Select.Option value="reclaimPolicy">回收策略</Select.Option>
-                <Select.Option value="volumeBindingMode">绑定模式</Select.Option>
+                <Select.Option value="name">{t('storage:search.fieldName')}</Select.Option>
+                <Select.Option value="provisioner">{t('storage:search.fieldProvisioner')}</Select.Option>
+                <Select.Option value="reclaimPolicy">{t('storage:search.fieldReclaimPolicy')}</Select.Option>
+                <Select.Option value="volumeBindingMode">{t('storage:search.fieldVolumeBindingMode')}</Select.Option>
               </Select>
             }
           />
@@ -576,7 +578,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
                 onClick={clearAllConditions}
                 style={{ padding: 0 }}
               >
-                清空全部
+                {t('common:actions.clearAll')}
               </Button>
             </Space>
           </div>
@@ -598,7 +600,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 个StorageClass`,
+          showTotal: (total) => t('storage:pagination.totalStorageClass', { total }),
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size || 20);
@@ -617,7 +619,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
       >
         {yamlLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <span>加载中...</span>
+            <span>{t('common:messages.loading')}</span>
           </div>
         ) : (
           <pre style={{ maxHeight: 600, overflow: 'auto', background: '#f5f5f5', padding: 16 }}>
@@ -628,7 +630,7 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
 
       {/* 列设置抽屉 */}
       <Drawer
-        title="列设置"
+        title={t('storage:columnSettings.title')}
         placement="right"
         width={400}
         open={columnSettingsVisible}
@@ -636,22 +638,22 @@ const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountCha
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+              <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>{t('storage:columnSettings.confirm')}</Button>
             </Space>
           </div>
         }
       >
         <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <p style={{ marginBottom: 8, color: '#666' }}>{t('storage:columnSettings.selectColumns')}</p>
           <Space direction="vertical" style={{ width: '100%' }}>
             {[
-              { key: 'provisioner', label: '供应商' },
-              { key: 'reclaimPolicy', label: '回收策略' },
-              { key: 'volumeBindingMode', label: '绑定模式' },
-              { key: 'allowVolumeExpansion', label: '允许扩展' },
-              { key: 'isDefault', label: '默认存储类' },
-              { key: 'createdAt', label: '创建时间' },
+              { key: 'provisioner', label: t('storage:columns.provisioner') },
+              { key: 'reclaimPolicy', label: t('storage:columns.reclaimPolicy') },
+              { key: 'volumeBindingMode', label: t('storage:columns.volumeBindingMode') },
+              { key: 'allowVolumeExpansion', label: t('storage:columns.allowVolumeExpansion') },
+              { key: 'isDefault', label: t('storage:columns.isDefault') },
+              { key: 'createdAt', label: t('common:table.createdAt') },
             ].map(item => (
               <Checkbox
                 key={item.key}

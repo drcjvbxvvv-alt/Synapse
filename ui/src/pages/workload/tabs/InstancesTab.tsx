@@ -3,6 +3,7 @@ import { Table, Tag, Button, Space, message, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import { WorkloadService } from '../../../services/workloadService';
+import { useTranslation } from 'react-i18next';
 
 interface PodInfo {
   name: string;
@@ -43,7 +44,8 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
   cronJobName
 }) => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+const { t } = useTranslation(['workload', 'common']);
+const [loading, setLoading] = useState(false);
   const [pods, setPods] = useState<PodInfo[]>([]);
 
   // 获取工作负载名称和类型
@@ -73,11 +75,11 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
       if (response.code === 200 && response.data) {
         setPods(((response.data as { items?: unknown[] }).items || []) as PodInfo[]);
       } else {
-        message.error(response.message || '获取Pod列表失败');
+        message.error(response.message || t('messages.fetchPodListError'));
       }
     } catch (error) {
       console.error('获取Pod列表失败:', error);
-      message.error('获取Pod列表失败');
+      message.error(t('messages.fetchPodListError'));
     } finally {
       setLoading(false);
     }
@@ -107,10 +109,10 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
     const created = new Date(createdAt).getTime();
     const diff = Math.floor((now - created) / 1000); // 秒
     
-    if (diff < 60) return `${diff}秒`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}分钟`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}小时`;
-    return `${Math.floor(diff / 86400)}天`;
+    if (diff < 60) return `${diff}${t('instances.seconds')}`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}${t('instances.minutes')}`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}${t('instances.hours')}`;
+    return `${Math.floor(diff / 86400)}${t('instances.days')}`;
   };
 
   // 格式化时间
@@ -130,7 +132,7 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
 
   const columns: ColumnsType<PodInfo> = [
     {
-      title: '实例名称',
+      title: t('instances.name'),
       dataIndex: 'name',
       key: 'name',
       width: 280,
@@ -153,39 +155,39 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
       ),
     },
     {
-      title: '状态',
+      title: t('instances.status'),
       dataIndex: 'phase',
       key: 'phase',
       width: 100,
       render: (phase: string) => renderStatusTag(phase),
     },
     {
-      title: '命名空间',
+      title: t('instances.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 150,
     },
     {
-      title: '节点IP',
+      title: t('instances.nodeIP'),
       dataIndex: 'nodeIP',
       key: 'nodeIP',
       width: 150,
     },
     {
-      title: '所在节点',
+      title: t('instances.nodeName'),
       dataIndex: 'nodeName',
       key: 'nodeName',
       width: 200,
     },
     {
-      title: '重启次数',
+      title: t('instances.restartCount'),
       dataIndex: 'restartCount',
       key: 'restartCount',
       width: 100,
       render: (count: number) => count || 0,
     },
     {
-      title: 'CPU申请/限制',
+      title: t('instances.cpuRequestLimit'),
       key: 'cpu',
       width: 150,
       render: (_, record: PodInfo) => (
@@ -196,7 +198,7 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
       ),
     },
     {
-      title: '内存申请/限制',
+      title: t('instances.memoryRequestLimit'),
       key: 'memory',
       width: 150,
       render: (_, record: PodInfo) => (
@@ -207,21 +209,21 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
       ),
     },
     {
-      title: '创建时间',
+      title: t('instances.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
       render: (time: string) => formatTime(time),
     },
     {
-      title: '创建时长',
+      title: t('instances.age'),
       dataIndex: 'createdAt',
       key: 'age',
       width: 100,
       render: (time: string) => calculateAge(time),
     },
     {
-      title: '操作',
+      title: t('instances.actions'),
       key: 'action',
       width: 180,
       fixed: 'right',
@@ -233,7 +235,7 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
             style={{ padding: 0 }}
             onClick={() => navigate(`/clusters/${clusterId}/pods/${record.namespace}/${record.name}?tab=monitoring`)}
           >
-            监控
+            {t('instances.monitoring')}
           </Button>
           <Button
             type="link"
@@ -241,7 +243,7 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
             style={{ padding: 0 }}
             onClick={() => navigate(`/clusters/${clusterId}/pods/${record.namespace}/${record.name}/logs`)}
           >
-            日志
+            {t('instances.logs')}
           </Button>
           <Button
             type="link"
@@ -249,7 +251,7 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
             style={{ padding: 0 }}
             onClick={() => navigate(`/clusters/${clusterId}/pods/${record.namespace}/${record.name}/terminal`)}
           >
-            终端
+            {t('instances.terminal')}
           </Button>
         </Space>
       ),
@@ -260,7 +262,7 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
     <Spin spinning={loading}>
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button onClick={loadPods}>刷新</Button>
+          <Button onClick={loadPods}>{t('instances.refresh')}</Button>
         </Space>
       </div>
       <Table
@@ -272,7 +274,7 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
           pageSize: 10,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `总共 ${total} 条`,
+          showTotal: (total) => t('instances.total', { count: total }),
         }}
         scroll={{ x: 1800 }}
       />

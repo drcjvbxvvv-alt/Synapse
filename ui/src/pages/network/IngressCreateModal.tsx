@@ -5,6 +5,7 @@ import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { IngressService } from '../../services/ingressService';
 import { getNamespaces } from '../../services/configService';
+import { useTranslation } from 'react-i18next';
 
 interface KubernetesIngressYAML {
   apiVersion: string;
@@ -75,7 +76,8 @@ const IngressCreateModal: React.FC<IngressCreateModalProps> = ({
   onSuccess,
 }) => {
   const { message } = App.useApp();
-  const [form] = Form.useForm();
+const { t } = useTranslation(['network', 'common']);
+const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('form');
   const [yamlContent, setYamlContent] = useState(`apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -130,11 +132,11 @@ spec:
         });
         
         if (response.code === 200) {
-          message.success('Ingress创建成功');
+          message.success(t('network:create.ingressSuccess'));
           onSuccess();
           onClose();
         } else {
-          message.error(response.message || 'Ingress创建失败');
+          message.error(response.message || t('network:create.ingressFailed'));
         }
       } else {
         // 表单方式创建
@@ -170,18 +172,18 @@ spec:
         });
         
         if (response.code === 200) {
-          message.success('Ingress创建成功');
+          message.success(t('network:create.ingressSuccess'));
           form.resetFields();
           onSuccess();
           onClose();
         } else {
-          message.error(response.message || 'Ingress创建失败');
+          message.error(response.message || t('network:create.ingressFailed'));
         }
       }
     } catch (error: unknown) {
-      console.error('创建Ingress失败:', error);
+      console.error('Failed to create Ingress:', error);
       const err = error as { message?: string };
-      message.error(err.message || '创建Ingress失败');
+      message.error(err.message || t('network:create.ingressFailed'));
     } finally {
       setLoading(false);
     }
@@ -262,7 +264,7 @@ spec:
         },
       };
 
-      // 添加TLS配置（如果存在）
+      // {t('network:create.addTLS')}配置（如果存在）
       if (values.tls && Array.isArray(values.tls) && values.tls.length > 0) {
         ingressObj.spec.tls = (values.tls as TLSFormItem[])
           .map((t) => ({
@@ -360,7 +362,7 @@ spec:
       });
     } catch (error) {
       console.error('YAML转表单失败:', error);
-      message.error('YAML格式错误，无法解析');
+      message.error(t('network:create.yamlParseError'));
     }
   };
 
@@ -387,12 +389,12 @@ spec:
       }}
     >
       <Form.Item
-        label="命名空间"
+        label={t('network:create.namespace')}
         name="namespace"
-        rules={[{ required: true, message: '请选择命名空间' }]}
+        rules={[{ required: true, message: t('network:create.namespaceRequired') }]}
       >
         <Select
-          placeholder="选择命名空间"
+          placeholder={t('network:create.namespacePlaceholder')}
           loading={loadingNamespaces}
           showSearch
           filterOption={(input, option) => {
@@ -410,9 +412,9 @@ spec:
       </Form.Item>
 
       <Form.Item
-        label="Ingress名称"
+        label={t('network:create.ingressName')}
         name="name"
-        rules={[{ required: true, message: '请输入Ingress名称' }]}
+        rules={[{ required: true, message: t('network:create.ingressNameRequired') }]}
       >
         <Input placeholder="my-ingress" />
       </Form.Item>
@@ -421,17 +423,17 @@ spec:
         <Input placeholder="nginx" />
       </Form.Item>
 
-      <Form.Item label="规则配置" required>
+      <Form.Item label={t('network:create.ruleConfig')} required>
         <Form.List name="rules">
           {(fields, { add, remove }) => (
             <>
               {fields.map((field, index) => (
                 <div key={field.key} style={{ border: '1px solid #d9d9d9', padding: 16, marginBottom: 16, borderRadius: 4 }}>
                   <Space style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <strong>规则 {index + 1}</strong>
+                    <strong>{t('network:create.rule')} {index + 1}</strong>
                     {fields.length > 1 && (
                       <Button type="link" danger onClick={() => remove(field.name)}>
-                        删除规则
+                        {t('network:create.deleteRule')}
                       </Button>
                     )}
                   </Space>
@@ -440,12 +442,12 @@ spec:
                     {...field}
                     label="Host"
                     name={[field.name, 'host']}
-                    rules={[{ required: true, message: '请输入Host' }]}
+                    rules={[{ required: true, message: t('network:create.hostRequired') }]}
                   >
                     <Input placeholder="example.com" />
                   </Form.Item>
 
-                  <Form.Item label="路径配置">
+                  <Form.Item label={t('network:create.pathConfig')}>
                     <Form.List name={[field.name, 'paths']}>
                       {(pathFields, { add: addPath, remove: removePath }) => (
                         <>
@@ -454,7 +456,7 @@ spec:
                               <Form.Item
                                 {...pathField}
                                 name={[pathField.name, 'path']}
-                                rules={[{ required: true, message: '必填' }]}
+                                rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
                                 <Input placeholder="Path (/)" style={{ width: 120 }} />
@@ -462,7 +464,7 @@ spec:
                               <Form.Item
                                 {...pathField}
                                 name={[pathField.name, 'pathType']}
-                                rules={[{ required: true, message: '必填' }]}
+                                rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
                                 <Select placeholder="PathType" style={{ width: 120 }}>
@@ -474,24 +476,24 @@ spec:
                               <Form.Item
                                 {...pathField}
                                 name={[pathField.name, 'serviceName']}
-                                rules={[{ required: true, message: '必填' }]}
+                                rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
-                                <Input placeholder="Service名称" style={{ width: 150 }} />
+                                <Input placeholder={t('network:create.serviceNameField')} style={{ width: 150 }} />
                               </Form.Item>
                               <Form.Item
                                 {...pathField}
                                 name={[pathField.name, 'servicePort']}
-                                rules={[{ required: true, message: '必填' }]}
+                                rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
-                                <InputNumber placeholder="端口" style={{ width: 100 }} min={1} max={65535} />
+                                <InputNumber placeholder={t('network:ingress.edit.servicePort')} style={{ width: 100 }} min={1} max={65535} />
                               </Form.Item>
                               <MinusCircleOutlined onClick={() => removePath(pathField.name)} />
                             </Space>
                           ))}
                           <Button type="dashed" onClick={() => addPath()} size="small" icon={<PlusOutlined />}>
-                            添加路径
+                            {t('network:create.addPath')}
                           </Button>
                         </>
                       )}
@@ -500,14 +502,14 @@ spec:
                 </div>
               ))}
               <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                添加规则
+                {t('network:create.addRule')}
               </Button>
             </>
           )}
         </Form.List>
       </Form.Item>
 
-      <Form.Item label="TLS配置">
+      <Form.Item label={t('network:create.tlsConfig')}>
         <Form.List name="tls">
           {(fields, { add, remove }) => (
             <>
@@ -516,24 +518,24 @@ spec:
                   <Form.Item
                     {...field}
                     name={[field.name, 'hosts']}
-                    rules={[{ required: true, message: '请输入Hosts' }]}
+                    rules={[{ required: true, message: t('network:create.hostsRequired') }]}
                     noStyle
                   >
-                    <Input placeholder="Hosts(逗号分隔)" style={{ width: 300 }} />
+                    <Input placeholder={t('network:create.hostsPlaceholder')} style={{ width: 300 }} />
                   </Form.Item>
                   <Form.Item
                     {...field}
                     name={[field.name, 'secretName']}
-                    rules={[{ required: true, message: '请输入Secret名称' }]}
+                    rules={[{ required: true, message: t('network:create.secretNameRequired') }]}
                     noStyle
                   >
-                    <Input placeholder="Secret名称" style={{ width: 200 }} />
+                    <Input placeholder={t('network:create.secretName')} style={{ width: 200 }} />
                   </Form.Item>
                   <MinusCircleOutlined onClick={() => remove(field.name)} />
                 </Space>
               ))}
               <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />}>
-                添加TLS
+                {t('network:create.addTLS')}
               </Button>
             </>
           )}
@@ -559,14 +561,14 @@ spec:
 
   return (
     <Modal
-      title="创建Ingress"
+      title={t('network:create.ingressTitle')}
       open={visible}
       onCancel={handleCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
       width={900}
-      okText="创建"
-      cancelText="取消"
+      okText={t('network:create.createBtn')}
+      cancelText={t('common:actions.cancel')}
     >
       <Tabs
         activeKey={activeTab}
@@ -574,12 +576,12 @@ spec:
         items={[
           {
             key: 'form',
-            label: '表单模式',
+            label: t('network:create.formMode'),
             children: <div style={{ maxHeight: 600, overflowY: 'auto' }}>{formItems}</div>,
           },
           {
             key: 'yaml',
-            label: 'YAML模式',
+            label: t('network:create.yamlMode'),
             children: yamlEditor,
           },
         ]}

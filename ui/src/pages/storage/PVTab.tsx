@@ -23,6 +23,7 @@ import { StorageService } from '../../services/storageService';
 import type { PV } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
+import { useTranslation } from 'react-i18next';
 
 const { Link } = Typography;
 
@@ -35,7 +36,8 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   
   // 数据状态
-  const [allPVs, setAllPVs] = useState<PV[]>([]);
+const { t } = useTranslation(['storage', 'common']);
+const [allPVs, setAllPVs] = useState<PV[]>([]);
   const [pvs, setPVs] = useState<PV[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -98,11 +100,11 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
   // 获取搜索字段的显示名称
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
-      name: 'PV名称',
-      status: '状态',
-      storageClassName: '存储类',
-      persistentVolumeSource: '存储源类型',
-      reclaimPolicy: '回收策略',
+      name: t('storage:search.fieldPVName'),
+      status: t('storage:search.fieldStatus'),
+      storageClassName: t('storage:search.fieldStorageClassName'),
+      persistentVolumeSource: t('storage:search.fieldPersistentVolumeSource'),
+      reclaimPolicy: t('storage:search.fieldReclaimPolicy'),
     };
     return labels[field] || field;
   };
@@ -146,11 +148,11 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
         const items = response.data.items || [];
         setAllPVs(items);
       } else {
-        message.error(response.message || '获取PV列表失败');
+        message.error(response.message || t('storage:messages.fetchPVError'));
       }
     } catch (error) {
-      console.error('获取PV列表失败:', error);
-      message.error('获取PV列表失败');
+      console.error('Failed to fetch PV list:', error);
+      message.error(t('storage:messages.fetchPVError'));
     } finally {
       setLoading(false);
     }
@@ -219,11 +221,11 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       if (response.code === 200) {
         setCurrentYaml(response.data.yaml);
       } else {
-        message.error(response.message || '获取YAML失败');
+        message.error(response.message || t('storage:messages.fetchYAMLError'));
       }
     } catch (error) {
-      console.error('获取YAML失败:', error);
-      message.error('获取YAML失败');
+      console.error('Failed to fetch YAML:', error);
+      message.error(t('storage:messages.fetchYAMLError'));
     } finally {
       setYamlLoading(false);
     }
@@ -238,29 +240,29 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       );
       
       if (response.code === 200) {
-        message.success('删除成功');
+        message.success(t('common:messages.deleteSuccess'));
         loadPVs();
       } else {
-        message.error(response.message || '删除失败');
+        message.error(response.message || t('storage:messages.deleteError'));
       }
     } catch (error) {
-      console.error('删除失败:', error);
-      message.error('删除失败');
+      console.error('Failed to delete:', error);
+      message.error(t('common:messages.deleteError'));
     }
   };
 
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的PV');
+      message.warning(t('storage:messages.selectDeletePV'));
       return;
     }
 
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 个PV吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('common:messages.confirmDelete'),
+      content: t('storage:messages.confirmDeletePV', { count: selectedRowKeys.length }),
+      okText: t('common:actions.confirm'),
+      cancelText: t('common:actions.cancel'),
       onOk: async () => {
         try {
           const selectedPVs = pvs.filter(p => 
@@ -276,16 +278,16 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
           const failCount = results.length - successCount;
           
           if (failCount === 0) {
-            message.success(`成功删除 ${successCount} 个PV`);
+            message.success(t('storage:messages.batchDeleteSuccess', { count: successCount, type: 'PV' }));
           } else {
-            message.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+            message.warning(t('storage:messages.batchDeletePartial', { success: successCount, fail: failCount }));
           }
           
           setSelectedRowKeys([]);
           loadPVs();
         } catch (error) {
-          console.error('批量删除失败:', error);
-          message.error('批量删除失败');
+          console.error('Batch delete failed:', error);
+          message.error(t('storage:messages.batchDeleteError'));
         }
       }
     });
@@ -297,20 +299,20 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       const filteredData = filterPVs(allPVs);
       
       if (filteredData.length === 0) {
-        message.warning('没有数据可导出');
+        message.warning(t('common:messages.noExportData'));
         return;
       }
 
       const dataToExport = filteredData.map(p => ({
-        'PV名称': p.name,
-        '状态': p.status,
-        '容量': p.capacity || '-',
-        '访问模式': StorageService.formatAccessModes(p.accessModes),
-        '回收策略': p.reclaimPolicy || '-',
-        '存储类': p.storageClassName || '-',
-        '声明': StorageService.formatClaimRef(p.claimRef),
-        '存储源类型': p.persistentVolumeSource || '-',
-        '创建时间': p.createdAt ? new Date(p.createdAt).toLocaleString('zh-CN') : '-',
+        [t('storage:export.pvNameLabel')]: p.name,
+        [t('storage:export.statusLabel')]: p.status,
+        [t('storage:export.capacityLabel')]: p.capacity || '-',
+        [t('storage:export.accessModesLabel')]: StorageService.formatAccessModes(p.accessModes),
+        [t('storage:export.reclaimPolicyLabel')]: p.reclaimPolicy || '-',
+        [t('storage:export.storageClassLabel')]: p.storageClassName || '-',
+        [t('storage:export.claimRefLabel')]: StorageService.formatClaimRef(p.claimRef),
+        [t('storage:export.sourceTypeLabel')]: p.persistentVolumeSource || '-',
+        [t('storage:export.createdAtLabel')]: p.createdAt ? new Date(p.createdAt).toLocaleString() : '-',
       }));
 
       const headers = Object.keys(dataToExport[0]);
@@ -329,17 +331,17 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       link.href = URL.createObjectURL(blob);
       link.download = `pv-list-${Date.now()}.csv`;
       link.click();
-      message.success(`成功导出 ${filteredData.length} 条数据`);
+      message.success(t('common:messages.exportCount', { count: filteredData.length }));
     } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败');
+      console.error('Export failed:', error);
+      message.error(t('common:messages.exportError'));
     }
   };
 
   // 列设置保存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
-    message.success('列设置已保存');
+    message.success(t('common:messages.columnSettingsSaved'));
   };
 
   // 行选择配置
@@ -353,7 +355,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
   // 定义所有可用列
   const allColumns: ColumnsType<PV> = [
     {
-      title: 'PV名称',
+      title: t('storage:columns.pvName'),
       dataIndex: 'name',
       key: 'name',
       fixed: 'left' as const,
@@ -367,7 +369,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       ),
     },
     {
-      title: '状态',
+      title: t('common:table.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
@@ -378,14 +380,14 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       ),
     },
     {
-      title: '容量',
+      title: t('storage:columns.capacity'),
       dataIndex: 'capacity',
       key: 'capacity',
       width: 100,
       render: (capacity: string) => StorageService.formatCapacity(capacity),
     },
     {
-      title: '访问模式',
+      title: t('storage:columns.accessModes'),
       dataIndex: 'accessModes',
       key: 'accessModes',
       width: 120,
@@ -396,7 +398,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       ),
     },
     {
-      title: '回收策略',
+      title: t('storage:columns.reclaimPolicy'),
       dataIndex: 'reclaimPolicy',
       key: 'reclaimPolicy',
       width: 100,
@@ -407,14 +409,14 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       ),
     },
     {
-      title: '存储类',
+      title: t('storage:columns.storageClassName'),
       dataIndex: 'storageClassName',
       key: 'storageClassName',
       width: 150,
       render: (name: string) => name ? <Tag>{name}</Tag> : '-',
     },
     {
-      title: '声明',
+      title: t('storage:columns.claimRef'),
       dataIndex: 'claimRef',
       key: 'claimRef',
       width: 200,
@@ -422,14 +424,14 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
         StorageService.formatClaimRef(claimRef),
     },
     {
-      title: '存储源类型',
+      title: t('storage:columns.persistentVolumeSource'),
       dataIndex: 'persistentVolumeSource',
       key: 'persistentVolumeSource',
       width: 120,
       render: (source: string) => <Tag color="purple">{source}</Tag>,
     },
     {
-      title: '创建时间',
+      title: t('common:table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
@@ -438,11 +440,11 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       render: (createdAt: string) => {
         if (!createdAt) return '-';
         const date = new Date(createdAt);
-        return date.toLocaleString('zh-CN');
+        return date.toLocaleString();
       },
     },
     {
-      title: '操作',
+      title: t('common:table.actions'),
       key: 'action',
       fixed: 'right' as const,
       width: 120,
@@ -456,18 +458,18 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
             YAML
           </Button>
           <Popconfirm
-            title="确定要删除这个PV吗？"
-            description={`确定要删除 ${record.name} 吗？`}
+            title={t('storage:messages.confirmDeletePVItem')}
+            description={t('storage:messages.confirmDeletePVDesc', { name: record.name })}
             onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
           >
             <Button
               type="link"
               size="small"
               danger
             >
-              删除
+              {t('common:actions.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -510,10 +512,10 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
             onClick={handleBatchDelete}
             danger
           >
-            批量删除
+            {t('common:actions.batchDelete')}
           </Button>
           <Button onClick={handleExport}>
-            导出
+            {t('common:actions.export')}
           </Button>
         </Space>
       </div>
@@ -523,7 +525,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="选择属性筛选，或输入关键字搜索"
+            placeholder={t('common:search.placeholder')}
             style={{ flex: 1 }}
             value={currentSearchValue}
             onChange={(e) => setCurrentSearchValue(e.target.value)}
@@ -535,11 +537,11 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
                 onChange={setCurrentSearchField} 
                 style={{ width: 130 }}
               >
-                <Select.Option value="name">PV名称</Select.Option>
-                <Select.Option value="status">状态</Select.Option>
-                <Select.Option value="storageClassName">存储类</Select.Option>
-                <Select.Option value="persistentVolumeSource">存储源类型</Select.Option>
-                <Select.Option value="reclaimPolicy">回收策略</Select.Option>
+                <Select.Option value="name">{t('storage:search.fieldPVName')}</Select.Option>
+                <Select.Option value="status">{t('storage:search.fieldStatus')}</Select.Option>
+                <Select.Option value="storageClassName">{t('storage:search.fieldStorageClassName')}</Select.Option>
+                <Select.Option value="persistentVolumeSource">{t('storage:search.fieldPersistentVolumeSource')}</Select.Option>
+                <Select.Option value="reclaimPolicy">{t('storage:search.fieldReclaimPolicy')}</Select.Option>
               </Select>
             }
           />
@@ -571,7 +573,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
                 onClick={clearAllConditions}
                 style={{ padding: 0 }}
               >
-                清空全部
+                {t('common:actions.clearAll')}
               </Button>
             </Space>
           </div>
@@ -593,7 +595,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 个PV`,
+          showTotal: (total) => t('storage:pagination.totalPV', { total }),
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size || 20);
@@ -612,7 +614,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
       >
         {yamlLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <span>加载中...</span>
+            <span>{t('common:messages.loading')}</span>
           </div>
         ) : (
           <pre style={{ maxHeight: 600, overflow: 'auto', background: '#f5f5f5', padding: 16 }}>
@@ -623,7 +625,7 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
 
       {/* 列设置抽屉 */}
       <Drawer
-        title="列设置"
+        title={t('storage:columnSettings.title')}
         placement="right"
         width={400}
         open={columnSettingsVisible}
@@ -631,24 +633,24 @@ const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>取消</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>确定</Button>
+              <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
+              <Button type="primary" onClick={handleColumnSettingsSave}>{t('storage:columnSettings.confirm')}</Button>
             </Space>
           </div>
         }
       >
         <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>选择要显示的列：</p>
+          <p style={{ marginBottom: 8, color: '#666' }}>{t('storage:columnSettings.selectColumns')}</p>
           <Space direction="vertical" style={{ width: '100%' }}>
             {[
-              { key: 'status', label: '状态' },
-              { key: 'capacity', label: '容量' },
-              { key: 'accessModes', label: '访问模式' },
-              { key: 'reclaimPolicy', label: '回收策略' },
-              { key: 'storageClassName', label: '存储类' },
-              { key: 'claimRef', label: '声明' },
-              { key: 'persistentVolumeSource', label: '存储源类型' },
-              { key: 'createdAt', label: '创建时间' },
+              { key: 'status', label: t('common:table.status') },
+              { key: 'capacity', label: t('storage:columns.capacity') },
+              { key: 'accessModes', label: t('storage:columns.accessModes') },
+              { key: 'reclaimPolicy', label: t('storage:columns.reclaimPolicy') },
+              { key: 'storageClassName', label: t('storage:columns.storageClassName') },
+              { key: 'claimRef', label: t('storage:columns.claimRef') },
+              { key: 'persistentVolumeSource', label: t('storage:columns.persistentVolumeSource') },
+              { key: 'createdAt', label: t('common:table.createdAt') },
             ].map(item => (
               <Checkbox
                 key={item.key}

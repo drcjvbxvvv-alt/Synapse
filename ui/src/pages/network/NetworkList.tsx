@@ -7,10 +7,12 @@ import {
 } from 'antd';
 import ServiceTab from './ServiceTab';
 import IngressTab from './IngressTab';
+import { useTranslation } from 'react-i18next';
 
 const NetworkList: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+const { t } = useTranslation(['network', 'common']);
+const [searchParams, setSearchParams] = useSearchParams();
   const loading = false;
   
   // 从URL读取当前Tab
@@ -31,7 +33,7 @@ const NetworkList: React.FC = () => {
   const tabItems = [
     {
       key: 'service',
-      label: '服务（Service）',
+      label: t('network:tabs.service'),
       children: (
         <ServiceTab
           clusterId={clusterId || ''}
@@ -41,7 +43,7 @@ const NetworkList: React.FC = () => {
     },
     {
       key: 'ingress',
-      label: '路由（Ingress）',
+      label: t('network:tabs.ingress'),
       children: (
         <IngressTab
           clusterId={clusterId || ''}

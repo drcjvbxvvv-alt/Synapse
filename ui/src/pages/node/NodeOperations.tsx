@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import { nodeService } from '../../services/nodeService';
 import type { Node } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
@@ -65,7 +66,8 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+const { t } = useTranslation(['nodeOps', 'common']);
+const [currentStep, setCurrentStep] = useState(0);
   const [operationType, setOperationType] = useState<'cordon' | 'uncordon' | 'drain'>('cordon');
   const [operationReason, setOperationReason] = useState('');
   const [drainOptions, setDrainOptions] = useState({
@@ -109,7 +111,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
       const initialStatus: NodeOperationStatusItem[] = selectedNodes.map(node => ({
         nodeName: node.name,
         status: 'pending' as const,
-        description: '等待操作',
+        description: t('nodeOps:execution.waitingOperation'),
         progress: 0,
       }));
       setNodeOperationStatus(initialStatus);
@@ -126,7 +128,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
     if (currentStep === 0) {
       // 验证操作类型选择
       if (!operationType) {
-        message.error('请选择操作类型');
+        message.error(t('nodeOps:operationType.selectRequired'));
         return;
       }
       setCurrentStep(currentStep + 1);
@@ -135,7 +137,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
       if (operationType === 'drain') {
         // 验证Drain操作的确认项
         if (!confirmChecks.serviceInterruption || !confirmChecks.replicaConfirmed || !confirmChecks.teamNotified) {
-          message.error('请确认所有风险提示项');
+          message.error(t('nodeOps:drain.confirmAllRisks'));
           return;
         }
       }
@@ -154,8 +156,8 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   // 处理取消
   const handleCancel = () => {
     Modal.confirm({
-      title: '确认取消',
-      content: '确定要取消当前操作吗？所有已配置的参数将丢失。',
+      title: t('nodeOps:cancel.title'),
+      content: t('nodeOps:cancel.content'),
       onOk: () => {
         onClose();
       },
@@ -195,7 +197,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
       const updatedStatus: NodeOperationStatusItem[] = nodeOperationStatus.map(node => ({
         ...node,
         status: 'waiting' as const,
-        description: '等待操作',
+        description: t('nodeOps:execution.waitingOperation'),
       }));
       setNodeOperationStatus(updatedStatus);
 
@@ -222,7 +224,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
       setCurrentStep(currentStep + 1);
     } catch (error) {
       console.error('执行节点操作失败:', error);
-      message.error('执行节点操作失败');
+      message.error(t('nodeOps:execution.executeFailed'));
     } finally {
       setLoading(false);
     }
@@ -233,13 +235,13 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
     const operations = selectedNodes.map(async (node, index) => {
       try {
         // 更新当前节点状态为执行中
-        updateNodeStatus(index, 'running', '正在执行操作', 10);
+        updateNodeStatus(index, 'running', t('nodeOps:execution.executingOperation'), 10);
 
         // 根据操作类型执行不同的操作
         await executeNodeOperation(node.name, index);
 
         // 更新成功结果
-        updateNodeStatus(index, 'success', '操作成功', 100);
+        updateNodeStatus(index, 'success', t('nodeOps:execution.operationSuccess'), 100);
         setOperationResults((prev: OperationResults) => ({
           ...prev,
           success: prev.success + 1,
@@ -281,13 +283,13 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
       const node = selectedNodes[i];
       try {
         // 更新当前节点状态为执行中
-        updateNodeStatus(i, 'running', '正在执行操作', 10);
+        updateNodeStatus(i, 'running', t('nodeOps:execution.executingOperation'), 10);
 
         // 根据操作类型执行不同的操作
         await executeNodeOperation(node.name, i);
 
         // 更新成功结果
-        updateNodeStatus(i, 'success', '操作成功', 100);
+        updateNodeStatus(i, 'success', t('nodeOps:execution.operationSuccess'), 100);
         setOperationResults((prev: OperationResults) => ({
           ...prev,
           success: prev.success + 1,
@@ -330,27 +332,27 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   const executeNodeOperation = async (nodeName: string, index: number) => {
     switch (operationType) {
       case 'cordon':
-        updateNodeStatus(index, 'running', '正在封锁节点', 30);
+        updateNodeStatus(index, 'running', t('nodeOps:execution.cordoning'), 30);
         await nodeService.cordonNode(clusterId, nodeName);
-        updateNodeStatus(index, 'running', '节点封锁成功', 90);
+        updateNodeStatus(index, 'running', t('nodeOps:execution.cordonSuccess'), 90);
         break;
       case 'uncordon':
-        updateNodeStatus(index, 'running', '正在解封节点', 30);
+        updateNodeStatus(index, 'running', t('nodeOps:execution.uncordoning'), 30);
         await nodeService.uncordonNode(clusterId, nodeName);
-        updateNodeStatus(index, 'running', '节点解封成功', 90);
+        updateNodeStatus(index, 'running', t('nodeOps:execution.uncordonSuccess'), 90);
         break;
       case 'drain':
-        updateNodeStatus(index, 'running', '正在驱逐节点上的Pod', 30);
+        updateNodeStatus(index, 'running', t('nodeOps:execution.draining'), 30);
         await nodeService.drainNode(clusterId, nodeName, {
           ignoreDaemonSets: drainOptions.ignoreDaemonSets,
           deleteLocalData: drainOptions.deleteLocalData,
           force: drainOptions.force,
           gracePeriodSeconds: drainOptions.gracePeriodSeconds,
         });
-        updateNodeStatus(index, 'running', '节点驱逐成功', 90);
+        updateNodeStatus(index, 'running', t('nodeOps:execution.drainSuccess'), 90);
         break;
       default:
-        throw new Error('不支持的操作类型');
+        throw new Error(t('nodeOps:execution.unsupportedType'));
     }
 
     // 模拟操作完成
@@ -373,7 +375,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
 
   // 处理完成
   const handleFinish = () => {
-    message.success('节点操作已完成');
+    message.success(t('nodeOps:result.nodeOperationComplete'));
     onSuccess();
     onClose();
   };
@@ -398,13 +400,13 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   const getOperationTitle = () => {
     switch (operationType) {
       case 'cordon':
-        return '封锁节点 (Cordon)';
+        return t('nodeOps:cordon.titleShort');
       case 'uncordon':
-        return '解封节点 (Uncordon)';
+        return t('nodeOps:uncordon.titleShort');
       case 'drain':
-        return '驱逐节点 (Drain)';
+        return t('nodeOps:drain.titleShort');
       default:
-        return '节点操作';
+        return t('nodeOps:operationType.nodeOperation');
     }
   };
 
@@ -412,11 +414,11 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   const getOperationDescription = () => {
     switch (operationType) {
       case 'cordon':
-        return '封锁节点将使节点不再接受新的Pod调度，但不会影响已经在节点上运行的Pod。';
+        return t('nodeOps:cordon.description');
       case 'uncordon':
-        return '解封节点将恢复节点接受新的Pod调度的能力。';
+        return t('nodeOps:uncordon.description');
       case 'drain':
-        return '驱逐节点将首先封锁节点，然后安全地驱逐节点上的所有Pod，使节点可以安全地进行维护操作。';
+        return t('nodeOps:drain.description');
       default:
         return '';
     }
@@ -441,7 +443,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   // 渲染选择操作类型
   const renderSelectOperationType = () => {
     return (
-      <Card title="选择操作类型">
+      <Card title={t('nodeOps:operationType.title')}>
         <Radio.Group
           value={operationType}
           onChange={handleOperationTypeChange}
@@ -450,13 +452,13 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
           style={{ marginBottom: 24 }}
         >
           <Radio.Button value="cordon">
-            <PauseCircleOutlined /> 封锁节点 (Cordon)
+            <PauseCircleOutlined /> {t('nodeOps:operationType.cordon')}
           </Radio.Button>
           <Radio.Button value="uncordon">
-            <PlayCircleOutlined /> 解封节点 (Uncordon)
+            <PlayCircleOutlined /> {t('nodeOps:operationType.uncordon')}
           </Radio.Button>
           <Radio.Button value="drain">
-            <ExportOutlined /> 驱逐节点 (Drain)
+            <ExportOutlined /> {t('nodeOps:operationType.drain')}
           </Radio.Button>
         </Radio.Group>
 
@@ -469,7 +471,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         />
 
         <div>
-          <Title level={5}>已选择 {selectedNodes.length} 个节点:</Title>
+          <Title level={5}>{t('nodeOps:common.selectedNodes', { count: selectedNodes.length })}</Title>
           <List
             size="small"
             bordered
@@ -485,7 +487,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
                   <Text>{node.name}</Text>
                   <Tag color="blue">{node.roles.join(', ')}</Tag>
                   {node.taints?.some(t => t.effect === 'NoSchedule') && (
-                    <Tag color="orange">已禁用调度</Tag>
+                    <Tag color="orange">{t('nodeOps:common.schedulingDisabled')}</Tag>
                   )}
                 </Space>
               </List.Item>
@@ -495,24 +497,24 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         </div>
 
         <Form layout="vertical">
-          <Form.Item label="执行策略">
+          <Form.Item label={t('nodeOps:common.executionStrategy')}>
             <Radio.Group value={executionStrategy} onChange={e => setExecutionStrategy(e.target.value)}>
-              <Radio value="parallel">并行执行 (同时操作所有节点)</Radio>
-              <Radio value="serial">串行执行 (逐个操作，间隔1秒)</Radio>
+              <Radio value="parallel">{t('nodeOps:common.parallel')}</Radio>
+              <Radio value="serial">{t('nodeOps:common.serial')}</Radio>
             </Radio.Group>
           </Form.Item>
 
-          <Form.Item label="失败处理">
+          <Form.Item label={t('nodeOps:common.failureHandling')}>
             <Radio.Group value={failureHandling} onChange={e => setFailureHandling(e.target.value)}>
-              <Radio value="stop">遇到错误时停止后续操作</Radio>
-              <Radio value="continue">忽略错误继续执行</Radio>
+              <Radio value="stop">{t('nodeOps:common.stopOnError')}</Radio>
+              <Radio value="continue">{t('nodeOps:common.continueOnError')}</Radio>
             </Radio.Group>
           </Form.Item>
 
-          <Form.Item label="操作原因 (可选)">
+          <Form.Item label={t('nodeOps:common.operationReason')}>
             <Input.TextArea
               rows={3}
-              placeholder="请输入操作原因，例如：计划维护、系统升级等"
+              placeholder={t('nodeOps:common.reasonPlaceholder')}
               value={operationReason}
               onChange={e => setOperationReason(e.target.value)}
             />
@@ -539,15 +541,15 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   // 渲染Cordon配置
   const renderCordonConfig = () => {
     return (
-      <Card title="封锁节点 (Cordon) 配置">
+      <Card title={t('nodeOps:cordon.title')}>
         <Alert
-          message="操作说明"
+          message={t('nodeOps:cordon.instructions')}
           description={
             <ul>
-              <li>节点将被标记为 "SchedulingDisabled"</li>
-              <li>现有Pod继续正常运行</li>
-              <li>新Pod不会调度到这些节点</li>
-              <li>不影响DaemonSet Pod</li>
+              <li>{t('nodeOps:cordon.rule1')}</li>
+              <li>{t('nodeOps:cordon.rule2')}</li>
+              <li>{t('nodeOps:cordon.rule3')}</li>
+              <li>{t('nodeOps:cordon.rule4')}</li>
             </ul>
           }
           type="info"
@@ -556,7 +558,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         />
 
         <div style={{ marginBottom: 24 }}>
-          <Title level={5}>目标节点:</Title>
+          <Title level={5}>{t('nodeOps:common.targetNodes')}</Title>
           <List
             size="small"
             bordered
@@ -565,9 +567,9 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
               <List.Item>
                 <Space>
                   {node.taints?.some(t => t.effect === 'NoSchedule') ? (
-                    <Badge status="warning" text={`${node.name} (已禁用调度)`} />
+                    <Badge status="warning" text={`${node.name} (${t('nodeOps:common.schedulingDisabled')})`} />
                   ) : (
-                    <Badge status="success" text={`${node.name} (可调度)`} />
+                    <Badge status="success" text={`${node.name} (${t('nodeOps:common.schedulable')})`} />
                   )}
                 </Space>
               </List.Item>
@@ -576,10 +578,10 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         </div>
 
         <Form layout="vertical">
-          <Form.Item label="操作原因 (可选)">
+          <Form.Item label={t('nodeOps:common.operationReason')}>
             <Input.TextArea
               rows={3}
-              placeholder="请输入操作原因，例如：计划维护、系统升级等"
+              placeholder={t('nodeOps:common.reasonPlaceholder')}
               value={operationReason}
               onChange={e => setOperationReason(e.target.value)}
             />
@@ -587,8 +589,8 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
 
           <Form.Item>
             <Checkbox.Group>
-              <Checkbox value="send-notification">发送通知给相关团队</Checkbox>
-              <Checkbox value="record-log" defaultChecked disabled>记录操作日志</Checkbox>
+              <Checkbox value="send-notification">{t('nodeOps:common.sendNotification')}</Checkbox>
+              <Checkbox value="record-log" defaultChecked disabled>{t('nodeOps:common.recordLog')}</Checkbox>
             </Checkbox.Group>
           </Form.Item>
         </Form>
@@ -599,14 +601,14 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   // 渲染Uncordon配置
   const renderUncordonConfig = () => {
     return (
-      <Card title="解封节点 (Uncordon) 配置">
+      <Card title={t('nodeOps:uncordon.title')}>
         <Alert
-          message="操作说明"
+          message={t('nodeOps:uncordon.instructions')}
           description={
             <ul>
-              <li>移除节点的 "SchedulingDisabled" 标记</li>
-              <li>节点恢复接受新Pod调度</li>
-              <li>立即生效，无需重启</li>
+              <li>{t('nodeOps:uncordon.rule1')}</li>
+              <li>{t('nodeOps:uncordon.rule2')}</li>
+              <li>{t('nodeOps:uncordon.rule3')}</li>
             </ul>
           }
           type="info"
@@ -615,7 +617,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         />
 
         <div style={{ marginBottom: 24 }}>
-          <Title level={5}>目标节点:</Title>
+          <Title level={5}>{t('nodeOps:common.targetNodes')}</Title>
           <List
             size="small"
             bordered
@@ -624,9 +626,9 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
               <List.Item>
                 <Space>
                   {node.taints?.some(t => t.effect === 'NoSchedule') ? (
-                    <Badge status="warning" text={`${node.name} (已禁用调度)`} />
+                    <Badge status="warning" text={`${node.name} (${t('nodeOps:common.schedulingDisabled')})`} />
                   ) : (
-                    <Badge status="success" text={`${node.name} (可调度)`} />
+                    <Badge status="success" text={`${node.name} (${t('nodeOps:common.schedulable')})`} />
                   )}
                 </Space>
               </List.Item>
@@ -635,10 +637,10 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         </div>
 
         <Form layout="vertical">
-          <Form.Item label="操作原因 (可选)">
+          <Form.Item label={t('nodeOps:common.operationReason')}>
             <Input.TextArea
               rows={3}
-              placeholder="请输入操作原因，例如：维护完成、恢复正常等"
+              placeholder={t('nodeOps:common.reasonPlaceholderRestore')}
               value={operationReason}
               onChange={e => setOperationReason(e.target.value)}
             />
@@ -646,9 +648,9 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
 
           <Form.Item>
             <Checkbox.Group>
-              <Checkbox value="check-status">启用后立即检查节点状态</Checkbox>
-              <Checkbox value="send-notification">发送恢复通知</Checkbox>
-              <Checkbox value="record-log" defaultChecked disabled>记录操作日志</Checkbox>
+              <Checkbox value="check-status">{t('nodeOps:common.checkStatusAfter')}</Checkbox>
+              <Checkbox value="send-notification">{t('nodeOps:common.sendRecoveryNotification')}</Checkbox>
+              <Checkbox value="record-log" defaultChecked disabled>{t('nodeOps:common.recordLog')}</Checkbox>
             </Checkbox.Group>
           </Form.Item>
         </Form>
@@ -659,17 +661,17 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   // 渲染Drain配置
   const renderDrainConfig = () => {
     return (
-      <Card title="驱逐节点 (Drain) 配置">
+      <Card title={t('nodeOps:drain.title')}>
         <Alert
-          message="警告"
-          description="驱逐节点是一个潜在的破坏性操作，它将驱逐节点上的所有Pod，可能导致服务中断。请确保您了解此操作的影响。"
+          message={t('nodeOps:drain.warning')}
+          description={t('nodeOps:drain.warningDesc')}
           type="warning"
           showIcon
           style={{ marginBottom: 24 }}
         />
 
         <div style={{ marginBottom: 24 }}>
-          <Title level={5}>目标节点:</Title>
+          <Title level={5}>{t('nodeOps:common.targetNodes')}</Title>
           <List
             size="small"
             bordered
@@ -680,7 +682,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
                   <Badge status="success" />
                   <Text>{node.name}</Text>
                   <Tag color="blue">{node.roles.join(', ')}</Tag>
-                  <Tag color="green">{node.podCount}个Pod</Tag>
+                  <Tag color="green">{t('nodeOps:drain.podCount', { count: node.podCount })}</Tag>
                 </Space>
               </List.Item>
             )}
@@ -688,17 +690,17 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         </div>
 
         <Form layout="vertical">
-          <Form.Item label="高级选项">
+          <Form.Item label={t('nodeOps:drain.advancedOptions')}>
             <Checkbox.Group onChange={handleDrainOptionsChange} defaultValue={['ignore-daemonsets']}>
-              <Checkbox value="ignore-daemonsets">忽略DaemonSet Pod</Checkbox>
-              <Checkbox value="delete-emptydir-data">删除本地存储的Pod</Checkbox>
-              <Checkbox value="force">强制删除 (--force) ⚠️ 危险操作</Checkbox>
+              <Checkbox value="ignore-daemonsets">{t('nodeOps:drain.ignoreDaemonSets')}</Checkbox>
+              <Checkbox value="delete-emptydir-data">{t('nodeOps:drain.deleteLocalData')}</Checkbox>
+              <Checkbox value="force">{t('nodeOps:drain.forceDelete')}</Checkbox>
             </Checkbox.Group>
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="宽限期 (秒)">
+              <Form.Item label={t('nodeOps:drain.gracePeriod')}>
                 <InputNumber
                   min={0}
                   max={300}
@@ -708,7 +710,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="超时时间 (秒)">
+              <Form.Item label={t('nodeOps:drain.timeout')}>
                 <InputNumber
                   min={60}
                   max={1800}
@@ -719,24 +721,24 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
             </Col>
           </Row>
 
-          <Form.Item label="确认风险">
+          <Form.Item label={t('nodeOps:drain.confirmRisk')}>
             <Checkbox.Group onChange={handleConfirmChecksChange}>
               <div style={{ marginBottom: 8 }}>
-                <Checkbox value="service-interruption">我了解此操作可能导致服务中断</Checkbox>
+                <Checkbox value="service-interruption">{t('nodeOps:drain.riskServiceInterruption')}</Checkbox>
               </div>
               <div style={{ marginBottom: 8 }}>
-                <Checkbox value="replica-confirmed">我已确认有足够的副本在其他节点运行</Checkbox>
+                <Checkbox value="replica-confirmed">{t('nodeOps:drain.riskReplicaConfirmed')}</Checkbox>
               </div>
               <div>
-                <Checkbox value="team-notified">我已通知相关团队此次维护操作</Checkbox>
+                <Checkbox value="team-notified">{t('nodeOps:drain.riskTeamNotified')}</Checkbox>
               </div>
             </Checkbox.Group>
           </Form.Item>
 
-          <Form.Item label="操作原因 (可选)">
+          <Form.Item label={t('nodeOps:common.operationReason')}>
             <Input.TextArea
               rows={3}
-              placeholder="请输入操作原因，例如：节点维护、系统升级等"
+              placeholder={t('nodeOps:common.reasonPlaceholderDrain')}
               value={operationReason}
               onChange={e => setOperationReason(e.target.value)}
             />
@@ -749,9 +751,9 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   // 渲染确认操作
   const renderConfirmOperation = () => {
     return (
-      <Card title={`正在执行: ${getOperationTitle()}`}>
+      <Card title={t('nodeOps:execution.executing', { title: getOperationTitle() })}>
         <div style={{ marginBottom: 16 }}>
-          <Text>总体进度:</Text>
+          <Text>{t('nodeOps:execution.overallProgress')}</Text>
           <Progress percent={operationProgress} status="active" />
         </div>
 
@@ -775,7 +777,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         />
 
         <div>
-          <Title level={5}>实时日志:</Title>
+          <Title level={5}>{t('nodeOps:execution.realtimeLog')}</Title>
           <div
             style={{
               height: 150,
@@ -799,10 +801,10 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   // 渲染操作结果
   const renderOperationResult = () => {
     return (
-      <Card title="操作完成">
+      <Card title={t('nodeOps:result.title')}>
         <Alert
-          message="操作已完成"
-          description={`操作类型: ${getOperationTitle()}`}
+          message={t('nodeOps:result.completed')}
+          description={t('nodeOps:result.operationType', { title: getOperationTitle() })}
           type="success"
           showIcon
           style={{ marginBottom: 24 }}
@@ -812,21 +814,21 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
           <Row gutter={16}>
             <Col span={8}>
               <Statistic
-                title="执行时间"
+                title={t('nodeOps:result.startTime')}
                 value={operationResults.startTime}
                 formatter={value => <span>{value}</span>}
               />
             </Col>
             <Col span={8}>
               <Statistic
-                title="完成时间"
+                title={t('nodeOps:result.endTime')}
                 value={operationResults.endTime}
                 formatter={value => <span>{value}</span>}
               />
             </Col>
             <Col span={8}>
               <Statistic
-                title="总耗时"
+                title={t('nodeOps:result.totalDuration')}
                 value={operationResults.duration}
               />
             </Col>
@@ -837,7 +839,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
           <Row gutter={16}>
             <Col span={8}>
               <Statistic
-                title="成功"
+                title={t('nodeOps:result.success')}
                 value={operationResults.success}
                 valueStyle={{ color: '#3f8600' }}
                 prefix={<CheckCircleOutlined />}
@@ -845,7 +847,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
             </Col>
             <Col span={8}>
               <Statistic
-                title="失败"
+                title={t('nodeOps:result.failed')}
                 value={operationResults.failed}
                 valueStyle={{ color: '#cf1322' }}
                 prefix={<CloseCircleOutlined />}
@@ -853,7 +855,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
             </Col>
             <Col span={8}>
               <Statistic
-                title="跳过"
+                title={t('nodeOps:result.skipped')}
                 value={operationResults.skipped}
                 valueStyle={{ color: '#faad14' }}
                 prefix={<ExclamationCircleOutlined />}
@@ -863,7 +865,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         </div>
 
         <div>
-          <Title level={5}>详细结果:</Title>
+          <Title level={5}>{t('nodeOps:result.detailResult')}</Title>
           <List
             size="small"
             bordered
@@ -887,8 +889,8 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
 
         {operationResults.failed > 0 && (
           <Alert
-            message="后续建议"
-            description="部分节点操作失败，请检查失败原因并考虑重试或手动处理。"
+            message={t('nodeOps:result.suggestion')}
+            description={t('nodeOps:result.suggestionDesc')}
             type="warning"
             showIcon
             style={{ marginBottom: 24 }}
@@ -897,7 +899,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
 
         <div style={{ marginTop: 24, textAlign: 'right' }}>
           <Button type="primary" onClick={handleFinish}>
-            完成
+            {t('nodeOps:buttons.finish')}
           </Button>
         </div>
       </Card>
@@ -907,18 +909,18 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   return (
     <div className="node-operations">
       <Card
-        title={<Title level={4}>节点操作</Title>}
+        title={<Title level={4}>{t('nodeOps:title')}</Title>}
         extra={
           <Button onClick={handleCancel}>
-            取消
+            {t('nodeOps:buttons.cancel')}
           </Button>
         }
       >
         <Steps current={currentStep} style={{ marginBottom: 24 }}>
-          <Step title="选择操作" />
-          <Step title="配置参数" />
-          <Step title="执行操作" />
-          <Step title="完成" />
+          <Step title={t('nodeOps:steps.selectOperation')} />
+          <Step title={t('nodeOps:steps.configParams')} />
+          <Step title={t('nodeOps:steps.executeOperation')} />
+          <Step title={t('nodeOps:steps.complete')} />
         </Steps>
 
         {renderStepContent()}
@@ -926,22 +928,22 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
         <div style={{ marginTop: 24, textAlign: 'right' }}>
           {currentStep > 0 && currentStep < 3 && (
             <Button style={{ marginRight: 8 }} onClick={handlePrevious}>
-              上一步
+              {t('nodeOps:buttons.previous')}
             </Button>
           )}
           {currentStep < 2 && (
             <Button type="primary" onClick={handleNext}>
-              下一步
+              {t('nodeOps:buttons.next')}
             </Button>
           )}
           {currentStep === 2 && (
             <Button type="primary" onClick={handleNext} loading={loading}>
-              开始执行
+              {t('nodeOps:buttons.startExecution')}
             </Button>
           )}
           {currentStep === 3 && (
             <Button type="primary" onClick={handleFinish}>
-              完成
+              {t('nodeOps:buttons.finish')}
             </Button>
           )}
         </div>

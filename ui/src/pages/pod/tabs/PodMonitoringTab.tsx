@@ -7,6 +7,7 @@ import { Card, Space, Button, Switch, Spin, DatePicker, Popover, Divider, Typogr
 import { ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { generateDataSourceUID } from '../../../config/grafana.config';
+import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
@@ -52,7 +53,8 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
   namespace,
   podName,
 }) => {
-  const [timeRange, setTimeRange] = useState('1h');
+const { t } = useTranslation(['pod', 'common']);
+const [timeRange, setTimeRange] = useState('1h');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
@@ -149,7 +151,7 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
   if (!clusterName) {
     return (
       <Empty
-        description="无法获取集群信息，请刷新页面重试"
+        description={t('pod:terminal.cannotGetCluster')}
         style={{ padding: '60px 0' }}
       />
     );
@@ -167,7 +169,7 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
             value={customFromTime}
             onChange={setCustomFromTime}
             style={{ width: '100%', marginTop: 4 }}
-            placeholder="开始时间"
+            placeholder={t('logs:center.startTime')}
             format="YYYY-MM-DD HH:mm:ss"
           />
         </div>
@@ -178,7 +180,7 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
             value={customToTime}
             onChange={setCustomToTime}
             style={{ width: '100%', marginTop: 4 }}
-            placeholder="结束时间"
+            placeholder={t('logs:center.endTime')}
             format="YYYY-MM-DD HH:mm:ss"
           />
         </div>
@@ -219,7 +221,7 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
 
   return (
     <Card
-      title="监控图表"
+      title={t('pod:terminal.monitorChart')}
       extra={
         <Space>
           <Popover
@@ -234,19 +236,19 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
             </Button>
           </Popover>
           <Space>
-            <span>自动刷新</span>
+            <span>{t('pod:terminal.autoRefresh')}</span>
             <Switch
               checked={autoRefresh}
               onChange={(checked) => {
                 setAutoRefresh(checked);
                 handleRefresh();
               }}
-              checkedChildren="开"
-              unCheckedChildren="关"
+              checkedChildren={t('pod:terminal.on')}
+              unCheckedChildren={t('pod:terminal.off')}
             />
           </Space>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-            刷新
+            {t('common:actions.refresh')}
           </Button>
         </Space>
       }
@@ -263,7 +265,7 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
           textAlign: 'center',
         }}>
           <Spin size="large" />
-          <div style={{ marginTop: 16, color: '#666' }}>监控数据加载中...</div>
+          <div style={{ marginTop: 16, color: '#666' }}>{t('pod:terminal.monitoringData')}</div>
         </div>
       )}
       
