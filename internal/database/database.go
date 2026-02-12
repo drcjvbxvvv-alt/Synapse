@@ -11,9 +11,9 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
+	"github.com/glebarez/sqlite"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 )
