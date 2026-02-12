@@ -155,7 +155,7 @@ spec:
 ```bash
 # 备份环境变量配置
 cp /opt/kubepolaris/.env config_backup_$(date +%Y%m%d).env
-cp /opt/kubepolaris/deploy/docker-compose/.env env_backup_$(date +%Y%m%d).env
+cp /opt/kubepolaris/.env env_backup_$(date +%Y%m%d).env
 
 # 备份 Kubernetes Secrets
 kubectl get secret -n kubepolaris kubepolaris-secrets -o yaml > secrets.yaml
@@ -165,7 +165,7 @@ kubectl get secret -n kubepolaris kubepolaris-secrets -o yaml > secrets.yaml
 
 ```bash
 # 使用 GPG 加密
-tar -cz /opt/kubepolaris/.env /opt/kubepolaris/deploy/docker-compose/.env | \
+tar -cz /opt/kubepolaris/.env | \
   gpg --encrypt -r admin@example.com > config_backup.tar.gz.gpg
 
 # 解密

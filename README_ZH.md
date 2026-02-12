@@ -140,24 +140,38 @@
 
 ## 🚀 快速开始
 
-### 方式一：Docker Compose（推荐）
+### 方式一：Docker Run（最快体验）
+
+```bash
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+
+# 访问 http://localhost:8080
+# 默认账号: admin / KubePolaris@2026
+```
+
+> 使用内置 SQLite，无需任何外部依赖。生产环境建议使用 Docker Compose + MySQL 部署。
+
+### 方式二：Docker Compose（推荐）
 
 ```bash
 # 环境要求 Docker 20.10+ and Docker Compose 2.0+
 
 # 克隆项目
 git clone https://github.com/clay-wangzhi/KubePolaris.git
+cd KubePolaris
 
+# 配置环境变量
+cp .env.example .env
+vim .env  # 设置密码
 
 # 启动服务
-cd KubePolaris/deploy/scripts/
-./install.sh
+docker compose up -d
 
-# Access http://${ip}
-# Default credentials: admin / KubePolaris@2026
+# 访问 http://${ip}
+# 默认账号: admin / KubePolaris@2026
 ```
 
-### 方式二：Kubernetes 部署
+### 方式三：Kubernetes 部署
 
 ```bash
 # 添加 Helm 仓库
@@ -173,7 +187,7 @@ helm install kubepolaris kubepolaris/kubepolaris \
 helm status kubepolaris -n kubepolaris
 ```
 
-### 方式三：源码运行
+### 方式四：源码运行
 
 ```bash
 # 环境要求

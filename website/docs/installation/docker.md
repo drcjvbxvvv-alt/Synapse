@@ -13,7 +13,19 @@ sidebar_position: 1
 - 至少 4GB 可用内存
 - 至少 20GB 可用磁盘空间
 
-## 快速部署
+## 一条命令快速体验
+
+```bash
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+```
+
+访问 `http://localhost:8080`，使用默认账号 `admin / KubePolaris@2026` 登录。
+
+:::tip
+以上方式使用内置 SQLite，适合快速体验。生产环境建议使用下方 Docker Compose 部署，搭配 MySQL + Grafana。
+:::
+
+## Docker Compose 部署
 
 ### 1. 获取代码
 
@@ -24,8 +36,14 @@ git clone https://github.com/clay-wangzhi/KubePolaris.git
 ### 2. 启动服务
 
 ```bash
-cd KubePolaris/deploy/scripts/
-./install.sh
+cd KubePolaris
+
+# 配置环境变量
+cp .env.example .env
+vim .env  # 设置密码
+
+# 启动服务
+docker compose up -d
 ```
 
 ### 3. 验证部署
@@ -44,12 +62,8 @@ curl http://localhost:8080/healthz
 
 ### 默认配置
 
-```yaml title="docker-compose.yml"
-
+```yaml title="docker-compose.yaml"
 services:
-  # ==========================================
-  # MySQL 数据库
-  # ==========================================
   mysql:
     image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/mysql:8.0
     container_name: kubepolaris-mysql
@@ -59,226 +73,35 @@ services:
       MYSQL_DATABASE: kubepolaris
       MYSQL_USER: kubepolaris
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      TZ: Asia/Shanghai
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    networks:
-      - kubepolaris-network
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD && mysql -h localhost -u kubepolaris -p$$MYSQL_PASSWORD -e 'SELECT 1' kubepolaris || exit 1"]
-      interval: 5s
-      timeout: 10s
-      retries: 30
-      start_period: 60s
+    # ...
 
-  # ==========================================
-  # KubePolaris 后端
-  # ==========================================
-  backend:
+  kubepolaris:
     build:
-      context: ../..
-      dockerfile: deploy/docker/kubepolaris/Dockerfile.backend
-    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris-backend:latest
-    container_name: kubepolaris-backend
+      context: .
+      dockerfile: Dockerfile
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:${VERSION:-latest}
+    container_name: kubepolaris
     restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
       grafana:
         condition: service_healthy
-    environment:
-      SERVER_PORT: 8080
-      SERVER_MODE: debug
-      DB_DRIVER: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USERNAME: kubepolaris
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      DB_DATABASE: kubepolaris
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRE_TIME: 24
-      LOG_LEVEL: debug
-      GRAFANA_ENABLED: "true"
-      GRAFANA_URL: http://grafana:3000
-      GRAFANA_API_KEY_FILE: /app/grafana/secrets/grafana_api_key
-      TZ: Asia/Shanghai
     ports:
-      - "8080:8080"
-    volumes:
-      - ../docker/grafana/secrets:/app/grafana/secrets:ro
-      - ~/.kube:/root/.kube:ro
-    networks:
-      - kubepolaris-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 100s
+      - "${APP_PORT:-80}:8080"
+    # ...
 
-  # ==========================================
-  # KubePolaris 前端
-  # ==========================================
-  frontend:
-    build:
-      context: ../..
-      dockerfile: deploy/docker/kubepolaris/Dockerfile.frontend
-    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris-frontend:latest
-    container_name: kubepolaris-frontend
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      TZ: Asia/Shanghai
-    ports:
-      - "80:80"
-    networks:
-      - kubepolaris-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ==========================================
-  # Grafana
-  # ==========================================
   grafana:
     image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/grafana:10.2.0
-    container_name: kubepolaris-grafana
-    restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-      GF_SECURITY_ALLOW_EMBEDDING: "true"
-      GF_SECURITY_COOKIE_SAMESITE: lax
-      GF_SECURITY_COOKIE_SECURE: "false"
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_AUTH_ANONYMOUS_ORG_NAME: Main Org.
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_LOG_LEVEL: info
-      # 配置子路径，通过 Nginx 代理访问
-      GF_SERVER_ROOT_URL: "/grafana/"
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-      TZ: Asia/Shanghai
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ../docker/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    networks:
-      - kubepolaris-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # ...
 
-  # ==========================================
-  # Grafana 初始化（自动生成 API Key）
-  # ==========================================
   grafana-init:
     image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/curl:8.16.0
-    container_name: kubepolaris-grafana-init
-    user: "0:0"  # 以 root 用户运行，解决权限问题
-    depends_on:
-      grafana:
-        condition: service_healthy
-    environment:
-      GRAFANA_URL: http://grafana:3000
-      GRAFANA_USER: admin
-      GRAFANA_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-    volumes:
-      - ../docker/grafana/secrets:/secrets
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        echo "⏳ 等待 Dashboard 加载完成..."
-        sleep 5
-
-        echo "🔧 设置 KubePolaris 文件夹权限..."
-        curl -s -X POST \
-          -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
-          -H "Content-Type: application/json" \
-          -d '{"items":[{"role":"Viewer","permission":1},{"role":"Editor","permission":2}]}' \
-          "$${GRAFANA_URL}/api/folders/kubepolaris-folder/permissions"
-        echo " ✅ 权限设置完成"
-
-        echo ""
-        echo "🔑 创建 Service Account 和 API Token..."
-
-        SA_EXISTS=$$(curl -s -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
-          "$${GRAFANA_URL}/api/serviceaccounts/search?query=kubepolaris" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
-
-        if [ -z "$$SA_EXISTS" ]; then
-          echo "  📝 创建新的 Service Account..."
-          SA_RESULT=$$(curl -s -X POST \
-            -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
-            -H "Content-Type: application/json" \
-            -d '{"name":"kubepolaris","role":"Admin","isDisabled":false}' \
-            "$${GRAFANA_URL}/api/serviceaccounts")
-          SA_ID=$$(echo "$$SA_RESULT" | grep -o '"id":[0-9]*' | cut -d: -f2)
-          echo "  ✅ Service Account 创建成功，ID: $$SA_ID"
-        else
-          SA_ID=$$SA_EXISTS
-          echo "  ℹ️  Service Account 已存在，ID: $$SA_ID"
-        fi
-
-        curl -s -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
-          "$${GRAFANA_URL}/api/serviceaccounts/$$SA_ID/tokens" | \
-          grep -o '"id":[0-9]*' | cut -d: -f2 | while read TOKEN_ID; do
-            curl -s -X DELETE \
-              -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
-              "$${GRAFANA_URL}/api/serviceaccounts/$$SA_ID/tokens/$$TOKEN_ID"
-          done
-
-        echo "  🔐 生成新的 API Token..."
-        TOKEN_RESULT=$$(curl -s -X POST \
-          -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
-          -H "Content-Type: application/json" \
-          -d '{"name":"kubepolaris-token","secondsToLive":0}' \
-          "$${GRAFANA_URL}/api/serviceaccounts/$$SA_ID/tokens")
-
-        API_KEY=$$(echo "$$TOKEN_RESULT" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
-
-        if [ -n "$$API_KEY" ]; then
-          echo "$$API_KEY" > /secrets/grafana_api_key
-          echo "  ✅ API Token 已保存到 /secrets/grafana_api_key"
-          echo ""
-          echo "=========================================="
-          echo "🎉 Grafana 初始化完成！"
-          echo "=========================================="
-        else
-          echo "  ❌ Token 创建失败: $$TOKEN_RESULT"
-          exit 1
-        fi
-    networks:
-      - kubepolaris-network
-    restart: "no"
-
-# ==========================================
-# 数据卷
-# ==========================================
-volumes:
-  mysql_data:
-    name: kubepolaris-mysql-data
-  grafana_data:
-    name: kubepolaris-grafana-data
-
-# ==========================================
-# 网络
-# ==========================================
-networks:
-  kubepolaris-network:
-    name: kubepolaris-network
-    driver: bridge
+    # 自动生成 Grafana API Key
+    # ...
 ```
+
+完整配置请参考项目根目录的 [docker-compose.yaml](https://github.com/clay-wangzhi/KubePolaris/blob/main/docker-compose.yaml)。
 
 
 ## 数据备份
@@ -308,14 +131,14 @@ docker run --rm -v kubepolaris_mysql_data:/data -v $(pwd):/backup alpine tar xzf
 ### 升级到新版本
 
 ```bash
-# 拉取新镜像
-docker-compose pull
+# 拉取最新代码
+git pull origin main
 
-# 重启服务
-docker-compose up -d
+# 重新构建并启动
+docker compose up -d --build
 
 # 查看日志确认升级成功
-docker-compose logs -f backend
+docker compose logs -f kubepolaris
 ```
 
 ### 回滚
@@ -323,7 +146,7 @@ docker-compose logs -f backend
 ```bash
 # 使用指定版本
 export VERSION=v1.0.0
-docker-compose up -d
+docker compose up -d
 ```
 
 ## 常见问题
@@ -334,10 +157,8 @@ docker-compose up -d
 # 查看端口占用
 lsof -i :8080
 
-# 修改端口映射
-# 在 docker-compose.yml 中修改 ports 配置
-ports:
-  - "9090:8080"  # 使用 9090 端口
+# 修改 .env 中的 APP_PORT 配置
+APP_PORT=9090  # 使用 9090 端口
 ```
 
 ### 容器无法访问网络
@@ -348,9 +169,9 @@ docker network ls
 docker network inspect kubepolaris_default
 
 # 重建网络
-docker-compose down
+docker compose down
 docker network prune
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 数据库连接失败
@@ -363,7 +184,7 @@ docker logs kubepolaris-mysql
 docker exec -it kubepolaris-mysql mysql -u root -p
 
 # 检查环境变量
-docker exec kubepolaris-backend env | grep DATABASE
+docker exec kubepolaris env | grep DB_
 ```
 
 ## 下一步

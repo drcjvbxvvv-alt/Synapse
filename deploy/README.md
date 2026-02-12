@@ -1,84 +1,68 @@
 # KubePolaris 部署指南
 
-本目录包含 KubePolaris 的所有部署相关文件。
+本目录包含 KubePolaris 的辅助部署配置文件。
+
+> **注意**: `Dockerfile` 和 `docker-compose.yaml` 已移至项目根目录，便于直接使用。
 
 ## 📁 目录结构
 
 ```
-deploy/
-├── docker/                    # Docker 相关配置
-│   ├── kubepolaris/          # KubePolaris 镜像构建
-│   │   ├── Dockerfile        # 一体化镜像（前后端合一）
-│   │   ├── Dockerfile.backend   # 后端镜像
-│   │   ├── Dockerfile.frontend  # 前端镜像
-│   │   ├── nginx.conf           # 一体化镜像 Nginx 配置
-│   │   ├── nginx-frontend.conf  # 前端镜像 Nginx 配置
-│   │   └── entrypoint.sh        # 启动脚本
-│   ├── mysql/                # MySQL 配置
-│   │   ├── conf/            # MySQL 配置文件
-│   │   └── init/            # 初始化 SQL 脚本
-│   └── grafana/              # Grafana 配置
-│       ├── dashboards/       # 预置 Dashboard
-│       ├── provisioning/     # 自动配置
-│       └── secrets/          # API Key 等密钥
-├── docker-compose/           # Docker Compose 文件
-│   ├── docker-compose.yml    # 开发环境
-│   └── docker-compose.prod.yml  # 生产环境
-├── scripts/                  # 部署脚本
-│   ├── install.sh           # 一键安装
-│   ├── upgrade.sh           # 升级脚本
-│   └── uninstall.sh         # 卸载脚本
-└── yaml/                     # Kubernetes YAML 文件（未来）
+项目根目录/
+├── Dockerfile                 # 多阶段构建（前后端合一，单二进制）
+├── docker-compose.yaml        # Docker Compose 编排文件
+├── .env.example               # 环境变量模板
+└── deploy/
+    ├── docker/
+    │   ├── grafana/           # Grafana 配置
+    │   │   ├── dashboards/    # 预置 Dashboard
+    │   │   ├── provisioning/  # 自动配置
+    │   │   └── secrets/       # API Key 等密钥
+    │   └── mysql/             # MySQL 配置（可选）
+    │       ├── conf/          # MySQL 配置文件
+    │       └── init/          # 初始化 SQL 脚本
+    └── helm/                  # Kubernetes Helm Chart
+        └── kubepolaris/
 ```
 
 ## 🚀 快速开始
 
-### 方式一：使用安装脚本（推荐）
+### 最快体验（一条命令）
 
 ```bash
-# 一键安装
-./deploy/scripts/install.sh
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
 
-# 升级
-./deploy/scripts/upgrade.sh
-
-# 卸载
-./deploy/scripts/uninstall.sh
+# 访问 http://localhost:8080
+# 默认账号: admin / KubePolaris@2026
 ```
 
-### 方式二：使用 Docker Compose
+> 使用内置 SQLite，无需外部依赖。生产环境建议使用 Docker Compose + MySQL。
+
+### Docker Compose 部署
 
 ```bash
-# 进入 docker-compose 目录
-cd deploy/docker-compose
+# 1. 克隆项目
+git clone https://github.com/clay-wangzhi/KubePolaris.git
+cd KubePolaris
 
-# 复制并编辑环境变量
-cp ../../.env.example .env
+# 2. 配置环境变量
+cp .env.example .env
 vim .env
 
-# 启动开发环境
-docker-compose up -d
+# 3. 启动所有服务
+docker compose up -d
 
-# 启动生产环境
-docker-compose -f docker-compose.prod.yml up -d
-```
+# 4. 查看日志
+docker compose logs -f
 
-### 方式三：使用 Makefile
-
-```bash
-# 在项目根目录执行
-make install    # 安装
-make docker-up  # 启动服务
-make docker-down # 停止服务
+# 5. 停止服务
+docker compose down
 ```
 
 ## 📦 镜像说明
 
 | 镜像 | 用途 | 端口 |
 |------|------|------|
-| `kubepolaris/kubepolaris` | 一体化镜像（前后端合一） | 80, 8080 |
-| `kubepolaris/backend` | 后端 API 服务 | 8080 |
-| `kubepolaris/frontend` | 前端静态服务 | 80 |
+| `kubepolaris` | 一体化镜像（前端通过 go:embed 嵌入后端） | 8080 |
 
 ## 🔧 环境变量
 
@@ -87,15 +71,15 @@ make docker-down # 停止服务
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `MYSQL_ROOT_PASSWORD` | MySQL root 密码 | - |
-| `MYSQL_USER` | MySQL 用户名 | kubepolaris |
-| `MYSQL_PASSWORD` | MySQL 密码 | - |
+| `MYSQL_PASSWORD` | MySQL 应用密码 | - |
 | `JWT_SECRET` | JWT 密钥 | - |
 | `GRAFANA_ADMIN_PASSWORD` | Grafana 管理员密码 | - |
+| `APP_PORT` | 应用对外端口 | `80` |
+| `SERVER_MODE` | 运行模式 (debug/release) | `release` |
 
 ## 📊 服务访问
 
-- **KubePolaris**: http://localhost:80
-- **API**: http://localhost:8080
+- **KubePolaris**: http://localhost (默认端口 80)
 - **Grafana**: http://localhost:3000
 
 ## 📝 注意事项
@@ -111,4 +95,3 @@ make docker-down # 停止服务
 
 3. **Kubernetes 集群访问**
    - 挂载 kubeconfig 或使用 ServiceAccount
-

@@ -14,16 +14,31 @@ sidebar_position: 1
 
 ## 第一步：启动 KubePolaris
 
-使用 Docker Compose 是最快速的体验方式：
+### 最快体验：一条命令启动
+
+```bash
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+```
+
+访问 `http://localhost:8080` 即可使用。
+
+:::tip 说明
+以上方式使用内置 SQLite，无需任何外部依赖，适合快速体验。生产环境建议使用下方 Docker Compose 方式部署。
+:::
+
+### 推荐方式：Docker Compose
 
 ```bash
 # 克隆项目
 git clone https://github.com/clay-wangzhi/KubePolaris.git
+cd KubePolaris
 
+# 配置环境变量
+cp .env.example .env
+vim .env  # 设置密码
 
 # 启动服务
-cd KubePolaris/deploy/scripts/
-./install.sh
+docker compose up -d
 ```
 
 等待约 1-2 分钟，所有服务启动完成后，访问：

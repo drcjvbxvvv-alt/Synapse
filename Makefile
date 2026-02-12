@@ -2,16 +2,13 @@
 # KubePolaris Makefile
 # ==========================================
 
-.PHONY: help dev build test lint docker-build docker-push helm-package docs swagger clean
+.PHONY: help dev dev-backend dev-frontend build build-backend build-frontend test test-backend test-frontend lint lint-backend lint-frontend docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs swagger clean version
 
 # 变量
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 REGISTRY ?= docker.io
 IMAGE_NAME ?= registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris
-BACKEND_IMAGE ?= registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris-backend
-FRONTEND_IMAGE ?= registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris-frontend
-COMPOSE_CMD := $(shell command -v docker-compose 2>/dev/null || echo "docker compose")
-DEPLOY_DIR := deploy
+COMPOSE_CMD := docker compose
 
 # 颜色
 BLUE := \033[0;34m
@@ -57,9 +54,6 @@ help:
 	@echo "  make docker-logs    - 查看 Docker Compose 日志"
 	@echo ""
 	@echo "$(GREEN)部署命令:$(NC)"
-	@echo "  make install        - 安装 KubePolaris"
-	@echo "  make upgrade        - 升级 KubePolaris"
-	@echo "  make uninstall      - 卸载 KubePolaris"
 	@echo "  make helm-package   - 打包 Helm Chart"
 	@echo ""
 	@echo "$(GREEN)其他命令:$(NC)"
@@ -77,7 +71,7 @@ help:
 ## dev: 启动开发环境
 dev:
 	@echo "$(BLUE)启动开发环境...$(NC)"
-	cd $(DEPLOY_DIR)/docker-compose && $(COMPOSE_CMD) up -d mysql grafana
+	$(COMPOSE_CMD) up -d mysql grafana grafana-init
 	@echo "$(GREEN)基础服务已启动$(NC)"
 	@echo "请在单独的终端运行:"
 	@echo "  后端: go run cmd/main.go"
@@ -159,7 +153,7 @@ lint-frontend:
 ## docker-build: 构建 Docker 镜像（前端嵌入后端，单镜像）
 docker-build:
 	@echo "$(BLUE)构建 Docker 镜像...$(NC)"
-	docker build -t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest -f $(DEPLOY_DIR)/docker/kubepolaris/Dockerfile .
+	docker build -t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest .
 	@echo "$(GREEN)镜像构建完成$(NC)"
 	@echo "  $(IMAGE_NAME):$(VERSION)"
 
@@ -173,51 +167,33 @@ docker-push:
 ## docker-up: 启动 Docker Compose 服务
 docker-up:
 	@echo "$(BLUE)启动 Docker Compose 服务...$(NC)"
-	cd $(DEPLOY_DIR)/docker-compose && $(COMPOSE_CMD) up -d
+	$(COMPOSE_CMD) up -d
 	@echo "$(GREEN)服务已启动$(NC)"
-	cd $(DEPLOY_DIR)/docker-compose && $(COMPOSE_CMD) ps
+	$(COMPOSE_CMD) ps
 
 ## docker-down: 停止 Docker Compose 服务
 docker-down:
 	@echo "$(BLUE)停止 Docker Compose 服务...$(NC)"
-	cd $(DEPLOY_DIR)/docker-compose && $(COMPOSE_CMD) down
+	$(COMPOSE_CMD) down
 	@echo "$(GREEN)服务已停止$(NC)"
 
 ## docker-logs: 查看 Docker Compose 日志
 docker-logs:
-	cd $(DEPLOY_DIR)/docker-compose && $(COMPOSE_CMD) logs -f
+	$(COMPOSE_CMD) logs -f
 
 ## docker-ps: 查看 Docker Compose 状态
 docker-ps:
-	cd $(DEPLOY_DIR)/docker-compose && $(COMPOSE_CMD) ps
+	$(COMPOSE_CMD) ps
 
 # ==========================================
 # 部署命令
 # ==========================================
 
-## install: 安装 KubePolaris
-install:
-	@echo "$(BLUE)安装 KubePolaris...$(NC)"
-	./$(DEPLOY_DIR)/scripts/install.sh
-
-## upgrade: 升级 KubePolaris
-upgrade:
-	@echo "$(BLUE)升级 KubePolaris...$(NC)"
-	./$(DEPLOY_DIR)/scripts/upgrade.sh
-
-## uninstall: 卸载 KubePolaris
-uninstall:
-	@echo "$(BLUE)卸载 KubePolaris...$(NC)"
-	./$(DEPLOY_DIR)/scripts/uninstall.sh
-
 ## helm-package: 打包 Helm Chart
 helm-package:
 	@echo "$(BLUE)打包 Helm Chart...$(NC)"
-	@if [ -d "$(DEPLOY_DIR)/yaml" ]; then \
-		echo "$(YELLOW)YAML 部署文件目录: $(DEPLOY_DIR)/yaml$(NC)"; \
-	fi
-	@if [ -d "$(DEPLOY_DIR)/helm/kubepolaris" ]; then \
-		helm package $(DEPLOY_DIR)/helm/kubepolaris -d dist/; \
+	@if [ -d "deploy/helm/kubepolaris" ]; then \
+		helm package deploy/helm/kubepolaris -d dist/; \
 		echo "$(GREEN)Helm Chart 打包完成$(NC)"; \
 	else \
 		echo "$(YELLOW)Helm Chart 目录不存在，请先创建$(NC)"; \

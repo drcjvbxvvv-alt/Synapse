@@ -140,24 +140,38 @@
 
 ## 🚀 Quick Start
 
-### Option 1: Docker Compose (Recommended)
+### Option 1: Docker Run (Quickest)
+
+```bash
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+
+# Access http://localhost:8080
+# Default credentials: admin / KubePolaris@2026
+```
+
+> Uses built-in SQLite, no external dependencies required. For production use, deploy with Docker Compose and MySQL.
+
+### Option 2: Docker Compose (Recommended)
 
 ```bash
 # Environmental requirements Docker 20.10+ and Docker Compose 2.0+
 
 # Clone the repository
 git clone https://github.com/clay-wangzhi/KubePolaris.git
+cd KubePolaris
 
+# Configure environment variables
+cp .env.example .env
+vim .env  # Set your passwords
 
 # Start services
-cd KubePolaris/deploy/scripts/
-./install.sh
+docker compose up -d
 
 # Access http://${ip}
 # Default credentials: admin / KubePolaris@2026
 ```
 
-### Option 2: Kubernetes Deployment
+### Option 3: Kubernetes Deployment
 
 ```bash
 # Add Helm repository
@@ -173,7 +187,7 @@ helm install kubepolaris kubepolaris/kubepolaris \
 helm status kubepolaris -n kubepolaris
 ```
 
-### Option 3: Run from Source
+### Option 4: Run from Source
 
 ```bash
 # Requirements
@@ -249,12 +263,13 @@ kubepolaris/
 │   │   ├── components/     # Common components
 │   │   ├── services/       # API services
 │   │   └── types/          # Type definitions
+├── Dockerfile              # Multi-stage build (single binary)
+├── docker-compose.yaml     # Docker Compose orchestration
+├── .env.example            # Environment variables template
 ├── deploy/                 # Deployment configs
-│   ├── docker/             # Docker configs
-│   ├── docker-compose/     # Compose files
-│   └── yaml/               # K8s YAML
-├── website/                # Documentation site
-└── .env.example            # Environment variables template
+│   ├── docker/             # Grafana & MySQL configs
+│   └── helm/               # Kubernetes Helm Chart
+└── website/                # Documentation site
 ```
 
 ## 📊 Feature Status
