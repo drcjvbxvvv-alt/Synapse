@@ -123,7 +123,7 @@ cd k8s-management-frontend && npm run dev
 ```
 
 ### 关键配置文件
-- 后端配置: `configs/config.yaml`
+- 后端配置: 纯环境变量模式（参见 `.env.example`）
 - 数据库初始化: `setup_mysql.sql`
 - 前端配置: `vite.config.ts`
 

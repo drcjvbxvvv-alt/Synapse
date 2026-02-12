@@ -6,14 +6,12 @@ sidebar_position: 3
 
 本文档详细说明 KubePolaris 的所有配置项。
 
-## 配置文件
+## 配置方式
 
-KubePolaris 支持以下方式加载配置（优先级从高到低）：
+KubePolaris 采用纯环境变量方式进行配置（优先级从高到低）：
 
-1. 命令行参数
-2. 环境变量
-3. 配置文件 (`configs/config.yaml`)
-4. 默认值
+1. 环境变量
+2. 代码默认值
 
 ## 配置项详解
 
@@ -319,7 +317,6 @@ export KUBEPOLARIS_JWT_SECRET=my-secret-key
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `--config, -c` | 配置文件路径 | `configs/config.yaml` |
 | `--port, -p` | 服务端口 | `8080` |
 | `--mode` | 运行模式 | `release` |
 | `--log-level` | 日志级别 | `info` |
@@ -328,68 +325,45 @@ export KUBEPOLARIS_JWT_SECRET=my-secret-key
 
 ## 配置示例
 
-### 开发环境
+### 本地开发
 
-```yaml title="configs/config.dev.yaml"
-server:
-  port: 8080
-  mode: debug
+从模板创建 `.env` 文件，按需修改：
 
-database:
-  host: localhost
-  port: 3306
-  user: root
-  password: root
-  name: kubepolaris_dev
-  log_mode: true
+```bash
+cp .env.example .env
+vim .env
+go run cmd/main.go
+```
 
-jwt:
-  secret: dev-secret-key
-  expire: 72h
+开发环境 `.env` 示例：
 
-log:
-  level: debug
-  format: text
+```bash
+SERVER_PORT=8080
+SERVER_MODE=debug
+DB_DRIVER=sqlite
+DB_DSN=./data/kubepolaris.db
+JWT_SECRET=dev-secret-key
+LOG_LEVEL=debug
 ```
 
 ### 生产环境
 
-```yaml title="configs/config.prod.yaml"
-server:
-  port: 8080
-  mode: release
-  read_timeout: 30
-  write_timeout: 30
+生产环境通过 Docker Compose `.env` 文件或 Kubernetes 环境变量注入：
 
-database:
-  host: mysql.kubepolaris.svc.cluster.local
-  port: 3306
-  user: kubepolaris
-  password: ${MYSQL_PASSWORD}  # 从环境变量读取
-  name: kubepolaris
-  max_idle_conns: 20
-  max_open_conns: 200
-  log_mode: false
-
-jwt:
-  secret: ${JWT_SECRET}  # 从环境变量读取
-  expire: 24h
-
-log:
-  level: info
-  format: json
-  file:
-    enabled: true
-    path: /var/log/kubepolaris/app.log
-
-security:
-  login:
-    max_attempts: 5
-    lockout_duration: 900
-
-audit:
-  enabled: true
-  retention_days: 365
+```bash
+SERVER_PORT=8080
+SERVER_MODE=release
+DB_DRIVER=mysql
+DB_HOST=mysql.kubepolaris.svc.cluster.local
+DB_PORT=3306
+DB_USERNAME=kubepolaris
+DB_PASSWORD=your-secure-password
+DB_DATABASE=kubepolaris
+JWT_SECRET=your-very-secure-jwt-secret-key-at-least-32-chars
+JWT_EXPIRE_TIME=24
+LOG_LEVEL=info
+GRAFANA_ENABLED=true
+GRAFANA_URL=http://grafana:3000
 ```
 
 ## 下一步

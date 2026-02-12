@@ -759,7 +759,7 @@ KubePolaris/
 │   ├── logo/
 │   ├── screenshots/
 │   └── demo/
-├── configs/
+├── .env.example
 ├── Makefile
 ├── README.md
 ├── README_zh.md

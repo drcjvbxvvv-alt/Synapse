@@ -182,13 +182,10 @@ jwt:
   secret: your-jwt-secret-key  # 与 .env 中的 JWT_SECRET 一致
 ```
 
-**重要**: 确保 `.env` 和 `config.yaml` 中的密码一致！
-
 #### 设置文件权限
 
 ```bash
 chmod 600 deploy/docker-compose/.env
-chmod 600 configs/config.yaml
 ```
 
 ### 2. 创建必要目录
@@ -246,9 +243,9 @@ curl http://localhost:3000/api/health
 | `FRONTEND_PORT` | 前端服务端口 | `80` | ❌ |
 | `GRAFANA_PORT` | Grafana 端口 | `3000` | ❌ |
 
-### 应用配置文件 (config.yaml)
+### 应用配置
 
-详细配置说明请参考 [configs/README.md](../configs/README.md)
+详细环境变量说明请参考项目根目录的 [.env.example](../../.env.example)
 
 ---
 
@@ -273,7 +270,6 @@ openssl rand -base64 12 | tr -dc 'a-zA-Z0-9' | head -c 12
 ```bash
 # 配置文件只允许所有者读写
 chmod 600 deploy/docker-compose/.env
-chmod 600 configs/config.yaml
 
 # secrets 目录权限
 chmod 700 deploy/docker/grafana/secrets
@@ -430,13 +426,13 @@ docker-compose config | grep -A 10 grafana-init
 
 ### 后端服务启动失败
 
-**检查配置文件**:
+**检查环境变量**:
 ```bash
-# 确保 config.yaml 存在
-ls -la configs/config.yaml
+# 确保 .env 文件存在
+ls -la deploy/docker-compose/.env
 
-# 检查配置语法
-docker-compose exec backend cat /app/configs/config.yaml
+# 检查环境变量是否正确注入
+docker-compose exec backend env | grep DB_
 ```
 
 **检查数据库连接**:
@@ -559,7 +555,7 @@ docker-compose up -d
 
 ## 📚 相关文档
 
-- [配置文件说明](../configs/README.md)
+- [环境变量配置模板](../../.env.example)
 - [开发者指南](../AI-DEV-GUIDE.md)
 - [API 文档](../docs/API.md)
 - [故障排查手册](../docs/TROUBLESHOOTING.md)

@@ -27,41 +27,6 @@ if [ -n "$DB_HOST" ]; then
     echo "✅ MySQL is ready!"
 fi
 
-# 创建配置文件（如果使用环境变量）
-if [ -n "$DB_HOST" ]; then
-    echo "📝 Generating config from environment variables..."
-    cat > /app/configs/config.yaml << EOF
-server:
-  port: ${SERVER_PORT:-8080}
-  mode: ${SERVER_MODE:-release}
-
-database:
-  driver: mysql
-  host: ${DB_HOST:-127.0.0.1}
-  port: ${DB_PORT:-3306}
-  username: ${DB_USERNAME:-kubepolaris}
-  password: ${DB_PASSWORD:-kubepolaris}
-  database: ${DB_DATABASE:-kubepolaris}
-  charset: utf8mb4
-
-jwt:
-  secret: ${JWT_SECRET:-k8s-management-secret-key}
-  expire_time: ${JWT_EXPIRE_TIME:-24}
-
-log:
-  level: ${LOG_LEVEL:-info}
-
-k8s:
-  default_namespace: ${K8S_DEFAULT_NAMESPACE:-default}
-
-grafana:
-  enabled: ${GRAFANA_ENABLED:-true}
-  url: ${GRAFANA_URL:-http://grafana:3000}
-  api_key: "${GRAFANA_API_KEY:-}"
-  api_key_file: "${GRAFANA_API_KEY_FILE:-./grafana/secrets/grafana_api_key}"
-EOF
-fi
-
 # 启动后端服务
 echo "🚀 Starting backend service..."
 /app/kubepolaris &

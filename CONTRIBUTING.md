@@ -73,13 +73,10 @@ cd kubepolaris
 # Install Go dependencies
 go mod download
 
-# Copy config file
-cp configs/config.example.yaml configs/config.yaml
+# Copy environment variables template (optional, modify as needed)
+cp .env.example .env
 
-# Edit configuration
-vim configs/config.yaml
-
-# Run the backend
+# Run the backend (uses SQLite by default, zero-config startup)
 go run cmd/main.go
 ```
 

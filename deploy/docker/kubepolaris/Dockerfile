@@ -74,9 +74,8 @@ RUN addgroup -g 1000 kubepolaris && \
 
 WORKDIR /app
 
-# 复制后端二进制文件和配置
+# 复制后端二进制文件
 COPY --from=backend-builder /app/kubepolaris /app/
-COPY --from=backend-builder /app/configs /app/configs
 
 # 创建必要的目录
 RUN mkdir -p /app/logs /app/data && \

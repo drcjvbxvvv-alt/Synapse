@@ -301,34 +301,29 @@ pnpm build
 
 ### 5. 配置
 
+KubePolaris 通过环境变量进行配置，支持 `.env` 文件自动加载。默认使用 SQLite，零配置即可启动。
+
 ```bash
-# 复制配置模板
-cp configs/config.example.yaml configs/config.yaml
-
-# 编辑配置
-vim configs/config.yaml
+# 从模板创建 .env 文件，按需修改
+cp .env.example .env
+vim .env
 ```
 
-```yaml title="configs/config.yaml"
-server:
-  port: 8080
-  mode: release  # debug, release, test
+如需使用 MySQL，在 `.env` 中设置：
 
-database:
-  host: localhost
-  port: 3306
-  user: root
-  password: your_password
-  name: kubepolaris
-
-jwt:
-  secret: your-jwt-secret-key
-  expire: 24h
-
-log:
-  level: info
-  format: json
+```bash
+DB_DRIVER=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=your_password
+DB_DATABASE=kubepolaris
+JWT_SECRET=your-jwt-secret-key
+LOG_LEVEL=info
+SERVER_MODE=release
 ```
+
+完整环境变量参考请查看项目根目录的 `.env.example` 文件。
 
 ### 6. 初始化数据库
 

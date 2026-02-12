@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
@@ -62,26 +63,26 @@ type K8sConfig struct {
 	DefaultNamespace string `mapstructure:"default_namespace"`
 }
 
-// Load 加载配置
+// Load 加载配置（纯环境变量模式）
 func Load() *Config {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("./configs")
-
 	// 设置默认值
 	setDefaults()
+
+	// 先加载 .env 到系统环境变量
+	if err := godotenv.Load(); err != nil {
+		log.Printf("未找到 .env 文件，使用系统环境变量: %v", err)
+	}
 
 	// 读取环境变量
 	viper.AutomaticEnv()
 
 	// 绑定服务器环境变量
-	_ = viper.BindEnv("server.port", "PORT")
 	_ = viper.BindEnv("server.port", "SERVER_PORT")
 	_ = viper.BindEnv("server.mode", "SERVER_MODE")
 
 	// 绑定数据库环境变量
 	_ = viper.BindEnv("database.driver", "DB_DRIVER")
+	_ = viper.BindEnv("database.dsn", "DB_DSN")
 	_ = viper.BindEnv("database.host", "DB_HOST")
 	_ = viper.BindEnv("database.port", "DB_PORT")
 	_ = viper.BindEnv("database.username", "DB_USERNAME")
@@ -96,20 +97,20 @@ func Load() *Config {
 	// 绑定日志环境变量
 	_ = viper.BindEnv("log.level", "LOG_LEVEL")
 
+	// 绑定 K8s 环境变量
+	_ = viper.BindEnv("k8s.default_namespace", "K8S_DEFAULT_NAMESPACE")
+
 	// 绑定 Grafana 环境变量
 	_ = viper.BindEnv("grafana.enabled", "GRAFANA_ENABLED")
 	_ = viper.BindEnv("grafana.url", "GRAFANA_URL")
 	_ = viper.BindEnv("grafana.api_key", "GRAFANA_API_KEY")
 	_ = viper.BindEnv("grafana.api_key_file", "GRAFANA_API_KEY_FILE")
 
-	if err := viper.ReadInConfig(); err != nil {
-		log.Printf("配置文件读取失败，使用默认配置: %v", err)
-	}
-
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatalf("配置解析失败: %v", err)
 	}
+	log.Printf("配置: %+v", config)
 
 	// 如果配置了 API Key 文件路径，尝试从文件读取（带重试和优雅降级）
 	if config.Grafana.APIKeyFile != "" {
@@ -172,7 +173,7 @@ func setDefaults() {
 
 	// 数据库默认配置
 	viper.SetDefault("database.driver", "sqlite")
-	viper.SetDefault("database.dsn", "./k8s_management.db")
+	viper.SetDefault("database.dsn", "./data/kubepolaris.db")
 	viper.SetDefault("database.host", "localhost")
 	viper.SetDefault("database.port", 3306)
 	viper.SetDefault("database.username", "root")
@@ -181,7 +182,7 @@ func setDefaults() {
 	viper.SetDefault("database.charset", "utf8mb4")
 
 	// JWT默认配置
-	viper.SetDefault("jwt.secret", "k8s-management-secret")
+	viper.SetDefault("jwt.secret", "kubepolaris-secret")
 	viper.SetDefault("jwt.expire_time", 24) // 24小时
 
 	// 日志默认配置

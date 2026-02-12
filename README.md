@@ -254,7 +254,7 @@ kubepolaris/
 │   ├── docker-compose/     # Compose files
 │   └── yaml/               # K8s YAML
 ├── website/                # Documentation site
-└── configs/                # Configuration files
+└── .env.example            # Environment variables template
 ```
 
 ## 📊 Feature Status

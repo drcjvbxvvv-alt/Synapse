@@ -109,32 +109,6 @@ create_directories() {
     log_success "目录创建完成"
 }
 
-# 生成配置文件
-generate_config_file() {
-    local CONFIG_FILE="$PROJECT_ROOT/configs/config.yaml"
-    local CONFIG_EXAMPLE="$PROJECT_ROOT/configs/config.yaml.example"
-    
-    if [ -f "$CONFIG_FILE" ]; then
-        log_warn "config.yaml 文件已存在，跳过生成"
-        return
-    fi
-    
-    if [ ! -f "$CONFIG_EXAMPLE" ]; then
-        log_error "config.yaml.example 模板文件不存在"
-        exit 1
-    fi
-    
-    log_info "生成配置文件..."
-    
-    # 使用与环境变量相同的密码
-    sed -e "s|password: CHANGE_ME  # 请修改为实际密码|password: ${MYSQL_PWD}|" \
-        -e "s|secret: CHANGE_ME  # 请修改为随机生成的密钥|secret: ${JWT_SECRET}|" \
-        "$CONFIG_EXAMPLE" > "$CONFIG_FILE"
-    
-    chmod 644 "$CONFIG_FILE"
-    log_success "配置文件已生成: $CONFIG_FILE"
-}
-
 # 生成环境变量文件
 generate_env_file() {
     local ENV_FILE="$DEPLOY_DIR/docker-compose/.env"
@@ -303,7 +277,6 @@ main() {
     check_dependencies
     create_directories
     generate_env_file
-    generate_config_file
     
     # 询问是否构建镜像
     # read -p "是否构建 Docker 镜像？[Y/n] " -n 1 -r

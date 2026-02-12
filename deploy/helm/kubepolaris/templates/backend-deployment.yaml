@@ -16,7 +16,6 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -114,10 +113,8 @@ spec:
         envFrom:
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        volumeMounts:
-        - name: config
-          mountPath: /app/configs
         {{- with .Values.backend.extraVolumeMounts }}
+        volumeMounts:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         livenessProbe:
@@ -126,11 +123,8 @@ spec:
           {{- toYaml .Values.backend.readinessProbe | nindent 10 }}
         resources:
           {{- toYaml .Values.backend.resources | nindent 10 }}
-      volumes:
-      - name: config
-        configMap:
-          name: {{ include "kubepolaris.fullname" . }}-config
       {{- with .Values.backend.extraVolumes }}
+      volumes:
       {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- with .Values.backend.nodeSelector }}

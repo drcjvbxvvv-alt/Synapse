@@ -71,13 +71,10 @@ cd kubepolaris
 # 安装 Go 依赖
 go mod download
 
-# 复制配置文件
-cp configs/config.example.yaml configs/config.yaml
+# 复制环境变量模板（可选，按需修改）
+cp .env.example .env
 
-# 编辑配置
-vim configs/config.yaml
-
-# 运行后端
+# 运行后端（默认使用 SQLite，零配置启动）
 go run cmd/main.go
 ```
 

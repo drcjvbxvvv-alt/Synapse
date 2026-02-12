@@ -105,44 +105,30 @@ FLUSH PRIVILEGES;
 
 ### 3. 配置应用
 
-```yaml title="configs/config.yaml"
-server:
-  port: 8080
-  mode: release
+KubePolaris 通过环境变量进行配置。从模板创建 `.env` 文件，修改生产环境配置：
 
-database:
-  host: your-mysql-host
-  port: 3306
-  user: kubepolaris
-  password: your_secure_password
-  name: kubepolaris
-  max_idle_conns: 20
-  max_open_conns: 200
-
-jwt:
-  secret: your-very-secure-jwt-secret-key-at-least-32-chars
-  expire: 24h
-
-log:
-  level: info
-  format: json
-  file:
-    enabled: true
-    path: /var/log/kubepolaris/app.log
-    max_size: 100
-    max_backups: 10
-    max_age: 30
-    compress: true
-
-security:
-  login:
-    max_attempts: 5
-    lockout_duration: 900
-
-audit:
-  enabled: true
-  retention_days: 365
+```bash
+cp .env.example .env
+vim .env
 ```
+
+生产环境 `.env` 示例：
+
+```bash
+SERVER_PORT=8080
+SERVER_MODE=release
+DB_DRIVER=mysql
+DB_HOST=your-mysql-host
+DB_PORT=3306
+DB_USERNAME=kubepolaris
+DB_PASSWORD=your_secure_password
+DB_DATABASE=kubepolaris
+JWT_SECRET=your-very-secure-jwt-secret-key-at-least-32-chars
+JWT_EXPIRE_TIME=24
+LOG_LEVEL=info
+```
+
+完整环境变量参考请查看项目根目录的 `.env.example` 文件。
 
 ### 4. 部署应用
 

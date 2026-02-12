@@ -108,7 +108,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ../../configs:/app/configs:ro
       - ../docker/grafana/secrets:/app/grafana/secrets:ro
       - ~/.kube:/root/.kube:ro
     networks:

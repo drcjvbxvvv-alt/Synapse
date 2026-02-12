@@ -62,13 +62,10 @@ GOOS=windows GOARCH=amd64 go build -o bin/kubepolaris-backend.exe ./cmd/main.go
 ### 3. 运行
 
 ```bash
-# 复制配置文件
-cp configs/config.example.yaml configs/config.yaml
+# 复制环境变量模板（可选，按需修改）
+cp .env.example .env
 
-# 编辑配置
-vim configs/config.yaml
-
-# 运行
+# 运行（默认使用 SQLite，零配置启动）
 ./bin/kubepolaris-backend
 
 # 或开发模式（热重载）
@@ -154,34 +151,28 @@ FLUSH PRIVILEGES;
 
 应用会在启动时自动迁移表结构（使用 GORM AutoMigrate）。
 
-## 配置文件
+## 配置
 
-```yaml title="configs/config.yaml"
-server:
-  port: 8080
-  mode: debug  # 开发环境使用 debug
+KubePolaris 通过环境变量进行配置，支持 `.env` 文件自动加载。默认使用 SQLite，零配置即可启动。
 
-database:
-  host: localhost
-  port: 3306
-  user: root
-  password: your_password
-  name: kubepolaris
-
-jwt:
-  secret: dev-jwt-secret-key-for-development
-  expire: 72h
-
-log:
-  level: debug
-  format: text  # 开发环境使用 text 格式
-
-cors:
-  enabled: true
-  allow_origins:
-    - "http://localhost:5173"  # 前端开发服务器
-    - "http://localhost:8080"
+```bash
+# 从模板创建 .env 文件，按需修改
+cp .env.example .env
+vim .env
 ```
+
+如需使用 MySQL，在 `.env` 中设置：
+
+```bash
+DB_DRIVER=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=your_password
+DB_DATABASE=kubepolaris
+```
+
+完整环境变量参考请查看项目根目录的 `.env.example` 文件。
 
 ## 完整开发流程
 
@@ -259,8 +250,7 @@ kubepolaris/
 │   └── services/            # 业务逻辑
 ├── pkg/
 │   └── logger/              # 日志工具
-├── configs/
-│   └── config.yaml          # 配置文件
+├── .env.example              # 环境变量配置模板
 ├── ui/                      # 前端代码
 │   ├── src/
 │   │   ├── components/      # 通用组件
