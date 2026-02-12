@@ -26,14 +26,14 @@ RUN npm run build
 # ==========================================
 FROM golang:1.24-alpine AS backend-builder
 
-# 安装必要的构建工具
-RUN apk add --no-cache git ca-certificates tzdata
+# 安装必要的构建工具（含 gcc/musl-dev，go-sqlite3 需要 CGO）
+RUN apk add --no-cache git ca-certificates tzdata gcc musl-dev
 
 WORKDIR /app
 
 # 设置 Go 代理
 ENV GOPROXY=https://goproxy.cn,direct
-ENV CGO_ENABLED=0
+ENV CGO_ENABLED=1
 ENV GOOS=linux
 
 # 复制依赖文件并下载依赖（利用缓存层）
