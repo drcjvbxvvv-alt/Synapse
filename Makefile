@@ -97,21 +97,21 @@ dev-frontend:
 # 构建命令
 # ==========================================
 
-## build: 构建前后端
-build: build-backend build-frontend
-	@echo "$(GREEN)构建完成$(NC)"
+## build: 构建前端并嵌入后端（单二进制）
+build: build-frontend build-backend
+	@echo "$(GREEN)构建完成: bin/kubepolaris（前端已嵌入）$(NC)"
 
-## build-backend: 构建后端
+## build-backend: 构建后端（需要先构建前端）
 build-backend:
 	@echo "$(BLUE)构建后端...$(NC)"
 	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/kubepolaris ./cmd/main.go
 	@echo "$(GREEN)后端构建完成: bin/kubepolaris$(NC)"
 
-## build-frontend: 构建前端
+## build-frontend: 构建前端到 web/static
 build-frontend:
 	@echo "$(BLUE)构建前端...$(NC)"
 	cd ui && npm ci && npm run build
-	@echo "$(GREEN)前端构建完成: ui/dist/$(NC)"
+	@echo "$(GREEN)前端构建完成: web/static/$(NC)"
 
 # ==========================================
 # 测试命令
@@ -156,26 +156,18 @@ lint-frontend:
 # Docker 命令
 # ==========================================
 
-## docker-build: 构建 Docker 镜像
+## docker-build: 构建 Docker 镜像（前端嵌入后端，单镜像）
 docker-build:
 	@echo "$(BLUE)构建 Docker 镜像...$(NC)"
 	docker build -t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest -f $(DEPLOY_DIR)/docker/kubepolaris/Dockerfile .
-	docker build -t $(BACKEND_IMAGE):$(VERSION) -t $(BACKEND_IMAGE):latest -f $(DEPLOY_DIR)/docker/kubepolaris/Dockerfile.backend .
-	docker build -t $(FRONTEND_IMAGE):$(VERSION) -t $(FRONTEND_IMAGE):latest -f $(DEPLOY_DIR)/docker/kubepolaris/Dockerfile.frontend .
 	@echo "$(GREEN)镜像构建完成$(NC)"
 	@echo "  $(IMAGE_NAME):$(VERSION)"
-	@echo "  $(BACKEND_IMAGE):$(VERSION)"
-	@echo "  $(FRONTEND_IMAGE):$(VERSION)"
 
 ## docker-push: 推送 Docker 镜像
 docker-push:
 	@echo "$(BLUE)推送 Docker 镜像...$(NC)"
 	docker push $(IMAGE_NAME):$(VERSION)
 	docker push $(IMAGE_NAME):latest
-	docker push $(BACKEND_IMAGE):$(VERSION)
-	docker push $(BACKEND_IMAGE):latest
-	docker push $(FRONTEND_IMAGE):$(VERSION)
-	docker push $(FRONTEND_IMAGE):latest
 	@echo "$(GREEN)镜像推送完成$(NC)"
 
 ## docker-up: 启动 Docker Compose 服务
@@ -251,7 +243,7 @@ swagger:
 clean:
 	@echo "$(BLUE)清理构建产物...$(NC)"
 	rm -rf bin/
-	rm -rf ui/dist/
+	rm -rf web/static/assets web/static/*.js web/static/*.css web/static/*.ico web/static/*.svg web/static/*.png
 	rm -rf coverage.out coverage.html
 	rm -rf dist/
 	docker image prune -f

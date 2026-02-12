@@ -1,6 +1,6 @@
 # ==========================================
 # KubePolaris 多阶段构建 Dockerfile
-# 前后端一体化镜像
+# 前端嵌入后端，单二进制镜像
 # ==========================================
 
 # ==========================================
@@ -22,7 +22,7 @@ COPY ui/ ./
 RUN npm run build
 
 # ==========================================
-# Stage 2: Build Backend
+# Stage 2: Build Backend (with embedded frontend)
 # ==========================================
 FROM golang:1.24-alpine AS backend-builder
 
@@ -40,8 +40,13 @@ ENV GOOS=linux
 COPY go.mod go.sum ./
 RUN go mod download
 
-# 复制源代码并构建
+# 复制源代码
 COPY . .
+
+# 将前端构建产物复制到 web/static 目录（供 go:embed 嵌入）
+COPY --from=frontend-builder /app/web/static ./web/static
+
+# 构建二进制文件
 RUN go build -ldflags="-s -w" -o kubepolaris ./cmd/main.go
 
 # ==========================================
@@ -57,7 +62,6 @@ LABEL version="1.0.0"
 RUN apk add --no-cache \
     ca-certificates \
     tzdata \
-    nginx \
     curl \
     && rm -rf /var/cache/apk/*
 
@@ -70,34 +74,24 @@ RUN addgroup -g 1000 kubepolaris && \
 
 WORKDIR /app
 
-# 复制后端二进制文件
+# 复制后端二进制文件和配置
 COPY --from=backend-builder /app/kubepolaris /app/
 COPY --from=backend-builder /app/configs /app/configs
 
-# 复制前端静态文件
-COPY --from=frontend-builder /app/ui/dist /usr/share/nginx/html
-
-# 复制 Nginx 配置
-COPY deploy/docker/kubepolaris/nginx.conf /etc/nginx/nginx.conf
-
-# 复制启动脚本
-COPY deploy/docker/kubepolaris/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
 # 创建必要的目录
-RUN mkdir -p /app/logs /app/data /var/log/nginx /var/lib/nginx/tmp && \
-    chown -R kubepolaris:kubepolaris /app /var/log/nginx /var/lib/nginx /usr/share/nginx/html && \
-    chmod -R 755 /var/lib/nginx
+RUN mkdir -p /app/logs /app/data && \
+    chown -R kubepolaris:kubepolaris /app
 
 # 暴露端口
-# 80: Nginx (前端)
-# 8080: Backend API
-EXPOSE 80 8080
+# 8080: Backend API + Frontend
+EXPOSE 8080
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/healthz || exit 1
 
-# 使用启动脚本
-ENTRYPOINT ["/app/entrypoint.sh"]
+# 使用非 root 用户运行
+USER kubepolaris
 
+# 直接启动二进制文件
+ENTRYPOINT ["/app/kubepolaris"]

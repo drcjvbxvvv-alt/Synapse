@@ -31,7 +31,8 @@ export default defineConfig({
     include: ['monaco-editor'],
   },
   build: {
-    outDir: 'dist',
+    outDir: '../web/static',
+    emptyOutDir: true,
     sourcemap: false,
     commonjsOptions: {
       include: [/monaco-editor/, /node_modules/],

@@ -211,3 +211,7 @@ website/node_modules/
 
 # sqlite database
 data/
+
+# Embedded frontend build artifacts
+web/static
+!web/static/index.html

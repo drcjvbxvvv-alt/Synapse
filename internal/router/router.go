@@ -1,6 +1,11 @@
 package router
 
 import (
+	"io/fs"
+	"net/http"
+	"strings"
+
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
@@ -10,6 +15,7 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/KubePolaris/web"
 )
 
 func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
@@ -30,7 +36,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		gin.Logger(),                        // 可替换为 zap/logrus 结构化日志中间件
 		middleware.CORS(),                   // TODO: 从 cfg 读取允许的 Origin/Methods/Headers
 		middleware.OperationAudit(opLogSvc), // 操作审计中间件（记录所有非GET请求）
-		// middleware.Gzip(),     // TODO: 如需压缩
+		gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/ws/"})), // Gzip 压缩（排除 WebSocket）
 		// middleware.RateLimit() // TODO: 关键接口限流
 	)
 
@@ -586,9 +592,67 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		}
 	}
 
+	// 嵌入前端静态文件服务
+	setupStatic(r)
+
 	// TODO:
 	// - 统一错误处理/响应格式中间件
 	// - OpenAPI/Swagger 文档路由（/swagger/*any）
-	// - 404/405 兜底处理
 	return r
+}
+
+// setupStatic 配置嵌入的前端静态文件服务
+func setupStatic(r *gin.Engine) {
+	assetsFS, err := fs.Sub(web.StaticFS, "static/assets")
+	if err != nil {
+		logger.Error("加载前端静态资源失败", "error", err)
+		return
+	}
+
+	// 静态资源缓存（assets 目录包含带 hash 的文件，可以长期缓存）
+	assetsGroup := r.Group("/assets")
+	assetsGroup.Use(func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		c.Next()
+	})
+	assetsGroup.StaticFS("/", http.FS(assetsFS))
+
+	// 所有未匹配的路由回退到 index.html（SPA 路由支持）
+	r.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// API 和 WebSocket 路径返回 404
+		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/ws/") {
+			c.JSON(404, gin.H{"code": 404, "message": "not found"})
+			return
+		}
+
+		// 尝试提供静态文件（如 favicon.ico 等根目录文件）
+		filePath := strings.TrimPrefix(path, "/")
+		if filePath != "" {
+			if f, err := web.StaticFS.Open("static/" + filePath); err == nil {
+				f.Close()
+				fileServer := http.FileServer(http.FS(mustSub(web.StaticFS, "static")))
+				fileServer.ServeHTTP(c.Writer, c.Request)
+				return
+			}
+		}
+
+		// 回退到 index.html
+		content, err := web.StaticFS.ReadFile("static/index.html")
+		if err != nil {
+			c.JSON(500, gin.H{"code": 500, "message": "frontend not available"})
+			return
+		}
+		c.Data(200, "text/html; charset=utf-8", content)
+	})
+}
+
+// mustSub 是 fs.Sub 的便捷封装
+func mustSub(fsys fs.FS, dir string) fs.FS {
+	sub, err := fs.Sub(fsys, dir)
+	if err != nil {
+		panic(err)
+	}
+	return sub
 }
