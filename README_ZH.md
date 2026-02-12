@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="website/static/img/logo.svg" alt="KubePolaris Logo" width="120" height="120">
+  <img src="docs/static/img/logo.svg" alt="KubePolaris Logo" width="120" height="120">
 </p>
 
 <h1 align="center">KubePolaris（北辰）</h1>
