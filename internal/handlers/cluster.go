@@ -485,16 +485,11 @@ func (h *ClusterHandler) GetClusterEvents(c *gin.Context) {
 		return
 	}
 
-	// 构建 K8s 客户端并直接调用 API 获取事件
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error(), "data": nil})
+		logger.Error("获取K8s客户端失败", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "获取K8s客户端失败: " + err.Error(), "data": nil})
 		return
 	}
 
@@ -620,16 +615,10 @@ func (h *ClusterHandler) GetClusterMetrics(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
-
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err)
+		logger.Error("获取K8s客户端失败", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
 			"message": "获取集群监控数据失败: " + err.Error(),

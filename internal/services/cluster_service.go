@@ -246,15 +246,7 @@ func (s *ClusterService) getClusterRealTimeMetrics(cluster *models.Cluster) *mod
 		return nil
 	}
 
-	var k8sClient *K8sClient
-	var err error
-
-	// 根据存储的信息创建客户端
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else if cluster.SATokenEnc != "" {
-		k8sClient, err = NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	k8sClient, err := NewK8sClientForCluster(cluster)
 
 	if err != nil {
 		logger.Error("创建K8s客户端失败", "cluster", cluster.Name, "error", err)

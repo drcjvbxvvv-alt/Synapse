@@ -48,13 +48,8 @@ func (h *RBACHandler) SyncPermissions(c *gin.Context) {
 		return
 	}
 
-	// Create K8s client
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 创建 K8s 客户端
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -105,13 +100,8 @@ func (h *RBACHandler) GetSyncStatus(c *gin.Context) {
 		return
 	}
 
-	// Create K8s client
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 创建 K8s 客户端
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -162,13 +152,8 @@ func (h *RBACHandler) ListClusterRoles(c *gin.Context) {
 		return
 	}
 
-	// Create K8s client
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 创建 K8s 客户端
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -258,13 +243,8 @@ func (h *RBACHandler) CreateCustomClusterRole(c *gin.Context) {
 		return
 	}
 
-	// Create K8s client
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 创建 K8s 客户端
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -316,13 +296,8 @@ func (h *RBACHandler) DeleteClusterRole(c *gin.Context) {
 		return
 	}
 
-	// Create K8s client
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 创建 K8s 客户端
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -374,13 +349,8 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 		return
 	}
 
-	// Create K8s client
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 创建 K8s 客户端
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -474,13 +444,8 @@ func (h *RBACHandler) CreateCustomRole(c *gin.Context) {
 		return
 	}
 
-	// Create K8s client
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 创建 K8s 客户端
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -533,13 +498,8 @@ func (h *RBACHandler) DeleteRole(c *gin.Context) {
 		return
 	}
 
-	// Create K8s client
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 创建 K8s 客户端
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,

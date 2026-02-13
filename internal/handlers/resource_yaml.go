@@ -730,12 +730,9 @@ func (h *ResourceYAMLHandler) ApplyStorageClassYAML(c *gin.Context) {
 	})
 }
 
-// createK8sClient 创建K8s客户端
+// createK8sClient 获取缓存的 K8s 客户端
 func (h *ResourceYAMLHandler) createK8sClient(cluster *models.Cluster) (*services.K8sClient, error) {
-	if cluster.KubeconfigEnc != "" {
-		return services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	}
-	return services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
+	return h.k8sMgr.GetK8sClient(cluster)
 }
 
 // GetServiceYAMLClean 获取干净的Service YAML（用于编辑）

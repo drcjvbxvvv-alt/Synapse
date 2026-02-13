@@ -113,17 +113,12 @@ func (h *LogCenterHandler) GetEventLogs(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -268,17 +263,12 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 	}
 	startTime := time.Now().Add(-since)
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -478,15 +468,10 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		_ = conn.WriteJSON(gin.H{"type": "error", "message": "创建K8s客户端失败: " + err.Error()})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "获取K8s客户端失败: " + err.Error()})
 		return
 	}
 

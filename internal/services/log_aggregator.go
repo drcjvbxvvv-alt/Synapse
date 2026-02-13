@@ -65,13 +65,7 @@ func (a *LogAggregator) streamPodLogs(
 	outputCh chan<- *models.LogEntry,
 ) {
 	// 创建K8s客户端
-	var k8sClient *K8sClient
-	var err error
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	k8sClient, err := NewK8sClientForCluster(cluster)
 	if err != nil {
 		logger.Error("创建K8s客户端失败", "error", err)
 		return
@@ -216,13 +210,7 @@ func (a *LogAggregator) GetContainerLogs(
 	previous bool,
 ) (string, error) {
 	// 创建K8s客户端
-	var k8sClient *K8sClient
-	var err error
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	k8sClient, err := NewK8sClientForCluster(cluster)
 	if err != nil {
 		return "", err
 	}
@@ -266,13 +254,7 @@ func (a *LogAggregator) SearchLogs(
 	query *models.LogQuery,
 ) ([]models.LogEntry, int, error) {
 	// 创建K8s客户端
-	var k8sClient *K8sClient
-	var err error
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	k8sClient, err := NewK8sClientForCluster(cluster)
 	if err != nil {
 		return nil, 0, err
 	}

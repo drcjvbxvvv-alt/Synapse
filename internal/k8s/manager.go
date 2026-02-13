@@ -26,6 +26,7 @@ import (
 )
 
 type ClusterRuntime struct {
+	k8sClient *services.K8sClient // 缓存的 K8sClient（包含 clientset 和 rest.Config）
 	clientset *kubernetes.Clientset
 	factory   informers.SharedInformerFactory
 
@@ -66,14 +67,8 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 		return rt, nil
 	}
 
-	// 使用已有封装创建 clientset（复用认证/容错逻辑）
-	var kc *services.K8sClient
-	var err error
-	if cluster.KubeconfigEnc != "" {
-		kc, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		kc, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 使用统一入口创建 K8s 客户端（复用认证/容错逻辑）
+	kc, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		return nil, fmt.Errorf("为集群创建客户端失败: %w", err)
 	}
@@ -83,6 +78,7 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 
 	rt := &ClusterRuntime{
+		k8sClient: kc,
 		clientset: clientset,
 		factory:   factory,
 		stopCh:    make(chan struct{}),
@@ -407,6 +403,25 @@ func (m *ClusterInformerManager) RolloutsLister(clusterID uint) rolloutslisters.
 	defer m.mu.RUnlock()
 	if rt, ok := m.clusters[clusterID]; ok && rt.rolloutEnabled && rt.rolloutLister != nil {
 		return rt.rolloutLister
+	}
+	return nil
+}
+
+// GetK8sClient 获取指定集群的缓存 K8sClient（复用 Informer 管理器中已创建的客户端，避免重复创建）
+func (m *ClusterInformerManager) GetK8sClient(cluster *models.Cluster) (*services.K8sClient, error) {
+	rt, err := m.EnsureForCluster(cluster)
+	if err != nil {
+		return nil, err
+	}
+	return rt.k8sClient, nil
+}
+
+// GetK8sClientByID 根据集群 ID 获取已缓存的 K8sClient（集群必须已通过 EnsureForCluster 初始化）
+func (m *ClusterInformerManager) GetK8sClientByID(clusterID uint) *services.K8sClient {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.k8sClient
 	}
 	return nil
 }

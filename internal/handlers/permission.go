@@ -326,12 +326,7 @@ func (h *PermissionHandler) ensureUserRBACInCluster(permission *models.ClusterPe
 	}
 
 	// 创建 K8s 客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		logger.Error("创建 K8s 客户端失败", "clusterID", permission.ClusterID, "error", err)
 		return
@@ -425,12 +420,7 @@ func (h *PermissionHandler) updateUserRBACInCluster(oldPermission, newPermission
 	}
 
 	// 创建 K8s 客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		logger.Error("创建 K8s 客户端失败", "error", err)
 		return
@@ -507,12 +497,7 @@ func (h *PermissionHandler) cleanupUserRBACInCluster(permission *models.ClusterP
 	}
 
 	// 创建 K8s 客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
 		logger.Error("创建 K8s 客户端失败", "error", err)
 		return

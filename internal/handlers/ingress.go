@@ -100,16 +100,11 @@ func (h *IngressHandler) ListIngresses(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err, "clusterId", clusterID)
-		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("创建K8s客户端失败: %v", err), "data": nil})
+		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
+		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("获取K8s客户端失败: %v", err), "data": nil})
 		return
 	}
 
@@ -188,16 +183,11 @@ func (h *IngressHandler) GetIngress(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err, "clusterId", clusterID)
-		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("创建K8s客户端失败: %v", err), "data": nil})
+		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
+		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("获取K8s客户端失败: %v", err), "data": nil})
 		return
 	}
 
@@ -236,16 +226,11 @@ func (h *IngressHandler) GetIngressYAML(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err, "clusterId", clusterID)
-		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("创建K8s客户端失败: %v", err), "data": nil})
+		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
+		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("获取K8s客户端失败: %v", err), "data": nil})
 		return
 	}
 
@@ -296,16 +281,11 @@ func (h *IngressHandler) DeleteIngress(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err, "clusterId", clusterID)
-		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("创建K8s客户端失败: %v", err), "data": nil})
+		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
+		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("获取K8s客户端失败: %v", err), "data": nil})
 		return
 	}
 
@@ -527,16 +507,11 @@ func (h *IngressHandler) CreateIngress(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err, "clusterId", clusterID)
-		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("创建K8s客户端失败: %v", err), "data": nil})
+		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
+		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("获取K8s客户端失败: %v", err), "data": nil})
 		return
 	}
 
@@ -587,16 +562,11 @@ func (h *IngressHandler) UpdateIngress(c *gin.Context) {
 		return
 	}
 
-	// 创建K8s客户端
-	var k8sClient *services.K8sClient
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err = services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-	} else {
-		k8sClient, err = services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-	}
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err, "clusterId", clusterID)
-		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("创建K8s客户端失败: %v", err), "data": nil})
+		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
+		c.JSON(500, gin.H{"code": 500, "message": fmt.Sprintf("获取K8s客户端失败: %v", err), "data": nil})
 		return
 	}
 
@@ -826,23 +796,13 @@ func (h *IngressHandler) GetIngressNamespaces(c *gin.Context) {
 		return
 	}
 
-	// 初始化K8s客户端
-	var clientset *kubernetes.Clientset
-	if cluster.KubeconfigEnc != "" {
-		k8sClient, err := services.NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
-		if err != nil {
-			c.JSON(500, gin.H{"error": fmt.Sprintf("创建K8s客户端失败: %v", err)})
-			return
-		}
-		clientset = k8sClient.GetClientset()
-	} else {
-		k8sClient, err := services.NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
-		if err != nil {
-			c.JSON(500, gin.H{"error": fmt.Sprintf("创建K8s客户端失败: %v", err)})
-			return
-		}
-		clientset = k8sClient.GetClientset()
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
+	if err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("获取K8s客户端失败: %v", err)})
+		return
 	}
+	clientset := k8sClient.GetClientset()
 
 	// 获取所有Ingresses
 	ingressList, err := clientset.NetworkingV1().Ingresses("").List(context.Background(), metav1.ListOptions{})

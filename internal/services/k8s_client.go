@@ -9,6 +9,7 @@ import (
 	"time"
 
 	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -91,6 +92,14 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 		clientset: clientset,
 		config:    config,
 	}, nil
+}
+
+// NewK8sClientForCluster 根据集群模型创建 K8s 客户端（统一入口，消除重复的 if/else 创建逻辑）
+func NewK8sClientForCluster(cluster *models.Cluster) (*K8sClient, error) {
+	if cluster.KubeconfigEnc != "" {
+		return NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
+	}
+	return NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
 }
 
 // TestConnection 测试连接并获取集群信息
