@@ -134,6 +134,7 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/workloads/create" element={<DeploymentCreate />} />
               <Route path="clusters/:clusterId/workloads/deployment/:namespace/:name" element={<DeploymentDetail />} />
               <Route path="clusters/:clusterId/workloads/rollout/:namespace/:name" element={<RolloutDetail />} />
+              <Route path="clusters/:clusterId/workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
               <Route path="clusters/:clusterId/workloads/:namespace/:name" element={<WorkloadDetail />} />
               <Route path="clusters/:clusterId/yaml/apply" element={<YAMLEditor />} />
               <Route path="workloads" element={<WorkloadList />} />

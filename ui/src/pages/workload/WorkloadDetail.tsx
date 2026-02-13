@@ -38,8 +38,9 @@ const { TabPane } = Tabs;
 type WorkloadDetailProps = Record<string, never>;
 
 const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
-  const { clusterId, namespace, name } = useParams<{
+  const { clusterId, type, namespace, name } = useParams<{
     clusterId: string;
+    type: string;
     namespace: string;
     name: string;
   }>();
@@ -47,7 +48,17 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
 const { t } = useTranslation(["workload", "common"]);
 const navigate = useNavigate();
   
-  const workloadType = searchParams.get('type') || 'deployment';
+  // URL 路径中的 type 是小写（如 statefulset），需要映射为 API 期望的 PascalCase
+  const typeMap: Record<string, string> = {
+    deployment: 'Deployment',
+    statefulset: 'StatefulSet',
+    daemonset: 'DaemonSet',
+    job: 'Job',
+    cronjob: 'CronJob',
+    rollout: 'Rollout',
+  };
+  const rawType = type || searchParams.get('type') || 'deployment';
+  const workloadType = typeMap[rawType.toLowerCase()] || rawType;
   
   const [workload, setWorkload] = useState<Record<string, unknown> | null>(null);
   const [workloadInfo, setWorkloadInfo] = useState<WorkloadInfo | null>(null);
@@ -64,15 +75,44 @@ const navigate = useNavigate();
     try {
       const response = await WorkloadService.getWorkloadDetail(
         clusterId,
+        workloadType,
         namespace,
-        name,
-        workloadType
+        name
       );
       
       if (response.code === 200) {
         setWorkload(response.data.raw);
         setWorkloadInfo(response.data.workload);
-        setPods(response.data.pods || []);
+        // 后端返回的 pods 是 K8s PodList 对象 {items: [...]}, 需要提取并转换
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const podsData = response.data.pods as any;
+        const rawPods: Array<Record<string, unknown>> = Array.isArray(podsData) ? podsData : (podsData?.items || []);
+        // 将 K8s 原始 Pod 对象转换为前端扁平结构
+        const flatPods = rawPods.map((pod: Record<string, unknown>) => {
+          const metadata = (pod.metadata || {}) as Record<string, unknown>;
+          const spec = (pod.spec || {}) as Record<string, unknown>;
+          const status = (pod.status || {}) as Record<string, unknown>;
+          const containerStatuses = (status.containerStatuses || []) as Array<Record<string, unknown>>;
+          const specContainers = (spec.containers || []) as Array<Record<string, unknown>>;
+          return {
+            name: metadata.name,
+            namespace: metadata.namespace,
+            status: status.phase,
+            nodeName: spec.nodeName,
+            podIP: status.podIP,
+            createdAt: metadata.creationTimestamp,
+            containers: specContainers.map((c: Record<string, unknown>, i: number) => {
+              const cs = containerStatuses[i] as Record<string, unknown> | undefined;
+              return {
+                name: c.name,
+                image: c.image,
+                ready: cs?.ready ?? false,
+                restartCount: cs?.restartCount ?? 0,
+              };
+            }),
+          };
+        });
+        setPods(flatPods);
         setScaleReplicas(response.data.workload.replicas || 1);
       } else {
         message.error(response.message || t('detail.fetchError'));
