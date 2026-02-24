@@ -143,7 +143,8 @@
 ### Option 1: Docker Run (Quickest)
 
 ```bash
-docker run --rm -p 8080:8080 wangzhichidocker/kubepolaris:latest
+docker pull registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
 
 # Access http://localhost:8080
 # Default credentials: admin / KubePolaris@2026
@@ -327,7 +328,6 @@ git commit -m 'feat: add amazing feature'
 git push origin feature/amazing-feature
 ```
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
 ## 📚 Documentation
 

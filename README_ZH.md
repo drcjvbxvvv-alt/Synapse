@@ -143,6 +143,7 @@
 ### 方式一：Docker Run（最快体验）
 
 ```bash
+docker pull registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
 docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
 
 # 访问 http://localhost:8080
@@ -326,8 +327,6 @@ git commit -m 'feat: add amazing feature'
 # 4. 推送并创建 PR
 git push origin feature/amazing-feature
 ```
-
-详细指南请参考 [CONTRIBUTING.md](./CONTRIBUTING.md) | [CONTRIBUTING_zh.md](./CONTRIBUTING_zh.md)
 
 ## 📚 文档
 
