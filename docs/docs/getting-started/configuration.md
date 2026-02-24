@@ -362,8 +362,6 @@ DB_DATABASE=kubepolaris
 JWT_SECRET=your-very-secure-jwt-secret-key-at-least-32-chars
 JWT_EXPIRE_TIME=24
 LOG_LEVEL=info
-GRAFANA_ENABLED=true
-GRAFANA_URL=http://grafana:3000
 ```
 
 ## 下一步

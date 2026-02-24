@@ -84,10 +84,6 @@ spec:
           value: {{ .Values.config.log.level | quote }}
         - name: TZ
           value: "Asia/Shanghai"
-        {{- if or .Values.grafana.enabled .Values.grafana.external.enabled }}
-        - name: GRAFANA_ENABLED
-          value: "true"
-        {{- end }}
         {{- with .Values.backend.env }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

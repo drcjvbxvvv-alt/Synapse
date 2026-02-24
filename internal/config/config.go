@@ -12,13 +12,7 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Log      LogConfig      `mapstructure:"log"`
-	K8s      K8sConfig      `mapstructure:"k8s"`
-	Grafana  GrafanaConfig  `mapstructure:"grafana"`
-}
-
-// GrafanaConfig Grafana 功能开关（URL 和 API Key 已迁移到系统设置配置中心）
-type GrafanaConfig struct {
-	Enabled bool `mapstructure:"enabled"`
+	K8s K8sConfig `mapstructure:"k8s"`
 }
 
 // ServerConfig 服务器配置
@@ -92,9 +86,6 @@ func Load() *Config {
 	// 绑定 K8s 环境变量
 	_ = viper.BindEnv("k8s.default_namespace", "K8S_DEFAULT_NAMESPACE")
 
-	// 绑定 Grafana 环境变量（仅保留功能开关，连接配置已迁移到配置中心）
-	_ = viper.BindEnv("grafana.enabled", "GRAFANA_ENABLED")
-
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		logger.Fatal("配置解析失败: %v", err)
@@ -129,7 +120,4 @@ func setDefaults() {
 
 	// K8s默认配置
 	viper.SetDefault("k8s.default_namespace", "default")
-
-	// Grafana 默认配置（仅功能开关）
-	viper.SetDefault("grafana.enabled", false)
 }

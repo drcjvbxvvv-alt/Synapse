@@ -76,12 +76,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 	} else {
 		logger.Info("Grafana 尚未配置连接信息，请在系统设置中配置")
 	}
-	// 仅在 GRAFANA_ENABLED=true 时将 grafanaSvc 传给 monitoringConfigSvc 用于自动同步数据源
-	var monitoringGrafanaSvc *services.GrafanaService
-	if cfg.Grafana.Enabled {
-		monitoringGrafanaSvc = grafanaSvc
-	}
-	monitoringConfigSvc := services.NewMonitoringConfigServiceWithGrafana(db, monitoringGrafanaSvc)
+	// 始终将 grafanaSvc 传给 monitoringConfigSvc，运行时通过 IsEnabled() 判断是否同步数据源
+	monitoringConfigSvc := services.NewMonitoringConfigServiceWithGrafana(db, grafanaSvc)
 	// K8s Informer 管理器
 	k8sMgr := k8s.NewClusterInformerManager()
 	// 预热所有已存在集群的 Informer（后台执行，不阻塞启动）
