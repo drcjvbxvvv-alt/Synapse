@@ -23,9 +23,14 @@ export const hasPermission = (
   return PERMISSION_PRIORITY[userPermission] >= PERMISSION_PRIORITY[requiredPermission];
 };
 
-// 检查是否是平台管理员（基于用户名）
-export const isPlatformAdmin = (username: string | undefined): boolean => {
-  return username === 'admin';
+// 检查是否是平台管理员
+// 逻辑：username 为 admin，或者在任意集群拥有 admin 权限
+export const isPlatformAdmin = (username: string | undefined, permissions?: { permission_type: string }[]): boolean => {
+  if (username === 'admin') return true;
+  if (permissions && permissions.length > 0) {
+    return permissions.some(p => p.permission_type === 'admin');
+  }
+  return false;
 };
 
 // 外层侧边栏菜单权限配置
@@ -37,6 +42,12 @@ export const MAIN_MENU_PERMISSIONS: Record<string, {
   'overview': {},
   'cluster-management': {},
   
+  // 访问控制菜单组 - 仅平台管理员可见
+  'access-control': { platformAdminOnly: true },
+  'access-users': { platformAdminOnly: true },
+  'access-user-groups': { platformAdminOnly: true },
+  'access-permissions': { platformAdminOnly: true },
+
   // 仅平台管理员可见
   'permission-management': { platformAdminOnly: true },
   'audit-management': { platformAdminOnly: true },
@@ -159,6 +170,9 @@ export const ROUTE_PERMISSIONS: Record<string, {
   requiredPermission?: PermissionType;
   platformAdminOnly?: boolean;
 }> = {
+  '/access/users': { platformAdminOnly: true },
+  '/access/user-groups': { platformAdminOnly: true },
+  '/access/permissions': { platformAdminOnly: true },
   '/permissions': { platformAdminOnly: true },
   '/audit': { platformAdminOnly: true },
   '/audit/operations': { platformAdminOnly: true },
@@ -186,4 +200,3 @@ export default {
   ROUTE_PERMISSIONS,
   CLUSTER_ROUTE_PERMISSIONS,
 };
-

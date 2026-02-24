@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -269,9 +270,12 @@ type CreateClusterPermissionRequest struct {
 	PermissionType string   `json:"permission_type" binding:"required"`
 	Namespaces     []string `json:"namespaces"`
 	CustomRoleRef  string   `json:"custom_role_ref"`
+	// 批量字段：与 UserID/UserGroupID 互斥，支持同时为多个用户和用户组创建权限
+	UserIDs      []uint `json:"user_ids"`
+	UserGroupIDs []uint `json:"user_group_ids"`
 }
 
-// CreateClusterPermission 创建集群权限
+// CreateClusterPermission 创建集群权限（支持批量）
 func (h *PermissionHandler) CreateClusterPermission(c *gin.Context) {
 	var req CreateClusterPermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -282,32 +286,82 @@ func (h *PermissionHandler) CreateClusterPermission(c *gin.Context) {
 		return
 	}
 
-	serviceReq := &services.CreateClusterPermissionRequest{
-		ClusterID:      req.ClusterID,
-		UserID:         req.UserID,
-		UserGroupID:    req.UserGroupID,
-		PermissionType: req.PermissionType,
-		Namespaces:     req.Namespaces,
-		CustomRoleRef:  req.CustomRoleRef,
+	// 兼容旧的单个用户/用户组字段
+	if req.UserID != nil && len(req.UserIDs) == 0 {
+		req.UserIDs = []uint{*req.UserID}
+	}
+	if req.UserGroupID != nil && len(req.UserGroupIDs) == 0 {
+		req.UserGroupIDs = []uint{*req.UserGroupID}
 	}
 
-	permission, err := h.permissionService.CreateClusterPermission(serviceReq)
-	if err != nil {
+	if len(req.UserIDs) == 0 && len(req.UserGroupIDs) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": err.Error(),
+			"message": "至少需要指定一个用户或用户组",
 		})
 		return
 	}
 
-	// 异步创建 RBAC 资源（如果需要）
-	go h.ensureUserRBACInCluster(permission)
+	var created []models.ClusterPermissionResponse
+	var errs []string
 
-	c.JSON(http.StatusOK, gin.H{
+	// 为每个用户创建权限
+	for _, uid := range req.UserIDs {
+		uidCopy := uid
+		serviceReq := &services.CreateClusterPermissionRequest{
+			ClusterID:      req.ClusterID,
+			UserID:         &uidCopy,
+			PermissionType: req.PermissionType,
+			Namespaces:     req.Namespaces,
+			CustomRoleRef:  req.CustomRoleRef,
+		}
+		permission, err := h.permissionService.CreateClusterPermission(serviceReq)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("用户ID=%d: %s", uid, err.Error()))
+			continue
+		}
+		go h.ensureUserRBACInCluster(permission)
+		created = append(created, permission.ToResponse())
+	}
+
+	// 为每个用户组创建权限
+	for _, gid := range req.UserGroupIDs {
+		gidCopy := gid
+		serviceReq := &services.CreateClusterPermissionRequest{
+			ClusterID:      req.ClusterID,
+			UserGroupID:    &gidCopy,
+			PermissionType: req.PermissionType,
+			Namespaces:     req.Namespaces,
+			CustomRoleRef:  req.CustomRoleRef,
+		}
+		permission, err := h.permissionService.CreateClusterPermission(serviceReq)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("用户组ID=%d: %s", gid, err.Error()))
+			continue
+		}
+		go h.ensureUserRBACInCluster(permission)
+		created = append(created, permission.ToResponse())
+	}
+
+	if len(created) == 0 && len(errs) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "创建失败",
+			"data":    gin.H{"errors": errs},
+		})
+		return
+	}
+
+	resp := gin.H{
 		"code":    200,
 		"message": "创建成功",
-		"data":    permission.ToResponse(),
-	})
+		"data":    gin.H{"items": created, "count": len(created)},
+	}
+	if len(errs) > 0 {
+		resp["message"] = fmt.Sprintf("部分创建成功（%d成功，%d失败）", len(created), len(errs))
+		resp["data"].(gin.H)["errors"] = errs
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // ensureUserRBACInCluster 确保用户在集群中有对应的 RBAC 资源

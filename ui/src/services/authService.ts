@@ -1,5 +1,5 @@
 import { request } from '../utils/api';
-import type { ApiResponse, User, LDAPConfig, SSHConfig, MyPermissionsResponse } from '../types';
+import type { ApiResponse, User, LDAPConfig, SSHConfig, GrafanaConfig, GrafanaDashboardSyncStatus, MyPermissionsResponse } from '../types';
 
 // 登录请求参数
 export interface LoginRequest {
@@ -119,6 +119,31 @@ export const systemSettingService = {
   // 获取SSH凭据（用于自动连接）
   getSSHCredentials: (): Promise<ApiResponse<SSHConfig>> => {
     return request.get<SSHConfig>('/system/ssh/credentials');
+  },
+
+  // 获取 Grafana 配置
+  getGrafanaConfig: (): Promise<ApiResponse<GrafanaConfig>> => {
+    return request.get<GrafanaConfig>('/system/grafana/config');
+  },
+
+  // 更新 Grafana 配置
+  updateGrafanaConfig: (config: GrafanaConfig): Promise<ApiResponse<null>> => {
+    return request.put<null>('/system/grafana/config', config);
+  },
+
+  // 测试 Grafana 连接
+  testGrafanaConnection: (config: GrafanaConfig): Promise<ApiResponse<{ success: boolean; error?: string }>> => {
+    return request.post<{ success: boolean; error?: string }>('/system/grafana/test-connection', config);
+  },
+
+  // 获取 Grafana Dashboard 同步状态
+  getGrafanaDashboardStatus: (): Promise<ApiResponse<GrafanaDashboardSyncStatus>> => {
+    return request.get<GrafanaDashboardSyncStatus>('/system/grafana/dashboard-status');
+  },
+
+  // 同步 Grafana Dashboard
+  syncGrafanaDashboards: (): Promise<ApiResponse<GrafanaDashboardSyncStatus>> => {
+    return request.post<GrafanaDashboardSyncStatus>('/system/grafana/sync-dashboards');
   },
 };
 

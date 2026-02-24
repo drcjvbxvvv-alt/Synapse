@@ -391,31 +391,28 @@ export interface User {
   username: string;
   email: string;
   display_name: string;
+  phone?: string;
   auth_type: 'local' | 'ldap';
   status: 'active' | 'inactive' | 'locked';
   last_login_at?: string;
   last_login_ip?: string;
   created_at: string;
   updated_at: string;
-  roles?: Role[];
 }
 
-export interface Role {
-  id: number;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-  permissions?: Permission[];
+// 用户管理请求类型
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  email?: string;
+  display_name?: string;
+  phone?: string;
 }
 
-export interface Permission {
-  id: number;
-  code: string;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
+export interface UpdateUserRequest {
+  email?: string;
+  display_name?: string;
+  phone?: string;
 }
 
 // LDAP配置类型
@@ -444,6 +441,25 @@ export interface SSHConfig {
   auth_type: 'password' | 'key';
   password?: string;
   private_key?: string;
+}
+
+// Grafana 配置类型
+export interface GrafanaConfig {
+  url: string;
+  api_key: string;
+}
+
+// Grafana Dashboard 同步状态
+export interface GrafanaDashboardSyncStatus {
+  folder_exists: boolean;
+  dashboards: GrafanaDashboardStatusItem[];
+  all_synced: boolean;
+}
+
+export interface GrafanaDashboardStatusItem {
+  uid: string;
+  title: string;
+  exists: boolean;
 }
 
 // ========== 权限管理类型 ==========
@@ -494,6 +510,8 @@ export interface CreateClusterPermissionRequest {
   cluster_id: number;
   user_id?: number;
   user_group_id?: number;
+  user_ids?: number[];
+  user_group_ids?: number[];
   permission_type: PermissionType;
   namespaces?: string[];
   custom_role_ref?: string;

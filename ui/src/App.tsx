@@ -44,6 +44,7 @@ import { LogCenter, EventLogs } from './pages/logs';
 import ArgoCDConfigPage from './pages/plugins/ArgoCDConfigPage';
 import ArgoCDApplicationsPage from './pages/plugins/ArgoCDApplicationsPage';
 import { PermissionManagement } from './pages/permission';
+import { UserManagement, UserGroupManagement } from './pages/access';
 import { MonitoringCenter } from './pages/om';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
@@ -198,7 +199,23 @@ const AppContent: React.FC = () => {
                   <CommandHistory />
                 </PermissionGuard>
               } />
-              {/* 权限管理路由 - 仅平台管理员 */}
+              {/* 访问控制路由 - 仅平台管理员 */}
+              <Route path="access/users" element={
+                <PermissionGuard platformAdminOnly>
+                  <UserManagement />
+                </PermissionGuard>
+              } />
+              <Route path="access/user-groups" element={
+                <PermissionGuard platformAdminOnly>
+                  <UserGroupManagement />
+                </PermissionGuard>
+              } />
+              <Route path="access/permissions" element={
+                <PermissionGuard platformAdminOnly>
+                  <PermissionManagement />
+                </PermissionGuard>
+              } />
+              {/* 权限管理路由 - 兼容旧路由 */}
               <Route path="permissions" element={
                 <PermissionGuard platformAdminOnly>
                   <PermissionManagement />

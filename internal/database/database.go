@@ -167,10 +167,6 @@ func autoMigrate(db *gorm.DB) error {
 	// 按依赖顺序迁移表
 	err := db.AutoMigrate(
 		&models.User{},
-		&models.Role{},
-		&models.Permission{},
-		&models.UserRole{},
-		&models.RolePermission{},
 		&models.Cluster{},
 		&models.ClusterMetrics{},
 		&models.TerminalSession{},
@@ -196,7 +192,7 @@ func autoMigrate(db *gorm.DB) error {
 		createDefaultUser(db)
 		createTestClusters(db)
 		createDefaultSystemSettings(db)
-		createDefaultPermissions(db) // 创建默认权限配置
+		createDefaultPermissions(db)
 	}
 
 	return err

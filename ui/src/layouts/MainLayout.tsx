@@ -148,6 +148,9 @@ const MainLayout: React.FC = () => {
     if (isClusterDetail) {
       return ['kubernetes-resources', 'cluster', 'cloud-native-observability', 'cloud-native-cost'];
     }
+    if (location.pathname.startsWith('/access')) {
+      return ['access-control'];
+    }
     if (location.pathname.startsWith('/audit')) {
       return ['audit-management'];
     }
@@ -189,7 +192,10 @@ const MainLayout: React.FC = () => {
     // 主页面的路由匹配
     if (path === '/overview' || path === '/') return ['overview'];
     if (path.startsWith('/clusters') && !path.match(/\/clusters\/[^/]+\//)) return ['cluster-management'];
-    if (path.startsWith('/permissions')) return ['permission-management'];
+    if (path === '/access/users') return ['access-users'];
+    if (path === '/access/user-groups') return ['access-user-groups'];
+    if (path === '/access/permissions') return ['access-permissions'];
+    if (path.startsWith('/permissions')) return ['access-permissions'];
     if (path === '/audit/operations') return ['audit-operations'];
     if (path === '/audit/commands') return ['audit-commands'];
     if (path.startsWith('/audit')) return ['audit-operations'];
@@ -214,10 +220,29 @@ const MainLayout: React.FC = () => {
       onClick: () => navigate('/clusters'),
     },
     {
-      key: 'permission-management',
+      key: 'access-control',
       icon: <KeyOutlined />,
-      label: t('menu.permissions'),
-      onClick: () => navigate('/permissions'),
+      label: '访问控制',
+      children: [
+        {
+          key: 'access-users',
+          icon: <UserOutlined />,
+          label: '用户管理',
+          onClick: () => navigate('/access/users'),
+        },
+        {
+          key: 'access-user-groups',
+          icon: <ClusterOutlined />,
+          label: '用户组管理',
+          onClick: () => navigate('/access/user-groups'),
+        },
+        {
+          key: 'access-permissions',
+          icon: <KeyOutlined />,
+          label: '权限分配',
+          onClick: () => navigate('/access/permissions'),
+        },
+      ],
     },
     {
       key: 'audit-management',
@@ -446,10 +471,11 @@ const MainLayout: React.FC = () => {
 
   // 获取当前用户信息
   const currentUser = tokenManager.getUser();
-  const isUserPlatformAdmin = isPlatformAdmin(currentUser?.username);
   
   // 获取当前集群权限（用于集群内层菜单过滤）
-  const { currentClusterPermission } = usePermission();
+  const { currentClusterPermission, clusterPermissions } = usePermission();
+  const allPerms = useMemo(() => Array.from(clusterPermissions.values()), [clusterPermissions]);
+  const isUserPlatformAdmin = useMemo(() => isPlatformAdmin(currentUser?.username, allPerms), [currentUser, allPerms]);
   const currentPermissionType = currentClusterPermission?.permission_type as PermissionType | undefined;
 
   // 过滤外层主菜单
@@ -459,10 +485,8 @@ const MainLayout: React.FC = () => {
       const key = item.key as string;
       const config = MAIN_MENU_PERMISSIONS[key];
       
-      // 如果没有配置，默认显示
       if (!config) return true;
       
-      // 平台管理员专属菜单
       if (config.platformAdminOnly && !isUserPlatformAdmin) {
         return false;
       }

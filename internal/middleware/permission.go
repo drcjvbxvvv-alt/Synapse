@@ -8,6 +8,7 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // PermissionMiddleware 权限中间件
@@ -253,27 +254,47 @@ func (m *PermissionMiddleware) AutoWriteCheck() gin.HandlerFunc {
 }
 
 // PlatformAdminRequired 平台管理员权限检查
-// 用于系统设置、用户管理等平台级操作
-func PlatformAdminRequired() gin.HandlerFunc {
+// 判定逻辑：用户名为 admin，或用户（直接/通过用户组）在任意集群拥有 admin 权限类型
+func PlatformAdminRequired(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从上下文获取用户信息
 		userID := c.GetUint("user_id")
+		username := c.GetString("username")
 		if userID == 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "未登录",
-			})
+			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "未登录"})
 			c.Abort()
 			return
 		}
 
-		// TODO: 检查用户是否是平台管理员
-		// 目前简单实现：ID为1的用户是超级管理员
-		// 实际应用中应该从数据库查询用户角色
-		// 这里先放行，后续完善
-		_ = userID
+		if username == "admin" {
+			c.Next()
+			return
+		}
 
-		c.Next()
+		// 检查用户是否直接拥有 admin 权限
+		var count int64
+		db.Model(&models.ClusterPermission{}).
+			Where("user_id = ? AND permission_type = ?", userID, models.PermissionTypeAdmin).
+			Count(&count)
+		if count > 0 {
+			c.Next()
+			return
+		}
+
+		// 检查用户所在用户组是否拥有 admin 权限
+		var groupIDs []uint
+		db.Model(&models.UserGroupMember{}).Where("user_id = ?", userID).Pluck("user_group_id", &groupIDs)
+		if len(groupIDs) > 0 {
+			db.Model(&models.ClusterPermission{}).
+				Where("user_group_id IN ? AND permission_type = ?", groupIDs, models.PermissionTypeAdmin).
+				Count(&count)
+			if count > 0 {
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "需要平台管理员权限"})
+		c.Abort()
 	}
 }
 

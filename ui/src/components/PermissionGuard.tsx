@@ -19,11 +19,8 @@ import type { PermissionType } from '../types';
 
 interface PermissionGuardProps {
   children: React.ReactNode;
-  // 平台管理员专属
   platformAdminOnly?: boolean;
-  // 集群级别权限要求
   requiredPermission?: PermissionType;
-  // 自定义无权限时的行为
   fallback?: React.ReactNode;
 }
 
@@ -39,16 +36,16 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
 }) => {
   const { t } = useTranslation('components');
   const currentUser = tokenManager.getUser();
-  const { currentClusterPermission, loading } = usePermission();
+  const { currentClusterPermission, clusterPermissions, loading } = usePermission();
 
-  // 如果权限还在加载中，可以显示加载状态
   if (loading) {
     return null;
   }
 
   // 检查平台管理员权限
   if (platformAdminOnly) {
-    if (!isPlatformAdmin(currentUser?.username)) {
+    const allPerms = Array.from(clusterPermissions.values());
+    if (!isPlatformAdmin(currentUser?.username, allPerms)) {
       if (fallback) return <>{fallback}</>;
       return (
         <Result
@@ -90,16 +87,16 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
 
 /**
  * 平台管理员路由守卫
- * 自动检测当前路由是否需要平台管理员权限
  */
 export const PlatformAdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const currentUser = tokenManager.getUser();
+  const { clusterPermissions } = usePermission();
 
-  // 检查当前路由是否需要平台管理员权限
   const routeConfig = ROUTE_PERMISSIONS[location.pathname];
+  const allPerms = Array.from(clusterPermissions.values());
   
-  if (routeConfig?.platformAdminOnly && !isPlatformAdmin(currentUser?.username)) {
+  if (routeConfig?.platformAdminOnly && !isPlatformAdmin(currentUser?.username, allPerms)) {
     return <Navigate to="/overview" replace />;
   }
 
@@ -108,7 +105,6 @@ export const PlatformAdminGuard: React.FC<{ children: React.ReactNode }> = ({ ch
 
 /**
  * 集群权限路由守卫
- * 自动检测当前集群路由是否需要特定权限
  */
 export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation('components');
@@ -119,11 +115,9 @@ export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = (
     return null;
   }
 
-  // 从路径中提取子路由部分
   const pathMatch = location.pathname.match(/\/clusters\/[^/]+(.+)/);
   const subPath = pathMatch ? pathMatch[1] : '';
 
-  // 检查是否需要特定权限
   for (const [routePattern, requiredPermission] of Object.entries(CLUSTER_ROUTE_PERMISSIONS)) {
     if (subPath.startsWith(routePattern)) {
       const userPermission = currentClusterPermission?.permission_type as PermissionType | undefined;
@@ -148,7 +142,6 @@ export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = (
   return <>{children}</>;
 };
 
-// 获取权限类型的显示名称
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getPermissionLabel = (type: PermissionType, t: any): string => {
   const labels: Record<PermissionType, string> = {

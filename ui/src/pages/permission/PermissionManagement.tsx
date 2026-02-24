@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  App,
   Card,
   Table,
   Button,
@@ -9,7 +10,6 @@ import {
   Input,
   Select,
   Tag,
-  message,
   Tooltip,
   Popconfirm,
   Typography,
@@ -48,6 +48,7 @@ import permissionService, {
   allowsPartialNamespaces,
 } from '../../services/permissionService';
 import { clusterService } from '../../services/clusterService';
+import { getNamespaces as fetchClusterNamespaces } from '../../services/namespaceService';
 import rbacService from '../../services/rbacService';
 import type { SyncStatusResult } from '../../services/rbacService';
 import CustomRoleEditor from '../../components/CustomRoleEditor';
@@ -94,6 +95,7 @@ const PermissionTypeCard: React.FC<{
 const PermissionManagement: React.FC = () => {
   // 状态
 const { t } = useTranslation(['permission', 'common']);
+const { message } = App.useApp();
 
 const defaultPermissionTypes: PermissionTypeInfo[] = defaultPermissionTypeKeys.map(type => ({
     type,
@@ -127,6 +129,8 @@ const [loading, setLoading] = useState(false);
   const [selectedPermissionType, setSelectedPermissionType] = useState<PermissionType>('admin');
   const [assignType, setAssignType] = useState<'user' | 'group'>('user');
   const [allNamespaces, setAllNamespaces] = useState(true);
+  const [namespaceOptions, setNamespaceOptions] = useState<string[]>([]);
+  const [namespacesLoading, setNamespacesLoading] = useState(false);
 
   // 同步权限状态
   const [syncModalVisible, setSyncModalVisible] = useState(false);
@@ -241,17 +245,21 @@ const [loading, setLoading] = useState(false);
   const handleEdit = (record: ClusterPermission) => {
     setEditingPermission(record);
     setSelectedPermissionType(record.permission_type);
-    setAssignType(record.user_id ? 'user' : 'group');
     setAllNamespaces(record.namespaces.includes('*'));
     form.setFieldsValue({
       cluster_id: record.cluster_id,
-      user_id: record.user_id,
-      user_group_id: record.user_group_id,
       permission_type: record.permission_type,
       namespaces: record.namespaces.filter((n) => n !== '*'),
       custom_role_ref: record.custom_role_ref,
     });
     setModalVisible(true);
+    if (record.cluster_id) {
+      setNamespacesLoading(true);
+      fetchClusterNamespaces(record.cluster_id)
+        .then((nsList) => setNamespaceOptions(nsList.map((ns) => ns.name)))
+        .catch(() => setNamespaceOptions([]))
+        .finally(() => setNamespacesLoading(false));
+    }
   };
 
   // 删除权限
@@ -286,24 +294,22 @@ const [loading, setLoading] = useState(false);
     try {
       const values = await form.validateFields();
       
-      const data = {
-        cluster_id: values.cluster_id,
-        permission_type: selectedPermissionType,
-        namespaces: allNamespaces ? ['*'] : (values.namespaces || []),
-        custom_role_ref: selectedPermissionType === 'custom' ? values.custom_role_ref : undefined,
-        user_id: assignType === 'user' ? values.user_id : undefined,
-        user_group_id: assignType === 'group' ? values.user_group_id : undefined,
-      };
-
       if (editingPermission) {
         await permissionService.updateClusterPermission(editingPermission.id, {
-          permission_type: data.permission_type,
-          namespaces: data.namespaces,
-          custom_role_ref: data.custom_role_ref,
+          permission_type: selectedPermissionType,
+          namespaces: allNamespaces ? ['*'] : (values.namespaces || []),
+          custom_role_ref: selectedPermissionType === 'custom' ? values.custom_role_ref : undefined,
         });
         message.success(t('common:messages.saveSuccess'));
       } else {
-        await permissionService.createClusterPermission(data);
+        await permissionService.createClusterPermission({
+          cluster_id: values.cluster_id,
+          permission_type: selectedPermissionType,
+          namespaces: allNamespaces ? ['*'] : (values.namespaces || []),
+          custom_role_ref: selectedPermissionType === 'custom' ? values.custom_role_ref : undefined,
+          user_ids: assignType === 'user' ? values.user_ids : undefined,
+          user_group_ids: assignType === 'group' ? values.user_group_ids : undefined,
+        });
         message.success(t('permission:actions.addSuccess'));
       }
 
@@ -311,7 +317,9 @@ const [loading, setLoading] = useState(false);
       loadData();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
-      message.error(err.response?.data?.message || t('permission:actions.operationError'));
+      if (err.response?.data?.message) {
+        message.error(err.response.data.message);
+      }
     }
   };
 
@@ -549,6 +557,17 @@ const [loading, setLoading] = useState(false);
                 disabled={!!editingPermission}
                 showSearch
                 optionFilterProp="children"
+                onChange={(value: number) => {
+                  setNamespaceOptions([]);
+                  form.setFieldsValue({ namespaces: [] });
+                  if (value) {
+                    setNamespacesLoading(true);
+                    fetchClusterNamespaces(value)
+                      .then((nsList) => setNamespaceOptions(nsList.map((ns) => ns.name)))
+                      .catch(() => setNamespaceOptions([]))
+                      .finally(() => setNamespacesLoading(false));
+                  }
+                }}
               >
                 {clusters.map((c) => (
                   <Option key={c.id} value={parseInt(c.id)}>
@@ -628,14 +647,20 @@ const [loading, setLoading] = useState(false);
                     <Button
                       type={assignType === 'user' ? 'primary' : 'default'}
                       icon={<UserOutlined />}
-                      onClick={() => setAssignType('user')}
+                      onClick={() => {
+                        setAssignType('user');
+                        form.setFieldsValue({ user_ids: undefined, user_group_ids: undefined });
+                      }}
                     >
                       {t('permission:columns.user')}
                     </Button>
                     <Button
                       type={assignType === 'group' ? 'primary' : 'default'}
                       icon={<TeamOutlined />}
-                      onClick={() => setAssignType('group')}
+                      onClick={() => {
+                        setAssignType('group');
+                        form.setFieldsValue({ user_ids: undefined, user_group_ids: undefined });
+                      }}
                     >
                       {t('permission:columns.userGroup')}
                     </Button>
@@ -644,47 +669,37 @@ const [loading, setLoading] = useState(false);
 
                 {assignType === 'user' ? (
                   <Form.Item
-                    name="user_id"
+                    name="user_ids"
                     label={t('permission:form.selectUser')}
                     rules={[{ required: true, message: t('permission:form.selectUserRequired') }]}
                   >
                     <Select
+                      mode="multiple"
                       placeholder={t('permission:form.selectUserPlaceholder')}
                       showSearch
-                      optionFilterProp="children"
-                    >
-                      {users.map((u) => (
-                        <Option key={u.id} value={u.id}>
-                          <Space>
-                            <UserOutlined />
-                            {u.display_name || u.username}
-                            <Text type="secondary">({u.username})</Text>
-                          </Space>
-                        </Option>
-                      ))}
-                    </Select>
+                      optionFilterProp="label"
+                      options={users.map((u) => ({
+                        label: `${u.display_name || u.username} (${u.username})`,
+                        value: u.id,
+                      }))}
+                    />
                   </Form.Item>
                 ) : (
                   <Form.Item
-                    name="user_group_id"
+                    name="user_group_ids"
                     label={t('permission:form.selectUserGroup')}
                     rules={[{ required: true, message: t('permission:form.selectUserGroupRequired') }]}
                   >
                     <Select
+                      mode="multiple"
                       placeholder={t('permission:form.selectUserGroupPlaceholder')}
                       showSearch
-                      optionFilterProp="children"
-                    >
-                      {userGroups.map((g) => (
-                        <Option key={g.id} value={g.id}>
-                          <Space>
-                            <TeamOutlined />
-                            {g.name}
-                            <Text type="secondary">({t('permission:form.memberCount', { count: g.users?.length || 0 })})</Text>
-                          </Space>
-                        </Option>
-                      ))}
-                    </Select>
+                      optionFilterProp="label"
+                      options={userGroups.map((g) => ({
+                        label: `${g.name} (${g.users?.length || 0} 成员)`,
+                        value: g.id,
+                      }))}
+                    />
                   </Form.Item>
                 )}
               </>
@@ -716,10 +731,13 @@ const [loading, setLoading] = useState(false);
                   mode="tags"
                   placeholder={t('permission:form.namespacePlaceholder')}
                   tokenSeparators={[',']}
+                  loading={namespacesLoading}
+                  showSearch
+                  optionFilterProp="children"
                 >
-                  <Option value="default">default</Option>
-                  <Option value="kube-system">kube-system</Option>
-                  <Option value="kube-public">kube-public</Option>
+                  {namespaceOptions.map((ns) => (
+                    <Option key={ns} value={ns}>{ns}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             )}

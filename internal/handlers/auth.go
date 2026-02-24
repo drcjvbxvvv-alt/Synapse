@@ -47,7 +47,7 @@ type LoginResponse struct {
 	Token       string                         `json:"token"`
 	User        models.User                    `json:"user"`
 	ExpiresAt   int64                          `json:"expires_at"`
-	Permissions []models.MyPermissionsResponse `json:"permissions,omitempty"` // 用户权限列表
+	Permissions []models.MyPermissionsResponse `json:"permissions,omitempty"`
 }
 
 // Login 用户登录 - 支持本地密码和LDAP两种认证方式
@@ -329,7 +329,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	}
 
 	var user models.User
-	if err := h.db.Preload("Roles").First(&user, userID).Error; err != nil {
+	if err := h.db.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"code":    404,
 			"message": "用户不存在",
