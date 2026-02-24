@@ -3,16 +3,15 @@
  * 相比多 Panel 分别嵌入，整体嵌入加载更快
  */
 import React, { useState, useMemo, useCallback } from 'react';
-import { Card, Space, Button, Switch, Spin, DatePicker, Popover, Divider, Typography, Empty } from 'antd';
+import { Card, Space, Button, Switch, Spin, DatePicker, Popover, Divider, Typography, Empty, Alert } from 'antd';
 import { ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { generateDataSourceUID } from '../../../config/grafana.config';
 import { useTranslation } from 'react-i18next';
+import { useGrafanaUrl } from '../../../hooks/useGrafanaUrl';
 
 const { Text } = Typography;
 
-// 使用相对路径，通过 Nginx 代理访问 Grafana
-const GRAFANA_URL = '/grafana';
 const DASHBOARD_UID = 'kubepolaris-pod-detail';
 
 // Grafana 风格的时间范围选项
@@ -53,6 +52,7 @@ const PodMonitoringTab: React.FC<PodMonitoringTabProps> = ({
   namespace,
   podName,
 }) => {
+const { grafanaUrl, loading: grafanaUrlLoading } = useGrafanaUrl();
 const { t } = useTranslation(['pod', 'common']);
 const [timeRange, setTimeRange] = useState('1h');
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -118,8 +118,8 @@ const [timeRange, setTimeRange] = useState('1h');
     }
 
     // 完全 kiosk 模式：隐藏侧边栏和顶部导航栏
-    return `${GRAFANA_URL}/d/${DASHBOARD_UID}/?${params.toString()}&kiosk`;
-  }, [getFromTime, getToTime, dataSourceUid, namespace, podName, autoRefresh]);
+    return `${grafanaUrl}/d/${DASHBOARD_UID}/?${params.toString()}&kiosk`;
+  }, [grafanaUrl, getFromTime, getToTime, dataSourceUid, namespace, podName, autoRefresh]);
 
   const handleRefresh = () => {
     setLoading(true);
@@ -254,32 +254,43 @@ const [timeRange, setTimeRange] = useState('1h');
       }
       styles={{ body: { padding: 0, position: 'relative', minHeight: 800 } }}
     >
-      {/* 加载状态 */}
-      {loading && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 10,
-          textAlign: 'center',
-        }}>
-          <Spin size="large" />
-          <div style={{ marginTop: 16, color: '#666' }}>{t('pod:terminal.monitoringData')}</div>
-        </div>
+      {grafanaUrlLoading ? (
+        <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
+      ) : !grafanaUrl ? (
+        <Alert
+          message="Grafana 未配置"
+          description="请在「系统设置 → Grafana 设置」中配置 Grafana 地址，然后刷新页面。"
+          type="warning"
+          showIcon
+          style={{ margin: 24 }}
+        />
+      ) : (
+        <>
+          {loading && (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
+              textAlign: 'center',
+            }}>
+              <Spin size="large" />
+              <div style={{ marginTop: 16, color: '#666' }}>{t('pod:terminal.monitoringData')}</div>
+            </div>
+          )}
+          <iframe
+            key={`${refreshKey}-${clusterId}-${namespace}-${podName}`}
+            src={dashboardUrl}
+            width="100%"
+            height="800"
+            frameBorder="0"
+            style={{ border: 'none', display: 'block' }}
+            title="Grafana Pod Monitoring Dashboard"
+            onLoad={handleIframeLoad}
+          />
+        </>
       )}
-      
-      {/* 整个 Dashboard iframe */}
-      <iframe
-        key={`${refreshKey}-${clusterId}-${namespace}-${podName}`}
-        src={dashboardUrl}
-        width="100%"
-        height="800"
-        frameBorder="0"
-        style={{ border: 'none', display: 'block' }}
-        title="Grafana Pod Monitoring Dashboard"
-        onLoad={handleIframeLoad}
-      />
     </Card>
   );
 };

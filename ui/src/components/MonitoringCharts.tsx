@@ -5,6 +5,7 @@ import { ReloadOutlined } from '@ant-design/icons';
 import api from '../utils/api';
 import GrafanaPanel from './GrafanaPanel';
 import { generateDataSourceUID } from '../config/grafana.config';
+import { useGrafanaUrl } from '../hooks/useGrafanaUrl';
 
 const { Option } = Select;
 
@@ -149,6 +150,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
   type,
   lazyLoad = false,
 }) => {
+  const { grafanaUrl } = useGrafanaUrl();
   const [metrics, setMetrics] = useState<ClusterMetricsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState('1h');
@@ -569,6 +571,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   <Row gutter={16}>
                     <Col span={6}>
                       <GrafanaPanel
+                        grafanaUrl={grafanaUrl}
                         dashboardUid="k8s-cluster"
                         panelId={80}
                         variables={{ 
