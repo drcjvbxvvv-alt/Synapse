@@ -6,123 +6,34 @@ import {
   Form,
   Input,
   Button,
-  Card,
   Typography,
   Tabs,
   Space,
   Spin,
   App,
 } from 'antd';
+
 import {
   UserOutlined,
   LockOutlined,
   LoginOutlined,
   CloudServerOutlined,
+  ClusterOutlined,
+  MonitorOutlined,
+  SafetyCertificateOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import { authService, tokenManager } from '../../services/authService';
+import './Login.css';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface LoginFormValues {
   username: string;
   password: string;
 }
 
-// 样式定义
-const styles = `
-  @keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-20px) rotate(5deg); }
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 0.3; }
-  }
-
-  @keyframes slideInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .login-container {
-    animation: fadeIn 0.6s ease-out;
-  }
-
-  .login-card {
-    animation: slideInUp 0.8s ease-out;
-  }
-
-  .login-card:hover {
-    transform: translateY(-4px);
-    transition: all 0.3s ease;
-  }
-
-  .decorative-circle {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    animation: float 8s ease-in-out infinite;
-  }
-
-  .decorative-circle:nth-child(1) {
-    width: 300px;
-    height: 300px;
-    top: -150px;
-    left: -150px;
-    animation-delay: 0s;
-  }
-
-  .decorative-circle:nth-child(2) {
-    width: 200px;
-    height: 200px;
-    bottom: -100px;
-    right: -100px;
-    animation-delay: 2s;
-  }
-
-  .decorative-circle:nth-child(3) {
-    width: 150px;
-    height: 150px;
-    top: 50%;
-    right: 10%;
-    animation-delay: 4s;
-  }
-
-  .kubernetes-pattern {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    pointer-events: none;
-  }
-
-  .tech-text {
-    position: absolute;
-    font-size: 48px;
-    font-weight: 700;
-    opacity: 0.05;
-    color: #667eea;
-    animation: pulse 6s ease-in-out infinite;
-    font-family: 'Arial Black', sans-serif;
-  }
-
-  .tech-text:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
-  .tech-text:nth-child(2) { top: 20%; right: 15%; animation-delay: 2s; }
-  .tech-text:nth-child(3) { bottom: 15%; left: 20%; animation-delay: 4s; }
-  .tech-text:nth-child(4) { bottom: 25%; right: 10%; animation-delay: 6s; }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-`;
+const isDev = import.meta.env.DEV;
 
 const Login: React.FC = () => {
   const { message } = App.useApp();
@@ -135,27 +46,14 @@ const Login: React.FC = () => {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [activeTab, setActiveTab] = useState<'local' | 'ldap'>('local');
 
-  // 注入样式
-  useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.textContent = styles;
-    document.head.appendChild(styleElement);
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, []);
-
-  // 获取重定向地址
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
-  // 检查是否已登录
   useEffect(() => {
     if (tokenManager.isLoggedIn()) {
       navigate(from, { replace: true });
     }
   }, [navigate, from]);
 
-  // 获取认证状态
   useEffect(() => {
     const fetchAuthStatus = async () => {
       try {
@@ -173,7 +71,6 @@ const Login: React.FC = () => {
     fetchAuthStatus();
   }, []);
 
-  // 登录处理
   const handleLogin = async (values: LoginFormValues) => {
     setLoading(true);
     try {
@@ -184,12 +81,10 @@ const Login: React.FC = () => {
       });
 
       if (response.code === 200) {
-        // 保存认证信息
         tokenManager.setToken(response.data.token);
         tokenManager.setUser(response.data.user);
         tokenManager.setExpiresAt(response.data.expires_at);
-        
-        // 保存权限信息
+
         if (response.data.permissions) {
           tokenManager.setPermissions(response.data.permissions);
         }
@@ -209,13 +104,11 @@ const Login: React.FC = () => {
 
   if (checkingStatus) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      }}>
+      <div className="login-loading">
+        <div className="login-loading-logo">
+          <img src={kubernetesLogo} alt="KubePolaris" width={44} height={44} />
+          <span>KubePolaris</span>
+        </div>
         <Spin size="large" />
       </div>
     );
@@ -242,230 +135,153 @@ const Login: React.FC = () => {
     }] : []),
   ];
 
+  const features = [
+    {
+      icon: <ClusterOutlined />,
+      title: t('auth.featureMultiClusterTitle'),
+      desc: t('auth.featureMultiClusterDesc'),
+    },
+    {
+      icon: <MonitorOutlined />,
+      title: t('auth.featureObservabilityTitle'),
+      desc: t('auth.featureObservabilityDesc'),
+    },
+    {
+      icon: <SafetyCertificateOutlined />,
+      title: t('auth.featureRBACTitle'),
+      desc: t('auth.featureRBACDesc'),
+    },
+    {
+      icon: <CodeOutlined />,
+      title: t('auth.featureGitOpsTitle'),
+      desc: t('auth.featureGitOpsDesc'),
+    },
+  ];
+
   return (
-    <div
-      className="login-container"
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: 24,
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* 装饰性背景圆圈 */}
-      <div className="decorative-circle" />
-      <div className="decorative-circle" />
-      <div className="decorative-circle" />
+    <main className="login-page">
+      {/* Left: Brand Panel */}
+      <section className="login-brand-panel" aria-hidden="true">
+        <div className="login-bg-grid" />
+        <div className="login-bg-glow login-bg-glow-1" />
+        <div className="login-bg-glow login-bg-glow-2" />
+        <div className="login-bg-float login-bg-float-1" />
+        <div className="login-bg-float login-bg-float-2" />
+        <div className="login-bg-float login-bg-float-3" />
 
-      {/* 技术栈文字背景 */}
-      <div className="kubernetes-pattern">
-        <div className="tech-text">SRE</div>
-        <div className="tech-text">AI</div>
-        <div className="tech-text">K8s</div>
-        <div className="tech-text">Agent</div>
-      </div>
-
-      <Card
-        className="login-card"
-        style={{
-          width: 460,
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-          borderRadius: 24,
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.3)',
-          position: 'relative',
-          zIndex: 1,
-        }}
-        bodyStyle={{ padding: '48px 40px' }}
-      >
-        {/* Logo 和标题区域 */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div 
-            style={{ 
-              marginBottom: 20,
-              position: 'relative',
-              display: 'inline-block'
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                width: '80px',
-                height: '80px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: '50%',
-                filter: 'blur(20px)',
-                opacity: 0.3,
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-              }}
-            />
-            <img
-              src={kubernetesLogo}
-              alt="KubePolaris"
-              style={{ 
-                width: 72, 
-                height: 72,
-                position: 'relative',
-                filter: 'drop-shadow(0 4px 12px rgba(102, 126, 234, 0.3))',
-              }}
-            />
+        <div className="login-brand-content">
+          <div className="login-brand-logo">
+            <img src={kubernetesLogo} alt="" width={48} height={48} />
+            <span className="login-brand-logo-text">KubePolaris</span>
           </div>
-          <Title 
-            level={2} 
-            style={{ 
-              margin: '0 0 8px 0',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontWeight: 700,
-              fontSize: 32,
-            }}
-          >
-            KubePolaris
-          </Title>
-          <Text 
-            style={{ 
-              fontSize: 15,
-              color: '#6b7280',
-              fontWeight: 500,
-            }}
-          >
-            {t('app.tagline')}
-          </Text>
+
+          <h2 className="login-brand-headline">
+            {t('auth.brandHeadline')}
+          </h2>
+          <p className="login-brand-desc">
+            {t('auth.brandDesc')}
+          </p>
+
+          <div className="login-features">
+            {features.map((f, i) => (
+              <div className="login-feature-item" key={i}>
+                <div className="login-feature-icon">{f.icon}</div>
+                <div className="login-feature-text">
+                  <h4>{f.title}</h4>
+                  <p>{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
 
-        {/* 登录方式切换 */}
-        {ldapEnabled ? (
-          <Tabs
-            activeKey={activeTab}
-            onChange={(key) => setActiveTab(key as 'local' | 'ldap')}
-            items={tabItems}
-            centered
-            style={{ marginBottom: 32 }}
-          />
-        ) : null}
+      {/* Right: Form Panel */}
+      <section className="login-form-panel">
+        <div className="login-form-wrapper">
+          <div className="login-form-header">
+            <h1 className="login-form-title">{t('auth.welcomeBack')}</h1>
+            <p className="login-form-subtitle">{t('auth.loginSubtitle')}</p>
+          </div>
 
-        {/* 登录表单 */}
-        <Form
-          form={form}
-          onFinish={handleLogin}
-          layout="vertical"
-          requiredMark={false}
-        >
-          <Form.Item
-            name="username"
-            rules={[{ required: true, message: t('auth.usernameRequired') }]}
-          >
-            <Input
-              prefix={<UserOutlined style={{ color: '#9ca3af' }} />}
-              placeholder={t('auth.username')}
-              size="large"
-              autoComplete="username"
-              style={{
-                height: 48,
-                borderRadius: 12,
-                fontSize: 15,
-                border: '1px solid #e5e7eb',
-              }}
+          {ldapEnabled && (
+            <Tabs
+              activeKey={activeTab}
+              onChange={(key) => setActiveTab(key as 'local' | 'ldap')}
+              items={tabItems}
+              centered
+              style={{ marginBottom: 28 }}
             />
-          </Form.Item>
+          )}
 
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: t('auth.passwordRequired') }]}
-            style={{ marginBottom: 32 }}
+          <Form
+            form={form}
+            onFinish={handleLogin}
+            layout="vertical"
+            requiredMark={false}
+            className="login-form"
           >
-            <Input.Password
-              prefix={<LockOutlined style={{ color: '#9ca3af' }} />}
-              placeholder={t('auth.password')}
-              size="large"
-              autoComplete="current-password"
-              style={{
-                height: 48,
-                borderRadius: 12,
-                fontSize: 15,
-                border: '1px solid #e5e7eb',
-              }}
-            />
-          </Form.Item>
-
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={loading}
-              icon={<LoginOutlined />}
-              style={{
-                height: 52,
-                borderRadius: 12,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                fontSize: 16,
-                fontWeight: 600,
-                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-                transition: 'all 0.3s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
-              }}
+            <Form.Item
+              name="username"
+              label={t('auth.username')}
+              rules={[{ required: true, message: t('auth.usernameRequired') }]}
             >
-              {t('auth.login')}
-            </Button>
-          </Form.Item>
-        </Form>
+              <Input
+                prefix={<UserOutlined style={{ color: '#9ca3af' }} aria-hidden="true" />}
+                placeholder={`${t('auth.username')}…`}
+                size="large"
+                autoComplete="username"
+                spellCheck={false}
+                autoFocus
+              />
+            </Form.Item>
 
-        {/* 提示信息 */}
-        <div 
-          style={{ 
-            textAlign: 'center', 
-            marginTop: 32,
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-            borderRadius: 12,
-            border: '1px solid rgba(102, 126, 234, 0.1)',
-          }}
-        >
-          <Text 
-            style={{ 
-              fontSize: 13,
-              color: '#6b7280',
-              lineHeight: '1.6',
-            }}
-          >
-            {activeTab === 'ldap' 
-              ? t('auth.ldapHint')
-              : t('auth.defaultAdminHint')}
-          </Text>
+            <Form.Item
+              name="password"
+              label={t('auth.password')}
+              rules={[{ required: true, message: t('auth.passwordRequired') }]}
+              style={{ marginBottom: 28 }}
+            >
+              <Input.Password
+                prefix={<LockOutlined style={{ color: '#9ca3af' }} aria-hidden="true" />}
+                placeholder={`${t('auth.password')}…`}
+                size="large"
+                autoComplete="current-password"
+                spellCheck={false}
+              />
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                block
+                loading={loading}
+                icon={<LoginOutlined />}
+                className="login-button"
+              >
+                {t('auth.login')}
+              </Button>
+            </Form.Item>
+          </Form>
+
+          {isDev && (
+            <div className="login-hint-box">
+              <Text>
+                {activeTab === 'ldap'
+                  ? t('auth.ldapHint')
+                  : t('auth.defaultAdminHint')}
+              </Text>
+            </div>
+          )}
         </div>
 
-        {/* 版权信息 */}
-        <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <Text 
-            type="secondary" 
-            style={{ 
-              fontSize: 12,
-              color: '#9ca3af',
-            }}
-          >
-            © 2026 KubePolaris. All rights reserved.
-          </Text>
+        <div className="login-footer">
+          <Text>{t('auth.copyright')}</Text>
         </div>
-      </Card>
-    </div>
+      </section>
+    </main>
   );
 };
 

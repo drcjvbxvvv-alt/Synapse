@@ -186,7 +186,20 @@
     "usernameRequired": "请输入用户名",
     "passwordRequired": "请输入密码",
     "ldapHint": "🔐 使用企业账号登录",
-    "defaultAdminHint": "👤 默认管理员: admin / KubePolaris@2026"
+    "defaultAdminHint": "👤 默认管理员: admin / KubePolaris@2026",
+    "copyright": "© 2026 KubePolaris. 保留所有权利。",
+    "welcomeBack": "欢迎回来",
+    "loginSubtitle": "登录以管理你的集群和资源。",
+    "brandHeadline": "统一管理你的 Kubernetes 集群",
+    "brandDesc": "通过单一平台监控、运维和治理所有 Kubernetes 集群。",
+    "featureMultiClusterTitle": "多集群管理",
+    "featureMultiClusterDesc": "统一仪表盘管理和切换多个集群。",
+    "featureObservabilityTitle": "全栈可观测性",
+    "featureObservabilityDesc": "集成 Prometheus 和 Grafana 的监控、日志与告警。",
+    "featureRBACTitle": "企业级权限控制",
+    "featureRBACDesc": "细粒度的 RBAC 权限管理，支持 LDAP 集成。",
+    "featureGitOpsTitle": "Web 终端",
+    "featureGitOpsDesc": "内置 Kubectl、Pod 和 SSH 三种终端，在浏览器中实时操作集群。"
   },
   "search": {
     "placeholder": "选择属性筛选，或输入关键字搜索",

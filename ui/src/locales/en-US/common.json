@@ -186,7 +186,20 @@
     "usernameRequired": "Please enter username",
     "passwordRequired": "Please enter password",
     "ldapHint": "🔐 Login with enterprise account",
-    "defaultAdminHint": "👤 Default admin: admin / KubePolaris@2026"
+    "defaultAdminHint": "👤 Default admin: admin / KubePolaris@2026",
+    "copyright": "© 2026 KubePolaris. All rights reserved.",
+    "welcomeBack": "Welcome Back",
+    "loginSubtitle": "Sign in to access your clusters and resources.",
+    "brandHeadline": "Unified Management for Your Kubernetes Fleet",
+    "brandDesc": "Monitor, operate, and govern all your Kubernetes clusters from a single pane of glass.",
+    "featureMultiClusterTitle": "Multi-Cluster Management",
+    "featureMultiClusterDesc": "Manage and switch between clusters with a unified dashboard.",
+    "featureObservabilityTitle": "Full-Stack Observability",
+    "featureObservabilityDesc": "Integrated monitoring, logging, and alerting powered by Prometheus & Grafana.",
+    "featureRBACTitle": "Enterprise RBAC",
+    "featureRBACDesc": "Fine-grained role-based access control with LDAP integration.",
+    "featureGitOpsTitle": "Web Terminal",
+    "featureGitOpsDesc": "Built-in Kubectl, Pod & SSH terminal for real-time cluster operations in browser."
   },
   "search": {
     "placeholder": "Select attribute to filter, or enter keyword to search",
