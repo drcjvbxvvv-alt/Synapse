@@ -462,6 +462,19 @@ export interface GrafanaDashboardStatusItem {
   exists: boolean;
 }
 
+// Grafana 数据源同步状态
+export interface GrafanaDataSourceSyncStatus {
+  datasources: GrafanaDataSourceStatusItem[];
+  all_synced: boolean;
+}
+
+export interface GrafanaDataSourceStatusItem {
+  cluster_name: string;
+  datasource_uid: string;
+  prometheus_url: string;
+  exists: boolean;
+}
+
 // ========== 权限管理类型 ==========
 
 // 权限类型常量

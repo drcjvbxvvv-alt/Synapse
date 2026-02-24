@@ -1,11 +1,6 @@
 package config
 
 import (
-	"fmt"
-	"os"
-	"strings"
-	"time"
-
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
@@ -21,12 +16,9 @@ type Config struct {
 	Grafana  GrafanaConfig  `mapstructure:"grafana"`
 }
 
-// GrafanaConfig Grafana 配置
+// GrafanaConfig Grafana 功能开关（URL 和 API Key 已迁移到系统设置配置中心）
 type GrafanaConfig struct {
-	Enabled    bool   `mapstructure:"enabled"`
-	URL        string `mapstructure:"url"`
-	APIKey     string `mapstructure:"api_key"`
-	APIKeyFile string `mapstructure:"api_key_file"` // 从文件读取 API Key（优先级高于 api_key）
+	Enabled bool `mapstructure:"enabled"`
 }
 
 // ServerConfig 服务器配置
@@ -100,11 +92,8 @@ func Load() *Config {
 	// 绑定 K8s 环境变量
 	_ = viper.BindEnv("k8s.default_namespace", "K8S_DEFAULT_NAMESPACE")
 
-	// 绑定 Grafana 环境变量
+	// 绑定 Grafana 环境变量（仅保留功能开关，连接配置已迁移到配置中心）
 	_ = viper.BindEnv("grafana.enabled", "GRAFANA_ENABLED")
-	_ = viper.BindEnv("grafana.url", "GRAFANA_URL")
-	_ = viper.BindEnv("grafana.api_key", "GRAFANA_API_KEY")
-	_ = viper.BindEnv("grafana.api_key_file", "GRAFANA_API_KEY_FILE")
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
@@ -112,57 +101,7 @@ func Load() *Config {
 	}
 	logger.Info("配置: %+v", config)
 
-	// 如果配置了 API Key 文件路径，尝试从文件读取（带重试和优雅降级）
-	if config.Grafana.APIKeyFile != "" {
-		if apiKey, err := readAPIKeyFromFile(config.Grafana.APIKeyFile); err == nil {
-			config.Grafana.APIKey = apiKey
-			logger.Info("Grafana API Key 已从文件加载: %s", config.Grafana.APIKeyFile)
-		} else {
-			// 如果 Grafana 是启用的，记录警告但不中断启动
-			if config.Grafana.Enabled {
-				logger.Warn("从文件读取 Grafana API Key 失败: %v", err)
-				logger.Warn("Grafana 功能将被禁用，但系统将继续运行")
-				config.Grafana.Enabled = false // 自动禁用 Grafana 功能
-			} else {
-				logger.Info("Grafana 未启用，跳过 API Key 加载")
-			}
-		}
-	} else if config.Grafana.Enabled && config.Grafana.APIKey == "" {
-		logger.Warn("Grafana 已启用但未配置 API Key，功能可能不可用")
-	}
-
 	return &config
-}
-
-// readAPIKeyFromFile 从文件读取 API Key（带重试机制）
-func readAPIKeyFromFile(filePath string) (string, error) {
-	maxRetries := 30                 // 最多重试 30 次
-	retryInterval := 2 * time.Second // 每次间隔 2 秒
-
-	for i := 0; i < maxRetries; i++ {
-		data, err := os.ReadFile(filePath)
-		if err == nil {
-			apiKey := strings.TrimSpace(string(data))
-			if apiKey != "" {
-				return apiKey, nil
-			}
-			// 文件存在但内容为空，继续重试
-			if i < maxRetries-1 {
-				logger.Info("Grafana API Key 文件存在但为空，等待内容写入... (尝试 %d/%d)", i+1, maxRetries)
-			}
-		} else {
-			// 文件不存在，继续重试
-			if i < maxRetries-1 {
-				logger.Info("等待 Grafana API Key 文件生成... (尝试 %d/%d)", i+1, maxRetries)
-			}
-		}
-
-		if i < maxRetries-1 {
-			time.Sleep(retryInterval)
-		}
-	}
-
-	return "", fmt.Errorf("重试 %d 次后仍无法读取有效的 API Key 文件: %s", maxRetries, filePath)
 }
 
 // setDefaults 设置默认配置值
@@ -191,9 +130,6 @@ func setDefaults() {
 	// K8s默认配置
 	viper.SetDefault("k8s.default_namespace", "default")
 
-	// Grafana 默认配置
+	// Grafana 默认配置（仅功能开关）
 	viper.SetDefault("grafana.enabled", false)
-	viper.SetDefault("grafana.url", "http://localhost:3000")
-	viper.SetDefault("grafana.api_key", "")
-	viper.SetDefault("grafana.api_key_file", "") // 支持从文件读取 API Key
 }

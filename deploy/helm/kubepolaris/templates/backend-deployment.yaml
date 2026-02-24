@@ -84,27 +84,9 @@ spec:
           value: {{ .Values.config.log.level | quote }}
         - name: TZ
           value: "Asia/Shanghai"
-        {{- if .Values.grafana.enabled }}
+        {{- if or .Values.grafana.enabled .Values.grafana.external.enabled }}
         - name: GRAFANA_ENABLED
           value: "true"
-        - name: GRAFANA_URL
-          value: "http://{{ include "kubepolaris.fullname" . }}-grafana:3000"
-        - name: GRAFANA_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "kubepolaris.fullname" . }}-grafana-api-key
-              key: grafana-api-key
-              optional: true
-        {{- else if .Values.grafana.external.enabled }}
-        - name: GRAFANA_ENABLED
-          value: "true"
-        - name: GRAFANA_URL
-          value: {{ .Values.grafana.external.url | quote }}
-        - name: GRAFANA_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.grafana.external.existingSecret | default (printf "%s-grafana-external" (include "kubepolaris.fullname" .)) }}
-              key: {{ .Values.grafana.external.existingSecretApiKeyKey | default "grafana-api-key" }}
         {{- end }}
         {{- with .Values.backend.env }}
         {{- toYaml . | nindent 8 }}

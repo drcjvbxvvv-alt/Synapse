@@ -65,13 +65,10 @@ services:
       JWT_EXPIRE_TIME: 24
       LOG_LEVEL: ${LOG_LEVEL:-info}
       GRAFANA_ENABLED: "true"
-      GRAFANA_URL: http://grafana:3000
-      GRAFANA_API_KEY_FILE: /app/grafana/secrets/grafana_api_key
       TZ: Asia/Shanghai
     ports:
       - "${APP_PORT:-8080}:8080"
     volumes:
-      - ./deploy/docker/grafana/secrets:/app/grafana/secrets:ro
       - kubepolaris_logs:/app/logs
     networks:
       - kubepolaris-network

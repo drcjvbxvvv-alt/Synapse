@@ -4,8 +4,6 @@ import (
 	"embed"
 	"io/fs"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"strings"
 
 	"github.com/gin-contrib/gzip"
@@ -62,27 +60,28 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 	argoCDSvc := services.NewArgoCDService(db)         // ArgoCD 服务
 	permissionSvc := services.NewPermissionService(db) // 权限服务
 
-	// 初始化 Grafana 服务（从数据库读取配置，env 仅控制功能开关）
-	var grafanaSvc *services.GrafanaService
+	// 初始化 Grafana 服务（始终创建实例，从数据库读取配置，env 仅控制代理和自动同步）
 	grafanaSettingSvc := services.NewGrafanaSettingService(db)
-	if cfg.Grafana.Enabled {
-		grafanaConfig, err := grafanaSettingSvc.GetGrafanaConfig()
-		if err != nil {
-			logger.Error("读取 Grafana 配置失败", "error", err)
-		} else if grafanaConfig.URL != "" && grafanaConfig.APIKey != "" {
-			grafanaSvc = services.NewGrafanaService(grafanaConfig.URL, grafanaConfig.APIKey)
-			if err := grafanaSvc.TestConnection(); err != nil {
-				logger.Warn("Grafana 连接测试失败，数据源同步将被禁用", "error", err)
-			} else {
-				logger.Info("Grafana 服务已启用（配置来自数据库）", "url", grafanaConfig.URL)
-			}
+	grafanaSvc := services.NewGrafanaService("", "")
+	grafanaConfig, err := grafanaSettingSvc.GetGrafanaConfig()
+	if err != nil {
+		logger.Error("读取 Grafana 配置失败", "error", err)
+	} else if grafanaConfig.URL != "" && grafanaConfig.APIKey != "" {
+		grafanaSvc.UpdateConfig(grafanaConfig.URL, grafanaConfig.APIKey)
+		if err := grafanaSvc.TestConnection(); err != nil {
+			logger.Warn("Grafana 连接测试失败，数据源同步将被禁用", "error", err)
 		} else {
-			// URL 或 APIKey 为空，创建空实例以便后续通过配置中心热更新
-			grafanaSvc = services.NewGrafanaService("", "")
-			logger.Info("Grafana 功能已启用，但尚未配置连接信息，请在系统设置中配置")
+			logger.Info("Grafana 服务已启用（配置来自数据库）", "url", grafanaConfig.URL)
 		}
+	} else {
+		logger.Info("Grafana 尚未配置连接信息，请在系统设置中配置")
 	}
-	monitoringConfigSvc := services.NewMonitoringConfigServiceWithGrafana(db, grafanaSvc)
+	// 仅在 GRAFANA_ENABLED=true 时将 grafanaSvc 传给 monitoringConfigSvc 用于自动同步数据源
+	var monitoringGrafanaSvc *services.GrafanaService
+	if cfg.Grafana.Enabled {
+		monitoringGrafanaSvc = grafanaSvc
+	}
+	monitoringConfigSvc := services.NewMonitoringConfigServiceWithGrafana(db, monitoringGrafanaSvc)
 	// K8s Informer 管理器
 	k8sMgr := k8s.NewClusterInformerManager()
 	// 预热所有已存在集群的 Informer（后台执行，不阻塞启动）
@@ -545,6 +544,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 			systemSettings.POST("/grafana/test-connection", systemSettingHandler.TestGrafanaConnection)
 			systemSettings.GET("/grafana/dashboard-status", systemSettingHandler.GetGrafanaDashboardStatus)
 			systemSettings.POST("/grafana/sync-dashboards", systemSettingHandler.SyncGrafanaDashboards)
+			systemSettings.GET("/grafana/datasource-status", systemSettingHandler.GetGrafanaDataSourceStatus)
+			systemSettings.POST("/grafana/sync-datasources", systemSettingHandler.SyncGrafanaDataSources)
 		}
 
 		// permissions - 权限管理
@@ -629,15 +630,6 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 		}
 	}
 
-	// Grafana 反向代理（前端嵌入后端后，无 Nginx 时由后端代理 Grafana 请求）
-	if cfg.Grafana.Enabled {
-		grafanaURL := ""
-		if grafanaSvc != nil {
-			grafanaURL = grafanaSvc.GetBaseURL()
-		}
-		setupGrafanaProxy(r, grafanaURL, grafanaSettingSvc)
-	}
-
 	// 嵌入前端静态文件服务
 	setupStatic(r)
 
@@ -692,53 +684,6 @@ func setupStatic(r *gin.Engine) {
 		}
 		c.Data(200, "text/html; charset=utf-8", content)
 	})
-}
-
-// setupGrafanaProxy 配置 Grafana 反向代理
-// 将 /grafana/* 请求代理到 Grafana 服务，支持前端嵌入后端的场景（无需 Nginx）
-// 支持从数据库动态读取 Grafana 地址，每次请求时获取最新配置
-func setupGrafanaProxy(r *gin.Engine, initialURL string, grafanaSettingSvc *services.GrafanaSettingService) {
-	// 注册 /grafana 路由组，支持所有 HTTP 方法
-	grafanaGroup := r.Group("/grafana")
-	grafanaGroup.Any("/*path", func(c *gin.Context) {
-		// 动态获取 Grafana URL（支持配置中心热更新）
-		grafanaURL := initialURL
-		if grafanaSettingSvc != nil {
-			if cfg, err := grafanaSettingSvc.GetGrafanaConfig(); err == nil && cfg.URL != "" {
-				grafanaURL = cfg.URL
-			}
-		}
-
-		if grafanaURL == "" {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "Grafana 未配置，请在系统设置中配置 Grafana 地址"})
-			return
-		}
-
-		target, err := url.Parse(grafanaURL)
-		if err != nil {
-			logger.Error("解析 Grafana URL 失败", "url", grafanaURL, "error", err)
-			c.JSON(http.StatusBadGateway, gin.H{"error": "Grafana URL 配置无效"})
-			return
-		}
-
-		proxy := httputil.NewSingleHostReverseProxy(target)
-		proxy.Director = func(req *http.Request) {
-			req.URL.Scheme = target.Scheme
-			req.URL.Host = target.Host
-			req.Host = target.Host
-		}
-		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-			logger.Error("Grafana 代理请求失败", "path", r.URL.Path, "error", err)
-			w.WriteHeader(http.StatusBadGateway)
-			_, _ = w.Write([]byte(`{"error": "grafana proxy error"}`))
-		}
-
-		// 移除 X-Frame-Options 以允许 iframe 嵌入
-		c.Writer.Header().Del("X-Frame-Options")
-		proxy.ServeHTTP(c.Writer, c.Request)
-	})
-
-	logger.Info("Grafana 反向代理已启用", "initialTarget", initialURL, "path", "/grafana/*")
 }
 
 // mustSub 是 fs.Sub 的便捷封装

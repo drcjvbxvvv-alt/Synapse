@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
@@ -13,17 +14,21 @@ import (
 
 // SystemSettingHandler 系统设置处理器
 type SystemSettingHandler struct {
-	db                *gorm.DB
-	ldapService       *services.LDAPService
-	sshSettingService *services.SSHSettingService
+	db                    *gorm.DB
+	ldapService           *services.LDAPService
+	sshSettingService     *services.SSHSettingService
+	grafanaSettingService *services.GrafanaSettingService
+	grafanaService        *services.GrafanaService
 }
 
 // NewSystemSettingHandler 创建系统设置处理器
-func NewSystemSettingHandler(db *gorm.DB) *SystemSettingHandler {
+func NewSystemSettingHandler(db *gorm.DB, grafanaService *services.GrafanaService) *SystemSettingHandler {
 	return &SystemSettingHandler{
-		db:                db,
-		ldapService:       services.NewLDAPService(db),
-		sshSettingService: services.NewSSHSettingService(db),
+		db:                    db,
+		ldapService:           services.NewLDAPService(db),
+		sshSettingService:     services.NewSSHSettingService(db),
+		grafanaSettingService: services.NewGrafanaSettingService(db),
+		grafanaService:        grafanaService,
 	}
 }
 
@@ -439,5 +444,313 @@ func (h *SystemSettingHandler) GetSSHCredentials(c *gin.Context) {
 		"code":    200,
 		"message": "获取成功",
 		"data":    config,
+	})
+}
+
+// ==================== Grafana 配置相关接口 ====================
+
+// GetGrafanaConfig 获取 Grafana 配置
+func (h *SystemSettingHandler) GetGrafanaConfig(c *gin.Context) {
+	config, err := h.grafanaSettingService.GetGrafanaConfig()
+	if err != nil {
+		logger.Error("获取 Grafana 配置失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取 Grafana 配置失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	safeConfig := *config
+	if safeConfig.APIKey != "" {
+		safeConfig.APIKey = "******"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data":    safeConfig,
+	})
+}
+
+// UpdateGrafanaConfigRequest Grafana 配置更新请求
+type UpdateGrafanaConfigRequest struct {
+	URL    string `json:"url"`
+	APIKey string `json:"api_key"`
+}
+
+// UpdateGrafanaConfig 更新 Grafana 配置
+func (h *SystemSettingHandler) UpdateGrafanaConfig(c *gin.Context) {
+	var req UpdateGrafanaConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数错误",
+			"data":    nil,
+		})
+		return
+	}
+
+	existingConfig, err := h.grafanaSettingService.GetGrafanaConfig()
+	if err != nil {
+		logger.Error("获取现有 Grafana 配置失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "更新 Grafana 配置失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	config := &models.GrafanaSettingConfig{
+		URL: req.URL,
+	}
+
+	if req.APIKey != "" && req.APIKey != "******" {
+		config.APIKey = req.APIKey
+	} else {
+		config.APIKey = existingConfig.APIKey
+	}
+
+	if err := h.grafanaSettingService.SaveGrafanaConfig(config); err != nil {
+		logger.Error("保存 Grafana 配置失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "保存 Grafana 配置失败",
+			"data":    nil,
+		})
+		return
+	}
+
+	// 配置更新后，刷新 GrafanaService 的连接参数
+	if h.grafanaService != nil {
+		h.grafanaService.UpdateConfig(config.URL, config.APIKey)
+		logger.Info("Grafana 服务配置已热更新", "url", config.URL)
+	}
+
+	logger.Info("Grafana 配置更新成功")
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "Grafana 配置更新成功",
+		"data":    nil,
+	})
+}
+
+// TestGrafanaConnection 测试 Grafana 连接
+func (h *SystemSettingHandler) TestGrafanaConnection(c *gin.Context) {
+	var req UpdateGrafanaConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数错误",
+			"data":    nil,
+		})
+		return
+	}
+
+	existingConfig, _ := h.grafanaSettingService.GetGrafanaConfig()
+
+	apiKey := req.APIKey
+	if (apiKey == "" || apiKey == "******") && existingConfig != nil {
+		apiKey = existingConfig.APIKey
+	}
+
+	// 创建临时 GrafanaService 用于测试连接
+	testSvc := services.NewGrafanaService(req.URL, apiKey)
+	if err := testSvc.TestConnection(); err != nil {
+		logger.Warn("Grafana 连接测试失败: %v", err)
+		c.JSON(http.StatusOK, gin.H{
+			"code":    400,
+			"message": err.Error(),
+			"data": gin.H{
+				"success": false,
+				"error":   err.Error(),
+			},
+		})
+		return
+	}
+
+	logger.Info("Grafana 连接测试成功")
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "Grafana 连接测试成功",
+		"data": gin.H{
+			"success": true,
+		},
+	})
+}
+
+// GetGrafanaDashboardStatus 获取 Dashboard 同步状态
+func (h *SystemSettingHandler) GetGrafanaDashboardStatus(c *gin.Context) {
+	if h.grafanaService == nil || !h.grafanaService.IsEnabled() {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "Grafana 未配置",
+			"data": gin.H{
+				"folder_exists": false,
+				"dashboards":    []interface{}{},
+				"all_synced":    false,
+			},
+		})
+		return
+	}
+
+	status, err := h.grafanaService.GetDashboardSyncStatus()
+	if err != nil {
+		logger.Error("获取 Dashboard 同步状态失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取 Dashboard 同步状态失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data":    status,
+	})
+}
+
+// GetGrafanaDataSourceStatus 获取数据源同步状态
+func (h *SystemSettingHandler) GetGrafanaDataSourceStatus(c *gin.Context) {
+	if h.grafanaService == nil || !h.grafanaService.IsEnabled() {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "Grafana 未配置",
+			"data": gin.H{
+				"datasources": []interface{}{},
+				"all_synced":  false,
+			},
+		})
+		return
+	}
+
+	clusters := h.getMonitoringClusters()
+	status, err := h.grafanaService.GetDataSourceSyncStatus(clusters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取数据源同步状态失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data":    status,
+	})
+}
+
+// SyncGrafanaDataSources 同步所有数据源到 Grafana
+func (h *SystemSettingHandler) SyncGrafanaDataSources(c *gin.Context) {
+	if h.grafanaService == nil || !h.grafanaService.IsEnabled() {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请先配置 Grafana 连接信息",
+			"data":    nil,
+		})
+		return
+	}
+
+	clusters := h.getMonitoringClusters()
+	if len(clusters) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "没有已配置监控的集群",
+			"data": gin.H{
+				"datasources": []interface{}{},
+				"all_synced":  false,
+			},
+		})
+		return
+	}
+
+	status, err := h.grafanaService.SyncAllDataSources(clusters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "同步数据源失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	msg := "数据源同步成功"
+	if !status.AllSynced {
+		msg = "部分数据源同步失败，请检查日志"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": msg,
+		"data":    status,
+	})
+}
+
+// getMonitoringClusters 获取所有启用了监控的集群信息
+func (h *SystemSettingHandler) getMonitoringClusters() []services.DataSourceClusterInfo {
+	var clusters []models.Cluster
+	if err := h.db.Select("name, monitoring_config").Where("monitoring_config != '' AND monitoring_config IS NOT NULL").Find(&clusters).Error; err != nil {
+		logger.Error("查询集群监控配置失败", "error", err)
+		return nil
+	}
+
+	var result []services.DataSourceClusterInfo
+	for _, cluster := range clusters {
+		var config models.MonitoringConfig
+		if err := json.Unmarshal([]byte(cluster.MonitoringConfig), &config); err != nil {
+			continue
+		}
+		if config.Type == "disabled" || config.Endpoint == "" {
+			continue
+		}
+		result = append(result, services.DataSourceClusterInfo{
+			ClusterName:   cluster.Name,
+			PrometheusURL: config.Endpoint,
+		})
+	}
+	return result
+}
+
+// SyncGrafanaDashboards 同步 Dashboard 到 Grafana
+func (h *SystemSettingHandler) SyncGrafanaDashboards(c *gin.Context) {
+	if h.grafanaService == nil || !h.grafanaService.IsEnabled() {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请先配置 Grafana 连接信息",
+			"data":    nil,
+		})
+		return
+	}
+
+	status, err := h.grafanaService.EnsureDashboards()
+	if err != nil {
+		logger.Error("同步 Dashboard 失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "同步 Dashboard 失败: " + err.Error(),
+			"data":    nil,
+		})
+		return
+	}
+
+	logger.Info("Dashboard 同步完成", "all_synced", status.AllSynced)
+
+	msg := "Dashboard 同步成功"
+	if !status.AllSynced {
+		msg = "部分 Dashboard 同步失败，请检查日志"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": msg,
+		"data":    status,
 	})
 }

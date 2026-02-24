@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Space, Select, Switch } from 'antd';
+import { Row, Col, Card, Space, Select, Switch, Spin, Alert } from 'antd';
 import GrafanaPanel from './GrafanaPanel';
 import { GRAFANA_CONFIG, TIME_RANGE_MAP } from '../config/grafana.config';
+import { useGrafanaUrl } from '../hooks/useGrafanaUrl';
 
 const { Option } = Select;
 
@@ -25,6 +26,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
   workloadName,
   type,
 }) => {
+  const { grafanaUrl, loading: grafanaUrlLoading } = useGrafanaUrl();
   const [timeRange, setTimeRange] = useState('1h');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
@@ -51,6 +53,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
     <Row gutter={[16, 16]}>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.cpuUsage}
           variables={variables}
@@ -63,6 +66,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.memoryUsage}
           variables={variables}
@@ -75,6 +79,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={24}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.networkTraffic}
           variables={variables}
@@ -87,6 +92,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.containerRestarts}
           variables={variables}
@@ -99,6 +105,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.cpuThrottling}
           variables={variables}
@@ -117,6 +124,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
     <Row gutter={[16, 16]}>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.cpuUsage}
           variables={variables}
@@ -129,6 +137,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.memoryUsage}
           variables={variables}
@@ -141,6 +150,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.podStatus}
           variables={variables}
@@ -153,6 +163,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.networkTraffic}
           variables={variables}
@@ -165,6 +176,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={24}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.nodeOverview}
           variables={variables}
@@ -183,6 +195,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
     <Row gutter={[16, 16]}>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.cpuUsage}
           variables={variables}
@@ -195,6 +208,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.memoryUsage}
           variables={variables}
@@ -207,6 +221,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.diskUsage}
           variables={variables}
@@ -219,6 +234,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.networkIO}
           variables={variables}
@@ -237,6 +253,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
     <Row gutter={[16, 16]}>
       <Col span={24}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.cpuUsageMulti}
           variables={variables}
@@ -249,6 +266,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={24}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.memoryUsageMulti}
           variables={variables}
@@ -261,6 +279,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.podStatus}
           variables={variables}
@@ -273,6 +292,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       </Col>
       <Col span={12}>
         <GrafanaPanel
+          grafanaUrl={grafanaUrl}
           dashboardUid={dashboardUid}
           panelId={panels.restartCount}
           variables={variables}
@@ -329,7 +349,18 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
         </Space>
       }
     >
-      {renderCharts()}
+      {grafanaUrlLoading ? (
+        <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
+      ) : !grafanaUrl ? (
+        <Alert
+          message="Grafana 未配置"
+          description="请在「系统设置 → Grafana 设置」中配置 Grafana 地址。"
+          type="warning"
+          showIcon
+        />
+      ) : (
+        renderCharts()
+      )}
     </Card>
   );
 };

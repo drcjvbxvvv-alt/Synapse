@@ -75,6 +75,20 @@ func GetDefaultSSHConfig() SSHConfig {
 	}
 }
 
+// GrafanaSettingConfig Grafana 系统配置结构（存储在 system_settings 表中）
+type GrafanaSettingConfig struct {
+	URL    string `json:"url"`     // Grafana 地址，如 http://grafana:3000
+	APIKey string `json:"api_key"` // Grafana Service Account Token 或 API Key
+}
+
+// GetDefaultGrafanaSettingConfig 获取默认 Grafana 配置
+func GetDefaultGrafanaSettingConfig() GrafanaSettingConfig {
+	return GrafanaSettingConfig{
+		URL:    "",
+		APIKey: "",
+	}
+}
+
 // TableName 指定表名
 func (SystemSetting) TableName() string {
 	return "system_settings"

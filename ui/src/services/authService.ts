@@ -1,5 +1,5 @@
 import { request } from '../utils/api';
-import type { ApiResponse, User, LDAPConfig, SSHConfig, GrafanaConfig, GrafanaDashboardSyncStatus, MyPermissionsResponse } from '../types';
+import type { ApiResponse, User, LDAPConfig, SSHConfig, GrafanaConfig, GrafanaDashboardSyncStatus, GrafanaDataSourceSyncStatus, MyPermissionsResponse } from '../types';
 
 // 登录请求参数
 export interface LoginRequest {
@@ -144,6 +144,16 @@ export const systemSettingService = {
   // 同步 Grafana Dashboard
   syncGrafanaDashboards: (): Promise<ApiResponse<GrafanaDashboardSyncStatus>> => {
     return request.post<GrafanaDashboardSyncStatus>('/system/grafana/sync-dashboards');
+  },
+
+  // 获取 Grafana 数据源同步状态
+  getGrafanaDataSourceStatus: (): Promise<ApiResponse<GrafanaDataSourceSyncStatus>> => {
+    return request.get<GrafanaDataSourceSyncStatus>('/system/grafana/datasource-status');
+  },
+
+  // 同步 Grafana 数据源
+  syncGrafanaDataSources: (): Promise<ApiResponse<GrafanaDataSourceSyncStatus>> => {
+    return request.post<GrafanaDataSourceSyncStatus>('/system/grafana/sync-datasources');
   },
 };
 

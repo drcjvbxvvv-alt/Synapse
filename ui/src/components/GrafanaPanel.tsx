@@ -3,8 +3,7 @@ import { Card, Button, Space, Spin, Alert, Skeleton } from 'antd';
 import { FullscreenOutlined, ReloadOutlined } from '@ant-design/icons';
 
 interface GrafanaPanelProps {
-  // Grafana 配置
-  grafanaUrl?: string;           // Grafana 地址，默认从环境变量
+  grafanaUrl: string;            // Grafana 外置地址（从系统设置获取）
   dashboardUid: string;          // Dashboard UID
   panelId: number;               // Panel ID
   
@@ -29,7 +28,7 @@ interface GrafanaPanelProps {
 }
 
 const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
-  grafanaUrl = '/grafana',  // 使用相对路径，通过 Nginx 代理访问
+  grafanaUrl,
   dashboardUid,
   panelId,
   variables = {},

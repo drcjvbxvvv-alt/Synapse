@@ -6,10 +6,12 @@ import {
   SafetyCertificateOutlined,
   BellOutlined,
   KeyOutlined,
+  DashboardOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import LDAPSettings from './LDAPSettings';
 import SSHSettings from './SSHSettings';
+import GrafanaSettings from './GrafanaSettings';
 import { useTranslation } from 'react-i18next';
 
 const { Title } = Typography;
@@ -38,6 +40,16 @@ const [activeTab, setActiveTab] = useState('ssh');
         </span>
       ),
       children: <LDAPSettings />,
+    },
+    {
+      key: 'grafana',
+      label: (
+        <span>
+          <DashboardOutlined />
+          {t('settings:tabs.grafana')}
+        </span>
+      ),
+      children: <GrafanaSettings />,
     },
     {
       key: 'security',
