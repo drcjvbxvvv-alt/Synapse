@@ -345,7 +345,9 @@ func (s *GrafanaService) EnsureDashboards() (*DashboardSyncStatus, error) {
 		return nil, fmt.Errorf("grafana 服务未配置")
 	}
 
-	status := &DashboardSyncStatus{}
+	status := &DashboardSyncStatus{
+		Dashboards: []DashboardStatusItem{},
+	}
 
 	// 1. 创建 KubePolaris 文件夹（幂等）
 	folderExists, err := s.ensureFolder("kubepolaris-folder", "KubePolaris")
@@ -409,7 +411,10 @@ func (s *GrafanaService) GetDashboardSyncStatus() (*DashboardSyncStatus, error) 
 		return nil, fmt.Errorf("grafana 服务未配置")
 	}
 
-	status := &DashboardSyncStatus{AllSynced: true}
+	status := &DashboardSyncStatus{
+		AllSynced:  true,
+		Dashboards: []DashboardStatusItem{},
+	}
 
 	// 检查文件夹
 	status.FolderExists = s.folderExists("kubepolaris-folder")
@@ -578,7 +583,10 @@ func (s *GrafanaService) GetDataSourceSyncStatus(clusters []DataSourceClusterInf
 		return nil, fmt.Errorf("grafana 服务未配置")
 	}
 
-	status := &DataSourceSyncStatus{AllSynced: true}
+	status := &DataSourceSyncStatus{
+		AllSynced:   true,
+		DataSources: []DataSourceStatusItem{},
+	}
 
 	for _, c := range clusters {
 		uid := GenerateDataSourceUID(c.ClusterName)
@@ -609,7 +617,10 @@ func (s *GrafanaService) SyncAllDataSources(clusters []DataSourceClusterInfo) (*
 		return nil, fmt.Errorf("grafana 服务未配置")
 	}
 
-	status := &DataSourceSyncStatus{AllSynced: true}
+	status := &DataSourceSyncStatus{
+		AllSynced:   true,
+		DataSources: []DataSourceStatusItem{},
+	}
 
 	for _, c := range clusters {
 		uid := GenerateDataSourceUID(c.ClusterName)

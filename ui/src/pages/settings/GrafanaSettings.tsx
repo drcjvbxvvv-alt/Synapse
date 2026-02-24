@@ -341,7 +341,7 @@ const GrafanaSettings: React.FC = () => {
                   )}
                 </div>
               }
-              dataSource={dashboardStatus.dashboards}
+              dataSource={dashboardStatus.dashboards ?? []}
               renderItem={(item) => (
                 <List.Item>
                   <Space>
@@ -393,7 +393,7 @@ const GrafanaSettings: React.FC = () => {
           </Text>
         </div>
 
-        {dataSourceStatus && dataSourceStatus.datasources.length > 0 ? (
+        {dataSourceStatus && dataSourceStatus.datasources?.length > 0 ? (
           <div style={{ marginBottom: 16 }}>
             <List
               size="small"
@@ -406,7 +406,7 @@ const GrafanaSettings: React.FC = () => {
                   )}
                 </div>
               }
-              dataSource={dataSourceStatus.datasources}
+              dataSource={dataSourceStatus.datasources ?? []}
               renderItem={(item) => (
                 <List.Item>
                   <Space>
