@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Button, Space, message, Spin, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SearchOutlined } from '@ant-design/icons';
@@ -60,10 +60,9 @@ const [loading, setLoading] = useState(false);
     : cronJobName ? 'CronJob'
     : '';
 
-  // 加载事件列表
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
-    
+
     setLoading(true);
     try {
       const response = await WorkloadService.getWorkloadEvents(
@@ -72,7 +71,7 @@ const [loading, setLoading] = useState(false);
         workloadType,
         workloadName
       );
-      
+
       if (response.code === 200 && response.data) {
         const eventList = ((response.data as { items?: unknown[] }).items || []) as EventInfo[];
         setEvents(eventList);
@@ -86,12 +85,11 @@ const [loading, setLoading] = useState(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, workloadName, workloadType, t]);
 
   useEffect(() => {
     loadEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [loadEvents]);
 
   // 搜索事件
   const handleSearch = (value: string) => {

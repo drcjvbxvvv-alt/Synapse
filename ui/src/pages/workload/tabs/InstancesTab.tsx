@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Button, Space, message, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
@@ -58,20 +58,18 @@ const [loading, setLoading] = useState(false);
     : cronJobName ? 'CronJob'
     : '';
 
-  // 加载Pod列表
-  const loadPods = async () => {
+  const loadPods = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
-    
+
     setLoading(true);
     try {
-      // 使用label selector查询工作负载对应的Pods
       const response = await WorkloadService.getWorkloadPods(
         clusterId,
         namespace,
         workloadType,
         workloadName
       );
-      
+
       if (response.code === 200 && response.data) {
         setPods(((response.data as { items?: unknown[] }).items || []) as PodInfo[]);
       } else {
@@ -83,12 +81,11 @@ const [loading, setLoading] = useState(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, workloadName, workloadType, t]);
 
   useEffect(() => {
     loadPods();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [loadPods]);
 
   // 渲染状态标签
   const renderStatusTag = (phase: string) => {

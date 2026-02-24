@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -72,7 +72,7 @@ const ClusterList: React.FC = () => {
     );
   };
 
-  const columns: ColumnsType<Cluster> = [
+  const columns = useMemo<ColumnsType<Cluster>>(() => [
     {
       title: t('columns.name'),
       dataIndex: 'name',
@@ -221,7 +221,7 @@ const ClusterList: React.FC = () => {
         </Space>
       ),
     },
-  ];
+  ], [t, tc, navigate, modal]);
 
   // 打开终端
   const openTerminal = (cluster: Cluster) => {

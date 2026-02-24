@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -456,8 +456,7 @@ const NodeList: React.FC = () => {
     setTotal(filteredItems.length);
   }, [allNodes, filterNodes, currentPage, pageSize, sortField, sortOrder]);
 
-  // 表格列定义
-  const allColumns: ColumnsType<Node> = [
+  const allColumns = useMemo<ColumnsType<Node>>(() => [
     {
       title: t('columns.status'),
       key: 'status',
@@ -632,13 +631,18 @@ const NodeList: React.FC = () => {
         </Space>
       ),
     },
-  ];
+  ], [t, tc, sortField, sortOrder, selectedClusterId, navigate]);
 
-  // 根据可见性过滤列
-  const columns = allColumns.filter(col => {
-    if (col.key === 'action') return true; // 操作列始终显示
+  const columns = useMemo(() => allColumns.filter(col => {
+    if (col.key === 'action') return true;
     return visibleColumns.includes(col.key as string);
-  });
+  }), [allColumns, visibleColumns]);
+
+  const nodeRowSelection = useMemo(() => ({
+    type: 'checkbox' as const,
+    selectedRowKeys: selectedNodes,
+    onChange: handleSelectionChange,
+  }), [selectedNodes, handleSelectionChange]);
 
   // 表格排序处理
   const handleTableChange = (
@@ -816,11 +820,7 @@ const NodeList: React.FC = () => {
           </div>
 
           <Table
-            rowSelection={{
-              type: 'checkbox',
-              selectedRowKeys: selectedNodes,
-              onChange: handleSelectionChange,
-            }}
+            rowSelection={nodeRowSelection}
             columns={columns}
             dataSource={nodes}
             rowKey="id"

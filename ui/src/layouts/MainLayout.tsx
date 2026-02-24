@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import kubernetesLogo from '../assets/kubernetes.png';
 import {
@@ -10,11 +10,8 @@ import {
   Dropdown,
   Avatar,
   Space,
-  Select,
   message,
-  Tag,
 } from 'antd';
-import { GlobalOutlined } from '@ant-design/icons';
 import {
   ClusterOutlined,
   DesktopOutlined,
@@ -32,8 +29,6 @@ import {
   HddOutlined,
   KeyOutlined,
   TagsOutlined,
-  ArrowLeftOutlined,
-  CodeOutlined,
   ContainerOutlined,
   LogoutOutlined,
   HistoryOutlined,
@@ -41,13 +36,12 @@ import {
   BranchesOutlined,
 } from '@ant-design/icons';
 import type { MenuProps as AntMenuProps } from 'antd';
-import type {  Cluster, PermissionType } from '../types';
-import { clusterService } from '../services/clusterService';
+import type { PermissionType } from '../types';
 import SearchDropdown from '../components/SearchDropdown';
+import ClusterSelector from '../components/ClusterSelector';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { tokenManager } from '../services/authService';
 import { usePermission } from '../hooks/usePermission';
-import { getPermissionTypeName, getPermissionTypeColor } from '../services/permissionService';
 import { 
   MAIN_MENU_PERMISSIONS, 
   CLUSTER_MENU_PERMISSIONS, 
@@ -148,31 +142,23 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const { t } = useTranslation();
 
-  // 判断是否在集群详情页面
-  const isClusterDetailPage = () => {
-    return location.pathname.match(/\/clusters\/[^/]+\//);
-  };
-  
-  // 获取默认展开的菜单键
-  const getDefaultOpenKeys = () => {
-    if (isClusterDetailPage()) {
+  const isClusterDetail = !!location.pathname.match(/\/clusters\/[^/]+\//);
+
+  const getDefaultOpenKeys = useCallback(() => {
+    if (isClusterDetail) {
       return ['kubernetes-resources', 'cluster', 'cloud-native-observability', 'cloud-native-cost'];
     }
-    // 主页面：如果当前在审计页面，默认展开审计管理
     if (location.pathname.startsWith('/audit')) {
       return ['audit-management'];
     }
     return [];
-  };
+  }, [isClusterDetail, location.pathname]);
 
-  // 管理菜单展开状态
   const [openKeys, setOpenKeys] = useState<string[]>(getDefaultOpenKeys());
 
-  // 当路由变化时，更新展开的菜单
   useEffect(() => {
     setOpenKeys(getDefaultOpenKeys());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [getDefaultOpenKeys]);
 
   // 处理菜单展开/折叠
   const handleOpenChange = (keys: string[]) => {
@@ -520,10 +506,12 @@ const MainLayout: React.FC = () => {
     });
   }, [currentPermissionType]);
 
-  // 根据当前页面和权限选择对应的菜单
-  const menuItems = isClusterDetailPage() 
-    ? filterClusterMenuItems([...clusterDetailMenuItems]) 
-    : filterMainMenuItems([...mainMenuItems]);
+  const menuItems = useMemo(() => 
+    isClusterDetail
+      ? filterClusterMenuItems([...clusterDetailMenuItems]) 
+      : filterMainMenuItems([...mainMenuItems]),
+    [isClusterDetail, filterClusterMenuItems, filterMainMenuItems, clusterDetailMenuItems, mainMenuItems]
+  );
   
   // 处理用户名显示，去掉末尾的数字
   const getDisplayName = () => {
@@ -572,106 +560,6 @@ const MainLayout: React.FC = () => {
       navigate(`/search?q=${encodeURIComponent(value)}`);
     }
   };
-
-  const ClusterSelector = () => {
-    const { id, clusterId } = useParams();
-    const navigate = useNavigate();
-    const { Option } = Select;
-    const [clusters, setClusters] = useState<Cluster[]>([]);
-    const { getPermissionType, setCurrentClusterId, canWrite } = usePermission();
-    // 优先使用 clusterId，如果没有则使用 id
-    const currentClusterId = clusterId || id;
-    
-    // 获取当前集群的权限类型
-    const permissionType = currentClusterId ? getPermissionType(currentClusterId) : null;
-    const hasWritePermission = currentClusterId ? canWrite(currentClusterId) : false;
-    
-    // 同步当前集群到权限上下文
-    useEffect(() => {
-      if (currentClusterId) {
-        setCurrentClusterId(currentClusterId);
-      }
-    }, [currentClusterId, setCurrentClusterId]);
-    
-    const openTerminal = () => {
-      if (currentClusterId) {
-        window.open(`/clusters/${currentClusterId}/terminal`);
-      } else {
-        message.error(t('menu.cannotGetClusterId'));
-      }
-    };
-
-
-      // 获取集群列表 - 使用useCallback优化
-    const fetchClusters = useCallback(async () => {
-      try {
-        const response = await clusterService.getClusters();
-        setClusters(response.data.items || []);
-      } catch (error) {
-        console.error('Failed to fetch clusters:', error);
-      }
-    }, []);
-    useEffect(() => {
-      fetchClusters();    
-    }, [fetchClusters]);
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', justifyContent: 'space-between', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <Button
-          type="text"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/clusters')}
-          style={{ marginRight: 16 }}
-        >
-          {t('menu.backToClusterList')}
-        </Button>
-        <ClusterOutlined style={{ color: '#1890ff' }} />
-        <span>{t('menu.currentCluster')}</span>
-
-        <Select
-          value={currentClusterId}
-          style={{ minWidth: 200 }}
-          onChange={(newClusterId) => {
-            // 保持当前子路由，只切换集群ID
-            const currentPath = location.pathname;
-            const newPath = currentPath.replace(/\/clusters\/[^/]+/, `/clusters/${newClusterId}`);
-            navigate(newPath);
-          }}
-        >
-
-          {clusters.map(cluster => (
-            <Option key={cluster.id} value={cluster.id.toString()}>
-              {cluster.name}
-            </Option>
-          ))}
-        </Select>
-        {/* 权限类型标签 */}
-        {permissionType && (
-          <Tag color={getPermissionTypeColor(permissionType)} style={{ marginLeft: 8 }}>
-            {getPermissionTypeName(permissionType)}
-          </Tag>
-        )}
-        {!hasWritePermission && permissionType && (
-          <span style={{ color: '#ff4d4f', fontSize: '12px' }}>
-            {t('menu.readonlyMode')}
-          </span>
-        )}
-        </div>
-        <Space size="middle">
-          <Button 
-            type="text" 
-            icon={<CodeOutlined />}
-            onClick={() => openTerminal()}  // 调用已有的终端功能
-            disabled={!hasWritePermission}
-            title={!hasWritePermission ? t('menu.readonlyNoTerminal') : undefined}
-          >
-              {t('menu.kubectlTerminal')}
-          </Button>
-        </Space>
-      </div>
-    );
-};
-
 
   return (
     <Layout style={{ minHeight: '100vh', background: '#fafbfc' }}>
@@ -734,8 +622,7 @@ const MainLayout: React.FC = () => {
         </Space>
       </Header>
 
-      {/* 新增：集群头部栏 */}
-      {isClusterDetailPage() && (
+      {isClusterDetail && (
         <div style={{
           position: 'fixed',
           top: '48px',
@@ -750,19 +637,19 @@ const MainLayout: React.FC = () => {
           alignItems: 'center',
           padding: '0 24px'
         }}>
-          <ClusterSelector />  {/* 集群选择器组件 */}
+          <ClusterSelector />
         </div>
       )}
 
       <Layout style={{ 
-        marginTop: isClusterDetailPage() ? 112 : 64  // 动态调整顶部间距
+        marginTop: isClusterDetail ? 112 : 64,
         }}>
         <Sider
           width={192}
           style={{
             position: 'fixed',
             left: 0,
-            top: isClusterDetailPage() ? 112 : 52,
+            top: isClusterDetail ? 112 : 52,
             bottom: 0,
             zIndex: 999,
             background: '#f8fafc',

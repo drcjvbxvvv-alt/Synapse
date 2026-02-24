@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -501,13 +501,12 @@ const PodList: React.FC = () => {
     }
   }, [routeClusterId, loadPods]);
 
-  // 行选择配置
-  const rowSelection = {
+  const rowSelection = useMemo(() => ({
     selectedRowKeys,
     onChange: (keys: React.Key[]) => {
       setSelectedRowKeys(keys as string[]);
     },
-  };
+  }), [selectedRowKeys]);
 
   // 操作菜单
   const getActionMenuItems = (record: PodInfo): MenuProps['items'] => [
@@ -541,8 +540,7 @@ const PodList: React.FC = () => {
     },
   ];
 
-  // 定义所有可用列
-  const allColumns: ColumnsType<PodInfo> = [
+  const allColumns = useMemo<ColumnsType<PodInfo>>(() => [
     {
       title: t('columns.name'),
       dataIndex: 'name',
@@ -722,13 +720,12 @@ const PodList: React.FC = () => {
         </Space>
       ),
     },
-  ];
+  ], [t, tc, sortField, sortOrder, clusterId, navigate, message, loadPods]);
 
-  // 根据可见性过滤列
-  const columns = allColumns.filter(col => {
-    if (col.key === 'actions') return true; // 操作列始终显示
+  const columns = useMemo(() => allColumns.filter(col => {
+    if (col.key === 'actions') return true;
     return visibleColumns.includes(col.key as string);
-  });
+  }), [allColumns, visibleColumns]);
 
   // 表格排序处理（只更新排序状态，实际排序在useEffect中处理）
   const handleTableChange = (

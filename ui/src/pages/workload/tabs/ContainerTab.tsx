@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Descriptions, 
   Spin, 
@@ -264,10 +264,9 @@ const [loading, setLoading] = useState(false);
     : cronJobName ? 'CronJob'
     : '';
 
-  // 加载Deployment Spec
-  const loadSpec = async () => {
+  const loadSpec = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
-    
+
     setLoading(true);
     try {
       const response = await WorkloadService.getWorkloadDetail(
@@ -276,20 +275,18 @@ const [loading, setLoading] = useState(false);
         namespace,
         workloadName
       );
-      
+
       if (response.code === 200 && response.data) {
-        // 使用 raw 字段获取完整的 Deployment 对象
-        const data = response.data as unknown as { 
-          raw?: Record<string, unknown> & { spec?: DeploymentSpec }; 
+        const data = response.data as unknown as {
+          raw?: Record<string, unknown> & { spec?: DeploymentSpec };
           workload?: Record<string, unknown> & { spec?: DeploymentSpec };
         };
         const deployment = data.raw || data.workload;
         setSpec(deployment?.spec || null);
-        
-        // 默认选择第一个容器
-        const spec = deployment?.spec;
-        if (spec?.template?.spec?.containers && Array.isArray(spec.template.spec.containers) && spec.template.spec.containers.length > 0) {
-          setSelectedContainer(spec.template.spec.containers[0].name);
+
+        const specData = deployment?.spec;
+        if (specData?.template?.spec?.containers && Array.isArray(specData.template.spec.containers) && specData.template.spec.containers.length > 0) {
+          setSelectedContainer(specData.template.spec.containers[0].name);
         }
       } else {
         message.error(response.message || t('messages.fetchContainerError'));
@@ -300,12 +297,11 @@ const [loading, setLoading] = useState(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, workloadName, workloadType, t]);
 
   useEffect(() => {
     loadSpec();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [loadSpec]);
 
   if (loading) {
     return (

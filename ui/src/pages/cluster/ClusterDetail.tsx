@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
@@ -47,8 +47,7 @@ const { id } = useParams<{ id: string }>();
   // 从 URL 参数读取默认 Tab，默认为 events
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'events');
 
-  // 获取集群详情
-  const fetchClusterDetail = async () => {
+  const fetchClusterDetail = useCallback(async () => {
     if (!id) return;
     
     setLoading(true);
@@ -56,15 +55,14 @@ const { id } = useParams<{ id: string }>();
       const response = await clusterService.getCluster(id);
       setCluster(response.data);
     } catch (error) {
-message.error(t('detail.fetchError'));
+      message.error(t('detail.fetchError'));
       console.error('Failed to fetch cluster detail:', error);
-} finally {
+    } finally {
       setLoading(false);
     }
-  };
+  }, [id, t]);
 
-  // 获取集群概览信息
-  const fetchClusterOverview = async () => {
+  const fetchClusterOverview = useCallback(async () => {
     if (!id) return;
     
     setLoadingOverview(true);
@@ -72,18 +70,17 @@ message.error(t('detail.fetchError'));
       const response = await clusterService.getClusterOverview(id);
       setClusterOverview(response.data as ClusterOverview);
     } catch (error) {
-message.error(t('detail.fetchOverviewError'));
+      message.error(t('detail.fetchOverviewError'));
       console.error('Failed to fetch cluster overview:', error);
-} finally {
+    } finally {
       setLoadingOverview(false);
     }
-  };
+  }, [id, t]);
 
-  // 刷新所有数据
-  const refreshAllData = () => {
+  const refreshAllData = useCallback(() => {
     fetchClusterDetail();
     fetchClusterOverview();
-  };
+  }, [fetchClusterDetail, fetchClusterOverview]);
 
   // 获取状态标签
   const getStatusTag = (status: string) => {
@@ -109,19 +106,19 @@ const config = statusConfig[status as keyof typeof statusConfig] || statusConfig
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
 
-  const fetchClusterEvents = async (keyword?: string) => {
+  const fetchClusterEvents = useCallback(async (keyword?: string) => {
     if (!id) return;
     setLoadingEvents(true);
     try {
       const response = await clusterService.getClusterEvents(id, keyword ? { search: keyword } : undefined);
       setEvents(response.data || []);
     } catch (error) {
-message.error(t('detail.fetchEventsError'));
+      message.error(t('detail.fetchEventsError'));
       console.error('Failed to fetch K8s events:', error);
-} finally {
+    } finally {
       setLoadingEvents(false);
     }
-  };
+  }, [id, t]);
 
   const handleSearchEvents = (value: string) => {
     setEventSearch(value);
@@ -258,17 +255,13 @@ pagination={{ pageSize: 20, showTotal: (total) => t('events.totalEvents', { coun
 
   useEffect(() => {
     refreshAllData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [refreshAllData]);
 
   useEffect(() => {
     if (activeTab === 'events') {
       fetchClusterEvents(eventSearch);
     }
-    // 当切换到监控概览标签页时，自动触发加载（如果使用懒加载）
-    // 注意：MonitoringCharts 组件内部会处理懒加载逻辑
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, id]);
+  }, [activeTab, id, fetchClusterEvents, eventSearch]);
 
   if (!cluster && !loading) {
     return (

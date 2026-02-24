@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -33,13 +33,9 @@ const NamespaceDetail: React.FC = () => {
   const navigate = useNavigate();
   const [namespaceDetail, setNamespaceDetail] = useState<NamespaceDetailData | null>(null);
   const [loading, setLoading] = useState(false);
-const { t } = useTranslation(["namespace", "common"]);
-useEffect(() => {
-    fetchNamespaceDetail();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusterId, namespace]);
+  const { t } = useTranslation(["namespace", "common"]);
 
-  const fetchNamespaceDetail = async () => {
+  const fetchNamespaceDetail = useCallback(async () => {
     if (!clusterId || !namespace) return;
     setLoading(true);
     try {
@@ -51,7 +47,11 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, t]);
+
+  useEffect(() => {
+    fetchNamespaceDetail();
+  }, [fetchNamespaceDetail]);
 
   const handleBack = () => {
     navigate(`/clusters/${clusterId}/namespaces`);

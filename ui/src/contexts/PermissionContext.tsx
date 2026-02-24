@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, type ReactNode } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import type { MyPermissionsResponse, PermissionType } from '../types';
 import permissionService from '../services/permissionService';
 import { tokenManager } from '../services/authService';
@@ -224,7 +224,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     refreshPermissions();
   }, [refreshPermissions]);
 
-  const value: PermissionContextType = {
+  const value = useMemo<PermissionContextType>(() => ({
     clusterPermissions,
     currentClusterPermission,
     loading,
@@ -240,7 +240,23 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     getAllowedNamespaces,
     hasAllNamespaceAccess,
     filterNamespaces,
-  };
+  }), [
+    clusterPermissions,
+    currentClusterPermission,
+    loading,
+    hasClusterAccess,
+    hasNamespaceAccess,
+    canPerformAction,
+    isAdmin,
+    isReadonly,
+    canWrite,
+    getPermissionType,
+    refreshPermissions,
+    setCurrentClusterId,
+    getAllowedNamespaces,
+    hasAllNamespaceAccess,
+    filterNamespaces,
+  ]);
 
   return (
     <PermissionContext.Provider value={value}>

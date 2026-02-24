@@ -120,4 +120,4 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
   );
 };
 
-export default NamespaceSelector;
+export default React.memo(NamespaceSelector);

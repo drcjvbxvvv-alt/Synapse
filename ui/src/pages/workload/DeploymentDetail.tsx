@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Card, 
@@ -73,10 +73,9 @@ const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'instances');
   const [clusterName, setClusterName] = useState<string>('');
 
-  // 加载Deployment详情
-  const loadDeploymentDetail = async () => {
+  const loadDeploymentDetail = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
-    
+
     setLoading(true);
     try {
       const response = await WorkloadService.getWorkloadDetail(
@@ -85,7 +84,7 @@ const [loading, setLoading] = useState(false);
         namespace,
         name
       );
-      
+
       if (response.code === 200 && response.data) {
         setDeployment(response.data.workload);
       } else {
@@ -97,12 +96,11 @@ const [loading, setLoading] = useState(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, name, t]);
 
   useEffect(() => {
     loadDeploymentDetail();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusterId, namespace, name]);
+  }, [loadDeploymentDetail]);
 
   // 加载集群信息获取集群名称（用于 Grafana 数据源）
   useEffect(() => {

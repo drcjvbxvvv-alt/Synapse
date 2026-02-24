@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -40,7 +40,21 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
   const searchRef = useRef<InputRef>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 防抖搜索
+  const performSearch = useCallback(async (searchQuery: string) => {
+    setLoading(true);
+    try {
+      const searchResults = await searchService.quickSearch(searchQuery);
+      setResults(searchResults);
+      setVisible(searchResults.length > 0);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setResults([]);
+      setVisible(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query.trim()) {
@@ -52,9 +66,8 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, performSearch]);
 
-  // 处理点击外部关闭下拉菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -72,22 +85,6 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [visible]);
-
-  // 执行搜索
-  const performSearch = async (searchQuery: string) => {
-    setLoading(true);
-    try {
-      const searchResults = await searchService.quickSearch(searchQuery);
-      setResults(searchResults);
-      setVisible(searchResults.length > 0);
-    } catch (error) {
-      console.error('Search failed:', error);
-      setResults([]);
-      setVisible(false);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 处理搜索
   const handleSearch = (value: string) => {
@@ -398,4 +395,4 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
   );
 };
 
-export default SearchDropdown;
+export default React.memo(SearchDropdown);

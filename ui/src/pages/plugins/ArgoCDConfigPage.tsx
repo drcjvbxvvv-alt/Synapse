@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Card,
@@ -41,7 +41,7 @@ const [form] = Form.useForm();
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'unknown'>('unknown');
   const [enabled, setEnabled] = useState(false);
 
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     if (!clusterId) return;
     setLoading(true);
     try {
@@ -50,7 +50,7 @@ const [form] = Form.useForm();
         form.setFieldsValue(response.data);
         setEnabled(response.data.enabled);
         setConnectionStatus(
-          response.data.connection_status === 'connected' ? 'connected' : 
+          response.data.connection_status === 'connected' ? 'connected' :
           response.data.connection_status === 'disconnected' ? 'disconnected' : 'unknown'
         );
       }
@@ -60,12 +60,11 @@ const [form] = Form.useForm();
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, form, t]);
 
   useEffect(() => {
     loadConfig();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusterId]);
+  }, [loadConfig]);
 
   const handleSave = async () => {
     try {
