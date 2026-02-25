@@ -52,25 +52,25 @@ RUN go build -ldflags="-s -w" -o kubepolaris .
 # ==========================================
 # Stage 3: Production Image
 # ==========================================
-FROM alpine:3.19
+FROM debian:bookworm-slim
 
 LABEL maintainer="KubePolaris Team"
 LABEL description="KubePolaris - Enterprise Kubernetes Multi-Cluster Management Platform"
 LABEL version="1.0.0"
 
 # 安装必要的运行时依赖
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     tzdata \
     curl \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置时区
 ENV TZ=Asia/Shanghai
 
 # 创建非 root 用户
-RUN addgroup -g 1000 kubepolaris && \
-    adduser -u 1000 -G kubepolaris -s /bin/sh -D kubepolaris
+RUN groupadd -g 1000 kubepolaris && \
+    useradd -u 1000 -g kubepolaris -s /bin/sh -M kubepolaris
 
 WORKDIR /app
 
