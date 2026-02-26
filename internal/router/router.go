@@ -587,6 +587,24 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 
 		// 集群级权限查询
 		protected.GET("/clusters/:clusterID/my-permissions", permissionHandler.GetMyClusterPermission)
+
+		// AI 配置管理（仅平台管理员）
+		aiConfigHandler := handlers.NewAIConfigHandler(db)
+		aiGroup := protected.Group("/ai")
+		aiGroup.Use(middleware.PlatformAdminRequired(db))
+		{
+			aiGroup.GET("/config", aiConfigHandler.GetConfig)
+			aiGroup.PUT("/config", aiConfigHandler.UpdateConfig)
+			aiGroup.POST("/test-connection", aiConfigHandler.TestConnection)
+		}
+
+		// AI Chat（集群级）
+		aiChatHandler := handlers.NewAIChatHandler(db, clusterSvc, k8sMgr, prometheusSvc, monitoringConfigSvc)
+		aiChat := clusters.Group("/:clusterID/ai")
+		aiChat.Use(permMiddleware.ClusterAccessRequired())
+		{
+			aiChat.POST("/chat", aiChatHandler.Chat)
+		}
 	}
 
 	// WebSocket：建议也加认证

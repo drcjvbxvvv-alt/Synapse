@@ -7,11 +7,13 @@ import {
   BellOutlined,
   KeyOutlined,
   DashboardOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import LDAPSettings from './LDAPSettings';
 import SSHSettings from './SSHSettings';
 import GrafanaSettings from './GrafanaSettings';
+import AISettings from './AISettings';
 import { useTranslation } from 'react-i18next';
 
 const { Title } = Typography;
@@ -50,6 +52,16 @@ const [activeTab, setActiveTab] = useState('ssh');
         </span>
       ),
       children: <GrafanaSettings />,
+    },
+    {
+      key: 'ai',
+      label: (
+        <span>
+          <RobotOutlined />
+          {t('settings:tabs.ai')}
+        </span>
+      ),
+      children: <AISettings />,
     },
     {
       key: 'security',

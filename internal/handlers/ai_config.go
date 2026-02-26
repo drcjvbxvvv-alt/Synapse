@@ -1,0 +1,186 @@
+package handlers
+
+import (
+	"context"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+)
+
+// AIConfigHandler AI 配置处理器
+type AIConfigHandler struct {
+	configService *services.AIConfigService
+}
+
+// NewAIConfigHandler 创建 AI 配置处理器
+func NewAIConfigHandler(db *gorm.DB) *AIConfigHandler {
+	return &AIConfigHandler{
+		configService: services.NewAIConfigService(db),
+	}
+}
+
+// GetConfig 获取 AI 配置
+func (h *AIConfigHandler) GetConfig(c *gin.Context) {
+	config, err := h.configService.GetConfig()
+	if err != nil {
+		logger.Error("获取 AI 配置失败", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取 AI 配置失败: " + err.Error(),
+		})
+		return
+	}
+
+	if config == nil {
+		defaultCfg := models.GetDefaultAIConfig()
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "获取成功",
+			"data": gin.H{
+				"provider": defaultCfg.Provider,
+				"endpoint": defaultCfg.Endpoint,
+				"api_key":  "",
+				"model":    defaultCfg.Model,
+				"enabled":  defaultCfg.Enabled,
+			},
+		})
+		return
+	}
+
+	apiKeyDisplay := ""
+	if config.ID > 0 {
+		// 检查是否有 API Key 已配置（需要查带 key 的记录）
+		fullConfig, _ := h.configService.GetConfigWithAPIKey()
+		if fullConfig != nil && fullConfig.APIKey != "" {
+			apiKeyDisplay = "******"
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data": gin.H{
+			"provider": config.Provider,
+			"endpoint": config.Endpoint,
+			"api_key":  apiKeyDisplay,
+			"model":    config.Model,
+			"enabled":  config.Enabled,
+		},
+	})
+}
+
+// UpdateConfig 更新 AI 配置
+func (h *AIConfigHandler) UpdateConfig(c *gin.Context) {
+	var req struct {
+		Provider string `json:"provider"`
+		Endpoint string `json:"endpoint"`
+		APIKey   string `json:"api_key"`
+		Model    string `json:"model"`
+		Enabled  bool   `json:"enabled"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	config := &models.AIConfig{
+		Provider: req.Provider,
+		Endpoint: req.Endpoint,
+		APIKey:   req.APIKey,
+		Model:    req.Model,
+		Enabled:  req.Enabled,
+	}
+
+	if err := h.configService.SaveConfig(config); err != nil {
+		logger.Error("保存 AI 配置失败", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "保存 AI 配置失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "保存成功",
+	})
+}
+
+// TestConnection 测试 AI 连接
+func (h *AIConfigHandler) TestConnection(c *gin.Context) {
+	var req struct {
+		Provider string `json:"provider"`
+		Endpoint string `json:"endpoint"`
+		APIKey   string `json:"api_key"`
+		Model    string `json:"model"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	apiKey := req.APIKey
+	if apiKey == "" || apiKey == "******" {
+		fullConfig, err := h.configService.GetConfigWithAPIKey()
+		if err != nil || fullConfig == nil || fullConfig.APIKey == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    400,
+				"message": "请提供 API Key",
+			})
+			return
+		}
+		apiKey = fullConfig.APIKey
+	}
+
+	endpoint := req.Endpoint
+	if endpoint == "" {
+		endpoint = "https://api.openai.com/v1"
+	}
+
+	model := req.Model
+	if model == "" {
+		model = "gpt-4o"
+	}
+
+	testConfig := &models.AIConfig{
+		Provider: req.Provider,
+		Endpoint: endpoint,
+		APIKey:   apiKey,
+		Model:    model,
+	}
+
+	provider := services.NewAIProvider(testConfig)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	if err := provider.TestConnection(ctx); err != nil {
+		logger.Error("AI 连接测试失败", "error", err)
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "连接测试失败: " + err.Error(),
+			"data":    gin.H{"success": false},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "连接测试成功",
+		"data":    gin.H{"success": true},
+	})
+}

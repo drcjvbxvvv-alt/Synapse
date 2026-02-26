@@ -42,6 +42,7 @@ import ClusterSelector from '../components/ClusterSelector';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { tokenManager } from '../services/authService';
 import { usePermission } from '../hooks/usePermission';
+import AIChatPanel from '../components/AIChat/AIChatPanel';
 import { 
   MAIN_MENU_PERMISSIONS, 
   CLUSTER_MENU_PERMISSIONS, 
@@ -726,6 +727,8 @@ const MainLayout: React.FC = () => {
           </Content>
         </Layout>
       </Layout>
+
+      <AIChatPanel />
     </Layout>
   );
 };
