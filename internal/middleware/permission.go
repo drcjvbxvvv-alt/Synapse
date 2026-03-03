@@ -100,7 +100,7 @@ func (m *PermissionMiddleware) NamespaceAccessRequired() gin.HandlerFunc {
 		}
 
 		// 如果有命名空间参数，检查权限
-		if namespace != "" && !permission.HasNamespaceAccess(namespace) {
+		if namespace != "" && !services.HasNamespaceAccess(permission, namespace) {
 			c.JSON(http.StatusForbidden, gin.H{
 				"code":    403,
 				"message": "无权限访问该命名空间",
@@ -132,7 +132,7 @@ func (m *PermissionMiddleware) ActionRequired(actions ...string) gin.HandlerFunc
 
 		// 检查所有要求的操作权限
 		for _, action := range actions {
-			if !permission.CanPerformAction(action) {
+			if !services.CanPerformAction(permission, action) {
 				c.JSON(http.StatusForbidden, gin.H{
 					"code":    403,
 					"message": "权限不足，无法执行此操作",
@@ -339,7 +339,7 @@ func HasNamespaceAccess(c *gin.Context, namespace string) bool {
 	if permission == nil {
 		return false
 	}
-	return permission.HasNamespaceAccess(namespace)
+	return services.HasNamespaceAccess(permission, namespace)
 }
 
 // FilterNamespaces 过滤命名空间列表，只返回用户有权限访问的
@@ -349,15 +349,13 @@ func FilterNamespaces(c *gin.Context, namespaces []string) []string {
 		return []string{}
 	}
 
-	// 如果有全部命名空间权限，直接返回
-	if permission.HasAllNamespaceAccess() {
+	if services.HasAllNamespaceAccess(permission) {
 		return namespaces
 	}
 
-	// 过滤只保留有权限的命名空间
 	filtered := make([]string, 0)
 	for _, ns := range namespaces {
-		if permission.HasNamespaceAccess(ns) {
+		if services.HasNamespaceAccess(permission, ns) {
 			filtered = append(filtered, ns)
 		}
 	}
@@ -375,15 +373,14 @@ func GetEffectiveNamespace(c *gin.Context, requestedNs string) (string, bool) {
 	}
 
 	// 如果有全部权限
-	if permission.HasAllNamespaceAccess() {
+	if services.HasAllNamespaceAccess(permission) {
 		return requestedNs, true
 	}
 
 	allowedNs := permission.GetNamespaceList()
 
-	// 如果用户指定了命名空间，检查权限
 	if requestedNs != "" {
-		if permission.HasNamespaceAccess(requestedNs) {
+		if services.HasNamespaceAccess(permission, requestedNs) {
 			return requestedNs, true
 		}
 		return "", false // 无权访问请求的命名空间

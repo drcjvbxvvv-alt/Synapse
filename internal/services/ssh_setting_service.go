@@ -1,10 +1,6 @@
 package services
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
 
 	"gorm.io/gorm"
@@ -22,47 +18,19 @@ func NewSSHSettingService(db *gorm.DB) *SSHSettingService {
 
 // GetSSHConfig 从数据库获取SSH配置
 func (s *SSHSettingService) GetSSHConfig() (*models.SSHConfig, error) {
-	var setting models.SystemSetting
-	if err := s.db.Where("config_key = ?", "ssh_config").First(&setting).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 返回默认配置
-			defaultConfig := models.GetDefaultSSHConfig()
-			return &defaultConfig, nil
-		}
+	var config models.SSHConfig
+	found, err := GetSystemSetting(s.db, "ssh_config", &config)
+	if err != nil {
 		return nil, err
 	}
-
-	var config models.SSHConfig
-	if err := json.Unmarshal([]byte(setting.Value), &config); err != nil {
-		return nil, fmt.Errorf("解析SSH配置失败: %w", err)
+	if !found {
+		defaultConfig := models.GetDefaultSSHConfig()
+		return &defaultConfig, nil
 	}
-
 	return &config, nil
 }
 
 // SaveSSHConfig 保存SSH配置到数据库
 func (s *SSHSettingService) SaveSSHConfig(config *models.SSHConfig) error {
-	configJSON, err := json.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("序列化SSH配置失败: %w", err)
-	}
-
-	var setting models.SystemSetting
-	result := s.db.Where("config_key = ?", "ssh_config").First(&setting)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		// 创建新配置
-		setting = models.SystemSetting{
-			ConfigKey: "ssh_config",
-			Value:     string(configJSON),
-			Type:      "ssh",
-		}
-		return s.db.Create(&setting).Error
-	} else if result.Error != nil {
-		return result.Error
-	}
-
-	// 更新现有配置
-	setting.Value = string(configJSON)
-	return s.db.Save(&setting).Error
+	return SaveSystemSetting(s.db, "ssh_config", "ssh", config)
 }

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
@@ -20,8 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -36,6 +35,7 @@ const (
 type KubectlPodTerminalHandler struct {
 	clusterService *services.ClusterService
 	auditService   *services.AuditService
+	k8sMgr         *k8s.ClusterInformerManager
 	podTerminal    *PodTerminalHandler
 	activeSessions map[string]int // podName -> activeConnections
 	sessionsMutex  sync.RWMutex
@@ -43,11 +43,12 @@ type KubectlPodTerminalHandler struct {
 }
 
 // NewKubectlPodTerminalHandler 创建 kubectl Pod 终端处理器
-func NewKubectlPodTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService) *KubectlPodTerminalHandler {
+func NewKubectlPodTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService, k8sMgr *k8s.ClusterInformerManager) *KubectlPodTerminalHandler {
 	h := &KubectlPodTerminalHandler{
 		clusterService: clusterService,
 		auditService:   auditService,
-		podTerminal:    NewPodTerminalHandler(clusterService, auditService),
+		k8sMgr:         k8sMgr,
+		podTerminal:    NewPodTerminalHandler(clusterService, auditService, k8sMgr),
 		activeSessions: make(map[string]int),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
@@ -103,18 +104,13 @@ func (h *KubectlPodTerminalHandler) HandleKubectlPodTerminal(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sConfig, err := h.createK8sConfig(cluster)
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建K8s配置失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取K8s客户端失败: " + err.Error()})
 		return
 	}
-
-	client, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建K8s客户端失败"})
-		return
-	}
+	client := k8sClient.GetClientset()
 
 	// 创建或获取 kubectl Pod，使用对应权限的 ServiceAccount
 	// Pod 名称包含权限类型，确保不同权限使用不同的 Pod
@@ -305,15 +301,11 @@ func (h *KubectlPodTerminalHandler) cleanupIdlePods() {
 
 // cleanupClusterIdlePods 清理指定集群的空闲 Pod
 func (h *KubectlPodTerminalHandler) cleanupClusterIdlePods(cluster *models.Cluster) {
-	k8sConfig, err := h.createK8sConfig(cluster)
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		return
 	}
-
-	client, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		return
-	}
+	client := k8sClient.GetClientset()
 
 	ctx := context.Background()
 	pods, err := client.CoreV1().Pods(kubectlPodNamespace).List(ctx, metav1.ListOptions{
@@ -352,33 +344,3 @@ func (h *KubectlPodTerminalHandler) cleanupClusterIdlePods(cluster *models.Clust
 	}
 }
 
-// createK8sConfig 创建 K8s 配置
-func (h *KubectlPodTerminalHandler) createK8sConfig(cluster *models.Cluster) (*rest.Config, error) {
-	// 优先使用 Kubeconfig 方式
-	if cluster.KubeconfigEnc != "" {
-		config, err := clientcmd.RESTConfigFromKubeConfig([]byte(cluster.KubeconfigEnc))
-		if err != nil {
-			return nil, fmt.Errorf("解析kubeconfig失败: %v", err)
-		}
-		config.Timeout = 30 * time.Second
-		return config, nil
-	}
-
-	// 回退到 Token 方式
-	config := &rest.Config{
-		Host:    cluster.APIServer,
-		Timeout: 30 * time.Second,
-	}
-
-	if cluster.SATokenEnc != "" {
-		config.BearerToken = cluster.SATokenEnc
-	}
-
-	if cluster.CAEnc != "" {
-		config.CAData = []byte(cluster.CAEnc)
-	} else {
-		config.Insecure = true
-	}
-
-	return config, nil
-}

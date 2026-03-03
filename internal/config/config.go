@@ -90,7 +90,8 @@ func Load() *Config {
 	if err := viper.Unmarshal(&config); err != nil {
 		logger.Fatal("配置解析失败: %v", err)
 	}
-	logger.Info("配置: %+v", config)
+	logger.Info("配置加载完成: server.port=%d, server.mode=%s, db.driver=%s, log.level=%s",
+		config.Server.Port, config.Server.Mode, config.Database.Driver, config.Log.Level)
 
 	return &config
 }

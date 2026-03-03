@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/kubernetes"
 )
 
 // PodHandler Pod处理器
@@ -918,23 +917,8 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 		}
 	}
 
-	// 为日志流创建无超时的专用REST config
-	// 克隆原有config并移除超时限制
-	logStreamConfig := *k8sClient.GetRestConfig()
-	logStreamConfig.Timeout = 0 // 移除超时限制
-
-	// 使用无超时config创建临时clientset
-	logClientset, err := kubernetes.NewForConfig(&logStreamConfig)
-	if err != nil {
-		_ = conn.WriteJSON(map[string]interface{}{
-			"type":    "error",
-			"message": "创建日志客户端失败: " + err.Error(),
-		})
-		return
-	}
-
-	// 获取日志流
-	req := logClientset.CoreV1().Pods(namespace).GetLogs(name, logOptions)
+	// 获取日志流（使用缓存的clientset）
+	req := k8sClient.GetClientset().CoreV1().Pods(namespace).GetLogs(name, logOptions)
 	logStream, err := req.Stream(context.Background())
 	if err != nil {
 		_ = conn.WriteJSON(map[string]interface{}{

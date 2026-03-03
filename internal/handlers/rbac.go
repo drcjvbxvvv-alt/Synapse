@@ -4,24 +4,27 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/internal/templates/rbac"
-
 	"github.com/gin-gonic/gin"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
+	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/KubePolaris/internal/templates/rbac"
 )
 
-// RBACHandler handles RBAC-related requests
+// RBACHandler RBAC 权限管理处理器
 type RBACHandler struct {
 	clusterService *services.ClusterService
 	rbacService    *services.RBACService
+	k8sMgr         *k8s.ClusterInformerManager
 }
 
-// NewRBACHandler creates a new RBACHandler
-func NewRBACHandler(clusterService *services.ClusterService, rbacService *services.RBACService) *RBACHandler {
+// NewRBACHandler 创建 RBAC 权限管理处理器
+func NewRBACHandler(clusterService *services.ClusterService, rbacService *services.RBACService, k8sMgr *k8s.ClusterInformerManager) *RBACHandler {
 	return &RBACHandler{
 		clusterService: clusterService,
 		rbacService:    rbacService,
+		k8sMgr:         k8sMgr,
 	}
 }
 
@@ -48,12 +51,12 @@ func (h *RBACHandler) SyncPermissions(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -100,12 +103,12 @@ func (h *RBACHandler) GetSyncStatus(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -152,12 +155,12 @@ func (h *RBACHandler) ListClusterRoles(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -243,12 +246,12 @@ func (h *RBACHandler) CreateCustomClusterRole(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -296,12 +299,12 @@ func (h *RBACHandler) DeleteClusterRole(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -349,12 +352,12 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -444,12 +447,12 @@ func (h *RBACHandler) CreateCustomRole(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}
@@ -498,12 +501,12 @@ func (h *RBACHandler) DeleteRole(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 		})
 		return
 	}

@@ -500,21 +500,5 @@ func (s *AlertManagerService) GetAlertStats(ctx context.Context, config *models.
 
 // setAuth 设置认证
 func (s *AlertManagerService) setAuth(req *http.Request, auth *models.MonitoringAuth) error {
-	if auth == nil {
-		return nil
-	}
-
-	switch auth.Type {
-	case "none", "":
-		// 无需认证
-		return nil
-	case "basic":
-		req.SetBasicAuth(auth.Username, auth.Password)
-	case "bearer":
-		req.Header.Set("Authorization", "Bearer "+auth.Token)
-	default:
-		return fmt.Errorf("不支持的认证类型: %s", auth.Type)
-	}
-
-	return nil
+	return SetMonitoringAuth(req, auth)
 }

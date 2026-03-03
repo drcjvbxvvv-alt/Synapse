@@ -20,19 +20,15 @@ import (
 
 // AIChatHandler AI 对话处理器
 type AIChatHandler struct {
-	db               *gorm.DB
-	clusterService   *services.ClusterService
-	k8sMgr           *k8s.ClusterInformerManager
-	aiConfigService  *services.AIConfigService
-	toolExecutor     *services.ToolExecutor
+	clusterService  *services.ClusterService
+	aiConfigService *services.AIConfigService
+	toolExecutor    *services.ToolExecutor
 }
 
 // NewAIChatHandler 创建 AI 对话处理器
-func NewAIChatHandler(db *gorm.DB, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, promSvc *services.PrometheusService, monCfgSvc *services.MonitoringConfigService) *AIChatHandler {
+func NewAIChatHandler(db *gorm.DB, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *AIChatHandler {
 	return &AIChatHandler{
-		db:              db,
 		clusterService:  clusterSvc,
-		k8sMgr:          k8sMgr,
 		aiConfigService: services.NewAIConfigService(db),
 		toolExecutor:    services.NewToolExecutor(k8sMgr, clusterSvc),
 	}
@@ -125,7 +121,7 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 		}
 
 		var contentBuilder strings.Builder
-		var toolCallsMap = make(map[int]*services.ToolCall)
+		toolCallsMap := make(map[int]*services.ToolCall)
 		finishReason := ""
 
 		for evt := range eventCh {
@@ -141,32 +137,23 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 			}
 
 			for _, tc := range evt.ToolCalls {
-				idx := tc.ID
-				if idx == "" {
-					// 流式中可能分批到达，用 Index 做 key
-					for _, existTC := range evt.ToolCalls {
-						if existTC.ID != "" {
-							idx = existTC.ID
-						}
-					}
-				}
-				// 根据 ID 累积参数
-				if tc.ID != "" {
-					toolCallsMap[len(toolCallsMap)] = &services.ToolCall{
+				idx := tc.Index
+				existing, ok := toolCallsMap[idx]
+				if !ok {
+					toolCallsMap[idx] = &services.ToolCall{
+						Index:    idx,
 						ID:       tc.ID,
 						Type:     "function",
 						Function: services.FunctionCall{Name: tc.Function.Name, Arguments: tc.Function.Arguments},
 					}
 				} else {
-					// 追加参数到最后一个工具调用
-					lastIdx := len(toolCallsMap) - 1
-					if lastIdx >= 0 {
-						existing := toolCallsMap[lastIdx]
-						if tc.Function.Name != "" {
-							existing.Function.Name += tc.Function.Name
-						}
-						existing.Function.Arguments += tc.Function.Arguments
+					if tc.ID != "" {
+						existing.ID = tc.ID
 					}
+					if tc.Function.Name != "" {
+						existing.Function.Name += tc.Function.Name
+					}
+					existing.Function.Arguments += tc.Function.Arguments
 				}
 			}
 
@@ -180,7 +167,6 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 		}
 
 		if finishReason == "tool_calls" && len(toolCallsMap) > 0 {
-			// 构建工具调用列表
 			toolCalls := make([]services.ToolCall, 0, len(toolCallsMap))
 			for i := 0; i < len(toolCallsMap); i++ {
 				if tc, ok := toolCallsMap[i]; ok {
@@ -267,4 +253,3 @@ func ensureJSON(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
 }
-

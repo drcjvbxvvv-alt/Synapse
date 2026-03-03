@@ -493,8 +493,8 @@ func GetUserClusterRoleBindingName(userID uint, permissionType string) string {
 	return fmt.Sprintf("kubepolaris-user-%d-%s-cluster", userID, permissionType)
 }
 
-// HasAllNamespaceAccess 检查是否有全部命名空间权限
-func HasAllNamespaceAccess(namespaces []string) bool {
+// hasAllNamespaces 检查命名空间列表是否包含全部权限
+func hasAllNamespaces(namespaces []string) bool {
 	for _, ns := range namespaces {
 		if ns == "*" {
 			return true
@@ -507,7 +507,7 @@ func HasAllNamespaceAccess(namespaces []string) bool {
 // 根据权限配置自动创建 SA 和绑定
 func (s *RBACService) EnsureUserRBAC(clientset *kubernetes.Clientset, config *UserRBACConfig) error {
 	ctx := context.Background()
-	hasAllAccess := HasAllNamespaceAccess(config.Namespaces)
+	hasAllAccess := hasAllNamespaces(config.Namespaces)
 
 	// 获取对应的 ClusterRole
 	clusterRoleName := config.ClusterRoleRef
@@ -660,7 +660,7 @@ func (s *RBACService) CleanupUserRBAC(clientset *kubernetes.Clientset, userID ui
 
 // GetEffectiveServiceAccount 获取用户应该使用的 SA 名称
 func (s *RBACService) GetEffectiveServiceAccount(config *UserRBACConfig) string {
-	hasAllAccess := HasAllNamespaceAccess(config.Namespaces)
+	hasAllAccess := hasAllNamespaces(config.Namespaces)
 
 	switch config.PermissionType {
 	case "admin":

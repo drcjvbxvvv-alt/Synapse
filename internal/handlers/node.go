@@ -251,15 +251,29 @@ func (h *NodeHandler) GetNodeOverview(c *gin.Context) {
 		}
 	}
 
-	// 构建概览数据
+	ctx := c.Request.Context()
+	nodeResourceUsage := h.getNodesResourceUsage(ctx, cluster.ID)
+	var totalCPU, totalMemory float64
+	usageCount := 0
+	for _, usage := range nodeResourceUsage {
+		totalCPU += usage["cpuUsage"]
+		totalMemory += usage["memoryUsage"]
+		usageCount++
+	}
+	var cpuUsage, memoryUsage float64
+	if usageCount > 0 {
+		cpuUsage = totalCPU / float64(usageCount)
+		memoryUsage = totalMemory / float64(usageCount)
+	}
+
 	overview := gin.H{
 		"totalNodes":       totalNodes,
 		"readyNodes":       readyNodes,
 		"notReadyNodes":    notReadyNodes,
 		"maintenanceNodes": maintenanceNodes,
-		"cpuUsage":         65.0, // 模拟数据，后续可以通过metrics-server获取
-		"memoryUsage":      72.0, // 模拟数据
-		"storageUsage":     45.0, // 模拟数据
+		"cpuUsage":         cpuUsage,
+		"memoryUsage":      memoryUsage,
+		"storageUsage":     0.0,
 	}
 
 	c.JSON(http.StatusOK, gin.H{

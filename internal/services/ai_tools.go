@@ -10,6 +10,7 @@ import (
 
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -521,42 +522,32 @@ func (e *ToolExecutor) listDeployments(clusterID uint, namespace string) (string
 		Images    string `json:"images"`
 	}
 
-	var result []deploySummary
-
+	var deploys []*appsv1.Deployment
+	var err error
 	if namespace != "" {
-		deploys, err := lister.Deployments(namespace).List(labels.Everything())
-		if err != nil {
-			return "", fmt.Errorf("列出 Deployment 失败: %w", err)
-		}
-		for _, d := range deploys {
-			images := getContainerImages(d.Spec.Template.Spec.Containers)
-			result = append(result, deploySummary{
-				Name:      d.Name,
-				Namespace: d.Namespace,
-				Replicas:  *d.Spec.Replicas,
-				Ready:     d.Status.ReadyReplicas,
-				Available: d.Status.AvailableReplicas,
-				Age:       formatAge(d.CreationTimestamp.Time),
-				Images:    images,
-			})
-		}
+		deploys, err = lister.Deployments(namespace).List(labels.Everything())
 	} else {
-		deploys, err := lister.List(labels.Everything())
-		if err != nil {
-			return "", fmt.Errorf("列出 Deployment 失败: %w", err)
+		deploys, err = lister.List(labels.Everything())
+	}
+	if err != nil {
+		return "", fmt.Errorf("列出 Deployment 失败: %w", err)
+	}
+
+	result := make([]deploySummary, 0, len(deploys))
+	for _, d := range deploys {
+		var replicas int32 = 1
+		if d.Spec.Replicas != nil {
+			replicas = *d.Spec.Replicas
 		}
-		for _, d := range deploys {
-			images := getContainerImages(d.Spec.Template.Spec.Containers)
-			result = append(result, deploySummary{
-				Name:      d.Name,
-				Namespace: d.Namespace,
-				Replicas:  *d.Spec.Replicas,
-				Ready:     d.Status.ReadyReplicas,
-				Available: d.Status.AvailableReplicas,
-				Age:       formatAge(d.CreationTimestamp.Time),
-				Images:    images,
-			})
-		}
+		result = append(result, deploySummary{
+			Name:      d.Name,
+			Namespace: d.Namespace,
+			Replicas:  replicas,
+			Ready:     d.Status.ReadyReplicas,
+			Available: d.Status.AvailableReplicas,
+			Age:       formatAge(d.CreationTimestamp.Time),
+			Images:    getContainerImages(d.Spec.Template.Spec.Containers),
+		})
 	}
 
 	data, _ := json.Marshal(map[string]interface{}{
@@ -787,46 +778,35 @@ func (e *ToolExecutor) listServices(clusterID uint, namespace string) (string, e
 	}
 
 	type svcSummary struct {
-		Name       string `json:"name"`
-		Namespace  string `json:"namespace"`
-		Type       string `json:"type"`
-		ClusterIP  string `json:"clusterIP"`
-		Ports      string `json:"ports"`
-		Age        string `json:"age"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+		Type      string `json:"type"`
+		ClusterIP string `json:"clusterIP"`
+		Ports     string `json:"ports"`
+		Age       string `json:"age"`
 	}
 
-	var result []svcSummary
-
+	var svcs []*corev1.Service
+	var err error
 	if namespace != "" {
-		svcs, err := lister.Services(namespace).List(labels.Everything())
-		if err != nil {
-			return "", fmt.Errorf("列出 Service 失败: %w", err)
-		}
-		for _, svc := range svcs {
-			result = append(result, svcSummary{
-				Name:      svc.Name,
-				Namespace: svc.Namespace,
-				Type:      string(svc.Spec.Type),
-				ClusterIP: svc.Spec.ClusterIP,
-				Ports:     formatServicePorts(svc.Spec.Ports),
-				Age:       formatAge(svc.CreationTimestamp.Time),
-			})
-		}
+		svcs, err = lister.Services(namespace).List(labels.Everything())
 	} else {
-		svcs, err := lister.List(labels.Everything())
-		if err != nil {
-			return "", fmt.Errorf("列出 Service 失败: %w", err)
-		}
-		for _, svc := range svcs {
-			result = append(result, svcSummary{
-				Name:      svc.Name,
-				Namespace: svc.Namespace,
-				Type:      string(svc.Spec.Type),
-				ClusterIP: svc.Spec.ClusterIP,
-				Ports:     formatServicePorts(svc.Spec.Ports),
-				Age:       formatAge(svc.CreationTimestamp.Time),
-			})
-		}
+		svcs, err = lister.List(labels.Everything())
+	}
+	if err != nil {
+		return "", fmt.Errorf("列出 Service 失败: %w", err)
+	}
+
+	result := make([]svcSummary, 0, len(svcs))
+	for _, svc := range svcs {
+		result = append(result, svcSummary{
+			Name:      svc.Name,
+			Namespace: svc.Namespace,
+			Type:      string(svc.Spec.Type),
+			ClusterIP: svc.Spec.ClusterIP,
+			Ports:     formatServicePorts(svc.Spec.Ports),
+			Age:       formatAge(svc.CreationTimestamp.Time),
+		})
 	}
 
 	data, _ := json.Marshal(map[string]interface{}{
@@ -842,12 +822,7 @@ func (e *ToolExecutor) listIngresses(ctx context.Context, clusterID uint, namesp
 		return "", err
 	}
 
-	var ns string
-	if namespace != "" {
-		ns = namespace
-	}
-
-	ingressList, err := clientset.NetworkingV1().Ingresses(ns).List(ctx, metav1.ListOptions{})
+	ingressList, err := clientset.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", fmt.Errorf("列出 Ingress 失败: %w", err)
 	}

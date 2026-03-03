@@ -16,7 +16,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/config"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
 )
 
@@ -47,16 +46,9 @@ func (s *AuthHandlerTestSuite) SetupTest() {
 	s.db = gormDB
 	s.mock = mock
 
-	cfg := &config.Config{
-		JWT: config.JWTConfig{
-			Secret:     "test-secret-key-for-unit-tests-only",
-			ExpireTime: 24,
-		},
-	}
-
-	// 创建 OperationLogService 用于测试（即使为 nil 也不会 panic，因为已添加 nil 检查）
+	authSvc := services.NewAuthService(gormDB, "test-secret-key-for-unit-tests-only", 24)
 	opLogSvc := services.NewOperationLogService(gormDB)
-	s.handler = NewAuthHandler(gormDB, cfg, opLogSvc)
+	s.handler = NewAuthHandler(authSvc, opLogSvc)
 
 	s.router = gin.New()
 	s.router.POST("/api/auth/login", s.handler.Login)

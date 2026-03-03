@@ -4,24 +4,27 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
+
+	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
-
-	"github.com/gin-gonic/gin"
 )
 
 // OMHandler 运维中心处理器
 type OMHandler struct {
 	clusterSvc *services.ClusterService
 	omSvc      *services.OMService
+	k8sMgr     *k8s.ClusterInformerManager
 }
 
 // NewOMHandler 创建运维中心处理器
-func NewOMHandler(clusterSvc *services.ClusterService, omSvc *services.OMService) *OMHandler {
+func NewOMHandler(clusterSvc *services.ClusterService, omSvc *services.OMService, k8sMgr *k8s.ClusterInformerManager) *OMHandler {
 	return &OMHandler{
 		clusterSvc: clusterSvc,
 		omSvc:      omSvc,
+		k8sMgr:     k8sMgr,
 	}
 }
 
@@ -57,28 +60,18 @@ func (h *OMHandler) GetHealthDiagnosis(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	if cluster.KubeconfigEnc == "" && cluster.SATokenEnc == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "集群未配置认证信息",
-			"data":    nil,
-		})
-		return
-	}
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
-
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err)
+		logger.Error("获取K8s客户端失败", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 			"data":    nil,
 		})
 		return
 	}
 
-	// 获取 clientset
 	clientset := k8sClient.GetClientset()
 	if clientset == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -159,28 +152,18 @@ func (h *OMHandler) GetResourceTop(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	if cluster.KubeconfigEnc == "" && cluster.SATokenEnc == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "集群未配置认证信息",
-			"data":    nil,
-		})
-		return
-	}
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
-
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err)
+		logger.Error("获取K8s客户端失败", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 			"data":    nil,
 		})
 		return
 	}
 
-	// 获取 clientset
 	clientset := k8sClient.GetClientset()
 	if clientset == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -242,28 +225,18 @@ func (h *OMHandler) GetControlPlaneStatus(c *gin.Context) {
 		return
 	}
 
-	// 创建 K8s 客户端
-	if cluster.KubeconfigEnc == "" && cluster.SATokenEnc == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "集群未配置认证信息",
-			"data":    nil,
-		})
-		return
-	}
-	k8sClient, err := services.NewK8sClientForCluster(cluster)
-
+	// 获取 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err)
+		logger.Error("获取K8s客户端失败", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "创建K8s客户端失败: " + err.Error(),
+			"message": "获取K8s客户端失败: " + err.Error(),
 			"data":    nil,
 		})
 		return
 	}
 
-	// 获取 clientset
 	clientset := k8sClient.GetClientset()
 	if clientset == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

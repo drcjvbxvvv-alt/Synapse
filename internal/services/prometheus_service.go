@@ -527,27 +527,7 @@ func (s *PrometheusService) buildQueryURL(endpoint string, query *models.Metrics
 
 // setAuth 设置认证
 func (s *PrometheusService) setAuth(req *http.Request, auth *models.MonitoringAuth) error {
-	if auth == nil {
-		return nil
-	}
-
-	switch auth.Type {
-	case "none":
-		// 无需认证，直接返回
-		return nil
-	case "basic":
-		req.SetBasicAuth(auth.Username, auth.Password)
-	case "bearer":
-		req.Header.Set("Authorization", "Bearer "+auth.Token)
-	case "mtls":
-		// mTLS 认证需要在创建 HTTP 客户端时配置
-		// 这里可以添加证书配置逻辑
-		return fmt.Errorf("mTLS 认证暂未实现")
-	default:
-		return fmt.Errorf("不支持的认证类型: %s", auth.Type)
-	}
-
-	return nil
+	return SetMonitoringAuth(req, auth)
 }
 
 // parseTimeRange 解析时间范围

@@ -168,11 +168,21 @@ func (h *NamespaceHandler) GetNamespaceDetail(c *gin.Context) {
 		}
 	}
 
-	// 获取命名空间下的资源统计
-	pods, _ := clientset.CoreV1().Pods(namespaceName).List(context.TODO(), metav1.ListOptions{})
-	services, _ := clientset.CoreV1().Services(namespaceName).List(context.TODO(), metav1.ListOptions{})
-	configMaps, _ := clientset.CoreV1().ConfigMaps(namespaceName).List(context.TODO(), metav1.ListOptions{})
-	secrets, _ := clientset.CoreV1().Secrets(namespaceName).List(context.TODO(), metav1.ListOptions{})
+	resourceCount := map[string]int{
+		"pods": 0, "services": 0, "configMaps": 0, "secrets": 0,
+	}
+	if pods, err := clientset.CoreV1().Pods(namespaceName).List(context.TODO(), metav1.ListOptions{}); err == nil {
+		resourceCount["pods"] = len(pods.Items)
+	}
+	if svcs, err := clientset.CoreV1().Services(namespaceName).List(context.TODO(), metav1.ListOptions{}); err == nil {
+		resourceCount["services"] = len(svcs.Items)
+	}
+	if cms, err := clientset.CoreV1().ConfigMaps(namespaceName).List(context.TODO(), metav1.ListOptions{}); err == nil {
+		resourceCount["configMaps"] = len(cms.Items)
+	}
+	if secs, err := clientset.CoreV1().Secrets(namespaceName).List(context.TODO(), metav1.ListOptions{}); err == nil {
+		resourceCount["secrets"] = len(secs.Items)
+	}
 
 	namespaceDetail := map[string]interface{}{
 		"name":              namespace.Name,
@@ -181,12 +191,7 @@ func (h *NamespaceHandler) GetNamespaceDetail(c *gin.Context) {
 		"annotations":       namespace.Annotations,
 		"creationTimestamp": namespace.CreationTimestamp.Format("2006-01-02 15:04:05"),
 		"resourceQuota":     resourceQuota,
-		"resourceCount": map[string]int{
-			"pods":       len(pods.Items),
-			"services":   len(services.Items),
-			"configMaps": len(configMaps.Items),
-			"secrets":    len(secrets.Items),
-		},
+		"resourceCount":     resourceCount,
 	}
 
 	c.JSON(http.StatusOK, gin.H{

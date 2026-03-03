@@ -2,7 +2,6 @@ package services
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -33,49 +32,21 @@ func NewLDAPService(db *gorm.DB) *LDAPService {
 
 // GetLDAPConfig 从数据库获取LDAP配置
 func (s *LDAPService) GetLDAPConfig() (*models.LDAPConfig, error) {
-	var setting models.SystemSetting
-	if err := s.db.Where("config_key = ?", "ldap_config").First(&setting).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 返回默认配置
-			defaultConfig := models.GetDefaultLDAPConfig()
-			return &defaultConfig, nil
-		}
+	var config models.LDAPConfig
+	found, err := GetSystemSetting(s.db, "ldap_config", &config)
+	if err != nil {
 		return nil, err
 	}
-
-	var config models.LDAPConfig
-	if err := json.Unmarshal([]byte(setting.Value), &config); err != nil {
-		return nil, fmt.Errorf("解析LDAP配置失败: %w", err)
+	if !found {
+		defaultConfig := models.GetDefaultLDAPConfig()
+		return &defaultConfig, nil
 	}
-
 	return &config, nil
 }
 
 // SaveLDAPConfig 保存LDAP配置到数据库
 func (s *LDAPService) SaveLDAPConfig(config *models.LDAPConfig) error {
-	configJSON, err := json.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("序列化LDAP配置失败: %w", err)
-	}
-
-	var setting models.SystemSetting
-	result := s.db.Where("config_key = ?", "ldap_config").First(&setting)
-
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		// 创建新配置
-		setting = models.SystemSetting{
-			ConfigKey: "ldap_config",
-			Value:     string(configJSON),
-			Type:      "ldap",
-		}
-		return s.db.Create(&setting).Error
-	} else if result.Error != nil {
-		return result.Error
-	}
-
-	// 更新现有配置
-	setting.Value = string(configJSON)
-	return s.db.Save(&setting).Error
+	return SaveSystemSetting(s.db, "ldap_config", "ldap", config)
 }
 
 // Authenticate 使用LDAP认证用户

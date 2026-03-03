@@ -12,9 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -22,7 +23,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -30,6 +30,7 @@ import (
 type PodTerminalHandler struct {
 	clusterService *services.ClusterService
 	auditService   *services.AuditService
+	k8sMgr         *k8s.ClusterInformerManager
 	upgrader       websocket.Upgrader
 	sessions       map[string]*PodTerminalSession
 	sessionsMutex  sync.RWMutex
@@ -71,10 +72,11 @@ type PodTerminalMessage struct {
 }
 
 // NewPodTerminalHandler 创建Pod终端处理器
-func NewPodTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService) *PodTerminalHandler {
+func NewPodTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService, k8sMgr *k8s.ClusterInformerManager) *PodTerminalHandler {
 	return &PodTerminalHandler{
 		clusterService: clusterService,
 		auditService:   auditService,
+		k8sMgr:         k8sMgr,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true // 在生产环境中应该检查Origin
@@ -179,19 +181,14 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		}
 	}()
 
-	// 创建Kubernetes配置
-	k8sConfig, err := h.createK8sConfig(cluster)
+	// 获取缓存的 K8s 客户端
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		h.sendMessage(conn, "error", fmt.Sprintf("创建Kubernetes配置失败: %v", err))
+		h.sendMessage(conn, "error", fmt.Sprintf("获取K8s客户端失败: %v", err))
 		return
 	}
-
-	// 创建Kubernetes客户端
-	client, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		h.sendMessage(conn, "error", fmt.Sprintf("创建Kubernetes客户端失败: %v", err))
-		return
-	}
+	client := k8sClient.GetClientset()
+	k8sConfig := k8sClient.GetRestConfig()
 
 	// 查找可用的shell
 	shell, err := h.findAvailableShell(client, k8sConfig, session)
@@ -538,37 +535,6 @@ func (h *PodTerminalHandler) closeSession(session *PodTerminalSession) {
 			close(session.done)
 		}
 	}
-}
-
-// createK8sConfig 创建Kubernetes配置
-func (h *PodTerminalHandler) createK8sConfig(cluster *models.Cluster) (*rest.Config, error) {
-	// 优先使用 Kubeconfig 方式
-	if cluster.KubeconfigEnc != "" {
-		config, err := clientcmd.RESTConfigFromKubeConfig([]byte(cluster.KubeconfigEnc))
-		if err != nil {
-			return nil, fmt.Errorf("解析kubeconfig失败: %v", err)
-		}
-		config.Timeout = 30 * time.Second
-		return config, nil
-	}
-
-	// 回退到 Token 方式
-	config := &rest.Config{
-		Host:    cluster.APIServer,
-		Timeout: 30 * time.Second,
-	}
-
-	if cluster.SATokenEnc != "" {
-		config.BearerToken = cluster.SATokenEnc
-	}
-
-	if cluster.CAEnc != "" {
-		config.CAData = []byte(cluster.CAEnc)
-	} else {
-		config.Insecure = true
-	}
-
-	return config, nil
 }
 
 // sendMessage 发送WebSocket消息

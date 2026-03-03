@@ -100,7 +100,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 	// Auth 仅开放登录与登出，其余走受保护分组
 	auth := api.Group("/auth")
 	{
-		authHandler := handlers.NewAuthHandler(db, cfg, opLogSvc)
+		authSvc := services.NewAuthService(db, cfg.JWT.Secret, cfg.JWT.ExpireTime)
+		authHandler := handlers.NewAuthHandler(authSvc, opLogSvc)
 		auth.POST("/login", authHandler.Login)
 		auth.POST("/logout", authHandler.Logout)
 		auth.GET("/status", authHandler.GetAuthStatus) // 获取认证状态（无需登录）
@@ -439,7 +440,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 
 				// RBAC 子分组 - KubePolaris 权限管理
 				rbacSvc := services.NewRBACService()
-				rbacHandler := handlers.NewRBACHandler(clusterSvc, rbacSvc)
+				rbacHandler := handlers.NewRBACHandler(clusterSvc, rbacSvc, k8sMgr)
 				rbacGroup := cluster.Group("/rbac")
 				{
 					rbacGroup.GET("/status", rbacHandler.GetSyncStatus)
@@ -464,7 +465,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 
 				// O&M - 监控中心（运维）
 				omSvc := services.NewOMService(prometheusSvc, monitoringConfigSvc)
-				omHandler := handlers.NewOMHandler(clusterSvc, omSvc)
+				omHandler := handlers.NewOMHandler(clusterSvc, omSvc, k8sMgr)
 				om := cluster.Group("/om")
 				{
 					om.GET("/health-diagnosis", omHandler.GetHealthDiagnosis)        // 集群健康诊断
@@ -547,7 +548,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 		// permissions - 权限管理
 		globalRbacSvc := services.NewRBACService()
 		permissionHandler := handlers.NewPermissionHandler(permissionSvc, clusterSvc, globalRbacSvc)
-		globalRbacHandler := handlers.NewRBACHandler(clusterSvc, globalRbacSvc)
+		globalRbacHandler := handlers.NewRBACHandler(clusterSvc, globalRbacSvc, k8sMgr)
 		permissions := protected.Group("/permissions")
 		{
 			// 权限类型
@@ -599,7 +600,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 		}
 
 		// AI Chat（集群级）
-		aiChatHandler := handlers.NewAIChatHandler(db, clusterSvc, k8sMgr, prometheusSvc, monitoringConfigSvc)
+		aiChatHandler := handlers.NewAIChatHandler(db, clusterSvc, k8sMgr)
 		aiChat := clusters.Group("/:clusterID/ai")
 		aiChat.Use(permMiddleware.ClusterAccessRequired())
 		{
@@ -614,8 +615,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) *gin.Engine {
 		// 终端处理器（注入审计服务）
 		kctl := handlers.NewKubectlTerminalHandler(clusterSvc, auditSvc)
 		ssh := handlers.NewSSHHandler(auditSvc)
-		podTerminal := handlers.NewPodTerminalHandler(clusterSvc, auditSvc)
-		kubectlPod := handlers.NewKubectlPodTerminalHandler(clusterSvc, auditSvc)
+		podTerminal := handlers.NewPodTerminalHandler(clusterSvc, auditSvc, k8sMgr)
+		kubectlPod := handlers.NewKubectlPodTerminalHandler(clusterSvc, auditSvc, k8sMgr)
 		podHandler := handlers.NewPodHandler(db, cfg, clusterSvc, k8sMgr)
 		logCenterHandler := handlers.NewLogCenterHandler(clusterSvc, k8sMgr)
 

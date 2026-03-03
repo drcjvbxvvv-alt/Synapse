@@ -95,7 +95,6 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	_ = factory.Apps().V1().StatefulSets().Informer()
 	_ = factory.Apps().V1().DaemonSets().Informer()
 	_ = factory.Batch().V1().Jobs().Informer()
-	// _ = factory.Batch().V1beta1().CronJobs().Informer()
 
 	// Detect and setup Argo Rollouts typed informer if CRD exists
 	if gv, found := hasArgoRollouts(clientset); found {
@@ -147,8 +146,7 @@ func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRun
 			rt.factory.Apps().V1().StatefulSets().Informer().HasSynced,
 			rt.factory.Apps().V1().DaemonSets().Informer().HasSynced,
 			rt.factory.Batch().V1().Jobs().Informer().HasSynced,
-			// rt.factory.Batch().V1beta1().CronJobs().Informer().HasSynced,  todo 后续兼容不同版本
-		}
+			}
 		if rt.rolloutEnabled && rt.rolloutInformer != nil {
 			syncedFuncs = append(syncedFuncs, rt.rolloutInformer.HasSynced)
 		}
@@ -364,16 +362,6 @@ func (m *ClusterInformerManager) JobsLister(clusterID uint) batchv1listers.JobLi
 	return nil
 }
 
-// CronJobsLister 返回 CronJobs 的 Lister
-// func (m *ClusterInformerManager) CronJobsLister(clusterID uint) batchv1beta1listers.CronJobLister {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	if rt, ok := m.clusters[clusterID]; ok {
-// 		return rt.factory.Batch().V1beta1().CronJobs().Lister()
-// 	}
-// 	return nil
-// }
-
 // hasArgoRollouts 探测是否存在 argoproj.io 的 rollouts 资源，返回其 GroupVersion
 func hasArgoRollouts(cs *kubernetes.Clientset) (schema.GroupVersion, bool) {
 	groups, resources, err := cs.Discovery().ServerGroupsAndResources()
@@ -450,7 +438,9 @@ func (m *ClusterInformerManager) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for id, rt := range m.clusters {
-		close(rt.stopCh)
+		rt.stopOnce.Do(func() {
+			close(rt.stopCh)
+		})
 		delete(m.clusters, id)
 	}
 }

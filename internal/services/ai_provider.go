@@ -25,6 +25,7 @@ type ChatMessage struct {
 
 // ToolCall 工具调用
 type ToolCall struct {
+	Index    int          `json:"index"`
 	ID       string       `json:"id"`
 	Type     string       `json:"type"`
 	Function FunctionCall `json:"function"`

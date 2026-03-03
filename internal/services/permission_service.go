@@ -435,20 +435,80 @@ func (s *PermissionService) HasClusterAccess(userID, clusterID uint) bool {
 	return err == nil
 }
 
-// CanPerformAction 检查用户是否可以执行指定操作
-func (s *PermissionService) CanPerformAction(userID, clusterID uint, action string, namespace string) bool {
+// CanPerformUserAction 检查用户是否可以执行指定操作
+func (s *PermissionService) CanPerformUserAction(userID, clusterID uint, action string, namespace string) bool {
 	permission, err := s.GetUserClusterPermission(userID, clusterID)
 	if err != nil {
 		return false
 	}
 
-	// 检查命名空间权限
-	if namespace != "" && !permission.HasNamespaceAccess(namespace) {
+	if namespace != "" && !HasNamespaceAccess(permission, namespace) {
 		return false
 	}
 
-	// 检查操作权限
-	return permission.CanPerformAction(action)
+	return CanPerformAction(permission, action)
+}
+
+// HasNamespaceAccess 检查权限是否包含指定命名空间的访问
+func HasNamespaceAccess(cp *models.ClusterPermission, namespace string) bool {
+	namespaces := cp.GetNamespaceList()
+	for _, ns := range namespaces {
+		if ns == "*" || ns == namespace {
+			return true
+		}
+		if len(ns) > 1 && ns[len(ns)-1] == '*' {
+			prefix := ns[:len(ns)-1]
+			if len(namespace) >= len(prefix) && namespace[:len(prefix)] == prefix {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// HasAllNamespaceAccess 检查是否有全部命名空间的访问权限
+func HasAllNamespaceAccess(cp *models.ClusterPermission) bool {
+	namespaces := cp.GetNamespaceList()
+	for _, ns := range namespaces {
+		if ns == "*" {
+			return true
+		}
+	}
+	return false
+}
+
+// CanPerformAction 检查权限类型是否允许执行指定操作
+func CanPerformAction(cp *models.ClusterPermission, action string) bool {
+	switch cp.PermissionType {
+	case models.PermissionTypeAdmin:
+		return true
+	case models.PermissionTypeOps:
+		restrictedActions := map[string]bool{
+			"node:cordon": true, "node:uncordon": true, "node:drain": true,
+			"pv:create": true, "pv:delete": true,
+			"storageclass:create": true, "storageclass:delete": true,
+			"quota:create": true, "quota:update": true, "quota:delete": true,
+		}
+		return !restrictedActions[action]
+	case models.PermissionTypeDev:
+		allowedPrefixes := []string{
+			"pod:", "deployment:", "statefulset:", "daemonset:",
+			"job:", "cronjob:", "service:", "ingress:",
+			"configmap:", "secret:", "rollout:",
+		}
+		for _, prefix := range allowedPrefixes {
+			if len(action) >= len(prefix) && action[:len(prefix)] == prefix {
+				return true
+			}
+		}
+		return false
+	case models.PermissionTypeReadonly:
+		return action == "view" || action == "list" || action == "get"
+	case models.PermissionTypeCustom:
+		return true
+	default:
+		return false
+	}
 }
 
 // ========== 用户查询 ==========

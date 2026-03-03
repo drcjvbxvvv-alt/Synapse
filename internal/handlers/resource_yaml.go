@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -57,30 +55,14 @@ type ResourceYAMLResponse struct {
 
 // ApplyConfigMapYAML 应用ConfigMap YAML
 func (h *ResourceYAMLHandler) ApplyConfigMapYAML(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-
 	var req ResourceYAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "参数错误: " + err.Error(),
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误: " + err.Error()})
 		return
 	}
 
-	logger.Info("应用ConfigMap YAML: cluster=%s, dryRun=%v", clusterID, req.DryRun)
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
-		return
-	}
-
-	// 创建K8s客户端
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
 
@@ -148,75 +130,35 @@ func (h *ResourceYAMLHandler) ApplyConfigMapYAML(c *gin.Context) {
 
 // GetConfigMapYAML 获取ConfigMap的YAML
 func (h *ResourceYAMLHandler) GetConfigMapYAML(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-	namespace := c.Param("namespace")
-	name := c.Param("name")
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cm, err := k8sClient.GetClientset().CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	cm, err := k8sClient.GetClientset().CoreV1().ConfigMaps(c.Param("namespace")).Get(ctx, c.Param("name"), metav1.GetOptions{})
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "ConfigMap不存在: " + err.Error()})
 		return
 	}
-
-	// 清理字段并设置TypeMeta
-	cleanCM := cm.DeepCopy()
-	cleanCM.ManagedFields = nil
-	cleanCM.APIVersion = "v1"
-	cleanCM.Kind = "ConfigMap"
-
-	yamlBytes, err := sigsyaml.Marshal(cleanCM)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "转换YAML失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "success",
-		"data": gin.H{
-			"yaml": string(yamlBytes),
-		},
-	})
+	clean := cm.DeepCopy()
+	clean.ManagedFields = nil
+	clean.APIVersion = "v1"
+	clean.Kind = "ConfigMap"
+	respondWithYAML(c, clean)
 }
 
 // ApplySecretYAML 应用Secret YAML
 func (h *ResourceYAMLHandler) ApplySecretYAML(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-
 	var req ResourceYAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误: " + err.Error()})
 		return
 	}
 
-	logger.Info("应用Secret YAML: cluster=%s, dryRun=%v", clusterID, req.DryRun)
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
-		return
-	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
 
@@ -327,26 +269,14 @@ func (h *ResourceYAMLHandler) GetSecretYAML(c *gin.Context) {
 
 // ApplyServiceYAML 应用Service YAML
 func (h *ResourceYAMLHandler) ApplyServiceYAML(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-
 	var req ResourceYAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误: " + err.Error()})
 		return
 	}
 
-	logger.Info("应用Service YAML: cluster=%s, dryRun=%v", clusterID, req.DryRun)
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
-		return
-	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
 
@@ -412,26 +342,14 @@ func (h *ResourceYAMLHandler) ApplyServiceYAML(c *gin.Context) {
 
 // ApplyIngressYAML 应用Ingress YAML
 func (h *ResourceYAMLHandler) ApplyIngressYAML(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-
 	var req ResourceYAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误: " + err.Error()})
 		return
 	}
 
-	logger.Info("应用Ingress YAML: cluster=%s, dryRun=%v", clusterID, req.DryRun)
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
-		return
-	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
 
@@ -494,26 +412,14 @@ func (h *ResourceYAMLHandler) ApplyIngressYAML(c *gin.Context) {
 
 // ApplyPVCYAML 应用PVC YAML
 func (h *ResourceYAMLHandler) ApplyPVCYAML(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-
 	var req ResourceYAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误: " + err.Error()})
 		return
 	}
 
-	logger.Info("应用PVC YAML: cluster=%s, dryRun=%v", clusterID, req.DryRun)
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
-		return
-	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
 
@@ -578,26 +484,14 @@ func (h *ResourceYAMLHandler) ApplyPVCYAML(c *gin.Context) {
 
 // ApplyPVYAML 应用PV YAML
 func (h *ResourceYAMLHandler) ApplyPVYAML(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-
 	var req ResourceYAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误: " + err.Error()})
 		return
 	}
 
-	logger.Info("应用PV YAML: cluster=%s, dryRun=%v", clusterID, req.DryRun)
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
-		return
-	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
 
@@ -655,26 +549,14 @@ func (h *ResourceYAMLHandler) ApplyPVYAML(c *gin.Context) {
 
 // ApplyStorageClassYAML 应用StorageClass YAML
 func (h *ResourceYAMLHandler) ApplyStorageClassYAML(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-
 	var req ResourceYAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "参数错误: " + err.Error()})
 		return
 	}
 
-	logger.Info("应用StorageClass YAML: cluster=%s, dryRun=%v", clusterID, req.DryRun)
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
-		return
-	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
 
@@ -735,240 +617,138 @@ func (h *ResourceYAMLHandler) createK8sClient(cluster *models.Cluster) (*service
 	return h.k8sMgr.GetK8sClient(cluster)
 }
 
-// GetServiceYAMLClean 获取干净的Service YAML（用于编辑）
-func (h *ResourceYAMLHandler) GetServiceYAMLClean(c *gin.Context) {
+// prepareK8sClient 通用初始化：解析 clusterID → 获取集群 → 创建客户端
+func (h *ResourceYAMLHandler) prepareK8sClient(c *gin.Context) (*services.K8sClient, bool) {
 	clusterID := c.Param("clusterID")
-	namespace := c.Param("namespace")
-	name := c.Param("name")
-
 	id := parseClusterID(clusterID)
 	cluster, err := h.clusterService.GetCluster(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
-		return
+		return nil, false
 	}
-
 	k8sClient, err := h.createK8sClient(cluster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
+		return nil, false
+	}
+	return k8sClient, true
+}
+
+// respondWithYAML 通用 YAML GET 响应：清理 ManagedFields、设置 TypeMeta、序列化
+func respondWithYAML(c *gin.Context, obj interface{}) {
+	yamlBytes, err := sigsyaml.Marshal(obj)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "转换YAML失败: " + err.Error()})
 		return
 	}
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "success",
+		"data":    gin.H{"yaml": string(yamlBytes)},
+	})
+}
 
+// GetServiceYAMLClean 获取干净的Service YAML（用于编辑）
+func (h *ResourceYAMLHandler) GetServiceYAMLClean(c *gin.Context) {
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	svc, err := k8sClient.GetClientset().CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	svc, err := k8sClient.GetClientset().CoreV1().Services(c.Param("namespace")).Get(ctx, c.Param("name"), metav1.GetOptions{})
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "Service不存在: " + err.Error()})
 		return
 	}
-
-	cleanSvc := svc.DeepCopy()
-	cleanSvc.ManagedFields = nil
-	cleanSvc.APIVersion = "v1"
-	cleanSvc.Kind = "Service"
-
-	yamlBytes, err := sigsyaml.Marshal(cleanSvc)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "转换YAML失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "success",
-		"data": gin.H{
-			"yaml": string(yamlBytes),
-		},
-	})
+	clean := svc.DeepCopy()
+	clean.ManagedFields = nil
+	clean.APIVersion = "v1"
+	clean.Kind = "Service"
+	respondWithYAML(c, clean)
 }
 
 // GetIngressYAMLClean 获取干净的Ingress YAML（用于编辑）
 func (h *ResourceYAMLHandler) GetIngressYAMLClean(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-	namespace := c.Param("namespace")
-	name := c.Param("name")
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	ing, err := k8sClient.GetClientset().NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+	ing, err := k8sClient.GetClientset().NetworkingV1().Ingresses(c.Param("namespace")).Get(ctx, c.Param("name"), metav1.GetOptions{})
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": fmt.Sprintf("Ingress不存在: %v", err)})
+		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "Ingress不存在: " + err.Error()})
 		return
 	}
-
-	cleanIng := ing.DeepCopy()
-	cleanIng.ManagedFields = nil
-	cleanIng.APIVersion = "networking.k8s.io/v1"
-	cleanIng.Kind = "Ingress"
-
-	yamlBytes, err := sigsyaml.Marshal(cleanIng)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "转换YAML失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "success",
-		"data": gin.H{
-			"yaml": string(yamlBytes),
-		},
-	})
+	clean := ing.DeepCopy()
+	clean.ManagedFields = nil
+	clean.APIVersion = "networking.k8s.io/v1"
+	clean.Kind = "Ingress"
+	respondWithYAML(c, clean)
 }
 
 // GetPVCYAMLClean 获取干净的PVC YAML（用于编辑）
 func (h *ResourceYAMLHandler) GetPVCYAMLClean(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-	namespace := c.Param("namespace")
-	name := c.Param("name")
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	pvc, err := k8sClient.GetClientset().CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
+	pvc, err := k8sClient.GetClientset().CoreV1().PersistentVolumeClaims(c.Param("namespace")).Get(ctx, c.Param("name"), metav1.GetOptions{})
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "PVC不存在: " + err.Error()})
 		return
 	}
-
-	cleanPVC := pvc.DeepCopy()
-	cleanPVC.ManagedFields = nil
-	cleanPVC.APIVersion = "v1"
-	cleanPVC.Kind = "PersistentVolumeClaim"
-
-	yamlBytes, err := sigsyaml.Marshal(cleanPVC)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "转换YAML失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "success",
-		"data": gin.H{
-			"yaml": string(yamlBytes),
-		},
-	})
+	clean := pvc.DeepCopy()
+	clean.ManagedFields = nil
+	clean.APIVersion = "v1"
+	clean.Kind = "PersistentVolumeClaim"
+	respondWithYAML(c, clean)
 }
 
 // GetPVYAMLClean 获取干净的PV YAML（用于编辑）
 func (h *ResourceYAMLHandler) GetPVYAMLClean(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-	name := c.Param("name")
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	pv, err := k8sClient.GetClientset().CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
+	pv, err := k8sClient.GetClientset().CoreV1().PersistentVolumes().Get(ctx, c.Param("name"), metav1.GetOptions{})
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "PV不存在: " + err.Error()})
 		return
 	}
-
-	cleanPV := pv.DeepCopy()
-	cleanPV.ManagedFields = nil
-	cleanPV.APIVersion = "v1"
-	cleanPV.Kind = "PersistentVolume"
-
-	yamlBytes, err := sigsyaml.Marshal(cleanPV)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "转换YAML失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "success",
-		"data": gin.H{
-			"yaml": string(yamlBytes),
-		},
-	})
+	clean := pv.DeepCopy()
+	clean.ManagedFields = nil
+	clean.APIVersion = "v1"
+	clean.Kind = "PersistentVolume"
+	respondWithYAML(c, clean)
 }
 
 // GetStorageClassYAMLClean 获取干净的StorageClass YAML（用于编辑）
 func (h *ResourceYAMLHandler) GetStorageClassYAMLClean(c *gin.Context) {
-	clusterID := c.Param("clusterID")
-	name := c.Param("name")
-
-	id := parseClusterID(clusterID)
-	cluster, err := h.clusterService.GetCluster(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "集群不存在"})
+	k8sClient, ok := h.prepareK8sClient(c)
+	if !ok {
 		return
 	}
-
-	k8sClient, err := h.createK8sClient(cluster)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "创建K8s客户端失败: " + err.Error()})
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	sc, err := k8sClient.GetClientset().StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
+	sc, err := k8sClient.GetClientset().StorageV1().StorageClasses().Get(ctx, c.Param("name"), metav1.GetOptions{})
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "StorageClass不存在: " + err.Error()})
 		return
 	}
-
-	cleanSC := sc.DeepCopy()
-	cleanSC.ManagedFields = nil
-	cleanSC.APIVersion = "storage.k8s.io/v1"
-	cleanSC.Kind = "StorageClass"
-
-	yamlBytes, err := sigsyaml.Marshal(cleanSC)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "转换YAML失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "success",
-		"data": gin.H{
-			"yaml": string(yamlBytes),
-		},
-	})
+	clean := sc.DeepCopy()
+	clean.ManagedFields = nil
+	clean.APIVersion = "storage.k8s.io/v1"
+	clean.Kind = "StorageClass"
+	respondWithYAML(c, clean)
 }
