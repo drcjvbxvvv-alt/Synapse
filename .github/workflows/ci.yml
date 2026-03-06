@@ -260,7 +260,7 @@ jobs:
     name: Integration Test
     runs-on: ubuntu-latest
     needs: [backend-build, frontend-build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('internal/integration/**/*.go') != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     services:
       mysql:
         image: mysql:8.0
@@ -278,13 +278,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Detect integration tests
+        id: detect-integration-tests
+        run: |
+          shopt -s globstar nullglob
+          files=(internal/integration/**/*.go)
+          if [ ${#files[@]} -gt 0 ]; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Go
+        if: steps.detect-integration-tests.outputs.has_tests == 'true'
         uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Run integration tests
+        if: steps.detect-integration-tests.outputs.has_tests == 'true'
         env:
           DB_DRIVER: mysql
           DB_HOST: localhost
@@ -295,6 +308,10 @@ jobs:
           INTEGRATION_TEST: true
         run: |
           go test -v -tags=integration ./internal/integration/...
+
+      - name: Skip integration tests
+        if: steps.detect-integration-tests.outputs.has_tests != 'true'
+        run: echo "No integration tests found under internal/integration, skipping."
 
   # ==================== 通知 ====================
   notify:
