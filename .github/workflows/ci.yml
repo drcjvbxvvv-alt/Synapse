@@ -26,9 +26,16 @@ jobs:
   backend-lint:
     name: Backend Lint
     runs-on: ubuntu-latest
+    needs: frontend-build
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: ui/dist
 
       - name: Set up Go
         uses: actions/setup-go@v6
