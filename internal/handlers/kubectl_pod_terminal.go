@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -99,25 +98,6 @@ func (h *KubectlPodTerminalHandler) HandleKubectlPodTerminal(c *gin.Context) {
 
 	logger.Info("用户kubectl终端权限", "userID", userID, "permissionType", permissionType, "namespaces", namespaces, "serviceAccount", serviceAccount)
 
-	targetNS := strings.TrimSpace(c.DefaultQuery("namespace", "default"))
-	if targetNS == "" {
-		targetNS = "default"
-	}
-	if errs := validation.IsDNS1123Subdomain(targetNS); len(errs) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的命名空间: " + strings.Join(errs, "; ")})
-		return
-	}
-	var clusterPerm *models.ClusterPermission
-	if perm, exists := c.Get("cluster_permission"); exists {
-		if cp, ok := perm.(*models.ClusterPermission); ok {
-			clusterPerm = cp
-		}
-	}
-	if clusterPerm != nil && !services.HasNamespaceAccess(clusterPerm, targetNS) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "无权访问该命名空间"})
-		return
-	}
-
 	// 获取集群信息
 	cluster, err := h.clusterService.GetCluster(uint(clusterID))
 	if err != nil {
@@ -190,8 +170,6 @@ func (h *KubectlPodTerminalHandler) HandleKubectlPodTerminal(c *gin.Context) {
 		"kubectl",
 		userID,
 		services.TerminalTypeKubectl,
-		clusterPerm,
-		targetNS,
 	)
 }
 
@@ -436,4 +414,3 @@ func (h *KubectlPodTerminalHandler) cleanupClusterIdlePods(cluster *models.Clust
 		}
 	}
 }
-

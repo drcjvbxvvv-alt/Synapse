@@ -21,7 +21,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -126,14 +125,7 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		_ = conn.Close()
 	}()
 
-	var clusterPerm *models.ClusterPermission
-	if p, ok := c.Get("cluster_permission"); ok {
-		if cp, ok := p.(*models.ClusterPermission); ok {
-			clusterPerm = cp
-		}
-	}
-
-	h.RunPodTerminalWithConn(conn, cluster, clusterID, namespace, podName, container, userID, terminalType, clusterPerm, "")
+	h.RunPodTerminalWithConn(conn, cluster, clusterID, namespace, podName, container, userID, terminalType)
 }
 
 // RunPodTerminalWithConn 在已建立的 WebSocket 上运行 Pod 终端（kubectl Pod 终端等场景先推送进度再复用此逻辑）
@@ -143,8 +135,6 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 	clusterIDStr, namespace, podName, container string,
 	userID uint,
 	terminalType services.TerminalType,
-	clusterPerm *models.ClusterPermission,
-	kubectlPreferredNamespace string,
 ) {
 	var auditSessionID uint
 	if h.auditService != nil {
@@ -218,11 +208,6 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 	}
 	h.sendMessage(conn, "connected", fmt.Sprintf("Connected to pod %s/%s%s using %s", namespace, podName, containerInfo, shell))
 
-	if terminalType == services.TerminalTypeKubectl && kubectlPreferredNamespace != "" {
-		time.Sleep(200 * time.Millisecond)
-		h.applyKubectlNamespace(session, kubectlPreferredNamespace)
-	}
-
 	for {
 		mt, data, err := conn.ReadMessage()
 		if err != nil {
@@ -239,32 +224,12 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 				h.handleInput(session, msg.Data)
 			case "resize":
 				h.handleResize(session, msg.Cols, msg.Rows)
-			case "change_namespace":
-				if terminalType != services.TerminalTypeKubectl {
-					continue
-				}
-				ns := strings.TrimSpace(msg.Data)
-				if errs := validation.IsDNS1123Subdomain(ns); len(errs) > 0 {
-					h.sendMessage(conn, "error", "无效的命名空间名称")
-					continue
-				}
-				if clusterPerm != nil && !services.HasNamespaceAccess(clusterPerm, ns) {
-					h.sendMessage(conn, "error", "无权访问该命名空间")
-					continue
-				}
-				h.applyKubectlNamespace(session, ns)
 			}
 			continue
 		}
 
 		h.handleInput(session, string(data))
 	}
-}
-
-// applyKubectlNamespace 将当前 kubeconfig 上下文的默认命名空间切换为指定值（适用于 kubectl 工具 Pod 内的交互 shell）
-func (h *PodTerminalHandler) applyKubectlNamespace(session *PodTerminalSession, ns string) {
-	line := fmt.Sprintf("kubectl config set-context --current --namespace=%s\r", ns)
-	h.handleInput(session, line)
 }
 
 // findAvailableShell 查找可用的shell

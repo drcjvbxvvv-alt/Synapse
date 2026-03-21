@@ -7,7 +7,7 @@
     "disconnect": "断开连接",
     "clear": "清空",
     "fullscreen": "全屏",
-    "connectedTo": "已连接到集群 {{clusterId}} - 命名空间: {{namespace}}",
+    "connectedTo": "已连接到集群 {{clusterId}}",
     "clusterNotFound": "集群ID不存在",
     "welcomeMessage": "请选择命名空间并点击\"连接终端\"开始...",
     "connecting": "正在连接终端...",

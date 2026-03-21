@@ -21,6 +21,7 @@ interface KubectlTerminalProps {
 
 const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   clusterId,
+  namespace: initialNamespace = 'default',
 }) => {
   const { t } = useTranslation('components');
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -31,7 +32,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   // selectedNamespace 用于接收 WebSocket 消息中的命名空间变更，当前未在 UI 中显示
-  const [, setSelectedNamespace] = useState<string>('default');
+  const [, setSelectedNamespace] = useState<string>(initialNamespace);
   
   // 使用 ref 来保存连接状态，避免闭包问题
   const connectedRef = useRef(false);
@@ -168,15 +169,12 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     terminal.current?.clear();
     terminal.current?.write(`\x1b[33m${t('kubectlTerminal.preparing')}\x1b[0m`);
     
-    const wsUrl = buildWebSocketUrl(`/ws/clusters/${clusterId}/kubectl`);
-    const params = new URLSearchParams({
-      token: token,
-    });
-
-    console.log('Connecting to WebSocket:', `${wsUrl}?${params}`);
+    const wsUrl = buildWebSocketUrl(
+      `/ws/clusters/${clusterId}/kubectl?token=${encodeURIComponent(token)}&namespace=${encodeURIComponent(initialNamespace)}`
+    );
 
     try {
-      websocket.current = new WebSocket(`${wsUrl}?${params}`);
+      websocket.current = new WebSocket(wsUrl);
 
       websocket.current.onopen = () => {
         // 等待服务端 type=connected（Pod/shell 就绪）

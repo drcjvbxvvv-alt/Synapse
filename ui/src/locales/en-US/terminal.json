@@ -7,7 +7,7 @@
     "disconnect": "Disconnect",
     "clear": "Clear",
     "fullscreen": "Fullscreen",
-    "connectedTo": "Connected to cluster {{clusterId}} - Namespace: {{namespace}}",
+    "connectedTo": "Connected to cluster {{clusterId}}",
     "clusterNotFound": "Cluster ID not found",
     "welcomeMessage": "Select a namespace and click \"Connect\" to start...",
     "connecting": "Connecting to terminal...",
