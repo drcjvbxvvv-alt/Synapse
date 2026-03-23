@@ -560,7 +560,7 @@ func getModuleName(module string) string {
 
 // getActionName 获取操作中文名称
 func getActionName(action string) string {
-	names := map[string]string{
+	names := map[string]string{ // #nosec G101 -- 操作名称映射，非凭据
 		"login":           "登录",
 		"logout":          "登出",
 		"login_failed":    "登录失败",

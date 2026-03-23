@@ -73,7 +73,7 @@ var ModuleNames = map[string]string{
 }
 
 // ActionNames 操作中文名称映射
-var ActionNames = map[string]string{
+var ActionNames = map[string]string{ // #nosec G101 -- 操作名称映射，非凭据
 	ActionLogin:          "登录",
 	ActionLogout:         "登出",
 	ActionLoginFailed:    "登录失败",

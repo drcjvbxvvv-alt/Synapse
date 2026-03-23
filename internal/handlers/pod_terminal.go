@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -384,6 +385,12 @@ func (h *PodTerminalHandler) handleInput(session *PodTerminalSession, input stri
 // handleResize 处理终端大小调整
 func (h *PodTerminalHandler) handleResize(session *PodTerminalSession, cols, rows int) {
 	if session.winSizeChan != nil {
+		if cols < 0 || cols > math.MaxUint16 {
+			cols = 80
+		}
+		if rows < 0 || rows > math.MaxUint16 {
+			rows = 24
+		}
 		size := &remotecommand.TerminalSize{
 			Width:  uint16(cols),
 			Height: uint16(rows),

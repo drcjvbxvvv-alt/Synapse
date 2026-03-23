@@ -644,7 +644,7 @@ func (s *ArgoCDService) createHTTPClient(insecure bool) *http.Client {
 		return &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- ArgoCD 常使用自签名证书，insecure 由用户配置控制
 			},
 		}
 	}

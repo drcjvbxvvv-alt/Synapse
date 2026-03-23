@@ -95,7 +95,7 @@ func initSQLite(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, e
 	// 确保目录存在
 	dir := filepath.Dir(dbPath)
 	if dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			return nil, fmt.Errorf("创建数据库目录失败: %w", err)
 		}
 	}

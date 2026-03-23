@@ -691,7 +691,7 @@ func setupStatic(r *gin.Engine) {
 		filePath := strings.TrimPrefix(path, "/")
 		if filePath != "" {
 			if f, err := staticFS.Open("ui/dist/" + filePath); err == nil {
-				f.Close()
+				_ = f.Close()
 				fileServer := http.FileServer(http.FS(mustSub(staticFS, "ui/dist")))
 				fileServer.ServeHTTP(c.Writer, c.Request)
 				return

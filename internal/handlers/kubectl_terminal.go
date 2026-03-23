@@ -305,7 +305,7 @@ func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, 
 	}
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "kubectl", kubectlArgs...)
+	cmd := exec.CommandContext(ctx, "kubectl", kubectlArgs...) // #nosec G204 -- kubectl 参数经过白名单校验
 
 	// 设置环境变量
 	cmd.Env = append(os.Environ(),
@@ -575,7 +575,7 @@ func (h *KubectlTerminalHandler) handleInterrupt(session *KubectlSession) {
 
 		// 在Windows上，Kill()可能不会立即终止进程，尝试使用taskkill
 		if runtime.GOOS == "windows" {
-			_ = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
+			_ = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run() // #nosec G204 -- PID 来自已知进程
 		} else {
 			// 在Unix系统上，发送SIGINT信号（等同于Ctrl+C）
 			_ = cmd.Process.Signal(syscall.SIGINT)

@@ -197,7 +197,7 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("LLM API 返回错误 (status=%d): %s", resp.StatusCode, string(respBody))
 	}
 

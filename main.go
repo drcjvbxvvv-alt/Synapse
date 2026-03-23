@@ -44,8 +44,9 @@ func main() {
 
 	// 创建 HTTP 服务器
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler: r,
+		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// 启动服务器

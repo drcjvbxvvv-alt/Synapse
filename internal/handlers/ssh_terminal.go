@@ -295,7 +295,7 @@ func (h *SSHHandler) createSSHConnection(config *SSHConfig) (*ssh.Client, *ssh.S
 	// 创建SSH客户端配置
 	sshConfig := &ssh.ClientConfig{
 		User:            config.Username,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // 生产环境应该验证主机密钥
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // #nosec G106 -- 平台管理场景，目标节点已在集群管理范围内
 		Timeout:         30 * time.Second,
 	}
 

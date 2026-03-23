@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"time"
 
@@ -881,7 +882,10 @@ func (e *ToolExecutor) scaleDeployment(ctx context.Context, clusterID uint, name
 		return "", fmt.Errorf("获取 Deployment scale 失败: %w", err)
 	}
 
-	scale.Spec.Replicas = int32(replicas)
+	if replicas < 0 || replicas > math.MaxInt32 {
+		return "", fmt.Errorf("副本数 %d 超出有效范围", replicas)
+	}
+	scale.Spec.Replicas = int32(replicas) // #nosec G115 -- 已做边界检查
 	_, err = clientset.AppsV1().Deployments(namespace).UpdateScale(ctx, name, scale, metav1.UpdateOptions{})
 	if err != nil {
 		return "", fmt.Errorf("扩缩容失败: %w", err)

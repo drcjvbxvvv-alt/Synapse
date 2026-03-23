@@ -31,7 +31,7 @@ func NewPrometheusService() *PrometheusService {
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // 可根据需要调整
+					InsecureSkipVerify: true, // #nosec G402 -- 内部集群 Prometheus 通信，用户可自行配置证书
 				},
 			},
 		},

@@ -163,7 +163,7 @@ func (s *LDAPService) connect(config *models.LDAPConfig) (*ldap.Conn, error) {
 
 	if config.UseTLS {
 		tlsConfig := &tls.Config{
-			InsecureSkipVerify: config.SkipTLSVerify,
+			InsecureSkipVerify: config.SkipTLSVerify, // #nosec G402 -- LDAP TLS 验证由用户配置 SkipTLSVerify 控制
 		}
 		ldapURL := fmt.Sprintf("ldaps://%s", addr)
 		conn, err = ldap.DialURL(ldapURL, ldap.DialWithTLSConfig(tlsConfig))
