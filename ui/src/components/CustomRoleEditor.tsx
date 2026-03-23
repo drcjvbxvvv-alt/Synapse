@@ -150,7 +150,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
       }
 
       setLoading(true);
-      const res = await rbacService.createCustomClusterRole(Number(clusterId), name, rules);
+      await rbacService.createCustomClusterRole(Number(clusterId), name, rules);
       message.success(t('customRoleEditor.createSuccess'));
       onSuccess(name);
       handleClose();

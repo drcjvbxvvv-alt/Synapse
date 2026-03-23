@@ -75,7 +75,7 @@ const ArgoCDConfigForm: React.FC<ArgoCDConfigFormProps> = ({
       const values = await form.validateFields();
       setSaving(true);
       
-      const response = await argoCDService.saveConfig(clusterId, values);
+      await argoCDService.saveConfig(clusterId, values);
       message.success(t('argoCDConfig.saveSuccess'));
       onConfigChange?.();
     } catch (error: unknown) {

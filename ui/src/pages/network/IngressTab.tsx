@@ -22,7 +22,8 @@ import type { Ingress } from '../../types';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import IngressCreateModal from './IngressCreateModal';
-import IngressForm, { buildIngressYaml } from './IngressForm';
+import IngressForm from './IngressForm';
+import { buildIngressYaml } from './ingressUtils';
 import IngressDrawer from './IngressDrawer';
 import { getIngressColumns } from './ingressColumns';
 import type { IngressTabProps, SearchCondition } from './ingressTypes';
@@ -467,7 +468,6 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         saveLoading={saveLoading}
         form={editForm}
         namespaces={namespaces}
-        clusterId={clusterId}
         onEditModeChange={setEditMode}
         onEditYamlChange={setEditYaml}
         onCancel={() => {

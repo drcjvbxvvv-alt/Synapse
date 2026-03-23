@@ -122,7 +122,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
         helm_values: values.helm_values,
       };
       
-      const response = await argoCDService.createApplication(clusterId!, req);
+      await argoCDService.createApplication(clusterId!, req);
       message.success(t('plugins:argocd.createSuccess'));
       setCreateModalVisible(false);
       form.resetFields();
@@ -139,7 +139,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
   const handleSync = async (appName: string) => {
     try {
       message.loading({ content: t('plugins:argocd.syncing'), key: 'sync' });
-      const response = await argoCDService.syncApplication(clusterId!, appName);
+      await argoCDService.syncApplication(clusterId!, appName);
       message.success({ content: t('plugins:argocd.syncTriggered'), key: 'sync' });
       loadApplications();
     } catch (error: unknown) {
@@ -152,7 +152,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
   const handleDelete = async (appName: string) => {
     try {
       message.loading({ content: t('plugins:argocd.deleting'), key: 'delete' });
-      const response = await argoCDService.deleteApplication(clusterId!, appName, true);
+      await argoCDService.deleteApplication(clusterId!, appName, true);
       message.success({ content: t('plugins:argocd.deleteSuccess'), key: 'delete' });
       loadApplications();
     } catch (error: unknown) {
@@ -171,7 +171,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
   const handleRollback = async (appName: string, revisionId: number) => {
     try {
       message.loading({ content: t('plugins:argocd.rolling'), key: 'rollback' });
-      const response = await argoCDService.rollbackApplication(clusterId!, appName, { revision_id: revisionId });
+      await argoCDService.rollbackApplication(clusterId!, appName, { revision_id: revisionId });
       message.success({ content: t('plugins:argocd.rollbackSuccess'), key: 'rollback' });
       loadApplications();
       setDetailDrawerVisible(false);

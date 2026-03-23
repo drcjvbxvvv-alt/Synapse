@@ -85,8 +85,8 @@ spec:
     try {
       if (activeTab === 'yaml') {
         // YAML方式创建
-        const response = await ServiceService.createService(clusterId, {
-          namespace: 'default', // 从YAML中解析
+        await ServiceService.createService(clusterId, {
+          namespace: 'default',
           yaml: yamlContent,
         });
         
@@ -94,10 +94,9 @@ spec:
         onSuccess();
         onClose();
       } else {
-        // 表单方式创建
         const values = await form.validateFields();
         
-        const response = await ServiceService.createService(clusterId, {
+        await ServiceService.createService(clusterId, {
           namespace: values.namespace,
           formData: {
             name: values.name,
