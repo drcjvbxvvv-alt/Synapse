@@ -41,8 +41,13 @@
 - ✅ Image Tag 全域搜尋（C4）— `models/image_index.go`（ImageIndex）；`handlers/image.go`（SyncImages/SearchImages/GetImageSyncStatus）；`router.go` 新增 `/images`；`imageService.ts`；`ImageSearch.tsx`（全域搜尋頁面 + 手動觸發索引）
 - ✅ 跨叢集統一工作負載視圖（C2）— `handlers/cross_cluster.go`（ListCrossClusterWorkloads/GetCrossClusterStats）；`router.go` 新增 `/workloads`；`crossClusterService.ts`；`CrossClusterWorkloads.tsx`（統計卡片 + 跨叢集搜尋表格）
 
-**未完成（下一批次）：**
-- §8.3 Phase D：Port-Forward、Project 多租戶模型、Deployment 保護機制、PDB 管理、Terminal 錄製回放、稽核日誌 SIEM 匯出
+**已完成（2026-04-02 §8.3 Phase D）：**
+- ✅ Port-Forward（D1）— `models/portforward.go`（PortForwardSession）；`handlers/portforward.go`（StartPortForward via SPDY/portforward、StopPortForward、ListPortForwards）；路由 `POST /clusters/:id/pods/:ns/:name/portforward`、`/portforwards`；`portforwardService.ts`；`PortForwardPanel.tsx`（建立轉發 + 活躍列表）
+- ✅ Deployment 保護機制（D3）— `ProtectedConfirm.tsx`（受保護命名空間危險操作確認，要求輸入資源名稱，或提交審批請求）；整合 Phase C 的 NamespaceProtection
+- ✅ PDB 管理（D4）— `handlers/pdb.go`（List/GetWorkloadPDB/Create/Update/Delete，使用 policy/v1）；路由 `/clusters/:id/pdbs`；`pdbService.ts`；`PDBPanel.tsx`（PDB CRUD + 狀態展示）
+- ✅ Terminal 會話錄製回放（D5）— `SessionReplay.tsx`（基於 TerminalCommand 記錄的逐步播放，黑底終端機風格，支援逐步回放動畫）
+- ✅ 稽核日誌 SIEM 匯出（D6）— `models/siem.go`（SIEMWebhookConfig）；`handlers/siem.go`（GetConfig/UpdateConfig/TestWebhook/ExportAuditLogs + PushToSIEM 非同步推送）；路由 `/system/siem`、`/audit/export`；`siemService.ts`；`SIEMConfig.tsx`（Webhook 設定 + 批次匯出）
+- ❌ Project 多租戶模型（D2）— 跳過（架構層面升級，需獨立 Sprint，4 週工作量）
 
 ---
 
@@ -1674,16 +1679,17 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 | 🟡 P1 | ResourceQuota / LimitRange CRUD | 深度不足 | 1 週 | ✅ **完成**（Phase B） |
 | 🟡 P1 | VPA 支援 | 完全缺失 | 2 週 | ✅ **完成**（Phase C） |
 | 🟡 P1 | Image Tag 全域搜尋 | 完全缺失 | 2 週 | ✅ **完成**（Phase C） |
-| 🟢 P2 | Port-Forward | 完全缺失 | 2 週 | Phase D |
-| 🟢 P2 | Project 多租戶模型 | 架構升級 | 4 週 | Phase D |
-| 🟢 P2 | Deployment 保護機制 | 完全缺失 | 1 週 | Phase D |
-| 🟢 P2 | PodDisruptionBudget 管理 | 完全缺失 | 1 週 | Phase D |
-| 🟢 P2 | Terminal 會話錄製回放 | 深度不足 | 2 週 | Phase D |
-| 🟢 P2 | 稽核日誌 SIEM 匯出 | 完全缺失 | 1 週 | Phase D |
+| 🟢 P2 | Port-Forward | 完全缺失 | 2 週 | ✅ **完成**（Phase D） |
+| 🟢 P2 | Project 多租戶模型 | 架構升級 | 4 週 | ❌ 跳過（獨立 Sprint） |
+| 🟢 P2 | Deployment 保護機制 | 完全缺失 | 1 週 | ✅ **完成**（Phase D） |
+| 🟢 P2 | PodDisruptionBudget 管理 | 完全缺失 | 1 週 | ✅ **完成**（Phase D） |
+| 🟢 P2 | Terminal 會話錄製回放 | 深度不足 | 2 週 | ✅ **完成**（Phase D，簡化版） |
+| 🟢 P2 | 稽核日誌 SIEM 匯出 | 完全缺失 | 1 週 | ✅ **完成**（Phase D） |
 
 **Phase A 進度（2026-04-02 完成）：** 4/4 項 ✅
 **Phase B 進度（2026-04-02 完成）：** 3/3 項 ✅
 **Phase C 進度（2026-04-02 完成）：** 4/4 項 ✅
+**Phase D 進度（2026-04-02 完成）：** 5/6 項 ✅（Project 多租戶跳過）
 
 ### 8.4 核心反思結論
 

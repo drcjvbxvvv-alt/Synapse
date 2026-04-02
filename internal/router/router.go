@@ -629,6 +629,21 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					nsProt.PUT("/:namespace", approvalHandler.SetNamespaceProtection)
 					nsProt.GET("/:namespace", approvalHandler.GetNamespaceProtectionStatus)
 				}
+
+				// PDB（PodDisruptionBudget）管理（§8.3 Phase D）
+				pdbHandler := handlers.NewPDBHandler(db, clusterSvc, k8sMgr)
+				pdbGroup := cluster.Group("/pdbs")
+				{
+					pdbGroup.GET("", pdbHandler.ListPDB)
+					pdbGroup.GET("/:namespace", pdbHandler.GetWorkloadPDB)
+					pdbGroup.POST("", pdbHandler.CreatePDB)
+					pdbGroup.PUT("/:namespace/:name", pdbHandler.UpdatePDB)
+					pdbGroup.DELETE("/:namespace/:name", pdbHandler.DeletePDB)
+				}
+
+				// Port-Forward（per-pod）（§8.3 Phase D）
+				pfHandler := handlers.NewPortForwardHandler(db, clusterSvc, k8sMgr)
+				cluster.POST("/pods/:namespace/:name/portforward", pfHandler.StartPortForward)
 			}
 		}
 
@@ -752,7 +767,24 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 			systemSettings.POST("/grafana/sync-dashboards", systemSettingHandler.SyncGrafanaDashboards)
 			systemSettings.GET("/grafana/datasource-status", systemSettingHandler.GetGrafanaDataSourceStatus)
 			systemSettings.POST("/grafana/sync-datasources", systemSettingHandler.SyncGrafanaDataSources)
+			// SIEM Webhook 匯出設定（§8.3 Phase D）
+			siemHandler := handlers.NewSIEMHandler(db)
+			systemSettings.GET("/siem/config", siemHandler.GetSIEMConfig)
+			systemSettings.PUT("/siem/config", siemHandler.UpdateSIEMConfig)
+			systemSettings.POST("/siem/test", siemHandler.TestSIEMWebhook)
 		}
+
+		// Port-Forward 會話管理（全域，§8.3 Phase D）
+		pfGlobalHandler := handlers.NewPortForwardHandler(db, clusterSvc, k8sMgr)
+		portforwards := protected.Group("/portforwards")
+		{
+			portforwards.GET("", pfGlobalHandler.ListPortForwards)
+			portforwards.DELETE("/:sessionId", pfGlobalHandler.StopPortForward)
+		}
+
+		// 稽核日誌 JSON 匯出（§8.3 Phase D）
+		siemExportHandler := handlers.NewSIEMHandler(db)
+		protected.GET("/audit/export", siemExportHandler.ExportAuditLogs)
 
 		// permissions - 权限管理
 		globalRbacSvc := services.NewRBACService()

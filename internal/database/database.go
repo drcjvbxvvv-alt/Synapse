@@ -193,6 +193,8 @@ func autoMigrate(db *gorm.DB) error {
 		&models.NamespaceProtection{},  // 命名空間保護設定表（審批工作流）
 		&models.ApprovalRequest{},      // 部署審批請求表
 		&models.ImageIndex{},           // 映像索引表（跨叢集 Image Tag 搜尋）
+		&models.PortForwardSession{},   // Port-Forward 會話記錄表
+		&models.SIEMWebhookConfig{},    // SIEM Webhook 設定表
 	)
 
 	// 根据数据库驱动类型重新启用外键约束检查
