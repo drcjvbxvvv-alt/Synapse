@@ -25,17 +25,17 @@ export const getPermissionTypes = async (): Promise<ApiResponse<PermissionTypeIn
 // ========== 用户列表 ==========
 
 // 获取用户列表（用于权限分配）
-export const getUsers = async (): Promise<ApiResponse<User[]>> => {
+export const getUsers = async (): Promise<User[]> => {
   const response = await api.get(`${BASE_URL}/users`);
-  return response.data;
+  return response.data?.items ?? response.data ?? [];
 };
 
 // ========== 用户组管理 ==========
 
 // 获取用户组列表
-export const getUserGroups = async (): Promise<ApiResponse<UserGroup[]>> => {
+export const getUserGroups = async (): Promise<UserGroup[]> => {
   const response = await api.get(`${BASE_URL}/user-groups`);
-  return response.data;
+  return response.data?.items ?? response.data ?? [];
 };
 
 // 获取用户组详情
@@ -77,17 +77,17 @@ export const removeUserFromGroup = async (groupId: number, userId: number): Prom
 // ========== 集群权限管理 ==========
 
 // 获取所有集群权限列表
-export const getAllClusterPermissions = async (): Promise<ApiResponse<ClusterPermission[]>> => {
+export const getAllClusterPermissions = async (): Promise<ClusterPermission[]> => {
   const response = await api.get(`${BASE_URL}/cluster-permissions`);
-  return response.data;
+  return response.data?.items ?? response.data ?? [];
 };
 
 // 获取指定集群的权限列表
-export const getClusterPermissions = async (clusterId: number): Promise<ApiResponse<ClusterPermission[]>> => {
+export const getClusterPermissions = async (clusterId: number): Promise<ClusterPermission[]> => {
   const response = await api.get(`${BASE_URL}/cluster-permissions`, {
     params: { cluster_id: clusterId }
   });
-  return response.data;
+  return response.data?.items ?? response.data ?? [];
 };
 
 // 获取权限详情

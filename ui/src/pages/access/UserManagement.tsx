@@ -313,7 +313,7 @@ const UserManagement: React.FC = () => {
         </Button>
       </div>
 
-      <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 16px' }}>
+      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
         <Space size="middle" wrap>
           <Input.Search
             placeholder="搜索用户名、显示名称、邮箱"
@@ -361,7 +361,7 @@ const UserManagement: React.FC = () => {
         </Space>
       </Card>
 
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 } }}>
         <Table
           rowKey="id"
           columns={columns}
@@ -388,7 +388,7 @@ const UserManagement: React.FC = () => {
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
         confirmLoading={submitLoading}
-        destroyOnClose
+        destroyOnHidden
         width={520}
       >
         <Form form={form} layout="vertical">
@@ -431,7 +431,7 @@ const UserManagement: React.FC = () => {
           setResetUserId(null);
         }}
         confirmLoading={submitLoading}
-        destroyOnClose
+        destroyOnHidden
         width={400}
       >
         <Form form={resetForm} layout="vertical">

@@ -281,7 +281,7 @@ const [loading, setLoading] = useState(true);
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
+          <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}><AlertOutlined /> {t('alert:global.totalAlerts')}</span>}
               value={alertStats.total}
@@ -298,7 +298,7 @@ const [loading, setLoading] = useState(true);
               cursor: alertStats.firing > 0 ? 'pointer' : 'default',
               borderLeft: alertStats.firing > 0 ? '4px solid #ff4d4f' : undefined,
             }} 
-            bodyStyle={{ padding: '20px 16px' }}
+            styles={{ body: { padding: '20px 16px' } }}
           >
             <Statistic
               title={<span style={{ color: '#6b7280' }}><FireOutlined style={{ color: '#ff4d4f' }} /> {t('alert:global.firing')}</span>}
@@ -313,7 +313,7 @@ const [loading, setLoading] = useState(true);
           </Card>
         </Col>
         <Col span={6}>
-          <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
+          <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}><StopOutlined style={{ color: '#faad14' }} /> {t('alert:global.suppressed')}</span>}
               value={alertStats.suppressed}
@@ -322,7 +322,7 @@ const [loading, setLoading] = useState(true);
           </Card>
         </Col>
         <Col span={6}>
-          <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
+          <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}><ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> {t('alert:global.criticalAlerts')}</span>}
               value={alertStats.bySeverity?.critical || 0}
@@ -342,7 +342,7 @@ const [loading, setLoading] = useState(true);
         }
         bordered={false}
         style={{ ...cardStyle, marginBottom: 16 }}
-        bodyStyle={{ padding: 16 }}
+        styles={{ body: { padding: 16 } }}
       >
         {renderSeverityDistribution()}
       </Card>
@@ -362,7 +362,7 @@ const [loading, setLoading] = useState(true);
         }
         bordered={false}
         style={cardStyle}
-        bodyStyle={{ padding: '0 16px 16px' }}
+        styles={{ body: { padding: '0 16px 16px' } }}
       >
         <Table
           columns={clusterColumns}

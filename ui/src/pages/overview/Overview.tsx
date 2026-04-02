@@ -456,7 +456,7 @@ tooltip: {
       {/* 第一行: 全局健康状态概览 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
-          <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
+          <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}><ClusterOutlined /> {t('stats.clusterTotal')}</span>}
               value={clusterStats.total}
@@ -465,7 +465,7 @@ tooltip: {
           </Card>
         </Col>
         <Col span={4}>
-          <Card bordered={false} style={{ ...cardStyle, height: 140, cursor: 'pointer' }} bodyStyle={{ padding: '20px 16px' }}
+          <Card bordered={false} style={{ ...cardStyle, height: 140, cursor: 'pointer' }} styles={{ body: { padding: '20px 16px' } }}
             onClick={() => navigate('/clusters')}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}><CheckCircleOutlined style={{ color: '#10b981' }} /> {t('stats.clusterHealthy')}</span>}
@@ -477,7 +477,7 @@ tooltip: {
         </Col>
         <Col span={4}>
           <Card bordered={false} style={{ ...cardStyle, height: 140, cursor: clusterStats.unhealthy > 0 ? 'pointer' : 'default' }} 
-            bodyStyle={{ padding: '20px 16px' }}
+            styles={{ body: { padding: '20px 16px' } }}
             onClick={() => clusterStats.unhealthy > 0 && navigate('/clusters')}>
             <Badge dot={clusterStats.unhealthy > 0} offset={[8, 0]}>
               <Statistic
@@ -489,7 +489,7 @@ tooltip: {
           </Card>
         </Col>
         <Col span={4}>
-          <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
+          <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}><DesktopOutlined /> {t('stats.nodeStatus')}</span>}
               value={nodeStats.ready}
@@ -504,7 +504,7 @@ tooltip: {
           </Card>
         </Col>
         <Col span={4}>
-          <Card bordered={false} style={{ ...cardStyle, height: 140 }} bodyStyle={{ padding: '20px 16px' }}>
+          <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
             <Statistic
               title={<span style={{ color: '#6b7280' }}><CloudServerOutlined /> {t('stats.podRunning')}</span>}
               value={podStats.running}
@@ -523,7 +523,7 @@ tooltip: {
           <Card 
             bordered={false} 
             style={{ ...cardStyle, height: 140, cursor: (alertStats?.firing || 0) > 0 ? 'pointer' : 'default' }} 
-            bodyStyle={{ padding: '20px 16px' }}
+            styles={{ body: { padding: '20px 16px' } }}
             onClick={() => (alertStats?.firing || 0) > 0 && navigate('/alerts')}
           >
             <Statistic
@@ -549,7 +549,7 @@ tooltip: {
             bordered={false} 
             style={{ ...cardStyle, height: 160 }}
             headStyle={{ ...cardHeadStyle, padding: '10px 16px' }}
-            bodyStyle={{ padding: '16px' }}
+            styles={{ body: { padding: '16px' } }}
           >
             <Progress 
               percent={cpuUsage} 
@@ -570,7 +570,7 @@ tooltip: {
             bordered={false} 
             style={{ ...cardStyle, height: 160 }}
             headStyle={{ ...cardHeadStyle, padding: '10px 16px' }}
-            bodyStyle={{ padding: '16px' }}
+            styles={{ body: { padding: '16px' } }}
           >
             <Progress 
               percent={memoryUsage} 
@@ -591,7 +591,7 @@ tooltip: {
             bordered={false} 
             style={{ ...cardStyle, height: 160 }}
             headStyle={{ ...cardHeadStyle, padding: '10px 16px' }}
-            bodyStyle={{ padding: '16px' }}
+            styles={{ body: { padding: '16px' } }}
           >
             <Progress 
               percent={storageUsage} 
@@ -616,7 +616,7 @@ tooltip: {
             bordered={false}
             style={{ ...cardStyle, height: 320 }}
             headStyle={cardHeadStyle}
-            bodyStyle={{ padding: '12px 16px' }}
+            styles={{ body: { padding: '12px 16px' } }}
           >
             <Table
               dataSource={versionDistribution}
@@ -641,7 +641,7 @@ tooltip: {
             bordered={false}
             style={{ ...cardStyle, height: 320 }}
             headStyle={cardHeadStyle}
-            bodyStyle={{ padding: '12px 16px' }}
+            styles={{ body: { padding: '12px 16px' } }}
           >
             {abnormalWorkloads.length > 0 ? (
               <Table
@@ -677,7 +677,7 @@ tooltip: {
             bordered={false}
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
-            bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
+            styles={{ body: { padding: '8px 16px', height: 'calc(100% - 57px)' } }}
           >
             {podDistribution.length > 0 ? (
               <Pie {...getPieConfig(podDistribution, t('common:units.count'), t('distribution.podDistribution'))} height={300} />
@@ -699,7 +699,7 @@ tooltip: {
             bordered={false}
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
-            bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
+            styles={{ body: { padding: '8px 16px', height: 'calc(100% - 57px)' } }}
           >
             {nodeDistribution.length > 0 ? (
               <Pie {...getPieConfig(nodeDistribution, t('common:units.count'), t('distribution.nodeDistribution'))} height={300} />
@@ -725,7 +725,7 @@ tooltip: {
             bordered={false}
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
-            bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
+            styles={{ body: { padding: '8px 16px', height: 'calc(100% - 57px)' } }}
           >
             {cpuDistribution.length > 0 ? (
               <Pie {...getPieConfig(cpuDistribution, t('common:units.cores'), t('distribution.cpuDistribution'))} height={300} />
@@ -747,7 +747,7 @@ tooltip: {
             bordered={false}
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
-            bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
+            styles={{ body: { padding: '8px 16px', height: 'calc(100% - 57px)' } }}
           >
             {memoryDistribution.length > 0 ? (
               <Pie {...getPieConfig(memoryDistribution, 'GB', t('distribution.memoryDistribution'))} height={300} />
@@ -766,7 +766,7 @@ tooltip: {
             bordered={false}
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
-            bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
+            styles={{ body: { padding: '8px 16px', height: 'calc(100% - 57px)' } }}
             extra={
               <Select value={podTimeRange} onChange={setPodTimeRange} size="small" style={{ width: 100 }}>
                 <Select.Option value="7d">{t('common:units.last7Days')}</Select.Option>
@@ -787,7 +787,7 @@ tooltip: {
             bordered={false}
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
-            bodyStyle={{ padding: '8px 16px', height: 'calc(100% - 57px)' }}
+            styles={{ body: { padding: '8px 16px', height: 'calc(100% - 57px)' } }}
             extra={
               <Select value={nodeTimeRange} onChange={setNodeTimeRange} size="small" style={{ width: 100 }}>
                 <Select.Option value="7d">{t('common:units.last7Days')}</Select.Option>

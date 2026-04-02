@@ -284,7 +284,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         style={{ top: 20 }}
         okText={t('resourceYAMLEditor.confirmUpdate')}
         cancelText={t('resourceYAMLEditor.cancel')}
-        destroyOnClose
+        destroyOnHidden
       >
         <div style={{ marginBottom: 16 }}>
           <Space>

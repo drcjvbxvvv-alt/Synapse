@@ -366,7 +366,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     <Dropdown
       open={visible}
       onOpenChange={setVisible}
-      dropdownRender={() => dropdownContent}
+      popupRender={() => dropdownContent}
       placement="bottomLeft"
       trigger={['click']}
     >

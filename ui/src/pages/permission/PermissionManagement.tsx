@@ -77,7 +77,7 @@ const PermissionTypeCard: React.FC<{
         backgroundColor: selected ? '#e6f7ff' : undefined,
         height: '100%',
       }}
-      bodyStyle={{ padding: '16px' }}
+      styles={{ body: { padding: '16px' } }}
     >
       <Title level={5} style={{ marginBottom: 8 }}>
         {type.name}
@@ -422,7 +422,7 @@ const [loading, setLoading] = useState(false);
       </div>
 
       {/* 权限类型说明卡片 - CCE风格 */}
-      <Card style={{ marginBottom: 24 }} bodyStyle={{ padding: '20px 24px' }}>
+      <Card style={{ marginBottom: 24 }} styles={{ body: { padding: '20px 24px' } }}>
         <Row gutter={24}>
           {(permissionTypes.length > 0 ? permissionTypes : defaultPermissionTypes).map((type, index, arr) => (
             <Col 
@@ -449,7 +449,7 @@ const [loading, setLoading] = useState(false);
       </Card>
 
       {/* 筛选栏 */}
-      <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 16px' }}>
+      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
         <Space size="large" wrap>
           <Space>
             <Popconfirm
@@ -504,7 +504,7 @@ const [loading, setLoading] = useState(false);
       </Card>
 
       {/* 权限列表表格 */}
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 } }}>
         <Table
           rowKey="id"
           columns={columns}
@@ -529,7 +529,7 @@ const [loading, setLoading] = useState(false);
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
         width={720}
-        destroyOnClose
+        destroyOnHidden
       >
         <Spin spinning={loading}>
           <Form
@@ -805,7 +805,7 @@ const [loading, setLoading] = useState(false);
           <Title level={5}>{t('permission:sync.resourcesTitle')}</Title>
           <Row gutter={16}>
             <Col span={8}>
-              <Card size="small" title="ClusterRole" bodyStyle={{ padding: 12 }}>
+              <Card size="small" title="ClusterRole" styles={{ body: { padding: 12 } }}>
                 <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12 }}>
                   <li>kubepolaris-cluster-admin</li>
                   <li>kubepolaris-ops</li>
@@ -815,7 +815,7 @@ const [loading, setLoading] = useState(false);
               </Card>
             </Col>
             <Col span={8}>
-              <Card size="small" title="ServiceAccount" bodyStyle={{ padding: 12 }}>
+              <Card size="small" title="ServiceAccount" styles={{ body: { padding: 12 } }}>
                 <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12 }}>
                   <li>kubepolaris-admin-sa</li>
                   <li>kubepolaris-ops-sa</li>
@@ -825,7 +825,7 @@ const [loading, setLoading] = useState(false);
               </Card>
             </Col>
             <Col span={8}>
-              <Card size="small" title="ClusterRoleBinding" bodyStyle={{ padding: 12 }}>
+              <Card size="small" title="ClusterRoleBinding" styles={{ body: { padding: 12 } }}>
                 <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12 }}>
                   <li>kubepolaris-admin-binding</li>
                   <li>kubepolaris-ops-binding</li>

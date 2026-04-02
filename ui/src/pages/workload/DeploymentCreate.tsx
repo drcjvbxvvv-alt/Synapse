@@ -520,7 +520,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
         style={{ top: 20 }}
         okText={t("create.confirmUpdate")}
         cancelText={t("create.cancel")}
-        destroyOnClose
+        destroyOnHidden
       >
         <div style={{ marginBottom: 16 }}>
           <Space>

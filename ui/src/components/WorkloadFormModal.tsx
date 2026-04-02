@@ -390,7 +390,7 @@ const WorkloadFormModal: React.FC<WorkloadFormModalProps> = ({
       width={900}
       okText={t('workloadForm.ok')}
       cancelText={t('workloadForm.cancel')}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

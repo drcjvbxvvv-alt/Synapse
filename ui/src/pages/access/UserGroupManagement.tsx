@@ -253,7 +253,7 @@ const UserGroupManagement: React.FC = () => {
         </Button>
       </div>
 
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card styles={{ body: { padding: 0 } }}>
         <Table
           rowKey="id"
           columns={columns}
@@ -272,7 +272,7 @@ const UserGroupManagement: React.FC = () => {
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -294,7 +294,7 @@ const UserGroupManagement: React.FC = () => {
         width={520}
         open={drawerVisible}
         onClose={closeMemberDrawer}
-        destroyOnClose
+        destroyOnHidden
       >
         <div style={{ marginBottom: 16 }}>
           <Space.Compact style={{ width: '100%' }}>
