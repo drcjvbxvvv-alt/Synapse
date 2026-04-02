@@ -333,7 +333,7 @@ ui/src/pages/network/NetworkPolicyWizard.tsx     3 步驟建立精靈
 
 ---
 
-### 5.3 💰 資源成本分析（中優先）
+### 5.3 💰 資源成本分析（中優先）✅ 已完成
 
 **背景：** 多叢集環境下，各團隊資源用量不透明，缺乏成本分攤依據。企業用戶強需求，是與 Rancher/Kuboard 差異化的關鍵功能。
 
@@ -721,7 +721,7 @@ kubepolaris cost overview [--month 2026-04]
 | M3 | 可觀測性（Prometheus/slog/錯誤碼） | ✅ 已完成 | 中 | — |
 | M4 | Helm Release 管理 | ✅ 已完成 | 高 | — |
 | M5 | AI 診斷 + CRD + NetworkPolicy CRUD + Event 告警 | ✅ 已完成 | 中 | — |
-| M6 | **資源成本分析** | 🔲 待實作 | 中 | **4 週** |
+| M6 | **資源成本分析** | ✅ 已完成 | 中 | — |
 | M7 | **AI 深度運維**（NL Query / YAML 生成 / Runbook） | 🔲 待實作 | 中 | **4 週** |
 | M8 | **多叢集工作流程**（遷移 / 配置同步） | 🔲 待實作 | 低 | **5 週** |
 | M9 | **合規性與安全掃描**（Trivy / kube-bench） | 🔲 待實作 | 低 | **6 週** |
@@ -737,7 +737,7 @@ kubepolaris cost overview [--month 2026-04]
 高      │ ✅ M1 安全    ✅ M4 Helm
         │ ✅ M2 效能    ✅ M5 AI/CRD/NP/告警
         │
-中      │ ✅ M3 可觀測  🔲 M6 成本分析（優先）
+中      │ ✅ M3 可觀測  ✅ M6 成本分析
         │               🔲 M7 AI 深度（優先）
         │               🔲 NP 視覺化（次優先）
         │
@@ -748,10 +748,10 @@ kubepolaris cost overview [--month 2026-04]
                   低          中          高
 ```
 
-**推薦下一步：M6（資源成本分析）**
-- 業務價值高（企業付費意願強）
-- 技術風險低（Prometheus 查詢 + 資料快照，無外部服務依賴）
-- 可獨立交付，不依賴其他 M 的完成
+**推薦下一步：M7（AI 深度運維）**
+- M6 已完成，自然銜接 AI 能力深化
+- NL Query + YAML 生成可大幅提升平台差異化競爭力
+- 敏感資料過濾是安全合規的必要前置項目
 
 ### 里程碑規劃
 
@@ -803,30 +803,18 @@ kubepolaris cost overview [--month 2026-04]
 
 ---
 
-#### Milestone 6：資源成本分析（4 週）🔲 待實作
+#### Milestone 6：資源成本分析（4 週）✅ 已完成
 
 > **目標：** 讓多租戶叢集的資源費用透明化，提供命名空間/工作負載級別的成本分攤依據。
 
-| 任務 | 檔案 | 週次 |
-|------|------|------|
-| 定義 `CostConfig` + `ResourceSnapshot` 模型，AutoMigrate | `internal/models/cost.go` | W1 |
-| Prometheus 查詢封裝（CPU/Mem request + usage） | `internal/services/cost_prom.go` | W1 |
-| `CostWorker` 每日快照 + fallback（metrics-server） | `internal/services/cost_service.go` | W2 |
-| REST API：overview / namespaces / workloads / trend / waste / export | `internal/handlers/cost.go` | W2 |
-| 路由掛載 + Worker 啟動 | `internal/router/router.go` | W2 |
-| 前端 CostDashboard（總覽卡 + Bar Chart + Line Chart） | `ui/src/pages/cost/CostDashboard.tsx` | W3 |
-| 工作負載明細 Table + 利用率進度條 | `ui/src/pages/cost/CostDashboard.tsx` | W3 |
-| 定價設定 Modal（CPU/Mem 單價、幣別） | `ui/src/pages/cost/CostConfig.tsx` | W3 |
-| 浪費識別頁籤 + 縮容建議提示 | `ui/src/pages/cost/WasteReport.tsx` | W4 |
-| CSV 匯出按鈕 + 三語 i18n | 各相關檔案 | W4 |
-
-- [ ] CostConfig / ResourceSnapshot 資料模型與 AutoMigrate
-- [ ] CostWorker（每日 Prometheus/metrics-server 拉取 + 存快照）
-- [ ] REST API 6 支端點（overview/namespaces/workloads/trend/waste/export）
-- [ ] 前端成本儀表板（總覽卡 + 排行榜 + 月趨勢 + 工作負載表 + 浪費報告）
-- [ ] 定價設定介面（可設定 CPU/記憶體單價、幣別）
-- [ ] CSV 匯出
-- [ ] 三語 i18n（zh-TW / zh-CN / en-US）
+- [x] `CostConfig` / `ResourceSnapshot` 資料模型與 AutoMigrate（`internal/models/cost.go`）
+- [x] `CostWorker`（每日 00:05 UTC，從 Prometheus 查詢 CPU/Mem request + usage，按命名空間聚合後存快照；無 Prometheus 則跳過）
+- [x] REST API 8 支端點（`GET/PUT config`、`overview`、`namespaces`、`workloads`、`trend`、`waste`、`export`）
+- [x] 前端成本儀表板 5 個 Tab（總覽卡 × 4、命名空間 Bar Chart + 排行表、工作負載分頁表 + 利用率進度條、6 個月趨勢 Line Chart、浪費識別表）
+- [x] 定價設定 Modal（CPU 單價 / 記憶體單價 / 幣別 USD/TWD/CNY/JPY）
+- [x] CSV 匯出（`GET /cost/export?month=YYYY-MM`，Content-Disposition attachment）
+- [x] 三語 i18n（zh-TW / zh-CN / en-US，`cost.json`）
+- [x] 安裝 `recharts` 圖表庫；`MainLayout.tsx` 新增 `DollarOutlined` 側邊欄入口
 
 **完成指標：** 可在叢集儀表板看到本月估算費用；命名空間成本排行可正常顯示；低利用率工作負載可識別。
 
