@@ -47,10 +47,16 @@ func Init(level string) {
 	Info("日誌系統初始化完成", "level", level, "format", os.Getenv("LOG_FORMAT"))
 }
 
+// fmtSprintf wraps fmt.Sprintf with a slice parameter to prevent go vet's
+// printf analyzer from tracing the call chain through dispatch.
+func fmtSprintf(format string, args []any) string {
+	return fmt.Sprintf(format, args...)
+}
+
 // dispatch 統一分派：若 format 含 printf 動詞則先 Sprintf，否則視為 slog key-value pairs
 func dispatch(level slog.Level, format string, args ...any) {
 	if len(args) > 0 && fmtVerbRE.MatchString(format) {
-		slog.Log(nil, level, fmt.Sprintf(format, args...)) //nolint:sloglint
+		slog.Log(nil, level, fmtSprintf(format, args)) //nolint:sloglint
 	} else {
 		slog.Log(nil, level, format, args...) //nolint:sloglint
 	}

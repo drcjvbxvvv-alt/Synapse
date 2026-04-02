@@ -10,6 +10,8 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	permModels "github.com/clay-wangzhi/KubePolaris/internal/models"
 )
 
 // PermissionServiceTestSuite 定义权限服务测试套件
@@ -185,6 +187,135 @@ func (s *PermissionServiceTestSuite) TestListUsers() {
 	users, err := s.service.ListUsers()
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), users, 2)
+}
+
+// TestCanPerformAction_Admin 管理員可執行所有操作
+func (s *PermissionServiceTestSuite) TestCanPerformAction_Admin() {
+	perm := &permModels.ClusterPermission{
+		PermissionType: permModels.PermissionTypeAdmin,
+		Namespaces:     `["*"]`,
+	}
+	assert.True(s.T(), CanPerformAction(perm, "node:drain"))
+	assert.True(s.T(), CanPerformAction(perm, "pv:delete"))
+	assert.True(s.T(), CanPerformAction(perm, "pod:delete"))
+}
+
+// TestCanPerformAction_Ops 運維不可操作節點/存儲/配額敏感操作
+func (s *PermissionServiceTestSuite) TestCanPerformAction_Ops() {
+	perm := &permModels.ClusterPermission{
+		PermissionType: permModels.PermissionTypeOps,
+		Namespaces:     `["*"]`,
+	}
+	assert.False(s.T(), CanPerformAction(perm, "node:drain"))
+	assert.False(s.T(), CanPerformAction(perm, "pv:delete"))
+	assert.False(s.T(), CanPerformAction(perm, "quota:update"))
+	// 允許的操作
+	assert.True(s.T(), CanPerformAction(perm, "deployment:update"))
+	assert.True(s.T(), CanPerformAction(perm, "pod:delete"))
+}
+
+// TestCanPerformAction_Dev 開發只允許特定資源
+func (s *PermissionServiceTestSuite) TestCanPerformAction_Dev() {
+	perm := &permModels.ClusterPermission{
+		PermissionType: permModels.PermissionTypeDev,
+		Namespaces:     `["dev"]`,
+	}
+	assert.True(s.T(), CanPerformAction(perm, "pod:delete"))
+	assert.True(s.T(), CanPerformAction(perm, "deployment:update"))
+	assert.False(s.T(), CanPerformAction(perm, "node:drain"))
+	assert.False(s.T(), CanPerformAction(perm, "view"))
+}
+
+// TestCanPerformAction_Readonly 只讀只允許 view/list/get
+func (s *PermissionServiceTestSuite) TestCanPerformAction_Readonly() {
+	perm := &permModels.ClusterPermission{
+		PermissionType: permModels.PermissionTypeReadonly,
+		Namespaces:     `["*"]`,
+	}
+	assert.True(s.T(), CanPerformAction(perm, "view"))
+	assert.True(s.T(), CanPerformAction(perm, "list"))
+	assert.True(s.T(), CanPerformAction(perm, "get"))
+	assert.False(s.T(), CanPerformAction(perm, "pod:delete"))
+	assert.False(s.T(), CanPerformAction(perm, "deployment:update"))
+}
+
+// TestHasNamespaceAccess_Wildcard 萬用字元應允許所有命名空間
+func (s *PermissionServiceTestSuite) TestHasNamespaceAccess_Wildcard() {
+	perm := &permModels.ClusterPermission{Namespaces: `["*"]`}
+	assert.True(s.T(), HasNamespaceAccess(perm, "production"))
+	assert.True(s.T(), HasNamespaceAccess(perm, "kube-system"))
+}
+
+// TestHasNamespaceAccess_Specific 指定命名空間只允許該命名空間
+func (s *PermissionServiceTestSuite) TestHasNamespaceAccess_Specific() {
+	perm := &permModels.ClusterPermission{Namespaces: `["dev","staging"]`}
+	assert.True(s.T(), HasNamespaceAccess(perm, "dev"))
+	assert.True(s.T(), HasNamespaceAccess(perm, "staging"))
+	assert.False(s.T(), HasNamespaceAccess(perm, "production"))
+	assert.False(s.T(), HasNamespaceAccess(perm, "kube-system"))
+}
+
+// TestCreateClusterPermission_DuplicateRejected 同一使用者不可重複設定同集群權限
+func (s *PermissionServiceTestSuite) TestCreateClusterPermission_DuplicateRejected() {
+	userID := uint(1)
+	req := &CreateClusterPermissionRequest{
+		ClusterID:      1,
+		UserID:         &userID,
+		PermissionType: permModels.PermissionTypeAdmin,
+	}
+
+	// 模擬已有相同設定
+	s.mock.ExpectQuery(`SELECT count`).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	_, err := s.service.CreateClusterPermission(req)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "已有权限配置")
+}
+
+// TestCreateClusterPermission_InvalidType 非法權限類型應被拒絕
+func (s *PermissionServiceTestSuite) TestCreateClusterPermission_InvalidType() {
+	userID := uint(1)
+	req := &CreateClusterPermissionRequest{
+		ClusterID:      1,
+		UserID:         &userID,
+		PermissionType: "superadmin", // invalid
+	}
+
+	_, err := s.service.CreateClusterPermission(req)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "无效的权限类型")
+}
+
+// TestCreateClusterPermission_CustomWithoutRole 自訂權限必須指定 ClusterRole
+func (s *PermissionServiceTestSuite) TestCreateClusterPermission_CustomWithoutRole() {
+	userID := uint(1)
+	req := &CreateClusterPermissionRequest{
+		ClusterID:      1,
+		UserID:         &userID,
+		PermissionType: permModels.PermissionTypeCustom,
+		CustomRoleRef:  "", // missing
+	}
+
+	_, err := s.service.CreateClusterPermission(req)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "必须指定ClusterRole")
+}
+
+// TestCreateClusterPermission_BothUserAndGroup 不可同時指定使用者與群組
+func (s *PermissionServiceTestSuite) TestCreateClusterPermission_BothUserAndGroup() {
+	userID := uint(1)
+	groupID := uint(2)
+	req := &CreateClusterPermissionRequest{
+		ClusterID:      1,
+		UserID:         &userID,
+		UserGroupID:    &groupID,
+		PermissionType: permModels.PermissionTypeAdmin,
+	}
+
+	_, err := s.service.CreateClusterPermission(req)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), err.Error(), "不能同时指定用户和用户组")
 }
 
 // TestPermissionServiceSuite 运行测试套件

@@ -218,9 +218,10 @@ jobs:
 
 | 測試項目 | 狀態 |
 |---------|------|
-| Auth Service 單元測試 | ⬜ 待實作 |
-| Permission Service 單元測試 | ⬜ 待實作 |
-| Cluster Service 單元測試 | ⬜ 待實作 |
+| Auth Service 單元測試 | ✅ 完成（11 tests PASS） |
+| Permission Service 單元測試 | ✅ 完成（17 tests PASS） |
+| Cluster Service 單元測試 | ✅ 完成（9 tests PASS） |
+| User Service 單元測試 | ✅ 完成（8 tests PASS） |
 | Helm Service 單元測試 | ⬜ 待實作 |
 | Handler 整合測試 | ⬜ 待實作 |
 | permissionService.test.ts | ⬜ 待實作 |
