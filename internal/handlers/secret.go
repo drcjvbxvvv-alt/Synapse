@@ -13,9 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
+	"encoding/json"
+
 	"github.com/clay-wangzhi/Synapse/internal/config"
 	"github.com/clay-wangzhi/Synapse/internal/k8s"
 	"github.com/clay-wangzhi/Synapse/internal/middleware"
+	"github.com/clay-wangzhi/Synapse/internal/models"
 	"github.com/clay-wangzhi/Synapse/internal/response"
 	"github.com/clay-wangzhi/Synapse/internal/services"
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
@@ -463,6 +466,9 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 		return
 	}
 
+	// 更新前儲存版本快照（只儲存 key 列表，不存明文 value）
+	h.saveSecretVersion(uint(id), namespace, name, secret.Data, c)
+
 	// 将字符串数据转换为字节数组
 	dataBytes := make(map[string][]byte)
 	for k, v := range req.Data {
@@ -486,4 +492,68 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 		"namespace":       updated.Namespace,
 		"resourceVersion": updated.ResourceVersion,
 	})
+}
+
+// ─── 版本歷史 ─────────────────────────────────────────────────────────────────
+
+// saveSecretVersion 儲存 Secret 版本快照（只記錄 key 列表，不儲存明文 value）
+func (h *SecretHandler) saveSecretVersion(clusterID uint, namespace, name string, data map[string][]byte, c *gin.Context) {
+	keys := make([]string, 0, len(data))
+	for k := range data {
+		keys = append(keys, k)
+	}
+	contentBytes, _ := json.Marshal(map[string]interface{}{"keys": keys, "note": "Secret value not stored for security"})
+	var nextVer int
+	h.db.Model(&models.ConfigVersion{}).
+		Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?", clusterID, "secret", namespace, name).
+		Select("COALESCE(MAX(version),0) + 1").Scan(&nextVer)
+	if nextVer == 0 {
+		nextVer = 1
+	}
+	changedBy := ""
+	if u, ok := c.Get("username"); ok {
+		changedBy, _ = u.(string)
+	}
+	ver := &models.ConfigVersion{
+		ClusterID:    clusterID,
+		ResourceType: "secret",
+		Namespace:    namespace,
+		Name:         name,
+		Version:      nextVer,
+		ContentJSON:  string(contentBytes),
+		ChangedBy:    changedBy,
+		ChangedAt:    time.Now(),
+	}
+	if err := h.db.Create(ver).Error; err != nil {
+		logger.Warn("儲存 Secret 版本快照失敗", "error", err)
+	}
+}
+
+// GetSecretVersions 取得 Secret 版本列表
+func (h *SecretHandler) GetSecretVersions(c *gin.Context) {
+	clusterIDStr := c.Param("clusterID")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	id, err := strconv.ParseUint(clusterIDStr, 10, 32)
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	var versions []models.ConfigVersion
+	h.db.Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?",
+		uint(id), "secret", namespace, name).
+		Order("version DESC").
+		Find(&versions)
+	// 隱藏 contentJSON（安全考量）
+	items := make([]map[string]interface{}, 0, len(versions))
+	for _, v := range versions {
+		items = append(items, map[string]interface{}{
+			"id":        v.ID,
+			"version":   v.Version,
+			"changedBy": v.ChangedBy,
+			"changedAt": v.ChangedAt,
+			"note":      "Secret 內容不顯示，僅記錄變更時間與操作者",
+		})
+	}
+	response.OK(c, gin.H{"items": items, "total": len(items)})
 }

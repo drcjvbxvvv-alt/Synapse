@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Card,
   Descriptions,
@@ -11,6 +11,7 @@ import {
   Typography,
   Modal,
   Switch,
+  Table,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -19,9 +20,10 @@ import {
   ReloadOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { secretService, type SecretDetail as SecretDetailType } from '../../services/configService';
+import { secretService, type SecretDetail as SecretDetailType, type ConfigVersion } from '../../services/configService';
 import MonacoEditor from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
 import { parseApiError } from '../../utils/api';
@@ -36,10 +38,12 @@ const SecretDetail: React.FC = () => {
     namespace: string;
     name: string;
   }>();
-const { t } = useTranslation(['config', 'common']);
-const [loading, setLoading] = useState(false);
+  const { t } = useTranslation(['config', 'common']);
+  const [loading, setLoading] = useState(false);
   const [secret, setSecret] = useState<SecretDetailType | null>(null);
   const [showValues, setShowValues] = useState(false);
+  const [versions, setVersions] = useState<ConfigVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
 
   // 加载Secret详情
   const loadSecret = React.useCallback(async () => {
@@ -55,9 +59,23 @@ const [loading, setLoading] = useState(false);
     }
   }, [clusterId, namespace, name]);
 
+  const loadVersions = useCallback(async () => {
+    if (!clusterId || !namespace || !name) return;
+    setVersionsLoading(true);
+    try {
+      const data = await secretService.getVersions(Number(clusterId), namespace, name);
+      setVersions(data || []);
+    } catch {
+      // silently ignore if no versions
+    } finally {
+      setVersionsLoading(false);
+    }
+  }, [clusterId, namespace, name]);
+
   useEffect(() => {
     loadSecret();
-  }, [loadSecret]);
+    loadVersions();
+  }, [loadSecret, loadVersions]);
 
   // 删除Secret
   const handleDelete = () => {
@@ -197,6 +215,42 @@ const [loading, setLoading] = useState(false);
               </Space>
             </TabPane>
           </Tabs>
+        </Card>
+
+        {/* 版本歷史（僅記錄 key 列表，不含 value） */}
+        <Card
+          title={<Space><HistoryOutlined />版本歷史</Space>}
+          extra={<Button size="small" icon={<ReloadOutlined />} onClick={loadVersions}>刷新</Button>}
+        >
+          <Table<ConfigVersion>
+            loading={versionsLoading}
+            dataSource={versions}
+            rowKey="id"
+            size="small"
+            pagination={{ pageSize: 10, showSizeChanger: false }}
+            locale={{ emptyText: '暫無版本記錄（首次編輯後開始追蹤）' }}
+            columns={[
+              { title: '版本', dataIndex: 'version', width: 70, render: (v: number) => `v${v}` },
+              { title: '操作人', dataIndex: 'changedBy', width: 120 },
+              {
+                title: '時間',
+                dataIndex: 'changedAt',
+                render: (v: string) => new Date(v).toLocaleString('zh-CN'),
+              },
+              {
+                title: 'Key 列表（值不記錄）',
+                dataIndex: 'contentJSON',
+                render: (v: string) => {
+                  try {
+                    const obj = JSON.parse(v) as { keys?: string[] };
+                    return (obj.keys || []).join(', ');
+                  } catch {
+                    return v;
+                  }
+                },
+              },
+            ]}
+          />
         </Card>
 
         {/* 数据内容 */}

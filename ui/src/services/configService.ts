@@ -48,6 +48,18 @@ export interface NamespaceItem {
   count: number;
 }
 
+export interface ConfigVersion {
+  id: number;
+  clusterId: number;
+  resourceType: string;
+  namespace: string;
+  name: string;
+  version: number;
+  contentJSON: string;
+  changedBy: string;
+  changedAt: string;
+}
+
 export interface ListResponse<T> {
   items: T[];
   total: number;
@@ -165,6 +177,21 @@ export const configMapService = {
       `/clusters/${clusterId}/configmaps/${namespace}/${name}`
     );
   },
+
+  // 获取版本历史
+  async getVersions(clusterId: number, namespace: string, name: string): Promise<ConfigVersion[]> {
+    return request.get<ConfigVersion[]>(
+      `/clusters/${clusterId}/configmaps/${namespace}/${name}/versions`
+    );
+  },
+
+  // 回滚到指定版本
+  async rollback(clusterId: number, namespace: string, name: string, version: number): Promise<void> {
+    await request.post(
+      `/clusters/${clusterId}/configmaps/${namespace}/${name}/versions/${version}/rollback`,
+      {}
+    );
+  },
 };
 
 // Secret API
@@ -253,6 +280,13 @@ export const secretService = {
   ): Promise<void> {
     await request.delete(
       `/clusters/${clusterId}/secrets/${namespace}/${name}`
+    );
+  },
+
+  // 获取版本历史（仅记录key列表，不含value）
+  async getVersions(clusterId: number, namespace: string, name: string): Promise<ConfigVersion[]> {
+    return request.get<ConfigVersion[]>(
+      `/clusters/${clusterId}/secrets/${namespace}/${name}/versions`
     );
   },
 };

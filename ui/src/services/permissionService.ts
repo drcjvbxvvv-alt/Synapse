@@ -138,11 +138,11 @@ export const getMyClusterPermission = async (clusterId: number | string): Promis
 
 // 权限类型显示名称映射
 export const permissionTypeNames: Record<string, string> = {
-  admin: '管理员权限',
-  ops: '运维权限',
-  dev: '开发权限',
-  readonly: '只读权限',
-  custom: '自定义权限',
+  admin: '管理員權限',
+  ops: '運維權限',
+  dev: '開發權限',
+  readonly: '只讀權限',
+  custom: '自定義權限',
 };
 
 // 权限类型颜色映射

@@ -73,6 +73,32 @@ export const deleteNamespace = async (
   await request.delete<void>(`/clusters/${clusterId}/namespaces/${namespace}`);
 };
 
+// ─── ResourceQuota API ────────────────────────────────────────────────────────
+export const listResourceQuotas = (clusterId: string, namespace: string) =>
+  request.get<{ items: any[]; total: number }>(`/clusters/${clusterId}/namespaces/${namespace}/quotas`);
+
+export const createResourceQuota = (clusterId: string, namespace: string, data: { name: string; hard: Record<string, string> }) =>
+  request.post(`/clusters/${clusterId}/namespaces/${namespace}/quotas`, data);
+
+export const updateResourceQuota = (clusterId: string, namespace: string, name: string, data: { hard: Record<string, string> }) =>
+  request.put(`/clusters/${clusterId}/namespaces/${namespace}/quotas/${name}`, data);
+
+export const deleteResourceQuota = (clusterId: string, namespace: string, name: string) =>
+  request.delete(`/clusters/${clusterId}/namespaces/${namespace}/quotas/${name}`);
+
+// ─── LimitRange API ───────────────────────────────────────────────────────────
+export const listLimitRanges = (clusterId: string, namespace: string) =>
+  request.get<{ items: any[]; total: number }>(`/clusters/${clusterId}/namespaces/${namespace}/limitranges`);
+
+export const createLimitRange = (clusterId: string, namespace: string, data: { name: string; limits: any[] }) =>
+  request.post(`/clusters/${clusterId}/namespaces/${namespace}/limitranges`, data);
+
+export const updateLimitRange = (clusterId: string, namespace: string, name: string, data: { limits: any[] }) =>
+  request.put(`/clusters/${clusterId}/namespaces/${namespace}/limitranges/${name}`, data);
+
+export const deleteLimitRange = (clusterId: string, namespace: string, name: string) =>
+  request.delete(`/clusters/${clusterId}/namespaces/${namespace}/limitranges/${name}`);
+
 /**
  * 命名空间服务对象 - 兼容旧的调用方式
  */

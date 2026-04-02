@@ -35,12 +35,16 @@ import {
   PauseCircleOutlined,
   ClearOutlined,
   PlusOutlined,
+  DatabaseOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
+import { Form } from 'antd';
 import { useParams } from 'react-router-dom';
 import { List as VirtualList } from 'react-window';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { logService } from '../../services/logService';
+import { logService, logSourceService } from '../../services/logService';
 import { useTranslation } from 'react-i18next';
 import type {
   LogEntry,
@@ -49,6 +53,7 @@ import type {
   LogStreamTarget,
   LogPodInfo,
   LogSearchParams,
+  LogSource,
 } from '../../services/logService';
 
 const { TabPane } = Tabs;
@@ -90,6 +95,19 @@ const [activeTab, setActiveTab] = useState('stream');
   const [logSearchKeyword, setLogSearchKeyword] = useState(''); // 实时{t('logs:center.logSearch')}关键字
   const wsRef = useRef<WebSocket | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // ===== 外部日誌源狀態 =====
+  const [logSources, setLogSources] = useState<LogSource[]>([]);
+  const [logSourcesLoading, setLogSourcesLoading] = useState(false);
+  const [srcModalOpen, setSrcModalOpen] = useState(false);
+  const [editingSrc, setEditingSrc] = useState<LogSource | null>(null);
+  const [srcForm] = Form.useForm();
+  const [selectedSrcId, setSelectedSrcId] = useState<number | null>(null);
+  const [extQuery, setExtQuery] = useState('');
+  const [extIndex, setExtIndex] = useState('');
+  const [extDateRange, setExtDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [extResults, setExtResults] = useState<LogEntry[]>([]);
+  const [extSearchLoading, setExtSearchLoading] = useState(false);
 
   // Pod选择器状态
   const [podSelectorVisible, setPodSelectorVisible] = useState(false);
@@ -480,6 +498,81 @@ const [activeTab, setActiveTab] = useState('stream');
       ),
     },
   ];
+
+  // ===== 外部日誌源 handlers =====
+  const loadLogSources = useCallback(async () => {
+    if (!clusterId) return;
+    setLogSourcesLoading(true);
+    try {
+      const data = await logSourceService.list(clusterId);
+      setLogSources(data || []);
+    } catch {
+      // ignore
+    } finally {
+      setLogSourcesLoading(false);
+    }
+  }, [clusterId]);
+
+  useEffect(() => {
+    if (activeTab === 'external') {
+      loadLogSources();
+    }
+  }, [activeTab, loadLogSources]);
+
+  const handleSaveLogSource = async () => {
+    try {
+      const values = await srcForm.validateFields();
+      if (editingSrc) {
+        await logSourceService.update(clusterId!, editingSrc.id, values);
+      } else {
+        await logSourceService.create(clusterId!, { ...values, enabled: true });
+      }
+      message.success(editingSrc ? '更新成功' : '創建成功');
+      setSrcModalOpen(false);
+      srcForm.resetFields();
+      setEditingSrc(null);
+      loadLogSources();
+    } catch (e: unknown) {
+      if ((e as { errorFields?: unknown }).errorFields) return;
+      message.error('操作失敗');
+    }
+  };
+
+  const handleDeleteLogSource = async (src: LogSource) => {
+    try {
+      await logSourceService.delete(clusterId!, src.id);
+      message.success('刪除成功');
+      if (selectedSrcId === src.id) setSelectedSrcId(null);
+      loadLogSources();
+    } catch {
+      message.error('刪除失敗');
+    }
+  };
+
+  const handleExtSearch = async () => {
+    if (!selectedSrcId) {
+      message.warning('請先選擇一個日誌源');
+      return;
+    }
+    setExtSearchLoading(true);
+    try {
+      const params: { query: string; index?: string; startTime?: string; endTime?: string; limit: number } = {
+        query: extQuery,
+        limit: 500,
+      };
+      if (extIndex) params.index = extIndex;
+      if (extDateRange) {
+        params.startTime = extDateRange[0].toISOString();
+        params.endTime = extDateRange[1].toISOString();
+      }
+      const result = await logSourceService.search(clusterId!, selectedSrcId, params);
+      setExtResults(result.items || []);
+    } catch (err: unknown) {
+      message.error('查詢失敗: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setExtSearchLoading(false);
+    }
+  };
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
@@ -906,8 +999,149 @@ const [activeTab, setActiveTab] = useState('stream');
               />
             </Card>
           </TabPane>
+
+          {/* 外部日誌源 Tab */}
+          <TabPane
+            tab={<span><DatabaseOutlined />外部日誌</span>}
+            key="external"
+          >
+            {/* 日誌源管理 */}
+            <Card
+              size="small"
+              title="日誌源管理"
+              style={{ marginBottom: 16 }}
+              extra={
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => { setEditingSrc(null); srcForm.resetFields(); setSrcModalOpen(true); }}
+                >
+                  新增日誌源
+                </Button>
+              }
+            >
+              <Table<LogSource>
+                loading={logSourcesLoading}
+                dataSource={logSources}
+                rowKey="id"
+                size="small"
+                pagination={false}
+                locale={{ emptyText: '暫無日誌源，點擊「新增日誌源」配置 Loki 或 Elasticsearch' }}
+                rowSelection={{
+                  type: 'radio',
+                  selectedRowKeys: selectedSrcId ? [selectedSrcId] : [],
+                  onChange: (keys) => setSelectedSrcId(keys[0] as number),
+                }}
+                columns={[
+                  { title: '名稱', dataIndex: 'name' },
+                  { title: '類型', dataIndex: 'type', width: 130, render: (t: string) => <Tag color={t === 'loki' ? 'blue' : 'orange'}>{t.toUpperCase()}</Tag> },
+                  { title: 'URL', dataIndex: 'url', ellipsis: true },
+                  { title: '狀態', dataIndex: 'enabled', width: 80, render: (v: boolean) => <Tag color={v ? 'green' : 'red'}>{v ? '啟用' : '停用'}</Tag> },
+                  {
+                    title: '操作', width: 110,
+                    render: (_: unknown, record: LogSource) => (
+                      <Space>
+                        <Button size="small" icon={<EditOutlined />} type="link" onClick={() => {
+                          setEditingSrc(record);
+                          srcForm.setFieldsValue({ type: record.type, name: record.name, url: record.url, username: record.username, enabled: record.enabled });
+                          setSrcModalOpen(true);
+                        }} />
+                        <Tooltip title="刪除">
+                          <Button size="small" icon={<DeleteOutlined />} type="link" danger onClick={() => handleDeleteLogSource(record)} />
+                        </Tooltip>
+                      </Space>
+                    ),
+                  },
+                ]}
+              />
+            </Card>
+
+            {/* 查詢介面 */}
+            <Card size="small" title="查詢日誌" style={{ marginBottom: 16 }}>
+              <Space wrap style={{ width: '100%' }}>
+                <Input
+                  placeholder={selectedSrcId ? (logSources.find(s => s.id === selectedSrcId)?.type === 'loki' ? 'LogQL 查詢，如 {namespace="default"}' : 'Lucene 查詢，如 error AND namespace:default') : '請先在上方選擇日誌源'}
+                  style={{ width: 420 }}
+                  value={extQuery}
+                  onChange={(e) => setExtQuery(e.target.value)}
+                  onPressEnter={handleExtSearch}
+                />
+                {selectedSrcId && logSources.find(s => s.id === selectedSrcId)?.type === 'elasticsearch' && (
+                  <Input
+                    placeholder="ES Index（如 k8s-logs-*）"
+                    style={{ width: 180 }}
+                    value={extIndex}
+                    onChange={(e) => setExtIndex(e.target.value)}
+                  />
+                )}
+                <RangePicker
+                  showTime
+                  value={extDateRange}
+                  onChange={(dates) => setExtDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
+                  placeholder={['開始時間', '結束時間']}
+                />
+                <Button type="primary" icon={<SearchOutlined />} loading={extSearchLoading} onClick={handleExtSearch}>
+                  查詢
+                </Button>
+              </Space>
+            </Card>
+
+            {/* 查詢結果 */}
+            <Card size="small" title={`查詢結果（${extResults.length} 筆）`}>
+              <Table<LogEntry>
+                dataSource={extResults}
+                rowKey={(r, i) => r.id || String(i)}
+                size="small"
+                loading={extSearchLoading}
+                pagination={{ pageSize: 50, showSizeChanger: true }}
+                scroll={{ y: 'calc(100vh - 600px)' }}
+                columns={[
+                  {
+                    title: '時間', dataIndex: 'timestamp', width: 180,
+                    render: (v: string) => new Date(v).toLocaleString('zh-CN'),
+                  },
+                  { title: '級別', dataIndex: 'level', width: 80, render: (v: string) => <Tag color={levelTagColors[v] || 'default'}>{v?.toUpperCase()}</Tag> },
+                  { title: '命名空間', dataIndex: 'namespace', width: 130 },
+                  { title: 'Pod', dataIndex: 'pod_name', width: 150, ellipsis: true },
+                  { title: '訊息', dataIndex: 'message', ellipsis: true },
+                ]}
+              />
+            </Card>
+          </TabPane>
         </Tabs>
       </Card>
+
+      {/* 外部日誌源 Modal */}
+      <Modal
+        title={editingSrc ? '編輯日誌源' : '新增日誌源'}
+        open={srcModalOpen}
+        onOk={handleSaveLogSource}
+        onCancel={() => { setSrcModalOpen(false); setEditingSrc(null); srcForm.resetFields(); }}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form form={srcForm} layout="vertical">
+          <Form.Item name="type" label="類型" rules={[{ required: true }]}>
+            <Select options={[{ label: 'Loki', value: 'loki' }, { label: 'Elasticsearch', value: 'elasticsearch' }]} disabled={!!editingSrc} />
+          </Form.Item>
+          <Form.Item name="name" label="名稱" rules={[{ required: true }]}>
+            <Input placeholder="如：prod-loki" />
+          </Form.Item>
+          <Form.Item name="url" label="URL" rules={[{ required: true }]}>
+            <Input placeholder="如：http://loki.monitoring:3100" />
+          </Form.Item>
+          <Form.Item name="username" label="用戶名（可選）">
+            <Input placeholder="HTTP Basic Auth 用戶名" />
+          </Form.Item>
+          <Form.Item name="password" label="密碼（可選）">
+            <Input.Password placeholder="HTTP Basic Auth 密碼" />
+          </Form.Item>
+          <Form.Item name="apiKey" label="API Key（可選）">
+            <Input.Password placeholder="Loki：X-Scope-OrgID；ES：ApiKey" />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* Pod选择器弹窗 */}
       <Modal

@@ -95,7 +95,7 @@ export const aiService = {
       })
       .catch((err) => {
         if (err.name === 'AbortError') return;
-        onError(err.message || '网络请求失败');
+        onError(err.message || '網路請求失敗');
       });
   },
 };

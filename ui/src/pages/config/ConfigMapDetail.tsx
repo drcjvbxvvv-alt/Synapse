@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Card,
   Descriptions,
@@ -10,15 +10,19 @@ import {
   Tabs,
   Typography,
   Modal,
+  Table,
+  Popconfirm,
 } from 'antd';
 import {
   ArrowLeftOutlined,
   EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
+  HistoryOutlined,
+  RollbackOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { configMapService, type ConfigMapDetail as ConfigMapDetailType } from '../../services/configService';
+import { configMapService, type ConfigMapDetail as ConfigMapDetailType, type ConfigVersion } from '../../services/configService';
 import MonacoEditor from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
 import { parseApiError } from '../../utils/api';
@@ -33,9 +37,11 @@ const ConfigMapDetail: React.FC = () => {
     namespace: string;
     name: string;
   }>();
-const { t } = useTranslation(['config', 'common']);
-const [loading, setLoading] = useState(false);
+  const { t } = useTranslation(['config', 'common']);
+  const [loading, setLoading] = useState(false);
   const [configMap, setConfigMap] = useState<ConfigMapDetailType | null>(null);
+  const [versions, setVersions] = useState<ConfigVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
 
   // 加载ConfigMap详情
   const loadConfigMap = React.useCallback(async () => {
@@ -55,9 +61,35 @@ const [loading, setLoading] = useState(false);
     }
   }, [clusterId, namespace, name]);
 
+  const loadVersions = useCallback(async () => {
+    if (!clusterId || !namespace || !name) return;
+    setVersionsLoading(true);
+    try {
+      const data = await configMapService.getVersions(Number(clusterId), namespace, name);
+      setVersions(data || []);
+    } catch {
+      // versions may not exist yet, silently ignore
+    } finally {
+      setVersionsLoading(false);
+    }
+  }, [clusterId, namespace, name]);
+
   useEffect(() => {
     loadConfigMap();
-  }, [loadConfigMap]);
+    loadVersions();
+  }, [loadConfigMap, loadVersions]);
+
+  const handleRollback = async (version: number) => {
+    if (!clusterId || !namespace || !name) return;
+    try {
+      await configMapService.rollback(Number(clusterId), namespace, name, version);
+      message.success(`已回滾至版本 v${version}`);
+      loadConfigMap();
+      loadVersions();
+    } catch (error: unknown) {
+      message.error(parseApiError(error) || '回滾失敗');
+    }
+  };
 
   // 删除ConfigMap
   const handleDelete = () => {
@@ -209,6 +241,44 @@ const [loading, setLoading] = useState(false);
           ) : (
             <Text type="secondary">{t('config:detail.noData')}</Text>
           )}
+        </Card>
+
+        {/* 版本歷史 */}
+        <Card
+          title={<Space><HistoryOutlined />版本歷史</Space>}
+          extra={<Button size="small" icon={<ReloadOutlined />} onClick={loadVersions}>刷新</Button>}
+        >
+          <Table<ConfigVersion>
+            loading={versionsLoading}
+            dataSource={versions}
+            rowKey="id"
+            size="small"
+            pagination={{ pageSize: 10, showSizeChanger: false }}
+            locale={{ emptyText: '暫無版本記錄（首次編輯後開始追蹤）' }}
+            columns={[
+              { title: '版本', dataIndex: 'version', width: 70, render: (v: number) => `v${v}` },
+              { title: '操作人', dataIndex: 'changedBy', width: 120 },
+              {
+                title: '時間',
+                dataIndex: 'changedAt',
+                render: (v: string) => new Date(v).toLocaleString('zh-CN'),
+              },
+              {
+                title: '操作',
+                width: 100,
+                render: (_: unknown, record: ConfigVersion) => (
+                  <Popconfirm
+                    title={`確定回滾至 v${record.version}？`}
+                    onConfirm={() => handleRollback(record.version)}
+                    okText="確定"
+                    cancelText="取消"
+                  >
+                    <Button size="small" icon={<RollbackOutlined />} type="link">回滾</Button>
+                  </Popconfirm>
+                ),
+              },
+            ]}
+          />
         </Card>
       </Space>
     </div>

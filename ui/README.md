@@ -1,544 +1,383 @@
-# K8s管理平台 - 前端项目
+# Synapse — 企業級 Kubernetes DevOps 平台
 
-一个基于React + TypeScript + Ant Design的现代化Kubernetes集群管理平台前端应用。
+> 多叢集管理 · AI 輔助運維 · 成本分析 · 完整可觀測性
 
-## 🚀 技术选型
-
-### 核心技术栈
-- **React 19.1.1** - 现代化前端框架
-- **TypeScript 5.8.3** - 类型安全的JavaScript超集
-- **Vite 7.1.2** - 快速的前端构建工具
-- **Ant Design 5.x** - 企业级UI组件库
-- **React Router DOM** - 前端路由管理
-
-### 开发工具
-- **ESLint** - 代码质量检查
-- **TypeScript ESLint** - TypeScript代码规范
-- **Vite Plugin React** - React支持插件
-
-### 依赖包
-```json
-{
-  "dependencies": {
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "antd": "^5.x",
-    "@ant-design/icons": "^5.x",
-    "react-router-dom": "^6.x",
-    "axios": "^1.x"
-  }
-}
-```
-
-## 📁 项目结构
-
-```
-k8s-management-frontend/
-├── public/                          # 静态资源
-│   └── vite.svg                    # Vite图标
-├── src/                            # 源代码目录
-│   ├── assets/                     # 静态资源
-│   │   └── react.svg              # React图标
-│   ├── layouts/                    # 布局组件
-│   │   └── MainLayout.tsx         # 主布局组件
-│   ├── pages/                      # 页面组件
-│   │   ├── cluster/               # 集群管理模块
-│   │   │   ├── ClusterList.tsx    # 集群列表页面
-│   │   │   ├── ClusterDetail.tsx  # 集群详情页面
-│   │   │   └── ClusterImport.tsx  # 集群导入页面
-│   │   ├── node/                  # 节点管理模块
-│   │   │   ├── NodeList.tsx       # 节点列表页面
-│   │   │   ├── NodeDetail.tsx     # 节点详情页面
-│   │   │   └── NodeOperations.tsx # 节点操作页面
-│   │   ├── pod/                   # Pod管理模块
-│   │   │   ├── PodList.tsx        # Pod列表页面
-│   │   │   └── PodDetail.tsx      # Pod详情页面
-│   │   ├── workload/              # 工作负载模块
-│   │   │   ├── WorkloadList.tsx   # 工作负载列表页面
-│   │   │   └── WorkloadDetail.tsx # 工作负载详情页面
-│   │   └── search/                # 搜索模块
-│   │       └── GlobalSearch.tsx   # 全局搜索页面
-│   ├── App.tsx                    # 主应用组件
-│   ├── App.css                    # 应用样式
-│   ├── main.tsx                   # 应用入口
-│   ├── index.css                  # 全局样式
-│   └── vite-env.d.ts             # Vite类型定义
-├── index.html                     # HTML模板
-├── package.json                   # 项目配置
-├── tsconfig.json                  # TypeScript配置
-├── tsconfig.app.json             # 应用TypeScript配置
-├── tsconfig.node.json            # Node.js TypeScript配置
-├── vite.config.ts                # Vite配置
-├── eslint.config.js              # ESLint配置
-└── README.md                     # 项目文档
-```
-
-## 🎯 功能模块
-
-### 1. 集群管理 (`/clusters`)
-- **集群列表** - 展示所有K8s集群的状态、版本、资源使用情况
-- **集群详情** - 查看单个集群的详细信息和监控数据
-- **集群导入** - 通过kubeconfig、手动配置或云服务商导入集群
-
-### 2. 节点管理 (`/nodes`)
-- **节点列表** - 展示集群中所有节点的状态和资源使用情况
-- **节点详情** - 查看节点的详细信息、Pod分布、事件等
-- **节点操作** - 执行Cordon、Uncordon、Drain等节点维护操作
-
-### 3. Pod管理 (`/pods`)
-- **Pod列表** - 展示所有Pod的状态、资源使用情况
-- **Pod详情** - 查看Pod的详细信息、日志、事件等
-
-### 4. 工作负载管理 (`/workloads`)
-- **工作负载列表** - 展示Deployments、StatefulSets、DaemonSets等
-- **工作负载详情** - 查看工作负载的详细配置和状态
-
-### 5. 全局搜索 (`/search`)
-- **统一搜索** - 跨资源类型的全局搜索功能
-
-## 🎨 设计系统 - 腾讯设计语言
-
-### 设计理念
-本项目采用**腾讯设计语言**作为核心设计系统，追求简洁、现代、高效的企业级用户体验。设计理念基于以下核心原则：
-
-#### 核心设计原则
-- **简洁至上** - 去除冗余元素，突出核心功能
-- **一致性** - 统一的视觉语言和交互模式
-- **高效性** - 优化用户操作路径，提升工作效率
-- **可访问性** - 确保所有用户都能轻松使用
-
-### 视觉设计系统
-
-#### 色彩系统
-```css
-/* 主色调 - 腾讯蓝 */
---primary-color: #006eff;
---primary-hover: #1a7aff;
---primary-light: #f0f6ff;
---primary-bg: #e6f3ff;
-
-/* 功能色彩 */
---success-color: #00d4aa;    /* 健康状态 */
---warning-color: #ff9f43;    /* 告警状态 */
---error-color: #ff7675;      /* 错误状态 */
---info-color: #a55eea;       /* 信息状态 */
-
-/* 中性色彩 */
---text-primary: #333333;     /* 主要文字 */
---text-secondary: #666666;   /* 次要文字 */
---text-disabled: #999999;    /* 禁用文字 */
---border-color: #e8eaec;     /* 边框颜色 */
---bg-color: #f5f7fa;         /* 背景颜色 */
---card-bg: #ffffff;          /* 卡片背景 */
-```
-
-#### 字体系统
-```css
-/* 字体家族 */
-font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 
-             'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', 
-             Arial, sans-serif;
-
-/* 字体大小层级 */
---font-size-xs: 12px;        /* 辅助信息 */
---font-size-sm: 14px;        /* 正文内容 */
---font-size-md: 16px;        /* 标题文字 */
---font-size-lg: 18px;        /* 页面标题 */
---font-size-xl: 24px;        /* 主标题 */
---font-size-xxl: 28px;       /* 数据展示 */
-
-/* 字重层级 */
---font-weight-normal: 400;   /* 正文 */
---font-weight-medium: 500;   /* 按钮、标签 */
---font-weight-semibold: 600; /* 小标题 */
---font-weight-bold: 700;     /* 主标题、数据 */
-```
-
-#### 间距系统
-基于8pt网格系统，确保视觉节奏的一致性：
-```css
---spacing-xs: 4px;   /* 紧密间距 */
---spacing-sm: 8px;   /* 小间距 */
---spacing-md: 12px;  /* 中等间距 */
---spacing-lg: 16px;  /* 大间距 */
---spacing-xl: 20px;  /* 超大间距 */
---spacing-xxl: 24px; /* 区块间距 */
---spacing-xxxl: 32px;/* 页面间距 */
-```
-
-#### 圆角系统
-```css
---border-radius-sm: 6px;   /* 标签、进度条 */
---border-radius-md: 8px;   /* 按钮、输入框 */
---border-radius-lg: 12px;  /* 卡片、容器 */
---border-radius-xl: 16px;  /* 统计卡片 */
-```
-
-#### 阴影系统
-```css
---shadow-sm: 0 1px 4px 0 rgba(0, 0, 0, 0.08);      /* 轻微阴影 */
---shadow-md: 0 2px 8px 0 rgba(0, 0, 0, 0.06);      /* 中等阴影 */
---shadow-lg: 0 4px 12px 0 rgba(0, 0, 0, 0.12);     /* 悬浮阴影 */
---shadow-xl: 0 8px 24px 0 rgba(0, 0, 0, 0.16);     /* 强调阴影 */
-```
-
-### 组件设计规范
-
-#### 统计卡片设计
-- **渐变背景** - 使用品牌色渐变增强视觉冲击力
-- **数据突出** - 大字号、粗字重突出关键数据
-- **图标辅助** - 使用语义化图标增强理解
-- **悬浮效果** - 微妙的transform和阴影变化
-
-#### 表格设计
-- **清晰层次** - 表头使用浅灰背景区分
-- **悬浮反馈** - 行悬浮时的背景色变化
-- **状态标签** - 彩色标签直观显示状态
-- **操作按钮** - 图标按钮减少视觉噪音
-
-#### 侧边栏菜单
-- **层次分明** - 一级菜单浅灰背景，二级菜单白色背景
-- **选中状态** - 腾讯蓝渐变背景突出当前页面
-- **悬浮反馈** - 浅蓝背景和边框提供即时反馈
-- **图标语义** - 16px图标配合文字增强识别
-
-#### 按钮设计
-- **主要按钮** - 腾讯蓝背景，白色文字，带阴影
-- **次要按钮** - 白色背景，灰色边框，深色文字
-- **悬浮效果** - 轻微上移和阴影加深
-- **圆角统一** - 8px圆角保持一致性
-
-### 布局结构
-
-#### 整体布局
-```
-┌─────────────────────────────────────────┐
-│              Header (60px)              │ 固定头部
-├─────────┬───────────────────────────────┤
-│         │                               │
-│ Sidebar │         Content               │ 主体区域
-│ (200px) │        (flex-1)               │
-│         │                               │
-└─────────┴───────────────────────────────┘
-```
-
-#### 页面结构
-```
-┌─────────────────────────────────────────┐
-│            Page Header                  │ 页面头部
-├─────────────────────────────────────────┤
-│          Stats Cards Grid               │ 统计卡片
-├─────────────────────────────────────────┤
-│            Toolbar                      │ 工具栏
-├─────────────────────────────────────────┤
-│           Data Table                    │ 数据表格
-└─────────────────────────────────────────┘
-```
-
-### 响应式设计
-
-#### 断点系统
-```css
-/* 移动端 */
-@media (max-width: 768px) {
-  /* 侧边栏折叠，工具栏垂直排列 */
-}
-
-/* 平板端 */
-@media (max-width: 1200px) {
-  /* 统计卡片2列显示 */
-}
-
-/* 桌面端 */
-@media (min-width: 1200px) {
-  /* 完整4列统计卡片显示 */
-}
-```
-
-### 动效设计
-
-#### 过渡动画
-```css
-/* 标准过渡 */
-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-/* 悬浮效果 */
-transform: translateY(-4px);
-box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.16);
-```
-
-#### 加载状态
-- **骨架屏** - 内容加载时的占位效果
-- **进度指示** - 操作进度的可视化反馈
-- **状态切换** - 平滑的状态转换动画
-
-### 可访问性设计
-
-#### 色彩对比
-- 确保文字与背景的对比度符合WCAG 2.1 AA标准
-- 不仅依赖颜色传达信息，配合图标和文字
-
-#### 键盘导航
-- 支持Tab键导航
-- 明确的焦点指示器
-- 快捷键支持（⌘K 全局搜索）
-
-#### 屏幕阅读器
-- 语义化HTML结构
-- 适当的ARIA标签
-- 图片alt文本
-
-### 设计实现
-
-#### CSS架构
-```
-src/
-├── index.css          # 全局样式和设计系统变量
-├── App.css           # 应用级组件样式
-└── components/       # 组件级样式
-```
-
-#### 样式组织
-1. **全局样式** - 设计系统变量、重置样式
-2. **组件样式** - 基于设计系统的组件实现
-3. **工具类** - 常用的原子化样式类
-4. **主题覆盖** - Ant Design组件的主题定制
-
-这套设计系统确保了整个K8s管理平台具有统一、现代、高效的用户体验，符合企业级应用的专业标准。
-# K8s管理平台 - 前端项目
-
-一个基于React + TypeScript + Ant Design的现代化Kubernetes集群管理平台前端应用。
-
-## 🚀 技术选型
-
-### 核心技术栈
-- **React 19.1.1** - 现代化前端框架
-- **TypeScript 5.8.3** - 类型安全的JavaScript超集
-- **Vite 7.1.2** - 快速的前端构建工具
-- **Ant Design 5.x** - 企业级UI组件库
-- **React Router DOM** - 前端路由管理
-
-### 开发工具
-- **ESLint** - 代码质量检查
-- **TypeScript ESLint** - TypeScript代码规范
-- **Vite Plugin React** - React支持插件
-
-### 依赖包
-```json
-{
-  "dependencies": {
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "antd": "^5.x",
-    "@ant-design/icons": "^5.x",
-    "react-router-dom": "^6.x",
-    "axios": "^1.x"
-  }
-}
-```
-
-## 📁 项目结构
-
-```
-k8s-management-frontend/
-├── public/                          # 静态资源
-│   └── vite.svg                    # Vite图标
-├── src/                            # 源代码目录
-│   ├── assets/                     # 静态资源
-│   │   └── react.svg              # React图标
-│   ├── layouts/                    # 布局组件
-│   │   └── MainLayout.tsx         # 主布局组件
-│   ├── pages/                      # 页面组件
-│   │   ├── cluster/               # 集群管理模块
-│   │   │   ├── ClusterList.tsx    # 集群列表页面
-│   │   │   ├── ClusterDetail.tsx  # 集群详情页面
-│   │   │   └── ClusterImport.tsx  # 集群导入页面
-│   │   ├── node/                  # 节点管理模块
-│   │   │   ├── NodeList.tsx       # 节点列表页面
-│   │   │   ├── NodeDetail.tsx     # 节点详情页面
-│   │   │   └── NodeOperations.tsx # 节点操作页面
-│   │   ├── pod/                   # Pod管理模块
-│   │   │   ├── PodList.tsx        # Pod列表页面
-│   │   │   └── PodDetail.tsx      # Pod详情页面
-│   │   ├── workload/              # 工作负载模块
-│   │   │   ├── WorkloadList.tsx   # 工作负载列表页面
-│   │   │   └── WorkloadDetail.tsx # 工作负载详情页面
-│   │   └── search/                # 搜索模块
-│   │       └── GlobalSearch.tsx   # 全局搜索页面
-│   ├── App.tsx                    # 主应用组件
-│   ├── App.css                    # 应用样式
-│   ├── main.tsx                   # 应用入口
-│   ├── index.css                  # 全局样式
-│   └── vite-env.d.ts             # Vite类型定义
-├── index.html                     # HTML模板
-├── package.json                   # 项目配置
-├── tsconfig.json                  # TypeScript配置
-├── tsconfig.app.json             # 应用TypeScript配置
-├── tsconfig.node.json            # Node.js TypeScript配置
-├── vite.config.ts                # Vite配置
-├── eslint.config.js              # ESLint配置
-└── README.md                     # 项目文档
-```
-
-## 🎯 功能模块
-
-### 1. 集群管理 (`/clusters`)
-- **集群列表** - 展示所有K8s集群的状态、版本、资源使用情况
-- **集群详情** - 查看单个集群的详细信息和监控数据
-- **集群导入** - 通过kubeconfig、手动配置或云服务商导入集群
-
-### 2. 节点管理 (`/nodes`)
-- **节点列表** - 展示集群中所有节点的状态和资源使用情况
-- **节点详情** - 查看节点的详细信息、Pod分布、事件等
-- **节点操作** - 执行Cordon、Uncordon、Drain等节点维护操作
-
-### 3. Pod管理 (`/pods`)
-- **Pod列表** - 展示所有Pod的状态、资源使用情况
-- **Pod详情** - 查看Pod的详细信息、日志、事件等
-
-### 4. 工作负载管理 (`/workloads`)
-- **工作负载列表** - 展示Deployments、StatefulSets、DaemonSets等
-- **工作负载详情** - 查看工作负载的详细配置和状态
-
-### 5. 全局搜索 (`/search`)
-- **统一搜索** - 跨资源类型的全局搜索功能
-
-
-## 🎨 UI设计特性
-
-### 布局结构
-- **固定头部** - 包含Logo、全局搜索、通知和用户菜单
-- **可折叠侧边栏** - 多级菜单导航，支持移动端适配
-- **主内容区** - 面包屑导航 + 页面内容
-
-### 组件特性
-- **响应式设计** - 适配桌面端、平板端和移动端
-- **统计卡片** - 直观展示关键指标
-- **数据表格** - 支持排序、筛选、分页
-- **状态标签** - 直观的状态指示器
-- **进度条** - 资源使用率可视化
-- **操作按钮** - 统一的操作入口
-
-### 交互体验
-- **快捷键支持** - ⌘K 快速搜索
-- **加载状态** - 优雅的加载动画
-- **错误处理** - 友好的错误提示
-- **确认对话框** - 危险操作二次确认
-
-## 🛠️ 开发指南
-
-### 环境要求
-- Node.js >= 16.0.0
-- npm >= 8.0.0
-
-### 安装依赖
-```bash
-npm install
-```
-
-### 启动开发服务器
-```bash
-npm run dev
-```
-访问 http://localhost:5173
-
-### 构建生产版本
-```bash
-npm run build
-```
-
-### 代码检查
-```bash
-npm run lint
-```
-
-### 预览生产构建
-```bash
-npm run preview
-```
-
-## 📋 开发规范
-
-### 文件命名
-- 组件文件使用 PascalCase：`ClusterList.tsx`
-- 工具函数使用 camelCase：`formatTime.ts`
-- 常量文件使用 UPPER_CASE：`API_ENDPOINTS.ts`
-
-### 组件结构
-```tsx
-import React from 'react';
-import { ComponentProps } from 'antd';
-
-interface Props {
-  // 组件属性定义
-}
-
-const ComponentName: React.FC<Props> = ({ prop1, prop2 }) => {
-  // 组件逻辑
-  
-  return (
-    <div>
-      {/* 组件JSX */}
-    </div>
-  );
-};
-
-export default ComponentName;
-```
-
-### 路由配置
-基于原型设计的路由结构：
-```tsx
-<Routes>
-  <Route path="/" element={<MainLayout />}>
-    <Route index element={<Navigate to="/clusters" replace />} />
-    <Route path="clusters" element={<ClusterList />} />
-    <Route path="clusters/:id" element={<ClusterDetail />} />
-    <Route path="clusters/import" element={<ClusterImport />} />
-    <Route path="nodes" element={<NodeList />} />
-    <Route path="nodes/:id" element={<NodeDetail />} />
-    <Route path="nodes/operations" element={<NodeOperations />} />
-    <Route path="pods" element={<PodList />} />
-    <Route path="pods/:namespace/:name" element={<PodDetail />} />
-    <Route path="workloads" element={<WorkloadList />} />
-    <Route path="workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
-    <Route path="search" element={<GlobalSearch />} />
-  </Route>
-</Routes>
-```
-
-## 🎯 后续开发计划
-
-### 第1周 - 项目基建 ✅
-- [x] 项目初始化和依赖配置
-- [x] 基础路由和布局搭建
-- [x] 页面组件基础结构
-
-### 第2周 - 集群管理功能
-- [ ] 完善集群列表页面功能
-- [ ] 实现集群详情页面
-- [ ] 开发集群导入向导
-- [ ] 集成监控图表组件
-
-### 第3周 - 节点管理功能
-- [ ] 完善节点列表和详情页面
-- [ ] 实现节点操作功能
-- [ ] 开发节点监控界面
-
-### 第4周 - Pod和工作负载管理
-- [ ] 完善Pod管理功能
-- [ ] 实现工作负载管理
-- [ ] 集成YAML编辑器
-
-### 第5-6周 - 全局搜索和完善
-- [ ] 实现全局搜索功能
-- [ ] 完善用户体验
-- [ ] 性能优化
-
-## 📞 联系方式
-
-如有问题或建议，请联系开发团队。
+Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基於 React 19 + TypeScript + Ant Design 5，後端基於 Go + Gin + GORM 構建。目標是讓開發、運維、SRE 團隊在單一入口完成日常 K8s 工作，從資源管理、監控告警到 AI 診斷、成本分析，無需在多個工具之間切換。
 
 ---
 
-**注意：** 本项目基于完整的原型设计开发，所有页面布局和交互都有对应的HTML原型可供参考。
+## 功能總覽
+
+### 🏗 多叢集管理
+- **叢集清單**：匯入多個 K8s 叢集（支援 kubeconfig / 手動設定），統一展示健康狀態、版本、節點數、Pod 數及資源利用率
+- **叢集詳情**：即時監控 CPU / 記憶體 / Pod 用量趨勢；叢集事件 Timeline；一鍵測試連線
+- **全域儀表板**：跨叢集彙總異常工作負載、告警摘要、資源分佈、版本分佈
+- **叢集指標**：整合 Prometheus，支援自定義查詢面板
+
+---
+
+### 🧩 工作負載管理
+
+#### Deployment
+- 列表 / 建立 / 縮放副本數 / 刪除
+- 詳情頁含：Pod 實例、容器資訊、歷史版本（ReplicaSet）、服務 / Ingress 關聯、監控圖表、事件
+- HPA 自動擴縮：建立 / 編輯 / 刪除 HorizontalPodAutoscaler，CPU 目標利用率設定
+
+#### StatefulSet / DaemonSet
+- 列表 / 縮放 / 刪除；詳情含關聯 Pod、事件
+
+#### Job / CronJob
+- 列表 / 建立 / 刪除；CronJob 暫停 / 恢復
+
+#### Argo Rollouts（漸進式交付）
+- Canary / Blue-Green 發布狀態展示
+- Promote（推進一步 / 全部推進）/ Abort（中止）操控
+- AnalysisRun 列表
+- 拓撲視覺化
+
+---
+
+### 📦 Pod 管理
+- 跨命名空間 Pod 列表，含狀態、資源用量、節點資訊
+- Pod 詳情：容器列表、資源 Requests / Limits、掛載卷、環境變數、事件
+- **即時日誌**：WebSocket 串流，支援多容器切換、搜尋關鍵字、自動捲動
+- **Web Terminal**：透過 kubectl exec 直接進入容器互動
+- AI 診斷：一鍵觸發 AI 分析 OOMKilled / CrashLoopBackOff / ImagePullBackOff 等問題
+
+---
+
+### 🌐 網路管理
+
+#### Service
+- ClusterIP / NodePort / LoadBalancer 列表；建立 / 編輯 / 刪除
+- Endpoints 詳情
+
+#### Ingress
+- 列表 / 建立 / 編輯 / 刪除；支援多 Host / Path / TLS
+
+#### NetworkPolicy
+- 完整 CRUD；**拓撲視覺化**（以 D3 / 力導向圖呈現 Pod 間允許 / 拒絕流量）
+- **建立精靈**：逐步引導設定 Ingress / Egress 規則，降低設定門檻
+
+---
+
+### 🗂 設定管理（ConfigMap / Secret）
+- 列表 / 建立 / 編輯 / 刪除
+- YAML 編輯器（Monaco Editor）內嵌，語法高亮 + Diff 預覽
+- **版本歷史**：每次 Update 前自動快照；ConfigMap 支援一鍵回滾至任意版本；Secret 僅記錄 key 列表（值不儲存，安全考量）
+
+---
+
+### 💾 儲存管理
+- PersistentVolume / PersistentVolumeClaim / StorageClass 列表
+- PVC 建立 / 刪除；PVC 與 PV 綁定狀態視覺化
+
+---
+
+### 🏷 命名空間管理
+- 列表 / 建立 / 刪除；標籤 / 注解管理
+- **ResourceQuota CRUD**：建立 / 編輯 / 刪除命名空間資源配額（CPU、記憶體、Pod 數等）
+- **LimitRange CRUD**：設定 Container / Pod 預設資源限制
+
+---
+
+### 🖥 節點管理
+- 節點清單：狀態、角色、版本、CPU / 記憶體利用率
+- 節點詳情：Pod 分佈、資源分配、系統資訊、事件
+- 運維操作：Cordon / Uncordon / Drain
+
+---
+
+### 📊 監控與告警
+
+#### Prometheus / Grafana 整合
+- 監控設定（Prometheus URL + Grafana URL + API Key）
+- 直接在平台內嵌入 Grafana Panel / Dashboard iframe
+- 自定義 PromQL 查詢面板
+
+#### AlertManager 整合
+- 告警列表 / 告警組 / 統計圖
+- Silences 管理（建立 / 刪除靜默規則）
+- AlertManager 設定 YAML 編輯 + 驗證 + 一鍵套用
+- 接收器（Receivers）管理
+
+#### 自定義 Event 告警規則
+- 依 K8s Event Reason / Namespace / 工作負載設定觸發條件
+- 通知渠道：Webhook / DingTalk / **Slack** / **Microsoft Teams**（Adaptive Card 格式）
+- 30 分鐘去重防抖；告警歷史紀錄
+
+---
+
+### 📋 日誌中心
+
+#### K8s 容器日誌串流
+- 多 Pod / 多容器同時串流（WebSocket）
+- 日誌級別過濾（Error / Warn / Info / Debug）+ 關鍵字搜尋
+- 自動捲動 / 暫停 / 清除
+
+#### K8s Event 日誌
+- Warning / Normal 事件列表；命名空間 / 關鍵字過濾；週期性自動重整
+
+#### 日誌搜尋
+- 跨叢集日誌全文搜尋，支援時間範圍篩選
+
+#### 外部日誌源（Loki / Elasticsearch）
+- **Loki 整合**：設定 Loki URL 後，支援 LogQL 查詢、時間範圍篩選
+- **Elasticsearch 整合**：設定 ES URL / Index，支援 Lucene Query String 語法
+- 日誌源 CRUD 管理（支援 Basic Auth / API Key 認證）
+- 查詢結果以統一表格格式呈現（時間 / 級別 / 命名空間 / Pod / 訊息）
+
+---
+
+### 🔐 安全管理
+- **Image 掃描（Trivy 整合）**：工作負載映像漏洞掃描；CVE 清單（Critical / High / Medium / Low）
+- **CIS Benchmark（kube-bench）**：叢集基準評分；逐項檢查通過 / 失敗狀態
+- **安全儀表板**：掃描結果彙總、高危漏洞排行
+
+---
+
+### 💰 成本分析
+- **定價設定**：CPU / 記憶體單價（USD / TWD / CNY / JPY）
+- **命名空間成本**：Bar Chart + 排行表；本月估算費用
+- **工作負載成本**：按 Deployment / StatefulSet 分攤，含利用率進度條
+- **趨勢分析**：6 個月歷史成本 Line Chart
+- **浪費識別**：低利用率工作負載（CPU / Mem 利用率 < 10%）
+- **CSV 匯出**：按月匯出成本報表
+
+---
+
+### 🤖 AI 智慧運維
+
+#### AI 聊天助手
+- 多 Provider 支援：OpenAI / Azure OpenAI / Anthropic Claude / Ollama（本地）
+- **Tool Calling**：AI 可自動呼叫 K8s API 查詢 Pod、Deployment、事件、日誌等資訊
+- 敏感資料過濾：Secret 值 / 含 password、token、key 的環境變數 → `[REDACTED]`
+- 浮動面板設計，可在任意頁面叫出
+- YAML 程式碼區塊自動偵測，提供「複製 YAML」與「套用至叢集」按鈕
+
+#### AI 診斷
+- Pod / Deployment 詳情頁一鍵觸發診斷，自動帶入資源狀態 prompt
+- 診斷到 OOMKilled / CrashLoopBackOff / ImagePullBackOff 時，自動附帶 Runbook 解決步驟
+
+#### 自然語言查詢（NL Query）
+- 輸入中文自然語言（如「列出所有 OOMKilled 的 Pod」）
+- AI 解析意圖 → 選擇適當 K8s 工具 → 執行查詢 → 摘要回傳
+
+#### YAML 生成助手
+- 輸入 `/yaml` 前綴描述需求（如 `/yaml 建立 nginx Deployment，2 副本，80 Port`）
+- AI 回傳可直接套用的完整 YAML
+
+#### Runbook 知識庫
+- 10 個常見場景（OOMKilled / CrashLoopBackOff / 節點 NotReady 等）
+- 支援關鍵字搜尋；以 Collapse 展開步驟式解決流程
+
+---
+
+### 🔄 GitOps — ArgoCD 整合
+- **連線設定**：ArgoCD Server URL + Token 設定，連線測試
+- **應用列表**：健康狀態 / 同步狀態 / 最後部署時間
+- **操作**：Sync（同步）/ Rollback（回滾）/ Delete（刪除）
+- **應用詳情**：資源樹狀結構、同步歷史
+
+---
+
+### ⎈ Helm 套件管理
+- **Release 列表**：版本 / 狀態 / 命名空間 / 更新時間
+- **安裝**：從倉庫選 Chart，填入 Values YAML
+- **升級 / 回滾 / 刪除**
+- **Values 查看**：User Values / All Values 對比
+- **Chart 倉庫管理**：新增 / 刪除 Helm Repository
+
+---
+
+### 🧩 CRD 自定義資源
+- 自動發現所有已安裝 CRD
+- 通用 CRD 實例列表（dynamic client）
+- 基本刪除操作
+
+---
+
+### 🖥 Web Terminal
+- **Pod Exec Terminal**：直接進入 Pod 容器 Shell（WebSocket，完整 TTY）
+- **kubectl Terminal**：叢集級 kubectl Shell，支援任意 kubectl 指令
+- **SSH Terminal**：透過設定好的 SSH Key，直接 SSH 到節點（支援多跳板機）
+- 會話記錄：指令歷史 / 操作時間 / 使用者追蹤
+
+---
+
+### 🔍 全域搜尋
+- 跨叢集搜尋 Pod / Deployment / Service 等資源
+- 依名稱 / 命名空間篩選；搜尋結果直接導航至詳情頁
+
+---
+
+### 👤 使用者與權限管理
+
+#### 使用者管理
+- 本地帳號 CRUD；LDAP 帳號同步
+- 狀態管理（啟用 / 停用）；密碼重設
+- 最後登入時間追蹤
+
+#### 使用者組
+- 群組 CRUD；成員新增 / 移除
+- 組層級叢集權限設定
+
+#### 叢集權限
+- 四種角色：Admin / Ops / Dev / ReadOnly + 自定義
+- 命名空間粒度（`["*"]` 或指定命名空間列表）
+- 支援用戶層級與用戶組層級綁定
+
+#### K8s RBAC
+- ClusterRole / Role / ClusterRoleBinding / RoleBinding 查看
+- 一鍵建立 / 解除權限綁定
+
+---
+
+### 🔒 稽核與合規
+
+#### 操作日誌
+- 所有 API 操作自動記錄（使用者 / 操作類型 / 資源 / 執行結果）
+- 支援按時間範圍、操作類型、使用者篩選
+
+#### Terminal 會話稽核
+- 記錄 kubectl / Pod Exec / SSH 三種 Terminal 的所有指令
+- 會話列表 + 指令詳情逐筆查詢
+
+---
+
+### ⚙️ 系統設定
+- **LDAP 整合**：LDAP Server URL / Bind DN / 用戶 / 群組搜尋設定
+- **AI 設定**：Provider 切換（OpenAI / Azure / Claude / Ollama）；API Key / Endpoint / 模型設定
+- **Grafana 整合**：Grafana URL / API Key / Dashboard ID 設定
+- **系統安全**：JWT Secret 強制設定；AES-256-GCM 憑證欄位加密（`ENCRYPTION_KEY` 環境變數）
+- **多叢集同步策略**：設定 ConfigMap / Secret 跨叢集同步規則（來源 / 目標 / 衝突策略 / Cron）
+
+---
+
+## 技術架構
+
+### 後端
+| 技術 | 用途 |
+|------|------|
+| **Go 1.22+** | 後端主語言 |
+| **Gin** | HTTP 框架 |
+| **GORM** | ORM（支援 SQLite / MySQL） |
+| **client-go** | Kubernetes API 客戶端 |
+| **helm.sh/helm/v3** | Helm SDK |
+| **gorilla/websocket** | WebSocket（Terminal / 日誌串流） |
+| **golang-jwt/jwt** | JWT 認證 |
+| **bcrypt** | 密碼雜湊 |
+| **AES-256-GCM** | kubeconfig 欄位加密 |
+
+### 前端
+| 技術 | 用途 |
+|------|------|
+| **React 19** | UI 框架 |
+| **TypeScript 5.8** | 型別安全 |
+| **Vite 7** | 建構工具 |
+| **Ant Design 5** | UI 元件庫 |
+| **Monaco Editor** | YAML / 程式碼編輯器 |
+| **@monaco-editor/react** | Monaco Diff Viewer |
+| **recharts** | 圖表（成本趨勢 / 監控） |
+| **react-window** | 大列表虛擬捲動 |
+| **@tanstack/react-query** | API 快取與狀態管理 |
+| **react-force-graph-2d** | NetworkPolicy 拓撲視覺化 |
+| **dayjs** | 時間處理 |
+| **i18next** | 多語言（繁中 / 簡中 / 英文） |
+
+---
+
+## 快速開始
+
+### 環境需求
+- Node.js >= 18
+- Go >= 1.22
+- kubectl（可選，用於 kubectl Terminal 功能）
+
+### 前端開發
+```bash
+cd ui
+npm install
+npm run dev
+# 訪問 http://localhost:5173
+```
+
+### 後端開發
+```bash
+# 複製設定檔
+cp config.yaml.example config.yaml
+
+# 啟動（預設使用 SQLite）
+go run main.go
+
+# 預設管理員帳號：admin / Synapse@2026
+```
+
+### 建構生產版本
+```bash
+# 前端建構（嵌入後端二進位）
+cd ui && npm run build
+
+# 後端建構（含嵌入前端靜態資源）
+go build -o synapse main.go
+
+# 啟動
+./synapse
+```
+
+### 環境變數
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `ENCRYPTION_KEY` | kubeconfig AES-256-GCM 加密金鑰（必填，生產環境） | — |
+| `JWT_SECRET` | JWT 簽名密鑰（release 模式必填） | — |
+| `DB_DRIVER` | 資料庫驅動（`sqlite` / `mysql`） | `sqlite` |
+| `DB_DSN` | SQLite 路徑或 MySQL DSN | `./data/synapse.db` |
+| `LOG_FORMAT` | 日誌格式（`text` / `json`） | `text` |
+| `INFORMER_SYNC_TIMEOUT` | K8s Informer 同步超時（秒） | `30` |
+
+---
+
+## 專案結構
+
+```
+Synapse/
+├── main.go                    # 應用入口
+├── internal/
+│   ├── handlers/              # HTTP Handler（業務邏輯入口）
+│   ├── services/              # 服務層（核心業務邏輯）
+│   ├── models/                # GORM 資料模型
+│   ├── middleware/            # Gin Middleware（Auth / CORS / Rate Limit / Audit）
+│   ├── router/                # 路由設定
+│   ├── k8s/                   # K8s 客戶端封裝 + Informer 管理
+│   ├── database/              # 資料庫初始化與遷移
+│   ├── config/                # 設定結構
+│   └── response/              # 統一回應格式
+├── pkg/
+│   ├── logger/                # 結構化日誌（slog）
+│   └── crypto/                # AES-256-GCM 加密套件
+├── runbooks/                  # AI Runbook 知識庫（JSON）
+└── ui/                        # React 前端
+    └── src/
+        ├── pages/             # 頁面元件
+        ├── services/          # API 呼叫層
+        ├── layouts/           # 主佈局
+        ├── components/        # 共用元件
+        └── utils/             # 工具函式
+```
+
+---
+
+## 預設帳號
+
+| 欄位 | 值 |
+|------|-----|
+| 帳號 | `admin` |
+| 密碼 | `Synapse@2026` |
+
+> ⚠️ 生產環境請立即修改預設密碼，並設定 `ENCRYPTION_KEY` 與 `JWT_SECRET`。
+
+---
+
+## 授權
+
+本專案以 MIT License 授權開源。

@@ -224,3 +224,50 @@ export const logService = {
 
 export default logService;
 
+// ---- External Log Sources (Loki / Elasticsearch) ----
+
+export interface LogSource {
+  id: number;
+  cluster_id: number;
+  type: 'loki' | 'elasticsearch';
+  name: string;
+  url: string;
+  username?: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExternalLogSearchParams {
+  query: string;
+  index?: string;      // ES only
+  startTime?: string;  // RFC3339
+  endTime?: string;    // RFC3339
+  limit?: number;
+}
+
+export const logSourceService = {
+  list: (clusterId: string | number) =>
+    request.get<LogSource[]>(`/clusters/${clusterId}/log-sources`),
+
+  create: (
+    clusterId: string | number,
+    data: { type: string; name: string; url: string; username?: string; password?: string; apiKey?: string; enabled: boolean }
+  ) => request.post<LogSource>(`/clusters/${clusterId}/log-sources`, data),
+
+  update: (
+    clusterId: string | number,
+    sourceId: number,
+    data: { name?: string; url?: string; username?: string; password?: string; apiKey?: string; enabled?: boolean }
+  ) => request.put(`/clusters/${clusterId}/log-sources/${sourceId}`, data),
+
+  delete: (clusterId: string | number, sourceId: number) =>
+    request.delete(`/clusters/${clusterId}/log-sources/${sourceId}`),
+
+  search: (clusterId: string | number, sourceId: number, params: ExternalLogSearchParams) =>
+    request.post<{ items: LogEntry[]; total: number }>(
+      `/clusters/${clusterId}/log-sources/${sourceId}/search`,
+      params
+    ),
+};
+

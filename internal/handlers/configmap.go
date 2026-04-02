@@ -13,9 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
+	"encoding/json"
+
 	"github.com/clay-wangzhi/Synapse/internal/config"
 	"github.com/clay-wangzhi/Synapse/internal/k8s"
 	"github.com/clay-wangzhi/Synapse/internal/middleware"
+	"github.com/clay-wangzhi/Synapse/internal/models"
 	"github.com/clay-wangzhi/Synapse/internal/response"
 	"github.com/clay-wangzhi/Synapse/internal/services"
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
@@ -435,6 +438,9 @@ func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
 		return
 	}
 
+	// 更新前儲存版本快照
+	h.saveConfigVersion(uint(id), "configmap", namespace, name, configMap.Data, c)
+
 	// 更新ConfigMap
 	configMap.Labels = req.Labels
 	configMap.Annotations = req.Annotations
@@ -464,4 +470,106 @@ func formatAge(d time.Duration) string {
 		return fmt.Sprintf("%dh", int(d.Hours()))
 	}
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
+}
+
+// ─── 版本歷史 ─────────────────────────────────────────────────────────────────
+
+// saveConfigVersion 儲存 ConfigMap 版本快照（非同步，不影響主流程）
+func (h *ConfigMapHandler) saveConfigVersion(clusterID uint, rType, namespace, name string, data map[string]string, c *gin.Context) {
+	contentBytes, _ := json.Marshal(data)
+	var nextVer int
+	h.db.Model(&models.ConfigVersion{}).
+		Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?", clusterID, rType, namespace, name).
+		Select("COALESCE(MAX(version),0) + 1").Scan(&nextVer)
+	if nextVer == 0 {
+		nextVer = 1
+	}
+	changedBy := ""
+	if u, ok := c.Get("username"); ok {
+		changedBy, _ = u.(string)
+	}
+	ver := &models.ConfigVersion{
+		ClusterID:    clusterID,
+		ResourceType: rType,
+		Namespace:    namespace,
+		Name:         name,
+		Version:      nextVer,
+		ContentJSON:  string(contentBytes),
+		ChangedBy:    changedBy,
+		ChangedAt:    time.Now(),
+	}
+	if err := h.db.Create(ver).Error; err != nil {
+		logger.Warn("儲存 ConfigMap 版本快照失敗", "error", err)
+	}
+}
+
+// GetConfigMapVersions 取得 ConfigMap 版本列表
+func (h *ConfigMapHandler) GetConfigMapVersions(c *gin.Context) {
+	clusterIDStr := c.Param("clusterID")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	id, err := strconv.ParseUint(clusterIDStr, 10, 32)
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	var versions []models.ConfigVersion
+	h.db.Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?",
+		uint(id), "configmap", namespace, name).
+		Order("version DESC").
+		Find(&versions)
+	response.OK(c, gin.H{"items": versions, "total": len(versions)})
+}
+
+// RollbackConfigMap 回滾 ConfigMap 到指定版本
+func (h *ConfigMapHandler) RollbackConfigMap(c *gin.Context) {
+	clusterIDStr := c.Param("clusterID")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	versionStr := c.Param("version")
+	id, err := strconv.ParseUint(clusterIDStr, 10, 32)
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	version, _ := strconv.Atoi(versionStr)
+
+	var ver models.ConfigVersion
+	if err := h.db.Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ? AND version = ?",
+		uint(id), "configmap", namespace, name, version).First(&ver).Error; err != nil {
+		response.NotFound(c, "版本不存在")
+		return
+	}
+
+	var data map[string]string
+	if err := json.Unmarshal([]byte(ver.ContentJSON), &data); err != nil {
+		response.InternalError(c, "版本資料損壞: "+err.Error())
+		return
+	}
+
+	cluster, err := h.clusterSvc.GetCluster(uint(id))
+	if err != nil {
+		response.NotFound(c, "叢集不存在")
+		return
+	}
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
+	if err != nil {
+		response.InternalError(c, "取得 K8s 客戶端失敗: "+err.Error())
+		return
+	}
+	clientset := k8sClient.GetClientset()
+	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		response.NotFound(c, "ConfigMap 不存在")
+		return
+	}
+	// 回滾前先存快照
+	h.saveConfigVersion(uint(id), "configmap", namespace, name, cm.Data, c)
+	cm.Data = data
+	if _, err := clientset.CoreV1().ConfigMaps(namespace).Update(context.Background(), cm, metav1.UpdateOptions{}); err != nil {
+		response.InternalError(c, "回滾失敗: "+err.Error())
+		return
+	}
+	logger.Info("回滾 ConfigMap", "cluster", clusterIDStr, "namespace", namespace, "name", name, "version", version)
+	response.OK(c, gin.H{"message": fmt.Sprintf("已回滾至版本 %d", version)})
 }

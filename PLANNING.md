@@ -30,9 +30,13 @@
 - ✅ Slack / Teams 通知（A3）— `event_alert_service.go` 新增 Slack text + Teams Adaptive Card 格式
 - ✅ Argo Rollouts 操控（A4）— `rollout.go` 新增 Promote / PromoteFull / Abort / GetAnalysisRuns，`RolloutDetail.tsx` 新增操作按鈕
 
+**已完成（2026-04-02 §8.3 Phase B）：**
+- ✅ ResourceQuota / LimitRange CRUD（B3）— `handlers/namespace.go` 新增 8 個 handler；`router.go` 新增路由；`namespaceService.ts` 新增 API；`NamespaceDetail.tsx` 新增配額管理 Card + Modal
+- ✅ ConfigMap / Secret 版本歷史（B2）— `models/config_version.go` + `database.go` AutoMigrate；`handlers/configmap.go` / `handlers/secret.go` 儲存快照 + GetVersions + Rollback；`router.go` 新增 versions / rollback 路由；`configService.ts` 新增 ConfigVersion 型別與 API；`ConfigMapDetail.tsx` 版本歷史 Card（含回滾）；`SecretDetail.tsx` 版本歷史 Card（僅 key 列表，不含 value）
+- ✅ Loki / Elasticsearch 實際查詢整合（B1）— `services/loki_service.go`（QueryRange via HTTP，LogQL）；`services/elasticsearch_service.go`（Search via DSL，Lucene）；`handlers/log_source.go`（LogSource CRUD + SearchExternalLogs）；`database.go` 新增 LogSourceConfig AutoMigrate；`router.go` 新增 log-sources 路由；`logService.ts` 新增 LogSource 型別與 logSourceService；`LogCenter.tsx` 新增「外部日誌」Tab（來源管理表格 + LogQL/Lucene 查詢 + 結果表格）
+
 **未完成（下一批次）：**
-- Helm Release 管理（M4）
-- §8.3 Phase B：Loki/ES 查詢整合、ConfigMap/Secret 版本歷史、ResourceQuota/LimitRange CRUD
+- §8.3 Phase C：部署審批工作流、Image Tag 全域搜尋、VPA
 
 ---
 
@@ -1480,15 +1484,9 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 
 ---
 
-#### 🔴 Loki / Elasticsearch 設定存在但無實際查詢整合
+#### ✅ Loki / Elasticsearch 實際查詢整合（Phase B 已完成）
 
-**現況：** `LogSourceConfig` 模型支援 `loki` / `elasticsearch` 類型，但後端僅儲存連線設定，並未實作對這些系統的查詢邏輯。前端 LogCenter 顯示的是 K8s 容器日誌串流，不是集中式日誌查詢。
-**問題：** 生產環境普遍使用 Loki 或 ES 集中管理日誌，現況等同於「假整合」— 設定了但什麼都做不了。
-**強化方向：**
-- 實作 Loki HTTP API 查詢（`/loki/api/v1/query_range`，LogQL 支援）
-- 實作 Elasticsearch Query DSL 基礎查詢
-- LogCenter 統一入口：K8s 串流 + Loki + ES 三個來源切換
-- 關鍵字搜尋、時間範圍篩選、正規表達式過濾
+**實作：** `services/loki_service.go`（QueryRange via `/loki/api/v1/query_range`）；`services/elasticsearch_service.go`（Search via `/_search` DSL）；`handlers/log_source.go`（LogSource CRUD + SearchExternalLogs）；`LogCenter.tsx` 新增「外部日誌」Tab，支援 LogQL / Lucene 查詢、時間範圍篩選、結果顯示。
 
 ---
 
@@ -1526,14 +1524,9 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 
 ---
 
-#### 🟡 ResourceQuota / LimitRange 缺乏 CRUD
+#### ✅ ResourceQuota / LimitRange CRUD（Phase B 已完成）
 
-**現況：** Namespace 詳情頁展示配額用量，但無法建立或修改 `ResourceQuota` 與 `LimitRange`。
-**問題：** 多租戶環境的核心管控工具無法在平台內操作。
-**強化方向：**
-- ResourceQuota / LimitRange 的建立、編輯、刪除
-- 配額用量視覺化（已用 / 總量 進度條，按 CPU/Memory/PVC 分類）
-- 配額超限預警（接近 80% 時告警）
+**實作：** `handlers/namespace.go` 新增 8 個 handler（ListResourceQuotas / Create / Update / Delete，ListLimitRanges / Create / Update / Delete）；`router.go` 新增路由；`namespaceService.ts` 新增 8 個 API 函式；`NamespaceDetail.tsx` 新增配額管理 Card + 建立/編輯 Modal。
 
 ---
 
@@ -1557,17 +1550,10 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 
 ### 8.2 「完全缺失但高需求」— 重要功能空白
 
-#### 🔴 無 OAuth2 / OIDC 整合
+#### ~~🔴 無 OAuth2 / OIDC 整合~~ ❌ 決策：不實作
 
-**現況：** 僅支援本地帳號與 LDAP。
-**影響：** 無法接入 Google Workspace、GitHub、GitLab、Keycloak、Okta 等主流 SSO 方案，企業導入門檻高。
-**方案：** 整合 OIDC（OpenID Connect），一套接入所有支援 OIDC 的 IdP：
-```go
-// internal/auth/oidc.go
-// 依賴 golang.org/x/oauth2 + coreos/go-oidc
-// 配置：ClientID, ClientSecret, IssuerURL, RedirectURL
-// 流程：Browser → /auth/oidc/login → IdP → /auth/oidc/callback → JWT
-```
+**決定（2026-04-02）：** 不整合 OAuth2 / OIDC。
+**理由：** 現有 LDAP + 本地帳號已滿足目標使用情境；OIDC 引入的複雜度（IdP 配置、redirect flow、token exchange）超過當前收益。後續如需 SSO，評估直接接入 Kubernetes OIDC（kube-apiserver `--oidc-*` 參數）而非自行實作。
 
 ---
 
@@ -1617,14 +1603,9 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 
 ---
 
-#### 🟡 無 ConfigMap / Secret 版本歷史
+#### ✅ ConfigMap / Secret 版本歷史（Phase B 已完成）
 
-**現況：** ConfigMap/Secret CRUD 完整，但修改後無法查看歷史版本或回滾。
-**影響：** 配置變更是常見故障來源，無歷史記錄意味著無法快速回滾。
-**方案：**
-- 每次 Update 前儲存舊版本快照至 DB（`config_history` 表）
-- 版本列表 + Diff 視圖（新舊版本並排比較）
-- 一鍵回滾到指定版本
+**實作：** `models/config_version.go`（ConfigVersion 模型，`config_versions` 表）；`database.go` 新增 AutoMigrate；`handlers/configmap.go` 在 UpdateConfigMap 前儲存快照，新增 GetConfigMapVersions + RollbackConfigMap；`handlers/secret.go` 儲存 key 列表快照（不含 value，安全考量）；`configService.ts` 新增 ConfigVersion 型別與 getVersions/rollback API；`ConfigMapDetail.tsx` 版本歷史 Card（Table + 回滾 Popconfirm）；`SecretDetail.tsx` 版本歷史 Card（僅顯示 key 列表）。
 
 ---
 
@@ -1658,10 +1639,9 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 
 ---
 
-#### 🟢 無 SAML 支援
+#### ~~🟢 無 SAML 支援~~ ❌ 不在規劃範圍
 
-**影響：** 部分老牌企業（銀行、製造業）使用 SAML IdP（AD FS、Shibboleth），OIDC 無法涵蓋。
-**方案：** 整合 `crewjam/saml` 套件，提供 SAML SP 功能（優先序低於 OIDC）
+**決定（2026-04-02）：** OIDC 已不實作，SAML 亦同步排除。老牌企業 SSO 需求如有必要，未來再獨立評估。
 
 ---
 
@@ -1676,16 +1656,16 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 
 | 優先級 | 功能 | 類別 | 工作量 | 狀態 |
 |--------|------|------|--------|------|
-| 🔴 P0 | Loki / ES 實際查詢整合 | 深度不足 | 3 週 | Phase B |
-| 🔴 P0 | OAuth2 / OIDC 整合 | 完全缺失 | 2 週 | Phase C |
+| 🔴 P0 | Loki / ES 實際查詢整合 | 深度不足 | 3 週 | ✅ **完成**（Phase B） |
+| ~~🔴 P0~~ | ~~OAuth2 / OIDC 整合~~ | 完全缺失 | — | ❌ 不實作 |
 | 🔴 P0 | HPA CRUD | 深度不足 | 1 週 | ✅ **完成** |
 | 🔴 P0 | 部署審批工作流 | 完全缺失 | 3 週 | Phase C |
 | 🟡 P1 | Argo Rollouts 操控（Promote/Abort/Analysis） | 深度不足 | 2 週 | ✅ **完成** |
 | 🟡 P1 | 通知渠道擴充（Slack / Teams） | 深度不足 | 1 週 | ✅ **完成** |
 | 🟡 P1 | YAML Apply Dry-run / Diff | 深度不足 | 1 週 | ✅ **完成**（已存在） |
-| 🟡 P1 | ConfigMap/Secret 版本歷史 | 完全缺失 | 2 週 | Phase B |
-| 🟡 P1 | 跨叢集統一工作負載視圖 | 完全缺失 | 2 週 | Phase B |
-| 🟡 P1 | ResourceQuota / LimitRange CRUD | 深度不足 | 1 週 | Phase B |
+| 🟡 P1 | ConfigMap/Secret 版本歷史 | 完全缺失 | 2 週 | ✅ **完成**（Phase B） |
+| 🟡 P1 | 跨叢集統一工作負載視圖 | 完全缺失 | 2 週 | Phase C |
+| 🟡 P1 | ResourceQuota / LimitRange CRUD | 深度不足 | 1 週 | ✅ **完成**（Phase B） |
 | 🟡 P1 | VPA 支援 | 完全缺失 | 2 週 | Phase C |
 | 🟡 P1 | Image Tag 全域搜尋 | 完全缺失 | 2 週 | Phase C |
 | 🟢 P2 | Port-Forward | 完全缺失 | 2 週 | Phase D |
@@ -1700,7 +1680,7 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 ### 8.4 核心反思結論
 
 > 1. **廣度夠但深度不足：** 日誌、HPA、Rollouts、通知等功能都「有做」但停在 MVP 水準，用戶在生產環境使用時很快就會碰壁。
-> 2. **認證系統是採用瓶頸：** 只有 LDAP + 本地帳號，現代企業 80% 使用 OIDC，OAuth2/OIDC 是優先度最高的補足項。
+> 2. **認證系統維持現狀：** LDAP + 本地帳號已滿足目標使用情境，OAuth2/OIDC 已評估後決定不實作（複雜度超過收益）。
 > 3. **缺乏生產環境保護機制：** 無審批工作流、無命名空間保護、無變更窗口，對於真正想把 Synapse 用在生產環境的企業是最大的風險點。
 > 4. **跨叢集能力是差異化機會：** 多數競品（Kuboard、Lens）是單叢集或弱多叢集設計，統一工作負載視圖、跨叢集映像索引是 Synapse 的獨特競爭點，應加強而非停留在現狀。
 

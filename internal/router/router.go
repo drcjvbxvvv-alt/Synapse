@@ -190,6 +190,16 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					namespaces.GET("/:namespace", namespaceHandler.GetNamespaceDetail)
 					namespaces.POST("", namespaceHandler.CreateNamespace)
 					namespaces.DELETE("/:namespace", namespaceHandler.DeleteNamespace)
+					// ResourceQuota CRUD
+					namespaces.GET("/:namespace/quotas", namespaceHandler.ListResourceQuotas)
+					namespaces.POST("/:namespace/quotas", namespaceHandler.CreateResourceQuota)
+					namespaces.PUT("/:namespace/quotas/:name", namespaceHandler.UpdateResourceQuota)
+					namespaces.DELETE("/:namespace/quotas/:name", namespaceHandler.DeleteResourceQuota)
+					// LimitRange CRUD
+					namespaces.GET("/:namespace/limitranges", namespaceHandler.ListLimitRanges)
+					namespaces.POST("/:namespace/limitranges", namespaceHandler.CreateLimitRange)
+					namespaces.PUT("/:namespace/limitranges/:name", namespaceHandler.UpdateLimitRange)
+					namespaces.DELETE("/:namespace/limitranges/:name", namespaceHandler.DeleteLimitRange)
 				}
 
 				// monitoring 子分组
@@ -381,6 +391,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					configmaps.PUT("/:namespace/:name", configMapHandler.UpdateConfigMap)
 					configmaps.DELETE("/:namespace/:name", configMapHandler.DeleteConfigMap)
 					configmaps.POST("/yaml/apply", resourceYAMLHandler.ApplyConfigMapYAML)
+					configmaps.GET("/:namespace/:name/versions", configMapHandler.GetConfigMapVersions)
+					configmaps.POST("/:namespace/:name/versions/:version/rollback", configMapHandler.RollbackConfigMap)
 				}
 
 				// secrets 子分组
@@ -394,6 +406,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					secrets.PUT("/:namespace/:name", secretHandler.UpdateSecret)
 					secrets.DELETE("/:namespace/:name", secretHandler.DeleteSecret)
 					secrets.POST("/yaml/apply", resourceYAMLHandler.ApplySecretYAML)
+					secrets.GET("/:namespace/:name/versions", secretHandler.GetSecretVersions)
 				}
 
 				// services 子分组
@@ -517,6 +530,17 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					logs.GET("/namespaces", logCenterHandler.GetNamespacesForLogs) // 获取命名空间列表
 					logs.GET("/pods", logCenterHandler.GetPodsForLogs)             // 获取Pod列表
 					logs.POST("/export", logCenterHandler.ExportLogs)              // 导出日志
+				}
+
+				// log-sources - 外部日誌源（Loki / Elasticsearch）
+				logSrcHandler := handlers.NewLogSourceHandler(db)
+				logSrcs := cluster.Group("/log-sources")
+				{
+					logSrcs.GET("", logSrcHandler.ListLogSources)
+					logSrcs.POST("", logSrcHandler.CreateLogSource)
+					logSrcs.PUT("/:sourceId", logSrcHandler.UpdateLogSource)
+					logSrcs.DELETE("/:sourceId", logSrcHandler.DeleteLogSource)
+					logSrcs.POST("/:sourceId/search", logSrcHandler.SearchExternalLogs)
 				}
 
 				// O&M - 监控中心（运维）

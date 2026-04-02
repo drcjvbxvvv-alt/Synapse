@@ -188,6 +188,8 @@ func autoMigrate(db *gorm.DB) error {
 		&models.BenchResult{},        // CIS kube-bench 評分表
 		&models.SyncPolicy{},         // 多叢集配置同步策略表
 		&models.SyncHistory{},        // 同步歷史紀錄表
+		&models.ConfigVersion{},      // ConfigMap/Secret 版本歷史快照表
+		&models.LogSourceConfig{},    // 外部日誌源設定表（Loki / Elasticsearch）
 	)
 
 	// 根据数据库驱动类型重新启用外键约束检查
