@@ -111,6 +111,10 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		}
 	}()
 
+	// 啟動 Event 告警工作器（後台週期掃描 K8s Events 並比對規則）
+	eventAlertWorker := services.NewEventAlertWorker(db, k8sMgr, clusterSvc)
+	eventAlertWorker.Start()
+
 	// /api/v1
 	api := r.Group("/api/v1")
 
@@ -526,6 +530,18 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					crdGroup.GET("/resources", crdHandler.ListCRDResources)
 					crdGroup.GET("/resources/:namespace/:name", crdHandler.GetCRDResource)
 					crdGroup.DELETE("/resources/:namespace/:name", crdHandler.DeleteCRDResource)
+				}
+
+				// Event 告警規則
+				eventAlertHandler := handlers.NewEventAlertHandler(db)
+				eventAlerts := cluster.Group("/event-alerts")
+				{
+					eventAlerts.GET("/rules", eventAlertHandler.ListRules)
+					eventAlerts.POST("/rules", eventAlertHandler.CreateRule)
+					eventAlerts.PUT("/rules/:ruleID", eventAlertHandler.UpdateRule)
+					eventAlerts.DELETE("/rules/:ruleID", eventAlertHandler.DeleteRule)
+					eventAlerts.PUT("/rules/:ruleID/toggle", eventAlertHandler.ToggleRule)
+					eventAlerts.GET("/history", eventAlertHandler.ListHistory)
 				}
 			}
 		}

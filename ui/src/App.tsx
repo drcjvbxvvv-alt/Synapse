@@ -49,6 +49,7 @@ import { MonitoringCenter } from './pages/om';
 import HelmList from './pages/helm/HelmList';
 import CRDList from './pages/crd/CRDList';
 import CRDResources from './pages/crd/CRDResources';
+import EventAlertRules from './pages/alert/EventAlertRules';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
 import { PermissionGuard } from './components/PermissionGuard';
@@ -199,6 +200,8 @@ const AppContent: React.FC = () => {
               {/* CRD 自動發現 */}
               <Route path="clusters/:clusterId/crds" element={<CRDList />} />
               <Route path="clusters/:clusterId/crds/:group/:version/:plural" element={<CRDResources />} />
+              {/* Event 告警規則引擎 */}
+              <Route path="clusters/:clusterId/event-alerts" element={<EventAlertRules />} />
               {/* 审计管理路由 - 仅平台管理员 */}
               <Route path="audit/operations" element={
                 <PermissionGuard platformAdminOnly>

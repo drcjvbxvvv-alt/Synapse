@@ -475,7 +475,7 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 - [x] 多 AI 提供者設定頁（支援 OpenAI / Azure OpenAI / Anthropic Claude / Ollama；AIConfig 新增 api_version 欄位；Provider 切換自動填入預設端點與模型選單；ai_provider.go 處理各 Provider 的 URL、Auth 頭與 Anthropic 獨立格式）
 - [x] CRD 自動發現與通用列表（`handlers/crd.go` + 動態客戶端；前端 CRDList / CRDResources 頁面；側邊欄 CRD 管理入口）
 - [x] NetworkPolicy 管理介面（`handlers/networkpolicy.go` + 動態 CRUD；前端 NetworkPolicyTab；網路管理頁新增第三個 Tab；三語 i18n）
-- [ ] Event 告警規則引擎
+- [x] Event 告警規則引擎（`models/event_alert.go` + `services/event_alert_service.go` + `handlers/event_alert.go`；後台 Worker 每 60 秒掃描 K8s Events；Webhook / DingTalk 通知；30 分鐘去重；前端 EventAlertRules 頁面含規則 CRUD + 告警歷史兩分頁）
 
 ---
 
