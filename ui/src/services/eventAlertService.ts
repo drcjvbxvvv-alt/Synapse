@@ -1,5 +1,5 @@
 import { request } from '../utils/api';
-import type { ApiResponse, PaginatedResponse } from '../types';
+import type { PaginatedResponse } from '../types';
 
 export interface EventAlertRule {
   id: number;
@@ -31,25 +31,22 @@ export interface EventAlertHistory {
   triggeredAt: string;
 }
 
-export type RuleListResponse = ApiResponse<PaginatedResponse<EventAlertRule>>;
-export type HistoryListResponse = ApiResponse<PaginatedResponse<EventAlertHistory>>;
-
 export const EventAlertService = {
-  listRules: (clusterId: string, page = 1, pageSize = 20): Promise<RuleListResponse> =>
+  listRules: (clusterId: string, page = 1, pageSize = 20): Promise<PaginatedResponse<EventAlertRule>> =>
     request.get(`/clusters/${clusterId}/event-alerts/rules?page=${page}&pageSize=${pageSize}`),
 
-  createRule: (clusterId: string, rule: Partial<EventAlertRule>): Promise<ApiResponse<EventAlertRule>> =>
+  createRule: (clusterId: string, rule: Partial<EventAlertRule>): Promise<EventAlertRule> =>
     request.post(`/clusters/${clusterId}/event-alerts/rules`, rule),
 
-  updateRule: (clusterId: string, ruleId: number, rule: Partial<EventAlertRule>): Promise<ApiResponse<EventAlertRule>> =>
+  updateRule: (clusterId: string, ruleId: number, rule: Partial<EventAlertRule>): Promise<EventAlertRule> =>
     request.put(`/clusters/${clusterId}/event-alerts/rules/${ruleId}`, rule),
 
-  deleteRule: (clusterId: string, ruleId: number): Promise<ApiResponse<null>> =>
+  deleteRule: (clusterId: string, ruleId: number): Promise<null> =>
     request.delete(`/clusters/${clusterId}/event-alerts/rules/${ruleId}`),
 
-  toggleRule: (clusterId: string, ruleId: number, enabled: boolean): Promise<ApiResponse<{ enabled: boolean }>> =>
+  toggleRule: (clusterId: string, ruleId: number, enabled: boolean): Promise<{ enabled: boolean }> =>
     request.put(`/clusters/${clusterId}/event-alerts/rules/${ruleId}/toggle`, { enabled }),
 
-  listHistory: (clusterId: string, page = 1, pageSize = 20): Promise<HistoryListResponse> =>
+  listHistory: (clusterId: string, page = 1, pageSize = 20): Promise<PaginatedResponse<EventAlertHistory>> =>
     request.get(`/clusters/${clusterId}/event-alerts/history?page=${page}&pageSize=${pageSize}`),
 };

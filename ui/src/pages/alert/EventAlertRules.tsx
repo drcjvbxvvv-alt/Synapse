@@ -69,10 +69,8 @@ const EventAlertRules: React.FC = () => {
     setRulesLoading(true);
     try {
       const res = await EventAlertService.listRules(clusterId, page);
-      if (res.code === 0 && res.data) {
-        setRules(res.data.items ?? []);
-        setRulesTotal(res.data.total ?? 0);
-      }
+      setRules(res.items ?? []);
+      setRulesTotal(res.total ?? 0);
     } finally {
       setRulesLoading(false);
     }
@@ -83,10 +81,8 @@ const EventAlertRules: React.FC = () => {
     setHistoryLoading(true);
     try {
       const res = await EventAlertService.listHistory(clusterId, page);
-      if (res.code === 0 && res.data) {
-        setHistory(res.data.items ?? []);
-        setHistoryTotal(res.data.total ?? 0);
-      }
+      setHistory(res.items ?? []);
+      setHistoryTotal(res.total ?? 0);
     } finally {
       setHistoryLoading(false);
     }

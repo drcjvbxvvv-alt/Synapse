@@ -301,135 +301,457 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 **背景：** NetworkPolicy 是 Kubernetes 零信任網路的關鍵，但 YAML 撰寫困難且難以直觀理解流量規則。
 
 **功能範圍：**
-- NetworkPolicy 列表與 CRUD
-- 流量規則視覺化（拓撲圖，節點為 Pod/Namespace，邊為允許流量）
-- 規則建立精靈（選擇 ingress/egress，定義 selector、port、CIDR）
-- 規則衝突檢測與警告
+- ✅ NetworkPolicy 列表與 CRUD（已完成）
+- 流量規則視覺化拓撲圖（節點 = Pod/Namespace，有向邊 = 允許流量）
+- 規則建立精靈（3 步驟：定義 PodSelector → 設定 Ingress/Egress 規則 → 預覽確認）
+- 規則衝突檢測（後端靜態分析：重疊 selector + 矛盾 allow/deny）
 
-**技術方案：** 前端使用 `@antv/g6` 或 `reactflow` 繪製拓撲圖。
+**技術方案（待實作部分）：**
+
+| 元件 | 方案 | 說明 |
+|------|------|------|
+| 拓撲圖渲染 | `reactflow` v12 | 已在 Appendix A 選定，Dagre 佈局 |
+| 節點資料來源 | `GET /clusters/:id/networkpolicies/topology` | 後端組合 NP + Pod label 資訊 |
+| 衝突檢測 | `GET /clusters/:id/networkpolicies/conflicts` | 後端靜態分析，回傳衝突對清單 |
+| 精靈步驟 | Ant Design Steps + Form | 最終輸出為 YAML → 複用現有儲存邏輯 |
+
+**後端新增 API：**
+```
+GET  /clusters/:id/networkpolicies/topology          拓撲節點/邊資料
+GET  /clusters/:id/networkpolicies/conflicts         衝突規則清單
+POST /clusters/:id/networkpolicies/wizard-validate   精靈步驟驗證
+```
+
+**前端新增元件：**
+```
+ui/src/pages/network/NetworkPolicyTopology.tsx   ReactFlow 拓撲圖
+ui/src/pages/network/NetworkPolicyWizard.tsx     3 步驟建立精靈
+```
+
+**實作難度：** ⭐⭐⭐⭐（高，ReactFlow 整合 + 衝突邏輯）
+**估計工作量：** 3 週
 
 ---
 
 ### 5.3 💰 資源成本分析（中優先）
 
-**背景：** 多叢集環境下，各團隊資源用量不透明，缺乏成本分攤依據。
+**背景：** 多叢集環境下，各團隊資源用量不透明，缺乏成本分攤依據。企業用戶強需求，是與 Rancher/Kuboard 差異化的關鍵功能。
 
 **功能範圍：**
 - 依命名空間 / 工作負載 / 標籤維度的 CPU / Memory 用量統計
-- 與雲端定價整合（AWS / GCP / Azure 節點定價表）
-- 月度成本趨勢圖
-- 資源浪費識別（長期低用量 Deployment）
-- 成本報表匯出（CSV / PDF）
+- 可設定單價模型（CPU 核 / 小時、GB 記憶體 / 小時，或對應雲廠商定價）
+- 月度成本趨勢折線圖（最近 6 個月）
+- 資源浪費識別（CPU 用量持續 < 請求量 10% 超過 7 天）
+- 成本報表匯出（CSV）
 
-**技術方案：** 後端定期從 Prometheus 拉取用量並持久化；成本計算引入可設定的單價。
+**資料模型：**
+```go
+// internal/models/cost.go
+
+type CostConfig struct {
+    ID           uint    // 每個叢集一筆
+    ClusterID    uint
+    CpuPricePerCore  float64  // USD / core / hour，例如 0.048
+    MemPricePerGiB   float64  // USD / GiB / hour，例如 0.006
+    Currency     string  // "USD" / "TWD" / "CNY"
+    UpdatedAt    time.Time
+}
+
+type ResourceSnapshot struct {
+    ID          uint
+    ClusterID   uint
+    Namespace   string
+    Workload    string  // "Deployment/app-name"
+    Date        time.Time  // 每日快照（精確到日）
+    CpuRequest  float64  // 單位：millicores
+    CpuUsage    float64
+    MemRequest  float64  // 單位：MiB
+    MemUsage    float64
+    PodCount    int
+}
+```
+
+**後端架構：**
+
+```
+services/cost_service.go
+  ├── CostWorker（每日 00:05 執行）
+  │     ├── 從 Prometheus 查詢 container_cpu_usage_seconds_total
+  │     │   + kube_pod_container_resource_requests（CPU/Memory）
+  │     └── 若無 Prometheus → fallback 到 K8s metrics-server
+  ├── CalcCost(snapshot, config) float64
+  ├── DetectWaste(clusterID) []WasteReport
+  └── ExportCSV(clusterID, month) []byte
+```
+
+**API 端點：**
+```
+GET  /clusters/:id/cost/config           讀取定價設定
+PUT  /clusters/:id/cost/config           更新定價設定
+GET  /clusters/:id/cost/overview         叢集總覽（本月估算 + 上月對比）
+GET  /clusters/:id/cost/namespaces       命名空間成本排行（支援 ?month=2026-04）
+GET  /clusters/:id/cost/workloads        工作負載成本明細（支援 ?namespace=&page=）
+GET  /clusters/:id/cost/trend            6 個月趨勢（按命名空間堆疊）
+GET  /clusters/:id/cost/waste            浪費識別報告
+GET  /clusters/:id/cost/export           下載 CSV（?month=2026-04）
+```
+
+**前端頁面：**
+```
+ui/src/pages/cost/
+  ├── CostDashboard.tsx      主儀表板（總覽卡 + 排行榜 + 趨勢圖）
+  ├── CostConfig.tsx         定價設定 Modal
+  ├── WasteReport.tsx        浪費識別列表
+  └── costService.ts         API service
+```
+
+**前端 UI 構成：**
+- 頂部：本月預估總費用 / 最高命名空間 / 浪費百分比 — 3 個 Statistic Card
+- 左側：命名空間成本 Bar Chart（Ant Design Charts / recharts）
+- 右側：月度趨勢 Line Chart（堆疊，不同命名空間用不同顏色）
+- 底部：工作負載明細 Table（含 CPU 利用率進度條、記憶體利用率、估算成本）
+- 浪費頁籤：低利用率工作負載列表 + 建議縮容動作
+
+**依賴條件：**
+- Prometheus 已部署（若無則退化為 requests-only 計算，不含實際用量）
+- metrics-server 作為備援資料來源
+
+**實作難度：** ⭐⭐⭐（中，主要是 Prometheus 查詢與資料模型設計）
+**估計工作量：** 4 週
 
 ---
 
-### 5.4 🔔 K8s Event 告警規則（中優先）
-
-**背景：** AlertManager 整合現有，但 K8s Event（OOMKill、ImagePullBackoff、CrashLoopBackoff）需手動查看，無主動通知。
-
-**功能範圍：**
-- Event 類型告警規則設定（OOMKill、Node NotReady、PVC Pending 等）
-- 告警通知渠道（Email、Webhook、企業微信/釘釘）
-- 告警靜默（Silence）管理
-- 告警歷史與確認（Acknowledge）機制
-
-**技術方案：** 後端 Event Informer 訂閱 K8s Events，比對規則後觸發通知。
+### 5.4 🔔 K8s Event 告警規則（中優先）✅ 已完成
 
 ---
 
 ### 5.5 🤖 AI 能力升級（中優先）
 
-**背景：** 平台已有 AI Chat WebSocket 端點，但功能尚未完整開放於 UI。
+**背景：** AI 診斷按鈕與多 Provider 設定已完成。待完成部分為更深度的智慧運維能力。
 
-**功能範圍：**
+**已完成：**
+- ✅ Pod / Workload AI 診斷（透過 ai:diagnose 事件驅動）
+- ✅ 多 AI Provider（OpenAI / Azure / Anthropic / Ollama）
 
-**智慧診斷：**
-- Pod CrashLoop / OOMKill 自動分析（取得日誌 + 事件 → AI 分析根因）
-- 部署失敗診斷（YAML 錯誤、資源不足、映像問題）
-- 叢集健康異常解讀
+**待實作功能：**
 
-**智慧運維：**
-- 自然語言查詢（「列出所有重啟超過 5 次的 Pod」→ 轉換為 API 呼叫）
-- YAML 生成助手（描述需求 → 生成 Deployment YAML）
-- Runbook 自動推薦
+#### 5.5.1 自然語言 K8s 查詢（NL Query）
 
-**AI 提供者：**
-- 支援 OpenAI / Azure OpenAI / Claude / 本地 Ollama
-- 敏感資料過濾（不傳送 Secret 明文給 AI）
+**設計方案：**
+```
+使用者輸入 → AI 解析意圖 → 生成結構化查詢 → 執行 K8s API → 回傳結果
+
+系統 Prompt 範例：
+  你是 KubePolaris K8s 查詢助手。
+  將使用者問題轉換為 JSON 查詢規格：
+  { "resource": "pods", "filter": {"restartCount": {">": 5}}, "namespace": "_all_" }
+```
+
+**後端新增：**
+```go
+// POST /ai/nl-query
+// 接收 { "question": "列出所有重啟超過 5 次的 Pod" }
+// AI 產生 QuerySpec → handlers/ai_query.go 執行對應 K8s API
+// 回傳結構化資源列表
+```
+
+**支援查詢類型（第一版）：**
+- Pod（重啟次數、狀態、命名空間）
+- Deployment（副本數、映像版本）
+- Node（狀態、標籤、CPU/記憶體壓力）
+- Event（類型、原因、時間範圍）
+
+#### 5.5.2 YAML 生成助手
+
+**設計方案：**
+```
+使用者描述 → AI 以 K8s 專家角色生成 YAML → 前端 Monaco 預覽 → 可直接套用
+```
+
+**前端整合：**
+- 在 AI Chat 面板新增 `/yaml` 指令模式
+- 輸出的 YAML 可一鍵複製或直接送往 `POST /clusters/:id/yaml/apply`
+
+#### 5.5.3 敏感資料過濾
+
+**設計方案：**
+```go
+// internal/services/ai_sanitizer.go
+// 在組裝 AI prompt 前，過濾所有 Secret data 欄位值
+// 替換為 "[REDACTED: secret/my-secret]"
+func SanitizeContext(ctx string) string
+```
+
+過濾規則：
+- Secret `data` 欄位值 → `[REDACTED]`
+- 含 `password`/`token`/`key` 的環境變數值 → `[REDACTED]`
+- PEM 憑證內容 → `[REDACTED: certificate]`
+
+#### 5.5.4 Runbook 自動推薦
+
+**設計方案：**
+- 內建 Runbook 知識庫（JSON 檔案，隨二進位嵌入）
+- AI 診斷回應後，後端從知識庫比對 reason/message keyword，附加 runbook 連結
+- 第一版 10 個常見場景：OOMKilled、CrashLoopBackOff、ImagePullBackOff、Evicted、NodeNotReady、PVCPending、CPUThrottling、FailedScheduling、DiskPressure、NetworkPolicy 阻擋
+
+**API：**
+```
+GET /ai/runbooks?reason=OOMKilled     回傳相關 Runbook 列表
+```
+
+**實作難度（整體）：** ⭐⭐⭐⭐（高，NL Query 需 prompt engineering 迭代）
+**估計工作量：** 4 週
 
 ---
 
-### 5.6 📋 CRD 通用管理介面（中優先）
-
-**背景：** 各叢集可能安裝不同 Operator（如 Cert-Manager、Kafka Operator），目前只能透過 YAML 管理。
-
-**功能範圍：**
-- 自動發現叢集內所有 CRD
-- 通用資源列表（依 CRD 定義產生欄位）
-- 詳情頁（JSON Schema 驅動的表單）
-- YAML 讀寫支援
-- 常用 Operator CRD 預設欄位設定（Cert-Manager Certificate、Kafka 等）
+### 5.6 📋 CRD 通用管理介面（中優先）✅ 已完成
 
 ---
 
 ### 5.7 🔄 多叢集工作流程（低優先）
 
+**背景：** 多叢集管理的核心價值在於跨叢集協作，目前平台叢集間彼此隔離，無任何協同操作。
+
 **功能範圍：**
-- 跨叢集工作負載遷移精靈
-- 多叢集配置同步（ConfigMap / Secret 從主叢集推送到多個叢集）
-- 跨叢集流量策略（與 Istio / Linkerd 整合）
+
+#### 5.7.1 跨叢集工作負載遷移精靈
+
+**流程：**
+```
+選擇來源叢集 → 選擇工作負載 → 選擇目標叢集 → 命名空間映射
+→ 資源檢查（目標叢集是否有足夠 CPU/記憶體）→ 確認 → 執行遷移
+```
+
+**後端邏輯：**
+```go
+// POST /workloads/migrate
+// 1. 從來源叢集取得 Deployment YAML（去除 status/resourceVersion）
+// 2. 在目標叢集建立 Namespace（若不存在）
+// 3. 同步相依 ConfigMap / Secret（可選）
+// 4. Apply Deployment 至目標叢集
+// 5. 回傳遷移結果（成功/失敗詳情）
+```
+
+#### 5.7.2 多叢集配置同步
+
+**設計方案：**
+- 定義「同步策略」：來源叢集 + 來源命名空間 + 資源類型 + 目標叢集列表
+- 支援手動觸發或定時（Cron）同步
+- 衝突策略：`overwrite` / `skip` / `merge`
+
+**資料模型：**
+```go
+type SyncPolicy struct {
+    ID              uint
+    Name            string
+    SourceClusterID uint
+    SourceNamespace string
+    ResourceType    string  // "ConfigMap" / "Secret"
+    ResourceNames   string  // JSON 陣列
+    TargetClusters  string  // JSON 陣列（叢集 ID）
+    ConflictPolicy  string  // "overwrite" / "skip"
+    Schedule        string  // Cron 表達式，空字串表示手動
+    LastSyncAt      time.Time
+}
+```
+
+#### 5.7.3 跨叢集流量策略（Istio 整合，僅查看）
+
+**第一版範圍（保守）：**
+- 查看叢集內已安裝的 Istio VirtualService / ServiceEntry CRD
+- 複用 CRD 通用介面（5.6 已完成）實現，不額外開發
+
+**實作難度：** ⭐⭐⭐（中，遷移精靈最複雜，同步邏輯次之）
+**估計工作量：** 5 週
 
 ---
 
 ### 5.8 🛡️ 合規性與安全掃描（低優先）
 
-**功能範圍：**
-- OPA / Gatekeeper 策略管理介面
-- Pod Security Admission 設定
-- Trivy 映像掃描整合（列出高危漏洞的工作負載）
-- CIS Kubernetes Benchmark 自動評分
-- 合規報告生成
+**背景：** 企業合規需求（SOC2、等保三級）要求定期評估 K8s 叢集安全狀態。
+
+**功能範圍與實作策略：**
+
+#### 5.8.1 Trivy 映像掃描整合
+
+**設計方案：**
+- 後端透過 `os/exec` 呼叫 `trivy image <image>` 取得掃描結果（需主機已安裝 Trivy）
+- 或呼叫 Trivy Server API（`trivy server --listen 0.0.0.0:4954`）
+- 掃描結果存入 DB，關聯至工作負載
+
+```go
+type ImageScanResult struct {
+    ID            uint
+    ClusterID     uint
+    Namespace     string
+    Workload      string
+    Image         string
+    ScannedAt     time.Time
+    CriticalCount int
+    HighCount     int
+    MediumCount   int
+    ResultJSON    string  // 完整 Trivy JSON 結果
+}
+```
+
+**API：**
+```
+POST /clusters/:id/security/scan           觸發掃描（非同步）
+GET  /clusters/:id/security/scan-results   掃描結果列表
+GET  /clusters/:id/security/scan-results/:workload  特定工作負載結果
+```
+
+#### 5.8.2 CIS Kubernetes Benchmark 評分
+
+**設計方案：**
+- 在目標叢集建立短暫 `kube-bench` Job（使用官方 `aquasec/kube-bench` 映像）
+- 等待 Job 完成，取得 logs，解析 JSON 輸出
+- 儲存評分摘要（PASS/FAIL/WARN 計數）
+
+**評分維度：** Master Node、Worker Node、etcd、Control Plane、Policies
+
+#### 5.8.3 OPA/Gatekeeper 策略管理
+
+**設計方案（利用已有 CRD 介面）：**
+- `ConstraintTemplate` / `Constraint` CRD 通過 5.6 通用介面管理
+- 新增「Gatekeeper 儀表板」：統計各策略違規次數（從 Constraint status 讀取）
+
+**實作難度：** ⭐⭐⭐⭐（高，Trivy 整合與 kube-bench Job 管理最複雜）
+**估計工作量：** 6 週
 
 ---
 
 ### 5.9 📦 備份與災難恢復（低優先）
 
-**功能範圍：**
-- Velero 整合（備份排程、還原操作）
-- etcd 快照管理
-- 工作負載設定匯出（YAML bundle）
-- 跨叢集還原精靈
+**背景：** 生產環境需要定期備份，但 Velero 部署門檻高，第一版聚焦於「輕量匯出」。
+
+**功能範圍（分兩階段）：**
+
+#### Phase 1：工作負載配置匯出（無外部依賴）
+
+**設計方案：**
+- 選擇叢集 + 命名空間 → 後端依序取出所有資源 YAML → 打包成 ZIP 下載
+- 資源清單：Deployment、StatefulSet、DaemonSet、Service、Ingress、ConfigMap（不含 Secret 值）、PVC（不含資料）、HPA、CronJob
+- 提供 `manifest.json` 索引，記錄資源版本與匯出時間
+
+```
+GET /clusters/:id/backup/export?namespace=prod    下載 ZIP 包
+```
+
+#### Phase 2：Velero 整合（需叢集已安裝 Velero）
+
+**設計方案：**
+- 透過 K8s CRD 管理 Velero `Backup` / `Schedule` / `Restore` 資源
+- 複用 CRD 通用介面（5.6）實現基礎 CRUD
+- 新增 Velero 專屬儀表板：備份清單 + 狀態 + 觸發還原
+
+```go
+// 偵測叢集是否安裝 Velero
+// GET /clusters/:id/backup/velero-status
+// 回傳 { installed: bool, version: string }
+```
+
+**etcd 快照：** 僅限 Self-managed 叢集（EKS/GKE/AKS 不適用），優先級最低，暫不實作。
+
+**實作難度：** ⭐⭐（Phase 1 低；Phase 2 中）
+**估計工作量：** Phase 1：1 週；Phase 2：3 週
 
 ---
 
 ### 5.10 🖥️ CLI 工具（低優先）
 
+**背景：** 提供 CLI 工具可讓 DevOps 工程師在 CI/CD pipeline 中使用平台功能，無需開啟瀏覽器。
+
 **功能範圍：**
-- `kubepolaris` CLI 指令，功能對應 Web UI 操作
-- 支援 kubeconfig 自動同步（從 Web 平台匯出叢集憑證）
-- 腳本化 CI/CD 場景（`kubepolaris deploy --cluster prod --namespace app`）
+
+**技術方案：**
+- 使用 `cobra` + `viper` 框架，獨立 Go 二進位（`cmd/cli/main.go`）
+- 設定檔：`~/.kubepolaris/config.yaml`（server URL + JWT token）
+- 輸出格式：`--output table|json|yaml`
+
+**指令設計：**
+```
+kubepolaris login --server https://... --token <token>
+kubepolaris cluster list
+kubepolaris cluster use <id>
+
+kubepolaris pod list [--namespace <ns>] [--cluster <id>]
+kubepolaris pod logs <name> --namespace <ns>
+
+kubepolaris workload list [--type deployment|statefulset]
+kubepolaris workload rollout restart <name> --namespace <ns>
+kubepolaris workload rollout undo <name> --namespace <ns>
+
+kubepolaris helm list [--namespace <ns>]
+kubepolaris helm upgrade <release> --chart <repo/chart> --values values.yaml
+
+kubepolaris yaml apply -f manifest.yaml --cluster <id>
+
+kubepolaris cost overview [--month 2026-04]
+```
+
+**CI/CD 整合範例：**
+```yaml
+# GitHub Actions
+- name: Deploy to Production
+  run: |
+    kubepolaris helm upgrade myapp --chart stable/myapp \
+      --set image.tag=${{ github.sha }} \
+      --cluster prod --namespace production
+```
+
+**分發方式：**
+- `go build` 單一二進位，無外部依賴
+- GitHub Releases 提供 Linux / macOS / Windows 預編譯版本
+- `go install github.com/clay-wangzhi/KubePolaris/cmd/cli@latest`
+
+**實作難度：** ⭐⭐（低，主要是 REST API 封裝）
+**估計工作量：** 3 週
 
 ---
 
 ## 6. 優先序與里程碑
 
-### 優先序矩陣
+### 功能完成狀態總覽
+
+| 里程碑 | 功能 | 狀態 | 優先級 | 估計工作量 |
+|--------|------|------|--------|-----------|
+| M1 | 安全強化（加密/JWT/Rate Limit/WS） | ✅ 已完成 | 高 | — |
+| M2 | 穩定性與效能（Informer/WAL/分頁/虛擬捲動） | ✅ 已完成 | 高 | — |
+| M3 | 可觀測性（Prometheus/slog/錯誤碼） | ✅ 已完成 | 中 | — |
+| M4 | Helm Release 管理 | ✅ 已完成 | 高 | — |
+| M5 | AI 診斷 + CRD + NetworkPolicy CRUD + Event 告警 | ✅ 已完成 | 中 | — |
+| M6 | **資源成本分析** | 🔲 待實作 | 中 | **4 週** |
+| M7 | **AI 深度運維**（NL Query / YAML 生成 / Runbook） | 🔲 待實作 | 中 | **4 週** |
+| M8 | **多叢集工作流程**（遷移 / 配置同步） | 🔲 待實作 | 低 | **5 週** |
+| M9 | **合規性與安全掃描**（Trivy / kube-bench） | 🔲 待實作 | 低 | **6 週** |
+| M10 | **備份匯出 + CLI 工具** | 🔲 待實作 | 低 | **4 週** |
+| — | NetworkPolicy 視覺化拓撲圖 + 精靈 | 🔲 待實作 | 中 | **3 週** |
+
+**待實作總估計：約 26 週（6.5 個月）**
+
+### 建議實作順序
 
 ```
 影響度  ↑
-高      │ [S1] 憑證加密   [5.1] Helm 管理
-        │ [S2] JWT 強化   [5.4] Event 告警
+高      │ ✅ M1 安全    ✅ M4 Helm
+        │ ✅ M2 效能    ✅ M5 AI/CRD/NP/告警
         │
-中      │ [4.2] 可觀測性   [5.2] NetworkPolicy
-        │ [F1] 指標修正   [5.5] AI 升級
+中      │ ✅ M3 可觀測  🔲 M6 成本分析（優先）
+        │               🔲 M7 AI 深度（優先）
+        │               🔲 NP 視覺化（次優先）
         │
-低      │ [A3] Router 拆分 [5.6] CRD 管理
-        │ [4.5] DB 改善   [5.7] 多叢集流程
+低      │               🔲 M8 多叢集
+        │               🔲 M10 CLI
+        │               🔲 M9 合規掃描
         └─────────────────────────────────→ 實作難度
                   低          中          高
 ```
+
+**推薦下一步：M6（資源成本分析）**
+- 業務價值高（企業付費意願強）
+- 技術風險低（Prometheus 查詢 + 資料快照，無外部服務依賴）
+- 可獨立交付，不依賴其他 M 的完成
 
 ### 里程碑規劃
 
@@ -470,12 +792,140 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 
 **完成指標：** 可替代 `helm list`、`helm upgrade`、`helm rollback` 日常操作。
 
-#### Milestone 5：AI 與 CRD（8 週）
+#### Milestone 5：AI 與 CRD（8 週）✅ 已完成
 - [x] AI 診斷 UI 完整開放（Pod / Workload 詳情頁新增「AI 診斷」按鈕，透過自定義事件驅動浮動 AI 面板；AIChatPanel 監聽 ai:diagnose 事件並自動帶入診斷 prompt）
 - [x] 多 AI 提供者設定頁（支援 OpenAI / Azure OpenAI / Anthropic Claude / Ollama；AIConfig 新增 api_version 欄位；Provider 切換自動填入預設端點與模型選單；ai_provider.go 處理各 Provider 的 URL、Auth 頭與 Anthropic 獨立格式）
 - [x] CRD 自動發現與通用列表（`handlers/crd.go` + 動態客戶端；前端 CRDList / CRDResources 頁面；側邊欄 CRD 管理入口）
 - [x] NetworkPolicy 管理介面（`handlers/networkpolicy.go` + 動態 CRUD；前端 NetworkPolicyTab；網路管理頁新增第三個 Tab；三語 i18n）
 - [x] Event 告警規則引擎（`models/event_alert.go` + `services/event_alert_service.go` + `handlers/event_alert.go`；後台 Worker 每 60 秒掃描 K8s Events；Webhook / DingTalk 通知；30 分鐘去重；前端 EventAlertRules 頁面含規則 CRUD + 告警歷史兩分頁）
+
+**完成指標：** 平台支援 4 家 AI Provider；CRD/NetworkPolicy 可完整管理；告警通知端對端可用。
+
+---
+
+#### Milestone 6：資源成本分析（4 週）🔲 待實作
+
+> **目標：** 讓多租戶叢集的資源費用透明化，提供命名空間/工作負載級別的成本分攤依據。
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| 定義 `CostConfig` + `ResourceSnapshot` 模型，AutoMigrate | `internal/models/cost.go` | W1 |
+| Prometheus 查詢封裝（CPU/Mem request + usage） | `internal/services/cost_prom.go` | W1 |
+| `CostWorker` 每日快照 + fallback（metrics-server） | `internal/services/cost_service.go` | W2 |
+| REST API：overview / namespaces / workloads / trend / waste / export | `internal/handlers/cost.go` | W2 |
+| 路由掛載 + Worker 啟動 | `internal/router/router.go` | W2 |
+| 前端 CostDashboard（總覽卡 + Bar Chart + Line Chart） | `ui/src/pages/cost/CostDashboard.tsx` | W3 |
+| 工作負載明細 Table + 利用率進度條 | `ui/src/pages/cost/CostDashboard.tsx` | W3 |
+| 定價設定 Modal（CPU/Mem 單價、幣別） | `ui/src/pages/cost/CostConfig.tsx` | W3 |
+| 浪費識別頁籤 + 縮容建議提示 | `ui/src/pages/cost/WasteReport.tsx` | W4 |
+| CSV 匯出按鈕 + 三語 i18n | 各相關檔案 | W4 |
+
+- [ ] CostConfig / ResourceSnapshot 資料模型與 AutoMigrate
+- [ ] CostWorker（每日 Prometheus/metrics-server 拉取 + 存快照）
+- [ ] REST API 6 支端點（overview/namespaces/workloads/trend/waste/export）
+- [ ] 前端成本儀表板（總覽卡 + 排行榜 + 月趨勢 + 工作負載表 + 浪費報告）
+- [ ] 定價設定介面（可設定 CPU/記憶體單價、幣別）
+- [ ] CSV 匯出
+- [ ] 三語 i18n（zh-TW / zh-CN / en-US）
+
+**完成指標：** 可在叢集儀表板看到本月估算費用；命名空間成本排行可正常顯示；低利用率工作負載可識別。
+
+---
+
+#### Milestone 7：AI 深度運維（4 週）🔲 待實作
+
+> **目標：** 從「AI 輔助診斷」升級為「AI 主動運維助手」，支援自然語言查詢與 YAML 生成。
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| 敏感資料過濾器（Secret/Token 值 → `[REDACTED]`） | `internal/services/ai_sanitizer.go` | W1 |
+| NL Query：系統 Prompt 設計 + QuerySpec 解析 + K8s API 執行 | `internal/handlers/ai_query.go` | W1–W2 |
+| YAML 生成助手：系統 Prompt + `/yaml` 指令模式 | `internal/handlers/ai_yaml.go` | W2 |
+| Runbook 知識庫 JSON（10 個常見場景） | `internal/assets/runbooks.json` | W3 |
+| Runbook 比對 API + 診斷回應附加 Runbook 連結 | `internal/services/runbook_service.go` | W3 |
+| 前端 NL Query UI（AI 面板新增查詢模式切換） | `ui/src/components/AIChat/AIChatPanel.tsx` | W3–W4 |
+| 前端 YAML 生成介面（輸出至 Monaco + 一鍵 Apply） | `ui/src/components/AIChat/AIYamlPanel.tsx` | W4 |
+
+- [ ] 敏感資料過濾（Secret data / 含 password 的 env var → `[REDACTED]`）
+- [ ] 自然語言 K8s 查詢（NL → QuerySpec → K8s API → 結構化結果）
+- [ ] YAML 生成助手（描述 → 完整 K8s YAML，可直接 Apply）
+- [ ] Runbook 知識庫（10 個常見場景，JSON 嵌入二進位）
+- [ ] 診斷回應自動附帶相關 Runbook 連結
+- [ ] 三語 i18n
+
+**完成指標：** 輸入「列出所有 OOMKilled 的 Pod」可正確回傳結果；YAML 生成輸出可直接 Apply 不報錯。
+
+---
+
+#### Milestone 8：多叢集工作流程（5 週）🔲 待實作
+
+> **目標：** 打通叢集間協作壁壘，支援工作負載遷移與配置同步。
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| `SyncPolicy` 資料模型 | `internal/models/sync_policy.go` | W1 |
+| 配置同步 API（CRUD + 觸發） + Worker | `internal/services/sync_service.go` | W1–W2 |
+| 工作負載遷移後端邏輯（取 YAML → 目標叢集 Apply） | `internal/handlers/workload_migrate.go` | W2–W3 |
+| 遷移精靈前端（3 步驟：選叢集 → 資源檢查 → 確認執行） | `ui/src/pages/cluster/MigrateWizard.tsx` | W3–W4 |
+| 配置同步管理前端（策略 CRUD + 手動觸發 + 歷史紀錄） | `ui/src/pages/cluster/SyncPolicies.tsx` | W4–W5 |
+
+- [ ] SyncPolicy 資料模型（來源叢集 / 資源 / 目標叢集 / 衝突策略 / Cron）
+- [ ] 配置同步服務（手動 + 定時，支援 ConfigMap / Secret）
+- [ ] 工作負載遷移精靈後端（YAML 取出 → 清理 metadata → 目標叢集 Apply）
+- [ ] 前端遷移精靈（3 步驟精靈 + 資源配額預檢）
+- [ ] 前端同步策略管理頁
+- [ ] 三語 i18n
+
+**完成指標：** 可將 staging 叢集的 Deployment 遷移到 production 叢集；ConfigMap 同步至 3 個叢集成功率 100%。
+
+---
+
+#### Milestone 9：合規性與安全掃描（6 週）🔲 待實作
+
+> **目標：** 提供叢集安全基線評估，協助企業滿足 SOC2 / 等保合規要求。
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| `ImageScanResult` 資料模型 | `internal/models/security.go` | W1 |
+| Trivy 整合（exec 模式 + Server 模式） | `internal/services/trivy_service.go` | W1–W2 |
+| 映像掃描 API + 非同步掃描狀態輪詢 | `internal/handlers/security.go` | W2 |
+| kube-bench Job 管理（建立 Job → 等待 → 解析結果） | `internal/services/bench_service.go` | W3–W4 |
+| Gatekeeper 儀表板（違規統計，利用 CRD 介面） | `ui/src/pages/security/GatekeeperDashboard.tsx` | W4 |
+| 前端安全儀表板（掃描結果 + 基準分數 + 嚴重漏洞列表） | `ui/src/pages/security/SecurityDashboard.tsx` | W5–W6 |
+
+- [ ] ImageScanResult 資料模型
+- [ ] Trivy 映像掃描整合（支援 exec 呼叫與 Trivy Server API 兩種模式）
+- [ ] 非同步掃描任務管理（觸發 → 輪詢狀態 → 結果儲存）
+- [ ] CIS kube-bench 評分（在叢集建立 Job → 解析輸出 → 儲存評分）
+- [ ] Gatekeeper 違規統計儀表板（利用 CRD 介面）
+- [ ] 前端安全儀表板（漏洞嚴重度分佈 + 基準評分 + 詳情 Drawer）
+- [ ] 三語 i18n
+
+**完成指標：** 可對指定工作負載觸發映像掃描並檢視 CVE 列表；kube-bench 可顯示 PASS/FAIL 統計。
+
+---
+
+#### Milestone 10：備份匯出 + CLI 工具（4 週）🔲 待實作
+
+> **目標：** Phase 1 輕量備份不依賴外部工具；CLI 工具支援 CI/CD 整合。
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| 命名空間資源 ZIP 匯出 API | `internal/handlers/backup.go` | W1 |
+| Velero 狀態偵測 + Backup/Restore CRD 管理 | `internal/handlers/velero.go` | W1–W2 |
+| 前端備份頁（匯出按鈕 + Velero 備份列表） | `ui/src/pages/backup/BackupPage.tsx` | W2 |
+| CLI 框架（cobra + viper，`cmd/cli/main.go`） | `cmd/cli/` | W2–W3 |
+| CLI 指令實作（login/cluster/pod/helm/yaml apply/cost） | `cmd/cli/commands/` | W3–W4 |
+| GitHub Actions workflow + Release 編譯 | `.github/workflows/release-cli.yml` | W4 |
+
+- [ ] 工作負載配置 ZIP 匯出（無外部依賴，Phase 1）
+- [ ] Velero 整合（偵測安裝狀態 + Backup/Restore CRD CRUD，Phase 2）
+- [ ] 前端備份管理頁（匯出按鈕 + Velero 備份列表 + 還原觸發）
+- [ ] CLI 工具框架（cobra + viper，獨立二進位）
+- [ ] CLI 核心指令（login / cluster / pod / helm / yaml / cost）
+- [ ] CI/CD 整合文件 + GitHub Release 自動編譯
+
+**完成指標：** `kubepolaris pod list --cluster prod` 可正常輸出；ZIP 匯出包含所有 Deployment/Service/ConfigMap YAML。
 
 ---
 
@@ -485,10 +935,15 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 |------|---------|------|------|
 | 欄位加密 | AES-256-GCM（自實作） | `age`、Vault Transit | 依部署環境選擇 |
 | 狀態管理 | @tanstack/react-query | SWR | React Query 生態更完整 |
-| 拓撲圖 | ReactFlow | @antv/g6 | ReactFlow 對 React 整合更佳 |
+| 拓撲圖 | ReactFlow v12 | @antv/g6 | ReactFlow 對 React 整合更佳，內建 Dagre 佈局 |
 | 日誌系統 | `slog`（標準庫） | zap | Go 1.21+ slog 是官方解 |
 | 追蹤 | OpenTelemetry | Jaeger SDK | OTel 為業界標準 |
 | Helm | helm.sh/helm/v3 | — | 官方 SDK，唯一選擇 |
+| 成本圖表 | recharts | Ant Design Charts | recharts 體積小、API 簡潔 |
+| 映像掃描 | Trivy CLI / Server | Grype | Trivy 生態完整，支援 OCI / 映像 / 設定掃描 |
+| K8s 基準評估 | kube-bench（Job 模式） | kube-hunter | kube-bench 對應 CIS Benchmark，業界標準 |
+| CLI 框架 | cobra + viper | urfave/cli | cobra 生態最大，kubectl/helm 皆採用 |
+| ZIP 打包 | `archive/zip`（標準庫） | — | 無需外部依賴 |
 
 ---
 

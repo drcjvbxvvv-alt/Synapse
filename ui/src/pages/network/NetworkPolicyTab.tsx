@@ -87,11 +87,9 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
     setLoading(true);
     try {
       const res = await NetworkPolicyService.list(clusterId, namespace || undefined, search || undefined, page, ps);
-      if (res.code === 0 && res.data) {
-        setPolicies(res.data.items ?? []);
-        setTotal(res.data.total ?? 0);
-        onCountChange?.(res.data.total ?? 0);
-      }
+      setPolicies(res.items ?? []);
+      setTotal(res.total ?? 0);
+      onCountChange?.(res.total ?? 0);
     } catch {
       message.error(t('network:networkpolicy.messages.fetchError'));
     } finally {
@@ -120,12 +118,10 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
   const handleViewYAML = async (policy: NetworkPolicyInfo) => {
     try {
       const res = await NetworkPolicyService.getYAML(clusterId, policy.namespace, policy.name);
-      if (res.code === 0 && res.data) {
-        setYamlContent(res.data.yaml);
-        setSelectedPolicy(policy);
-        setYamlMode('view');
-        setYamlDrawerOpen(true);
-      }
+      setYamlContent(res.yaml);
+      setSelectedPolicy(policy);
+      setYamlMode('view');
+      setYamlDrawerOpen(true);
     } catch {
       message.error(t('network:networkpolicy.messages.fetchYAMLError'));
     }
@@ -134,12 +130,10 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
   const handleEditYAML = async (policy: NetworkPolicyInfo) => {
     try {
       const res = await NetworkPolicyService.getYAML(clusterId, policy.namespace, policy.name);
-      if (res.code === 0 && res.data) {
-        setYamlContent(res.data.yaml);
-        setSelectedPolicy(policy);
-        setYamlMode('edit');
-        setYamlDrawerOpen(true);
-      }
+      setYamlContent(res.yaml);
+      setSelectedPolicy(policy);
+      setYamlMode('edit');
+      setYamlDrawerOpen(true);
     } catch {
       message.error(t('network:networkpolicy.messages.fetchYAMLError'));
     }
@@ -156,24 +150,16 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
     setYamlSaving(true);
     try {
       if (yamlMode === 'create') {
-        const res = await NetworkPolicyService.create(clusterId, namespace || 'default', yamlContent);
-        if (res.code === 0) {
-          message.success(t('network:networkpolicy.messages.createSuccess'));
-          setYamlDrawerOpen(false);
-          fetchPolicies(1, pageSize);
-          setCurrentPage(1);
-        } else {
-          message.error(res.message || t('network:networkpolicy.messages.createError'));
-        }
+        await NetworkPolicyService.create(clusterId, namespace || 'default', yamlContent);
+        message.success(t('network:networkpolicy.messages.createSuccess'));
+        setYamlDrawerOpen(false);
+        fetchPolicies(1, pageSize);
+        setCurrentPage(1);
       } else if (yamlMode === 'edit' && selectedPolicy) {
-        const res = await NetworkPolicyService.update(clusterId, selectedPolicy.namespace, selectedPolicy.name, yamlContent);
-        if (res.code === 0) {
-          message.success(t('network:networkpolicy.messages.updateSuccess'));
-          setYamlDrawerOpen(false);
-          fetchPolicies();
-        } else {
-          message.error(res.message || t('network:networkpolicy.messages.updateError'));
-        }
+        await NetworkPolicyService.update(clusterId, selectedPolicy.namespace, selectedPolicy.name, yamlContent);
+        message.success(t('network:networkpolicy.messages.updateSuccess'));
+        setYamlDrawerOpen(false);
+        fetchPolicies();
       }
     } catch {
       message.error(t('common:messages.error'));
