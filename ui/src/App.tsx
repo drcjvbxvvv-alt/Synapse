@@ -47,6 +47,8 @@ import { PermissionManagement } from './pages/permission';
 import { UserManagement, UserGroupManagement } from './pages/access';
 import { MonitoringCenter } from './pages/om';
 import HelmList from './pages/helm/HelmList';
+import CRDList from './pages/crd/CRDList';
+import CRDResources from './pages/crd/CRDResources';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
 import { PermissionGuard } from './components/PermissionGuard';
@@ -194,6 +196,9 @@ const AppContent: React.FC = () => {
                   <HelmList />
                 </PermissionGuard>
               } />
+              {/* CRD 自動發現 */}
+              <Route path="clusters/:clusterId/crds" element={<CRDList />} />
+              <Route path="clusters/:clusterId/crds/:group/:version/:plural" element={<CRDResources />} />
               {/* 审计管理路由 - 仅平台管理员 */}
               <Route path="audit/operations" element={
                 <PermissionGuard platformAdminOnly>

@@ -34,6 +34,7 @@
     "clusterUpgrade": "Cluster Upgrade",
     "gitopsApps": "GitOps Apps",
     "helmReleases": "Helm Apps",
+    "crdManagement": "CRD Management",
     "observability": "Observability",
     "costGovernance": "Cost Governance",
     "costInsights": "Cost Insights",

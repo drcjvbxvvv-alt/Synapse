@@ -505,6 +505,16 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					helmReleases.GET("/:namespace/:name/values", helmHandler.GetReleaseValues)
 					helmReleases.POST("/:namespace/:name/rollback", helmHandler.RollbackRelease)
 				}
+
+				// CRD 自動發現與通用資源列表
+				crdHandler := handlers.NewCRDHandler(clusterSvc, k8sMgr)
+				crdGroup := cluster.Group("/crds")
+				{
+					crdGroup.GET("", crdHandler.ListCRDs)
+					crdGroup.GET("/resources", crdHandler.ListCRDResources)
+					crdGroup.GET("/resources/:namespace/:name", crdHandler.GetCRDResource)
+					crdGroup.DELETE("/resources/:namespace/:name", crdHandler.DeleteCRDResource)
+				}
 			}
 		}
 

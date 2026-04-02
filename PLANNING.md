@@ -473,7 +473,7 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 #### Milestone 5：AI 與 CRD（8 週）
 - [ ] AI 診斷 UI 完整開放
 - [ ] 多 AI 提供者設定頁
-- [ ] CRD 自動發現與通用列表
+- [x] CRD 自動發現與通用列表（`handlers/crd.go` + 動態客戶端；前端 CRDList / CRDResources 頁面；側邊欄 CRD 管理入口）
 - [ ] NetworkPolicy 管理介面
 - [ ] Event 告警規則引擎
 

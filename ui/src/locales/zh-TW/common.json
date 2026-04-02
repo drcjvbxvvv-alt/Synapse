@@ -34,6 +34,7 @@
     "clusterUpgrade": "叢集升級",
     "gitopsApps": "GitOps 應用",
     "helmReleases": "Helm 應用",
+    "crdManagement": "CRD 管理",
     "observability": "雲原生觀測",
     "costGovernance": "雲原生成本治理",
     "costInsights": "成本洞察",
