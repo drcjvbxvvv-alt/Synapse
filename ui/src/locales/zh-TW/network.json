@@ -1,7 +1,33 @@
 {
   "tabs": {
     "service": "服務（Service）",
-    "ingress": "路由（Ingress）"
+    "ingress": "路由（Ingress）",
+    "networkpolicy": "網路策略（NetworkPolicy）"
+  },
+  "networkpolicy": {
+    "create": "建立 NetworkPolicy",
+    "createTitle": "建立 NetworkPolicy",
+    "editTitle": "編輯 NetworkPolicy：{{name}}",
+    "viewTitle": "查看 NetworkPolicy：{{name}}",
+    "columns": {
+      "policyTypes": "策略類型",
+      "podSelector": "Pod 選擇器",
+      "allPods": "所有 Pod",
+      "rules": "規則數"
+    },
+    "messages": {
+      "fetchError": "取得 NetworkPolicy 列表失敗",
+      "fetchYAMLError": "取得 YAML 失敗",
+      "createSuccess": "NetworkPolicy 建立成功",
+      "createError": "NetworkPolicy 建立失敗",
+      "updateSuccess": "NetworkPolicy 更新成功",
+      "updateError": "NetworkPolicy 更新失敗",
+      "confirmDeleteTitle": "確認刪除",
+      "confirmDeleteDesc": "確定要刪除 NetworkPolicy「{{name}}」嗎？"
+    },
+    "pagination": {
+      "total": "共 {{total}} 個 NetworkPolicy"
+    }
   },
   "service": {
     "title": "服務管理",

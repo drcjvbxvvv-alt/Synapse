@@ -1,7 +1,33 @@
 {
   "tabs": {
     "service": "Service",
-    "ingress": "Ingress"
+    "ingress": "Ingress",
+    "networkpolicy": "NetworkPolicy"
+  },
+  "networkpolicy": {
+    "create": "Create NetworkPolicy",
+    "createTitle": "Create NetworkPolicy",
+    "editTitle": "Edit NetworkPolicy: {{name}}",
+    "viewTitle": "View NetworkPolicy: {{name}}",
+    "columns": {
+      "policyTypes": "Policy Types",
+      "podSelector": "Pod Selector",
+      "allPods": "All Pods",
+      "rules": "Rules"
+    },
+    "messages": {
+      "fetchError": "Failed to fetch NetworkPolicy list",
+      "fetchYAMLError": "Failed to fetch YAML",
+      "createSuccess": "NetworkPolicy created successfully",
+      "createError": "Failed to create NetworkPolicy",
+      "updateSuccess": "NetworkPolicy updated successfully",
+      "updateError": "Failed to update NetworkPolicy",
+      "confirmDeleteTitle": "Confirm Delete",
+      "confirmDeleteDesc": "Are you sure you want to delete NetworkPolicy \"{{name}}\"?"
+    },
+    "pagination": {
+      "total": "Total {{total}} NetworkPolicies"
+    }
   },
   "service": {
     "title": "Service Management",

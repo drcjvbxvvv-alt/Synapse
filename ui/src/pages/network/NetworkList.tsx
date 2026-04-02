@@ -7,6 +7,7 @@ import {
 } from 'antd';
 import ServiceTab from './ServiceTab';
 import IngressTab from './IngressTab';
+import NetworkPolicyTab from './NetworkPolicyTab';
 import { useTranslation } from 'react-i18next';
 
 const NetworkList: React.FC = () => {
@@ -23,6 +24,8 @@ const [searchParams, setSearchParams] = useSearchParams();
   const [_serviceCount, setServiceCount] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_ingressCount, setIngressCount] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_npCount, setNpCount] = useState(0);
 
   // Tab切换处理
   const handleTabChange = (key: string) => {
@@ -48,6 +51,16 @@ const [searchParams, setSearchParams] = useSearchParams();
         <IngressTab
           clusterId={clusterId || ''}
           onCountChange={setIngressCount}
+        />
+      ),
+    },
+    {
+      key: 'networkpolicy',
+      label: t('network:tabs.networkpolicy'),
+      children: (
+        <NetworkPolicyTab
+          clusterId={clusterId || ''}
+          onCountChange={setNpCount}
         />
       ),
     },

@@ -403,6 +403,18 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					ingresses.POST("/yaml/apply", resourceYAMLHandler.ApplyIngressYAML)
 				}
 
+				// networkpolicies 子分組
+				npHandler := handlers.NewNetworkPolicyHandler(clusterSvc, k8sMgr)
+				nps := cluster.Group("/networkpolicies")
+				{
+					nps.GET("", npHandler.ListNetworkPolicies)
+					nps.POST("", npHandler.CreateNetworkPolicy)
+					nps.GET("/:namespace/:name", npHandler.GetNetworkPolicy)
+					nps.PUT("/:namespace/:name", npHandler.UpdateNetworkPolicy)
+					nps.GET("/:namespace/:name/yaml", npHandler.GetNetworkPolicyYAML)
+					nps.DELETE("/:namespace/:name", npHandler.DeleteNetworkPolicy)
+				}
+
 				// storage 子分组 - PVC, PV, StorageClass
 				storageHandler := handlers.NewStorageHandler(db, cfg, clusterSvc, k8sMgr)
 

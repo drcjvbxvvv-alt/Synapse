@@ -474,7 +474,7 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 - [ ] AI 診斷 UI 完整開放
 - [ ] 多 AI 提供者設定頁
 - [x] CRD 自動發現與通用列表（`handlers/crd.go` + 動態客戶端；前端 CRDList / CRDResources 頁面；側邊欄 CRD 管理入口）
-- [ ] NetworkPolicy 管理介面
+- [x] NetworkPolicy 管理介面（`handlers/networkpolicy.go` + 動態 CRUD；前端 NetworkPolicyTab；網路管理頁新增第三個 Tab；三語 i18n）
 - [ ] Event 告警規則引擎
 
 ---
