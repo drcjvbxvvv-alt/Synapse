@@ -35,6 +35,8 @@
     "gitopsApps": "GitOps Apps",
     "helmReleases": "Helm Apps",
     "crdManagement": "CRD Management",
+    "costAnalysis": "Cost Analysis",
+    "eventAlerts": "Event Alerts",
     "observability": "Observability",
     "costGovernance": "Cost Governance",
     "costInsights": "Cost Insights",

@@ -115,6 +115,10 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	eventAlertWorker := services.NewEventAlertWorker(db, k8sMgr, clusterSvc)
 	eventAlertWorker.Start()
 
+	// 啟動成本快照工作器（每日 00:05 UTC 拍攝資源用量快照）
+	costWorker := services.NewCostWorker(db, clusterSvc)
+	costWorker.Start()
+
 	// /api/v1
 	api := r.Group("/api/v1")
 
@@ -542,6 +546,20 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					eventAlerts.DELETE("/rules/:ruleID", eventAlertHandler.DeleteRule)
 					eventAlerts.PUT("/rules/:ruleID/toggle", eventAlertHandler.ToggleRule)
 					eventAlerts.GET("/history", eventAlertHandler.ListHistory)
+				}
+
+				// 資源成本分析
+				costHandler := handlers.NewCostHandler(db)
+				cost := cluster.Group("/cost")
+				{
+					cost.GET("/config", costHandler.GetConfig)
+					cost.PUT("/config", costHandler.UpdateConfig)
+					cost.GET("/overview", costHandler.GetOverview)
+					cost.GET("/namespaces", costHandler.GetNamespaceCosts)
+					cost.GET("/workloads", costHandler.GetWorkloadCosts)
+					cost.GET("/trend", costHandler.GetTrend)
+					cost.GET("/waste", costHandler.GetWaste)
+					cost.GET("/export", costHandler.ExportCSV)
 				}
 			}
 		}

@@ -35,6 +35,7 @@ import {
   AuditOutlined,
   BranchesOutlined,
   DeploymentUnitOutlined,
+  DollarOutlined,
 } from '@ant-design/icons';
 import type { MenuProps as AntMenuProps } from 'antd';
 import type { PermissionType } from '../types';
@@ -189,6 +190,7 @@ const MainLayout: React.FC = () => {
     if (path.match(/\/clusters\/[^/]+\/helm/)) return ['cluster-helm'];
     if (path.match(/\/clusters\/[^/]+\/crds/)) return ['cluster-crds'];
     if (path.match(/\/clusters\/[^/]+\/event-alerts/)) return ['cluster-event-alerts'];
+    if (path.match(/\/clusters\/[^/]+\/cost/)) return ['cluster-cost'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
@@ -483,6 +485,17 @@ const MainLayout: React.FC = () => {
             const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
             if (clusterMatch) {
               navigate(`/clusters/${clusterMatch[1]}/event-alerts`);
+            }
+          },
+        },
+        {
+          key: 'cluster-cost',
+          icon: <DollarOutlined />,
+          label: t('menu.costAnalysis', '成本分析'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/cost`);
             }
           },
         },

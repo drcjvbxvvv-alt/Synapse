@@ -1,0 +1,58 @@
+{
+  "title": "资源成本分析",
+  "menu": "成本分析",
+  "tabs": {
+    "overview": "总览",
+    "namespaces": "命名空间",
+    "workloads": "工作负载",
+    "trend": "月度趋势",
+    "waste": "浪费识别"
+  },
+  "overview": {
+    "totalCost": "本月预估费用",
+    "topNamespace": "费用最高命名空间",
+    "wastePercent": "资源浪费比例",
+    "snapshotDays": "已采集天数",
+    "noData": "本月尚无快照数据，请确认 Prometheus 已配置"
+  },
+  "config": {
+    "title": "定价配置",
+    "cpuPrice": "CPU 单价（核/小时）",
+    "memPrice": "内存单价（GiB/小时）",
+    "currency": "币种",
+    "save": "保存配置",
+    "saveSuccess": "定价配置已保存",
+    "hint": "费用 = CPU（核）× 小时 × 单价 + 内存（GiB）× 小时 × 单价"
+  },
+  "table": {
+    "namespace": "命名空间",
+    "workload": "工作负载",
+    "cpuRequest": "CPU 申请（m）",
+    "cpuUsage": "CPU 用量（m）",
+    "cpuUtil": "CPU 使用率",
+    "memRequest": "内存申请（MiB）",
+    "memUsage": "内存用量（MiB）",
+    "memUtil": "内存使用率",
+    "podCount": "Pod 数",
+    "estCost": "预估费用",
+    "wastedCost": "浪费费用",
+    "days": "统计天数"
+  },
+  "trend": {
+    "title": "月度成本趋势",
+    "months": "最近 {{n}} 个月",
+    "totalLabel": "总费用"
+  },
+  "waste": {
+    "title": "低利用率工作负载（CPU 使用率 < 10%，连续 7 天）",
+    "empty": "目前没有识别到浪费的工作负载",
+    "suggestion": "建议缩减 requests 或 replicas"
+  },
+  "export": {
+    "button": "导出 CSV",
+    "filename": "cost-{{month}}.csv"
+  },
+  "monthPicker": "选择月份",
+  "prometheusRequired": "需要配置 Prometheus 才能显示实际用量；若无 Prometheus，仅显示 Request 估算",
+  "loading": "加载成本数据中..."
+}

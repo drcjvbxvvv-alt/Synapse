@@ -1,0 +1,58 @@
+{
+  "title": "Resource Cost Analysis",
+  "menu": "Cost Analysis",
+  "tabs": {
+    "overview": "Overview",
+    "namespaces": "Namespaces",
+    "workloads": "Workloads",
+    "trend": "Monthly Trend",
+    "waste": "Waste Detection"
+  },
+  "overview": {
+    "totalCost": "Estimated Cost This Month",
+    "topNamespace": "Top Namespace by Cost",
+    "wastePercent": "Waste Percentage",
+    "snapshotDays": "Days Collected",
+    "noData": "No snapshot data for this month. Please configure Prometheus."
+  },
+  "config": {
+    "title": "Pricing Configuration",
+    "cpuPrice": "CPU Price (core/hour)",
+    "memPrice": "Memory Price (GiB/hour)",
+    "currency": "Currency",
+    "save": "Save Configuration",
+    "saveSuccess": "Pricing configuration saved",
+    "hint": "Cost = CPU (cores) × hours × price + Memory (GiB) × hours × price"
+  },
+  "table": {
+    "namespace": "Namespace",
+    "workload": "Workload",
+    "cpuRequest": "CPU Request (m)",
+    "cpuUsage": "CPU Usage (m)",
+    "cpuUtil": "CPU Util%",
+    "memRequest": "Mem Request (MiB)",
+    "memUsage": "Mem Usage (MiB)",
+    "memUtil": "Mem Util%",
+    "podCount": "Pods",
+    "estCost": "Est. Cost",
+    "wastedCost": "Wasted Cost",
+    "days": "Days"
+  },
+  "trend": {
+    "title": "Monthly Cost Trend",
+    "months": "Last {{n}} months",
+    "totalLabel": "Total Cost"
+  },
+  "waste": {
+    "title": "Underutilized Workloads (CPU < 10% for 7 days)",
+    "empty": "No underutilized workloads detected",
+    "suggestion": "Consider reducing requests or replicas"
+  },
+  "export": {
+    "button": "Export CSV",
+    "filename": "cost-{{month}}.csv"
+  },
+  "monthPicker": "Select Month",
+  "prometheusRequired": "Prometheus is required for actual usage data. Without it, only resource requests are estimated.",
+  "loading": "Loading cost data..."
+}

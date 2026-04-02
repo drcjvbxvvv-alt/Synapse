@@ -1,0 +1,515 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  Card,
+  Tabs,
+  Statistic,
+  Table,
+  Progress,
+  Button,
+  Space,
+  Modal,
+  Form,
+  InputNumber,
+  Select,
+  DatePicker,
+  Tag,
+  Tooltip,
+  Empty,
+  Row,
+  Col,
+  App,
+  Typography,
+  Alert,
+} from 'antd';
+import {
+  SettingOutlined,
+  DownloadOutlined,
+  ReloadOutlined,
+  WarningOutlined,
+  DollarOutlined,
+  CloudOutlined,
+} from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartTooltip,
+  Legend,
+  LineChart,
+  Line,
+  ResponsiveContainer,
+} from 'recharts';
+import {
+  CostService,
+  type CostConfig,
+  type CostItem,
+  type CostOverview,
+  type TrendPoint,
+  type WasteItem,
+} from '../../services/costService';
+
+const { Text } = Typography;
+const { Option } = Select;
+
+const COLORS = [
+  '#4e79a7', '#f28e2b', '#e15759', '#76b7b2',
+  '#59a14f', '#edc948', '#b07aa1', '#ff9da7',
+];
+
+const CostDashboard: React.FC = () => {
+  const { clusterId } = useParams<{ clusterId: string }>();
+  const { t } = useTranslation(['cost', 'common']);
+  const { message } = App.useApp();
+
+  const [activeTab, setActiveTab] = useState('overview');
+  const [month, setMonth] = useState(dayjs().format('YYYY-MM'));
+
+  // Overview
+  const [overview, setOverview] = useState<CostOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+
+  // Namespace costs
+  const [nsCosts, setNsCosts] = useState<CostItem[]>([]);
+  const [nsLoading, setNsLoading] = useState(false);
+
+  // Workload costs
+  const [wlCosts, setWlCosts] = useState<CostItem[]>([]);
+  const [wlTotal, setWlTotal] = useState(0);
+  const [wlPage, setWlPage] = useState(1);
+  const [wlLoading, setWlLoading] = useState(false);
+
+  // Trend
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [trendLoading, setTrendLoading] = useState(false);
+
+  // Waste
+  const [waste, setWaste] = useState<WasteItem[]>([]);
+  const [wasteLoading, setWasteLoading] = useState(false);
+
+  // Config modal
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configForm] = Form.useForm();
+  const [configSaving, setConfigSaving] = useState(false);
+
+  const loadOverview = useCallback(async () => {
+    if (!clusterId) return;
+    setOverviewLoading(true);
+    try {
+      const data = await CostService.getOverview(clusterId, month);
+      setOverview(data);
+    } catch { /* ignore */ }
+    finally { setOverviewLoading(false); }
+  }, [clusterId, month]);
+
+  const loadNsCosts = useCallback(async () => {
+    if (!clusterId) return;
+    setNsLoading(true);
+    try {
+      const data = await CostService.getNamespaceCosts(clusterId, month);
+      setNsCosts(data ?? []);
+    } catch { /* ignore */ }
+    finally { setNsLoading(false); }
+  }, [clusterId, month]);
+
+  const loadWorkloads = useCallback(async (page = 1) => {
+    if (!clusterId) return;
+    setWlLoading(true);
+    try {
+      const res = await CostService.getWorkloadCosts(clusterId, month, undefined, page);
+      setWlCosts(res.items ?? []);
+      setWlTotal(res.total ?? 0);
+    } catch { /* ignore */ }
+    finally { setWlLoading(false); }
+  }, [clusterId, month]);
+
+  const loadTrend = useCallback(async () => {
+    if (!clusterId) return;
+    setTrendLoading(true);
+    try {
+      const data = await CostService.getTrend(clusterId, 6);
+      setTrend(data ?? []);
+    } catch { /* ignore */ }
+    finally { setTrendLoading(false); }
+  }, [clusterId]);
+
+  const loadWaste = useCallback(async () => {
+    if (!clusterId) return;
+    setWasteLoading(true);
+    try {
+      const data = await CostService.getWaste(clusterId);
+      setWaste(data ?? []);
+    } catch { /* ignore */ }
+    finally { setWasteLoading(false); }
+  }, [clusterId]);
+
+  useEffect(() => { loadOverview(); }, [loadOverview]);
+  useEffect(() => { if (activeTab === 'namespaces') loadNsCosts(); }, [activeTab, loadNsCosts]);
+  useEffect(() => { if (activeTab === 'workloads') loadWorkloads(1); }, [activeTab, loadWorkloads]);
+  useEffect(() => { if (activeTab === 'trend') loadTrend(); }, [activeTab, loadTrend]);
+  useEffect(() => { if (activeTab === 'waste') loadWaste(); }, [activeTab, loadWaste]);
+
+  const handleOpenConfig = async () => {
+    if (!clusterId) return;
+    try {
+      const cfg = await CostService.getConfig(clusterId);
+      configForm.setFieldsValue(cfg);
+    } catch { /* use defaults */ }
+    setConfigOpen(true);
+  };
+
+  const handleSaveConfig = async () => {
+    try {
+      const values: CostConfig = await configForm.validateFields();
+      setConfigSaving(true);
+      await CostService.updateConfig(clusterId!, values);
+      message.success(t('cost:config.saveSuccess'));
+      setConfigOpen(false);
+      loadOverview();
+    } catch { /* validation */ }
+    finally { setConfigSaving(false); }
+  };
+
+  const currency = overview?.config?.currency ?? 'USD';
+
+  // ---- Bar chart data (top 10 namespaces) ----
+  const barData = nsCosts.slice(0, 10).map(item => ({
+    name: item.name,
+    cost: Number(item.est_cost.toFixed(4)),
+  }));
+
+  // ---- Line chart data (trend) ----
+  const allNs = Array.from(new Set(trend.flatMap(p => p.breakdown?.map(b => b.namespace) ?? [])));
+  const lineData = trend.map(p => {
+    const point: Record<string, string | number> = { month: p.month };
+    allNs.forEach(ns => {
+      point[ns] = p.breakdown?.find(b => b.namespace === ns)?.cost ?? 0;
+    });
+    point.total = Number(p.total.toFixed(4));
+    return point;
+  });
+
+  // ---- Columns ----
+  const utilCell = (val: number) => (
+    <Progress
+      percent={Number(val.toFixed(1))}
+      size="small"
+      status={val < 10 ? 'exception' : val < 50 ? 'active' : 'normal'}
+      format={p => `${p}%`}
+    />
+  );
+
+  const nsColumns = [
+    { title: t('cost:table.namespace'), dataIndex: 'name', key: 'name' },
+    { title: t('cost:table.cpuRequest'), dataIndex: 'cpu_request', key: 'cpu_request', render: (v: number) => v.toFixed(1) },
+    { title: t('cost:table.cpuUtil'), dataIndex: 'cpu_util', key: 'cpu_util', render: utilCell },
+    { title: t('cost:table.memRequest'), dataIndex: 'mem_request', key: 'mem_request', render: (v: number) => v.toFixed(1) },
+    { title: t('cost:table.memUtil'), dataIndex: 'mem_util', key: 'mem_util', render: utilCell },
+    { title: t('cost:table.podCount'), dataIndex: 'pod_count', key: 'pod_count' },
+    {
+      title: t('cost:table.estCost'), dataIndex: 'est_cost', key: 'est_cost',
+      render: (v: number, row: CostItem) => <Text strong>{`${row.currency} ${v.toFixed(4)}`}</Text>,
+      sorter: (a: CostItem, b: CostItem) => b.est_cost - a.est_cost,
+    },
+  ];
+
+  const wlColumns = [
+    { title: t('cost:table.workload'), dataIndex: 'name', key: 'name', ellipsis: true },
+    { title: t('cost:table.cpuRequest'), dataIndex: 'cpu_request', key: 'cpu_request', render: (v: number) => v.toFixed(1) },
+    { title: t('cost:table.cpuUtil'), dataIndex: 'cpu_util', key: 'cpu_util', render: utilCell },
+    { title: t('cost:table.memRequest'), dataIndex: 'mem_request', key: 'mem_request', render: (v: number) => v.toFixed(1) },
+    { title: t('cost:table.memUtil'), dataIndex: 'mem_util', key: 'mem_util', render: utilCell },
+    {
+      title: t('cost:table.estCost'), dataIndex: 'est_cost', key: 'est_cost',
+      render: (v: number, row: CostItem) => `${row.currency} ${v.toFixed(4)}`,
+    },
+  ];
+
+  const wasteColumns = [
+    { title: t('cost:table.namespace'), dataIndex: 'namespace', key: 'namespace' },
+    { title: t('cost:table.workload'), dataIndex: 'workload', key: 'workload', ellipsis: true },
+    { title: t('cost:table.cpuRequest'), dataIndex: 'cpu_request', key: 'cpu_request', render: (v: number) => v.toFixed(1) },
+    {
+      title: t('cost:table.cpuUtil'), dataIndex: 'cpu_util', key: 'cpu_util',
+      render: (v: number) => <Tag color="red">{v.toFixed(1)}%</Tag>,
+    },
+    { title: t('cost:table.memRequest'), dataIndex: 'mem_request', key: 'mem_request', render: (v: number) => v.toFixed(1) },
+    { title: t('cost:table.days'), dataIndex: 'days', key: 'days' },
+    {
+      title: t('cost:table.wastedCost'), dataIndex: 'wasted_cost', key: 'wasted_cost',
+      render: (v: number, row: WasteItem) => (
+        <Text type="danger" strong>{`${row.currency} ${v.toFixed(4)}`}</Text>
+      ),
+    },
+  ];
+
+  const monthPicker = (
+    <DatePicker.MonthPicker
+      value={dayjs(month, 'YYYY-MM')}
+      onChange={v => v && setMonth(v.format('YYYY-MM'))}
+      allowClear={false}
+      style={{ width: 130 }}
+    />
+  );
+
+  const tabItems = [
+    {
+      key: 'overview',
+      label: t('cost:tabs.overview'),
+      children: (
+        <div>
+          <Alert
+            type="info"
+            showIcon
+            message={t('cost:prometheusRequired')}
+            style={{ marginBottom: 16 }}
+            closable
+          />
+          <Space style={{ marginBottom: 16 }}>
+            {monthPicker}
+            <Button icon={<ReloadOutlined />} onClick={loadOverview}>{t('common:actions.refresh', '重新整理')}</Button>
+          </Space>
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:overview.totalCost')}
+                  value={overview?.total_cost ?? 0}
+                  precision={4}
+                  prefix={<DollarOutlined />}
+                  suffix={currency}
+                  loading={overviewLoading}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:overview.topNamespace')}
+                  value={overview?.top_namespace || '—'}
+                  prefix={<CloudOutlined />}
+                  loading={overviewLoading}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:overview.wastePercent')}
+                  value={overview?.waste_percent ?? 0}
+                  precision={1}
+                  suffix="%"
+                  prefix={<WarningOutlined style={{ color: '#faad14' }} />}
+                  loading={overviewLoading}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:overview.snapshotDays')}
+                  value={overview?.snapshot_count ?? 0}
+                  suffix={t('common:table.days', '天')}
+                  loading={overviewLoading}
+                />
+              </Card>
+            </Col>
+          </Row>
+          {!overview?.snapshot_count && !overviewLoading && (
+            <Empty description={t('cost:overview.noData')} />
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'namespaces',
+      label: t('cost:tabs.namespaces'),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            {monthPicker}
+            <Button icon={<ReloadOutlined />} onClick={loadNsCosts}>{t('common:actions.refresh', '重新整理')}</Button>
+          </Space>
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col xs={24} lg={14}>
+              <Card title={t('cost:tabs.namespaces')} size="small">
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={barData} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
+                    <YAxis />
+                    <RechartTooltip formatter={(v) => [`${currency} ${v}`, t('cost:table.estCost')]} />
+                    <Bar dataKey="cost" fill="#4e79a7" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+            </Col>
+          </Row>
+          <Table
+            rowKey="name"
+            columns={nsColumns}
+            dataSource={nsCosts}
+            loading={nsLoading}
+            size="small"
+            scroll={{ x: 800 }}
+            pagination={false}
+          />
+        </div>
+      ),
+    },
+    {
+      key: 'workloads',
+      label: t('cost:tabs.workloads'),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            {monthPicker}
+            <Button icon={<ReloadOutlined />} onClick={() => loadWorkloads(1)}>{t('common:actions.refresh', '重新整理')}</Button>
+            <Tooltip title={t('cost:export.button')}>
+              <Button
+                icon={<DownloadOutlined />}
+                href={CostService.getExportURL(clusterId!, month)}
+                target="_blank"
+              >
+                {t('cost:export.button')}
+              </Button>
+            </Tooltip>
+          </Space>
+          <Table
+            rowKey="name"
+            columns={wlColumns}
+            dataSource={wlCosts}
+            loading={wlLoading}
+            size="small"
+            scroll={{ x: 800 }}
+            pagination={{
+              current: wlPage,
+              total: wlTotal,
+              pageSize: 20,
+              onChange: (p) => { setWlPage(p); loadWorkloads(p); },
+            }}
+          />
+        </div>
+      ),
+    },
+    {
+      key: 'trend',
+      label: t('cost:tabs.trend'),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            <Button icon={<ReloadOutlined />} onClick={loadTrend}>{t('common:actions.refresh', '重新整理')}</Button>
+          </Space>
+          <Card title={t('cost:trend.title')} loading={trendLoading}>
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={lineData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <RechartTooltip />
+                <Legend />
+                {allNs.map((ns, i) => (
+                  <Line
+                    key={ns}
+                    type="monotone"
+                    dataKey={ns}
+                    stroke={COLORS[i % COLORS.length]}
+                    dot={false}
+                  />
+                ))}
+                <Line type="monotone" dataKey="total" stroke="#000" strokeWidth={2} dot={false} name={t('cost:trend.totalLabel')} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+      ),
+    },
+    {
+      key: 'waste',
+      label: (
+        <span>
+          <WarningOutlined style={{ color: '#faad14' }} /> {t('cost:tabs.waste')}
+          {waste.length > 0 && <Tag color="red" style={{ marginLeft: 4 }}>{waste.length}</Tag>}
+        </span>
+      ),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            <Button icon={<ReloadOutlined />} onClick={loadWaste}>{t('common:actions.refresh', '重新整理')}</Button>
+          </Space>
+          {waste.length === 0 && !wasteLoading ? (
+            <Empty description={t('cost:waste.empty')} />
+          ) : (
+            <>
+              <Alert
+                type="warning"
+                showIcon
+                message={t('cost:waste.suggestion')}
+                style={{ marginBottom: 12 }}
+              />
+              <Table
+                rowKey={(r: WasteItem) => `${r.namespace}/${r.workload}`}
+                columns={wasteColumns}
+                dataSource={waste}
+                loading={wasteLoading}
+                size="small"
+                scroll={{ x: 900 }}
+                pagination={false}
+              />
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: 24 }}>
+      <Card
+        bordered={false}
+        title={t('cost:title')}
+        extra={
+          <Button icon={<SettingOutlined />} onClick={handleOpenConfig}>
+            {t('cost:config.title')}
+          </Button>
+        }
+      >
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+      </Card>
+
+      <Modal
+        title={t('cost:config.title')}
+        open={configOpen}
+        onOk={handleSaveConfig}
+        onCancel={() => setConfigOpen(false)}
+        confirmLoading={configSaving}
+        width={480}
+        destroyOnClose
+      >
+        <Alert type="info" message={t('cost:config.hint')} style={{ marginBottom: 16 }} />
+        <Form form={configForm} layout="vertical">
+          <Form.Item name="cpu_price_per_core" label={t('cost:config.cpuPrice')} rules={[{ required: true }]}>
+            <InputNumber min={0} step={0.001} precision={4} style={{ width: '100%' }} addonBefore="$" />
+          </Form.Item>
+          <Form.Item name="mem_price_per_gib" label={t('cost:config.memPrice')} rules={[{ required: true }]}>
+            <InputNumber min={0} step={0.001} precision={4} style={{ width: '100%' }} addonBefore="$" />
+          </Form.Item>
+          <Form.Item name="currency" label={t('cost:config.currency')} rules={[{ required: true }]}>
+            <Select>
+              <Option value="USD">USD</Option>
+              <Option value="TWD">TWD</Option>
+              <Option value="CNY">CNY</Option>
+              <Option value="JPY">JPY</Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+};
+
+export default CostDashboard;

@@ -182,6 +182,8 @@ func autoMigrate(db *gorm.DB) error {
 		&models.HelmRepository{},     // Helm Chart 倉庫配置表
 		&models.EventAlertRule{},     // K8s Event 告警規則表
 		&models.EventAlertHistory{},  // Event 告警歷史紀錄表
+		&models.CostConfig{},         // 成本定價設定表
+		&models.ResourceSnapshot{},   // 資源每日快照表
 	)
 
 	// 根据数据库驱动类型重新启用外键约束检查

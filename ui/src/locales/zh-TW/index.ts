@@ -22,6 +22,7 @@ import network from './network.json';
 import config from './config.json';
 import components from './components.json';
 import helm from './helm.json';
+import cost from './cost.json';
 export default {
   common,
   cluster,
@@ -47,4 +48,5 @@ export default {
   config,
   components,
   helm,
+  cost,
 };

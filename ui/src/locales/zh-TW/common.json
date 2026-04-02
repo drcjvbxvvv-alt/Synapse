@@ -35,6 +35,8 @@
     "gitopsApps": "GitOps 應用",
     "helmReleases": "Helm 應用",
     "crdManagement": "CRD 管理",
+    "costAnalysis": "成本分析",
+    "eventAlerts": "Event 告警",
     "observability": "雲原生觀測",
     "costGovernance": "雲原生成本治理",
     "costInsights": "成本洞察",
