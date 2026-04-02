@@ -97,8 +97,7 @@ const HelmList: React.FC = () => {
     setLoading(true);
     try {
       const resp = await helmService.listReleases(clusterId, namespace || undefined);
-      const data = resp.data;
-      const items = Array.isArray(data) ? data : (data as { items: HelmRelease[] }).items ?? [];
+      const items = Array.isArray(resp) ? resp : (resp as { items: HelmRelease[] }).items ?? [];
       setReleases(items);
     } catch (err) {
       message.error(t('fetchError', 'Failed to fetch releases'));
@@ -110,7 +109,7 @@ const HelmList: React.FC = () => {
   const fetchRepos = useCallback(async () => {
     try {
       const resp = await helmService.listRepos();
-      setRepos(Array.isArray(resp.data) ? resp.data : []);
+      setRepos(Array.isArray(resp) ? resp : []);
     } catch {
       // ignore
     }
@@ -141,7 +140,7 @@ const HelmList: React.FC = () => {
     setChartKeyword(keyword);
     try {
       const resp = await helmService.searchCharts(keyword);
-      setCharts(Array.isArray(resp.data) ? resp.data : []);
+      setCharts(Array.isArray(resp) ? resp : []);
     } catch {
       // ignore
     }
@@ -204,7 +203,7 @@ const HelmList: React.FC = () => {
     setRollbackRevision(0);
     try {
       const resp = await helmService.getHistory(clusterId!, record.namespace, record.name);
-      setHistoryItems(Array.isArray(resp.data) ? resp.data : []);
+      setHistoryItems(Array.isArray(resp) ? resp : []);
     } catch {
       setHistoryItems([]);
     }
@@ -254,7 +253,7 @@ const HelmList: React.FC = () => {
     setHistoryTarget(record);
     try {
       const resp = await helmService.getHistory(clusterId!, record.namespace, record.name);
-      setHistoryItems(Array.isArray(resp.data) ? resp.data : []);
+      setHistoryItems(Array.isArray(resp) ? resp : []);
     } catch {
       setHistoryItems([]);
     }
