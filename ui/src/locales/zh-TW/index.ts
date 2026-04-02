@@ -21,6 +21,7 @@ import alert from './alert.json';
 import network from './network.json';
 import config from './config.json';
 import components from './components.json';
+import helm from './helm.json';
 export default {
   common,
   cluster,
@@ -45,4 +46,5 @@ export default {
   network,
   config,
   components,
+  helm,
 };

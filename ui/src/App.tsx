@@ -46,6 +46,7 @@ import ArgoCDApplicationsPage from './pages/plugins/ArgoCDApplicationsPage';
 import { PermissionManagement } from './pages/permission';
 import { UserManagement, UserGroupManagement } from './pages/access';
 import { MonitoringCenter } from './pages/om';
+import HelmList from './pages/helm/HelmList';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
 import { PermissionGuard } from './components/PermissionGuard';
@@ -186,6 +187,11 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/argocd/applications" element={
                 <PermissionGuard requiredPermission="ops">
                   <ArgoCDApplicationsPage />
+                </PermissionGuard>
+              } />
+              <Route path="clusters/:clusterId/helm" element={
+                <PermissionGuard requiredPermission="ops">
+                  <HelmList />
                 </PermissionGuard>
               } />
               {/* 审计管理路由 - 仅平台管理员 */}

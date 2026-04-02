@@ -33,6 +33,7 @@
     "configCenter": "Config Center",
     "clusterUpgrade": "Cluster Upgrade",
     "gitopsApps": "GitOps Apps",
+    "helmReleases": "Helm Apps",
     "observability": "Observability",
     "costGovernance": "Cost Governance",
     "costInsights": "Cost Insights",

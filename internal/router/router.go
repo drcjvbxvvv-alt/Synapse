@@ -491,7 +491,31 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					om.GET("/resource-top", omHandler.GetResourceTop)                // 资源消耗 Top N
 					om.GET("/control-plane-status", omHandler.GetControlPlaneStatus) // 控制面组件状态
 				}
+
+				// Helm Release 管理（cluster-scoped）
+				helmHandler := handlers.NewHelmHandler(clusterSvc, db)
+				helmReleases := cluster.Group("/helm/releases")
+				{
+					helmReleases.GET("", helmHandler.ListReleases)
+					helmReleases.POST("", helmHandler.InstallRelease)
+					helmReleases.GET("/:namespace/:name", helmHandler.GetRelease)
+					helmReleases.PUT("/:namespace/:name", helmHandler.UpgradeRelease)
+					helmReleases.DELETE("/:namespace/:name", helmHandler.UninstallRelease)
+					helmReleases.GET("/:namespace/:name/history", helmHandler.GetReleaseHistory)
+					helmReleases.GET("/:namespace/:name/values", helmHandler.GetReleaseValues)
+					helmReleases.POST("/:namespace/:name/rollback", helmHandler.RollbackRelease)
+				}
 			}
+		}
+
+		// Helm Repository 管理（global）
+		helmGlobalHandler := handlers.NewHelmHandler(clusterSvc, db)
+		helmGroup := protected.Group("/helm")
+		{
+			helmGroup.GET("/repos", helmGlobalHandler.ListRepos)
+			helmGroup.POST("/repos", helmGlobalHandler.AddRepo)
+			helmGroup.DELETE("/repos/:name", helmGlobalHandler.RemoveRepo)
+			helmGroup.GET("/repos/charts", helmGlobalHandler.SearchCharts)
 		}
 
 		// overview - 总览大盘

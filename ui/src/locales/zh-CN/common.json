@@ -33,6 +33,7 @@
     "configCenter": "配置中心",
     "clusterUpgrade": "集群升级",
     "gitopsApps": "GitOps 应用",
+    "helmReleases": "Helm 应用",
     "observability": "云原生观测",
     "costGovernance": "云原生成本治理",
     "costInsights": "成本洞察",

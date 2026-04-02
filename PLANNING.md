@@ -461,12 +461,12 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 
 **完成指標：** 所有操作可透過日誌全鏈路追蹤。
 
-#### Milestone 4：Helm 管理（6 週）
-- [ ] Helm SDK 整合
-- [ ] Release 列表 / 詳情頁
-- [ ] 安裝 / 升級 / 回滾 / 刪除
-- [ ] Chart Repository 管理
-- [ ] Values 差異比對
+#### Milestone 4：Helm 管理（6 週）✅
+- [x] Helm SDK 整合（helm.sh/helm/v3 v3.14.4 + k8s.io/cli-runtime）
+- [x] Release 列表 / 詳情頁（含 Status Tag 顏色、namespace 篩選）
+- [x] 安裝 / 升級 / 回滾 / 刪除（REST API + 前端 Modal）
+- [x] Chart Repository 管理（CRUD + DB 持久化）
+- [x] Values 查看（user values / all values）
 
 **完成指標：** 可替代 `helm list`、`helm upgrade`、`helm rollback` 日常操作。
 

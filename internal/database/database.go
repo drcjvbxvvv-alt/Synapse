@@ -179,6 +179,7 @@ func autoMigrate(db *gorm.DB) error {
 		&models.UserGroupMember{},   // 用户组成员关联表
 		&models.ClusterPermission{}, // 集群权限表
 		&models.AIConfig{},          // AI 配置表
+		&models.HelmRepository{},    // Helm Chart 倉庫配置表
 	)
 
 	// 根据数据库驱动类型重新启用外键约束检查
