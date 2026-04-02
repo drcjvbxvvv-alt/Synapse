@@ -25,6 +25,7 @@ import {
   DeleteOutlined,
   ExpandAltOutlined,
   BarChartOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
@@ -143,6 +144,19 @@ const navigate = useNavigate();
     }
   };
 
+  // AI 诊断工作负载
+  const handleAIDiagnose = () => {
+    if (!workloadInfo) return;
+    const ready = `${workloadInfo.readyReplicas ?? 0}/${workloadInfo.replicas ?? 0}`;
+    const prompt =
+      `Please diagnose the following Kubernetes ${workloadType} and identify why it may not be healthy:\n\n` +
+      `Name: ${workloadInfo.name}\nNamespace: ${workloadInfo.namespace}\nType: ${workloadType}\n` +
+      `Ready: ${ready}\nStatus: ${workloadInfo.status}\n` +
+      (workloadInfo.images?.length ? `Images: ${workloadInfo.images.join(', ')}\n` : '') +
+      `\nPlease analyze possible root causes and provide actionable remediation steps.`;
+    window.dispatchEvent(new CustomEvent('ai:diagnose', { detail: { message: prompt } }));
+  };
+
   // 删除工作负载
   const handleDelete = async () => {
     if (!clusterId || !namespace || !name) return;
@@ -247,7 +261,15 @@ const navigate = useNavigate();
               icon={<EditOutlined />}
               onClick={() => navigate(`/clusters/${clusterId}/yaml/apply?workload=${namespace}/${name}&type=${workloadType}`)}
             >{t('actions.editYAML')}</Button>
-            
+
+            <Button
+              icon={<RobotOutlined />}
+              onClick={handleAIDiagnose}
+              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' }}
+            >
+              AI 診斷
+            </Button>
+
             <Popconfirm
               title={t("common:actions.delete")}
 description={t('actions.confirmDeleteWorkload', { name: workloadInfo.name })}

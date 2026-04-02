@@ -37,11 +37,12 @@ func (h *AIConfigHandler) GetConfig(c *gin.Context) {
 	if config == nil {
 		defaultCfg := models.GetDefaultAIConfig()
 		response.OK(c, gin.H{
-			"provider": defaultCfg.Provider,
-			"endpoint": defaultCfg.Endpoint,
-			"api_key":  "",
-			"model":    defaultCfg.Model,
-			"enabled":  defaultCfg.Enabled,
+			"provider":    defaultCfg.Provider,
+			"endpoint":    defaultCfg.Endpoint,
+			"api_key":     "",
+			"model":       defaultCfg.Model,
+			"api_version": "",
+			"enabled":     defaultCfg.Enabled,
 		})
 		return
 	}
@@ -56,22 +57,24 @@ func (h *AIConfigHandler) GetConfig(c *gin.Context) {
 	}
 
 	response.OK(c, gin.H{
-		"provider": config.Provider,
-		"endpoint": config.Endpoint,
-		"api_key":  apiKeyDisplay,
-		"model":    config.Model,
-		"enabled":  config.Enabled,
+		"provider":    config.Provider,
+		"endpoint":    config.Endpoint,
+		"api_key":     apiKeyDisplay,
+		"model":       config.Model,
+		"api_version": config.APIVersion,
+		"enabled":     config.Enabled,
 	})
 }
 
 // UpdateConfig 更新 AI 配置
 func (h *AIConfigHandler) UpdateConfig(c *gin.Context) {
 	var req struct {
-		Provider string `json:"provider"`
-		Endpoint string `json:"endpoint"`
-		APIKey   string `json:"api_key"`
-		Model    string `json:"model"`
-		Enabled  bool   `json:"enabled"`
+		Provider   string `json:"provider"`
+		Endpoint   string `json:"endpoint"`
+		APIKey     string `json:"api_key"`
+		Model      string `json:"model"`
+		APIVersion string `json:"api_version"`
+		Enabled    bool   `json:"enabled"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -80,11 +83,12 @@ func (h *AIConfigHandler) UpdateConfig(c *gin.Context) {
 	}
 
 	config := &models.AIConfig{
-		Provider: req.Provider,
-		Endpoint: req.Endpoint,
-		APIKey:   req.APIKey,
-		Model:    req.Model,
-		Enabled:  req.Enabled,
+		Provider:   req.Provider,
+		Endpoint:   req.Endpoint,
+		APIKey:     req.APIKey,
+		Model:      req.Model,
+		APIVersion: req.APIVersion,
+		Enabled:    req.Enabled,
 	}
 
 	if err := h.configService.SaveConfig(config); err != nil {

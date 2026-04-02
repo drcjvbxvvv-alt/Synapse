@@ -25,6 +25,7 @@ import {
   FileTextOutlined,
   ConsoleSqlOutlined,
   LineChartOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import { clusterService } from '../../services/clusterService';
@@ -93,6 +94,27 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   // 进入终端 - 新窗口打开
   const handleTerminal = () => {
     window.open(`/clusters/${clusterId}/pods/${namespace}/${name}/terminal`, '_blank');
+  };
+
+  // AI 诊断：将 Pod 状态信息作为上下文发送给 AI
+  const handleAIDiagnose = () => {
+    if (!pod) return;
+    const restarts = pod.containers?.reduce((sum, c) => sum + (c.restartCount || 0), 0) ?? 0;
+    const containers = pod.containers?.map(c =>
+      `  - ${c.name}: state=${c.state ?? 'unknown'}, ready=${c.ready}, restarts=${c.restartCount}`
+    ).join('\n') ?? '';
+    const conditions = pod.conditions?.filter(c => c.status === 'False')
+      .map(c => `  - ${c.type}: ${c.reason ?? ''} ${c.message ?? ''}`)
+      .join('\n') ?? '';
+
+    const prompt =
+      `Please diagnose the following Kubernetes Pod and identify the root cause and suggest fixes:\n\n` +
+      `Pod: ${pod.name}\nNamespace: ${pod.namespace}\nStatus: ${pod.status}\nTotal Restarts: ${restarts}\n` +
+      (containers ? `Containers:\n${containers}\n` : '') +
+      (conditions ? `Abnormal Conditions:\n${conditions}\n` : '') +
+      `\nPlease analyze the possible causes and provide actionable remediation steps.`;
+
+    window.dispatchEvent(new CustomEvent('ai:diagnose', { detail: { message: prompt } }));
   };
 
   useEffect(() => {
@@ -259,6 +281,14 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               {t('actions.terminal')}
             </Button>
             
+            <Button
+              icon={<RobotOutlined />}
+              onClick={handleAIDiagnose}
+              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' }}
+            >
+              AI 診斷
+            </Button>
+
             <Popconfirm
               title={tc('messages.confirmDelete')}
               description={t('actions.confirmDeleteContent', { name: pod.name })}

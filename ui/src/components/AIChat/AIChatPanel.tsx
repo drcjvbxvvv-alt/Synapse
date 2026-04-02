@@ -23,6 +23,23 @@ const AIChatPanel: React.FC = () => {
   const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
   const clusterId = clusterMatch ? clusterMatch[1] : null;
 
+  // Listen for ai:diagnose custom events dispatched from detail pages
+  const handleSendRef = useRef<(content: string) => void>(() => {});
+
+  useEffect(() => {
+    const listener = (e: Event) => {
+      const detail = (e as CustomEvent<{ message: string }>).detail;
+      if (!detail?.message) return;
+      setOpen(true);
+      // Delay slightly so drawer is open before sending
+      setTimeout(() => {
+        handleSendRef.current(detail.message);
+      }, 300);
+    };
+    window.addEventListener('ai:diagnose', listener);
+    return () => window.removeEventListener('ai:diagnose', listener);
+  }, []);
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -177,6 +194,11 @@ const AIChatPanel: React.FC = () => {
     },
     [clusterId, chatHistory, antMessage],
   );
+
+  // keep ref in sync so the ai:diagnose event listener can invoke the latest handleSend
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  }, [handleSend]);
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {

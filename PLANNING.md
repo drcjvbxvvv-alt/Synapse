@@ -471,8 +471,8 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 **完成指標：** 可替代 `helm list`、`helm upgrade`、`helm rollback` 日常操作。
 
 #### Milestone 5：AI 與 CRD（8 週）
-- [ ] AI 診斷 UI 完整開放
-- [ ] 多 AI 提供者設定頁
+- [x] AI 診斷 UI 完整開放（Pod / Workload 詳情頁新增「AI 診斷」按鈕，透過自定義事件驅動浮動 AI 面板；AIChatPanel 監聽 ai:diagnose 事件並自動帶入診斷 prompt）
+- [x] 多 AI 提供者設定頁（支援 OpenAI / Azure OpenAI / Anthropic Claude / Ollama；AIConfig 新增 api_version 欄位；Provider 切換自動填入預設端點與模型選單；ai_provider.go 處理各 Provider 的 URL、Auth 頭與 Anthropic 獨立格式）
 - [x] CRD 自動發現與通用列表（`handlers/crd.go` + 動態客戶端；前端 CRDList / CRDResources 頁面；側邊欄 CRD 管理入口）
 - [x] NetworkPolicy 管理介面（`handlers/networkpolicy.go` + 動態 CRUD；前端 NetworkPolicyTab；網路管理頁新增第三個 Tab；三語 i18n）
 - [ ] Event 告警規則引擎

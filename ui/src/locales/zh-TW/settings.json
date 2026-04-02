@@ -185,7 +185,7 @@
     "model": "模型",
     "modelRequired": "請輸入模型名稱",
     "modelTooltip": "模型識別碼，例如 gpt-4o、deepseek-chat、qwen-turbo",
-    "modelPlaceholder": "例如: gpt-4o、deepseek-chat",
+    "modelPlaceholder": "例如: gpt-4o、deepseek-chat",\n    "modelCustomHint": "也可直接輸入自訂模型名稱",
     "saveConfig": "儲存設定",
     "testConnection": "測試連線",
     "loadConfigFailed": "載入 AI 設定失敗",

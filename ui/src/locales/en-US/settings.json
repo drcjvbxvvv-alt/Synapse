@@ -186,6 +186,7 @@
     "modelRequired": "Please enter model name",
     "modelTooltip": "Model identifier, e.g. gpt-4o, deepseek-chat, qwen-turbo",
     "modelPlaceholder": "e.g. gpt-4o, deepseek-chat",
+    "modelCustomHint": "You can also type a custom model name",
     "saveConfig": "Save Config",
     "testConnection": "Test Connection",
     "loadConfigFailed": "Failed to load AI configuration",

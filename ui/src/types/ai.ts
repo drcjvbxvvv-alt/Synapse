@@ -3,6 +3,7 @@ export interface AIConfig {
   endpoint: string;
   api_key: string;
   model: string;
+  api_version?: string;
   enabled: boolean;
 }
 
