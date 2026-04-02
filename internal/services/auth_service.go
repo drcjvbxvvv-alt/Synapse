@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"github.com/clay-wangzhi/KubePolaris/internal/apierrors"
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 )
@@ -55,20 +56,20 @@ func (s *AuthService) Login(username, password, authType, clientIP string) (*Log
 	case "local":
 		user, err = s.authenticateLocal(username, password)
 	default:
-		return nil, fmt.Errorf("不支持的认证类型")
+		return nil, apierrors.ErrAuthUnsupportedType()
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	if user.Status != "active" {
-		return nil, fmt.Errorf("用户账号已被禁用")
+		return nil, apierrors.ErrAuthAccountDisabled()
 	}
 
 	// 生成JWT token
 	tokenString, expiresAt, err := s.generateJWT(user)
 	if err != nil {
-		return nil, fmt.Errorf("JWT token生成失败: %w", err)
+		return nil, apierrors.ErrAuthTokenFailed()
 	}
 
 	// 更新最后登录时间和IP
@@ -94,16 +95,16 @@ func (s *AuthService) Login(username, password, authType, clientIP string) (*Log
 func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword string) error {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return fmt.Errorf("用户不存在")
+		return apierrors.ErrUserNotFound()
 	}
 
 	if user.AuthType == "ldap" {
-		return fmt.Errorf("LDAP用户不能在此修改密码")
+		return apierrors.ErrAuthLDAPReadonly()
 	}
 
 	// 验证旧密码
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword+user.Salt)); err != nil {
-		return fmt.Errorf("原密码错误")
+		return apierrors.ErrAuthWrongPassword()
 	}
 
 	// 生成新密码哈希
@@ -125,7 +126,7 @@ func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword strin
 func (s *AuthService) GetProfile(userID uint) (*models.User, error) {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return nil, fmt.Errorf("用户不存在")
+		return nil, apierrors.ErrUserNotFound()
 	}
 	return &user, nil
 }
@@ -143,7 +144,7 @@ func (s *AuthService) GetAuthStatus() (bool, error) {
 func (s *AuthService) authenticateLocal(username, password string) (*models.User, error) {
 	var user models.User
 	if err := s.db.Where("username = ?", username).First(&user).Error; err != nil {
-		return nil, fmt.Errorf("用户名或密码错误")
+		return nil, apierrors.ErrAuthInvalidCredentials()
 	}
 
 	passwordWithSalt := password + user.Salt
@@ -151,7 +152,7 @@ func (s *AuthService) authenticateLocal(username, password string) (*models.User
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(passwordWithSalt)); err != nil {
 		logger.Warn("密码验证失败 - 用户: %s, 错误: %v", username, err)
-		return nil, fmt.Errorf("用户名或密码错误")
+		return nil, apierrors.ErrAuthInvalidCredentials()
 	}
 
 	return &user, nil
@@ -165,7 +166,7 @@ func (s *AuthService) authenticateLDAP(username, password string) (*models.User,
 	}
 
 	if !ldapConfig.Enabled {
-		return nil, fmt.Errorf("LDAP认证未启用")
+		return nil, apierrors.ErrAuthLDAPNotEnabled()
 	}
 
 	ldapUser, err := s.ldapService.Authenticate(username, password)

@@ -1,13 +1,13 @@
 package services
 
 import (
-	"errors"
 	"fmt"
-
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+
+	"github.com/clay-wangzhi/KubePolaris/internal/apierrors"
+	"github.com/clay-wangzhi/KubePolaris/internal/models"
 )
 
 // UserService 用户管理服务
@@ -50,7 +50,7 @@ func (s *UserService) CreateUser(req *CreateUserRequest) (*models.User, error) {
 	var count int64
 	s.db.Model(&models.User{}).Where("username = ?", req.Username).Count(&count)
 	if count > 0 {
-		return nil, errors.New("用户名已存在")
+		return nil, apierrors.ErrUserDuplicateUsername()
 	}
 
 	salt := fmt.Sprintf("kp_%s_salt", req.Username)
@@ -81,7 +81,7 @@ func (s *UserService) CreateUser(req *CreateUserRequest) (*models.User, error) {
 func (s *UserService) UpdateUser(id uint, req *UpdateUserRequest) (*models.User, error) {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
-		return nil, errors.New("用户不存在")
+		return nil, apierrors.ErrUserNotFound()
 	}
 
 	if req.Email != nil {
@@ -105,11 +105,11 @@ func (s *UserService) UpdateUser(id uint, req *UpdateUserRequest) (*models.User,
 func (s *UserService) DeleteUser(id uint) error {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
-		return errors.New("用户不存在")
+		return apierrors.ErrUserNotFound()
 	}
 
 	if user.Username == "admin" {
-		return errors.New("不能删除 admin 用户")
+		return apierrors.ErrUserAdminProtected()
 	}
 
 	// 清除用户组关联
@@ -127,7 +127,7 @@ func (s *UserService) DeleteUser(id uint) error {
 func (s *UserService) GetUser(id uint) (*models.User, error) {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
-		return nil, errors.New("用户不存在")
+		return nil, apierrors.ErrUserNotFound()
 	}
 	return &user, nil
 }
@@ -165,15 +165,15 @@ func (s *UserService) ListUsers(params *ListUsersParams) ([]models.User, int64, 
 func (s *UserService) UpdateUserStatus(id uint, status string) error {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
-		return errors.New("用户不存在")
+		return apierrors.ErrUserNotFound()
 	}
 
 	if user.Username == "admin" {
-		return errors.New("不能修改 admin 用户状态")
+		return apierrors.ErrUserAdminProtected()
 	}
 
 	if status != "active" && status != "inactive" {
-		return errors.New("无效的状态值")
+		return apierrors.ErrUserInvalidStatus()
 	}
 
 	user.Status = status
@@ -184,11 +184,11 @@ func (s *UserService) UpdateUserStatus(id uint, status string) error {
 func (s *UserService) ResetPassword(id uint, newPassword string) error {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
-		return errors.New("用户不存在")
+		return apierrors.ErrUserNotFound()
 	}
 
 	if user.AuthType == "ldap" {
-		return errors.New("LDAP 用户不能重置密码")
+		return apierrors.ErrAuthLDAPReadonly()
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword+user.Salt), bcrypt.DefaultCost)

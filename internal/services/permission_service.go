@@ -2,13 +2,13 @@ package services
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
+	"gorm.io/gorm"
+
+	"github.com/clay-wangzhi/KubePolaris/internal/apierrors"
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
-
-	"gorm.io/gorm"
 )
 
 // PermissionService 权限服务
@@ -39,7 +39,7 @@ func (s *PermissionService) CreateUserGroup(name, description string) (*models.U
 func (s *PermissionService) UpdateUserGroup(id uint, name, description string) (*models.UserGroup, error) {
 	var group models.UserGroup
 	if err := s.db.First(&group, id).Error; err != nil {
-		return nil, fmt.Errorf("用户组不存在")
+		return nil, apierrors.ErrGroupNotFound()
 	}
 
 	group.Name = name
@@ -56,7 +56,7 @@ func (s *PermissionService) DeleteUserGroup(id uint) error {
 	var count int64
 	s.db.Model(&models.ClusterPermission{}).Where("user_group_id = ?", id).Count(&count)
 	if count > 0 {
-		return fmt.Errorf("该用户组还有关联的权限配置，请先删除相关权限")
+		return apierrors.ErrGroupHasPermissions()
 	}
 
 	// 删除用户组成员关联
@@ -73,7 +73,7 @@ func (s *PermissionService) DeleteUserGroup(id uint) error {
 func (s *PermissionService) GetUserGroup(id uint) (*models.UserGroup, error) {
 	var group models.UserGroup
 	if err := s.db.Preload("Users").First(&group, id).Error; err != nil {
-		return nil, fmt.Errorf("用户组不存在")
+		return nil, apierrors.ErrGroupNotFound()
 	}
 	return &group, nil
 }
@@ -92,13 +92,13 @@ func (s *PermissionService) AddUserToGroup(userID, groupID uint) error {
 	// 检查用户是否存在
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return fmt.Errorf("用户不存在")
+		return apierrors.ErrUserNotFound()
 	}
 
 	// 检查用户组是否存在
 	var group models.UserGroup
 	if err := s.db.First(&group, groupID).Error; err != nil {
-		return fmt.Errorf("用户组不存在")
+		return apierrors.ErrGroupNotFound()
 	}
 
 	// 检查是否已在组中
@@ -127,13 +127,13 @@ func (s *PermissionService) RemoveUserFromGroup(userID, groupID uint) error {
 func (s *PermissionService) CreateClusterPermission(req *CreateClusterPermissionRequest) (*models.ClusterPermission, error) {
 	// 验证参数
 	if req.ClusterID == 0 {
-		return nil, errors.New("集群ID不能为空")
+		return nil, apierrors.ErrBadRequest("集群ID不能为空")
 	}
 	if req.UserID == nil && req.UserGroupID == nil {
-		return nil, errors.New("必须指定用户或用户组")
+		return nil, apierrors.ErrBadRequest("必须指定用户或用户组")
 	}
 	if req.UserID != nil && req.UserGroupID != nil {
-		return nil, errors.New("不能同时指定用户和用户组")
+		return nil, apierrors.ErrPermissionAmbiguousTarget()
 	}
 
 	// 验证权限类型
@@ -145,12 +145,12 @@ func (s *PermissionService) CreateClusterPermission(req *CreateClusterPermission
 		models.PermissionTypeCustom:   true,
 	}
 	if !validTypes[req.PermissionType] {
-		return nil, errors.New("无效的权限类型")
+		return nil, apierrors.ErrPermissionInvalidType()
 	}
 
 	// 自定义权限必须指定角色
 	if req.PermissionType == models.PermissionTypeCustom && req.CustomRoleRef == "" {
-		return nil, errors.New("自定义权限必须指定ClusterRole或Role")
+		return nil, apierrors.ErrPermissionCustomRoleRequired()
 	}
 
 	// 检查是否已存在相同的权限配置
@@ -163,7 +163,7 @@ func (s *PermissionService) CreateClusterPermission(req *CreateClusterPermission
 	var count int64
 	query.Count(&count)
 	if count > 0 {
-		return nil, errors.New("该用户/用户组在此集群已有权限配置")
+		return nil, apierrors.ErrPermissionDuplicate()
 	}
 
 	// 处理命名空间
@@ -209,7 +209,7 @@ type CreateClusterPermissionRequest struct {
 func (s *PermissionService) UpdateClusterPermission(id uint, req *UpdateClusterPermissionRequest) (*models.ClusterPermission, error) {
 	var permission models.ClusterPermission
 	if err := s.db.First(&permission, id).Error; err != nil {
-		return nil, errors.New("权限配置不存在")
+		return nil, apierrors.ErrPermissionNotFound()
 	}
 
 	// 验证权限类型
@@ -222,7 +222,7 @@ func (s *PermissionService) UpdateClusterPermission(id uint, req *UpdateClusterP
 			models.PermissionTypeCustom:   true,
 		}
 		if !validTypes[req.PermissionType] {
-			return nil, errors.New("无效的权限类型")
+			return nil, apierrors.ErrPermissionInvalidType()
 		}
 		permission.PermissionType = req.PermissionType
 	}
@@ -232,7 +232,7 @@ func (s *PermissionService) UpdateClusterPermission(id uint, req *UpdateClusterP
 		if req.CustomRoleRef != "" {
 			permission.CustomRoleRef = req.CustomRoleRef
 		} else if permission.CustomRoleRef == "" {
-			return nil, errors.New("自定义权限必须指定ClusterRole或Role")
+			return nil, apierrors.ErrPermissionCustomRoleRequired()
 		}
 	}
 
@@ -266,7 +266,7 @@ func (s *PermissionService) DeleteClusterPermission(id uint) error {
 		return fmt.Errorf("删除权限配置失败: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return errors.New("权限配置不存在")
+		return apierrors.ErrPermissionNotFound()
 	}
 	return nil
 }
@@ -275,7 +275,7 @@ func (s *PermissionService) DeleteClusterPermission(id uint) error {
 func (s *PermissionService) GetClusterPermission(id uint) (*models.ClusterPermission, error) {
 	var permission models.ClusterPermission
 	if err := s.db.Preload("User").Preload("UserGroup").Preload("Cluster").First(&permission, id).Error; err != nil {
-		return nil, errors.New("权限配置不存在")
+		return nil, apierrors.ErrPermissionNotFound()
 	}
 	return &permission, nil
 }
@@ -343,7 +343,7 @@ func (s *PermissionService) getDefaultPermission(userID, clusterID uint) (*model
 	// 查询用户信息
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return nil, errors.New("用户不存在")
+		return nil, apierrors.ErrUserNotFound()
 	}
 
 	// 确定默认权限类型
@@ -526,7 +526,7 @@ func (s *PermissionService) ListUsers() ([]models.User, error) {
 func (s *PermissionService) GetUser(id uint) (*models.User, error) {
 	var user models.User
 	if err := s.db.Preload("Roles").First(&user, id).Error; err != nil {
-		return nil, errors.New("用户不存在")
+		return nil, apierrors.ErrUserNotFound()
 	}
 	return &user, nil
 }
@@ -536,7 +536,7 @@ func (s *PermissionService) GetUser(id uint) (*models.User, error) {
 func (s *PermissionService) GetUserAccessibleClusterIDs(userID uint) ([]uint, bool, error) {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		return nil, false, errors.New("用户不存在")
+		return nil, false, apierrors.ErrUserNotFound()
 	}
 
 	// admin 用户拥有全部集群权限

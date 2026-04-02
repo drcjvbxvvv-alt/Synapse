@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
+	"github.com/clay-wangzhi/KubePolaris/internal/apierrors"
 	"github.com/clay-wangzhi/KubePolaris/internal/constants"
 	"github.com/clay-wangzhi/KubePolaris/internal/response"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
@@ -42,14 +45,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if err != nil {
 		logger.Warn("用户登录失败: %s, 错误: %v", req.Username, err)
 
-		// 判断错误类型确定状态码
-		statusCode := 401
-		if err.Error() == "用户账号已被禁用" {
-			statusCode = 403
-		} else if err.Error() == "不支持的认证类型" {
-			statusCode = 400
-		} else if err.Error() == "JWT token生成失败" {
-			statusCode = 500
+		// 从 AppError 中提取状态码（fallback 401）
+		statusCode := http.StatusUnauthorized
+		if ae, ok := apierrors.As(err); ok {
+			statusCode = ae.HTTPStatus
 		}
 
 		// 记录登录失败审计日志
@@ -70,16 +69,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			})
 		}
 
-		switch statusCode {
-		case 400:
-			response.BadRequest(c, err.Error())
-		case 403:
-			response.Forbidden(c, err.Error())
-		case 500:
-			response.InternalError(c, err.Error())
-		default:
-			response.Unauthorized(c, err.Error())
-		}
+		response.FromError(c, err)
 		return
 	}
 
@@ -190,16 +180,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 	err := h.authService.ChangePassword(userID, req.OldPassword, req.NewPassword)
 	if err != nil {
-		switch err.Error() {
-		case "用户不存在":
-			response.NotFound(c, err.Error())
-		case "LDAP用户不能在此修改密码":
-			response.Forbidden(c, err.Error())
-		case "原密码错误":
-			response.Unauthorized(c, err.Error())
-		default:
-			response.InternalError(c, err.Error())
-		}
+		response.FromError(c, err)
 		return
 	}
 

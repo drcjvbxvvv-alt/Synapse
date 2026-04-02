@@ -457,7 +457,7 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 - [x] 健康檢查深化（`/readyz` 真實 DB ping，`/healthz` liveness）
 - [x] 結構化日誌（`pkg/logger` 改用 slog，LOG_FORMAT=json|text）
 - [x] 稽核日誌完整查詢（`GetAuditLogs` 委派 OperationLogService.List，支援完整篩選）
-- [ ] 錯誤碼化（API error codes，待實作）
+- [x] 錯誤碼化（`internal/apierrors` 套件，AppError 攜帶 HTTPStatus + Code；`response.FromError` 統一轉換；Service 層回傳結構化錯誤取代字串比對）
 
 **完成指標：** 所有操作可透過日誌全鏈路追蹤。
 

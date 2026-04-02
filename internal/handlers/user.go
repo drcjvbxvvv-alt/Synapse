@@ -58,7 +58,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 	user, err := h.userService.GetUser(uint(id))
 	if err != nil {
-		response.NotFound(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	user, err := h.userService.CreateUser(&req)
 	if err != nil {
-		response.BadRequest(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	user, err := h.userService.UpdateUser(uint(id), &req)
 	if err != nil {
-		response.BadRequest(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	if err := h.userService.DeleteUser(uint(id)); err != nil {
-		response.BadRequest(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 
@@ -149,7 +149,7 @@ func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
 	}
 
 	if err := h.userService.UpdateUserStatus(uint(id), req.Status); err != nil {
-		response.BadRequest(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 
@@ -176,7 +176,7 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := h.userService.ResetPassword(uint(id), req.NewPassword); err != nil {
-		response.BadRequest(c, err.Error())
+		response.FromError(c, err)
 		return
 	}
 

@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/clay-wangzhi/KubePolaris/internal/apierrors"
 )
 
 // ErrorBody 统一错误响应体
@@ -104,4 +106,15 @@ func InternalError(c *gin.Context, msg string) {
 // ServiceUnavailable 503
 func ServiceUnavailable(c *gin.Context, msg string) {
 	Error(c, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", msg)
+}
+
+// FromError converts an error into a JSON response.
+// If err is an *apierrors.AppError the response uses its HTTPStatus and Code;
+// otherwise it falls back to 500 INTERNAL_ERROR.
+func FromError(c *gin.Context, err error) {
+	if ae, ok := apierrors.As(err); ok {
+		Error(c, ae.HTTPStatus, ae.Code, ae.Message)
+		return
+	}
+	InternalError(c, err.Error())
 }
