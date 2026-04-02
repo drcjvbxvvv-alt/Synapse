@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import kubernetesLogo from '../../assets/kubernetes.png';
@@ -34,6 +34,24 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [ldapEnabled, setLdapEnabled] = useState(false);
   const [activeTab, setActiveTab] = useState<'local' | 'ldap'>('local');
+
+  // Autofill detection: Chrome bypasses React onChange, so we poll the DOM
+  // to sync autofilled values into the antd Form store before submission.
+  const usernameRef = useRef<HTMLInputElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const syncAutofill = () => {
+      const u = usernameRef.current?.value;
+      const p = passwordRef.current?.value;
+      if (u) form.setFieldValue('username', u);
+      if (p) form.setFieldValue('password', p);
+    };
+    // Poll shortly after mount to catch browser autofill
+    const t1 = setTimeout(syncAutofill, 300);
+    const t2 = setTimeout(syncAutofill, 800);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [form]);
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
@@ -86,7 +104,7 @@ const Login: React.FC = () => {
       {/* ── Left: Brand Panel ── */}
       <section
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[52%] relative flex-col justify-center overflow-hidden
+        className="hidden lg:flex lg:w-[52%] min-h-screen relative flex-col justify-center overflow-hidden
                    bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
       >
         {/* Subtle grid */}
@@ -95,28 +113,28 @@ const Login: React.FC = () => {
           style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '40px 40px' }}
         />
         {/* Glow spots */}
-        <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-indigo-500/15 blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-blue-600/20 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 px-14 py-16 max-w-lg">
+        <div className="relative z-10 px-12 py-8 max-w-lg">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
-            <img src={kubernetesLogo} alt="" className="w-10 h-10" />
+          <div className="flex items-center gap-3 mb-8">
+            <img src={kubernetesLogo} alt="" className="w-9 h-9" />
             <span className="text-white text-2xl font-bold tracking-wide">Synapse</span>
           </div>
 
-          <h2 className="text-white text-3xl font-semibold leading-snug mb-4">
+          <h2 className="text-white text-2xl font-semibold leading-snug mb-3">
             {t('auth.brandHeadline')}
           </h2>
-          <p className="text-slate-400 text-base leading-relaxed mb-10">
+          <p className="text-slate-400 text-sm leading-relaxed mb-8">
             {t('auth.brandDesc')}
           </p>
 
-          <ul className="space-y-5">
+          <ul className="space-y-4">
             {features.map((f, i) => (
-              <li key={i} className="flex items-start gap-4">
-                <div className="mt-0.5 w-9 h-9 flex items-center justify-center rounded-lg
-                                bg-white/10 text-blue-400 text-base flex-shrink-0">
+              <li key={i} className="flex items-start gap-3">
+                <div className="mt-0.5 w-8 h-8 flex items-center justify-center rounded-lg
+                                bg-white/10 text-blue-400 text-sm flex-shrink-0">
                   {f.icon}
                 </div>
                 <div>
@@ -170,6 +188,7 @@ const Login: React.FC = () => {
               rules={[{ required: true, message: t('auth.usernameRequired') }]}
             >
               <Input
+                ref={(node) => { usernameRef.current = node?.input ?? null; }}
                 prefix={<UserOutlined className="text-slate-400" aria-hidden="true" />}
                 placeholder={`${t('auth.username')}…`}
                 size="large"
@@ -186,6 +205,7 @@ const Login: React.FC = () => {
               className="!mb-7"
             >
               <Input.Password
+                ref={(node) => { passwordRef.current = node?.input ?? null; }}
                 prefix={<LockOutlined className="text-slate-400" aria-hidden="true" />}
                 placeholder={`${t('auth.password')}…`}
                 size="large"
