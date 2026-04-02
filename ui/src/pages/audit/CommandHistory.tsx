@@ -403,7 +403,8 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           dataSource={sessions}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1200 }}
+          virtual
+          scroll={{ x: 1200, y: 600 }}
           pagination={{
             current: currentPage,
             pageSize,

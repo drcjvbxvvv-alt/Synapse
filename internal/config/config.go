@@ -42,7 +42,8 @@ type JWTConfig struct {
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level string `mapstructure:"level"`
+	Level  string `mapstructure:"level"`
+	Format string `mapstructure:"format"` // text | json（預設 text，由 LOG_FORMAT env 控制）
 }
 
 // K8sConfig Kubernetes配置
@@ -89,6 +90,7 @@ func Load() *Config {
 
 	// 绑定日志环境变量
 	_ = viper.BindEnv("log.level", "LOG_LEVEL")
+	_ = viper.BindEnv("log.format", "LOG_FORMAT")
 
 	// 绑定 K8s 环境变量
 	_ = viper.BindEnv("k8s.default_namespace", "K8S_DEFAULT_NAMESPACE")

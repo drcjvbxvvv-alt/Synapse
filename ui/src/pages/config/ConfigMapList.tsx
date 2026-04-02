@@ -580,7 +580,8 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
         rowKey={(record) => `${record.namespace}/${record.name}`}
         rowSelection={rowSelection}
         loading={loading}
-        scroll={{ x: 1200 }}
+        virtual
+        scroll={{ x: 1200, y: 600 }}
         size="middle"
         onChange={handleTableChange}
         pagination={{

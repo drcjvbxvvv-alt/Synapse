@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
   Table,
@@ -89,15 +90,10 @@ const methodColorMap: Record<string, string> = {
 
 const OperationLogs: React.FC = () => {
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
 
   // 数据状态
-const { t } = useTranslation(['audit', 'common']);
-const [logs, setLogs] = useState<OperationLogItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [stats, setStats] = useState<OperationLogStats | null>(null);
-  const [modules, setModules] = useState<ModuleOption[]>([]);
-  const [actions, setActions] = useState<ModuleOption[]>([]);
+  const { t } = useTranslation(['audit', 'common']);
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -113,103 +109,100 @@ const [logs, setLogs] = useState<OperationLogItem[]>([]);
   // 详情抽屉
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<OperationLogDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
 
-  // 获取模块和操作列表
-  const fetchOptions = useCallback(async () => {
-    try {
-      const [modulesRes, actionsRes] = await Promise.all([
-        auditService.getModules(),
-        auditService.getActions(),
-      ]);
-      setModules(modulesRes || []);
-      setActions(actionsRes || []);
-    } catch (error) {
-      console.error('获取选项失败', error);
-    }
-  }, []);
+  // React Query：模块和操作列表（長期快取，不常變）
+  const { data: modules = [] } = useQuery<ModuleOption[]>({
+    queryKey: ['auditModules'],
+    queryFn: () => auditService.getModules().then(r => r || []),
+    staleTime: 5 * 60_000,
+  });
 
-  // 获取统计数据
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await auditService.getOperationLogStats();
-      setStats(res);
-    } catch (error) {
-      console.error('获取统计信息失败', error);
-    }
-  }, []);
+  const { data: actions = [] } = useQuery<ModuleOption[]>({
+    queryKey: ['auditActions'],
+    queryFn: () => auditService.getActions().then(r => r || []),
+    staleTime: 5 * 60_000,
+  });
 
-  // 获取日志列表
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: OperationLogListParams = {
-        page: currentPage,
-        pageSize,
-      };
-      if (module) params.module = module;
-      if (action) params.action = action;
-      if (success !== '') params.success = success === 'true';
-      if (keyword) params.keyword = keyword;
-      if (dateRange) {
-        params.startTime = dateRange[0].startOf('day').toISOString();
-        params.endTime = dateRange[1].endOf('day').toISOString();
-      }
+  // React Query：統計數據
+  const { data: stats = null } = useQuery<OperationLogStats | null>({
+    queryKey: ['auditStats'],
+    queryFn: () => auditService.getOperationLogStats(),
+    staleTime: 60_000,
+  });
 
-      const res = await auditService.getOperationLogs(params);
-      setLogs(res.items || []);
-      setTotal(res.total);
-    } catch {
-      message.error(t('audit:operations.fetchFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, pageSize, module, action, success, keyword, dateRange, message]);
+  // React Query：日誌列表（依篩選條件和分頁變化重新請求）
+  const logsParams: OperationLogListParams = {
+    page: currentPage,
+    pageSize,
+    ...(module && { module }),
+    ...(action && { action }),
+    ...(success !== '' && { success: success === 'true' }),
+    ...(keyword && { keyword }),
+    ...(dateRange && {
+      startTime: dateRange[0].startOf('day').toISOString(),
+      endTime: dateRange[1].endOf('day').toISOString(),
+    }),
+  };
 
-  // 获取日志详情
-  const fetchLogDetail = useCallback(async (id: number) => {
-    setDetailLoading(true);
-    try {
-      const res = await auditService.getOperationLog(id);
-      setSelectedLog(res);
-    } catch {
-      message.error(t('audit:operations.fetchDetailFailed'));
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [message]);
+  const {
+    data: logsData,
+    isLoading: loading,
+    error: logsError,
+  } = useQuery({
+    queryKey: ['operationLogs', logsParams],
+    queryFn: () => auditService.getOperationLogs(logsParams),
+  });
+
+  const logs: OperationLogItem[] = logsData?.items || [];
+  const total = logsData?.total ?? 0;
+
+  if (logsError) {
+    message.error(t('audit:operations.fetchFailed'));
+  }
+
+  // React Query：日誌詳情（依 selectedLog id 查詢）
+  const [pendingDetailId, setPendingDetailId] = useState<number | null>(null);
+  const {
+    data: detailData,
+    isLoading: detailLoading,
+    isError: detailError,
+  } = useQuery<OperationLogDetail>({
+    queryKey: ['operationLogDetail', pendingDetailId],
+    queryFn: () => auditService.getOperationLog(pendingDetailId!),
+    enabled: pendingDetailId != null,
+    staleTime: 0,
+  });
 
   useEffect(() => {
-    fetchOptions();
-    fetchStats();
-  }, [fetchOptions, fetchStats]);
+    if (detailData) setSelectedLog(detailData);
+  }, [detailData]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    if (detailError) message.error(t('audit:operations.fetchDetailFailed'));
+  }, [detailError, message, t]);
 
   // 查看详情
-  const handleViewDetail = (record: OperationLogItem) => {
+  const handleViewDetail = useCallback((record: OperationLogItem) => {
     setDrawerVisible(true);
-    fetchLogDetail(record.id);
-  };
+    setPendingDetailId(record.id);
+  }, []);
 
   // 关闭抽屉
-  const handleCloseDrawer = () => {
+  const handleCloseDrawer = useCallback(() => {
     setDrawerVisible(false);
     setSelectedLog(null);
-  };
+    setPendingDetailId(null);
+  }, []);
 
   // 刷新数据
-  const handleRefresh = () => {
-    fetchStats();
-    fetchLogs();
-  };
+  const handleRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['auditStats'] });
+    queryClient.invalidateQueries({ queryKey: ['operationLogs'] });
+  }, [queryClient]);
 
-  // 搜索
+  // 搜索（重置頁碼，React Query 會自動因 logsParams 變更而重新請求）
   const handleSearch = () => {
     setCurrentPage(1);
-    fetchLogs();
   };
 
   // 表格列定义
@@ -475,7 +468,8 @@ const [logs, setLogs] = useState<OperationLogItem[]>([]);
           dataSource={logs}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1400 }}
+          virtual
+          scroll={{ x: 1400, y: 600 }}
           pagination={{
             current: currentPage,
             pageSize,

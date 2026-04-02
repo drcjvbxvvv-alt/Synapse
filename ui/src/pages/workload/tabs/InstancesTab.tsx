@@ -269,7 +269,8 @@ const [loading, setLoading] = useState(false);
           showQuickJumper: true,
           showTotal: (total) => t('instances.total', { count: total }),
         }}
-        scroll={{ x: 1800 }}
+        virtual
+        scroll={{ x: 1800, y: 600 }}
       />
     </Spin>
   );

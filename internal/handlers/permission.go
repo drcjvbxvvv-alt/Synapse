@@ -131,7 +131,7 @@ func (h *PermissionHandler) ListUserGroups(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, groups)
+	response.List(c, groups, int64(len(groups)))
 }
 
 // AddUserToGroupRequest 添加用户到用户组请求
@@ -514,7 +514,7 @@ func (h *PermissionHandler) ListClusterPermissions(c *gin.Context) {
 		responses[i] = p.ToResponse()
 	}
 
-	response.OK(c, responses)
+	response.List(c, responses, int64(len(responses)))
 }
 
 // ListAllClusterPermissions 获取所有集群权限列表
@@ -531,7 +531,7 @@ func (h *PermissionHandler) ListAllClusterPermissions(c *gin.Context) {
 		responses[i] = p.ToResponse()
 	}
 
-	response.OK(c, responses)
+	response.List(c, responses, int64(len(responses)))
 }
 
 // ========== 用户权限查询 ==========
@@ -622,7 +622,7 @@ func (h *PermissionHandler) GetMyClusterPermission(c *gin.Context) {
 
 // ========== 用户列表 ==========
 
-// ListUsers 获取用户列表
+// ListUsers 获取用户列表（用於权限管理的用户选择）
 func (h *PermissionHandler) ListUsers(c *gin.Context) {
 	users, err := h.permissionService.ListUsers()
 	if err != nil {
@@ -630,5 +630,5 @@ func (h *PermissionHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, users)
+	response.List(c, users, int64(len(users)))
 }

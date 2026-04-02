@@ -574,7 +574,8 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
         rowKey={(record) => record.name}
         rowSelection={rowSelection}
         loading={loading}
-        scroll={{ x: 1400 }}
+        virtual
+        scroll={{ x: 1400, y: 600 }}
         size="middle"
         onChange={handleTableChange}
         pagination={{

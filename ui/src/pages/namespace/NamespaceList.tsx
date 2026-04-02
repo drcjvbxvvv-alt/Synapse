@@ -593,7 +593,8 @@ const [form] = Form.useForm();
           rowKey="name"
           rowSelection={rowSelection}
           loading={loading}
-          scroll={{ x: 900 }}
+          virtual
+          scroll={{ x: 900, y: 600 }}
           size="middle"
           onChange={handleTableChange}
           pagination={{

@@ -419,7 +419,8 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         rowKey={(record) => `${record.namespace}/${record.name}`}
         rowSelection={{ selectedRowKeys, onChange: (keys) => setSelectedRowKeys(keys as string[]) }}
         loading={loading}
-        scroll={{ x: 1400 }}
+        virtual
+        scroll={{ x: 1400, y: 600 }}
         size="middle"
         onChange={handleTableChange}
         pagination={{

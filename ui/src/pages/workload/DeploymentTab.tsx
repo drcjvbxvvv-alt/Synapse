@@ -716,7 +716,8 @@ style={{ flex: 1 }}
         rowKey={(record) => `${record.namespace}-${record.name}-${record.type}`}
         rowSelection={rowSelection}
         loading={loading}
-        scroll={{ x: 1400 }}
+        virtual
+        scroll={{ x: 1400, y: 600 }}
         size="middle"
         onChange={handleTableChange}
         pagination={{

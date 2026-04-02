@@ -17,6 +17,7 @@ type AuditHandler struct {
 	db           *gorm.DB
 	cfg          *config.Config
 	auditService *services.AuditService
+	opLogService *services.OperationLogService
 }
 
 // NewAuditHandler 创建审计处理器
@@ -25,16 +26,58 @@ func NewAuditHandler(db *gorm.DB, cfg *config.Config) *AuditHandler {
 		db:           db,
 		cfg:          cfg,
 		auditService: services.NewAuditService(db),
+		opLogService: services.NewOperationLogService(db),
 	}
 }
 
-// GetAuditLogs 获取审计日志
-// TODO: 尚未实现通用审计日志查询，当前仅返回空列表。
-// 终端会话审计已通过 GetTerminalSessions 等端点实现；
-// 操作审计已通过 OperationLog 模块实现。
-// 此端点预留用于未来整合所有审计数据的统一查询入口。
+// GetAuditLogs 获取统一审计日志（委派 OperationLogService.List）
+// 支援查詢參數：page, pageSize, username, module, action, result(success/failed), startTime, endTime, keyword
 func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
-	response.PagedList(c, []interface{}{}, 0, 1, 10)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+
+	req := &services.OperationLogListRequest{
+		Page:         page,
+		PageSize:     pageSize,
+		Username:     c.Query("username"),
+		Module:       c.Query("module"),
+		Action:       c.Query("action"),
+		ResourceType: c.Query("resourceType"),
+		Keyword:      c.Query("keyword"),
+	}
+
+	// result=success|failed
+	if result := c.Query("result"); result != "" {
+		ok := result == "success"
+		req.Success = &ok
+	}
+
+	// clusterID
+	if cidStr := c.Query("clusterId"); cidStr != "" {
+		if cid, err := strconv.ParseUint(cidStr, 10, 32); err == nil {
+			uid := uint(cid)
+			req.ClusterID = &uid
+		}
+	}
+
+	if startStr := c.Query("startTime"); startStr != "" {
+		if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+			req.StartTime = &t
+		}
+	}
+	if endStr := c.Query("endTime"); endStr != "" {
+		if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+			req.EndTime = &t
+		}
+	}
+
+	resp, err := h.opLogService.List(req)
+	if err != nil {
+		response.InternalError(c, "获取审计日志失败: "+err.Error())
+		return
+	}
+
+	response.OK(c, resp)
 }
 
 // GetTerminalSessions 获取终端会话记录

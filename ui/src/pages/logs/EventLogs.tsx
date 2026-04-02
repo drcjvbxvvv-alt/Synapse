@@ -378,7 +378,8 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
           dataSource={events}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1300 }}
+          virtual
+          scroll={{ x: 1300, y: 600 }}
           pagination={{
             pageSize: 20,
             showSizeChanger: true,

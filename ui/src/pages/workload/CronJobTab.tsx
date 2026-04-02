@@ -705,7 +705,8 @@ const { t } = useTranslation(['workload', 'common']);
           pageSizeOptions: ['10', '20', '50', '100'],
         }}
         onChange={handleTableChange}
-        scroll={{ x: 1500 }}
+        virtual
+        scroll={{ x: 1500, y: 600 }}
       />
 
       {/* 扩缩容Modal */}

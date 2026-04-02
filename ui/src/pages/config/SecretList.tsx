@@ -616,7 +616,8 @@ const [allSecrets, setAllSecrets] = useState<SecretListItem[]>([]);
         rowKey={(record) => `${record.namespace}/${record.name}`}
         rowSelection={rowSelection}
         loading={loading}
-        scroll={{ x: 1300 }}
+        virtual
+        scroll={{ x: 1300, y: 600 }}
         size="middle"
         onChange={handleTableChange}
         pagination={{

@@ -219,7 +219,8 @@ const [loading, setLoading] = useState(false);
           showSizeChanger: true,
           showTotal: (total) => t('events.total', { count: total }),
         }}
-        scroll={{ x: 1600 }}
+        virtual
+        scroll={{ x: 1600, y: 600 }}
       />
     </Spin>
   );

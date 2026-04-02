@@ -44,8 +44,16 @@ func NewClusterHandler(db *gorm.DB, cfg *config.Config, mgr *k8s.ClusterInformer
 	}
 }
 
-// GetClusters 获取集群列表（按用户权限过滤）
+// GetClusters 获取集群列表（按用户权限过滤，支援分頁 page/pageSize）
 func (h *ClusterHandler) GetClusters(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 50
+	}
 	userID := c.GetUint("user_id")
 
 	// 获取用户可访问的集群
@@ -91,7 +99,16 @@ func (h *ClusterHandler) GetClusters(c *gin.Context) {
 		clusterList = append(clusterList, clusterData)
 	}
 
-	response.PagedList(c, clusterList, int64(len(clusterList)), 1, 10)
+	total := int64(len(clusterList))
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start > len(clusterList) {
+		start = len(clusterList)
+	}
+	if end > len(clusterList) {
+		end = len(clusterList)
+	}
+	response.PagedList(c, clusterList[start:end], total, page, pageSize)
 }
 
 // ImportCluster 导入集群

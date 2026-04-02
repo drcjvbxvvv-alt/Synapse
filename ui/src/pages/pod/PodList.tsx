@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -128,10 +129,10 @@ const PodList: React.FC = () => {
   
   const clusterId = routeClusterId || '1';
   
-  // 数据状态
-  const [allPods, setAllPods] = useState<PodInfo[]>([]); // 所有原始数据
-  const [pods, setPods] = useState<PodInfo[]>([]); // 当前页显示的数据
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  // 派生狀態：client-side 篩選和分頁後的顯示數據
+  const [pods, setPods] = useState<PodInfo[]>([]);
   const [total, setTotal] = useState(0);
   
   // 分页状态
@@ -250,33 +251,27 @@ const PodList: React.FC = () => {
     });
   }, [searchConditions]);
 
-  // 加载Pod列表（获取所有数据，不分页）
-  const loadPods = useCallback(async () => {
-    if (!clusterId) return;
-    
-    setLoading(true);
-    try {
-      // 获取所有数据（设置一个很大的pageSize）
-      const response = await PodService.getPods(
-        clusterId,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        1,
-        10000 // 获取所有数据
-      );
-      
-      const items = response.items || [];
-      setAllPods(items);
-    } catch (error) {
-      console.error('Failed to fetch pods:', error);
-      message.error(t('list.fetchError'));
-    } finally {
-      setLoading(false);
-    }
-  }, [clusterId, message, t]);
+  // React Query：載入所有 Pod（大 pageSize，client-side 篩選）
+  const {
+    data: podData,
+    isLoading: loading,
+    isError: podError,
+  } = useQuery({
+    queryKey: ['pods', clusterId],
+    queryFn: () => PodService.getPods(clusterId, undefined, undefined, undefined, undefined, undefined, 1, 10000),
+    enabled: !!clusterId,
+    staleTime: 30_000,
+  });
+
+  if (podError) {
+    message.error(t('list.fetchError'));
+  }
+
+  const allPods: PodInfo[] = podData?.items || [];
+
+  const loadPods = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['pods', clusterId] });
+  }, [queryClient, clusterId]);
 
   // 删除Pod
   const handleDelete = async (pod: PodInfo) => {
@@ -476,10 +471,6 @@ const PodList: React.FC = () => {
     setTotal(filteredItems.length);
   }, [allPods, filterPods, currentPage, pageSize, sortField, sortOrder]);
 
-  // 初始加载数据
-  useEffect(() => {
-    loadPods();
-  }, [loadPods]);
 
   // 集群切换时重新加载
   useEffect(() => {
@@ -849,7 +840,8 @@ const PodList: React.FC = () => {
             rowKey={(record) => `${record.namespace}/${record.name}`}
             rowSelection={rowSelection}
             loading={loading}
-            scroll={{ x: 1400 }}
+            virtual
+            scroll={{ x: 1400, y: 600 }}
             size="middle"
             onChange={handleTableChange}
             pagination={{

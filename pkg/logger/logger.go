@@ -2,89 +2,82 @@ package logger
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 
 	"k8s.io/klog/v2"
 )
 
-// LogLevel 日志级别
-type LogLevel int
+// fmtVerbRE 匹配 printf 格式動詞（%v %s %d %f 等）
+var fmtVerbRE = regexp.MustCompile(`%[vsTdxXfFgeEbcqp]`)
 
-const (
-	DEBUG LogLevel = iota
-	INFO
-	WARN
-	ERROR
-)
-
-var currentLevel LogLevel = INFO
-
-func init() {
-	// 确保在 Init() 被调用之前，日志格式也是一致的
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
-
-// Init 初始化日志系统
+// Init 初始化日誌系統
+// level: debug | info | warn | error
+// format 由環境變數 LOG_FORMAT=json|text 控制，預設 text
 func Init(level string) {
-	// 设置日志级别
+	var lvl slog.Level
 	switch strings.ToLower(level) {
 	case "debug":
-		currentLevel = DEBUG
-	case "info":
-		currentLevel = INFO
+		lvl = slog.LevelDebug
 	case "warn":
-		currentLevel = WARN
+		lvl = slog.LevelWarn
 	case "error":
-		currentLevel = ERROR
+		lvl = slog.LevelError
 	default:
-		currentLevel = INFO
+		lvl = slog.LevelInfo
 	}
 
-	// 配置 klog（client-go 内部使用 klog），将其输出重定向到标准输出
-	// 注意：本项目自身的日志统一走 log.Output，不再调用 klog
+	opts := &slog.HandlerOptions{Level: lvl}
+
+	var handler slog.Handler
+	if strings.ToLower(os.Getenv("LOG_FORMAT")) == "json" {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	} else {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	}
+
+	slog.SetDefault(slog.New(handler))
+
+	// 將 klog（client-go 使用）輸出導向 stdout
 	klog.InitFlags(nil)
 	klog.SetOutput(os.Stdout)
 
-	Info("日志系统初始化完成，级别: %s", level)
+	Info("日誌系統初始化完成", "level", level, "format", os.Getenv("LOG_FORMAT"))
 }
 
-// Debug 调试日志
-func Debug(format string, args ...interface{}) {
-	if currentLevel <= DEBUG {
-		message := fmt.Sprintf("[DEBUG] "+format, args...)
-		_ = log.Output(2, message)
+// dispatch 統一分派：若 format 含 printf 動詞則先 Sprintf，否則視為 slog key-value pairs
+func dispatch(level slog.Level, format string, args ...any) {
+	if len(args) > 0 && fmtVerbRE.MatchString(format) {
+		slog.Log(nil, level, fmt.Sprintf(format, args...)) //nolint:sloglint
+	} else {
+		slog.Log(nil, level, format, args...) //nolint:sloglint
 	}
 }
 
-// Info 信息日志
-func Info(format string, args ...interface{}) {
-	if currentLevel <= INFO {
-		message := fmt.Sprintf("[INFO] "+format, args...)
-		_ = log.Output(2, message)
-	}
+// Debug 除錯日誌
+func Debug(format string, args ...any) {
+	dispatch(slog.LevelDebug, format, args...)
 }
 
-// Warn 警告日志
-func Warn(format string, args ...interface{}) {
-	if currentLevel <= WARN {
-		message := fmt.Sprintf("[WARN] "+format, args...)
-		_ = log.Output(2, message)
-	}
+// Info 資訊日誌
+func Info(format string, args ...any) {
+	dispatch(slog.LevelInfo, format, args...)
 }
 
-// Error 错误日志
-func Error(format string, args ...interface{}) {
-	if currentLevel <= ERROR {
-		message := fmt.Sprintf("[ERROR] "+format, args...)
-		_ = log.Output(2, message)
-	}
+// Warn 警告日誌
+func Warn(format string, args ...any) {
+	dispatch(slog.LevelWarn, format, args...)
 }
 
-// Fatal 致命错误日志（输出后退出程序）
-func Fatal(format string, args ...interface{}) {
-	message := fmt.Sprintf("[FATAL] "+format, args...)
-	_ = log.Output(2, message)
+// Error 錯誤日誌
+func Error(format string, args ...any) {
+	dispatch(slog.LevelError, format, args...)
+}
+
+// Fatal 致命錯誤（輸出後退出）
+func Fatal(format string, args ...any) {
+	dispatch(slog.LevelError, format, args...)
 	os.Exit(1)
 }
