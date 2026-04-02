@@ -17,12 +17,14 @@
 | Prometheus Metrics Endpoint | ✅ 完成 | `internal/middleware/metrics.go`、`internal/router/router.go`（`/metrics` route） |
 | /readyz 健康深化 | ✅ 完成 | `internal/router/router.go`（DB ping） |
 
+**已完成（2026-04-02 第二批次）：**
+- ✅ 結構化日誌（slog / JSON，LOG_FORMAT env 切換）
+- ✅ 稽核日誌完整查詢（GetAuditLogs 委派 OperationLogService.List）
+- ✅ 完整 API 分頁（permission 列表、cluster 列表修正假分頁）
+- ✅ 前端 React Query 導入（@tanstack/react-query v5，QueryClientProvider）
+- ✅ 前端列表虛擬捲動（16 個 Table 加入 virtual + scroll.y=600）
+
 **未完成（下一批次）：**
-- 結構化日誌（slog / JSON）
-- 稽核日誌完整查詢
-- 完整 API 分頁強制
-- 前端 React Query 導入
-- 前端列表虛擬捲動
 - Helm Release 管理（M4）
 
 ---
@@ -444,17 +446,17 @@ PARTITION BY RANGE (YEAR(created_at) * 100 + MONTH(created_at)) (
 - [x] Informer 同步超時可設定化（`INFORMER_SYNC_TIMEOUT` env，預設 30 秒）
 - [x] 叢集指標 fallback 邏輯（`fetchPodStats()` 從 K8s API 取得實際 Pod 計數）
 - [x] SQLite WAL 啟用（`_journal_mode=WAL` 已在 database.go 啟用）
-- [ ] 完整 API 分頁（列表端點統一 page/pageSize/total，待實作）
-- [ ] React Query 導入（前端快取，待實作）
-- [ ] 大型列表虛擬捲動（待實作）
+- [x] 完整 API 分頁（permission 列表改 response.List，cluster 修正假分頁）
+- [x] React Query 導入（@tanstack/react-query v5，QueryClientProvider，OperationLogs + PodList 遷移）
+- [x] 大型列表虛擬捲動（16 個 Table 加入 virtual + scroll.y=600）
 
 **完成指標：** 20 叢集 / 5000 Pod 場景下 API P95 < 200ms。
 
 #### Milestone 3：可觀測性（3 週）🔄 部分完成
 - [x] 應用 Prometheus metrics endpoint（`/metrics`，`middleware/metrics.go`，記錄 API 延遲、請求數）
 - [x] 健康檢查深化（`/readyz` 真實 DB ping，`/healthz` liveness）
-- [ ] 結構化日誌（slog / JSON 格式，待實作）
-- [ ] 稽核日誌完整查詢（待實作）
+- [x] 結構化日誌（`pkg/logger` 改用 slog，LOG_FORMAT=json|text）
+- [x] 稽核日誌完整查詢（`GetAuditLogs` 委派 OperationLogService.List，支援完整篩選）
 - [ ] 錯誤碼化（API error codes，待實作）
 
 **完成指標：** 所有操作可透過日誌全鏈路追蹤。
