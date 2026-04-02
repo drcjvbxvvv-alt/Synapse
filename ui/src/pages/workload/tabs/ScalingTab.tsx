@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Card, Descriptions, Form, InputNumber, Modal, Popconfirm, Spin, Empty, Space, Tag } from 'antd';
+import { App, Button, Card, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Spin, Empty, Select, Space, Tag, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { WorkloadService } from '../../../services/workloadService';
+import { vpaService, type VPAInfo, type VPARequest } from '../../../services/vpaService';
 import { useTranslation } from 'react-i18next';
 
 interface HPAInfo {
@@ -68,6 +69,13 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<HPAFormValues>();
 
+  // VPA state
+  const [vpa, setVpa] = useState<VPAInfo | null>(null);
+  const [vpaInstalled, setVpaInstalled] = useState<boolean | null>(null);
+  const [vpaModalOpen, setVpaModalOpen] = useState(false);
+  const [vpaSaving, setVpaSaving] = useState(false);
+  const [vpaForm] = Form.useForm<VPARequest>();
+
   const workloadName = deploymentName || rolloutName || statefulSetName || daemonSetName || jobName || cronJobName;
   const workloadType = deploymentName ? 'Deployment'
     : rolloutName ? 'Rollout'
@@ -91,6 +99,19 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
   }, [clusterId, namespace, workloadName, workloadType]);
 
   useEffect(() => { loadHPA(); }, [loadHPA]);
+
+  const loadVPA = useCallback(async () => {
+    if (!clusterId || !namespace || !workloadName || !workloadType) return;
+    try {
+      const res = await vpaService.getWorkloadVPA(clusterId, namespace, workloadName, workloadType);
+      setVpaInstalled(res.data.installed);
+      setVpa(res.data.vpa);
+    } catch {
+      setVpaInstalled(false);
+    }
+  }, [clusterId, namespace, workloadName, workloadType]);
+
+  useEffect(() => { loadVPA(); }, [loadVPA]);
 
   const openCreate = () => {
     form.resetFields();
@@ -161,7 +182,59 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
     );
   }
 
+  const handleVPASave = async () => {
+    const values = await vpaForm.validateFields();
+    if (!workloadName) return;
+    setVpaSaving(true);
+    try {
+      const payload: VPARequest = {
+        ...values,
+        name: vpa?.name ?? `${workloadName}-vpa`,
+        namespace,
+        targetKind: workloadType,
+        targetName: workloadName,
+      };
+      if (vpa) {
+        await vpaService.update(clusterId, namespace, vpa.name, payload);
+        message.success('VPA 更新成功');
+      } else {
+        await vpaService.create(clusterId, payload);
+        message.success('VPA 建立成功');
+      }
+      setVpaModalOpen(false);
+      loadVPA();
+    } catch (e) {
+      message.error('操作失敗：' + String(e));
+    } finally {
+      setVpaSaving(false);
+    }
+  };
+
+  const handleVPADelete = async () => {
+    if (!vpa) return;
+    try {
+      await vpaService.delete(clusterId, namespace, vpa.name);
+      message.success('VPA 刪除成功');
+      setVpa(null);
+    } catch (e) {
+      message.error('刪除失敗：' + String(e));
+    }
+  };
+
+  const openVPACreate = () => {
+    vpaForm.resetFields();
+    vpaForm.setFieldsValue({ updateMode: 'Auto' });
+    setVpaModalOpen(true);
+  };
+
+  const openVPAEdit = () => {
+    if (!vpa) return;
+    vpaForm.setFieldsValue({ updateMode: vpa.updateMode });
+    setVpaModalOpen(true);
+  };
+
   const isHPASupported = ['Deployment', 'StatefulSet', 'Rollout'].includes(workloadType);
+  const isVPASupported = ['Deployment', 'StatefulSet', 'DaemonSet'].includes(workloadType);
 
   return (
     <div>
@@ -276,6 +349,113 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
           </Form.Item>
           <Form.Item name="memTargetUtilization" label="記憶體目標使用率 (%)">
             <InputNumber min={1} max={100} placeholder="例如：80（不填則不設記憶體指標）" style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* VPA 區塊 */}
+      {isVPASupported && (
+        <div style={{ marginTop: 24 }}>
+          {vpaInstalled === false ? (
+            <Alert
+              type="info"
+              message="VPA 未安裝"
+              description="此叢集未偵測到 Vertical Pod Autoscaler Controller。請先在叢集安裝 VPA 方可使用此功能。"
+              showIcon
+            />
+          ) : (
+            <>
+              {!vpa ? (
+                <Empty description="尚未設定 VPA" style={{ padding: '32px 0' }}>
+                  <Button type="default" icon={<PlusOutlined />} onClick={openVPACreate}>
+                    建立 VPA
+                  </Button>
+                </Empty>
+              ) : (
+                <Card
+                  title="VPA（Vertical Pod Autoscaler）"
+                  size="small"
+                  extra={
+                    <Space>
+                      <Button size="small" icon={<EditOutlined />} onClick={openVPAEdit}>編輯</Button>
+                      <Popconfirm title="確定刪除此 VPA？" onConfirm={handleVPADelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
+                        <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
+                      </Popconfirm>
+                    </Space>
+                  }
+                >
+                  <Descriptions column={2} bordered size="small" style={{ marginBottom: vpa.recommendations?.length ? 12 : 0 }}>
+                    <Descriptions.Item label="VPA 名稱">{vpa.name}</Descriptions.Item>
+                    <Descriptions.Item label="更新模式"><Tag>{vpa.updateMode || 'Auto'}</Tag></Descriptions.Item>
+                    <Descriptions.Item label="目標">{vpa.targetKind} / {vpa.targetName}</Descriptions.Item>
+                  </Descriptions>
+
+                  {vpa.recommendations && vpa.recommendations.length > 0 && (
+                    <Card title="VPA 建議值" size="small" style={{ marginTop: 8 }}>
+                      {vpa.recommendations.map((rec, i) => (
+                        <Descriptions key={i} column={2} size="small" bordered style={{ marginBottom: 8 }}
+                          title={<span style={{ fontWeight: 'normal', fontSize: 12 }}>容器：{rec.containerName}</span>}
+                        >
+                          {rec.target && (
+                            <>
+                              <Descriptions.Item label="建議 CPU">{rec.target.cpu ?? '-'}</Descriptions.Item>
+                              <Descriptions.Item label="建議記憶體">{rec.target.memory ?? '-'}</Descriptions.Item>
+                            </>
+                          )}
+                          {rec.lowerBound && (
+                            <>
+                              <Descriptions.Item label="下限 CPU">{rec.lowerBound.cpu ?? '-'}</Descriptions.Item>
+                              <Descriptions.Item label="下限記憶體">{rec.lowerBound.memory ?? '-'}</Descriptions.Item>
+                            </>
+                          )}
+                          {rec.upperBound && (
+                            <>
+                              <Descriptions.Item label="上限 CPU">{rec.upperBound.cpu ?? '-'}</Descriptions.Item>
+                              <Descriptions.Item label="上限記憶體">{rec.upperBound.memory ?? '-'}</Descriptions.Item>
+                            </>
+                          )}
+                        </Descriptions>
+                      ))}
+                    </Card>
+                  )}
+                </Card>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* VPA Modal */}
+      <Modal
+        open={vpaModalOpen}
+        title={vpa ? '編輯 VPA' : '建立 VPA'}
+        onCancel={() => setVpaModalOpen(false)}
+        onOk={handleVPASave}
+        confirmLoading={vpaSaving}
+        okText="儲存"
+        cancelText="取消"
+        destroyOnClose
+      >
+        <Form form={vpaForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="updateMode" label="更新模式">
+            <Select>
+              <Select.Option value="Auto">Auto（自動調整 requests）</Select.Option>
+              <Select.Option value="Initial">Initial（僅初始設定）</Select.Option>
+              <Select.Option value="Recreate">Recreate（需重啟 Pod）</Select.Option>
+              <Select.Option value="Off">Off（僅建議，不執行）</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="minCPU" label="CPU 下限（minAllowed）">
+            <Input placeholder="例如 100m" />
+          </Form.Item>
+          <Form.Item name="maxCPU" label="CPU 上限（maxAllowed）">
+            <Input placeholder="例如 2" />
+          </Form.Item>
+          <Form.Item name="minMemory" label="記憶體下限（minAllowed）">
+            <Input placeholder="例如 50Mi" />
+          </Form.Item>
+          <Form.Item name="maxMemory" label="記憶體上限（maxAllowed）">
+            <Input placeholder="例如 2Gi" />
           </Form.Item>
         </Form>
       </Modal>

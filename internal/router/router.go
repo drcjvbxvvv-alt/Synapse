@@ -602,7 +602,61 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					cost.GET("/waste", costHandler.GetWaste)
 					cost.GET("/export", costHandler.ExportCSV)
 				}
+
+				// VPA 子分組（§8.3 Phase C）
+				vpaHandler := handlers.NewVPAHandler(db, clusterSvc, k8sMgr)
+				vpaGroup := cluster.Group("/vpa")
+				{
+					vpaGroup.GET("/crd-check", vpaHandler.CheckVPACRD)
+					vpaGroup.GET("", vpaHandler.ListVPA)
+					vpaGroup.POST("", vpaHandler.CreateVPA)
+					vpaGroup.PUT("/:namespace/:name", vpaHandler.UpdateVPA)
+					vpaGroup.DELETE("/:namespace/:name", vpaHandler.DeleteVPA)
+					vpaGroup.GET("/:namespace/:name/workload", vpaHandler.GetWorkloadVPA)
+				}
+
+				// 審批請求（per-cluster）（§8.3 Phase C）
+				approvalHandler := handlers.NewApprovalHandler(db, clusterSvc)
+				clusterApprovals := cluster.Group("/approvals")
+				{
+					clusterApprovals.POST("", approvalHandler.CreateApprovalRequest)
+				}
+
+				// 命名空間保護設定（§8.3 Phase C）
+				nsProt := cluster.Group("/namespace-protections")
+				{
+					nsProt.GET("", approvalHandler.GetNamespaceProtections)
+					nsProt.PUT("/:namespace", approvalHandler.SetNamespaceProtection)
+					nsProt.GET("/:namespace", approvalHandler.GetNamespaceProtectionStatus)
+				}
 			}
+		}
+
+		// 審批工作流（全域）（§8.3 Phase C）
+		globalApprovalHandler := handlers.NewApprovalHandler(db, clusterSvc)
+		approvals := protected.Group("/approvals")
+		{
+			approvals.GET("", globalApprovalHandler.ListApprovalRequests)
+			approvals.GET("/pending-count", globalApprovalHandler.GetPendingCount)
+			approvals.PUT("/:id/approve", globalApprovalHandler.ApproveRequest)
+			approvals.PUT("/:id/reject", globalApprovalHandler.RejectRequest)
+		}
+
+		// 跨叢集統一工作負載視圖（§8.3 Phase C）
+		crossClusterHandler := handlers.NewCrossClusterHandler(db, clusterSvc, permissionSvc, k8sMgr)
+		workloads := protected.Group("/workloads")
+		{
+			workloads.GET("", crossClusterHandler.ListCrossClusterWorkloads)
+			workloads.GET("/stats", crossClusterHandler.GetCrossClusterStats)
+		}
+
+		// 映像索引與搜尋（§8.3 Phase C）
+		imageHandler := handlers.NewImageHandler(db, clusterSvc, permissionSvc, k8sMgr)
+		images := protected.Group("/images")
+		{
+			images.GET("/search", imageHandler.SearchImages)
+			images.GET("/status", imageHandler.GetImageSyncStatus)
+			images.POST("/sync", imageHandler.SyncImages)
 		}
 
 		// 多叢集工作流程

@@ -35,8 +35,14 @@
 - ✅ ConfigMap / Secret 版本歷史（B2）— `models/config_version.go` + `database.go` AutoMigrate；`handlers/configmap.go` / `handlers/secret.go` 儲存快照 + GetVersions + Rollback；`router.go` 新增 versions / rollback 路由；`configService.ts` 新增 ConfigVersion 型別與 API；`ConfigMapDetail.tsx` 版本歷史 Card（含回滾）；`SecretDetail.tsx` 版本歷史 Card（僅 key 列表，不含 value）
 - ✅ Loki / Elasticsearch 實際查詢整合（B1）— `services/loki_service.go`（QueryRange via HTTP，LogQL）；`services/elasticsearch_service.go`（Search via DSL，Lucene）；`handlers/log_source.go`（LogSource CRUD + SearchExternalLogs）；`database.go` 新增 LogSourceConfig AutoMigrate；`router.go` 新增 log-sources 路由；`logService.ts` 新增 LogSource 型別與 logSourceService；`LogCenter.tsx` 新增「外部日誌」Tab（來源管理表格 + LogQL/Lucene 查詢 + 結果表格）
 
+**已完成（2026-04-02 §8.3 Phase C）：**
+- ✅ 部署審批工作流（C1）— `models/approval.go`（NamespaceProtection + ApprovalRequest）；`handlers/approval.go`（Create/List/Approve/Reject + namespace-protections CRUD）；`router.go` 新增 `/approvals`（全域）與 `/clusters/:id/approvals`、`/namespace-protections`；`approvalService.ts`；`ApprovalCenter.tsx`（審批列表 + 核准/拒絕 Modal）
+- ✅ VPA 支援（C3）— `handlers/vpa.go`（dynamic client，CheckCRD/List/Create/Update/Delete/GetWorkloadVPA）；`router.go` 新增 `/vpa`；`vpaService.ts`；`ScalingTab.tsx` 新增 VPA Card（含建議值顯示）+ 建立/編輯 Modal
+- ✅ Image Tag 全域搜尋（C4）— `models/image_index.go`（ImageIndex）；`handlers/image.go`（SyncImages/SearchImages/GetImageSyncStatus）；`router.go` 新增 `/images`；`imageService.ts`；`ImageSearch.tsx`（全域搜尋頁面 + 手動觸發索引）
+- ✅ 跨叢集統一工作負載視圖（C2）— `handlers/cross_cluster.go`（ListCrossClusterWorkloads/GetCrossClusterStats）；`router.go` 新增 `/workloads`；`crossClusterService.ts`；`CrossClusterWorkloads.tsx`（統計卡片 + 跨叢集搜尋表格）
+
 **未完成（下一批次）：**
-- §8.3 Phase C：部署審批工作流、Image Tag 全域搜尋、VPA
+- §8.3 Phase D：Port-Forward、Project 多租戶模型、Deployment 保護機制、PDB 管理、Terminal 錄製回放、稽核日誌 SIEM 匯出
 
 ---
 
@@ -1659,15 +1665,15 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 | 🔴 P0 | Loki / ES 實際查詢整合 | 深度不足 | 3 週 | ✅ **完成**（Phase B） |
 | ~~🔴 P0~~ | ~~OAuth2 / OIDC 整合~~ | 完全缺失 | — | ❌ 不實作 |
 | 🔴 P0 | HPA CRUD | 深度不足 | 1 週 | ✅ **完成** |
-| 🔴 P0 | 部署審批工作流 | 完全缺失 | 3 週 | Phase C |
+| 🔴 P0 | 部署審批工作流 | 完全缺失 | 3 週 | ✅ **完成**（Phase C） |
 | 🟡 P1 | Argo Rollouts 操控（Promote/Abort/Analysis） | 深度不足 | 2 週 | ✅ **完成** |
 | 🟡 P1 | 通知渠道擴充（Slack / Teams） | 深度不足 | 1 週 | ✅ **完成** |
 | 🟡 P1 | YAML Apply Dry-run / Diff | 深度不足 | 1 週 | ✅ **完成**（已存在） |
 | 🟡 P1 | ConfigMap/Secret 版本歷史 | 完全缺失 | 2 週 | ✅ **完成**（Phase B） |
-| 🟡 P1 | 跨叢集統一工作負載視圖 | 完全缺失 | 2 週 | Phase C |
+| 🟡 P1 | 跨叢集統一工作負載視圖 | 完全缺失 | 2 週 | ✅ **完成**（Phase C） |
 | 🟡 P1 | ResourceQuota / LimitRange CRUD | 深度不足 | 1 週 | ✅ **完成**（Phase B） |
-| 🟡 P1 | VPA 支援 | 完全缺失 | 2 週 | Phase C |
-| 🟡 P1 | Image Tag 全域搜尋 | 完全缺失 | 2 週 | Phase C |
+| 🟡 P1 | VPA 支援 | 完全缺失 | 2 週 | ✅ **完成**（Phase C） |
+| 🟡 P1 | Image Tag 全域搜尋 | 完全缺失 | 2 週 | ✅ **完成**（Phase C） |
 | 🟢 P2 | Port-Forward | 完全缺失 | 2 週 | Phase D |
 | 🟢 P2 | Project 多租戶模型 | 架構升級 | 4 週 | Phase D |
 | 🟢 P2 | Deployment 保護機制 | 完全缺失 | 1 週 | Phase D |
@@ -1676,6 +1682,8 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 | 🟢 P2 | 稽核日誌 SIEM 匯出 | 完全缺失 | 1 週 | Phase D |
 
 **Phase A 進度（2026-04-02 完成）：** 4/4 項 ✅
+**Phase B 進度（2026-04-02 完成）：** 3/3 項 ✅
+**Phase C 進度（2026-04-02 完成）：** 4/4 項 ✅
 
 ### 8.4 核心反思結論
 
