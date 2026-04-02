@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import kubernetesLogo from '../../assets/kubernetes.png';
-import {
-  Form,
-  Input,
-  Button,
-  Typography,
-  Tabs,
-  Space,
-  App,
-} from 'antd';
-
+import { Form, Input, Button, Typography, Tabs, Space, App } from 'antd';
 import {
   UserOutlined,
   LockOutlined,
@@ -24,7 +15,6 @@ import {
 } from '@ant-design/icons';
 import { authService, tokenManager } from '../../services/authService';
 import { parseApiError } from '@/utils/api';
-import './Login.css';
 
 const { Text } = Typography;
 
@@ -48,22 +38,13 @@ const Login: React.FC = () => {
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
   useEffect(() => {
-    if (tokenManager.isLoggedIn()) {
-      navigate(from, { replace: true });
-    }
+    if (tokenManager.isLoggedIn()) navigate(from, { replace: true });
   }, [navigate, from]);
 
   useEffect(() => {
-    const fetchAuthStatus = async () => {
-      try {
-        const response = await authService.getAuthStatus();
-        setLdapEnabled(response.ldap_enabled);
-      } catch (error) {
-        console.error('Failed to fetch auth status:', error);
-      }
-    };
-
-    fetchAuthStatus();
+    authService.getAuthStatus()
+      .then(r => setLdapEnabled(r.ldap_enabled))
+      .catch(() => {});
   }, []);
 
   const handleLogin = async (values: LoginFormValues) => {
@@ -74,15 +55,10 @@ const Login: React.FC = () => {
         password: values.password,
         auth_type: activeTab,
       });
-
       tokenManager.setToken(response.token);
       tokenManager.setUser(response.user);
       tokenManager.setExpiresAt(response.expires_at);
-
-      if (response.permissions) {
-        tokenManager.setPermissions(response.permissions);
-      }
-
+      if (response.permissions) tokenManager.setPermissions(response.permissions);
       message.success(t('auth.loginSuccess'));
       navigate(from, { replace: true });
     } catch (error: unknown) {
@@ -93,93 +69,83 @@ const Login: React.FC = () => {
   };
 
   const tabItems = [
-    {
-      key: 'local',
-      label: (
-        <Space>
-          <UserOutlined />
-          {t('auth.passwordLogin')}
-        </Space>
-      ),
-    },
-    ...(ldapEnabled ? [{
-      key: 'ldap',
-      label: (
-        <Space>
-          <CloudServerOutlined />
-          {t('auth.ldapLogin')}
-        </Space>
-      ),
-    }] : []),
+    { key: 'local', label: <Space><UserOutlined />{t('auth.passwordLogin')}</Space> },
+    ...(ldapEnabled ? [{ key: 'ldap', label: <Space><CloudServerOutlined />{t('auth.ldapLogin')}</Space> }] : []),
   ];
 
   const features = [
-    {
-      icon: <ClusterOutlined />,
-      title: t('auth.featureMultiClusterTitle'),
-      desc: t('auth.featureMultiClusterDesc'),
-    },
-    {
-      icon: <MonitorOutlined />,
-      title: t('auth.featureObservabilityTitle'),
-      desc: t('auth.featureObservabilityDesc'),
-    },
-    {
-      icon: <SafetyCertificateOutlined />,
-      title: t('auth.featureRBACTitle'),
-      desc: t('auth.featureRBACDesc'),
-    },
-    {
-      icon: <CodeOutlined />,
-      title: t('auth.featureGitOpsTitle'),
-      desc: t('auth.featureGitOpsDesc'),
-    },
+    { icon: <ClusterOutlined />, title: t('auth.featureMultiClusterTitle'), desc: t('auth.featureMultiClusterDesc') },
+    { icon: <MonitorOutlined />, title: t('auth.featureObservabilityTitle'), desc: t('auth.featureObservabilityDesc') },
+    { icon: <SafetyCertificateOutlined />, title: t('auth.featureRBACTitle'), desc: t('auth.featureRBACDesc') },
+    { icon: <CodeOutlined />, title: t('auth.featureGitOpsTitle'), desc: t('auth.featureGitOpsDesc') },
   ];
 
   return (
-    <main className="login-page">
-      {/* Left: Brand Panel */}
-      <section className="login-brand-panel" aria-hidden="true">
-        <div className="login-bg-grid" />
-        <div className="login-bg-glow login-bg-glow-1" />
-        <div className="login-bg-glow login-bg-glow-2" />
-        <div className="login-bg-float login-bg-float-1" />
-        <div className="login-bg-float login-bg-float-2" />
-        <div className="login-bg-float login-bg-float-3" />
+    <main className="min-h-screen flex bg-[var(--color-bg-page)] dark:bg-slate-900">
 
-        <div className="login-brand-content">
-          <div className="login-brand-logo">
-            <img src={kubernetesLogo} alt="" width={48} height={48} />
-            <span className="login-brand-logo-text">Synapse</span>
+      {/* ── Left: Brand Panel ── */}
+      <section
+        aria-hidden="true"
+        className="hidden lg:flex lg:w-[52%] relative flex-col justify-center overflow-hidden
+                   bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
+      >
+        {/* Subtle grid */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '40px 40px' }}
+        />
+        {/* Glow spots */}
+        <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-blue-600/20 blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-indigo-500/15 blur-3xl" />
+
+        <div className="relative z-10 px-14 py-16 max-w-lg">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-12">
+            <img src={kubernetesLogo} alt="" className="w-10 h-10" />
+            <span className="text-white text-2xl font-bold tracking-wide">Synapse</span>
           </div>
 
-          <h2 className="login-brand-headline">
+          <h2 className="text-white text-3xl font-semibold leading-snug mb-4">
             {t('auth.brandHeadline')}
           </h2>
-          <p className="login-brand-desc">
+          <p className="text-slate-400 text-base leading-relaxed mb-10">
             {t('auth.brandDesc')}
           </p>
 
-          <div className="login-features">
+          <ul className="space-y-5">
             {features.map((f, i) => (
-              <div className="login-feature-item" key={i}>
-                <div className="login-feature-icon">{f.icon}</div>
-                <div className="login-feature-text">
-                  <h4>{f.title}</h4>
-                  <p>{f.desc}</p>
+              <li key={i} className="flex items-start gap-4">
+                <div className="mt-0.5 w-9 h-9 flex items-center justify-center rounded-lg
+                                bg-white/10 text-blue-400 text-base flex-shrink-0">
+                  {f.icon}
                 </div>
-              </div>
+                <div>
+                  <h4 className="text-white text-sm font-semibold mb-0.5">{f.title}</h4>
+                  <p className="text-slate-400 text-xs leading-relaxed">{f.desc}</p>
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
-      {/* Right: Form Panel */}
-      <section className="login-form-panel">
-        <div className="login-form-wrapper">
-          <div className="login-form-header">
-            <h1 className="login-form-title">{t('auth.welcomeBack')}</h1>
-            <p className="login-form-subtitle">{t('auth.loginSubtitle')}</p>
+      {/* ── Right: Form Panel ── */}
+      <section className="flex-1 flex flex-col items-center justify-center px-6 py-12
+                          bg-[var(--color-bg-page)] dark:bg-slate-900">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <img src={kubernetesLogo} alt="" className="w-8 h-8" />
+            <span className="text-[var(--color-text-primary)] font-bold text-lg">Synapse</span>
+          </div>
+
+          <div className="mb-8">
+            <h1 className="text-[var(--color-text-primary)] text-2xl font-semibold mb-1">
+              {t('auth.welcomeBack')}
+            </h1>
+            <p className="text-[var(--color-text-secondary)] text-sm">
+              {t('auth.loginSubtitle')}
+            </p>
           </div>
 
           {ldapEnabled && (
@@ -188,7 +154,7 @@ const Login: React.FC = () => {
               onChange={(key) => setActiveTab(key as 'local' | 'ldap')}
               items={tabItems}
               centered
-              style={{ marginBottom: 28 }}
+              className="mb-6"
             />
           )}
 
@@ -197,7 +163,6 @@ const Login: React.FC = () => {
             onFinish={handleLogin}
             layout="vertical"
             requiredMark={false}
-            className="login-form"
           >
             <Form.Item
               name="username"
@@ -205,7 +170,7 @@ const Login: React.FC = () => {
               rules={[{ required: true, message: t('auth.usernameRequired') }]}
             >
               <Input
-                prefix={<UserOutlined style={{ color: '#9ca3af' }} aria-hidden="true" />}
+                prefix={<UserOutlined className="text-slate-400" aria-hidden="true" />}
                 placeholder={`${t('auth.username')}…`}
                 size="large"
                 autoComplete="username"
@@ -218,10 +183,10 @@ const Login: React.FC = () => {
               name="password"
               label={t('auth.password')}
               rules={[{ required: true, message: t('auth.passwordRequired') }]}
-              style={{ marginBottom: 28 }}
+              className="!mb-7"
             >
               <Input.Password
-                prefix={<LockOutlined style={{ color: '#9ca3af' }} aria-hidden="true" />}
+                prefix={<LockOutlined className="text-slate-400" aria-hidden="true" />}
                 placeholder={`${t('auth.password')}…`}
                 size="large"
                 autoComplete="current-password"
@@ -229,7 +194,7 @@ const Login: React.FC = () => {
               />
             </Form.Item>
 
-            <Form.Item style={{ marginBottom: 0 }}>
+            <Form.Item className="!mb-0">
               <Button
                 type="primary"
                 htmlType="submit"
@@ -237,7 +202,6 @@ const Login: React.FC = () => {
                 block
                 loading={loading}
                 icon={<LoginOutlined />}
-                className="login-button"
               >
                 {t('auth.login')}
               </Button>
@@ -245,19 +209,18 @@ const Login: React.FC = () => {
           </Form>
 
           {isDev && (
-            <div className="login-hint-box">
-              <Text>
-                {activeTab === 'ldap'
-                  ? t('auth.ldapHint')
-                  : t('auth.defaultAdminHint')}
+            <div className="mt-5 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-900/20
+                            border border-amber-200 dark:border-amber-700/50">
+              <Text className="!text-amber-700 dark:!text-amber-400 text-xs">
+                {activeTab === 'ldap' ? t('auth.ldapHint') : t('auth.defaultAdminHint')}
               </Text>
             </div>
           )}
         </div>
 
-        <div className="login-footer">
-          <Text>{t('auth.copyright')}</Text>
-        </div>
+        <footer className="mt-12 text-center">
+          <Text className="!text-[var(--color-text-muted)] text-xs">{t('auth.copyright')}</Text>
+        </footer>
       </section>
     </main>
   );
