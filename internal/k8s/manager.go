@@ -48,13 +48,23 @@ type ClusterRuntime struct {
 
 // ClusterInformerManager 统一管理各集群的 Informer 生命周期与缓存访问
 type ClusterInformerManager struct {
-	mu       sync.RWMutex
-	clusters map[uint]*ClusterRuntime
+	mu          sync.RWMutex
+	clusters    map[uint]*ClusterRuntime
+	syncTimeout time.Duration // configurable cache-sync timeout (default 30s)
 }
 
 func NewClusterInformerManager() *ClusterInformerManager {
 	return &ClusterInformerManager{
-		clusters: make(map[uint]*ClusterRuntime),
+		clusters:    make(map[uint]*ClusterRuntime),
+		syncTimeout: 30 * time.Second,
+	}
+}
+
+// SetSyncTimeout overrides the default cache-sync timeout.
+// Must be called before any cluster is registered.
+func (m *ClusterInformerManager) SetSyncTimeout(d time.Duration) {
+	if d > 0 {
+		m.syncTimeout = d
 	}
 }
 
@@ -173,8 +183,8 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 		return nil, fmt.Errorf("集群 %d 未初始化 informer", clusterID)
 	}
 
-	// 等待缓存同步（给一个较短的时间窗以保护延迟）
-	sctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	// 等待缓存同步（使用可設定的逾時，預設 30 秒）
+	sctx, cancel := context.WithTimeout(ctx, m.syncTimeout)
 	defer cancel()
 	if !m.waitForSync(sctx, rt) {
 		return nil, fmt.Errorf("informer 缓存尚未就绪")

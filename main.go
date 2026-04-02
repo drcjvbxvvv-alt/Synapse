@@ -13,6 +13,7 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/internal/config"
 	"github.com/clay-wangzhi/KubePolaris/internal/database"
 	"github.com/clay-wangzhi/KubePolaris/internal/router"
+	"github.com/clay-wangzhi/KubePolaris/pkg/crypto"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,14 @@ func main() {
 
 	// 初始化日志
 	logger.Init(cfg.Log.Level)
+
+	// 初始化欄位加密（若未設定 ENCRYPTION_KEY 則靜默跳過）
+	crypto.Init(cfg.Security.EncryptionKey)
+	if crypto.IsEnabled() {
+		logger.Info("欄位加密已啟用（AES-256-GCM）")
+	} else {
+		logger.Warn("安全提示: ENCRYPTION_KEY 未設定，叢集憑證將以明文儲存於資料庫")
+	}
 
 	// 初始化数据库连接
 	db, err := database.Init(cfg.Database)

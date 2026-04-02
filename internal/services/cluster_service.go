@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -8,6 +9,8 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/internal/models"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"gorm.io/gorm"
 )
 
@@ -260,19 +263,42 @@ func (s *ClusterService) getClusterRealTimeMetrics(cluster *models.Cluster) *mod
 		return nil
 	}
 
+	// 從 K8s API 統計 Pod 數量（使用 15 秒超時避免阻塞）
+	podCount, runningPods := fetchPodStats(k8sClient)
+
 	// 创建指标对象
 	metrics := &models.ClusterMetrics{
 		ClusterID:   cluster.ID,
 		NodeCount:   clusterInfo.NodeCount,
 		ReadyNodes:  clusterInfo.ReadyNodes,
-		PodCount:    0, // TODO: 实现Pod统计
-		RunningPods: 0, // TODO: 实现运行中Pod统计
-		CPUUsage:    0, // TODO: 实现CPU使用率统计
-		MemoryUsage: 0, // TODO: 实现内存使用率统计
+		PodCount:    podCount,
+		RunningPods: runningPods,
+		CPUUsage:    0, // 需要 Prometheus 整合
+		MemoryUsage: 0, // 需要 Prometheus 整合
 		UpdatedAt:   time.Now(),
 	}
 
 	return metrics
+}
+
+// fetchPodStats lists all pods across namespaces and returns (total, running) counts.
+// Uses a 15-second context timeout to avoid blocking the stats call.
+func fetchPodStats(kc *K8sClient) (total int, running int) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	podList, err := kc.GetClientset().CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		logger.Warn("獲取 Pod 列表失敗", "error", err)
+		return 0, 0
+	}
+	total = len(podList.Items)
+	for i := range podList.Items {
+		if podList.Items[i].Status.Phase == corev1.PodRunning {
+			running++
+		}
+	}
+	return
 }
 
 // UpdateClusterMetrics 更新集群指标到数据库

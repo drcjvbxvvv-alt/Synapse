@@ -1,0 +1,29 @@
+{
+  "title": "全域搜尋",
+  "searchPlaceholder": "搜尋叢集、節點、容器組、工作負載...",
+  "searchFailed": "搜尋失敗，請稍後再試",
+  "enterKeyword": "請輸入搜尋關鍵字開始搜尋",
+  "noResults": "暫無搜尋結果",
+  "viewDetails": "查看詳情",
+  "tabs": {
+    "all": "全部",
+    "cluster": "叢集",
+    "node": "節點",
+    "pod": "容器組",
+    "workload": "工作負載"
+  },
+  "noResultsFor": {
+    "all": "暫無搜尋結果",
+    "cluster": "暫無叢集搜尋結果",
+    "node": "暫無節點搜尋結果",
+    "pod": "暫無容器組搜尋結果",
+    "workload": "暫無工作負載搜尋結果"
+  },
+  "description": {
+    "node": "節點",
+    "replicas": "副本數",
+    "cluster": "叢集",
+    "namespace": "命名空間",
+    "clusterId": "叢集 ID"
+  }
+}

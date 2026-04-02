@@ -1,0 +1,65 @@
+{
+  "editor": {
+    "title": "YAML 編輯器",
+    "apply": "套用",
+    "preview": "預覽",
+    "reset": "重設",
+    "dryRunMode": "DryRun 模式",
+    "on": "開",
+    "off": "關",
+    "back": "返回",
+    "close": "關閉",
+    "confirmApply": "確認套用",
+    "confirmUpdate": "確認更新",
+    "cancel": "取消"
+  },
+  "messages": {
+    "loadFailed": "載入 YAML 失敗",
+    "loadError": "載入 YAML 失敗",
+    "unknownError": "未知錯誤",
+    "emptyContent": "YAML 內容不能為空",
+    "dryRunPassed": "預檢通過！YAML 設定有效，可以安全套用。",
+    "validateSuccess": "YAML 驗證成功",
+    "applySuccess": "YAML 套用成功",
+    "validateFailed": "驗證",
+    "applyFailed": "套用",
+    "yamlFailed": "YAML {{action}} 失敗",
+    "dryRunCheckPassed": "預檢通過",
+    "dryRunCheckFailed": "預檢失敗",
+    "preCheckFailed": "預檢失敗",
+    "missingParams": "缺少必要參數：叢集 ID 或工作負載類型",
+    "resetSuccess": "已重設 YAML 內容",
+    "loadingYaml": "載入 YAML 中...",
+    "initEditor": "初始化編輯器...",
+    "editorLoading": "編輯器載入中...",
+    "loading": "載入中...",
+    "noContent": "暫無 YAML 內容"
+  },
+  "confirm": {
+    "leave": "確認離開",
+    "leaveDesc": "您有未儲存的變更，確定要離開嗎？",
+    "applyYaml": "確認套用 YAML",
+    "applyYamlDesc": "確定要套用這些 YAML 設定嗎？這將在叢集中建立資源。",
+    "resetTitle": "確認重設",
+    "resetDesc": "確定要重設 YAML 內容嗎？未儲存的變更將遺失。"
+  },
+  "alert": {
+    "loadFailed": "載入失敗",
+    "retry": "重試",
+    "unsavedChanges": "您有未儲存的變更",
+    "unsavedChangesDesc": "請記得儲存您的變更，或點擊重設按鈕恢復原始內容。",
+    "hasUnsavedChanges": "• 有未儲存的變更"
+  },
+  "preview": {
+    "title": "YAML 預覽結果",
+    "validationSuccess": "驗證成功",
+    "validationSuccessDesc": "YAML 格式正確，可以安全套用到叢集。"
+  },
+  "diff": {
+    "title": "確認變更 - YAML Diff 對比",
+    "reviewChanges": "請仔細檢查以下變更",
+    "reviewChangesDesc": "左側為原始設定，右側為修改後的設定。確認無誤後點擊「確認更新」按鈕套用變更。",
+    "originalConfig": "原始設定",
+    "modifiedConfig": "修改後設定"
+  }
+}

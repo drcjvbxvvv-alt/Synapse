@@ -1,0 +1,96 @@
+{
+  "title": "權限管理",
+  "tooltip": "設定使用者/使用者群組在叢集中的存取權限",
+  "syncPermissions": "同步權限",
+  "addPermission": "新增權限",
+  "editPermission": "編輯權限",
+  "types": {
+    "admin": {
+      "name": "管理員權限",
+      "description": "對全部命名空間下所有資源的讀寫權限（必須選擇全部命名空間）。"
+    },
+    "ops": {
+      "name": "運維權限",
+      "description": "對全部命名空間下大多數資源的讀寫權限（必須選擇全部命名空間）。"
+    },
+    "dev": {
+      "name": "開發權限",
+      "description": "對所選命名空間下大多數資源的讀寫權限（可選擇部分命名空間）。"
+    },
+    "readonly": {
+      "name": "唯讀權限",
+      "description": "對所選命名空間下大多數資源的唯讀權限（可選擇部分命名空間）。"
+    },
+    "custom": {
+      "name": "自訂權限",
+      "description": "權限由您所選擇的 ClusterRole 或 Role 決定。"
+    }
+  },
+  "columns": {
+    "subject": "使用者/使用者群組",
+    "clusterName": "叢集名稱",
+    "permissionType": "權限類型",
+    "user": "使用者",
+    "userGroup": "使用者群組"
+  },
+  "actions": {
+    "editTooltip": "編輯權限",
+    "confirmDeletePermission": "確定刪除該權限設定嗎？",
+    "confirmBatchDelete": "確定批次刪除選取的權限嗎？",
+    "selectDeleteFirst": "請選擇要刪除的權限",
+    "batchDeleteSuccess": "批次刪除成功",
+    "batchDeleteError": "批次刪除失敗",
+    "addSuccess": "新增成功",
+    "operationError": "操作失敗"
+  },
+  "filter": {
+    "selectCluster": "選擇叢集",
+    "namespace": "命名空間",
+    "all": "全部",
+    "keyword": "請輸入關鍵字"
+  },
+  "form": {
+    "selectCluster": "選擇叢集",
+    "selectClusterRequired": "請選擇叢集",
+    "selectClusterPlaceholder": "請選擇叢集",
+    "permissionType": "權限類型",
+    "customRoleName": "ClusterRole/Role 名稱",
+    "customRoleRequired": "請輸入角色名稱",
+    "noSuitableRole": "沒有合適的角色？",
+    "selectClusterFirst": "請先選擇叢集",
+    "createClusterRole": "立即建立新的 ClusterRole",
+    "customRolePlaceholder": "例如: view, edit, cluster-admin 或自訂建立的角色名",
+    "assignTo": "分配給",
+    "selectUser": "選擇使用者",
+    "selectUserRequired": "請選擇使用者",
+    "selectUserPlaceholder": "請選擇使用者",
+    "selectUserGroup": "選擇使用者群組",
+    "selectUserGroupRequired": "請選擇使用者群組",
+    "selectUserGroupPlaceholder": "請選擇使用者群組",
+    "memberCount": "{{count}} 人",
+    "namespaceScope": "命名空間範圍",
+    "allNamespacesRequired": "此權限類型必須選擇全部命名空間",
+    "allNamespaces": "全部命名空間",
+    "selectNamespace": "選擇命名空間",
+    "selectNamespaceRequired": "請選擇命名空間",
+    "namespacePlaceholder": "輸入命名空間名稱（支援萬用字元，如 app-*）"
+  },
+  "sync": {
+    "title": "同步 KubePolaris 權限資源",
+    "description": "同步將在目標叢集中建立 KubePolaris 所需的 RBAC 資源（ClusterRole、ServiceAccount、ClusterRoleBinding），以支援不同權限類型的 kubectl 終端機存取。",
+    "clusterName": "叢集名稱",
+    "syncStatus": "同步狀態",
+    "notChecked": "未檢查",
+    "synced": "已同步",
+    "notSynced": "未同步",
+    "syncBtn": "同步",
+    "resyncBtn": "重新同步",
+    "syncSuccess": "同步成功",
+    "syncFailed": "同步失敗",
+    "resourcesTitle": "將建立的資源："
+  },
+  "loadError": "載入資料失敗",
+  "pagination": {
+    "total": "共 {{total}} 筆"
+  }
+}

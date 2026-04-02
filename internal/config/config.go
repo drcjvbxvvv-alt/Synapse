@@ -12,7 +12,8 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Log      LogConfig      `mapstructure:"log"`
-	K8s K8sConfig `mapstructure:"k8s"`
+	K8s      K8sConfig      `mapstructure:"k8s"`
+	Security SecurityConfig `mapstructure:"security"`
 }
 
 // ServerConfig 服务器配置
@@ -46,7 +47,13 @@ type LogConfig struct {
 
 // K8sConfig Kubernetes配置
 type K8sConfig struct {
-	DefaultNamespace string `mapstructure:"default_namespace"`
+	DefaultNamespace   string `mapstructure:"default_namespace"`
+	InformerSyncTimeout int   `mapstructure:"informer_sync_timeout"` // seconds
+}
+
+// SecurityConfig 安全相关配置
+type SecurityConfig struct {
+	EncryptionKey string `mapstructure:"encryption_key"`
 }
 
 // Load 加载配置（纯环境变量模式）
@@ -85,6 +92,10 @@ func Load() *Config {
 
 	// 绑定 K8s 环境变量
 	_ = viper.BindEnv("k8s.default_namespace", "K8S_DEFAULT_NAMESPACE")
+	_ = viper.BindEnv("k8s.informer_sync_timeout", "INFORMER_SYNC_TIMEOUT")
+
+	// 绑定安全环境变量
+	_ = viper.BindEnv("security.encryption_key", "ENCRYPTION_KEY")
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
@@ -131,4 +142,8 @@ func setDefaults() {
 
 	// K8s默认配置
 	viper.SetDefault("k8s.default_namespace", "default")
+	viper.SetDefault("k8s.informer_sync_timeout", 30) // 30 seconds
+
+	// 安全默认配置（空字符串表示禁用加密）
+	viper.SetDefault("security.encryption_key", "")
 }

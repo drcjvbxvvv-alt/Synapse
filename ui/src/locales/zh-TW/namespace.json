@@ -1,0 +1,69 @@
+{
+  "title": "命名空間管理",
+  "list": {
+    "title": "命名空間列表",
+    "fetchError": "取得命名空間列表失敗",
+    "createNamespace": "建立命名空間",
+    "totalNamespaces": "共 {{count}} 個命名空間",
+    "fieldName": "名稱",
+    "fieldStatus": "狀態",
+    "fieldLabel": "標籤"
+  },
+  "columns": {
+    "name": "命名空間",
+    "status": "狀態",
+    "labels": "標籤",
+    "createdAt": "建立時間",
+    "actions": "操作",
+    "moreLabels": "還有 {{count}} 個標籤"
+  },
+  "actions": {
+    "viewDetail": "詳情",
+    "delete": "刪除",
+    "batchDelete": "批次刪除",
+    "export": "匯出",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteDesc": "確定要刪除命名空間 \"{{name}}\" 嗎？此操作將刪除該命名空間下的所有資源。",
+    "confirmBatchDelete": "確認批次刪除",
+    "confirmBatchDeleteDesc": "確定要刪除選取的 {{count}} 個命名空間嗎？此操作將刪除這些命名空間下的所有資源。",
+    "selectDeleteFirst": "請先選擇要刪除的命名空間",
+    "cannotDeleteSystem": "不能刪除系統命名空間"
+  },
+  "create": {
+    "title": "建立命名空間",
+    "name": "命名空間名稱",
+    "nameLabel": "命名空間名稱",
+    "nameRequired": "請輸入命名空間名稱",
+    "namePattern": "名稱只能包含小寫字母、數字和連字號，且必須以字母或數字開頭和結尾",
+    "namePlaceholder": "例如: my-namespace",
+    "description": "描述（選填）",
+    "descriptionLabel": "描述（選填）",
+    "descriptionPlaceholder": "輸入命名空間的描述資訊"
+  },
+  "detail": {
+    "title": "命名空間詳情",
+    "subtitle": "命名空間詳情: {{name}}",
+    "notFound": "命名空間不存在",
+    "resourceStats": "資源統計",
+    "services": "服務",
+    "basicInfo": "基本資訊",
+    "name": "名稱",
+    "status": "狀態",
+    "createdAt": "建立時間",
+    "resourceQuota": "資源配額",
+    "usedQuota": "已使用",
+    "totalQuota": "總配額",
+    "labels": "標籤",
+    "annotations": "標記",
+    "noLabels": "暫無標籤",
+    "noAnnotations": "暫無標記"
+  },
+  "messages": {
+    "createSuccess": "命名空間建立成功",
+    "createError": "建立命名空間失敗",
+    "deleteSuccess": "命名空間刪除成功",
+    "deleteError": "刪除命名空間失敗",
+    "fetchDetailError": "取得命名空間詳情失敗",
+    "batchDeleteError": "批次刪除失敗"
+  }
+}

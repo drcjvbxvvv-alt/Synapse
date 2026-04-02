@@ -1,0 +1,46 @@
+{
+  "title": "總覽儀表板",
+  "autoRefresh": "自動重新整理",
+  "stats": {
+    "clusterTotal": "叢集總數",
+    "clusterHealthy": "健康叢集",
+    "clusterUnhealthy": "異常叢集",
+    "nodeStatus": "節點狀態",
+    "podRunning": "Pod 執行中",
+    "alerts": "警報",
+    "alertFiring": "個觸發中",
+    "alertConfigured": "{{count}} 個叢集已設定警報",
+    "nodeAbnormal": "{{count}} 個節點異常"
+  },
+  "resource": {
+    "cpuUsage": "CPU 使用率",
+    "memoryUsage": "記憶體使用率",
+    "storageUsage": "儲存使用率"
+  },
+  "distribution": {
+    "clusterVersion": "叢集版本分佈",
+    "versionName": "版本名稱",
+    "clusterCount": "叢集數量",
+    "podDistribution": "Pod 分佈",
+    "nodeDistribution": "Node 分佈",
+    "cpuDistribution": "CPU 分佈",
+    "memoryDistribution": "記憶體分佈",
+    "clusterDistribution": "叢集分佈",
+    "cluster": "叢集",
+    "quantity": "數量"
+  },
+  "abnormal": {
+    "title": "異常工作負載",
+    "workload": "工作負載",
+    "namespace": "命名空間",
+    "cluster": "叢集",
+    "type": "類型",
+    "reason": "異常原因",
+    "duration": "持續時間",
+    "allNormal": "所有工作負載執行正常"
+  },
+  "trend": {
+    "podTrend": "Pod 數量趨勢（按叢集）",
+    "nodeTrend": "Node 數量趨勢（按叢集）"
+  }
+}

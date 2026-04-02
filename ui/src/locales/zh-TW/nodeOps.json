@@ -1,0 +1,121 @@
+{
+  "title": "節點操作",
+  "steps": {
+    "selectOperation": "選擇操作",
+    "configParams": "設定參數",
+    "executeOperation": "執行操作",
+    "complete": "完成"
+  },
+  "operationType": {
+    "title": "選擇操作類型",
+    "cordon": "封鎖節點 (Cordon)",
+    "uncordon": "解封節點 (Uncordon)",
+    "drain": "驅逐節點 (Drain)",
+    "nodeOperation": "節點操作",
+    "selectRequired": "請選擇操作類型"
+  },
+  "cordon": {
+    "title": "封鎖節點 (Cordon) 設定",
+    "titleShort": "封鎖節點 (Cordon)",
+    "description": "封鎖節點將使節點不再接受新的 Pod 排程，但不會影響已在節點上執行的 Pod。",
+    "instructions": "操作說明",
+    "rule1": "節點將被標記為 \"SchedulingDisabled\"",
+    "rule2": "現有 Pod 繼續正常執行",
+    "rule3": "新 Pod 不會排程到這些節點",
+    "rule4": "不影響 DaemonSet Pod"
+  },
+  "uncordon": {
+    "title": "解封節點 (Uncordon) 設定",
+    "titleShort": "解封節點 (Uncordon)",
+    "description": "解封節點將恢復節點接受新的 Pod 排程的能力。",
+    "instructions": "操作說明",
+    "rule1": "移除節點的 \"SchedulingDisabled\" 標記",
+    "rule2": "節點恢復接受新 Pod 排程",
+    "rule3": "立即生效，無需重啟"
+  },
+  "drain": {
+    "title": "驅逐節點 (Drain) 設定",
+    "titleShort": "驅逐節點 (Drain)",
+    "description": "驅逐節點將首先封鎖節點，然後安全地驅逐節點上的所有 Pod，使節點可以安全地進行維護操作。",
+    "warning": "警告",
+    "warningDesc": "驅逐節點是一個潛在的破壞性操作，它將驅逐節點上的所有 Pod，可能導致服務中斷。請確保您了解此操作的影響。",
+    "advancedOptions": "進階選項",
+    "ignoreDaemonSets": "忽略 DaemonSet Pod",
+    "deleteLocalData": "刪除本機儲存的 Pod",
+    "forceDelete": "強制刪除 (--force) ⚠️ 危險操作",
+    "gracePeriod": "寬限期（秒）",
+    "timeout": "逾時時間（秒）",
+    "confirmRisk": "確認風險",
+    "riskServiceInterruption": "我了解此操作可能導致服務中斷",
+    "riskReplicaConfirmed": "我已確認有足夠的副本在其他節點執行",
+    "riskTeamNotified": "我已通知相關團隊此次維護操作",
+    "confirmAllRisks": "請確認所有風險提示項目",
+    "podCount": "{{count}} 個 Pod"
+  },
+  "common": {
+    "selectedNodes": "已選擇 {{count}} 個節點:",
+    "targetNodes": "目標節點:",
+    "schedulingDisabled": "已停用排程",
+    "schedulable": "可排程",
+    "executionStrategy": "執行策略",
+    "parallel": "平行執行（同時操作所有節點）",
+    "serial": "串行執行（逐個操作，間隔 1 秒）",
+    "failureHandling": "失敗處理",
+    "stopOnError": "遇到錯誤時停止後續操作",
+    "continueOnError": "忽略錯誤繼續執行",
+    "operationReason": "操作原因（選填）",
+    "reasonPlaceholder": "請輸入操作原因，例如：計劃維護、系統升級等",
+    "reasonPlaceholderRestore": "請輸入操作原因，例如：維護完成、恢復正常等",
+    "reasonPlaceholderDrain": "請輸入操作原因，例如：節點維護、系統升級等",
+    "sendNotification": "發送通知給相關團隊",
+    "sendRecoveryNotification": "發送恢復通知",
+    "recordLog": "記錄操作日誌",
+    "checkStatusAfter": "啟用後立即檢查節點狀態"
+  },
+  "execution": {
+    "executing": "正在執行: {{title}}",
+    "overallProgress": "整體進度:",
+    "realtimeLog": "即時日誌:",
+    "waitingOperation": "等待操作",
+    "executingOperation": "正在執行操作",
+    "operationSuccess": "操作成功",
+    "operationFailed": "操作失敗: {{error}}",
+    "cordoning": "正在封鎖節點",
+    "cordonSuccess": "節點封鎖成功",
+    "uncordoning": "正在解封節點",
+    "uncordonSuccess": "節點解封成功",
+    "draining": "正在驅逐節點上的 Pod",
+    "drainSuccess": "節點驅逐成功",
+    "unsupportedType": "不支援的操作類型",
+    "executeFailed": "執行節點操作失敗",
+    "operationTypeSuccess": "{{type}} 操作成功",
+    "operationTypeFailed": "{{type}} 操作失敗: {{error}}"
+  },
+  "result": {
+    "title": "操作完成",
+    "completed": "操作已完成",
+    "operationType": "操作類型: {{title}}",
+    "startTime": "執行時間",
+    "endTime": "完成時間",
+    "totalDuration": "總耗時",
+    "success": "成功",
+    "failed": "失敗",
+    "skipped": "跳過",
+    "detailResult": "詳細結果:",
+    "suggestion": "後續建議",
+    "suggestionDesc": "部分節點操作失敗，請檢查失敗原因並考慮重試或手動處理。",
+    "nodeOperationComplete": "節點操作已完成",
+    "durationFormat": "{{minutes}} 分 {{seconds}} 秒"
+  },
+  "cancel": {
+    "title": "確認取消",
+    "content": "確定要取消目前操作嗎？所有已設定的參數將遺失。"
+  },
+  "buttons": {
+    "previous": "上一步",
+    "next": "下一步",
+    "startExecution": "開始執行",
+    "finish": "完成",
+    "cancel": "取消"
+  }
+}

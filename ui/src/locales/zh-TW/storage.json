@@ -1,0 +1,92 @@
+{
+  "title": "儲存管理",
+  "tabs": {
+    "pvc": "儲存卷宣告（PVC）",
+    "pv": "儲存卷（PV）",
+    "storageClass": "儲存類別（StorageClass）"
+  },
+  "columns": {
+    "name": "名稱",
+    "pvName": "PV 名稱",
+    "pvcName": "PVC 名稱",
+    "provisioner": "提供者",
+    "reclaimPolicy": "回收策略",
+    "volumeBindingMode": "綁定模式",
+    "allowVolumeExpansion": "允許擴展",
+    "isDefault": "預設儲存類別",
+    "default": "預設",
+    "volumeName": "儲存卷",
+    "storageClassName": "儲存類別",
+    "capacity": "容量",
+    "accessModes": "存取模式",
+    "claimRef": "宣告",
+    "persistentVolumeSource": "儲存來源類型"
+  },
+  "search": {
+    "fieldName": "名稱",
+    "fieldPVName": "PV 名稱",
+    "fieldPVCName": "PVC 名稱",
+    "fieldProvisioner": "提供者",
+    "fieldReclaimPolicy": "回收策略",
+    "fieldVolumeBindingMode": "綁定模式",
+    "fieldNamespace": "命名空間",
+    "fieldStatus": "狀態",
+    "fieldStorageClassName": "儲存類別",
+    "fieldVolumeName": "儲存卷",
+    "fieldPersistentVolumeSource": "儲存來源類型"
+  },
+  "messages": {
+    "fetchStorageClassError": "取得 StorageClass 列表失敗",
+    "fetchPVCError": "取得 PVC 列表失敗",
+    "fetchPVError": "取得 PV 列表失敗",
+    "fetchYAMLError": "取得 YAML 失敗",
+    "deleteError": "刪除失敗",
+    "batchDeleteError": "批次刪除失敗",
+    "selectDeleteStorageClass": "請先選擇要刪除的 StorageClass",
+    "selectDeletePVC": "請先選擇要刪除的 PVC",
+    "selectDeletePV": "請先選擇要刪除的 PV",
+    "confirmDeleteStorageClass": "確定要刪除選取的 {{count}} 個 StorageClass 嗎？",
+    "confirmDeletePVC": "確定要刪除選取的 {{count}} 個 PVC 嗎？",
+    "confirmDeletePV": "確定要刪除選取的 {{count}} 個 PV 嗎？",
+    "batchDeleteSuccess": "成功刪除 {{count}} 個 {{type}}",
+    "batchDeletePartial": "刪除完成：成功 {{success}} 個，失敗 {{fail}} 個",
+    "loadNamespacesError": "載入命名空間失敗",
+    "confirmDeleteSC": "確定要刪除這個 StorageClass 嗎？",
+    "confirmDeleteSCDesc": "確定要刪除 {{name}} 嗎？",
+    "confirmDeletePVCItem": "確定要刪除這個 PVC 嗎？",
+    "confirmDeletePVCDesc": "確定要刪除 {{name}} 嗎？",
+    "confirmDeletePVItem": "確定要刪除這個 PV 嗎？",
+    "confirmDeletePVDesc": "確定要刪除 {{name}} 嗎？"
+  },
+  "export": {
+    "nameLabel": "名稱",
+    "provisionerLabel": "提供者",
+    "reclaimPolicyLabel": "回收策略",
+    "bindingModeLabel": "綁定模式",
+    "allowExpansionLabel": "允許擴展",
+    "defaultLabel": "預設儲存類別",
+    "pvcNameLabel": "PVC 名稱",
+    "namespaceLabel": "命名空間",
+    "statusLabel": "狀態",
+    "volumeNameLabel": "儲存卷",
+    "storageClassLabel": "儲存類別",
+    "capacityLabel": "容量",
+    "accessModesLabel": "存取模式",
+    "createdAtLabel": "建立時間",
+    "pvNameLabel": "PV 名稱",
+    "claimRefLabel": "宣告",
+    "sourceTypeLabel": "儲存來源類型"
+  },
+  "columnSettings": {
+    "title": "欄位設定",
+    "selectColumns": "選擇要顯示的欄位：",
+    "confirm": "確定"
+  },
+  "pagination": {
+    "totalStorageClass": "共 {{total}} 個 StorageClass",
+    "totalPVC": "共 {{total}} 個 PVC",
+    "totalPV": "共 {{total}} 個 PV"
+  },
+  "yes": "是",
+  "no": "否"
+}

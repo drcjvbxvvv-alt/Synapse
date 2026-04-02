@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ import (
 	"github.com/clay-wangzhi/KubePolaris/internal/response"
 	"github.com/clay-wangzhi/KubePolaris/internal/services"
 	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // staticFS 保存嵌入的前端静态文件系统，由 Setup 注入
@@ -34,24 +36,35 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	// 创建操作审计日志服务
 	opLogSvc := services.NewOperationLogService(db)
 
-	// 全局中间件：建议引入 RequestID + 结构化日志 + 统一恢复
+	// 全局中間件
 	r.Use(
-		// middleware.RequestID(), // TODO: 注入 traceId/requestId
-		gin.Recovery(),                      // 可替换为自定义 Recovery 统一错误响应
-		gin.Logger(),                        // 可替换为 zap/logrus 结构化日志中间件
-		middleware.CORS(),                   // TODO: 从 cfg 读取允许的 Origin/Methods/Headers
-		middleware.OperationAudit(opLogSvc), // 操作审计中间件（记录所有非GET请求）
-		gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/ws/"})), // Gzip 压缩（排除 WebSocket）
-		// middleware.RateLimit() // TODO: 关键接口限流
+		middleware.RequestID(),              // 注入 X-Request-ID
+		gin.Recovery(),
+		gin.Logger(),
+		middleware.CORS(),
+		middleware.OperationAudit(opLogSvc),
+		middleware.PrometheusMetrics(),      // 應用層 Prometheus 指標
+		gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/ws/"})),
 	)
 
-	// Health endpoints：liveness 与 readiness
+	// Prometheus metrics（不掛 Gzip，讓 Prometheus scraper 直接讀取）
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Health endpoints：liveness 與 readiness
 	r.GET("/healthz", func(c *gin.Context) {
 		response.OK(c, gin.H{"status": "ok"})
 	})
 	r.GET("/readyz", func(c *gin.Context) {
-		// TODO: 检查 db/k8s 可用性
-		response.OK(c, gin.H{"ready": true})
+		sqlDB, err := db.DB()
+		if err != nil {
+			response.Error(c, http.StatusServiceUnavailable, "DB_UNAVAILABLE", "database unavailable")
+			return
+		}
+		if err := sqlDB.Ping(); err != nil {
+			response.Error(c, http.StatusServiceUnavailable, "DB_PING_FAILED", "database ping failed")
+			return
+		}
+		response.OK(c, gin.H{"ready": true, "db": "ok"})
 	})
 
 	// 统一的 Service 实例，避免重复创建
@@ -79,8 +92,11 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	}
 	// 始终将 grafanaSvc 传给 monitoringConfigSvc，运行时通过 IsEnabled() 判断是否同步数据源
 	monitoringConfigSvc := services.NewMonitoringConfigServiceWithGrafana(db, grafanaSvc)
-	// K8s Informer 管理器
+	// K8s Informer 管理器（套用可設定的快取同步逾時）
 	k8sMgr := k8s.NewClusterInformerManager()
+	if cfg.K8s.InformerSyncTimeout > 0 {
+		k8sMgr.SetSyncTimeout(time.Duration(cfg.K8s.InformerSyncTimeout) * time.Second)
+	}
 	// 预热所有已存在集群的 Informer（后台执行，不阻塞启动）
 	go func() {
 		clusters, err := clusterSvc.GetAllClusters()
@@ -103,7 +119,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	{
 		authSvc := services.NewAuthService(db, cfg.JWT.Secret, cfg.JWT.ExpireTime)
 		authHandler := handlers.NewAuthHandler(authSvc, opLogSvc)
-		auth.POST("/login", authHandler.Login)
+		auth.POST("/login", middleware.LoginRateLimit(), authHandler.Login)
 		auth.POST("/logout", authHandler.Logout)
 		auth.GET("/status", authHandler.GetAuthStatus) // 获取认证状态（无需登录）
 		// /me 必须带 Auth

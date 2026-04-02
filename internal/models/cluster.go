@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/clay-wangzhi/KubePolaris/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -33,6 +34,71 @@ type Cluster struct {
 	// 关联关系
 	Creator         User              `json:"creator" gorm:"foreignKey:CreatedBy"`
 	TerminalSession []TerminalSession `json:"terminal_sessions" gorm:"foreignKey:ClusterID"`
+}
+
+// ---------------------------------------------------------------------------
+// GORM hooks — transparent AES-256-GCM encryption for sensitive fields.
+// Encryption is enabled when crypto.Init() is called with a non-empty key.
+// When no key is configured the hooks are no-ops (plaintext passthrough).
+// ---------------------------------------------------------------------------
+
+// BeforeSave encrypts sensitive fields before INSERT or UPDATE.
+func (c *Cluster) BeforeSave(_ *gorm.DB) error {
+	if !crypto.IsEnabled() {
+		return nil
+	}
+	var err error
+	if c.KubeconfigEnc, err = crypto.Encrypt(c.KubeconfigEnc); err != nil {
+		return err
+	}
+	if c.CAEnc, err = crypto.Encrypt(c.CAEnc); err != nil {
+		return err
+	}
+	if c.SATokenEnc, err = crypto.Encrypt(c.SATokenEnc); err != nil {
+		return err
+	}
+	return nil
+}
+
+// afterSave decrypts sensitive fields back into memory after a successful save
+// so the caller always sees plaintext values.
+func (c *Cluster) afterSave() {
+	if !crypto.IsEnabled() {
+		return
+	}
+	c.KubeconfigEnc, _ = crypto.Decrypt(c.KubeconfigEnc)
+	c.CAEnc, _ = crypto.Decrypt(c.CAEnc)
+	c.SATokenEnc, _ = crypto.Decrypt(c.SATokenEnc)
+}
+
+// AfterCreate decrypts the fields back to plaintext after a CREATE operation.
+func (c *Cluster) AfterCreate(_ *gorm.DB) error {
+	c.afterSave()
+	return nil
+}
+
+// AfterUpdate decrypts the fields back to plaintext after an UPDATE operation.
+func (c *Cluster) AfterUpdate(_ *gorm.DB) error {
+	c.afterSave()
+	return nil
+}
+
+// AfterFind decrypts sensitive fields after loading from the database.
+func (c *Cluster) AfterFind(_ *gorm.DB) error {
+	if !crypto.IsEnabled() {
+		return nil
+	}
+	var err error
+	if c.KubeconfigEnc, err = crypto.Decrypt(c.KubeconfigEnc); err != nil {
+		return err
+	}
+	if c.CAEnc, err = crypto.Decrypt(c.CAEnc); err != nil {
+		return err
+	}
+	if c.SATokenEnc, err = crypto.Decrypt(c.SATokenEnc); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ClusterStats 集群统计信息

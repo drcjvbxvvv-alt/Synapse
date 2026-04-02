@@ -1,0 +1,31 @@
+{
+  "kubectl": {
+    "title": "Kubectl 終端機",
+    "cluster": "叢集",
+    "selectNamespace": "選擇命名空間",
+    "connect": "連線終端機",
+    "disconnect": "中斷連線",
+    "clear": "清除",
+    "fullscreen": "全螢幕",
+    "connectedTo": "已連線到叢集 {{clusterId}}",
+    "clusterNotFound": "叢集 ID 不存在",
+    "welcomeMessage": "請選擇命名空間並點擊「連線終端機」開始...",
+    "connecting": "正在連線終端機...",
+    "prepHint": "若長時間停留在此，多為叢集正在建立終端機 Pod 或拉取映像；下方會顯示 Kubernetes 回傳的目前狀態。"
+  },
+  "messages": {
+    "connectFirst": "請先連線終端機",
+    "pasteFailed": "貼上失敗，請檢查瀏覽器權限",
+    "initFailed": "初始化終端機失敗",
+    "missingClusterId": "缺少叢集 ID",
+    "notLoggedIn": "未登入，請先登入",
+    "connectSuccess": "終端機連線成功",
+    "connectError": "終端機連線出錯",
+    "connectionLost": "終端機連線已中斷",
+    "createFailed": "建立終端機連線失敗",
+    "disconnected": "手動中斷連線",
+    "connectionError": "連線出錯",
+    "connectionClosed": "連線已中斷",
+    "createConnectionFailed": "建立連線失敗"
+  }
+}

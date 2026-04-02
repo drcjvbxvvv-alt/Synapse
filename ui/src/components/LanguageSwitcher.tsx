@@ -17,11 +17,7 @@ const LanguageSwitcher: React.FC = () => {
 
   const menuItems: MenuProps['items'] = supportedLanguages.map(lang => ({
     key: lang.code,
-    label: (
-      <span>
-        {lang.flag} {lang.name}
-      </span>
-    ),
+    label: <span>{lang.name}</span>,
   }));
 
   return (
@@ -38,7 +34,7 @@ const LanguageSwitcher: React.FC = () => {
         icon={<GlobalOutlined />}
         style={{ color: '#ffffff' }}
       >
-        {currentLanguage.flag}
+        {currentLanguage.name}
       </Button>
     </Dropdown>
   );
