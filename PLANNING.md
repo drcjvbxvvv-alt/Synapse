@@ -1,6 +1,6 @@
 # Synapse 系統規劃書
 
-> 版本：v1.2 | 日期：2026-04-02 | 狀態：進行中
+> 版本：v1.3 | 日期：2026-04-02 | 狀態：進行中
 
 ## 實作記錄（2026-04-02）
 
@@ -24,8 +24,15 @@
 - ✅ 前端 React Query 導入（@tanstack/react-query v5，QueryClientProvider）
 - ✅ 前端列表虛擬捲動（16 個 Table 加入 virtual + scroll.y=600）
 
+**已完成（2026-04-02 §8.3 Phase A）：**
+- ✅ HPA CRUD（A1）— `internal/handlers/hpa.go`、路由、`ScalingTab.tsx` 完整建立/編輯/刪除流程
+- ✅ YAML Apply Diff 顯示（A2）— 確認 `YAMLEditor.tsx` 與 `ResourceYAMLEditor.tsx` 已完整實作 Monaco DiffEditor 差異預覽
+- ✅ Slack / Teams 通知（A3）— `event_alert_service.go` 新增 Slack text + Teams Adaptive Card 格式
+- ✅ Argo Rollouts 操控（A4）— `rollout.go` 新增 Promote / PromoteFull / Abort / GetAnalysisRuns，`RolloutDetail.tsx` 新增操作按鈕
+
 **未完成（下一批次）：**
 - Helm Release 管理（M4）
+- §8.3 Phase B：Loki/ES 查詢整合、ConfigMap/Secret 版本歷史、ResourceQuota/LimitRange CRUD
 
 ---
 
@@ -1667,26 +1674,28 @@ M17 環境流水線（企業級多環境管理，Promotion Gate）
 
 ### 8.3 強化優先序矩陣
 
-| 優先級 | 功能 | 類別 | 工作量 |
-|--------|------|------|--------|
-| 🔴 P0 | Loki / ES 實際查詢整合 | 深度不足 | 3 週 |
-| 🔴 P0 | OAuth2 / OIDC 整合 | 完全缺失 | 2 週 |
-| 🔴 P0 | HPA CRUD | 深度不足 | 1 週 |
-| 🔴 P0 | 部署審批工作流 | 完全缺失 | 3 週 |
-| 🟡 P1 | Argo Rollouts 操控（Promote/Abort/Analysis） | 深度不足 | 2 週 |
-| 🟡 P1 | 通知渠道擴充（Slack / Teams） | 深度不足 | 1 週 |
-| 🟡 P1 | YAML Apply Dry-run / Diff | 深度不足 | 1 週 |
-| 🟡 P1 | ConfigMap/Secret 版本歷史 | 完全缺失 | 2 週 |
-| 🟡 P1 | 跨叢集統一工作負載視圖 | 完全缺失 | 2 週 |
-| 🟡 P1 | ResourceQuota / LimitRange CRUD | 深度不足 | 1 週 |
-| 🟡 P1 | VPA 支援 | 完全缺失 | 2 週 |
-| 🟡 P1 | Image Tag 全域搜尋 | 完全缺失 | 2 週 |
-| 🟢 P2 | Port-Forward | 完全缺失 | 2 週 |
-| 🟢 P2 | Project 多租戶模型 | 架構升級 | 4 週 |
-| 🟢 P2 | Deployment 保護機制 | 完全缺失 | 1 週 |
-| 🟢 P2 | PodDisruptionBudget 管理 | 完全缺失 | 1 週 |
-| 🟢 P2 | Terminal 會話錄製回放 | 深度不足 | 2 週 |
-| 🟢 P2 | 稽核日誌 SIEM 匯出 | 完全缺失 | 1 週 |
+| 優先級 | 功能 | 類別 | 工作量 | 狀態 |
+|--------|------|------|--------|------|
+| 🔴 P0 | Loki / ES 實際查詢整合 | 深度不足 | 3 週 | Phase B |
+| 🔴 P0 | OAuth2 / OIDC 整合 | 完全缺失 | 2 週 | Phase C |
+| 🔴 P0 | HPA CRUD | 深度不足 | 1 週 | ✅ **完成** |
+| 🔴 P0 | 部署審批工作流 | 完全缺失 | 3 週 | Phase C |
+| 🟡 P1 | Argo Rollouts 操控（Promote/Abort/Analysis） | 深度不足 | 2 週 | ✅ **完成** |
+| 🟡 P1 | 通知渠道擴充（Slack / Teams） | 深度不足 | 1 週 | ✅ **完成** |
+| 🟡 P1 | YAML Apply Dry-run / Diff | 深度不足 | 1 週 | ✅ **完成**（已存在） |
+| 🟡 P1 | ConfigMap/Secret 版本歷史 | 完全缺失 | 2 週 | Phase B |
+| 🟡 P1 | 跨叢集統一工作負載視圖 | 完全缺失 | 2 週 | Phase B |
+| 🟡 P1 | ResourceQuota / LimitRange CRUD | 深度不足 | 1 週 | Phase B |
+| 🟡 P1 | VPA 支援 | 完全缺失 | 2 週 | Phase C |
+| 🟡 P1 | Image Tag 全域搜尋 | 完全缺失 | 2 週 | Phase C |
+| 🟢 P2 | Port-Forward | 完全缺失 | 2 週 | Phase D |
+| 🟢 P2 | Project 多租戶模型 | 架構升級 | 4 週 | Phase D |
+| 🟢 P2 | Deployment 保護機制 | 完全缺失 | 1 週 | Phase D |
+| 🟢 P2 | PodDisruptionBudget 管理 | 完全缺失 | 1 週 | Phase D |
+| 🟢 P2 | Terminal 會話錄製回放 | 深度不足 | 2 週 | Phase D |
+| 🟢 P2 | 稽核日誌 SIEM 匯出 | 完全缺失 | 1 週 | Phase D |
+
+**Phase A 進度（2026-04-02 完成）：** 4/4 項 ✅
 
 ### 8.4 核心反思結論
 
