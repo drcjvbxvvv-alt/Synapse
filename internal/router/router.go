@@ -302,6 +302,20 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					rollouts.POST("/yaml/apply", rolloutHandler.ApplyYAML)
 					rollouts.POST("/:namespace/:name/scale", rolloutHandler.ScaleRollout)
 					rollouts.DELETE("/:namespace/:name", rolloutHandler.DeleteRollout)
+					rollouts.POST("/:namespace/:name/promote", rolloutHandler.PromoteRollout)
+					rollouts.POST("/:namespace/:name/promote-full", rolloutHandler.PromoteFullRollout)
+					rollouts.POST("/:namespace/:name/abort", rolloutHandler.AbortRollout)
+					rollouts.GET("/:namespace/:name/analysis-runs", rolloutHandler.GetRolloutAnalysisRuns)
+				}
+
+				// HPA 子分组
+				hpaHandler := handlers.NewHPAHandler(db, clusterSvc, k8sMgr)
+				hpa := cluster.Group("/hpa")
+				{
+					hpa.GET("", hpaHandler.ListHPA)
+					hpa.POST("", hpaHandler.CreateHPA)
+					hpa.PUT("/:namespace/:name", hpaHandler.UpdateHPA)
+					hpa.DELETE("/:namespace/:name", hpaHandler.DeleteHPA)
 				}
 
 				// StatefulSet 子分组

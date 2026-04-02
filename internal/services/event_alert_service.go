@@ -278,6 +278,36 @@ func (w *EventAlertWorker) notify(rule *models.EventAlertRule, event *corev1.Eve
 		}
 	}
 
+	// Slack 格式
+	if rule.NotifyType == "slack" {
+		payload = map[string]interface{}{
+			"text": fmt.Sprintf(":warning: *[Synapse 告警]* %s\n叢集: %d | 命名空間: `%s` | 物件: `%s`\n原因: `%s` | 次數: %d\n訊息: %s",
+				rule.Name, rule.ClusterID, event.Namespace, involvedObj,
+				event.Reason, event.Count, event.Message),
+		}
+	}
+
+	// Microsoft Teams 格式（Incoming Webhook）
+	if rule.NotifyType == "teams" {
+		payload = map[string]interface{}{
+			"type": "message",
+			"attachments": []map[string]interface{}{{
+				"contentType": "application/vnd.microsoft.card.adaptive",
+				"content": map[string]interface{}{
+					"type":    "AdaptiveCard",
+					"$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+					"version": "1.2",
+					"body": []map[string]interface{}{
+						{"type": "TextBlock", "text": fmt.Sprintf("[Synapse 告警] %s", rule.Name), "weight": "bolder", "size": "medium"},
+						{"type": "TextBlock", "text": fmt.Sprintf("叢集: %d | 命名空間: %s | 物件: %s", rule.ClusterID, event.Namespace, involvedObj), "wrap": true},
+						{"type": "TextBlock", "text": fmt.Sprintf("原因: %s | 次數: %d", event.Reason, event.Count), "wrap": true},
+						{"type": "TextBlock", "text": fmt.Sprintf("訊息: %s", event.Message), "wrap": true, "color": "attention"},
+					},
+				},
+			}},
+		}
+	}
+
 	data, _ := json.Marshal(payload)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

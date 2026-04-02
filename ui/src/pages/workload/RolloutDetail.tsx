@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  Card, 
+  App,
+  Card,
+  Popconfirm,
   Tabs, 
   Spin, 
   message, 
@@ -17,7 +19,10 @@ import {
   ArrowLeftOutlined,
   SyncOutlined,
   LineChartOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  CaretRightOutlined,
+  FastForwardOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
 import { useTranslation } from 'react-i18next';
@@ -65,9 +70,11 @@ const RolloutDetail: React.FC = () => {
   }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+  const { message: messageApi } = App.useApp();
+
 const { t } = useTranslation(["workload", "common"]);
 const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rollout, setRollout] = useState<RolloutDetailData | null>(null);
   // 从 URL 参数获取默认 Tab，支持通过 ?tab=monitoring 直接跳转到监控页
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'instances');
@@ -122,6 +129,48 @@ const [loading, setLoading] = useState(false);
   // 刷新
   const handleRefresh = () => {
     loadRolloutDetail();
+  };
+
+  const handlePromote = async () => {
+    if (!clusterId || !namespace || !name) return;
+    setActionLoading('promote');
+    try {
+      await WorkloadService.promoteRollout(clusterId, namespace, name);
+      messageApi.success('Promote 成功');
+      loadRolloutDetail();
+    } catch (e) {
+      messageApi.error('Promote 失敗: ' + String(e));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePromoteFull = async () => {
+    if (!clusterId || !namespace || !name) return;
+    setActionLoading('promote-full');
+    try {
+      await WorkloadService.promoteFullRollout(clusterId, namespace, name);
+      messageApi.success('Promote Full 成功');
+      loadRolloutDetail();
+    } catch (e) {
+      messageApi.error('Promote Full 失敗: ' + String(e));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAbort = async () => {
+    if (!clusterId || !namespace || !name) return;
+    setActionLoading('abort');
+    try {
+      await WorkloadService.abortRollout(clusterId, namespace, name);
+      messageApi.success('Abort 成功');
+      loadRolloutDetail();
+    } catch (e) {
+      messageApi.error('Abort 失敗: ' + String(e));
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   // 渲染状态标签
@@ -303,8 +352,46 @@ const [loading, setLoading] = useState(false);
           </Space>
         </div>
         <Space>
-          <Button 
-            icon={<LineChartOutlined />} 
+          <Button
+            icon={<CaretRightOutlined />}
+            onClick={handlePromote}
+            loading={actionLoading === 'promote'}
+            disabled={actionLoading !== null && actionLoading !== 'promote'}
+          >
+            Promote
+          </Button>
+          <Popconfirm
+            title="全量 Promote 將跳過所有 Pause 和 Analysis，確定執行？"
+            onConfirm={handlePromoteFull}
+            okText="確定"
+            cancelText="取消"
+          >
+            <Button
+              icon={<FastForwardOutlined />}
+              loading={actionLoading === 'promote-full'}
+              disabled={actionLoading !== null && actionLoading !== 'promote-full'}
+            >
+              Promote Full
+            </Button>
+          </Popconfirm>
+          <Popconfirm
+            title="確定中止此 Rollout？"
+            onConfirm={handleAbort}
+            okText="中止"
+            okButtonProps={{ danger: true }}
+            cancelText="取消"
+          >
+            <Button
+              danger
+              icon={<StopOutlined />}
+              loading={actionLoading === 'abort'}
+              disabled={actionLoading !== null && actionLoading !== 'abort'}
+            >
+              Abort
+            </Button>
+          </Popconfirm>
+          <Button
+            icon={<LineChartOutlined />}
             onClick={() => setActiveTab('monitoring')}
             type={activeTab === 'monitoring' ? 'primary' : 'default'}
           >

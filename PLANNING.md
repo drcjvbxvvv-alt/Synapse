@@ -1,6 +1,6 @@
 # Synapse 系統規劃書
 
-> 版本：v1.1 | 日期：2026-04-02 | 狀態：進行中
+> 版本：v1.2 | 日期：2026-04-02 | 狀態：進行中
 
 ## 實作記錄（2026-04-02）
 
@@ -37,6 +37,8 @@
 4. [解決方案與優化計劃](#4-解決方案與優化計劃)
 5. [新功能規劃](#5-新功能規劃)
 6. [優先序與里程碑](#6-優先序與里程碑)
+7. [平台演進方向：全能 CI/CD DevOps 平台](#7-平台演進方向全能-cicd-devops-平台)
+8. [系統反思：不足之處與強化方向](#8-系統反思不足之處與強化方向)
 
 ---
 
@@ -621,92 +623,68 @@ GET  /clusters/:id/security/scan-results/:workload  特定工作負載結果
 
 ---
 
-### 5.9 📦 備份與災難恢復（低優先）
+### 5.9 📦 備份與災難恢復（附加項，非核心路線）
 
-**背景：** 生產環境需要定期備份，但 Velero 部署門檻高，第一版聚焦於「輕量匯出」。
+**重新評估（2026-04-02）：**
 
-**功能範圍（分兩階段）：**
+- **Phase 1（ZIP 匯出）已移除：** M16 原生 GitOps 落地後，所有工作負載配置的「來源」即是 Git Repo，從叢集反向匯出 YAML 的需求消失。GitOps 本身就是最好的「備份」。
+- **Phase 2（Velero）保留為附加項：** Velero 解決的是**有狀態資料備份**（PVC 資料、資料庫快照），與 GitOps 不重疊，仍有價值，但不列入核心里程碑，改為 M16 完成後的可選整合。
 
-#### Phase 1：工作負載配置匯出（無外部依賴）
-
-**設計方案：**
-- 選擇叢集 + 命名空間 → 後端依序取出所有資源 YAML → 打包成 ZIP 下載
-- 資源清單：Deployment、StatefulSet、DaemonSet、Service、Ingress、ConfigMap（不含 Secret 值）、PVC（不含資料）、HPA、CronJob
-- 提供 `manifest.json` 索引，記錄資源版本與匯出時間
+**保留範圍（Velero，附加）：**
+- 偵測叢集是否已安裝 Velero（查詢 `velero` namespace）
+- 透過 K8s CRD 管理 Velero `Backup` / `Schedule` / `Restore` 資源（複用 CRD 通用介面）
+- 備份列表 + 狀態 + 觸發還原
 
 ```
-GET /clusters/:id/backup/export?namespace=prod    下載 ZIP 包
+GET /clusters/:id/backup/velero-status    偵測 Velero 安裝狀態
 ```
 
-#### Phase 2：Velero 整合（需叢集已安裝 Velero）
+**etcd 快照：** 僅限 Self-managed 叢集，優先級最低，暫不實作。
 
-**設計方案：**
-- 透過 K8s CRD 管理 Velero `Backup` / `Schedule` / `Restore` 資源
-- 複用 CRD 通用介面（5.6）實現基礎 CRUD
-- 新增 Velero 專屬儀表板：備份清單 + 狀態 + 觸發還原
-
-```go
-// 偵測叢集是否安裝 Velero
-// GET /clusters/:id/backup/velero-status
-// 回傳 { installed: bool, version: string }
-```
-
-**etcd 快照：** 僅限 Self-managed 叢集（EKS/GKE/AKS 不適用），優先級最低，暫不實作。
-
-**實作難度：** ⭐⭐（Phase 1 低；Phase 2 中）
-**估計工作量：** Phase 1：1 週；Phase 2：3 週
+**實作難度：** ⭐⭐（Velero 附加整合）
+**前置條件：** M16 原生 GitOps 完成後再評估是否實作
 
 ---
 
-### 5.10 🖥️ CLI 工具（低優先）
+### 5.10 🖥️ CLI 工具（延後，待 M13–M16 穩定後重新定義）
 
-**背景：** 提供 CLI 工具可讓 DevOps 工程師在 CI/CD pipeline 中使用平台功能，無需開啟瀏覽器。
+**重新評估（2026-04-02）：**
 
-**功能範圍：**
+CLI 工具的方向正確，但**現在規劃範圍錯誤**，原始設計僅涵蓋管理功能（cluster/pod/helm/cost），未考慮即將實作的 DevOps 能力。
 
-**技術方案：**
-- 使用 `cobra` + `viper` 框架，獨立 Go 二進位（`cmd/cli/main.go`）
-- 設定檔：`~/.synapse/config.yaml`（server URL + JWT token）
-- 輸出格式：`--output table|json|yaml`
+**延後理由：**
+- M13（CI Pipeline）、M14（Git 整合）、M16（GitOps）完成前，CLI 的核心使用場景（`pipeline run`、`deploy`、`env promote`）尚未存在
+- 在功能介面未穩定時設計 CLI 必然導致大幅重工
+- CLI 應在 DevOps 功能穩定後一次設計完整指令集
 
-**指令設計：**
+**未來範圍（M13–M16 完成後重新規劃）：**
 ```
 synapse login --server https://... --token <token>
+
+# 管理
 synapse cluster list
-synapse cluster use <id>
-
 synapse pod list [--namespace <ns>] [--cluster <id>]
-synapse pod logs <name> --namespace <ns>
+synapse helm list / upgrade / rollback
 
-synapse workload list [--type deployment|statefulset]
-synapse workload rollout restart <name> --namespace <ns>
-synapse workload rollout undo <name> --namespace <ns>
+# CI/CD（M13+ 後新增）
+synapse pipeline list
+synapse pipeline run <name> [--cluster <id>]
+synapse pipeline logs <run-id>
 
-synapse helm list [--namespace <ns>]
-synapse helm upgrade <release> --chart <repo/chart> --values values.yaml
+# GitOps（M16+ 後新增）
+synapse app list
+synapse app sync <name>
+synapse app diff <name>
 
-synapse yaml apply -f manifest.yaml --cluster <id>
-
-synapse cost overview [--month 2026-04]
+# 環境（M17+ 後新增）
+synapse env list
+synapse env promote <app> --from staging --to production
 ```
 
-**CI/CD 整合範例：**
-```yaml
-# GitHub Actions
-- name: Deploy to Production
-  run: |
-    synapse helm upgrade myapp --chart stable/myapp \
-      --set image.tag=${{ github.sha }} \
-      --cluster prod --namespace production
-```
+**技術方案（不變）：** `cobra` + `viper`，獨立 Go 二進位，`~/.synapse/config.yaml`
 
-**分發方式：**
-- `go build` 單一二進位，無外部依賴
-- GitHub Releases 提供 Linux / macOS / Windows 預編譯版本
-- `go install github.com/clay-wangzhi/Synapse/cmd/cli@latest`
-
-**實作難度：** ⭐⭐（低，主要是 REST API 封裝）
-**估計工作量：** 3 週
+**前置條件：** M16 完成後重新規劃並實作
+**估計工作量：** 4 週（屆時範圍更大，涵蓋 DevOps 全指令）
 
 ---
 
@@ -725,10 +703,18 @@ synapse cost overview [--month 2026-04]
 | M7 | **AI 深度運維**（NL Query / YAML 生成 / Runbook） | ✅ 已完成 | 中 | — |
 | M8 | **多叢集工作流程**（遷移 / 配置同步） | ✅ 已完成 | 低 | **5 週** |
 | M9 | **合規性與安全掃描**（Trivy / kube-bench） | ✅ 已完成 | 低 | **6 週** |
-| M10 | **備份匯出 + CLI 工具** | 🔲 待實作 | 低 | **4 週** |
+| M10 | ~~備份匯出 + CLI 工具~~ → **Velero 附加整合**（ZIP 移除；CLI 延後至 M16 後） | ⏸ 延後 | 低 | **重新評估中** |
+| M11 | **NetworkPolicy 拓撲內聯編輯 + 策略模擬**（移除拖拉建立，保留編輯現有規則 + YAML 預覽 + 模擬） | 🔲 待實作 | 中 | **2 週** |
+| M12 | **Service Mesh 視覺化（Istio 拓撲 + 流量管理）** | 🔲 待實作 | 中 | **5 週** |
 | — | NetworkPolicy 視覺化拓撲圖 + 精靈 | ✅ 已完成 | 中 | **3 週** |
+| **M13** | **原生 CI Pipeline 引擎**（K8s Job 驅動，DAG 步驟，日誌串流） | 🔲 待實作 | 🔴 高 | **8 週** |
+| **M14** | **Git 整合 + Webhook 觸發**（GitHub/GitLab/Gitea） | 🔲 待實作 | 🔴 高 | **4 週** |
+| **M15** | **映像 Registry 整合**（Harbor/DockerHub，Tag 管理） | 🔲 待實作 | 🟡 中 | **3 週** |
+| **M16** | **原生輕量 GitOps**（Kustomize/Helm，ArgoCD 整合升級） | 🔲 待實作 | 🟡 中 | **6 週** |
+| **M17** | **環境管理 + Promotion 流水線**（dev/staging/prod，人工審核閘門） | 🔲 待實作 | 🟢 低 | **5 週** |
 
-**待實作總估計：約 26 週（6.5 個月）**
+**待實作總估計（含 DevOps 演進）：約 59 週（~15 個月）**
+（M10 ZIP 移除 -1 週；CLI 延後不計；M11 縮減 -1 週）
 
 ### 建議實作順序
 
@@ -738,18 +724,20 @@ synapse cost overview [--month 2026-04]
         │ ✅ M2 效能    ✅ M5 AI/CRD/NP/告警
         │
 中      │ ✅ M3 可觀測  ✅ M6 成本分析
-        │ ✅ M7 AI 深度   🔲 NP 視覺化（次優先）
-        │
+        │ ✅ M7 AI 深度   🔲 M11 NP 視覺化編輯+模擬（次優先）
+        │               🔲 M12 Service Mesh（Istio 拓撲+流量管理）
 低      │               🔲 M8 多叢集
-        │               🔲 M10 CLI
+        │               ⏸ M10 延後重定義
         │               ✅ M9 合規掃描
         └─────────────────────────────────→ 實作難度
                   低          中          高
 ```
 
-**推薦下一步：M8（多叢集工作流程）或 NetworkPolicy 視覺化拓撲圖**
-- M7 已完成：NL Query、YAML 生成、Runbook 知識庫、敏感資料過濾均已實作
-- NP 視覺化拓撲圖難度高但差異化競爭力強，建議優先於 M8
+**推薦下一步：M11（NetworkPolicy 拓撲內聯編輯 + 策略模擬）**
+- 縮減後僅 2 週，建立於已有 ReactFlow 基礎設施之上，邊際成本低
+- 策略模擬（Apply 前預覽）是明確差異化功能，Wizard + 拓撲圖已夠用不需再做拖拉建立
+- M12（Service Mesh）依賴 Istio 部署，建議 M11 後再評估目標用戶的 Istio 採用率
+- 長期優先：M13 CI Pipeline 是平台演進為 DevOps 平台的最關鍵缺口
 
 ### 里程碑規劃
 
@@ -882,27 +870,830 @@ synapse cost overview [--month 2026-04]
 
 ---
 
-#### Milestone 10：備份匯出 + CLI 工具（4 週）🔲 待實作
+#### ~~Milestone 10：備份匯出 + CLI 工具~~ ⏸ 延後重新定義
 
-> **目標：** Phase 1 輕量備份不依賴外部工具；CLI 工具支援 CI/CD 整合。
+> **重新評估結論（2026-04-02）：** 原始 M10 範圍已拆分重組，不再作為獨立里程碑實作。
+
+| 子項目 | 新去向 | 理由 |
+|--------|--------|------|
+| ZIP 備份匯出 | ❌ 移除 | M16 GitOps 落地後，Git 即是備份來源，ZIP 匯出需求消失 |
+| Velero 整合 | ⏸ M16 後附加實作 | 解決有狀態資料（PVC）備份，與 GitOps 不重疊，但非核心路線 |
+| CLI 工具 | ⏸ M16 後重新規劃 | 原始指令集未涵蓋 Pipeline/Deploy/Promote，M13–M16 穩定後一次設計完整版 |
+
+**Velero 附加整合（M16 後，~2 週）：**
+- [ ] Velero 安裝偵測（`GET /clusters/:id/backup/velero-status`）
+- [ ] Backup/Restore CRD CRUD（複用 CRD 通用介面）
+- [ ] 前端備份狀態頁
+
+**CLI 重新規劃（M16 後，~4 週）：**
+- [ ] 完整指令集設計（涵蓋 cluster/pod/helm/pipeline/app/env）
+- [ ] cobra + viper 框架，`~/.synapse/config.yaml`
+- [ ] GitHub Release 自動編譯（Linux/macOS/Windows）
+
+---
+
+#### Milestone 11：NetworkPolicy 拓撲內聯編輯 + 策略模擬（2 週）🔲 待實作
+
+> **重新評估（2026-04-02）：** 原始「完整視覺化編輯器（拖拉新增節點/連線）」與已有 Wizard 功能重疊，ROI 低。縮減為：**拓撲圖上直接編輯現有規則** + **YAML 預覽** + **Apply 前策略模擬**，工作量從 3 週降為 2 週。
+
+**移除項目及理由：**
+
+| 移除項目 | 理由 |
+|---------|------|
+| 拖拉新增節點/連線以建立規則 | Wizard 已提供完整的結構化建立流程，兩套建立入口並存增加維護成本 |
+| 拓撲圖節點增刪 | 節點由叢集實際 Pod/Namespace 決定，手動增刪無意義 |
+
+**保留並實作：**
 
 | 任務 | 檔案 | 週次 |
 |------|------|------|
-| 命名空間資源 ZIP 匯出 API | `internal/handlers/backup.go` | W1 |
-| Velero 狀態偵測 + Backup/Restore CRD 管理 | `internal/handlers/velero.go` | W1–W2 |
-| 前端備份頁（匯出按鈕 + Velero 備份列表） | `ui/src/pages/backup/BackupPage.tsx` | W2 |
-| CLI 框架（cobra + viper，`cmd/cli/main.go`） | `cmd/cli/` | W2–W3 |
-| CLI 指令實作（login/cluster/pod/helm/yaml apply/cost） | `cmd/cli/commands/` | W3–W4 |
-| GitHub Actions workflow + Release 編譯 | `.github/workflows/release-cli.yml` | W4 |
+| 拓撲圖「編輯模式」：點選現有連線修改 port/protocol | `NetworkPolicyTopology.tsx`（擴充） | W1 |
+| 規則邊 Modal（點選連線 → 修改 ports / protocol / peer） | `NetworkPolicyEdgeModal.tsx`（新增） | W1 |
+| YAML 預覽面板（編輯後即時顯示生成的 NetworkPolicy YAML） | `NetworkPolicyTopology.tsx` | W1 |
+| 策略模擬後端（NP selector matching 引擎） | `internal/handlers/networkpolicy.go`（擴充） | W1–W2 |
+| 策略模擬前端（來源/目標 label + port → ALLOW/DENY + 決策路徑） | `NetworkPolicySimulator.tsx`（新增） | W2 |
+| 三語 i18n | — | W2 |
 
-- [ ] 工作負載配置 ZIP 匯出（無外部依賴，Phase 1）
-- [ ] Velero 整合（偵測安裝狀態 + Backup/Restore CRD CRUD，Phase 2）
-- [ ] 前端備份管理頁（匯出按鈕 + Velero 備份列表 + 還原觸發）
-- [ ] CLI 工具框架（cobra + viper，獨立二進位）
-- [ ] CLI 核心指令（login / cluster / pod / helm / yaml / cost）
-- [ ] CI/CD 整合文件 + GitHub Release 自動編譯
+**後端新增 API：**
+```
+POST /clusters/:id/networkpolicies/simulate
+  Body: { fromPodLabels: {}, toPodLabels: {}, port: 80, protocol: "TCP" }
+  Response: {
+    allowed: bool,
+    reason: "matched_policy" | "default_deny" | "no_policies",
+    matchedPolicies: [{ name, namespace, direction, rule }],
+    path: [{ from, to, decision }]   // 用於前端高亮路徑
+  }
+```
 
-**完成指標：** `synapse pod list --cluster prod` 可正常輸出；ZIP 匯出包含所有 Deployment/Service/ConfigMap YAML。
+**模擬引擎邏輯（自實作，無外部依賴）：**
+```go
+// 1. 取得叢集所有 NetworkPolicy
+// 2. 找出目標 Pod（toPodLabels selector matching）
+// 3. 是否有任何 NP 選中目標 Pod？
+//    - 無 → default allow（K8s 預設），回傳 ALLOW
+//    - 有 → 進入規則評估
+// 4. 逐條 ingress rule 評估：peer 是否包含來源 Pod？port 是否匹配？
+//    - 有匹配 → ALLOW，附上匹配的策略名稱與規則編號
+//    - 無匹配 → DENY（default deny when NP exists）
+// 5. 同理評估 egress（來源 Pod 方向）
+```
+
+**前端 UI 設計：**
+```
+┌─────────────────────────────────────────────────────────┐
+│  [檢視模式] [編輯模式] [模擬模式]              [儲存] [取消] │
+├─────────────────────────────┬───────────────────────────┤
+│                             │  ＜編輯模式＞              │
+│   ReactFlow 畫布            │  點選連線即可編輯規則        │
+│                             │  ┌─────────────────────┐  │
+│  [frontend] ──→ [backend]   │  │ Protocol: [TCP ▾]   │  │
+│  （點選此連線）               │  │ Port:     [8080   ] │  │
+│                             │  │ Direction: Ingress  │  │
+│                             │  └─────────────────────┘  │
+│                             │  YAML 預覽 ▼              │
+│                             │  podSelector:             │
+│                             │    matchLabels:           │
+│                             │      app: backend         │
+└─────────────────────────────┴───────────────────────────┘
+
+＜模擬模式＞
+來源 label: [app=frontend]  目標 label: [app=backend]  埠: [8080]  [模擬]
+──────────────────────────────────────────────────────────────
+✅ 允許  ← 策略 "allow-frontend" (default) Ingress 規則 #1 匹配
+   評估策略：[allow-frontend ✅]  [deny-all ❌ 未選中此 Pod]
+```
+
+- [ ] 拓撲圖編輯模式（點選連線 → 修改 port/protocol，不做新增節點）
+- [ ] 規則邊 Modal（`NetworkPolicyEdgeModal.tsx`）
+- [ ] YAML 預覽面板（編輯即時同步，Apply 前確認）
+- [ ] `POST /simulate` 後端模擬引擎（selector matching，自實作）
+- [ ] 前端策略模擬 UI（`NetworkPolicySimulator.tsx`，ALLOW/DENY + 決策依據）
+- [ ] 三語 i18n
+
+**完成指標：** 可在拓撲圖點選連線修改 port 並看到 YAML 即時更新；輸入來源/目標 Pod 標籤模擬後正確顯示 ALLOW/DENY 及決策規則。
+
+---
+
+#### Milestone 12：Service Mesh 視覺化（Istio 拓撲 + 流量管理）（5 週）🔲 待實作
+
+> **目標：** 為已安裝 Istio 的叢集提供服務依賴拓撲圖、即時流量指標視覺化，以及 VirtualService/DestinationRule 的友善管理介面。未安裝 Istio 時優雅降級（僅顯示 K8s 服務依賴推斷）。
+
+**功能範圍：**
+
+| 子功能 | 說明 | 資料來源 |
+|--------|------|---------|
+| Istio 安裝偵測 | 查詢 `istio-system` 是否存在 istiod Deployment | K8s API |
+| 服務拓撲圖 | 服務節點 + 有向呼叫邊（有 Istio 才有邊的流量數據） | Prometheus + K8s |
+| 流量指標 | 邊上顯示 RPS / 錯誤率 / P99 延遲 | Prometheus |
+| VirtualService 管理 | 列表 + 建立 + 編輯（流量比例滑桿）+ 刪除 | K8s CRD API |
+| DestinationRule 管理 | 列表 + 建立 + 編輯（熔斷 / 負載均衡策略表單）+ 刪除 | K8s CRD API |
+| Gateway 管理 | 列表 + CRUD（複用 CRD 通用介面，不另開發表單） | K8s CRD API |
+
+**技術方案：**
+
+| 元件 | 方案 | 說明 |
+|------|------|------|
+| 服務拓撲渲染 | ReactFlow v12（複用已有依賴） | 節點 = Service，邊 = 流量關係 |
+| 流量資料 | Prometheus 查詢 `istio_requests_total` | 無 Prometheus 時降級為靜態推斷 |
+| CRD 操作 | K8s dynamic client（複用 CRD 通用 handler） | 不硬編碼 Istio CRD schema |
+| VirtualService 表單 | 自訂表單（HTTPRoute + 流量比例）| 比 raw YAML 更易用 |
+| DestinationRule 表單 | 自訂表單（outlierDetection + loadBalancer）| 熔斷設定視覺化 |
+
+**後端新增 API：**
+```
+GET  /clusters/:id/service-mesh/status
+  Response: { installed: bool, version: string, prometheusAvailable: bool }
+
+GET  /clusters/:id/service-mesh/topology?namespace=&timeRange=5m
+  Response: {
+    nodes: [{ id, name, namespace, type: "service"|"external", podCount, labels }],
+    edges: [{ source, target, rps, errorRate, p99Latency }]
+  }
+
+GET  /clusters/:id/service-mesh/virtual-services?namespace=
+POST /clusters/:id/service-mesh/virtual-services
+PUT  /clusters/:id/service-mesh/virtual-services/:namespace/:name
+DELETE /clusters/:id/service-mesh/virtual-services/:namespace/:name
+
+GET  /clusters/:id/service-mesh/destination-rules?namespace=
+POST /clusters/:id/service-mesh/destination-rules
+PUT  /clusters/:id/service-mesh/destination-rules/:namespace/:name
+DELETE /clusters/:id/service-mesh/destination-rules/:namespace/:name
+```
+
+**Prometheus 查詢邏輯：**
+```go
+// services/mesh_service.go
+
+// 取得服務間流量矩陣（5 分鐘滾動視窗）
+queryRPS := `sum(rate(istio_requests_total[5m])) by (source_workload, destination_workload, destination_service_namespace)`
+queryErrors := `sum(rate(istio_requests_total{response_code=~"5.."}[5m])) by (source_workload, destination_workload)`
+queryP99 := `histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket[5m])) by (le, source_workload, destination_workload))`
+
+// 無 Prometheus 時 fallback：
+// 掃描所有 Service 的 selector，與 Deployment env/volumeMount 中的 Service 名稱比對，推斷靜態依賴
+```
+
+**前端新增元件：**
+```
+ui/src/pages/network/
+  ├── ServiceMeshTab.tsx          主頁籤（拓撲圖 + 流量管理入口）
+  ├── ServiceTopologyGraph.tsx    ReactFlow 服務拓撲圖（複用 NetworkPolicyTopology 架構）
+  ├── VirtualServiceList.tsx      VS 列表 + 建立/編輯 Modal
+  ├── VirtualServiceForm.tsx      HTTP Route 流量比例設定表單
+  ├── DestinationRuleList.tsx     DR 列表 + 建立/編輯 Modal
+  └── meshService.ts              API service
+```
+
+**拓撲圖 UI 設計：**
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ 命名空間 [default ▾]  時間範圍 [5m ▾]  [重新整理]  [流量管理 ▾] │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   [frontend]──3.2 RPS / 0.1% err──▶[backend]──▶[database]      │
+│       │                               │                          │
+│       └──1.1 RPS / 0%──▶[auth-svc]   └──▶[cache]               │
+│                                                                  │
+│   ● 節點顏色：綠=健康 / 橙=錯誤率>1% / 紅=錯誤率>5%              │
+│   ● 邊粗細：代表 RPS 大小                                        │
+│   ● 點選節點：顯示該服務的 VS/DR 設定                            │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**VirtualService 流量比例表單（金絲雀發布場景）：**
+```
+服務: [reviews ▾]   Host: reviews
+
+HTTP Route 規則：
+  ┌─────────────────────────────────────────┐
+  │ Destination: reviews-v1   Weight: [70]% │
+  │ Destination: reviews-v2   Weight: [30]% │
+  │ [+ 新增 Destination]                    │
+  └─────────────────────────────────────────┘
+超時設定: [5s]   重試次數: [3]
+```
+
+**實作任務：**
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| Istio 偵測 + Prometheus 查詢（RPS/錯誤率/P99） | `internal/services/mesh_service.go` | W1 |
+| Topology API + 靜態推斷 fallback | `internal/handlers/mesh.go` | W1–W2 |
+| VirtualService / DestinationRule CRUD API | `internal/handlers/mesh.go` | W2 |
+| 前端服務拓撲圖（ReactFlow，節點顏色/邊粗細代表指標） | `ServiceTopologyGraph.tsx` | W3 |
+| 前端 VS 流量比例表單（金絲雀發布場景） | `VirtualServiceForm.tsx` | W3–W4 |
+| 前端 DR 熔斷設定表單 | `DestinationRuleList.tsx` | W4 |
+| 未安裝 Istio 時降級提示 UI | `ServiceMeshTab.tsx` | W4 |
+| 三語 i18n | — | W5 |
+
+- [ ] Istio 安裝偵測（`GET /service-mesh/status`）
+- [ ] Prometheus 查詢流量矩陣（RPS / 錯誤率 / P99 延遲）
+- [ ] 靜態服務依賴推斷（無 Prometheus fallback）
+- [ ] VirtualService CRUD + 流量比例表單
+- [ ] DestinationRule CRUD + 熔斷策略表單
+- [ ] Gateway 管理（複用 CRD 通用介面）
+- [ ] 前端服務拓撲圖（ReactFlow，節點/邊指標視覺化）
+- [ ] 未安裝 Istio 優雅降級
+- [ ] 三語 i18n
+
+**完成指標：** 已安裝 Istio 的叢集可顯示服務依賴拓撲並標示 RPS；可透過表單設定 VirtualService 流量比例（金絲雀發布）；未安裝 Istio 的叢集顯示靜態推斷拓撲而非空白頁。
+
+---
+
+---
+
+## 7. 平台演進方向：全能 CI/CD DevOps 平台
+
+> **戰略目標：** 從「K8s 多叢集管理工具」演進為「端到端 CI/CD DevOps 平台」，使 Synapse 具備與 GitLab CI + ArgoCD + Rancher 組合相競爭的完整能力，且以單一二進位、零外部依賴為核心競爭優勢。
+
+### 7.1 現況差距分析
+
+| 能力維度 | 現況 | 差距 |
+|---------|------|------|
+| GitOps / CD | 代理外部 ArgoCD（需額外安裝） | 無原生 CD，強依賴外部 |
+| CI Pipeline | **完全沒有** | 最大缺口 |
+| Git 整合 | 無 | 無 Webhook、無 Repo 連結 |
+| 映像建置 / Registry | 無 | 無 Build 能力、無 Registry 管理 |
+| 環境流水線 | 僅 Namespace 粒度 | 無 dev → staging → prod 概念 |
+| Secret / 環境變數管理 | K8s Secret CRUD | 無跨環境注入、無 Vault 整合 |
+| 部署策略 | Argo Rollouts（基礎） | 藍綠/金絲雀不完整 |
+| 稽核 / 合規 | 操作日誌 | 無 Pipeline 執行稽核 |
+
+### 7.2 架構路線選擇
+
+三條可行路線，各有取捨：
+
+| 路線 | 說明 | 優點 | 缺點 |
+|------|------|------|------|
+| **A. 整合路線** | 接入 Tekton / Jenkins / GitLab CI 等成熟工具 | 開發量低，功能成熟 | 部署複雜度高，外部依賴多 |
+| **B. 原生路線** | 自研 Pipeline 引擎，完全內建 | 體驗一致，單一二進位優勢最大化 | 工作量極大，需維護 Pipeline runtime |
+| **C. 混合路線（建議）** | 原生輕量 Pipeline + 保留 ArgoCD/Tekton 作進階選項 | 快速交付核心場景，進階用戶可擴充 | 需設計良好的抽象層 |
+
+**建議採用路線 C**：先做原生輕量 Pipeline 覆蓋 80% 使用場景（Build → Push → Deploy），進階場景透過插件接入 Tekton/Jenkins。
+
+### 7.3 目標平台架構
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Synapse DevOps Platform                  │
+├────────────┬────────────┬────────────┬────────────┬────────────┤
+│  程式碼    │  CI        │  映像      │  CD        │  運行時    │
+│  管理      │  Pipeline  │  Registry  │  GitOps    │  管理      │
+│            │            │            │            │            │
+│ Git Webhook│ Pipeline   │ Harbor/    │ 原生 GitOps│ 現有 K8s   │
+│ Repo 連結  │ 定義 (YAML)│ Docker Hub │ + ArgoCD   │ 管理功能   │
+│ PR 觸發    │ 步驟引擎   │ 整合       │ 整合       │            │
+│ 分支策略   │ 日誌串流   │ 漏洞掃描   │ 同步狀態   │            │
+└────────────┴────────────┴────────────┴────────────┴────────────┘
+         ↑                      ↑                      ↑
+    Git Provider            K8s Job                ArgoCD /
+  (GitHub/GitLab/          (Pipeline               原生 GitOps
+    Gitea)                  Runtime)
+```
+
+### 7.4 Phase 1：CI Pipeline 引擎（核心，M13）
+
+> **目標：** 讓使用者可以在 Synapse 定義並執行 CI Pipeline，不需要安裝任何額外工具。
+
+**設計策略：** 以 K8s Job / Pod 作為 Pipeline 的執行單元，Pipeline 定義儲存在 Synapse DB，執行時動態建立 K8s Job。
+
+**資料模型：**
+```go
+// internal/models/pipeline.go
+
+type Pipeline struct {
+    ID          uint
+    Name        string
+    ClusterID   uint
+    Namespace   string
+    Description string
+    Trigger     string      // "manual" | "webhook" | "schedule"
+    GitRepo     string      // https://github.com/org/repo
+    GitBranch   string      // main / feature/* (glob)
+    StepsJSON   string      // JSON 序列化的 []PipelineStep
+    EnvVarsJSON string      // JSON 序列化的環境變數（加密）
+    Enabled     bool
+    CreatedAt   time.Time
+    UpdatedAt   time.Time
+}
+
+type PipelineStep struct {
+    Name       string            // "build"
+    Image      string            // "docker:24"
+    Commands   []string          // ["docker build -t ...", "docker push ..."]
+    Env        map[string]string // 步驟專屬環境變數
+    DependsOn  []string          // 前置步驟（DAG）
+    Timeout    int               // 秒，0 = 不限
+    RetryCount int
+}
+
+type PipelineRun struct {
+    ID         uint
+    PipelineID uint
+    Status     string    // "pending" | "running" | "success" | "failed" | "cancelled"
+    TriggerBy  string    // "manual:user_id" | "webhook:sha" | "schedule"
+    GitSHA     string
+    GitBranch  string
+    StartedAt  time.Time
+    FinishedAt *time.Time
+    Duration   int       // 秒
+}
+
+type StepRun struct {
+    ID            uint
+    PipelineRunID uint
+    StepName      string
+    Status        string
+    JobName       string   // K8s Job 名稱
+    LogPodName    string   // 用於串流日誌
+    StartedAt     time.Time
+    FinishedAt    *time.Time
+    ExitCode      *int
+}
+```
+
+**後端 Pipeline 執行引擎：**
+```go
+// internal/services/pipeline_runner.go
+
+// 1. 建立 PipelineRun 記錄
+// 2. 解析步驟 DAG（依賴關係）
+// 3. 按拓撲序依次提交 K8s Job：
+//    - Job spec 包含：image、command、env、resource limits
+//    - 掛載 workspace PVC（步驟間共享產物）
+//    - 注入 Synapse 系統環境變數（SYNAPSE_COMMIT_SHA、SYNAPSE_BRANCH 等）
+// 4. Watch Job 狀態，即時更新 StepRun
+// 5. Job 完成後串流 Pod 日誌至 DB（或保留 Pod 供即時串流）
+// 6. 所有步驟成功 → PipelineRun.Status = "success"
+//    任一步驟失敗 → 取消後續步驟，Status = "failed"
+```
+
+**API 端點：**
+```
+GET    /pipelines                          Pipeline 列表
+POST   /pipelines                          建立 Pipeline
+GET    /pipelines/:id                      Pipeline 詳情（含步驟定義）
+PUT    /pipelines/:id                      更新 Pipeline
+DELETE /pipelines/:id                      刪除 Pipeline
+POST   /pipelines/:id/run                  手動觸發執行
+GET    /pipelines/:id/runs                 執行歷史列表
+GET    /pipelines/:id/runs/:runId          執行詳情（含步驟狀態）
+GET    /pipelines/:id/runs/:runId/steps/:step/logs  步驟日誌（支援 SSE 串流）
+POST   /pipelines/:id/runs/:runId/cancel   取消執行中的 Run
+```
+
+**前端頁面：**
+```
+ui/src/pages/pipeline/
+  ├── PipelineList.tsx         Pipeline 列表（狀態燈、最後執行時間）
+  ├── PipelineEditor.tsx       Pipeline 定義編輯器（步驟卡片 + YAML 雙模式）
+  ├── PipelineRunList.tsx      執行歷史列表
+  ├── PipelineRunDetail.tsx    執行詳情（DAG 進度圖 + 步驟狀態）
+  ├── StepLogViewer.tsx        步驟日誌串流（SSE，複用 Terminal 樣式）
+  └── pipelineService.ts
+```
+
+**Pipeline 執行詳情 UI：**
+```
+執行 #42  main @ a3f9c12  ⏱ 3m 21s  ✅ 成功
+
+[clone] ──▶ [test] ──▶ [build] ──▶ [push] ──▶ [deploy]
+  ✅ 12s      ✅ 48s     ✅ 1m32s    ✅ 28s      ✅ 21s
+
+▼ build 步驟日誌
+  Step 1/4 : FROM golang:1.25-alpine
+  Step 2/4 : WORKDIR /app
+  ...
+```
+
+### 7.5 Phase 2：Git 整合與 Webhook 觸發（M14）
+
+> **目標：** 連結 Git Provider，實現 Push/PR 事件自動觸發 Pipeline。
+
+**支援 Git Provider：**
+- GitHub（App / PAT）
+- GitLab（Webhook Token）
+- Gitea（自架，優先支援，符合私有部署場景）
+- Bitbucket（後續）
+
+**資料模型：**
+```go
+type GitProvider struct {
+    ID          uint
+    Name        string   // "公司 GitLab"
+    Type        string   // "github" | "gitlab" | "gitea"
+    BaseURL     string   // https://gitlab.company.com
+    Token       string   // 加密儲存（AES-256-GCM）
+    WebhookSecret string // HMAC 驗證 secret
+    CreatedAt   time.Time
+}
+```
+
+**Webhook 流程：**
+```
+Git Push → POST /webhooks/:provider/:token
+  → 驗證 HMAC signature
+  → 解析 event type（push / pull_request / tag）
+  → 比對 Pipeline 的 GitRepo + GitBranch（glob）
+  → 建立 PipelineRun（TriggerBy="webhook:sha"，帶 GitSHA/Branch）
+  → 回傳 202 Accepted
+```
+
+**API 端點：**
+```
+GET    /git-providers                  Git Provider 列表
+POST   /git-providers                  新增
+PUT    /git-providers/:id              更新
+DELETE /git-providers/:id              刪除
+POST   /git-providers/:id/test         測試連線
+GET    /git-providers/:id/repos        列出可用 Repo（供 Pipeline 編輯器選擇）
+POST   /webhooks/:providerType/:secret 接收 Webhook（公開端點，無需 Auth）
+```
+
+### 7.6 Phase 3：映像 Registry 整合（M15）
+
+> **目標：** 管理 Container Registry，Pipeline 建置後自動推送，並在工作負載詳情頁顯示映像漏洞資訊。
+
+**支援 Registry：**
+- Harbor（企業私有，首選）
+- Docker Hub
+- 阿里雲 / AWS ECR / GCR（透過標準 Docker Registry API）
+
+**功能範圍：**
+- Registry 連線設定（URL / 帳密 / TLS）
+- Repository 瀏覽（Repo 列表 → Tag 列表 → Manifest 詳情）
+- 映像 Tag 管理（刪除舊 Tag、設定保留策略）
+- 漏洞掃描觸發（對接 Harbor 內建掃描 或 Trivy Server）
+- Pipeline 步驟中自動注入 Registry 憑證（`imagePullSecret`）
+
+```go
+type ContainerRegistry struct {
+    ID         uint
+    Name       string
+    Type       string   // "harbor" | "dockerhub" | "ecr" | "generic"
+    URL        string
+    Username   string
+    Password   string  // 加密儲存
+    Insecure   bool    // 允許自簽憑證
+    IsDefault  bool    // Pipeline 預設 push 目標
+}
+```
+
+### 7.7 Phase 4：原生 GitOps / CD（M16）
+
+> **目標：** 提供不依賴 ArgoCD 的輕量 GitOps 能力，同時保留 ArgoCD 整合作為進階選項。
+
+**兩層設計：**
+
+**Layer 1 — 輕量 GitOps（內建，無外部依賴）：**
+- 定義「Application」：Git Repo + 路徑 + 目標叢集/命名空間
+- 定期（或 Webhook 觸發）比對 Git 中的 YAML 與叢集實際狀態（Diff）
+- 自動同步（Apply）或僅通知差異（Drift Detection）
+- 支援 Kustomize overlay（疊加 base + overlays/prod）
+- 支援 Helm Chart（結合 M4 已有能力）
+
+```go
+type GitOpsApp struct {
+    ID              uint
+    Name            string
+    ClusterID       uint
+    Namespace       string
+    GitProviderID   uint
+    RepoURL         string
+    RepoPath        string   // manifests/prod/
+    TargetRevision  string   // main / v1.2.3 / HEAD
+    ToolType        string   // "raw" | "kustomize" | "helm"
+    HelmValuesPath  string   // 僅 helm 模式
+    SyncPolicy      string   // "manual" | "auto"
+    PruneResources  bool     // 是否刪除 Git 中移除的資源
+    LastSyncAt      *time.Time
+    LastSyncStatus  string
+    DriftDetected   bool
+}
+```
+
+**Layer 2 — ArgoCD 深度整合（現有代理模式升級）：**
+- 現有 ArgoCD 代理 API 保留
+- 新增 ArgoCD App Health 聚合到 Synapse 主儀表板
+- Pipeline 部署步驟可選「觸發 ArgoCD Sync」作為部署方式
+
+### 7.8 Phase 5：環境管理與部署流水線（M17）
+
+> **目標：** 建立 dev → staging → prod 的環境概念，支援跨環境的 Promotion 流程。
+
+**環境（Environment）模型：**
+```go
+type Environment struct {
+    ID          uint
+    Name        string   // "dev" | "staging" | "production"
+    ClusterID   uint
+    Namespace   string
+    Type        string   // "development" | "staging" | "production"
+    Order       int      // Promotion 順序（0=dev, 1=staging, 2=prod）
+    AutoPromote bool     // 上一環境成功後自動 Promote
+    RequireApproval bool // 部署前需人工審核
+    Labels      string   // JSON，用於資源識別
+}
+```
+
+**Promotion 流程：**
+```
+Pipeline 執行成功
+  → 部署到 dev 環境
+  → 自動（或等待審核）Promote to staging
+  → 執行 smoke test（可選 Pipeline 步驟）
+  → 人工審核（Production Gate）
+  → 部署到 production
+```
+
+**前端環境流水線視圖：**
+```
+myapp 部署流水線
+
+dev          staging       production
+[健康 ✅]  →  [等待審核 ⏳]  →  [未部署 ⬜]
+v1.2.3        v1.2.2           v1.2.1
+              [審核通過] [拒絕]
+```
+
+### 7.9 Gap 總結與里程碑規劃
+
+| 里程碑 | 功能 | 優先級 | 預估工作量 | 依賴 |
+|--------|------|--------|-----------|------|
+| **M13** | **原生 CI Pipeline 引擎**（K8s Job 驅動，手動觸發，DAG 步驟，日誌串流） | 🔴 高 | 8 週 | — |
+| **M14** | **Git 整合 + Webhook 觸發**（GitHub/GitLab/Gitea，Push/PR 事件驅動 Pipeline） | 🔴 高 | 4 週 | M13 |
+| **M15** | **映像 Registry 整合**（Harbor/DockerHub，Tag 管理，Pipeline 推送憑證注入） | 🟡 中 | 3 週 | M13 |
+| **M16** | **原生輕量 GitOps**（Git Repo → K8s Diff + Apply，Kustomize/Helm 支援，ArgoCD 整合升級） | 🟡 中 | 6 週 | M14 |
+| **M17** | **環境管理 + Promotion 流水線**（dev/staging/prod 環境概念，人工審核閘門） | 🟢 低 | 5 週 | M13, M16 |
+
+**DevOps 演進總估計：約 26 週（6.5 個月）**
+
+### 7.10 實作建議順序
+
+```
+現在（管理平台）
+    │
+    ▼
+M13 CI Pipeline 引擎（最大差距，優先補足）
+    │  ↳ 使用者可在平台內定義並執行 Build/Test/Deploy 步驟
+    ▼
+M14 Git Webhook 整合（自動化觸發，CI 才有完整價值）
+    │  ↳ Push 到 main → 自動觸發 Pipeline → 部署到 dev
+    ▼
+M15 Registry 整合（Pipeline 產物管理）
+    ▼
+M16 原生 GitOps（CD 能力內建化，擺脫 ArgoCD 強依賴）
+    ▼
+M17 環境流水線（企業級多環境管理，Promotion Gate）
+    │
+    ▼
+目標（全能 CI/CD DevOps 平台）
+```
+
+**此時 Synapse = Rancher（叢集管理）+ GitLab CI（Pipeline）+ ArgoCD（GitOps）合一，以單一二進位交付。**
+
+---
+
+## 8. 系統反思：不足之處與強化方向
+
+> **反思基準（2026-04-02）：** 系統目前有 47 個後端 handler、85+ 個前端頁面，功能廣度已達 MVP 水準。本章從「做了但沒做好」與「完全缺失但高需求」兩個維度進行反思，並提出強化方向。
+
+### 8.1 「有做但沒做好」— 深度不足的功能
+
+#### 🔴 HPA 只能看，不能管
+
+**現況：** `GetDeploymentHPA` 僅列出現有 HPA 設定，無法新增、修改、刪除。
+**問題：** 用戶看到 HPA 卻無法調整 min/max replicas 或 target CPU，必須回到 kubectl 操作，破壞平台的完整性。
+**強化方向：**
+- HPA CRUD（建立、編輯、刪除）
+- 視覺化 HPA 狀態（目前副本數 vs 目標，Scaling 事件時間軸）
+- 支援自定義指標（Custom Metrics）
+
+---
+
+#### 🔴 Loki / Elasticsearch 設定存在但無實際查詢整合
+
+**現況：** `LogSourceConfig` 模型支援 `loki` / `elasticsearch` 類型，但後端僅儲存連線設定，並未實作對這些系統的查詢邏輯。前端 LogCenter 顯示的是 K8s 容器日誌串流，不是集中式日誌查詢。
+**問題：** 生產環境普遍使用 Loki 或 ES 集中管理日誌，現況等同於「假整合」— 設定了但什麼都做不了。
+**強化方向：**
+- 實作 Loki HTTP API 查詢（`/loki/api/v1/query_range`，LogQL 支援）
+- 實作 Elasticsearch Query DSL 基礎查詢
+- LogCenter 統一入口：K8s 串流 + Loki + ES 三個來源切換
+- 關鍵字搜尋、時間範圍篩選、正規表達式過濾
+
+---
+
+#### 🔴 Argo Rollouts 管理功能淺薄
+
+**現況：** Rollout 列表/詳情/YAML/刪除/縮放，以及觀看 Pod/Service/Ingress/Events，但缺乏核心操控能力。
+**問題：** Argo Rollouts 的核心價值在於金絲雀/藍綠部署的**逐步推進與回滾控制**，現有介面沒有這些操作。
+**強化方向：**
+- Promote（推進到下一步）/ Full Promote（一次推進到底）
+- Abort（中止金絲雀，回滾到 stable）
+- Analysis Run 狀態視覺化（自動化指標分析結果）
+- 部署進度時間軸（每一步的推進時間、指標狀態）
+
+---
+
+#### 🟡 通知系統只覆蓋 K8s Event 告警，部署操作無通知
+
+**現況：** Event Alert Rules 可觸發 Webhook / DingTalk / Email，但僅針對 K8s Events。
+**問題：** 用戶最需要的通知場景（部署成功/失敗、擴縮容、安全掃描結果、Pipeline 完成）完全沒有。
+**強化方向：**
+- 通知觸發點擴充：部署操作、安全掃描、成本超標、節點異常
+- 渠道新增：**Slack**（國際市場必備）、**Microsoft Teams**（企業市場）
+- 通知規則引擎：指定叢集/命名空間/嚴重程度 → 路由到不同渠道
+
+---
+
+#### 🟡 多租戶沒有「租戶」實體，隔離依賴人工維護
+
+**現況：** 多租戶透過 `ClusterPermission`（叢集 + 命名空間 + 權限等級）實現，沒有明確的租戶/組織層級。
+**問題：** 規模稍大時，管理員需手動逐一設定每個用戶的每個叢集權限，無法批次管理。沒有自助式命名空間申請。
+**強化方向：**
+- 引入 **Project（專案）** 概念：一個 Project 對應一組 叢集+命名空間+成員
+- Project 管理員可自助管理成員和配額
+- 命名空間自助申請流程（Dev 申請 → 管理員審核 → 自動建立 + 配額）
+
+---
+
+#### 🟡 ResourceQuota / LimitRange 缺乏 CRUD
+
+**現況：** Namespace 詳情頁展示配額用量，但無法建立或修改 `ResourceQuota` 與 `LimitRange`。
+**問題：** 多租戶環境的核心管控工具無法在平台內操作。
+**強化方向：**
+- ResourceQuota / LimitRange 的建立、編輯、刪除
+- 配額用量視覺化（已用 / 總量 進度條，按 CPU/Memory/PVC 分類）
+- 配額超限預警（接近 80% 時告警）
+
+---
+
+#### 🟡 YAML Apply 沒有 Dry-run / Diff 預覽
+
+**現況：** `YAMLEditor` 直接 Apply，無法預覽變更影響。
+**問題：** 生產環境直接 Apply 風險高，用戶需要先知道「這個 YAML 會改變什麼」。
+**強化方向：**
+- Apply 前執行 `kubectl diff`（Server-side dry-run）
+- 顯示 Diff（新增/修改/刪除的欄位）
+- 可選：Apply 前需確認 diff 結果
+
+---
+
+#### 🟢 Terminal 會話只記錄指令，沒有錄製回放
+
+**現況：** `TerminalSession` + `TerminalCommand` 記錄執行的指令文字，但無法重現操作過程。
+**強化方向：** 基於 `asciinema` 格式錄製 Terminal 輸出，支援會話回放（安全稽核重要場景）
+
+---
+
+### 8.2 「完全缺失但高需求」— 重要功能空白
+
+#### 🔴 無 OAuth2 / OIDC 整合
+
+**現況：** 僅支援本地帳號與 LDAP。
+**影響：** 無法接入 Google Workspace、GitHub、GitLab、Keycloak、Okta 等主流 SSO 方案，企業導入門檻高。
+**方案：** 整合 OIDC（OpenID Connect），一套接入所有支援 OIDC 的 IdP：
+```go
+// internal/auth/oidc.go
+// 依賴 golang.org/x/oauth2 + coreos/go-oidc
+// 配置：ClientID, ClientSecret, IssuerURL, RedirectURL
+// 流程：Browser → /auth/oidc/login → IdP → /auth/oidc/callback → JWT
+```
+
+---
+
+#### 🔴 無部署審批工作流
+
+**現況：** 任何有權限的用戶都可直接部署到生產環境，無審核機制。
+**影響：** 生產環境變更缺乏管控，無法滿足 SOC2、ISO 27001 變更管理要求。
+**方案：**
+- 對特定命名空間（如 `production`）標記為「需要審批」
+- 部署操作觸發審批請求（Approval Request）
+- 審批人收到通知 → 平台內批准/拒絕
+- 審批記錄納入稽核日誌
+- 可設定審批逾時自動拒絕
+
+---
+
+#### 🔴 無 VPA（Vertical Pod Autoscaler）支援
+
+**現況：** 只有 HPA 唯讀檢視。
+**影響：** 無法幫助用戶識別資源 requests/limits 設定不合理的工作負載（過高浪費、過低 OOM）。
+**方案：**
+- VPA 物件 CRUD（若叢集已安裝 VPA controller）
+- Recommendation 顯示（VPA 建議的 CPU/Memory requests）
+- 與成本分析（M6）整合：VPA 建議 + 成本影響估算
+
+---
+
+#### 🔴 無跨叢集統一工作負載視圖
+
+**現況：** 每個功能都需先選擇叢集，無法跨叢集搜尋「所有叢集中名為 api-server 的 Deployment」。
+**影響：** 管理 10+ 個叢集時，排查問題需逐一切換叢集，效率極低。
+**方案：**
+- 全域工作負載搜尋（搜尋 Deployment/Pod/Service 名稱，跨所有叢集）
+- 統一儀表板：「異常工作負載」跨叢集聚合視圖
+- 現有 `QuickSearch` / `GlobalSearch` 已有基礎，需擴充至工作負載維度
+
+---
+
+#### 🟡 無 Port-Forward 功能
+
+**現況：** 提供 Web Terminal，但沒有 Port-Forward（將本地埠轉發到 Pod 埠）。
+**影響：** 調試服務時，用戶只能進入 Terminal 用 curl，無法直接在瀏覽器存取 Pod 的 HTTP 服務。
+**方案：**
+- 後端建立 K8s Port-Forward tunnel，透過 WebSocket 代理給瀏覽器
+- 前端顯示「轉發地址」，用戶可直接點開
+- 使用場景：直接在瀏覽器預覽 Pod 內的 Web UI（Prometheus、Grafana、自訂服務）
+
+---
+
+#### 🟡 無 ConfigMap / Secret 版本歷史
+
+**現況：** ConfigMap/Secret CRUD 完整，但修改後無法查看歷史版本或回滾。
+**影響：** 配置變更是常見故障來源，無歷史記錄意味著無法快速回滾。
+**方案：**
+- 每次 Update 前儲存舊版本快照至 DB（`config_history` 表）
+- 版本列表 + Diff 視圖（新舊版本並排比較）
+- 一鍵回滾到指定版本
+
+---
+
+#### 🟡 無 PodDisruptionBudget 管理
+
+**現況：** 無 PDB 相關功能。
+**影響：** 節點維護（drain）時可能意外終止過多 Pod，PDB 是防護關鍵，但用戶無法在平台內設定。
+**方案：** PDB CRUD + 在 Deployment 詳情頁顯示關聯的 PDB 狀態
+
+---
+
+#### 🟡 無 Image Tag 管理
+
+**現況：** 工作負載詳情顯示當前映像，但無法跨叢集查詢「哪個叢集在跑 nginx:1.21」。
+**影響：** 漏洞修補時，無法快速定位受影響的工作負載。
+**方案：**
+- 映像索引：定期掃描所有工作負載的 container image，存入 DB
+- 全域映像搜尋：輸入 `nginx:1.21` → 顯示所有使用此映像的工作負載（跨叢集）
+- 與安全掃描（M9）整合：掃描結果直接關聯到使用該映像的工作負載
+
+---
+
+#### 🟡 無 Deployment 保護機制
+
+**現況：** 無任何防止誤操作的機制。
+**影響：** 生產環境誤刪 Deployment 或誤縮容至 0，無任何阻擋。
+**方案：**
+- 命名空間保護標記（標記 `production` 為受保護）
+- 受保護命名空間的刪除/縮容操作需二次確認 + 輸入資源名稱
+- 設定「維護窗口」（允許變更的時間段），窗口外的操作被阻擋或需審批
+
+---
+
+#### 🟢 無 SAML 支援
+
+**影響：** 部分老牌企業（銀行、製造業）使用 SAML IdP（AD FS、Shibboleth），OIDC 無法涵蓋。
+**方案：** 整合 `crewjam/saml` 套件，提供 SAML SP 功能（優先序低於 OIDC）
+
+---
+
+#### 🟢 無稽核日誌 SIEM 匯出
+
+**現況：** 操作日誌完整但只能在平台內查詢，無法匯出到 Splunk / ELK / Datadog。
+**方案：** Webhook 推送模式（每條稽核日誌即時 POST 到外部 SIEM），或批次匯出 JSON
+
+---
+
+### 8.3 強化優先序矩陣
+
+| 優先級 | 功能 | 類別 | 工作量 |
+|--------|------|------|--------|
+| 🔴 P0 | Loki / ES 實際查詢整合 | 深度不足 | 3 週 |
+| 🔴 P0 | OAuth2 / OIDC 整合 | 完全缺失 | 2 週 |
+| 🔴 P0 | HPA CRUD | 深度不足 | 1 週 |
+| 🔴 P0 | 部署審批工作流 | 完全缺失 | 3 週 |
+| 🟡 P1 | Argo Rollouts 操控（Promote/Abort/Analysis） | 深度不足 | 2 週 |
+| 🟡 P1 | 通知渠道擴充（Slack / Teams） | 深度不足 | 1 週 |
+| 🟡 P1 | YAML Apply Dry-run / Diff | 深度不足 | 1 週 |
+| 🟡 P1 | ConfigMap/Secret 版本歷史 | 完全缺失 | 2 週 |
+| 🟡 P1 | 跨叢集統一工作負載視圖 | 完全缺失 | 2 週 |
+| 🟡 P1 | ResourceQuota / LimitRange CRUD | 深度不足 | 1 週 |
+| 🟡 P1 | VPA 支援 | 完全缺失 | 2 週 |
+| 🟡 P1 | Image Tag 全域搜尋 | 完全缺失 | 2 週 |
+| 🟢 P2 | Port-Forward | 完全缺失 | 2 週 |
+| 🟢 P2 | Project 多租戶模型 | 架構升級 | 4 週 |
+| 🟢 P2 | Deployment 保護機制 | 完全缺失 | 1 週 |
+| 🟢 P2 | PodDisruptionBudget 管理 | 完全缺失 | 1 週 |
+| 🟢 P2 | Terminal 會話錄製回放 | 深度不足 | 2 週 |
+| 🟢 P2 | 稽核日誌 SIEM 匯出 | 完全缺失 | 1 週 |
+
+### 8.4 核心反思結論
+
+> 1. **廣度夠但深度不足：** 日誌、HPA、Rollouts、通知等功能都「有做」但停在 MVP 水準，用戶在生產環境使用時很快就會碰壁。
+> 2. **認證系統是採用瓶頸：** 只有 LDAP + 本地帳號，現代企業 80% 使用 OIDC，OAuth2/OIDC 是優先度最高的補足項。
+> 3. **缺乏生產環境保護機制：** 無審批工作流、無命名空間保護、無變更窗口，對於真正想把 Synapse 用在生產環境的企業是最大的風險點。
+> 4. **跨叢集能力是差異化機會：** 多數競品（Kuboard、Lens）是單叢集或弱多叢集設計，統一工作負載視圖、跨叢集映像索引是 Synapse 的獨特競爭點，應加強而非停留在現狀。
 
 ---
 
@@ -921,6 +1712,15 @@ synapse cost overview [--month 2026-04]
 | K8s 基準評估 | kube-bench（Job 模式） | kube-hunter | kube-bench 對應 CIS Benchmark，業界標準 |
 | CLI 框架 | cobra + viper | urfave/cli | cobra 生態最大，kubectl/helm 皆採用 |
 | ZIP 打包 | `archive/zip`（標準庫） | — | 無需外部依賴 |
+| NP 策略模擬 | 自實作 Go selector matching | kube-networkpolicies | K8s NP 語義不複雜，自實作可控且無外部依賴 |
+| Istio 流量資料 | Prometheus `istio_requests_total` | Kiali API | Prometheus 已為現有依賴；Kiali 需額外部署 |
+| Service Mesh 拓撲渲染 | ReactFlow v12（複用現有） | @antv/g6 | 已有 @xyflow/react 依賴，零額外安裝成本 |
+| CI Pipeline 執行引擎 | K8s Job（原生，零額外元件） | Tekton Pipelines | K8s Job 已是現有依賴；Tekton 需額外 CRD 安裝 |
+| Pipeline 步驟間產物共享 | `emptyDir` / PVC（K8s 原生） | MinIO | 簡單場景用 emptyDir；需持久化時用 PVC |
+| Git Provider 整合 | 自實作 Webhook handler | go-github SDK | 各 Provider Webhook 格式差異不大，自實作可控 |
+| GitOps Diff 引擎 | `k8s.io/apimachinery` strategic merge | controller-runtime | 輕量場景無需完整 controller 框架 |
+| Kustomize 支援 | `sigs.k8s.io/kustomize/api` | shell exec | Go SDK 無需主機安裝 kustomize 二進位 |
+| Container Registry | 標準 Docker Registry HTTP API v2 | go-containerregistry | Docker Registry API 通用；Harbor 額外 API 單獨呼叫 |
 
 ---
 

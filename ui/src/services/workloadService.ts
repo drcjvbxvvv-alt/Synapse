@@ -266,6 +266,23 @@ export class WorkloadService {
     return request.delete(endpoint);
   }
 
+  // Argo Rollouts 操控
+  static async promoteRollout(clusterId: string, namespace: string, name: string): Promise<ApiResponse<unknown>> {
+    return request.post(`/clusters/${clusterId}/rollouts/${namespace}/${name}/promote`, {});
+  }
+
+  static async promoteFullRollout(clusterId: string, namespace: string, name: string): Promise<ApiResponse<unknown>> {
+    return request.post(`/clusters/${clusterId}/rollouts/${namespace}/${name}/promote-full`, {});
+  }
+
+  static async abortRollout(clusterId: string, namespace: string, name: string): Promise<ApiResponse<unknown>> {
+    return request.post(`/clusters/${clusterId}/rollouts/${namespace}/${name}/abort`, {});
+  }
+
+  static async getRolloutAnalysisRuns(clusterId: string, namespace: string, name: string): Promise<ApiResponse<unknown>> {
+    return request.get(`/clusters/${clusterId}/rollouts/${namespace}/${name}/analysis-runs`);
+  }
+
   // 重新部署工作负载（重启）
   static async restartWorkload(
     clusterId: string,
@@ -1011,6 +1028,27 @@ ${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && Array.
         endpoint += `workloads/${workloadType}/${namespace}/${workloadName}/hpa`;
     }
     return request.get(endpoint);
+  }
+
+  // HPA CRUD
+  static async createHPA(clusterId: string, data: {
+    name: string; namespace: string; targetKind: string; targetName: string;
+    minReplicas: number; maxReplicas: number;
+    cpuTargetUtilization?: number; memTargetUtilization?: number;
+  }): Promise<ApiResponse<unknown>> {
+    return request.post(`/clusters/${clusterId}/hpa`, data);
+  }
+
+  static async updateHPA(clusterId: string, namespace: string, name: string, data: {
+    name: string; namespace: string; targetKind: string; targetName: string;
+    minReplicas: number; maxReplicas: number;
+    cpuTargetUtilization?: number; memTargetUtilization?: number;
+  }): Promise<ApiResponse<unknown>> {
+    return request.put(`/clusters/${clusterId}/hpa/${namespace}/${name}`, data);
+  }
+
+  static async deleteHPA(clusterId: string, namespace: string, name: string): Promise<ApiResponse<unknown>> {
+    return request.delete(`/clusters/${clusterId}/hpa/${namespace}/${name}`);
   }
 
   // 获取Deployment的ReplicaSets

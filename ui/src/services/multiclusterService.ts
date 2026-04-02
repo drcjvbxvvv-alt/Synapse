@@ -1,11 +1,11 @@
 import { request } from '../utils/api';
 
 export interface MigrateRequest {
-  sourceClusterId: number;
+  sourceClusterId: string;
   sourceNamespace: string;
   workloadKind: string;
   workloadName: string;
-  targetClusterId: number;
+  targetClusterId: string;
   targetNamespace: string;
   syncConfigMaps?: boolean;
   syncSecrets?: boolean;

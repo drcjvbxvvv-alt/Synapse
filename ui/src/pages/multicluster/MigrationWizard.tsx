@@ -49,11 +49,11 @@ const MigrationWizard: React.FC<Props> = ({ open, onClose, onMigrated }) => {
   const [workloads, setWorkloads] = useState<WorkloadOption[]>([]);
 
   // Form state
-  const [srcClusterId, setSrcClusterId] = useState<number | undefined>();
+  const [srcClusterId, setSrcClusterId] = useState<string | undefined>();
   const [srcNamespace, setSrcNamespace] = useState('');
   const [workloadKind, setWorkloadKind] = useState('Deployment');
   const [workloadName, setWorkloadName] = useState('');
-  const [dstClusterId, setDstClusterId] = useState<number | undefined>();
+  const [dstClusterId, setDstClusterId] = useState<string | undefined>();
   const [dstNamespace, setDstNamespace] = useState('');
   const [newNamespace, setNewNamespace] = useState('');
   const [syncConfigMaps, setSyncConfigMaps] = useState(false);
@@ -72,23 +72,23 @@ const MigrationWizard: React.FC<Props> = ({ open, onClose, onMigrated }) => {
     }
   }, [open]);
 
-  const loadSrcNamespaces = useCallback((cid: number) => {
-    namespaceService.getNamespaces(String(cid))
+  const loadSrcNamespaces = useCallback((cid: string) => {
+    namespaceService.getNamespaces(cid)
       .then((res: any) => setSrcNamespaces((res?.items ?? []).map((n: any) => n.name)))
       .catch(() => {});
   }, []);
 
-  const loadDstNamespaces = useCallback((cid: number) => {
-    namespaceService.getNamespaces(String(cid))
+  const loadDstNamespaces = useCallback((cid: string) => {
+    namespaceService.getNamespaces(cid)
       .then((res: any) => setDstNamespaces((res?.items ?? []).map((n: any) => n.name)))
       .catch(() => {});
   }, []);
 
-  const loadWorkloads = useCallback(async (cid: number, ns: string, kind: string) => {
+  const loadWorkloads = useCallback(async (cid: string, ns: string, kind: string) => {
     if (!cid || !ns) return;
     try {
       const { WorkloadService } = await import('../../services/workloadService');
-      const res = await WorkloadService.getWorkloads(String(cid), ns, kind.toLowerCase() + 's', 1, 200);
+      const res = await WorkloadService.getWorkloads(cid, ns, kind.toLowerCase() + 's', 1, 200);
       const items = (res as any)?.items ?? [];
       setWorkloads(items.map((w: any) => ({ name: w.name, kind, namespace: w.namespace, replicas: w.replicas })));
     } catch {

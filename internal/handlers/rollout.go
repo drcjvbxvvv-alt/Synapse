@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
 	sigsyaml "sigs.k8s.io/yaml"
@@ -1144,4 +1145,194 @@ func (h *RolloutHandler) GetRolloutEvents(c *gin.Context) {
 	}
 
 	response.OK(c, events)
+}
+
+// PromoteRollout 推進 Rollout 一個步驟（解除 pause）
+func (h *RolloutHandler) PromoteRollout(c *gin.Context) {
+	clusterId := c.Param("clusterID")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	clusterID, err := parseClusterID(clusterId)
+	if err != nil {
+		response.BadRequest(c, "无效的集群ID")
+		return
+	}
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "集群不存在")
+		return
+	}
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
+	if err != nil {
+		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		return
+	}
+	rolloutClient, err := k8sClient.GetRolloutClient()
+	if err != nil {
+		response.InternalError(c, "获取Rollout客户端失败: "+err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	patch := []byte(`{"spec":{"paused":false}}`)
+	_, err = rolloutClient.ArgoprojV1alpha1().Rollouts(namespace).Patch(ctx, name, types.MergePatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		response.InternalError(c, "Promote 失敗: "+err.Error())
+		return
+	}
+	logger.Info("Promote Rollout", "cluster", clusterId, "namespace", namespace, "name", name)
+	response.OK(c, gin.H{"message": "Promote 成功"})
+}
+
+// PromoteFullRollout 全量推進 Rollout（跳過所有 pause 和 analysis）
+func (h *RolloutHandler) PromoteFullRollout(c *gin.Context) {
+	clusterId := c.Param("clusterID")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	clusterID, err := parseClusterID(clusterId)
+	if err != nil {
+		response.BadRequest(c, "无效的集群ID")
+		return
+	}
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "集群不存在")
+		return
+	}
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
+	if err != nil {
+		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		return
+	}
+	rolloutClient, err := k8sClient.GetRolloutClient()
+	if err != nil {
+		response.InternalError(c, "获取Rollout客户端失败: "+err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// 先取得現有 Rollout，設定 status.promoteFull = true 並透過 UpdateStatus 更新
+	existing, err := rolloutClient.ArgoprojV1alpha1().Rollouts(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		response.InternalError(c, "取得 Rollout 失敗: "+err.Error())
+		return
+	}
+	existing.Status.PromoteFull = true
+	_, err = rolloutClient.ArgoprojV1alpha1().Rollouts(namespace).UpdateStatus(ctx, existing, metav1.UpdateOptions{})
+	if err != nil {
+		response.InternalError(c, "Promote Full 失敗: "+err.Error())
+		return
+	}
+	logger.Info("PromoteFull Rollout", "cluster", clusterId, "namespace", namespace, "name", name)
+	response.OK(c, gin.H{"message": "Promote Full 成功"})
+}
+
+// AbortRollout 中止 Rollout
+func (h *RolloutHandler) AbortRollout(c *gin.Context) {
+	clusterId := c.Param("clusterID")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	clusterID, err := parseClusterID(clusterId)
+	if err != nil {
+		response.BadRequest(c, "无效的集群ID")
+		return
+	}
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "集群不存在")
+		return
+	}
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
+	if err != nil {
+		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		return
+	}
+	rolloutClient, err := k8sClient.GetRolloutClient()
+	if err != nil {
+		response.InternalError(c, "获取Rollout客户端失败: "+err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	existing, err := rolloutClient.ArgoprojV1alpha1().Rollouts(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		response.InternalError(c, "取得 Rollout 失敗: "+err.Error())
+		return
+	}
+	existing.Status.Abort = true
+	_, err = rolloutClient.ArgoprojV1alpha1().Rollouts(namespace).UpdateStatus(ctx, existing, metav1.UpdateOptions{})
+	if err != nil {
+		response.InternalError(c, "Abort 失敗: "+err.Error())
+		return
+	}
+	logger.Info("Abort Rollout", "cluster", clusterId, "namespace", namespace, "name", name)
+	response.OK(c, gin.H{"message": "Abort 成功"})
+}
+
+// GetRolloutAnalysisRuns 取得 Rollout 相關的 AnalysisRun 列表
+func (h *RolloutHandler) GetRolloutAnalysisRuns(c *gin.Context) {
+	clusterId := c.Param("clusterID")
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	clusterID, err := parseClusterID(clusterId)
+	if err != nil {
+		response.BadRequest(c, "无效的集群ID")
+		return
+	}
+	cluster, err := h.clusterService.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "集群不存在")
+		return
+	}
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
+	if err != nil {
+		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		return
+	}
+	rolloutClient, err := k8sClient.GetRolloutClient()
+	if err != nil {
+		response.InternalError(c, "获取Rollout客户端失败: "+err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// List AnalysisRuns 以 rollout owner label 過濾
+	labelSelector := fmt.Sprintf("rollouts-pod-template-hash,rollout-type")
+	_ = labelSelector // 改用 List all + filter by owner ref
+	allRuns, err := rolloutClient.ArgoprojV1alpha1().AnalysisRuns(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		response.InternalError(c, "取得 AnalysisRun 失敗: "+err.Error())
+		return
+	}
+
+	// 篩選屬於此 Rollout 的 AnalysisRun（透過 ownerReferences）
+	result := make([]map[string]interface{}, 0)
+	for _, ar := range allRuns.Items {
+		for _, ref := range ar.OwnerReferences {
+			if ref.Kind == "Rollout" && ref.Name == name {
+				result = append(result, map[string]interface{}{
+					"name":      ar.Name,
+					"namespace": ar.Namespace,
+					"phase":     string(ar.Status.Phase),
+					"message":   ar.Status.Message,
+					"startedAt": ar.CreationTimestamp.Time,
+				})
+				break
+			}
+		}
+	}
+
+	response.OK(c, gin.H{"items": result, "total": len(result)})
 }
