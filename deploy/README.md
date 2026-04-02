@@ -1,6 +1,6 @@
-# KubePolaris 部署指南
+# Synapse 部署指南
 
-本目录包含 KubePolaris 的辅助部署配置文件。
+本目录包含 Synapse 的辅助部署配置文件。
 
 > **注意**: `Dockerfile` 和 `docker-compose.yaml` 已移至项目根目录，便于直接使用。
 
@@ -21,7 +21,7 @@
     │       ├── conf/          # MySQL 配置文件
     │       └── init/          # 初始化 SQL 脚本
     └── helm/                  # Kubernetes Helm Chart
-        └── kubepolaris/
+        └── synapse/
 ```
 
 ## 🚀 快速开始
@@ -29,10 +29,10 @@
 ### 最快体验（一条命令）
 
 ```bash
-docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse:latest
 
 # 访问 http://localhost:8080
-# 默认账号: admin / KubePolaris@2026
+# 默认账号: admin / Synapse@2026
 ```
 
 > 使用内置 SQLite，无需外部依赖。生产环境建议使用 Docker Compose + MySQL。
@@ -41,8 +41,8 @@ docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kube
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd KubePolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd Synapse
 
 # 2. 配置环境变量
 cp .env.example .env
@@ -62,7 +62,7 @@ docker compose down
 
 | 镜像 | 用途 | 端口 |
 |------|------|------|
-| `kubepolaris` | 一体化镜像（前端通过 go:embed 嵌入后端） | 8080 |
+| `synapse` | 一体化镜像（前端通过 go:embed 嵌入后端） | 8080 |
 
 ## 🔧 环境变量
 
@@ -79,7 +79,7 @@ docker compose down
 
 ## 📊 服务访问
 
-- **KubePolaris**: http://localhost (默认端口 80)
+- **Synapse**: http://localhost (默认端口 80)
 - **Grafana**: http://localhost:3000
 
 ## 📝 注意事项

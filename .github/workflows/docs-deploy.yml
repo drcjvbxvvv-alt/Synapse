@@ -69,4 +69,4 @@ jobs:
           # 登录用户
           REMOTE_USER: git
           # 部署目标目录
-          TARGET: /home/git/kubepolaris      
+          TARGET: /home/git/synapse      

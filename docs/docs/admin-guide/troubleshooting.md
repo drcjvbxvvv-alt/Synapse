@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # 故障排查
 
-本文档提供 KubePolaris 常见问题的诊断和解决方法。
+本文档提供 Synapse 常见问题的诊断和解决方法。
 
 ## 诊断工具
 
@@ -27,26 +27,26 @@ curl http://localhost:8080/api/health
 
 ```bash
 # Docker
-docker logs kubepolaris-backend -f --tail 100
+docker logs synapse-backend -f --tail 100
 
 # Kubernetes
-kubectl logs -f deployment/kubepolaris-backend -n kubepolaris
+kubectl logs -f deployment/synapse-backend -n synapse
 
 # 查看错误日志
-kubectl logs deployment/kubepolaris-backend -n kubepolaris | grep -i error
+kubectl logs deployment/synapse-backend -n synapse | grep -i error
 ```
 
 ### 资源检查
 
 ```bash
 # Pod 状态
-kubectl get pods -n kubepolaris
+kubectl get pods -n synapse
 
 # 事件
-kubectl get events -n kubepolaris --sort-by='.lastTimestamp'
+kubectl get events -n synapse --sort-by='.lastTimestamp'
 
 # 资源使用
-kubectl top pods -n kubepolaris
+kubectl top pods -n synapse
 ```
 
 ## 常见问题
@@ -60,10 +60,10 @@ kubectl top pods -n kubepolaris
 #### 诊断
 ```bash
 # 查看 Pod 状态
-kubectl describe pod -l app=kubepolaris -n kubepolaris
+kubectl describe pod -l app=synapse -n synapse
 
 # 查看日志
-kubectl logs -f deployment/kubepolaris-backend -n kubepolaris --previous
+kubectl logs -f deployment/synapse-backend -n synapse --previous
 ```
 
 #### 常见原因
@@ -71,14 +71,14 @@ kubectl logs -f deployment/kubepolaris-backend -n kubepolaris --previous
 **1. 配置文件错误**
 ```bash
 # 验证配置
-kubectl get configmap kubepolaris-config -n kubepolaris -o yaml
+kubectl get configmap synapse-config -n synapse -o yaml
 ```
 
 **2. 数据库连接失败**
 ```bash
 # 测试数据库连接
 kubectl run -it --rm mysql-client --image=mysql:8.0 -- \
-  mysql -h kubepolaris-mysql -u root -p
+  mysql -h synapse-mysql -u root -p
 ```
 
 **3. 端口被占用**
@@ -103,7 +103,7 @@ netstat -tlnp | grep 8080
 #### 诊断
 ```bash
 # 查看认证日志
-kubectl logs deployment/kubepolaris-backend -n kubepolaris | grep -i auth
+kubectl logs deployment/synapse-backend -n synapse | grep -i auth
 ```
 
 #### 常见原因
@@ -111,8 +111,8 @@ kubectl logs deployment/kubepolaris-backend -n kubepolaris | grep -i auth
 **1. 密码错误**
 ```bash
 # 重置管理员密码
-kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- \
-  ./kubepolaris-backend reset-password --user admin --password newpass
+kubectl exec -it deployment/synapse-backend -n synapse -- \
+  ./synapse-backend reset-password --user admin --password newpass
 ```
 
 **2. 账号锁定**
@@ -122,7 +122,7 @@ kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- \
 **3. JWT 配置问题**
 ```bash
 # 检查 JWT 配置
-kubectl get secret kubepolaris-secrets -n kubepolaris -o yaml
+kubectl get secret synapse-secrets -n synapse -o yaml
 ```
 
 ---
@@ -135,8 +135,8 @@ kubectl get secret kubepolaris-secrets -n kubepolaris -o yaml
 
 #### 诊断
 ```bash
-# 从 KubePolaris Pod 测试连接
-kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- \
+# 从 Synapse Pod 测试连接
+kubectl exec -it deployment/synapse-backend -n synapse -- \
   curl -k https://api-server:6443/healthz
 ```
 
@@ -145,7 +145,7 @@ kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- \
 **1. 网络不通**
 ```bash
 # 检查网络
-kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- \
+kubectl exec -it deployment/synapse-backend -n synapse -- \
   ping api-server-ip
 ```
 
@@ -177,7 +177,7 @@ curl -H "Authorization: Bearer $TOKEN" -k https://api-server:6443/api/v1/nodes
 #### 诊断
 ```bash
 # 检查 WebSocket 服务
-kubectl logs deployment/kubepolaris-backend -n kubepolaris | grep -i websocket
+kubectl logs deployment/synapse-backend -n synapse | grep -i websocket
 
 # 浏览器控制台检查
 # 打开开发者工具 → Network → WS
@@ -221,7 +221,7 @@ kubectl auth can-i create pods/exec -n default
 time curl http://localhost:8080/api/clusters
 
 # 检查资源使用
-kubectl top pods -n kubepolaris
+kubectl top pods -n synapse
 ```
 
 #### 常见原因
@@ -273,7 +273,7 @@ curl -H "Authorization: Bearer $API_KEY" http://grafana:3000/api/org
 - 权限不足
 
 **3. 网络问题**
-- 从 KubePolaris Pod 无法访问监控服务
+- 从 Synapse Pod 无法访问监控服务
 
 ---
 
@@ -286,10 +286,10 @@ curl -H "Authorization: Bearer $API_KEY" http://grafana:3000/api/org
 #### 诊断
 ```bash
 # 检查数据库状态
-mysql -h mysql-host -u kubepolaris -p -e "SHOW STATUS"
+mysql -h mysql-host -u synapse -p -e "SHOW STATUS"
 
 # 检查连接数
-mysql -h mysql-host -u kubepolaris -p -e "SHOW PROCESSLIST"
+mysql -h mysql-host -u synapse -p -e "SHOW PROCESSLIST"
 ```
 
 #### 常见原因
@@ -375,17 +375,17 @@ kubernetes:
 
 ```bash
 # 收集诊断信息
-kubectl get pods -n kubepolaris -o wide
-kubectl get events -n kubepolaris
-kubectl logs deployment/kubepolaris-backend -n kubepolaris --tail=1000 > backend.log
-kubectl describe pod -l app=kubepolaris -n kubepolaris > pod-describe.txt
+kubectl get pods -n synapse -o wide
+kubectl get events -n synapse
+kubectl logs deployment/synapse-backend -n synapse --tail=1000 > backend.log
+kubectl describe pod -l app=synapse -n synapse > pod-describe.txt
 ```
 
 ### 提交 Issue
 
-访问 [GitHub Issues](https://github.com/clay-wangzhi/KubePolaris/issues) 并提供：
+访问 [GitHub Issues](https://github.com/clay-wangzhi/Synapse/issues) 并提供：
 
-1. KubePolaris 版本
+1. Synapse 版本
 2. 部署方式
 3. 问题描述
 4. 复现步骤

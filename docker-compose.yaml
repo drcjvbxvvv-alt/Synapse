@@ -1,5 +1,5 @@
 # ==========================================
-# KubePolaris Docker Compose
+# Synapse Docker Compose
 # ==========================================
 # 使用方法:
 #   cp .env.example .env  # 复制并配置环境变量
@@ -15,12 +15,12 @@ services:
   # ==========================================
   mysql:
     image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/mysql:8.0
-    container_name: kubepolaris-mysql
+    container_name: synapse-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: kubepolaris
-      MYSQL_USER: kubepolaris
+      MYSQL_DATABASE: synapse
+      MYSQL_USER: synapse
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       TZ: Asia/Shanghai
     ports:
@@ -29,23 +29,23 @@ services:
       - mysql_data:/var/lib/mysql
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     networks:
-      - kubepolaris-network
+      - synapse-network
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD && mysql -h localhost -u kubepolaris -p$$MYSQL_PASSWORD -e 'SELECT 1' kubepolaris || exit 1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD && mysql -h localhost -u synapse -p$$MYSQL_PASSWORD -e 'SELECT 1' synapse || exit 1"]
       interval: 5s
       timeout: 10s
       retries: 30
       start_period: 60s
 
   # ==========================================
-  # KubePolaris 应用服务
+  # Synapse 应用服务
   # ==========================================
-  kubepolaris:
+  synapse:
     build:
       context: .
       dockerfile: Dockerfile
-    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:${VERSION:-latest}
-    container_name: kubepolaris
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse:${VERSION:-latest}
+    container_name: synapse
     restart: unless-stopped
     depends_on:
       mysql:
@@ -58,9 +58,9 @@ services:
       DB_DRIVER: mysql
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_USERNAME: kubepolaris
+      DB_USERNAME: synapse
       DB_PASSWORD: ${MYSQL_PASSWORD}
-      DB_DATABASE: kubepolaris
+      DB_DATABASE: synapse
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRE_TIME: 24
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -68,9 +68,9 @@ services:
     ports:
       - "${APP_PORT:-8080}:8080"
     volumes:
-      - kubepolaris_logs:/app/logs
+      - synapse_logs:/app/logs
     networks:
-      - kubepolaris-network
+      - synapse-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
@@ -88,7 +88,7 @@ services:
   # ==========================================
   grafana:
     image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/grafana:10.2.0
-    container_name: kubepolaris-grafana
+    container_name: synapse-grafana
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: admin
@@ -112,7 +112,7 @@ services:
       - ./deploy/docker/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./deploy/docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
-      - kubepolaris-network
+      - synapse-network
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 10s
@@ -124,7 +124,7 @@ services:
   # ==========================================
   grafana-init:
     image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/curl:8.16.0
-    container_name: kubepolaris-grafana-init
+    container_name: synapse-grafana-init
     user: "0:0"  # 以 root 用户运行，解决权限问题
     depends_on:
       grafana:
@@ -141,26 +141,26 @@ services:
         echo "⏳ 等待 Dashboard 加载完成..."
         sleep 5
 
-        echo "🔧 设置 KubePolaris 文件夹权限..."
+        echo "🔧 设置 Synapse 文件夹权限..."
         curl -s -X POST \
           -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
           -H "Content-Type: application/json" \
           -d '{"items":[{"role":"Viewer","permission":1},{"role":"Editor","permission":2}]}' \
-          "$${GRAFANA_URL}/api/folders/kubepolaris-folder/permissions"
+          "$${GRAFANA_URL}/api/folders/synapse-folder/permissions"
         echo " ✅ 权限设置完成"
 
         echo ""
         echo "🔑 创建 Service Account 和 API Token..."
 
         SA_EXISTS=$$(curl -s -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
-          "$${GRAFANA_URL}/api/serviceaccounts/search?query=kubepolaris" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+          "$${GRAFANA_URL}/api/serviceaccounts/search?query=synapse" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
 
         if [ -z "$$SA_EXISTS" ]; then
           echo "  📝 创建新的 Service Account..."
           SA_RESULT=$$(curl -s -X POST \
             -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
             -H "Content-Type: application/json" \
-            -d '{"name":"kubepolaris","role":"Admin","isDisabled":false}' \
+            -d '{"name":"synapse","role":"Admin","isDisabled":false}' \
             "$${GRAFANA_URL}/api/serviceaccounts")
           SA_ID=$$(echo "$$SA_RESULT" | grep -o '"id":[0-9]*' | cut -d: -f2)
           echo "  ✅ Service Account 创建成功，ID: $$SA_ID"
@@ -181,7 +181,7 @@ services:
         TOKEN_RESULT=$$(curl -s -X POST \
           -u "$${GRAFANA_USER}:$${GRAFANA_PASSWORD}" \
           -H "Content-Type: application/json" \
-          -d '{"name":"kubepolaris-token","secondsToLive":0}' \
+          -d '{"name":"synapse-token","secondsToLive":0}' \
           "$${GRAFANA_URL}/api/serviceaccounts/$$SA_ID/tokens")
 
         API_KEY=$$(echo "$$TOKEN_RESULT" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
@@ -198,7 +198,7 @@ services:
           exit 1
         fi
     networks:
-      - kubepolaris-network
+      - synapse-network
     restart: "no"
 
 # ==========================================
@@ -206,16 +206,16 @@ services:
 # ==========================================
 volumes:
   mysql_data:
-    name: kubepolaris-mysql-data
+    name: synapse-mysql-data
   grafana_data:
-    name: kubepolaris-grafana-data
-  kubepolaris_logs:
-    name: kubepolaris-logs
+    name: synapse-grafana-data
+  synapse_logs:
+    name: synapse-logs
 
 # ==========================================
 # 网络
 # ==========================================
 networks:
-  kubepolaris-network:
-    name: kubepolaris-network
+  synapse-network:
+    name: synapse-network
     driver: bridge

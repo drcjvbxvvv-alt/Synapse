@@ -5,11 +5,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/apierrors"
-	"github.com/clay-wangzhi/KubePolaris/internal/constants"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/apierrors"
+	"github.com/clay-wangzhi/Synapse/internal/constants"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
 // AuthHandler 认证处理器

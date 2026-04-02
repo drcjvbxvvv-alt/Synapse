@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "kubepolaris.name" -}}
+{{- define "synapse.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "kubepolaris.fullname" -}}
+{{- define "synapse.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "kubepolaris.chart" -}}
+{{- define "synapse.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "kubepolaris.labels" -}}
-helm.sh/chart: {{ include "kubepolaris.chart" . }}
-{{ include "kubepolaris.selectorLabels" . }}
+{{- define "synapse.labels" -}}
+helm.sh/chart: {{ include "synapse.chart" . }}
+{{ include "synapse.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,65 +43,65 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "kubepolaris.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "kubepolaris.name" . }}
+{{- define "synapse.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "synapse.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Backend labels
 */}}
-{{- define "kubepolaris.backend.labels" -}}
-{{ include "kubepolaris.labels" . }}
+{{- define "synapse.backend.labels" -}}
+{{ include "synapse.labels" . }}
 app.kubernetes.io/component: backend
 {{- end }}
 
 {{/*
 Backend selector labels
 */}}
-{{- define "kubepolaris.backend.selectorLabels" -}}
-{{ include "kubepolaris.selectorLabels" . }}
+{{- define "synapse.backend.selectorLabels" -}}
+{{ include "synapse.selectorLabels" . }}
 app.kubernetes.io/component: backend
 {{- end }}
 
 {{/*
 Frontend labels
 */}}
-{{- define "kubepolaris.frontend.labels" -}}
-{{ include "kubepolaris.labels" . }}
+{{- define "synapse.frontend.labels" -}}
+{{ include "synapse.labels" . }}
 app.kubernetes.io/component: frontend
 {{- end }}
 
 {{/*
 Frontend selector labels
 */}}
-{{- define "kubepolaris.frontend.selectorLabels" -}}
-{{ include "kubepolaris.selectorLabels" . }}
+{{- define "synapse.frontend.selectorLabels" -}}
+{{ include "synapse.selectorLabels" . }}
 app.kubernetes.io/component: frontend
 {{- end }}
 
 {{/*
 MySQL labels
 */}}
-{{- define "kubepolaris.mysql.labels" -}}
-{{ include "kubepolaris.labels" . }}
+{{- define "synapse.mysql.labels" -}}
+{{ include "synapse.labels" . }}
 app.kubernetes.io/component: mysql
 {{- end }}
 
 {{/*
 MySQL selector labels
 */}}
-{{- define "kubepolaris.mysql.selectorLabels" -}}
-{{ include "kubepolaris.selectorLabels" . }}
+{{- define "synapse.mysql.selectorLabels" -}}
+{{ include "synapse.selectorLabels" . }}
 app.kubernetes.io/component: mysql
 {{- end }}
 
 {{/*
 ServiceAccount name
 */}}
-{{- define "kubepolaris.serviceAccountName" -}}
+{{- define "synapse.serviceAccountName" -}}
 {{- if .Values.backend.serviceAccount.create }}
-{{- default (include "kubepolaris.fullname" .) .Values.backend.serviceAccount.name }}
+{{- default (include "synapse.fullname" .) .Values.backend.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.backend.serviceAccount.name }}
 {{- end }}
@@ -110,7 +110,7 @@ ServiceAccount name
 {{/*
 Image name with registry
 */}}
-{{- define "kubepolaris.image" -}}
+{{- define "synapse.image" -}}
 {{- $registry := .Values.global.imageRegistry | default "" }}
 {{- $repository := .repository }}
 {{- $tag := .tag | default $.Chart.AppVersion }}
@@ -124,53 +124,53 @@ Image name with registry
 {{/*
 MySQL password secret name
 */}}
-{{- define "kubepolaris.mysql.secretName" -}}
+{{- define "synapse.mysql.secretName" -}}
 {{- if .Values.mysql.internal.existingSecret }}
 {{- .Values.mysql.internal.existingSecret }}
 {{- else if .Values.mysql.external.existingSecret }}
 {{- .Values.mysql.external.existingSecret }}
 {{- else }}
-{{- include "kubepolaris.fullname" . }}-mysql
+{{- include "synapse.fullname" . }}-mysql
 {{- end }}
 {{- end }}
 
 {{/*
 JWT secret name
 */}}
-{{- define "kubepolaris.jwt.secretName" -}}
+{{- define "synapse.jwt.secretName" -}}
 {{- if .Values.security.existingSecret }}
 {{- .Values.security.existingSecret }}
 {{- else }}
-{{- include "kubepolaris.fullname" . }}-secrets
+{{- include "synapse.fullname" . }}-secrets
 {{- end }}
 {{- end }}
 
 {{/*
 Grafana secret name
 */}}
-{{- define "kubepolaris.grafana.secretName" -}}
+{{- define "synapse.grafana.secretName" -}}
 {{- if .Values.grafana.existingSecret }}
 {{- .Values.grafana.existingSecret }}
 {{- else }}
-{{- include "kubepolaris.fullname" . }}-grafana
+{{- include "synapse.fullname" . }}-grafana
 {{- end }}
 {{- end }}
 
 {{/*
 Database host
 */}}
-{{- define "kubepolaris.database.host" -}}
+{{- define "synapse.database.host" -}}
 {{- if .Values.mysql.external.enabled }}
 {{- .Values.mysql.external.host }}
 {{- else }}
-{{- printf "%s-mysql" (include "kubepolaris.fullname" .) }}
+{{- printf "%s-mysql" (include "synapse.fullname" .) }}
 {{- end }}
 {{- end }}
 
 {{/*
 Database port
 */}}
-{{- define "kubepolaris.database.port" -}}
+{{- define "synapse.database.port" -}}
 {{- if .Values.mysql.external.enabled }}
 {{- .Values.mysql.external.port }}
 {{- else }}
@@ -181,7 +181,7 @@ Database port
 {{/*
 Database name
 */}}
-{{- define "kubepolaris.database.name" -}}
+{{- define "synapse.database.name" -}}
 {{- if .Values.mysql.external.enabled }}
 {{- .Values.mysql.external.database }}
 {{- else }}
@@ -192,7 +192,7 @@ Database name
 {{/*
 Database username
 */}}
-{{- define "kubepolaris.database.username" -}}
+{{- define "synapse.database.username" -}}
 {{- if .Values.mysql.external.enabled }}
 {{- .Values.mysql.external.username }}
 {{- else }}
@@ -203,7 +203,7 @@ Database username
 {{/*
 Return the proper image pull secrets
 */}}
-{{- define "kubepolaris.imagePullSecrets" -}}
+{{- define "synapse.imagePullSecrets" -}}
 {{- if .Values.global.imagePullSecrets }}
 imagePullSecrets:
 {{- range .Values.global.imagePullSecrets }}

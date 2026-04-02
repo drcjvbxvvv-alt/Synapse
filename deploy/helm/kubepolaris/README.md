@@ -1,14 +1,14 @@
-# KubePolaris Helm Chart
+# Synapse Helm Chart
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/clay-wangzhi/KubePolaris)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/clay-wangzhi/Synapse)
 [![Type](https://img.shields.io/badge/type-application-informational)](https://helm.sh/docs/topics/charts/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/clay-wangzhi/KubePolaris/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://github.com/clay-wangzhi/Synapse/blob/main/LICENSE)
 
 企业级 Kubernetes 多集群管理平台 Helm Chart
 
 ## 📖 简介
 
-KubePolaris 是一个现代化的 Kubernetes 集群管理平台，提供直观的 Web 界面来管理和监控多个 Kubernetes 集群。
+Synapse 是一个现代化的 Kubernetes 集群管理平台，提供直观的 Web 界面来管理和监控多个 Kubernetes 集群。
 
 **主要特性:**
 
@@ -32,7 +32,7 @@ KubePolaris 是一个现代化的 Kubernetes 集群管理平台，提供直观�
 ### 添加 Helm 仓库
 
 ```bash
-helm repo add kubepolaris https://clay-wangzhi.github.io/KubePolaris
+helm repo add synapse https://clay-wangzhi.github.io/Synapse
 helm repo update
 ```
 
@@ -40,26 +40,26 @@ helm repo update
 
 ```bash
 # 基础安装
-helm install kubepolaris kubepolaris/kubepolaris \
-  --namespace kubepolaris \
+helm install synapse synapse/synapse \
+  --namespace synapse \
   --create-namespace
 
 # 查看安装状态
-helm status kubepolaris -n kubepolaris
+helm status synapse -n synapse
 ```
 
 ### 访问应用
 
 ```bash
 # 使用 port-forward 访问
-kubectl port-forward -n kubepolaris svc/kubepolaris-frontend 8080:80
+kubectl port-forward -n synapse svc/synapse-frontend 8080:80
 
 # 在浏览器中打开
 # http://localhost:8080
 
 # 默认登录信息
 # 用户名: admin
-# 密码: KubePolaris@2026
+# 密码: Synapse@2026
 ```
 
 ## 📋 配置
@@ -85,8 +85,8 @@ kubectl port-forward -n kubepolaris svc/kubepolaris-frontend 8080:80
 ### 场景 1: 基础部署（使用内置 MySQL）
 
 ```bash
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm install synapse synapse/synapse \
+  -n synapse \
   --set security.jwtSecret="your-secure-jwt-secret-at-least-32-chars"
 ```
 
@@ -94,19 +94,19 @@ helm install kubepolaris kubepolaris/kubepolaris \
 
 ```bash
 # 1. 创建数据库 Secret
-kubectl create secret generic kubepolaris-mysql \
+kubectl create secret generic synapse-mysql \
   --from-literal=password=your_mysql_password \
-  -n kubepolaris
+  -n synapse
 
 # 2. 安装
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm install synapse synapse/synapse \
+  -n synapse \
   --set mysql.internal.enabled=false \
   --set mysql.external.enabled=true \
   --set mysql.external.host=mysql.example.com \
-  --set mysql.external.database=kubepolaris \
-  --set mysql.external.username=kubepolaris \
-  --set mysql.external.existingSecret=kubepolaris-mysql \
+  --set mysql.external.database=synapse \
+  --set mysql.external.username=synapse \
+  --set mysql.external.existingSecret=synapse-mysql \
   --set security.jwtSecret="your-secure-jwt-secret"
 ```
 
@@ -121,7 +121,7 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: kubepolaris.example.com
+    - host: synapse.example.com
       paths:
         - path: /
           pathType: Prefix
@@ -130,17 +130,17 @@ ingress:
           pathType: Prefix
           backend: backend
   tls:
-    - secretName: kubepolaris-tls
+    - secretName: synapse-tls
       hosts:
-        - kubepolaris.example.com
+        - synapse.example.com
 
 security:
   jwtSecret: "your-secure-jwt-secret-at-least-32-chars"
 ```
 
 ```bash
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm install synapse synapse/synapse \
+  -n synapse \
   -f values-ingress.yaml
 ```
 
@@ -149,8 +149,8 @@ helm install kubepolaris kubepolaris/kubepolaris \
 使用预配置的 HA 配置：
 
 ```bash
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm install synapse synapse/synapse \
+  -n synapse \
   -f values-ha.yaml
 ```
 
@@ -159,8 +159,8 @@ helm install kubepolaris kubepolaris/kubepolaris \
 ### 场景 5: 生产环境部署
 
 ```bash
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm install synapse synapse/synapse \
+  -n synapse \
   -f values-production.yaml \
   --set mysql.external.host=your-mysql-host \
   --set security.jwtSecret="$(openssl rand -base64 32)"
@@ -175,38 +175,38 @@ helm install kubepolaris kubepolaris/kubepolaris \
 helm repo update
 
 # 查看可用版本
-helm search repo kubepolaris --versions
+helm search repo synapse --versions
 
 # 升级到最新版本
-helm upgrade kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm upgrade synapse synapse/synapse \
+  -n synapse \
   -f values.yaml
 
 # 查看升级历史
-helm history kubepolaris -n kubepolaris
+helm history synapse -n synapse
 ```
 
 ### 回滚
 
 ```bash
 # 查看历史版本
-helm history kubepolaris -n kubepolaris
+helm history synapse -n synapse
 
 # 回滚到指定版本
-helm rollback kubepolaris 1 -n kubepolaris
+helm rollback synapse 1 -n synapse
 ```
 
 ## 🗑️ 卸载
 
 ```bash
 # 卸载 Chart
-helm uninstall kubepolaris -n kubepolaris
+helm uninstall synapse -n synapse
 
 # 删除 PVC（注意：会删除所有数据）
-kubectl delete pvc -l app.kubernetes.io/instance=kubepolaris -n kubepolaris
+kubectl delete pvc -l app.kubernetes.io/instance=synapse -n synapse
 
 # 删除命名空间
-kubectl delete namespace kubepolaris
+kubectl delete namespace synapse
 ```
 
 ## 🔍 故障排查
@@ -214,27 +214,27 @@ kubectl delete namespace kubepolaris
 ### 查看 Pod 状态
 
 ```bash
-kubectl get pods -n kubepolaris
-kubectl describe pod -l app.kubernetes.io/instance=kubepolaris -n kubepolaris
+kubectl get pods -n synapse
+kubectl describe pod -l app.kubernetes.io/instance=synapse -n synapse
 ```
 
 ### 查看日志
 
 ```bash
 # 后端日志
-kubectl logs -f -l app.kubernetes.io/component=backend -n kubepolaris
+kubectl logs -f -l app.kubernetes.io/component=backend -n synapse
 
 # 前端日志
-kubectl logs -f -l app.kubernetes.io/component=frontend -n kubepolaris
+kubectl logs -f -l app.kubernetes.io/component=frontend -n synapse
 
 # MySQL 日志
-kubectl logs -f -l app.kubernetes.io/component=mysql -n kubepolaris
+kubectl logs -f -l app.kubernetes.io/component=mysql -n synapse
 ```
 
 ### 查看事件
 
 ```bash
-kubectl get events -n kubepolaris --sort-by='.lastTimestamp'
+kubectl get events -n synapse --sort-by='.lastTimestamp'
 ```
 
 ### 常见问题
@@ -245,7 +245,7 @@ kubectl get events -n kubepolaris --sort-by='.lastTimestamp'
 
 ```bash
 # 检查 PVC 状态
-kubectl get pvc -n kubepolaris
+kubectl get pvc -n synapse
 
 # 检查节点资源
 kubectl describe nodes
@@ -257,11 +257,11 @@ kubectl describe nodes
 
 ```bash
 # 查看 MySQL Pod
-kubectl get pod -l app.kubernetes.io/component=mysql -n kubepolaris
+kubectl get pod -l app.kubernetes.io/component=mysql -n synapse
 
 # 查看 Secret
-kubectl get secret -n kubepolaris
-kubectl describe secret kubepolaris-mysql -n kubepolaris
+kubectl get secret -n synapse
+kubectl describe secret synapse-mysql -n synapse
 ```
 
 #### 后端无法启动
@@ -270,13 +270,13 @@ kubectl describe secret kubepolaris-mysql -n kubepolaris
 
 ```bash
 # 查看后端日志
-kubectl logs -l app.kubernetes.io/component=backend -n kubepolaris --tail=100
+kubectl logs -l app.kubernetes.io/component=backend -n synapse --tail=100
 
 # 检查 ConfigMap
-kubectl describe configmap kubepolaris-config -n kubepolaris
+kubectl describe configmap synapse-config -n synapse
 
 # 检查环境变量
-kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- env | grep -E "DB|JWT"
+kubectl exec -it deployment/synapse-backend -n synapse -- env | grep -E "DB|JWT"
 ```
 
 ## 🧪 测试
@@ -284,7 +284,7 @@ kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- env | grep -E 
 运行 Helm 测试：
 
 ```bash
-helm test kubepolaris -n kubepolaris
+helm test synapse -n synapse
 ```
 
 ## 📊 监控
@@ -322,14 +322,14 @@ grafana:
 
 ```bash
 # 创建 Secret
-kubectl create secret generic kubepolaris-secrets \
+kubectl create secret generic synapse-secrets \
   --from-literal=jwt-secret="$(openssl rand -base64 32)" \
-  -n kubepolaris
+  -n synapse
 
 # 使用 existing Secret
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
-  --set security.existingSecret=kubepolaris-secrets
+helm install synapse synapse/synapse \
+  -n synapse \
+  --set security.existingSecret=synapse-secrets
 ```
 
 2. 使用外部密钥管理工具（如 Vault、Sealed Secrets）
@@ -340,18 +340,18 @@ Chart 会自动创建必要的 RBAC 资源。可以通过 `rbac.rules` 自定义
 
 ## 📚 文档
 
-- [官方文档](https://kubepolaris.clay-wangzhi.com/docs)
-- [快速开始](https://kubepolaris.clay-wangzhi.com/docs/getting-started/quick-start)
-- [配置指南](https://kubepolaris.clay-wangzhi.com/docs/admin-guide/deployment)
-- [API 文档](https://kubepolaris.clay-wangzhi.com/docs/api/overview)
+- [官方文档](https://synapse.clay-wangzhi.com/docs)
+- [快速开始](https://synapse.clay-wangzhi.com/docs/getting-started/quick-start)
+- [配置指南](https://synapse.clay-wangzhi.com/docs/admin-guide/deployment)
+- [API 文档](https://synapse.clay-wangzhi.com/docs/api/overview)
 
 ## 🤝 贡献
 
-欢迎贡献！请查看 [CONTRIBUTING.md](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md)
+欢迎贡献！请查看 [CONTRIBUTING.md](https://github.com/clay-wangzhi/Synapse/blob/main/CONTRIBUTING.md)
 
 ## 📄 许可证
 
-Apache License 2.0 - 查看 [LICENSE](https://github.com/clay-wangzhi/KubePolaris/blob/main/LICENSE)
+Apache License 2.0 - 查看 [LICENSE](https://github.com/clay-wangzhi/Synapse/blob/main/LICENSE)
 
 ## 🙏 致谢
 
@@ -359,6 +359,6 @@ Apache License 2.0 - 查看 [LICENSE](https://github.com/clay-wangzhi/KubePolari
 
 ---
 
-**维护者:** KubePolaris Team
-**联系方式:** support@kubepolaris.io
-**主页:** https://kubepolaris.clay-wangzhi.com
+**维护者:** Synapse Team
+**联系方式:** support@synapse.io
+**主页:** https://synapse.clay-wangzhi.com

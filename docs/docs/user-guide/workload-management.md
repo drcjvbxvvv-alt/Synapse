@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # 工作负载管理
 
-KubePolaris 提供直观的界面来管理 Kubernetes 工作负载，包括 Deployment、StatefulSet、DaemonSet、Job 和 CronJob。
+Synapse 提供直观的界面来管理 Kubernetes 工作负载，包括 Deployment、StatefulSet、DaemonSet、Job 和 CronJob。
 
 ## 工作负载类型
 

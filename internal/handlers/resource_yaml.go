@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/config"
-	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/Synapse/internal/config"
+	"github.com/clay-wangzhi/Synapse/internal/k8s"
+	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

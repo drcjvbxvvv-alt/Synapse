@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/config"
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/config"
+	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	"github.com/glebarez/sqlite"
 	"golang.org/x/crypto/bcrypt"
@@ -89,7 +89,7 @@ func initSQLite(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, e
 	// 获取数据库文件路径
 	dbPath := cfg.DSN
 	if dbPath == "" {
-		dbPath = "./data/kubepolaris.db"
+		dbPath = "./data/synapse.db"
 	}
 
 	// 确保目录存在
@@ -184,6 +184,8 @@ func autoMigrate(db *gorm.DB) error {
 		&models.EventAlertHistory{},  // Event 告警歷史紀錄表
 		&models.CostConfig{},         // 成本定價設定表
 		&models.ResourceSnapshot{},   // 資源每日快照表
+		&models.ImageScanResult{},    // Trivy 映像掃描結果表
+		&models.BenchResult{},        // CIS kube-bench 評分表
 	)
 
 	// 根据数据库驱动类型重新启用外键约束检查
@@ -262,8 +264,8 @@ func createDefaultPermissions(db *gorm.DB) {
 // createDefaultUser 创建默认管理员用户
 func createDefaultUser(db *gorm.DB) {
 	// 使用 bcrypt 生成密码哈希
-	salt := "kubepolaris_salt"
-	password := "KubePolaris@2026" + salt
+	salt := "synapse_salt"
+	password := "Synapse@2026" + salt
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		logger.Error("生成密码哈希失败: %v", err)
@@ -280,7 +282,7 @@ func createDefaultUser(db *gorm.DB) {
 			Username:     "admin",
 			PasswordHash: string(hashedPassword),
 			Salt:         salt,
-			Email:        "admin@kubepolaris.io",
+			Email:        "admin@synapse.io",
 			DisplayName:  "管理员",
 			AuthType:     "local",
 			Status:       "active",
@@ -289,7 +291,7 @@ func createDefaultUser(db *gorm.DB) {
 		if err := db.Create(&user).Error; err != nil {
 			logger.Error("创建默认用户失败: %v", err)
 		} else {
-			logger.Info("默认管理员用户创建成功: admin/KubePolaris@2026")
+			logger.Info("默认管理员用户创建成功: admin/Synapse@2026")
 		}
 	} else if result.Error != nil {
 		logger.Error("查询默认用户失败: %v", result.Error)

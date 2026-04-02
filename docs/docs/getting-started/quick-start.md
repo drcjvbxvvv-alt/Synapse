@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # 快速开始
 
-本指南将帮助你在 5 分钟内快速体验 KubePolaris 的核心功能。
+本指南将帮助你在 5 分钟内快速体验 Synapse 的核心功能。
 
 ## 前置要求
 
@@ -12,12 +12,12 @@ sidebar_position: 1
 - 至少一个可用的 Kubernetes 集群（用于导入管理）
 - 8GB+ 可用内存
 
-## 第一步：启动 KubePolaris
+## 第一步：启动 Synapse
 
 ### 最快体验：一条命令启动
 
 ```bash
-docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse:latest
 ```
 
 访问 `http://localhost:8080` 即可使用。
@@ -30,8 +30,8 @@ docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kube
 
 ```bash
 # 克隆项目
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd KubePolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd Synapse
 
 # 配置环境变量
 cp .env.example .env
@@ -52,7 +52,7 @@ docker compose up -d
 | 项目 | 值 |
 |------|-----|
 | 用户名 | `admin` |
-| 密码 | `KubePolaris@2026` |
+| 密码 | `Synapse@2026` |
 
 :::warning 安全提示
 首次登录后请立即修改默认密码！
@@ -118,7 +118,7 @@ users:
 
 ## 第五步：配置监控告警（可选）
 
-KubePolaris 支持集成 Prometheus 和 Altermanager
+Synapse 支持集成 Prometheus 和 Altermanager
 
 1. 进入 **集群** → **配置中心**
 2. 填写 Prometheus 地址，如 `http://prometheus:9090`
@@ -150,13 +150,13 @@ lsof -i :8080
 
 ### 无法连接到集群
 
-1. 确认 API Server 地址可从 KubePolaris 容器访问
+1. 确认 API Server 地址可从 Synapse 容器访问
 2. 检查防火墙设置
 3. 验证 kubeconfig/Token 是否有效
 
 ```bash
 # 在容器内测试连接
-docker exec -it kubepolaris-backend curl -k https://your-api-server:6443/healthz
+docker exec -it synapse-backend curl -k https://your-api-server:6443/healthz
 ```
 
 ### 登录后页面空白
@@ -167,5 +167,5 @@ docker exec -it kubepolaris-backend curl -k https://your-api-server:6443/healthz
 # 或者使用无痕模式访问
 ```
 
-如果问题持续，请查看 [故障排查指南](../admin-guide/troubleshooting) 或在 [GitHub Issues](https://github.com/clay-wangzhi/KubePolaris/issues) 提问。
+如果问题持续，请查看 [故障排查指南](../admin-guide/troubleshooting) 或在 [GitHub Issues](https://github.com/clay-wangzhi/Synapse/issues) 提问。
 

@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/config"
-	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
-	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/config"
+	"github.com/clay-wangzhi/Synapse/internal/k8s"
+	"github.com/clay-wangzhi/Synapse/internal/middleware"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	"strings"
 

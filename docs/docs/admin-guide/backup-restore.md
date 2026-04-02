@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # 备份恢复
 
-本文档介绍 KubePolaris 的数据备份和恢复策略。
+本文档介绍 Synapse 的数据备份和恢复策略。
 
 ## 备份内容
 
@@ -21,37 +21,37 @@ sidebar_position: 4
 
 ```bash
 # 全量备份
-mysqldump -h mysql-host -u kubepolaris -p \
+mysqldump -h mysql-host -u synapse -p \
   --single-transaction \
   --routines \
   --triggers \
-  kubepolaris > backup_$(date +%Y%m%d_%H%M%S).sql
+  synapse > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # 压缩备份
-mysqldump -h mysql-host -u kubepolaris -p \
+mysqldump -h mysql-host -u synapse -p \
   --single-transaction \
-  kubepolaris | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
+  synapse | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
 ```
 
 ### 自动备份脚本
 
-```bash title="/opt/kubepolaris/scripts/backup.sh"
+```bash title="/opt/synapse/scripts/backup.sh"
 #!/bin/bash
 set -e
 
 # 配置
 BACKUP_DIR="/data/backups/mysql"
 MYSQL_HOST="mysql-host"
-MYSQL_USER="kubepolaris"
+MYSQL_USER="synapse"
 MYSQL_PASS="your_password"
-MYSQL_DB="kubepolaris"
+MYSQL_DB="synapse"
 RETENTION_DAYS=30
 
 # 创建备份目录
 mkdir -p $BACKUP_DIR
 
 # 生成备份文件名
-BACKUP_FILE="$BACKUP_DIR/kubepolaris_$(date +%Y%m%d_%H%M%S).sql.gz"
+BACKUP_FILE="$BACKUP_DIR/synapse_$(date +%Y%m%d_%H%M%S).sql.gz"
 
 # 执行备份
 mysqldump -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASS \
@@ -84,28 +84,28 @@ echo "Cleanup completed"
 crontab -e
 
 # 每天凌晨 2 点全量备份
-0 2 * * * /opt/kubepolaris/scripts/backup.sh >> /var/log/backup.log 2>&1
+0 2 * * * /opt/synapse/scripts/backup.sh >> /var/log/backup.log 2>&1
 
 # 每小时增量备份（使用 mysqlbinlog）
-0 * * * * /opt/kubepolaris/scripts/backup-binlog.sh >> /var/log/backup.log 2>&1
+0 * * * * /opt/synapse/scripts/backup-binlog.sh >> /var/log/backup.log 2>&1
 ```
 
 ### Docker 环境备份
 
 ```bash
 # 备份 Docker MySQL 容器
-docker exec kubepolaris-mysql mysqldump -u root -p kubepolaris > backup.sql
+docker exec synapse-mysql mysqldump -u root -p synapse > backup.sql
 
 # 或使用 docker-compose
-docker-compose exec mysql mysqldump -u root -p kubepolaris > backup.sql
+docker-compose exec mysql mysqldump -u root -p synapse > backup.sql
 ```
 
 ### Kubernetes 环境备份
 
 ```bash
 # 备份 Kubernetes 中的 MySQL
-kubectl exec -n kubepolaris deployment/kubepolaris-mysql -- \
-  mysqldump -u root -p kubepolaris > backup.sql
+kubectl exec -n synapse deployment/synapse-mysql -- \
+  mysqldump -u root -p synapse > backup.sql
 
 # 使用 CronJob 自动备份
 kubectl apply -f backup-cronjob.yaml
@@ -116,7 +116,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: mysql-backup
-  namespace: kubepolaris
+  namespace: synapse
 spec:
   schedule: "0 2 * * *"
   jobTemplate:
@@ -130,13 +130,13 @@ spec:
             - /bin/sh
             - -c
             - |
-              mysqldump -h kubepolaris-mysql -u root -p$MYSQL_PASSWORD kubepolaris | \
-              gzip > /backups/kubepolaris_$(date +%Y%m%d_%H%M%S).sql.gz
+              mysqldump -h synapse-mysql -u root -p$MYSQL_PASSWORD synapse | \
+              gzip > /backups/synapse_$(date +%Y%m%d_%H%M%S).sql.gz
             env:
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: kubepolaris-mysql
+                  name: synapse-mysql
                   key: password
             volumeMounts:
             - name: backup-volume
@@ -154,18 +154,18 @@ spec:
 
 ```bash
 # 备份环境变量配置
-cp /opt/kubepolaris/.env config_backup_$(date +%Y%m%d).env
-cp /opt/kubepolaris/.env env_backup_$(date +%Y%m%d).env
+cp /opt/synapse/.env config_backup_$(date +%Y%m%d).env
+cp /opt/synapse/.env env_backup_$(date +%Y%m%d).env
 
 # 备份 Kubernetes Secrets
-kubectl get secret -n kubepolaris kubepolaris-secrets -o yaml > secrets.yaml
+kubectl get secret -n synapse synapse-secrets -o yaml > secrets.yaml
 ```
 
 ### 加密备份
 
 ```bash
 # 使用 GPG 加密
-tar -cz /opt/kubepolaris/.env | \
+tar -cz /opt/synapse/.env | \
   gpg --encrypt -r admin@example.com > config_backup.tar.gz.gpg
 
 # 解密
@@ -178,38 +178,38 @@ gpg --decrypt config_backup.tar.gz.gpg | tar -xz
 
 ```bash
 # 解压并恢复
-gunzip < backup_20260107.sql.gz | mysql -h mysql-host -u kubepolaris -p kubepolaris
+gunzip < backup_20260107.sql.gz | mysql -h mysql-host -u synapse -p synapse
 
 # 或直接恢复
-mysql -h mysql-host -u kubepolaris -p kubepolaris < backup.sql
+mysql -h mysql-host -u synapse -p synapse < backup.sql
 ```
 
 ### Docker 恢复
 
 ```bash
 # 恢复到 Docker MySQL
-cat backup.sql | docker exec -i kubepolaris-mysql mysql -u root -p kubepolaris
+cat backup.sql | docker exec -i synapse-mysql mysql -u root -p synapse
 ```
 
 ### Kubernetes 恢复
 
 ```bash
 # 恢复到 Kubernetes MySQL
-kubectl exec -i -n kubepolaris deployment/kubepolaris-mysql -- \
-  mysql -u root -p kubepolaris < backup.sql
+kubectl exec -i -n synapse deployment/synapse-mysql -- \
+  mysql -u root -p synapse < backup.sql
 ```
 
 ### 完整恢复流程
 
 1. **停止应用**
    ```bash
-   kubectl scale deployment kubepolaris-backend --replicas=0 -n kubepolaris
+   kubectl scale deployment synapse-backend --replicas=0 -n synapse
    ```
 
 2. **恢复数据库**
    ```bash
-   kubectl exec -i -n kubepolaris deployment/kubepolaris-mysql -- \
-     mysql -u root -p kubepolaris < backup.sql
+   kubectl exec -i -n synapse deployment/synapse-mysql -- \
+     mysql -u root -p synapse < backup.sql
    ```
 
 3. **恢复配置**
@@ -219,12 +219,12 @@ kubectl exec -i -n kubepolaris deployment/kubepolaris-mysql -- \
 
 4. **启动应用**
    ```bash
-   kubectl scale deployment kubepolaris-backend --replicas=3 -n kubepolaris
+   kubectl scale deployment synapse-backend --replicas=3 -n synapse
    ```
 
 5. **验证**
    ```bash
-   curl https://kubepolaris.example.com/api/health
+   curl https://synapse.example.com/api/health
    ```
 
 ## 远程存储
@@ -233,32 +233,32 @@ kubectl exec -i -n kubepolaris deployment/kubepolaris-mysql -- \
 
 ```bash
 # 上传到 S3
-aws s3 cp backup.sql.gz s3://your-bucket/backups/kubepolaris/
+aws s3 cp backup.sql.gz s3://your-bucket/backups/synapse/
 
 # 下载备份
-aws s3 cp s3://your-bucket/backups/kubepolaris/backup.sql.gz ./
+aws s3 cp s3://your-bucket/backups/synapse/backup.sql.gz ./
 ```
 
 ### 阿里云 OSS
 
 ```bash
 # 上传到 OSS
-ossutil cp backup.sql.gz oss://your-bucket/backups/kubepolaris/
+ossutil cp backup.sql.gz oss://your-bucket/backups/synapse/
 
 # 下载备份
-ossutil cp oss://your-bucket/backups/kubepolaris/backup.sql.gz ./
+ossutil cp oss://your-bucket/backups/synapse/backup.sql.gz ./
 ```
 
 ## 备份验证
 
 ### 自动验证
 
-```bash title="/opt/kubepolaris/scripts/verify-backup.sh"
+```bash title="/opt/synapse/scripts/verify-backup.sh"
 #!/bin/bash
 set -e
 
 BACKUP_FILE=$1
-TEST_DB="kubepolaris_test"
+TEST_DB="synapse_test"
 
 # 创建测试数据库
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS $TEST_DB"

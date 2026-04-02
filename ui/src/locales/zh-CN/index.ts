@@ -23,6 +23,7 @@ import config from './config.json';
 import components from './components.json';
 import helm from './helm.json';
 import cost from './cost.json';
+import security from './security.json';
 export default {
   common,
   cluster,
@@ -49,4 +50,5 @@ export default {
   components,
   helm,
   cost,
+  security,
 };

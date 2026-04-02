@@ -1,5 +1,5 @@
 import { request } from '../utils/api';
-import type { AIConfig, ChatMessage } from '../types/ai';
+import type { AIConfig, ChatMessage, Runbook, NLQueryResult } from '../types/ai';
 
 export const aiService = {
   getConfig: () => {
@@ -12,6 +12,18 @@ export const aiService = {
 
   testConnection: (data: Partial<AIConfig>) => {
     return request.post<{ success: boolean }>('/ai/test-connection', data);
+  },
+
+  getRunbooks: (reason?: string) => {
+    const params = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    return request.get<Runbook[]>(`/ai/runbooks${params}`);
+  },
+
+  nlQuery: (clusterId: string, question: string, namespace?: string) => {
+    return request.post<NLQueryResult>(`/clusters/${clusterId}/ai/nl-query`, {
+      question,
+      namespace: namespace || '',
+    });
   },
 
   chatStream: (

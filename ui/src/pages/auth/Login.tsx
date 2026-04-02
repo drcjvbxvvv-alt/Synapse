@@ -150,7 +150,7 @@ const Login: React.FC = () => {
         <div className="login-brand-content">
           <div className="login-brand-logo">
             <img src={kubernetesLogo} alt="" width={48} height={48} />
-            <span className="login-brand-logo-text">KubePolaris</span>
+            <span className="login-brand-logo-text">Synapse</span>
           </div>
 
           <h2 className="login-brand-headline">

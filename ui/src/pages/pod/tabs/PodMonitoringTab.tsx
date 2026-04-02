@@ -12,7 +12,7 @@ import { useGrafanaUrl } from '../../../hooks/useGrafanaUrl';
 
 const { Text } = Typography;
 
-const DASHBOARD_UID = 'kubepolaris-pod-detail';
+const DASHBOARD_UID = 'synapse-pod-detail';
 
 // Grafana 风格的时间范围选项
 const TIME_RANGE_OPTIONS = [

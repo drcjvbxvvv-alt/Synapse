@@ -1,5 +1,5 @@
 # ==========================================
-# KubePolaris Makefile
+# Synapse Makefile
 # ==========================================
 
 .PHONY: help dev dev-backend dev-frontend build build-backend build-frontend test test-backend test-frontend test-e2e test-e2e-ui lint lint-backend lint-frontend docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs swagger clean version
@@ -7,7 +7,7 @@
 # 变量
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 REGISTRY ?= docker.io
-IMAGE_NAME ?= registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris
+IMAGE_NAME ?= registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse
 COMPOSE_CMD := docker compose
 
 # 颜色
@@ -23,7 +23,7 @@ NC := \033[0m
 help:
 	@echo ""
 	@echo "$(BLUE)╔═══════════════════════════════════════════════════════════╗$(NC)"
-	@echo "$(BLUE)║         KubePolaris Makefile 命令                          ║$(NC)"
+	@echo "$(BLUE)║         Synapse Makefile 命令                          ║$(NC)"
 	@echo "$(BLUE)╚═══════════════════════════════════════════════════════════╝$(NC)"
 	@echo ""
 	@echo "$(GREEN)开发命令:$(NC)"
@@ -95,13 +95,13 @@ dev-frontend:
 
 ## build: 构建前端并嵌入后端（单二进制）
 build: build-frontend build-backend
-	@echo "$(GREEN)构建完成: bin/kubepolaris（前端已嵌入）$(NC)"
+	@echo "$(GREEN)构建完成: bin/synapse（前端已嵌入）$(NC)"
 
 ## build-backend: 构建后端（需要先构建前端）
 build-backend:
 	@echo "$(BLUE)构建后端...$(NC)"
-	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/kubepolaris .
-	@echo "$(GREEN)后端构建完成: bin/kubepolaris$(NC)"
+	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/synapse .
+	@echo "$(GREEN)后端构建完成: bin/synapse$(NC)"
 
 ## build-frontend: 构建前端到 ui/dist
 build-frontend:
@@ -209,8 +209,8 @@ docker-ps:
 ## helm-package: 打包 Helm Chart
 helm-package:
 	@echo "$(BLUE)打包 Helm Chart...$(NC)"
-	@if [ -d "deploy/helm/kubepolaris" ]; then \
-		helm package deploy/helm/kubepolaris -d dist/; \
+	@if [ -d "deploy/helm/synapse" ]; then \
+		helm package deploy/helm/synapse -d dist/; \
 		echo "$(GREEN)Helm Chart 打包完成$(NC)"; \
 	else \
 		echo "$(YELLOW)Helm Chart 目录不存在，请先创建$(NC)"; \

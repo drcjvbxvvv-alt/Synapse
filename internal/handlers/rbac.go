@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/internal/templates/rbac"
+	"github.com/clay-wangzhi/Synapse/internal/k8s"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/clay-wangzhi/Synapse/internal/templates/rbac"
 )
 
 // RBACHandler RBAC 权限管理处理器
@@ -28,7 +28,7 @@ func NewRBACHandler(clusterService *services.ClusterService, rbacService *servic
 	}
 }
 
-// SyncPermissions syncs KubePolaris RBAC resources to the cluster
+// SyncPermissions syncs Synapse RBAC resources to the cluster
 // POST /api/v1/clusters/:clusterID/rbac/sync
 func (h *RBACHandler) SyncPermissions(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
@@ -64,7 +64,7 @@ func (h *RBACHandler) SyncPermissions(c *gin.Context) {
 	response.OK(c, result)
 }
 
-// GetSyncStatus gets the sync status of KubePolaris RBAC resources
+// GetSyncStatus gets the sync status of Synapse RBAC resources
 // GET /api/v1/clusters/:clusterID/rbac/status
 func (h *RBACHandler) GetSyncStatus(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
@@ -139,21 +139,21 @@ func (h *RBACHandler) ListClusterRoles(c *gin.Context) {
 		Labels        map[string]string `json:"labels"`
 		CreatedAt     string            `json:"created_at"`
 		RulesCount    int               `json:"rules_count"`
-		IsKubePolaris bool              `json:"is_kubepolaris"`
+		IsSynapse bool              `json:"is_synapse"`
 	}
 
 	items := make([]ClusterRoleItem, 0, len(clusterRoles))
 	for _, cr := range clusterRoles {
-		isKubePolaris := false
+		isSynapse := false
 		if cr.Labels != nil && cr.Labels[rbac.LabelManagedBy] == rbac.LabelValue {
-			isKubePolaris = true
+			isSynapse = true
 		}
 		items = append(items, ClusterRoleItem{
 			Name:          cr.Name,
 			Labels:        cr.Labels,
 			CreatedAt:     cr.CreationTimestamp.Format("2006-01-02 15:04:05"),
 			RulesCount:    len(cr.Rules),
-			IsKubePolaris: isKubePolaris,
+			IsSynapse: isSynapse,
 		})
 	}
 
@@ -288,14 +288,14 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 		Labels        map[string]string `json:"labels"`
 		CreatedAt     string            `json:"created_at"`
 		RulesCount    int               `json:"rules_count"`
-		IsKubePolaris bool              `json:"is_kubepolaris"`
+		IsSynapse bool              `json:"is_synapse"`
 	}
 
 	items := make([]RoleItem, 0, len(roles))
 	for _, role := range roles {
-		isKubePolaris := false
+		isSynapse := false
 		if role.Labels != nil && role.Labels[rbac.LabelManagedBy] == rbac.LabelValue {
-			isKubePolaris = true
+			isSynapse = true
 		}
 		items = append(items, RoleItem{
 			Name:          role.Name,
@@ -303,7 +303,7 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 			Labels:        role.Labels,
 			CreatedAt:     role.CreationTimestamp.Format("2006-01-02 15:04:05"),
 			RulesCount:    len(role.Rules),
-			IsKubePolaris: isKubePolaris,
+			IsSynapse: isSynapse,
 		})
 	}
 
@@ -399,9 +399,9 @@ func (h *RBACHandler) DeleteRole(c *gin.Context) {
 	response.OK(c, gin.H{"message": "删除成功"})
 }
 
-// GetKubePolarisClusterRoles returns the predefined KubePolaris ClusterRoles
-// GET /api/v1/rbac/kubepolaris-roles
-func (h *RBACHandler) GetKubePolarisClusterRoles(c *gin.Context) {
+// GetSynapseClusterRoles returns the predefined Synapse ClusterRoles
+// GET /api/v1/rbac/synapse-roles
+func (h *RBACHandler) GetSynapseClusterRoles(c *gin.Context) {
 	roles := rbac.GetAllClusterRoles()
 
 	type RoleInfo struct {

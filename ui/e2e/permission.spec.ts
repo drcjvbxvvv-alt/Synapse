@@ -9,7 +9,7 @@ test.describe('权限控制', () => {
   const testPass = 'Test@2026';
 
   test.beforeAll(async () => {
-    adminToken = await loginViaAPI('admin', 'KubePolaris@2026');
+    adminToken = await loginViaAPI('admin', 'Synapse@2026');
     await createUser(adminToken, testUser, testPass).catch(() => {});
   });
 

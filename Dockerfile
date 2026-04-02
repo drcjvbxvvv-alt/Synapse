@@ -1,5 +1,5 @@
 # ==========================================
-# KubePolaris 多阶段构建 Dockerfile
+# Synapse 多阶段构建 Dockerfile
 # 前端嵌入后端，单二进制镜像
 # ==========================================
 
@@ -47,15 +47,15 @@ COPY . .
 COPY --from=frontend-builder /app/ui/dist ./ui/dist
 
 # 构建二进制文件
-RUN go build -ldflags="-s -w" -o kubepolaris .
+RUN go build -ldflags="-s -w" -o synapse .
 
 # ==========================================
 # Stage 3: Production Image
 # ==========================================
 FROM alpine:3.21
 
-LABEL maintainer="KubePolaris Team"
-LABEL description="KubePolaris - Enterprise Kubernetes Multi-Cluster Management Platform"
+LABEL maintainer="Synapse Team"
+LABEL description="Synapse - Enterprise Kubernetes Multi-Cluster Management Platform"
 LABEL version="1.0.0"
 
 # 安装必要的运行时依赖
@@ -69,17 +69,17 @@ RUN apk add --no-cache \
 ENV TZ=Asia/Shanghai
 
 # 创建非 root 用户
-RUN addgroup -g 1000 kubepolaris && \
-    adduser -u 1000 -G kubepolaris -s /bin/sh -D kubepolaris
+RUN addgroup -g 1000 synapse && \
+    adduser -u 1000 -G synapse -s /bin/sh -D synapse
 
 WORKDIR /app
 
 # 复制后端二进制文件
-COPY --from=backend-builder /app/kubepolaris /app/
+COPY --from=backend-builder /app/synapse /app/
 
 # 创建必要的目录
 RUN mkdir -p /app/logs /app/data && \
-    chown -R kubepolaris:kubepolaris /app
+    chown -R synapse:synapse /app
 
 # 暴露端口
 # 8080: Backend API + Frontend
@@ -90,7 +90,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/healthz || exit 1
 
 # 使用非 root 用户运行
-USER kubepolaris
+USER synapse
 
 # 直接启动二进制文件
-ENTRYPOINT ["/app/kubepolaris"]
+ENTRYPOINT ["/app/synapse"]

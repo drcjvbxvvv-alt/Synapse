@@ -4,13 +4,13 @@ sidebar_position: 6
 
 # 监控告警
 
-KubePolaris 集成 Prometheus 和 Grafana，提供完整的监控告警能力。
+Synapse 集成 Prometheus 和 Grafana，提供完整的监控告警能力。
 
 ## 监控概览
 
 ### 内置监控
 
-KubePolaris 提供基础监控指标：
+Synapse 提供基础监控指标：
 
 - 集群资源使用总览
 - 节点资源使用率
@@ -28,7 +28,7 @@ KubePolaris 提供基础监控指标：
 
 ### Grafana 集成
 
-配置 Grafana 后可直接在 KubePolaris 中查看监控面板：
+配置 Grafana 后可直接在 Synapse 中查看监控面板：
 
 - 内嵌 Dashboard
 - 无需切换系统
@@ -119,7 +119,7 @@ KubePolaris 提供基础监控指标：
 
 ### 预置 Dashboard
 
-KubePolaris 提供预置的 Grafana Dashboard：
+Synapse 提供预置的 Grafana Dashboard：
 
 | Dashboard | 用途 |
 |-----------|------|
@@ -140,7 +140,7 @@ KubePolaris 提供预置的 Grafana Dashboard：
 在 Grafana 中创建 Dashboard 后：
 
 1. 复制 Dashboard UID
-2. 在 KubePolaris 中添加引用
+2. 在 Synapse 中添加引用
 3. 配置显示位置
 
 ## 告警管理
@@ -234,7 +234,7 @@ settings:
   smtp_port: 587
   username: alerts@example.com
   password: xxxxxx
-  from: KubePolaris <alerts@example.com>
+  from: Synapse <alerts@example.com>
   to:
     - ops@example.com
     - dev@example.com

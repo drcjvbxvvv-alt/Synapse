@@ -83,7 +83,7 @@ const { id: clusterId } = useParams<{ id: string }>();
     
     terminal.current.clear();
     terminal.current.writeln('\x1b[32m╭─────────────────────────────────────────────────────────────╮\x1b[0m');
-    terminal.current.writeln('\x1b[32m│                  KubePolaris Kubectl Terminal               │\x1b[0m');
+    terminal.current.writeln('\x1b[32m│                  Synapse Kubectl Terminal               │\x1b[0m');
     terminal.current.writeln('\x1b[32m╰─────────────────────────────────────────────────────────────╯\x1b[0m');
     terminal.current.writeln('');
     terminal.current.writeln(`\x1b[36mCluster:\x1b[0m ${clusterId}`);

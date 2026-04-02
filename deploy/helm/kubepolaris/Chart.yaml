@@ -1,5 +1,5 @@
 apiVersion: v2
-name: kubepolaris
+name: synapse
 description: Enterprise-Grade Kubernetes Multi-Cluster Management Platform
 type: application
 version: 1.0.5
@@ -12,16 +12,16 @@ keywords:
   - devops
   - k8s
 
-home: https://kubepolaris.clay-wangzhi.com
+home: https://synapse.clay-wangzhi.com
 sources:
-  - https://github.com/clay-wangzhi/KubePolaris
+  - https://github.com/clay-wangzhi/Synapse
 
 maintainers:
-  - name: KubePolaris Team
-    email: support@kubepolaris.io
+  - name: Synapse Team
+    email: support@synapse.io
     url: https://github.com/clay-wangzhi
 
-icon: https://kubepolaris.clay-wangzhi.com/img/logo.svg
+icon: https://synapse.clay-wangzhi.com/img/logo.svg
 
 annotations:
   category: Infrastructure

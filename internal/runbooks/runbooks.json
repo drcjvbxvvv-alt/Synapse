@@ -1,0 +1,152 @@
+[
+  {
+    "id": "oom-killed",
+    "title": "OOMKilled：容器記憶體不足被終止",
+    "reasons": ["OOMKilled"],
+    "keywords": ["OOMKilled", "OutOfMemory", "memory limit"],
+    "summary": "容器使用的記憶體超過 resources.limits.memory，被 Linux OOM Killer 強制終止。",
+    "steps": [
+      "1. 執行 `kubectl top pod <name> -n <ns>` 查看實際記憶體用量",
+      "2. 執行 `kubectl describe pod <name> -n <ns>` 查看 OOMKilled 的容器與 exit code",
+      "3. 增加 resources.limits.memory（建議先設為實際用量的 1.5 倍）",
+      "4. 分析應用程式是否有記憶體洩漏（如 Java Heap dump、Go pprof）",
+      "5. 若記憶體用量持續增長，考慮設定 JVM -Xmx 或應用層記憶體上限",
+      "6. 使用 VPA（Vertical Pod Autoscaler）自動調整記憶體 limit"
+    ]
+  },
+  {
+    "id": "crash-loop-back-off",
+    "title": "CrashLoopBackOff：容器反覆崩潰重啟",
+    "reasons": ["CrashLoopBackOff"],
+    "keywords": ["CrashLoopBackOff", "BackOff", "Restarting"],
+    "summary": "容器啟動後立即退出，Kubernetes 以指數退避方式反覆重啟，常見原因為應用程式錯誤、設定錯誤或依賴服務不可用。",
+    "steps": [
+      "1. 執行 `kubectl logs <pod> -n <ns> --previous` 查看崩潰前最後日誌",
+      "2. 執行 `kubectl describe pod <pod> -n <ns>` 確認 exit code（1=應用錯誤，137=OOM，139=Segfault）",
+      "3. 確認 ConfigMap / Secret 掛載的設定檔內容正確",
+      "4. 確認環境變數（DB host、port、credentials）均設定正確",
+      "5. 確認依賴服務（資料庫、Redis、其他 Service）已就緒",
+      "6. 如為 Init Container 卡住，執行 `kubectl logs <pod> -c <init-container>` 排查"
+    ]
+  },
+  {
+    "id": "image-pull-back-off",
+    "title": "ImagePullBackOff / ErrImagePull：映像拉取失敗",
+    "reasons": ["ImagePullBackOff", "ErrImagePull"],
+    "keywords": ["ImagePullBackOff", "ErrImagePull", "image pull", "registry"],
+    "summary": "Kubernetes 無法從 Registry 拉取指定容器映像，常見原因為映像名稱錯誤、Tag 不存在或 Registry 需要認證。",
+    "steps": [
+      "1. 確認映像名稱與 Tag 正確（`kubectl describe pod <pod>` 查看 Image 欄位）",
+      "2. 若為私有 Registry，確認 ImagePullSecret 已設定且 Secret 格式正確",
+      "3. 確認 Registry 網路可達（節點是否能存取 registry.example.com）",
+      "4. 確認 Tag 在 Registry 中確實存在（勿使用 `latest` 以外的不存在 tag）",
+      "5. 若使用 Docker Hub，確認未超過 Rate Limit（匿名 100次/6小時）",
+      "6. 執行 `kubectl create secret docker-registry` 建立拉取憑證"
+    ]
+  },
+  {
+    "id": "evicted",
+    "title": "Evicted：Pod 被節點驅逐",
+    "reasons": ["Evicted"],
+    "keywords": ["Evicted", "eviction", "DiskPressure", "MemoryPressure"],
+    "summary": "節點資源不足時，Kubelet 依據 QoS 等級（BestEffort → Burstable → Guaranteed）驅逐 Pod 以保護系統穩定。",
+    "steps": [
+      "1. 執行 `kubectl describe node <node>` 查看 Conditions（MemoryPressure、DiskPressure）",
+      "2. 執行 `kubectl get events -n <ns> --field-selector reason=Evicted` 查看驅逐原因",
+      "3. 若為磁碟壓力，清理節點上的過期映像：`kubectl describe node` 確認後清理 /var/lib/docker",
+      "4. 為重要 Pod 設定 resources.requests 與 limits，提升至 Guaranteed QoS",
+      "5. 設定 PriorityClass 保護關鍵工作負載不被驅逐",
+      "6. 考慮增加節點或使用 Cluster Autoscaler 自動擴節點"
+    ]
+  },
+  {
+    "id": "node-not-ready",
+    "title": "NodeNotReady：節點狀態不健康",
+    "reasons": ["NodeNotReady"],
+    "keywords": ["NodeNotReady", "NotReady", "node condition"],
+    "summary": "節點的 Ready Condition 為 False 或 Unknown，可能原因包括 kubelet 停止、網路中斷、系統資源耗盡或雲端節點異常。",
+    "steps": [
+      "1. 執行 `kubectl describe node <node>` 查看 Conditions 與 Events",
+      "2. SSH 登入節點，確認 kubelet 服務狀態：`systemctl status kubelet`",
+      "3. 查看 kubelet 日誌：`journalctl -u kubelet -n 100`",
+      "4. 確認節點磁碟、記憶體未滿：`df -h`、`free -h`",
+      "5. 確認容器 Runtime（containerd/Docker）正常運行",
+      "6. 若節點無法恢復，執行 `kubectl drain <node> --ignore-daemonsets` 後重建節點"
+    ]
+  },
+  {
+    "id": "pvc-pending",
+    "title": "PVCPending：PersistentVolumeClaim 卡在 Pending",
+    "reasons": ["ProvisioningFailed", "FailedBinding"],
+    "keywords": ["PVCPending", "Pending", "PVC", "PersistentVolumeClaim", "StorageClass", "ProvisioningFailed"],
+    "summary": "PVC 無法綁定到 PV，常見原因為沒有匹配的 StorageClass、Storage Provisioner 未運行或 PV 資源不足。",
+    "steps": [
+      "1. 執行 `kubectl describe pvc <pvc-name> -n <ns>` 查看詳細錯誤事件",
+      "2. 確認 PVC 中的 storageClassName 與實際可用 StorageClass 一致",
+      "3. 若使用動態 Provisioner（如 aws-ebs-csi-driver），確認 CSI Driver Pod 正常運行",
+      "4. 執行 `kubectl get storageclass` 確認 StorageClass 存在且有 Provisioner",
+      "5. 若手動建立 PV，確認 accessModes、storage capacity 與 PVC 需求相符",
+      "6. 檢查 Cloud Provider 配額（EBS volume 數量、EFS 容量等）是否已用盡"
+    ]
+  },
+  {
+    "id": "cpu-throttling",
+    "title": "CPU Throttling：CPU 持續被限速",
+    "reasons": [],
+    "keywords": ["CPUThrottling", "cpu throttling", "Throttled", "cpu limit"],
+    "summary": "容器的 CPU 使用率持續觸及 resources.limits.cpu，導致 Linux CFS 排程器對其限速，影響應用效能與延遲。",
+    "steps": [
+      "1. 查看 Prometheus 指標 `container_cpu_cfs_throttled_seconds_total` 確認 throttle 比例",
+      "2. 執行 `kubectl top pod <pod>` 觀察實際 CPU 用量趨勢",
+      "3. 適當增加 resources.limits.cpu（建議先增加 50%）",
+      "4. 若只設定 requests 未設 limits，Pod 可使用節點空閒 CPU，但也可能被其他高 requests Pod 壓縮",
+      "5. 對於 CPU 密集型任務，考慮調整應用的並發線程數以匹配 CPU limits",
+      "6. 使用 HPA（Horizontal Pod Autoscaler）以 CPU 使用率觸發橫向擴展"
+    ]
+  },
+  {
+    "id": "failed-scheduling",
+    "title": "FailedScheduling：Pod 無法被排程到節點",
+    "reasons": ["FailedScheduling"],
+    "keywords": ["FailedScheduling", "Unschedulable", "Insufficient", "taint", "affinity"],
+    "summary": "Kubernetes 排程器找不到滿足 Pod 需求的節點，常見原因包括資源不足、Taint 未容忍、Node Affinity 衝突。",
+    "steps": [
+      "1. 執行 `kubectl describe pod <pod> -n <ns>` 查看 Events 中的排程失敗原因",
+      "2. 若顯示 Insufficient cpu/memory，執行 `kubectl describe nodes` 確認可用資源",
+      "3. 若顯示 node(s) had taints，確認 Pod 的 tolerations 包含節點 taint",
+      "4. 若設定了 nodeSelector 或 nodeAffinity，確認有匹配條件的節點存在",
+      "5. 確認 Pod 請求的 StorageClass 在目標節點 Zone 可用（多可用區叢集問題）",
+      "6. 若叢集資源確實不足，考慮增加節點或降低 Pod 的 resources.requests"
+    ]
+  },
+  {
+    "id": "disk-pressure",
+    "title": "DiskPressure：節點磁碟壓力",
+    "reasons": ["DiskPressure"],
+    "keywords": ["DiskPressure", "disk pressure", "disk full", "imagefs"],
+    "summary": "節點磁碟（特別是 /var/lib/kubelet 或 /var/lib/docker）使用率超過閾值，Kubelet 觸發資源回收並停止調度新 Pod。",
+    "steps": [
+      "1. SSH 登入節點執行 `df -h` 確認哪個分區滿了",
+      "2. 清理未使用的容器映像：`crictl rmi --prune` 或 `docker image prune -a`",
+      "3. 清理已停止的容器：`crictl rm $(crictl ps -a -q --state exited)`",
+      "4. 檢查 `/var/log` 是否有大型日誌檔案",
+      "5. 調整 kubelet 的 `evictionHard` 與 `imageGCHighThresholdPercent` 設定",
+      "6. 考慮增加節點磁碟容量或將日誌輸出改為外部儲存（如 ELK/Loki）"
+    ]
+  },
+  {
+    "id": "network-policy-blocked",
+    "title": "NetworkPolicy 阻擋：連線被網路策略拒絕",
+    "reasons": [],
+    "keywords": ["NetworkPolicy", "network policy", "blocked", "denied", "connection refused", "timeout"],
+    "summary": "Pod 之間的流量被 NetworkPolicy 規則阻擋，導致連線逾時或被拒絕，常見於剛啟用 NetworkPolicy 或設定有誤的環境。",
+    "steps": [
+      "1. 執行 `kubectl get networkpolicies -n <ns>` 確認命名空間中的策略",
+      "2. 確認 podSelector 是否正確選中目標 Pod（注意 label 大小寫）",
+      "3. 確認 Ingress/Egress 方向設定正確（連線發起方需有 egress，接收方需有 ingress）",
+      "4. 使用 `kubectl exec <pod> -- nc -zv <target-svc> <port>` 測試連通性",
+      "5. 若啟用 Cilium/Calico，查看對應 CNI 的 policy audit log",
+      "6. 臨時解決：加入允許規則 `podSelector: {}` 開放全部，縮小範圍後再收緊"
+    ]
+  }
+]

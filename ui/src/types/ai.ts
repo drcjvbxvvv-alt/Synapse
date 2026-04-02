@@ -56,4 +56,21 @@ export interface DisplayMessage {
   toolResults?: { name: string; result: string }[];
   loading?: boolean;
   timestamp: number;
+  runbooks?: Runbook[];
+}
+
+export interface Runbook {
+  id: string;
+  title: string;
+  reasons: string[];
+  keywords: string[];
+  summary: string;
+  steps: string[];
+}
+
+export interface NLQueryResult {
+  question: string;
+  tool_used: string;
+  result: unknown;
+  summary: string;
 }

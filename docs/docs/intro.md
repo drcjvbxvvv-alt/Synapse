@@ -3,11 +3,11 @@ sidebar_position: 1
 slug: /
 ---
 
-# 欢迎使用 KubePolaris
+# 欢迎使用 Synapse
 
-**KubePolaris**（北辰）是一个开源的企业级 Kubernetes 多集群管理平台，致力于简化 Kubernetes 的日常运维和管理工作，让团队能够更专注于业务创新。
+**Synapse**（北辰）是一个开源的企业级 Kubernetes 多集群管理平台，致力于简化 Kubernetes 的日常运维和管理工作，让团队能够更专注于业务创新。
 
-> 「北辰」取自《论语》：「为政以德，譬如北辰，居其所而众星共之。」寓意 KubePolaris 作为 Kubernetes 集群管理的核心枢纽，统一管理、协调各个集群。
+> 「北辰」取自《论语》：「为政以德，譬如北辰，居其所而众星共之。」寓意 Synapse 作为 Kubernetes 集群管理的核心枢纽，统一管理、协调各个集群。
 
 ## ✨ 核心特性
 
@@ -61,7 +61,7 @@ slug: /
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                     KubePolaris Backend                      │
+│                     Synapse Backend                      │
 │                      (Go + Gin + GORM)                       │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────────┐ │
 │  │  Auth   │  │  API    │  │ WebSock │  │    Services     │ │
@@ -83,8 +83,8 @@ slug: /
 
 ```bash
 # 克隆仓库
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd synapse
 
 # 启动服务
 docker-compose up -d
@@ -96,11 +96,11 @@ docker-compose up -d
 
 ```bash
 # 添加 Helm 仓库
-helm repo add kubepolaris https://clay-wangzhi.github.io/KubePolaris
+helm repo add synapse https://clay-wangzhi.github.io/Synapse
 
 # 安装
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris --create-namespace
+helm install synapse synapse/synapse \
+  -n synapse --create-namespace
 ```
 
 详细安装说明请查看 [安装指南](./getting-started/installation)。
@@ -124,15 +124,15 @@ helm install kubepolaris kubepolaris/kubepolaris \
 - 📝 完善文档
 - 🔧 提交代码 PR
 
-请查看 [贡献指南](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md) 了解详情。
+请查看 [贡献指南](https://github.com/clay-wangzhi/Synapse/blob/main/CONTRIBUTING.md) 了解详情。
 
 ## 📄 开源协议
 
-KubePolaris 采用 [Apache License 2.0](https://github.com/clay-wangzhi/KubePolaris/blob/main/LICENSE) 开源协议。
+Synapse 采用 [Apache License 2.0](https://github.com/clay-wangzhi/Synapse/blob/main/LICENSE) 开源协议。
 
 ## 🌟 Star History
 
-如果 KubePolaris 对你有帮助，请给我们一个 Star ⭐️
+如果 Synapse 对你有帮助，请给我们一个 Star ⭐️
 
-[![Star History Chart](https://api.star-history.com/svg?repos=clay-wangzhi/KubePolaris&type=Date)](https://star-history.com/#clay-wangzhi/KubePolaris&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=clay-wangzhi/Synapse&type=Date)](https://star-history.com/#clay-wangzhi/Synapse&Date)
 

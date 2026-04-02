@@ -807,28 +807,28 @@ const [loading, setLoading] = useState(false);
             <Col span={8}>
               <Card size="small" title="ClusterRole" styles={{ body: { padding: 12 } }}>
                 <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12 }}>
-                  <li>kubepolaris-cluster-admin</li>
-                  <li>kubepolaris-ops</li>
-                  <li>kubepolaris-dev</li>
-                  <li>kubepolaris-readonly</li>
+                  <li>synapse-cluster-admin</li>
+                  <li>synapse-ops</li>
+                  <li>synapse-dev</li>
+                  <li>synapse-readonly</li>
                 </ul>
               </Card>
             </Col>
             <Col span={8}>
               <Card size="small" title="ServiceAccount" styles={{ body: { padding: 12 } }}>
                 <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12 }}>
-                  <li>kubepolaris-admin-sa</li>
-                  <li>kubepolaris-ops-sa</li>
-                  <li>kubepolaris-dev-sa</li>
-                  <li>kubepolaris-readonly-sa</li>
+                  <li>synapse-admin-sa</li>
+                  <li>synapse-ops-sa</li>
+                  <li>synapse-dev-sa</li>
+                  <li>synapse-readonly-sa</li>
                 </ul>
               </Card>
             </Col>
             <Col span={8}>
               <Card size="small" title="ClusterRoleBinding" styles={{ body: { padding: 12 } }}>
                 <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12 }}>
-                  <li>kubepolaris-admin-binding</li>
-                  <li>kubepolaris-ops-binding</li>
+                  <li>synapse-admin-binding</li>
+                  <li>synapse-ops-binding</li>
                 </ul>
               </Card>
             </Col>

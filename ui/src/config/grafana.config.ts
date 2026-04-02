@@ -4,7 +4,7 @@
 export const GRAFANA_CONFIG = {
   cluster: {
     // 使用项目自带的集群概览 Dashboard
-    dashboardUid: 'kubepolaris-cluster-overview',
+    dashboardUid: 'synapse-cluster-overview',
     panels: {
       // 集群资源总量
       cpuTotal: 85,
@@ -62,7 +62,7 @@ export const GRAFANA_CONFIG = {
   },
   // 工作负载详情监控 Dashboard 配置
   workloadDetail: {
-    dashboardUid: 'kubepolaris-workload-detail',
+    dashboardUid: 'synapse-workload-detail',
     panels: {
       // 资源使用
       cpuUsage: 2,              // CPU 使用率
@@ -92,7 +92,7 @@ export const GRAFANA_CONFIG = {
   },
   // Pod 详情监控 Dashboard 配置（按容器维度展示）
   podDetail: {
-    dashboardUid: 'kubepolaris-pod-detail',
+    dashboardUid: 'synapse-pod-detail',
     panels: {
       // 资源使用（按容器）
       cpuUsage: 2,              // CPU 使用率 (按容器)

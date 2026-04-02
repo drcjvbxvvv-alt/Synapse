@@ -1,4 +1,4 @@
-module github.com/clay-wangzhi/KubePolaris
+module github.com/clay-wangzhi/Synapse
 
 go 1.25.0
 

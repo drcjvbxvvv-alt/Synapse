@@ -3,19 +3,19 @@ import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'KubePolaris',
+  title: 'Synapse',
   tagline: '企业级 Kubernetes 多集群管理平台',
   favicon: 'img/favicon.ico',
 
   // 生产环境 URL，用于生成 sitemap 和规范 URL
   // 可更改为你的自定义域名
-  url: 'http://kubepolaris.clay-wangzhi.com',
+  url: 'http://synapse.clay-wangzhi.com',
   // GitHub Pages 部署路径，如果是自定义域名可以设为 '/'
   baseUrl: '/',
 
   // GitHub Pages 部署配置
-  organizationName: 'kubepolaris', // GitHub 组织/用户名
-  projectName: 'kubepolaris', // 仓库名
+  organizationName: 'synapse', // GitHub 组织/用户名
+  projectName: 'synapse', // 仓库名
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
@@ -41,7 +41,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/clay-wangzhi/KubePolaris/tree/main/docs/',
+          editUrl: 'https://github.com/clay-wangzhi/Synapse/tree/main/docs/',
           showLastUpdateTime: true,
           showLastUpdateAuthor: true,
         },
@@ -56,21 +56,21 @@ const config: Config = {
 
   themeConfig: {
     // 社交卡片图片
-    image: 'img/kubepolaris-social-card.png',
+    image: 'img/synapse-social-card.png',
     
     // 公告栏
     announcementBar: {
       id: 'support_us',
-      content: '⭐️ 如果你觉得 KubePolaris 有帮助，请在 <a target="_blank" rel="noopener noreferrer" href="https://github.com/clay-wangzhi/KubePolaris">GitHub</a> 上给我们一个 Star！',
+      content: '⭐️ 如果你觉得 Synapse 有帮助，请在 <a target="_blank" rel="noopener noreferrer" href="https://github.com/clay-wangzhi/Synapse">GitHub</a> 上给我们一个 Star！',
       backgroundColor: '#1890ff',
       textColor: '#ffffff',
       isCloseable: true,
     },
 
     navbar: {
-      title: 'KubePolaris',
+      title: 'Synapse',
       logo: {
-        alt: 'KubePolaris Logo',
+        alt: 'Synapse Logo',
         src: 'img/logo.svg',
         srcDark: 'img/logo-dark.svg',
       },
@@ -104,7 +104,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/clay-wangzhi/KubePolaris',
+          href: 'https://github.com/clay-wangzhi/Synapse',
           position: 'right',
           className: 'header-github-link',
           'aria-label': 'GitHub repository',
@@ -137,11 +137,11 @@ const config: Config = {
           items: [
             {
               label: 'GitHub Discussions',
-              href: 'https://github.com/clay-wangzhi/KubePolaris/discussions',
+              href: 'https://github.com/clay-wangzhi/Synapse/discussions',
             },
             {
               label: 'Slack',
-              href: 'https://kubepolaris.slack.com',
+              href: 'https://synapse.slack.com',
             },
           ],
         },
@@ -150,16 +150,16 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/clay-wangzhi/KubePolaris',
+              href: 'https://github.com/clay-wangzhi/Synapse',
             },
             {
               label: '发布日志',
-              href: 'https://github.com/clay-wangzhi/KubePolaris/releases',
+              href: 'https://github.com/clay-wangzhi/Synapse/releases',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} KubePolaris. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Synapse. Built with Docusaurus.`,
     },
 
     prism: {
@@ -172,7 +172,7 @@ const config: Config = {
     // algolia: {
     //   appId: 'YOUR_APP_ID',
     //   apiKey: 'YOUR_SEARCH_API_KEY',
-    //   indexName: 'kubepolaris',
+    //   indexName: 'synapse',
     //   contextualSearch: true,
     // },
 

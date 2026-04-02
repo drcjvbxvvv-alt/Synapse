@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/Synapse/internal/models"
 )
 
 // SetMonitoringAuth 为 HTTP 请求设置监控系统认证（Prometheus/AlertManager 共用）

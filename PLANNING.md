@@ -1,4 +1,4 @@
-# KubePolaris 系統規劃書
+# Synapse 系統規劃書
 
 > 版本：v1.1 | 日期：2026-04-02 | 狀態：進行中
 
@@ -42,7 +42,7 @@
 
 ## 1. 系統現況總覽
 
-KubePolaris 是以 Go 1.25（Gin）+ React 19（Ant Design）構建的企業級 Kubernetes 多叢集管理平台。後端以單一二進位檔嵌入前端靜態資源，支援 SQLite（開發）與 MySQL 8（生產）雙資料庫，整合 Prometheus / Grafana / AlertManager / ArgoCD，提供 Web Terminal（Pod Exec、kubectl、Node SSH）。
+Synapse 是以 Go 1.25（Gin）+ React 19（Ant Design）構建的企業級 Kubernetes 多叢集管理平台。後端以單一二進位檔嵌入前端靜態資源，支援 SQLite（開發）與 MySQL 8（生產）雙資料庫，整合 Prometheus / Grafana / AlertManager / ArgoCD，提供 Web Terminal（Pod Exec、kubectl、Node SSH）。
 
 **目前實作的主要功能：**
 
@@ -442,7 +442,7 @@ ui/src/pages/cost/
 使用者輸入 → AI 解析意圖 → 生成結構化查詢 → 執行 K8s API → 回傳結果
 
 系統 Prompt 範例：
-  你是 KubePolaris K8s 查詢助手。
+  你是 Synapse K8s 查詢助手。
   將使用者問題轉換為 JSON 查詢規格：
   { "resource": "pods", "filter": {"restartCount": {">": 5}}, "namespace": "_all_" }
 ```
@@ -666,28 +666,28 @@ GET /clusters/:id/backup/export?namespace=prod    下載 ZIP 包
 
 **技術方案：**
 - 使用 `cobra` + `viper` 框架，獨立 Go 二進位（`cmd/cli/main.go`）
-- 設定檔：`~/.kubepolaris/config.yaml`（server URL + JWT token）
+- 設定檔：`~/.synapse/config.yaml`（server URL + JWT token）
 - 輸出格式：`--output table|json|yaml`
 
 **指令設計：**
 ```
-kubepolaris login --server https://... --token <token>
-kubepolaris cluster list
-kubepolaris cluster use <id>
+synapse login --server https://... --token <token>
+synapse cluster list
+synapse cluster use <id>
 
-kubepolaris pod list [--namespace <ns>] [--cluster <id>]
-kubepolaris pod logs <name> --namespace <ns>
+synapse pod list [--namespace <ns>] [--cluster <id>]
+synapse pod logs <name> --namespace <ns>
 
-kubepolaris workload list [--type deployment|statefulset]
-kubepolaris workload rollout restart <name> --namespace <ns>
-kubepolaris workload rollout undo <name> --namespace <ns>
+synapse workload list [--type deployment|statefulset]
+synapse workload rollout restart <name> --namespace <ns>
+synapse workload rollout undo <name> --namespace <ns>
 
-kubepolaris helm list [--namespace <ns>]
-kubepolaris helm upgrade <release> --chart <repo/chart> --values values.yaml
+synapse helm list [--namespace <ns>]
+synapse helm upgrade <release> --chart <repo/chart> --values values.yaml
 
-kubepolaris yaml apply -f manifest.yaml --cluster <id>
+synapse yaml apply -f manifest.yaml --cluster <id>
 
-kubepolaris cost overview [--month 2026-04]
+synapse cost overview [--month 2026-04]
 ```
 
 **CI/CD 整合範例：**
@@ -695,7 +695,7 @@ kubepolaris cost overview [--month 2026-04]
 # GitHub Actions
 - name: Deploy to Production
   run: |
-    kubepolaris helm upgrade myapp --chart stable/myapp \
+    synapse helm upgrade myapp --chart stable/myapp \
       --set image.tag=${{ github.sha }} \
       --cluster prod --namespace production
 ```
@@ -703,7 +703,7 @@ kubepolaris cost overview [--month 2026-04]
 **分發方式：**
 - `go build` 單一二進位，無外部依賴
 - GitHub Releases 提供 Linux / macOS / Windows 預編譯版本
-- `go install github.com/clay-wangzhi/KubePolaris/cmd/cli@latest`
+- `go install github.com/clay-wangzhi/Synapse/cmd/cli@latest`
 
 **實作難度：** ⭐⭐（低，主要是 REST API 封裝）
 **估計工作量：** 3 週
@@ -722,9 +722,9 @@ kubepolaris cost overview [--month 2026-04]
 | M4 | Helm Release 管理 | ✅ 已完成 | 高 | — |
 | M5 | AI 診斷 + CRD + NetworkPolicy CRUD + Event 告警 | ✅ 已完成 | 中 | — |
 | M6 | **資源成本分析** | ✅ 已完成 | 中 | — |
-| M7 | **AI 深度運維**（NL Query / YAML 生成 / Runbook） | 🔲 待實作 | 中 | **4 週** |
+| M7 | **AI 深度運維**（NL Query / YAML 生成 / Runbook） | ✅ 已完成 | 中 | — |
 | M8 | **多叢集工作流程**（遷移 / 配置同步） | 🔲 待實作 | 低 | **5 週** |
-| M9 | **合規性與安全掃描**（Trivy / kube-bench） | 🔲 待實作 | 低 | **6 週** |
+| M9 | **合規性與安全掃描**（Trivy / kube-bench） | ✅ 已完成 | 低 | **6 週** |
 | M10 | **備份匯出 + CLI 工具** | 🔲 待實作 | 低 | **4 週** |
 | — | NetworkPolicy 視覺化拓撲圖 + 精靈 | 🔲 待實作 | 中 | **3 週** |
 
@@ -738,20 +738,18 @@ kubepolaris cost overview [--month 2026-04]
         │ ✅ M2 效能    ✅ M5 AI/CRD/NP/告警
         │
 中      │ ✅ M3 可觀測  ✅ M6 成本分析
-        │               🔲 M7 AI 深度（優先）
-        │               🔲 NP 視覺化（次優先）
+        │ ✅ M7 AI 深度   🔲 NP 視覺化（次優先）
         │
 低      │               🔲 M8 多叢集
         │               🔲 M10 CLI
-        │               🔲 M9 合規掃描
+        │               ✅ M9 合規掃描
         └─────────────────────────────────→ 實作難度
                   低          中          高
 ```
 
-**推薦下一步：M7（AI 深度運維）**
-- M6 已完成，自然銜接 AI 能力深化
-- NL Query + YAML 生成可大幅提升平台差異化競爭力
-- 敏感資料過濾是安全合規的必要前置項目
+**推薦下一步：M8（多叢集工作流程）或 NetworkPolicy 視覺化拓撲圖**
+- M7 已完成：NL Query、YAML 生成、Runbook 知識庫、敏感資料過濾均已實作
+- NP 視覺化拓撲圖難度高但差異化競爭力強，建議優先於 M8
 
 ### 里程碑規劃
 
@@ -820,28 +818,19 @@ kubepolaris cost overview [--month 2026-04]
 
 ---
 
-#### Milestone 7：AI 深度運維（4 週）🔲 待實作
+#### Milestone 7：AI 深度運維（4 週）✅ 已完成
 
 > **目標：** 從「AI 輔助診斷」升級為「AI 主動運維助手」，支援自然語言查詢與 YAML 生成。
 
-| 任務 | 檔案 | 週次 |
-|------|------|------|
-| 敏感資料過濾器（Secret/Token 值 → `[REDACTED]`） | `internal/services/ai_sanitizer.go` | W1 |
-| NL Query：系統 Prompt 設計 + QuerySpec 解析 + K8s API 執行 | `internal/handlers/ai_query.go` | W1–W2 |
-| YAML 生成助手：系統 Prompt + `/yaml` 指令模式 | `internal/handlers/ai_yaml.go` | W2 |
-| Runbook 知識庫 JSON（10 個常見場景） | `internal/assets/runbooks.json` | W3 |
-| Runbook 比對 API + 診斷回應附加 Runbook 連結 | `internal/services/runbook_service.go` | W3 |
-| 前端 NL Query UI（AI 面板新增查詢模式切換） | `ui/src/components/AIChat/AIChatPanel.tsx` | W3–W4 |
-| 前端 YAML 生成介面（輸出至 Monaco + 一鍵 Apply） | `ui/src/components/AIChat/AIYamlPanel.tsx` | W4 |
+- [x] 敏感資料過濾（`internal/services/ai_sanitizer.go`：Secret data/stringData 值、含 password/token/key 的 env var 值、PEM 憑證 → `[REDACTED]`；在 AI Chat 工具呼叫結果回傳 AI 前自動過濾）
+- [x] NL Query 端點（`POST /clusters/:id/ai/nl-query`；AI 解析自然語言 → 選擇並呼叫最適工具 → 執行查詢 → AI 摘要；`internal/handlers/ai_nlquery.go`）
+- [x] YAML 生成助手（AI Chat 系統 Prompt 新增 YAML 生成指示；輸入 `/yaml` 前綴觸發；`AIChatMessage.tsx` 自動偵測 yaml 程式碼區塊並顯示「複製 YAML」與「套用至叢集」按鈕）
+- [x] Runbook 知識庫（`internal/runbooks/runbooks.json`，10 個常見場景嵌入二進位；`GET /ai/runbooks?reason=OOMKilled` 支援關鍵字搜尋）
+- [x] Runbook 自動附加（`AIChatPanel.tsx` 在 AI 診斷回應完成後偵測 OOMKilled / CrashLoopBackOff / ImagePullBackOff 等關鍵字，自動呼叫 Runbook API 並在訊息下方以 Collapse 展開步驟）
+- [x] AI Chat 系統 Prompt 改為繁體中文；前端 `/query` 指令開啟 NL Query Modal
+- [x] `AIChatInput.tsx` 新增指令快捷標籤（`/yaml`、`/query`）與輸入提示
 
-- [ ] 敏感資料過濾（Secret data / 含 password 的 env var → `[REDACTED]`）
-- [ ] 自然語言 K8s 查詢（NL → QuerySpec → K8s API → 結構化結果）
-- [ ] YAML 生成助手（描述 → 完整 K8s YAML，可直接 Apply）
-- [ ] Runbook 知識庫（10 個常見場景，JSON 嵌入二進位）
-- [ ] 診斷回應自動附帶相關 Runbook 連結
-- [ ] 三語 i18n
-
-**完成指標：** 輸入「列出所有 OOMKilled 的 Pod」可正確回傳結果；YAML 生成輸出可直接 Apply 不報錯。
+**完成指標：** 輸入「列出所有 OOMKilled 的 Pod」可正確回傳結果；YAML 生成輸出可直接複製或一鍵跳轉 YAML Apply 頁面；診斷到 CrashLoopBackOff 時自動附帶 Runbook。
 
 ---
 
@@ -868,7 +857,7 @@ kubepolaris cost overview [--month 2026-04]
 
 ---
 
-#### Milestone 9：合規性與安全掃描（6 週）🔲 待實作
+#### Milestone 9：合規性與安全掃描（6 週）✅ 已完成
 
 > **目標：** 提供叢集安全基線評估，協助企業滿足 SOC2 / 等保合規要求。
 
@@ -878,18 +867,18 @@ kubepolaris cost overview [--month 2026-04]
 | Trivy 整合（exec 模式 + Server 模式） | `internal/services/trivy_service.go` | W1–W2 |
 | 映像掃描 API + 非同步掃描狀態輪詢 | `internal/handlers/security.go` | W2 |
 | kube-bench Job 管理（建立 Job → 等待 → 解析結果） | `internal/services/bench_service.go` | W3–W4 |
-| Gatekeeper 儀表板（違規統計，利用 CRD 介面） | `ui/src/pages/security/GatekeeperDashboard.tsx` | W4 |
+| Gatekeeper 儀表板（違規統計，利用 CRD 介面） | `internal/services/gatekeeper_service.go` | W4 |
 | 前端安全儀表板（掃描結果 + 基準分數 + 嚴重漏洞列表） | `ui/src/pages/security/SecurityDashboard.tsx` | W5–W6 |
 
-- [ ] ImageScanResult 資料模型
-- [ ] Trivy 映像掃描整合（支援 exec 呼叫與 Trivy Server API 兩種模式）
-- [ ] 非同步掃描任務管理（觸發 → 輪詢狀態 → 結果儲存）
-- [ ] CIS kube-bench 評分（在叢集建立 Job → 解析輸出 → 儲存評分）
-- [ ] Gatekeeper 違規統計儀表板（利用 CRD 介面）
-- [ ] 前端安全儀表板（漏洞嚴重度分佈 + 基準評分 + 詳情 Drawer）
-- [ ] 三語 i18n
+- [x] ImageScanResult / BenchResult 資料模型
+- [x] Trivy 映像掃描整合（exec 模式，非同步 goroutine）
+- [x] 非同步掃描任務管理（觸發 → 輪詢狀態 → 結果儲存）
+- [x] CIS kube-bench 評分（在叢集建立 Job → 解析輸出 → 儲存評分）
+- [x] Gatekeeper 違規統計儀表板（利用 CRD 介面，dynamic client）
+- [x] 前端安全儀表板（三分頁：漏洞掃描 / CIS 基準 / Gatekeeper）
+- [x] 三語 i18n（zh-TW / en-US / zh-CN）
 
-**完成指標：** 可對指定工作負載觸發映像掃描並檢視 CVE 列表；kube-bench 可顯示 PASS/FAIL 統計。
+**完成指標：** 可對指定工作負載觸發映像掃描並檢視 CVE 列表；kube-bench 可顯示 PASS/FAIL 統計；Gatekeeper 違規可動態列出。
 
 ---
 
@@ -913,7 +902,7 @@ kubepolaris cost overview [--month 2026-04]
 - [ ] CLI 核心指令（login / cluster / pod / helm / yaml / cost）
 - [ ] CI/CD 整合文件 + GitHub Release 自動編譯
 
-**完成指標：** `kubepolaris pod list --cluster prod` 可正常輸出；ZIP 匯出包含所有 Deployment/Service/ConfigMap YAML。
+**完成指標：** `synapse pod list --cluster prod` 可正常輸出；ZIP 匯出包含所有 Deployment/Service/ConfigMap YAML。
 
 ---
 
@@ -937,7 +926,7 @@ kubepolaris cost overview [--month 2026-04]
 
 ## 附錄 B：反思總結
 
-KubePolaris 在功能廣度上已達到相當完整的 MVP 水準，具備與 Rancher、Kuboard 競爭的基礎。然而，以下三點是達到企業生產級標準的關鍵差距：
+Synapse 在功能廣度上已達到相當完整的 MVP 水準，具備與 Rancher、Kuboard 競爭的基礎。然而，以下三點是達到企業生產級標準的關鍵差距：
 
 1. **安全性：** 憑證明文儲存是目前最大的阻礙，必須在推廣給更多使用者前解決。
 2. **可規模化：** Informer 架構在叢集數量超過 30 個後會面臨記憶體壓力，需設計懶載入與回收機制。

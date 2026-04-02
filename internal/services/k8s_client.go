@@ -9,7 +9,7 @@ import (
 	"time"
 
 	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/Synapse/internal/models"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"

@@ -1,7 +1,7 @@
 # ============================================================================
-# KubePolaris Helm Chart - Default Values
+# Synapse Helm Chart - Default Values
 # ============================================================================
-# 完整配置参考: https://kubepolaris.clay-wangzhi.com/docs/installation/kubernetes
+# 完整配置参考: https://synapse.clay-wangzhi.com/docs/installation/kubernetes
 # ============================================================================
 
 # ============== 全局配置 ==============
@@ -25,7 +25,7 @@ backend:
   replicaCount: 2
   
   image:
-    repository: kubepolaris-backend
+    repository: synapse-backend
     tag: "latest"
     pullPolicy: IfNotPresent
   
@@ -117,7 +117,7 @@ frontend:
   replicaCount: 2
   
   image:
-    repository: kubepolaris-frontend
+    repository: synapse-frontend
     tag: "latest"
     pullPolicy: IfNotPresent
   
@@ -208,8 +208,8 @@ mysql:
     rootPassword: ""
     
     # MySQL 数据库配置
-    database: kubepolaris
-    username: kubepolaris
+    database: synapse
+    username: synapse
     password: ""
     
     # 使用已有的 Secret
@@ -236,8 +236,8 @@ mysql:
     enabled: false
     host: ""
     port: 3306
-    database: kubepolaris
-    username: kubepolaris
+    database: synapse
+    username: synapse
     password: ""
     existingSecret: ""
     existingSecretPasswordKey: "password"
@@ -254,7 +254,7 @@ ingress:
     # nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
   
   hosts:
-    - host: kubepolaris.local
+    - host: synapse.local
       paths:
         - path: /
           pathType: Prefix
@@ -264,9 +264,9 @@ ingress:
           backend: backend
   
   tls: []
-  # - secretName: kubepolaris-tls
+  # - secretName: synapse-tls
   #   hosts:
-  #     - kubepolaris.local
+  #     - synapse.local
 
 # ============== Grafana 配置 ==============
 grafana:
@@ -442,7 +442,7 @@ init:
   # 默认管理员账号
   admin:
     username: admin
-    password: "KubePolaris@2026"
+    password: "Synapse@2026"
     email: admin@example.com
 
 # ============== 配置文件 ==============

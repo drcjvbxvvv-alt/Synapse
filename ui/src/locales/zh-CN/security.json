@@ -1,0 +1,78 @@
+{
+  "title": "安全扫描",
+  "tabs": {
+    "imageScan": "镜像漏洞扫描",
+    "bench": "CIS 基准测试",
+    "gatekeeper": "OPA/Gatekeeper 违规"
+  },
+  "scan": {
+    "trigger": "触发扫描",
+    "triggerAll": "扫描所有镜像",
+    "image": "镜像",
+    "pod": "Pod",
+    "container": "容器",
+    "namespace": "命名空间",
+    "status": "状态",
+    "critical": "严重",
+    "high": "高",
+    "medium": "中",
+    "low": "低",
+    "unknown": "未知",
+    "scannedAt": "扫描时间",
+    "viewDetail": "查看详情",
+    "pending": "待扫描",
+    "scanning": "扫描中",
+    "completed": "已完成",
+    "failed": "失败",
+    "triggerSuccess": "扫描已触发",
+    "noData": "暂无扫描记录，请点击「扫描所有镜像」开始",
+    "inputImage": "请输入镜像名称（如：nginx:latest）",
+    "imagePlaceholder": "nginx:latest",
+    "detail": {
+      "title": "漏洞详情",
+      "vulnId": "漏洞 ID",
+      "package": "软件包",
+      "installedVersion": "当前版本",
+      "fixedVersion": "修复版本",
+      "severity": "严重程度",
+      "description": "说明"
+    }
+  },
+  "bench": {
+    "trigger": "执行基准测试",
+    "runAt": "执行时间",
+    "status": "状态",
+    "score": "合规分数",
+    "pass": "通过",
+    "fail": "失败",
+    "warn": "警告",
+    "info": "信息",
+    "viewDetail": "查看详情",
+    "pending": "待执行",
+    "running": "执行中",
+    "completed": "已完成",
+    "failed": "失败",
+    "triggerSuccess": "基准测试已触发，请稍候…",
+    "noData": "暂无基准测试记录",
+    "detail": {
+      "title": "基准测试详情",
+      "section": "检查项目",
+      "testNumber": "测试编号",
+      "description": "说明",
+      "result": "结果",
+      "remediation": "修复建议"
+    }
+  },
+  "gatekeeper": {
+    "refresh": "刷新",
+    "totalViolations": "违规总数",
+    "constraintKind": "约束类型",
+    "constraintName": "约束名称",
+    "violationCount": "违规数量",
+    "resource": "资源",
+    "namespace": "命名空间",
+    "message": "消息",
+    "noData": "未发现违规，或 Gatekeeper 尚未安装",
+    "notInstalled": "Gatekeeper 未安装或无法访问"
+  }
+}

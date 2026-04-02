@@ -36,6 +36,7 @@ import {
   BranchesOutlined,
   DeploymentUnitOutlined,
   DollarOutlined,
+  SafetyOutlined,
 } from '@ant-design/icons';
 import type { MenuProps as AntMenuProps } from 'antd';
 import type { PermissionType } from '../types';
@@ -191,6 +192,7 @@ const MainLayout: React.FC = () => {
     if (path.match(/\/clusters\/[^/]+\/crds/)) return ['cluster-crds'];
     if (path.match(/\/clusters\/[^/]+\/event-alerts/)) return ['cluster-event-alerts'];
     if (path.match(/\/clusters\/[^/]+\/cost/)) return ['cluster-cost'];
+    if (path.match(/\/clusters\/[^/]+\/security/)) return ['cluster-security'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
@@ -499,6 +501,17 @@ const MainLayout: React.FC = () => {
             }
           },
         },
+        {
+          key: 'cluster-security',
+          icon: <SafetyOutlined />,
+          label: t('menu.securityScan', '安全掃描'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/security`);
+            }
+          },
+        },
       ],
     },
     {
@@ -675,7 +688,7 @@ const MainLayout: React.FC = () => {
               alt="Kubernetes" 
               style={{ width: '32px', height: '32px', marginRight: 8 }} 
             />
-            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff' }}>KubePolaris</span>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff' }}>Synapse</span>
           </div>
         </div>
 

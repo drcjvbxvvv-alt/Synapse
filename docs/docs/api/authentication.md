@@ -22,7 +22,7 @@ POST /api/auth/login
 ### 示例
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/auth/login \
+curl -X POST https://synapse.example.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -61,7 +61,7 @@ POST /api/auth/logout
 ### 示例
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/auth/logout \
+curl -X POST https://synapse.example.com/api/auth/logout \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -86,7 +86,7 @@ POST /api/auth/refresh
 ### 示例
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/auth/refresh \
+curl -X POST https://synapse.example.com/api/auth/refresh \
   -H "Authorization: Bearer <refresh-token>"
 ```
 
@@ -114,7 +114,7 @@ GET /api/auth/me
 ### 示例
 
 ```bash
-curl -X GET https://kubepolaris.example.com/api/auth/me \
+curl -X GET https://synapse.example.com/api/auth/me \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -160,7 +160,7 @@ POST /api/auth/change-password
 ### 示例
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/auth/change-password \
+curl -X POST https://synapse.example.com/api/auth/change-password \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{

@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/pkg/crypto"
+	"github.com/clay-wangzhi/Synapse/pkg/crypto"
 	"gorm.io/gorm"
 )
 

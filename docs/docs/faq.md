@@ -4,25 +4,25 @@ sidebar_position: 100
 
 # 常见问题
 
-本页面汇总 KubePolaris 使用过程中的常见问题及解答。
+本页面汇总 Synapse 使用过程中的常见问题及解答。
 
 ## 基础问题
 
-### KubePolaris 是什么？
+### Synapse 是什么？
 
-KubePolaris（北辰）是一个开源的企业级 Kubernetes 多集群管理平台，提供可视化的集群管理、工作负载管理、监控告警、Web 终端等功能。
+Synapse（北辰）是一个开源的企业级 Kubernetes 多集群管理平台，提供可视化的集群管理、工作负载管理、监控告警、Web 终端等功能。
 
-### KubePolaris 是否完全免费？
+### Synapse 是否完全免费？
 
-是的，KubePolaris 采用 Apache License 2.0 开源协议，完全免费使用，包括商业用途。
+是的，Synapse 采用 Apache License 2.0 开源协议，完全免费使用，包括商业用途。
 
 ### 支持哪些 Kubernetes 版本？
 
-KubePolaris 支持 Kubernetes 1.20 及以上版本。
+Synapse 支持 Kubernetes 1.20 及以上版本。
 
 ### 可以管理多少个集群？
 
-理论上没有限制。实际取决于部署资源，单个 KubePolaris 实例可以管理数十到数百个集群。
+理论上没有限制。实际取决于部署资源，单个 Synapse 实例可以管理数十到数百个集群。
 
 ## 安装部署
 
@@ -48,7 +48,7 @@ KubePolaris 支持 Kubernetes 1.20 及以上版本。
 
 ```bash
 helm repo update
-helm upgrade kubepolaris kubepolaris/kubepolaris -n kubepolaris
+helm upgrade synapse synapse/synapse -n synapse
 ```
 
 ## 集群管理
@@ -79,7 +79,7 @@ helm upgrade kubepolaris kubepolaris/kubepolaris -n kubepolaris
 
 ### 删除集群会影响实际集群吗？
 
-不会。删除只是从 KubePolaris 移除管理记录，不会对实际 Kubernetes 集群产生任何影响。
+不会。删除只是从 Synapse 移除管理记录，不会对实际 Kubernetes 集群产生任何影响。
 
 ## 权限管理
 
@@ -87,11 +87,11 @@ helm upgrade kubepolaris kubepolaris/kubepolaris -n kubepolaris
 
 ```bash
 # Docker
-docker exec -it kubepolaris-backend ./kubepolaris-backend reset-password --user admin --password newpass
+docker exec -it synapse-backend ./synapse-backend reset-password --user admin --password newpass
 
 # Kubernetes
-kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- \
-  ./kubepolaris-backend reset-password --user admin --password newpass
+kubectl exec -it deployment/synapse-backend -n synapse -- \
+  ./synapse-backend reset-password --user admin --password newpass
 ```
 
 ### 如何配置 LDAP 登录？
@@ -108,7 +108,7 @@ kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- \
 
 在「系统设置」→「监控配置」中填写 Prometheus 地址，如 `http://prometheus:9090`。
 
-### 如何在 KubePolaris 中嵌入 Grafana 面板？
+### 如何在 Synapse 中嵌入 Grafana 面板？
 
 1. 配置 Grafana 地址和 API Key
 2. 导入 Dashboard
@@ -116,7 +116,7 @@ kubectl exec -it deployment/kubepolaris-backend -n kubepolaris -- \
 
 ### 不配置 Prometheus 可以使用吗？
 
-可以。KubePolaris 提供基础的资源使用统计，但配置 Prometheus 后可获得更丰富的监控数据。
+可以。Synapse 提供基础的资源使用统计，但配置 Prometheus 后可获得更丰富的监控数据。
 
 ## 终端功能
 
@@ -175,20 +175,20 @@ terminal:
 
 ### 如何参与贡献？
 
-参考 [CONTRIBUTING.md](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md)。
+参考 [CONTRIBUTING.md](https://github.com/clay-wangzhi/Synapse/blob/main/CONTRIBUTING.md)。
 
 ### 如何报告 Bug？
 
-在 [GitHub Issues](https://github.com/clay-wangzhi/KubePolaris/issues) 提交，请提供详细的复现步骤和环境信息。
+在 [GitHub Issues](https://github.com/clay-wangzhi/Synapse/issues) 提交，请提供详细的复现步骤和环境信息。
 
 ### 如何获取商业支持？
 
-请联系 kubepolaris@example.com。
+请联系 synapse@example.com。
 
 ### 有官方交流群吗？
 
-- GitHub Discussions: https://github.com/clay-wangzhi/KubePolaris/discussions
-- Slack: https://kubepolaris.slack.com
+- GitHub Discussions: https://github.com/clay-wangzhi/Synapse/discussions
+- Slack: https://synapse.slack.com
 
 ## 还有其他问题？
 
@@ -196,6 +196,6 @@ terminal:
 
 1. 查阅 [用户指南](./user-guide/cluster-management)
 2. 查阅 [故障排查](./admin-guide/troubleshooting)
-3. 在 [GitHub Discussions](https://github.com/clay-wangzhi/KubePolaris/discussions) 提问
-4. 提交 [GitHub Issue](https://github.com/clay-wangzhi/KubePolaris/issues)
+3. 在 [GitHub Discussions](https://github.com/clay-wangzhi/Synapse/discussions) 提问
+4. 提交 [GitHub Issue](https://github.com/clay-wangzhi/Synapse/issues)
 

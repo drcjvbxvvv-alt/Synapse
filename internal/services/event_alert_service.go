@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -271,7 +271,7 @@ func (w *EventAlertWorker) notify(rule *models.EventAlertRule, event *corev1.Eve
 		payload = map[string]interface{}{
 			"msgtype": "text",
 			"text": map[string]string{
-				"content": fmt.Sprintf("[KubePolaris 告警] %s\n叢集: %d | 命名空間: %s | 物件: %s\n原因: %s | 次數: %d\n訊息: %s",
+				"content": fmt.Sprintf("[Synapse 告警] %s\n叢集: %d | 命名空間: %s | 物件: %s\n原因: %s | 次數: %d\n訊息: %s",
 					rule.Name, rule.ClusterID, event.Namespace, involvedObj,
 					event.Reason, event.Count, event.Message),
 			},

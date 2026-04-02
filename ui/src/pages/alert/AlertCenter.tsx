@@ -181,7 +181,7 @@ const [loading, setLoading] = useState(false);
         matchers: values.matchers || [],
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
-        createdBy: 'KubePolaris',
+        createdBy: 'Synapse',
         comment: values.comment || '',
       };
 

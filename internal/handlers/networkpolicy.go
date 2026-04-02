@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
-	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/k8s"
+	"github.com/clay-wangzhi/Synapse/internal/middleware"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	networkingv1 "k8s.io/api/networking/v1"

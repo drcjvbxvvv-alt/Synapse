@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# KubePolaris Helm Chart 快速部署脚本
+# Synapse Helm Chart 快速部署脚本
 # ============================================================================
 
 set -e
@@ -13,8 +13,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 默认值
-NAMESPACE="${NAMESPACE:-kubepolaris}"
-RELEASE_NAME="${RELEASE_NAME:-kubepolaris}"
+NAMESPACE="${NAMESPACE:-synapse}"
+RELEASE_NAME="${RELEASE_NAME:-synapse}"
 CHART_PATH="$(cd "$(dirname "$0")" && pwd)"
 
 # 日志函数
@@ -45,7 +45,7 @@ print_banner() {
     echo -e "${BLUE}║   ${GREEN}██║  ██╗╚██████╔╝██████╔╝███████╗██║     ╚██████╔╝${BLUE}   ║${NC}"
     echo -e "${BLUE}║   ${GREEN}╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝      ╚═════╝ ${BLUE}   ║${NC}"
     echo -e "${BLUE}║                                                           ║${NC}"
-    echo -e "${BLUE}║       ${NC}KubePolaris Helm Chart Quick Deploy${BLUE}                ║${NC}"
+    echo -e "${BLUE}║       ${NC}Synapse Helm Chart Quick Deploy${BLUE}                ║${NC}"
     echo -e "${BLUE}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -110,7 +110,7 @@ create_namespace() {
 
 # 部署应用
 deploy_app() {
-    log_info "部署 KubePolaris..."
+    log_info "部署 Synapse..."
     
     helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
         --namespace "$NAMESPACE" \
@@ -120,7 +120,7 @@ deploy_app() {
         --wait \
         --timeout 10m
     
-    log_success "KubePolaris 部署完成"
+    log_success "Synapse 部署完成"
 }
 
 # 等待服务就绪
@@ -150,7 +150,7 @@ show_access_info() {
     echo ""
     echo -e "${BLUE}默认登录信息:${NC}"
     echo "  用户名: admin"
-    echo "  密码: KubePolaris@2026"
+    echo "  密码: Synapse@2026"
     echo ""
     echo -e "${YELLOW}⚠️  首次登录后请立即修改默认密码！${NC}"
     echo ""

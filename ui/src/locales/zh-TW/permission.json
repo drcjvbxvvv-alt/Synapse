@@ -76,8 +76,8 @@
     "namespacePlaceholder": "輸入命名空間名稱（支援萬用字元，如 app-*）"
   },
   "sync": {
-    "title": "同步 KubePolaris 權限資源",
-    "description": "同步將在目標叢集中建立 KubePolaris 所需的 RBAC 資源（ClusterRole、ServiceAccount、ClusterRoleBinding），以支援不同權限類型的 kubectl 終端機存取。",
+    "title": "同步 Synapse 權限資源",
+    "description": "同步將在目標叢集中建立 Synapse 所需的 RBAC 資源（ClusterRole、ServiceAccount、ClusterRoleBinding），以支援不同權限類型的 kubectl 終端機存取。",
     "clusterName": "叢集名稱",
     "syncStatus": "同步狀態",
     "notChecked": "未檢查",
@@ -92,5 +92,149 @@
   "loadError": "載入資料失敗",
   "pagination": {
     "total": "共 {{total}} 筆"
+  },
+  "user": {
+    "title": "使用者管理",
+    "createUser": "建立使用者",
+    "editUser": "編輯使用者",
+    "searchPlaceholder": "搜尋使用者名稱、顯示名稱、郵箱",
+    "statusFilter": "狀態",
+    "authTypeFilter": "認證方式",
+    "refresh": "重新整理",
+    "columns": {
+      "username": "使用者名稱",
+      "displayName": "顯示名稱",
+      "email": "郵箱",
+      "phone": "電話",
+      "status": "狀態",
+      "authType": "認證方式",
+      "lastLogin": "最後登入",
+      "actions": "操作"
+    },
+    "status": {
+      "active": "啟用",
+      "inactive": "停用",
+      "all": "全部"
+    },
+    "authType": {
+      "local": "本地",
+      "ldap": "LDAP",
+      "all": "全部"
+    },
+    "actions": {
+      "edit": "編輯",
+      "enable": "啟用",
+      "disable": "停用",
+      "resetPassword": "重置密碼",
+      "delete": "刪除"
+    },
+    "messages": {
+      "loadFailed": "取得使用者列表失敗",
+      "updateSuccess": "更新成功",
+      "createSuccess": "建立成功",
+      "deleteSuccess": "刪除成功",
+      "deleteFailed": "刪除失敗",
+      "enableSuccess": "啟用成功",
+      "disableSuccess": "停用成功",
+      "toggleFailed": "操作失敗",
+      "adminCannotDisable": "admin 使用者不能停用",
+      "adminCannotDelete": "admin 使用者不能刪除",
+      "passwordResetSuccess": "密碼重置成功"
+    },
+    "confirm": {
+      "toggleStatus": "確認{{action}}使用者",
+      "toggleStatusContent": "確定要{{action}}使用者「{{name}}」嗎？",
+      "delete": "確認刪除",
+      "deleteContent": "確定要刪除使用者「{{name}}」嗎？此操作不可恢復。",
+      "ok": "確定",
+      "cancel": "取消"
+    },
+    "form": {
+      "username": "使用者名稱",
+      "usernameRequired": "請輸入使用者名稱",
+      "usernamePlaceholder": "請輸入使用者名稱",
+      "password": "密碼",
+      "passwordRequired": "請輸入密碼",
+      "passwordMinLength": "密碼至少 6 位",
+      "passwordPlaceholder": "請輸入密碼",
+      "displayName": "顯示名稱",
+      "displayNamePlaceholder": "請輸入顯示名稱",
+      "email": "郵箱",
+      "emailPlaceholder": "請輸入郵箱",
+      "phone": "電話",
+      "phonePlaceholder": "請輸入電話"
+    },
+    "resetPassword": {
+      "title": "重置密碼",
+      "newPassword": "新密碼",
+      "newPasswordRequired": "請輸入新密碼",
+      "newPasswordPlaceholder": "請輸入新密碼"
+    },
+    "pagination": {
+      "total": "共 {{total}} 筆"
+    }
+  },
+  "group": {
+    "title": "使用者群組管理",
+    "create": "建立使用者群組",
+    "editTitle": "編輯使用者群組",
+    "createTitle": "建立使用者群組",
+    "columns": {
+      "name": "名稱",
+      "description": "描述",
+      "memberCount": "成員數",
+      "createdAt": "建立時間",
+      "actions": "操作"
+    },
+    "actions": {
+      "manage": "管理成員",
+      "edit": "編輯",
+      "delete": "刪除"
+    },
+    "messages": {
+      "loadFailed": "載入使用者群組列表失敗",
+      "updateSuccess": "更新成功",
+      "createSuccess": "建立成功",
+      "updateFailed": "更新失敗",
+      "createFailed": "建立失敗",
+      "deleteSuccess": "刪除成功",
+      "deleteFailed": "刪除失敗",
+      "loadDataFailed": "載入資料失敗",
+      "selectUser": "請選擇要新增的使用者",
+      "userAlreadyInGroup": "該使用者已在使用者群組中",
+      "addSuccess": "新增成功",
+      "addFailed": "新增失敗",
+      "removeSuccess": "移除成功",
+      "removeFailed": "移除失敗"
+    },
+    "confirm": {
+      "delete": "確認刪除",
+      "deleteContent": "確定要刪除使用者群組「{{name}}」嗎？",
+      "remove": "確認移除",
+      "removeContent": "確定要將使用者「{{name}}」從使用者群組中移除嗎？",
+      "ok": "確認",
+      "cancel": "取消"
+    },
+    "form": {
+      "name": "名稱",
+      "nameRequired": "請輸入名稱",
+      "namePlaceholder": "請輸入使用者群組名稱",
+      "description": "描述",
+      "descriptionPlaceholder": "請輸入描述（可選）"
+    },
+    "drawer": {
+      "title": "管理成員 - {{name}}",
+      "selectUser": "選擇使用者",
+      "add": "新增",
+      "columns": {
+        "username": "使用者名稱",
+        "displayName": "顯示名稱",
+        "actions": "操作"
+      },
+      "remove": "移除"
+    },
+    "pagination": {
+      "total": "共 {{total}} 筆"
+    }
   }
 }

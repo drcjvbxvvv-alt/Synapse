@@ -80,7 +80,7 @@ function HomepageHeader() {
             </Link>
             <Link
               className="button button--secondary button--lg"
-              to="https://github.com/clay-wangzhi/KubePolaris">
+              to="https://github.com/clay-wangzhi/Synapse">
               ⭐ GitHub
             </Link>
           </div>
@@ -109,7 +109,7 @@ function FeatureSection() {
     <section className={styles.features}>
       <div className="container">
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>为什么选择 KubePolaris?</h2>
+          <h2 className={styles.sectionTitle}>为什么选择 Synapse?</h2>
           <p className={styles.sectionSubtitle}>
             专为企业设计的 Kubernetes 管理平台，让容器编排变得简单高效
           </p>
@@ -137,7 +137,7 @@ function UseCaseSection() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>适用场景</h2>
           <p className={styles.sectionSubtitle}>
-            无论你是开发者、运维工程师还是平台工程师，KubePolaris 都能帮助你更高效地工作
+            无论你是开发者、运维工程师还是平台工程师，Synapse 都能帮助你更高效地工作
           </p>
         </div>
         <div className={clsx('row', styles.useCaseGrid)}>
@@ -163,7 +163,7 @@ function QuickStartSection() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>快速开始</h2>
           <p className={styles.sectionSubtitle}>
-            只需几分钟，即可部署并开始使用 KubePolaris
+            只需几分钟，即可部署并开始使用 Synapse
           </p>
         </div>
         <div className={styles.codeBlock}>
@@ -176,12 +176,12 @@ function QuickStartSection() {
           <pre className={styles.codeContent}>
             <code>
 {`# 使用 Helm 安装
-helm repo add kubepolaris https://kubepolaris.github.io/charts
-helm install kubepolaris kubepolaris/kubepolaris -n kubepolaris --create-namespace
+helm repo add synapse https://synapse.github.io/charts
+helm install synapse synapse/synapse -n synapse --create-namespace
 
 # 或使用 Docker Compose 快速体验
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd synapse
 docker-compose up -d`}
             </code>
           </pre>
@@ -203,13 +203,13 @@ function CTASection() {
         <div className={styles.ctaContent}>
           <h2 className={styles.ctaTitle}>准备好开始了吗？</h2>
           <p className={styles.ctaSubtitle}>
-            加入 KubePolaris 社区，与全球开发者一起构建更好的 Kubernetes 管理体验
+            加入 Synapse 社区，与全球开发者一起构建更好的 Kubernetes 管理体验
           </p>
           <div className={styles.ctaButtons}>
             <Link className="button button--primary button--lg" to="/docs/getting-started/quick-start">
               立即开始
             </Link>
-            <Link className="button button--outline button--lg" to="https://github.com/clay-wangzhi/KubePolaris/discussions">
+            <Link className="button button--outline button--lg" to="https://github.com/clay-wangzhi/Synapse/discussions">
               加入社区
             </Link>
           </div>
@@ -224,7 +224,7 @@ export default function Home(): JSX.Element {
   return (
     <Layout
       title={`${siteConfig.title} - 企业级 Kubernetes 多集群管理平台`}
-      description="KubePolaris 是一个开源的企业级 Kubernetes 多集群管理平台，提供可视化工作负载管理、实时监控告警、Web 终端等功能。">
+      description="Synapse 是一个开源的企业级 Kubernetes 多集群管理平台，提供可视化工作负载管理、实时监控告警、Web 终端等功能。">
       <HomepageHeader />
       <main>
         <FeatureSection />

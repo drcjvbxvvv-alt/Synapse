@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-mysql
+  name: {{ include "synapse.fullname" . }}-mysql
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.mysql.labels" . | nindent 4 }}
+    {{- include "synapse.mysql.labels" . | nindent 4 }}
 spec:
   accessModes:
     - {{ .Values.mysql.internal.persistence.accessMode }}

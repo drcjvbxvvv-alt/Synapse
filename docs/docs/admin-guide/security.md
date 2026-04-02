@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # 安全加固
 
-本文档介绍 KubePolaris 的安全加固配置和最佳实践。
+本文档介绍 Synapse 的安全加固配置和最佳实践。
 
 ## 认证安全
 
@@ -67,7 +67,7 @@ jwt:
 ```nginx
 server {
     listen 80;
-    server_name kubepolaris.example.com;
+    server_name synapse.example.com;
     return 301 https://$server_name$request_uri;
 }
 
@@ -111,7 +111,7 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 cors:
   enabled: true
   allow_origins:
-    - "https://kubepolaris.example.com"  # 指定具体域名
+    - "https://synapse.example.com"  # 指定具体域名
   allow_methods:
     - GET
     - POST
@@ -151,19 +151,19 @@ rate_limit:
 
 ### Kubernetes 认证
 
-为 KubePolaris 创建专用 ServiceAccount：
+为 Synapse 创建专用 ServiceAccount：
 
 ```yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kubepolaris
+  name: synapse
   namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kubepolaris
+  name: synapse
 rules:
   # 只读权限
   - apiGroups: [""]
@@ -183,14 +183,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kubepolaris
+  name: synapse
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kubepolaris
+  name: synapse
 subjects:
   - kind: ServiceAccount
-    name: kubepolaris
+    name: synapse
     namespace: kube-system
 ```
 
@@ -216,10 +216,10 @@ encryption:
 
 ```bash
 # 加密备份
-mysqldump -u root -p kubepolaris | gpg --encrypt -r admin@example.com > backup.sql.gpg
+mysqldump -u root -p synapse | gpg --encrypt -r admin@example.com > backup.sql.gpg
 
 # 解密恢复
-gpg --decrypt backup.sql.gpg | mysql -u root -p kubepolaris
+gpg --decrypt backup.sql.gpg | mysql -u root -p synapse
 ```
 
 ### 日志脱敏
@@ -257,12 +257,12 @@ securityContext:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: kubepolaris
-  namespace: kubepolaris
+  name: synapse
+  namespace: synapse
 spec:
   podSelector:
     matchLabels:
-      app: kubepolaris
+      app: synapse
   policyTypes:
     - Ingress
     - Egress
@@ -277,7 +277,7 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              name: kubepolaris
+              name: synapse
       ports:
         - port: 3306  # MySQL
     - to:
@@ -292,7 +292,7 @@ spec:
 ```yaml
 # 使用官方镜像
 image:
-  repository: kubepolaris/kubepolaris
+  repository: synapse/synapse
   tag: v1.0.0  # 使用固定版本
   pullPolicy: IfNotPresent
 
@@ -355,7 +355,7 @@ audit:
 
 1. **容器镜像扫描**
    ```bash
-   trivy image kubepolaris/kubepolaris:latest
+   trivy image synapse/synapse:latest
    ```
 
 2. **依赖扫描**

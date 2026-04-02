@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/Synapse/internal/models"
 
 	"gorm.io/gorm"
 	"helm.sh/helm/v3/pkg/action"

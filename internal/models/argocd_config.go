@@ -9,7 +9,7 @@ import (
 // ArgoCDConfig ArgoCD 集成配置
 type ArgoCDConfig struct {
 	ID        uint `json:"id" gorm:"primaryKey"`
-	ClusterID uint `json:"cluster_id" gorm:"uniqueIndex"` // 关联的 KubePolaris 集群
+	ClusterID uint `json:"cluster_id" gorm:"uniqueIndex"` // 关联的 Synapse 集群
 
 	// ArgoCD 连接配置
 	Enabled   bool   `json:"enabled" gorm:"default:false"`  // 是否启用

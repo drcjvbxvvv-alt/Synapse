@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "KubePolaris",
+    "name": "Synapse",
     "tagline": "Enterprise Kubernetes Multi-Cluster Management Platform"
   },
   "menu": {
@@ -36,6 +36,7 @@
     "helmReleases": "Helm Apps",
     "crdManagement": "CRD Management",
     "costAnalysis": "Cost Analysis",
+    "securityScan": "Security Scanning",
     "eventAlerts": "Event Alerts",
     "observability": "Observability",
     "costGovernance": "Cost Governance",
@@ -190,8 +191,8 @@
     "usernameRequired": "Please enter username",
     "passwordRequired": "Please enter password",
     "ldapHint": "🔐 Login with enterprise account",
-    "defaultAdminHint": "👤 Default admin: admin / KubePolaris@2026",
-    "copyright": "© 2026 KubePolaris. All rights reserved.",
+    "defaultAdminHint": "👤 Default admin: admin / Synapse@2026",
+    "copyright": "© 2026 Synapse. All rights reserved.",
     "welcomeBack": "Welcome Back",
     "loginSubtitle": "Sign in to access your clusters and resources.",
     "brandHeadline": "Unified Management for Your Kubernetes Fleet",

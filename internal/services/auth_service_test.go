@@ -69,7 +69,7 @@ func (s *AuthServiceTestSuite) TestLogin_Success() {
 	// 1. authenticateLocal: query user
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
 		WithArgs("admin", sqlmock.AnyArg()).
-		WillReturnRows(userRow(1, "admin", "KubePolaris@2026", "kubepolaris_salt", "active"))
+		WillReturnRows(userRow(1, "admin", "Synapse@2026", "synapse_salt", "active"))
 
 	// 2. db.Save (update last login)
 	s.mock.ExpectBegin()
@@ -85,9 +85,9 @@ func (s *AuthServiceTestSuite) TestLogin_Success() {
 	s.mock.ExpectQuery("SELECT").WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
 	//    - query user (for default permission type)
 	s.mock.ExpectQuery("SELECT").
-		WillReturnRows(userRow(1, "admin", "KubePolaris@2026", "kubepolaris_salt", "active"))
+		WillReturnRows(userRow(1, "admin", "Synapse@2026", "synapse_salt", "active"))
 
-	result, err := s.service.Login("admin", "KubePolaris@2026", "local", "127.0.0.1")
+	result, err := s.service.Login("admin", "Synapse@2026", "local", "127.0.0.1")
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), result)
 	assert.NotEmpty(s.T(), result.Token)
@@ -97,7 +97,7 @@ func (s *AuthServiceTestSuite) TestLogin_Success() {
 func (s *AuthServiceTestSuite) TestLogin_WrongPassword() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
 		WithArgs("admin", sqlmock.AnyArg()).
-		WillReturnRows(userRow(1, "admin", "KubePolaris@2026", "kubepolaris_salt", "active"))
+		WillReturnRows(userRow(1, "admin", "Synapse@2026", "synapse_salt", "active"))
 
 	_, err := s.service.Login("admin", "wrongpassword", "local", "127.0.0.1")
 	assert.Error(s.T(), err)

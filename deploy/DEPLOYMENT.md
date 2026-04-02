@@ -1,8 +1,8 @@
-# KubePolaris 部署指南
+# Synapse 部署指南
 
 ## 📦 部署方式
 
-KubePolaris 支持多种部署方式：
+Synapse 支持多种部署方式：
 
 1. **Docker Compose 部署**（推荐用于开发/测试）
 2. **Kubernetes Helm 部署**（推荐用于生产环境）
@@ -16,54 +16,54 @@ KubePolaris 支持多种部署方式：
 
 ```bash
 # 1. 添加 Helm 仓库
-helm repo add kubepolaris https://clay-wangzhi.github.io/KubePolaris
+helm repo add synapse https://clay-wangzhi.github.io/Synapse
 helm repo update
 
 # 2. 搜索可用版本
-helm search repo kubepolaris
+helm search repo synapse
 
 # 3. 安装（使用默认配置）
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris --create-namespace
+helm install synapse synapse/synapse \
+  -n synapse --create-namespace
 
 # 4. 或者自定义配置安装
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris --create-namespace \
+helm install synapse synapse/synapse \
+  -n synapse --create-namespace \
   --set mysql.auth.rootPassword=your-root-password \
   --set mysql.auth.password=your-password \
   --set backend.config.jwt.secret=your-jwt-secret
 
 # 5. 查看安装状态
-helm status kubepolaris -n kubepolaris
-kubectl get pods -n kubepolaris
+helm status synapse -n synapse
+kubectl get pods -n synapse
 ```
 
 ### 方式二：从源码安装
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd KubePolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd Synapse
 
 # 2. 安装
-helm install kubepolaris ./deploy/helm/kubepolaris \
-  -n kubepolaris --create-namespace \
-  -f ./deploy/helm/kubepolaris/values.yaml
+helm install synapse ./deploy/helm/synapse \
+  -n synapse --create-namespace \
+  -f ./deploy/helm/synapse/values.yaml
 ```
 
 ### Helm 配置说明
 
-详细配置请参考 [Helm Chart README](./helm/kubepolaris/README.md)
+详细配置请参考 [Helm Chart README](./helm/synapse/README.md)
 
 常用配置项：
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `mysql.auth.rootPassword` | MySQL root 密码 | `kubepolaris-root` |
-| `mysql.auth.password` | 应用数据库密码 | `kubepolaris123` |
+| `mysql.auth.rootPassword` | MySQL root 密码 | `synapse-root` |
+| `mysql.auth.password` | 应用数据库密码 | `synapse123` |
 | `backend.config.jwt.secret` | JWT 密钥 | 随机生成 |
 | `ingress.enabled` | 是否启用 Ingress | `true` |
-| `ingress.hosts[0].host` | 域名 | `kubepolaris.local` |
+| `ingress.hosts[0].host` | 域名 | `synapse.local` |
 | `grafana.enabled` | 是否启用内置 Grafana | `true` |
 
 ### 升级和卸载
@@ -71,10 +71,10 @@ helm install kubepolaris ./deploy/helm/kubepolaris \
 ```bash
 # 升级
 helm repo update
-helm upgrade kubepolaris kubepolaris/kubepolaris -n kubepolaris
+helm upgrade synapse synapse/synapse -n synapse
 
 # 卸载
-helm uninstall kubepolaris -n kubepolaris
+helm uninstall synapse -n synapse
 ```
 
 ---
@@ -84,10 +84,10 @@ helm uninstall kubepolaris -n kubepolaris
 ### 一条命令快速体验
 
 ```bash
-docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse:latest
 ```
 
-访问 `http://localhost:8080`，默认账号 `admin / KubePolaris@2026`。
+访问 `http://localhost:8080`，默认账号 `admin / Synapse@2026`。
 
 > 使用内置 SQLite，无需外部依赖。生产环境建议使用下方 Docker Compose + MySQL 部署。
 
@@ -104,8 +104,8 @@ docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kube
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd KubePolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd Synapse
 
 # 2. 配置环境变量
 cp .env.example .env
@@ -125,9 +125,9 @@ docker compose ps
 
 启动完成后，访问：
 
-- **KubePolaris**: http://localhost
+- **Synapse**: http://localhost
   - 默认账号: `admin`
-  - 默认密码: `KubePolaris@2026`
+  - 默认密码: `Synapse@2026`
 
 - **Grafana**: http://localhost:3000
   - 默认账号: `admin`
@@ -201,7 +201,7 @@ chmod 700 deploy/docker/grafana/secrets
 docker compose logs -f
 
 # 查看特定服务日志
-docker compose logs -f kubepolaris
+docker compose logs -f synapse
 docker compose logs -f mysql
 docker compose logs -f grafana
 ```
@@ -213,7 +213,7 @@ docker compose logs -f grafana
 docker compose restart
 
 # 重启特定服务
-docker compose restart kubepolaris
+docker compose restart synapse
 ```
 
 ### 停止服务
@@ -246,7 +246,7 @@ docker compose ps
 
 ```bash
 # 备份 MySQL 数据
-docker compose exec mysql mysqldump -u root -p kubepolaris > backup.sql
+docker compose exec mysql mysqldump -u root -p synapse > backup.sql
 
 # 备份 Grafana 数据
 docker compose exec grafana tar czf - /var/lib/grafana > grafana-backup.tar.gz
@@ -256,7 +256,7 @@ docker compose exec grafana tar czf - /var/lib/grafana > grafana-backup.tar.gz
 
 ```bash
 # 恢复 MySQL 数据
-docker compose exec -T mysql mysql -u root -p kubepolaris < backup.sql
+docker compose exec -T mysql mysql -u root -p synapse < backup.sql
 
 # 恢复 Grafana 数据
 docker compose exec -T grafana tar xzf - -C / < grafana-backup.tar.gz
@@ -277,7 +277,7 @@ docker compose ps
 
 **查看错误日志**:
 ```bash
-docker compose logs kubepolaris
+docker compose logs synapse
 docker compose logs mysql
 ```
 
@@ -294,7 +294,7 @@ docker compose exec mysql mysqladmin ping -h localhost
 
 # 重置 MySQL
 docker compose down
-docker volume rm kubepolaris-mysql-data
+docker volume rm synapse-mysql-data
 docker compose up -d mysql
 ```
 
@@ -320,7 +320,7 @@ docker compose logs grafana-init
 docker compose ps
 
 # 手动测试健康检查
-curl http://localhost/healthz          # KubePolaris
+curl http://localhost/healthz          # Synapse
 curl http://localhost:3000/api/health  # Grafana
 ```
 
@@ -340,7 +340,7 @@ docker system df
 
 ```bash
 # 1. 备份数据
-docker compose exec mysql mysqldump -u root -p kubepolaris > backup_$(date +%Y%m%d).sql
+docker compose exec mysql mysqldump -u root -p synapse > backup_$(date +%Y%m%d).sql
 
 # 2. 拉取最新代码
 git pull origin main
@@ -358,7 +358,7 @@ curl http://localhost/healthz
 ## 📚 相关文档
 
 - [环境变量配置模板](../.env.example)
-- [Helm Chart 文档](./helm/kubepolaris/README.md)
+- [Helm Chart 文档](./helm/synapse/README.md)
 
 ---
 

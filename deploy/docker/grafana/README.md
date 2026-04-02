@@ -49,8 +49,8 @@ docker-compose -f docker-compose-grafana.yml restart
 2. 输入 Dashboard ID: `6417`
 3. 点击 **Load**
 4. 配置：
-   - Name: `KubePolaris - Pod Monitoring`
-   - Folder: `KubePolaris`
+   - Name: `Synapse - Pod Monitoring`
+   - Folder: `Synapse`
    - Prometheus: 选择你的数据源
 5. 点击 **Import**
 

@@ -1,10 +1,10 @@
 # ============================================================================
-# KubePolaris 高可用部署配置
+# Synapse 高可用部署配置
 # ============================================================================
 # 使用方法:
-#   helm install kubepolaris kubepolaris/kubepolaris \
+#   helm install synapse synapse/synapse \
 #     -f values-ha.yaml \
-#     -n kubepolaris \
+#     -n synapse \
 #     --create-namespace
 # ============================================================================
 
@@ -63,9 +63,9 @@ mysql:
     enabled: true
     host: mysql.example.com
     port: 3306
-    database: kubepolaris
-    username: kubepolaris
-    existingSecret: kubepolaris-mysql-secret
+    database: synapse
+    username: synapse
+    existingSecret: synapse-mysql-secret
 
 # Ingress 配置
 ingress:
@@ -81,7 +81,7 @@ ingress:
     # 请求大小限制
     nginx.ingress.kubernetes.io/proxy-body-size: "100m"
   hosts:
-    - host: kubepolaris.example.com
+    - host: synapse.example.com
       paths:
         - path: /
           pathType: Prefix
@@ -90,9 +90,9 @@ ingress:
           pathType: Prefix
           backend: backend
   tls:
-    - secretName: kubepolaris-tls
+    - secretName: synapse-tls
       hosts:
-        - kubepolaris.example.com
+        - synapse.example.com
 
 # PDB 配置 - 确保至少 2 个副本可用
 podDisruptionBudget:

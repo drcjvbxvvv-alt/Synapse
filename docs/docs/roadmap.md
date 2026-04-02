@@ -4,7 +4,7 @@ sidebar_position: 101
 
 # 产品路线图
 
-本页面展示 KubePolaris 的发展规划和即将推出的功能。
+本页面展示 Synapse 的发展规划和即将推出的功能。
 
 ## 愿景
 
@@ -155,11 +155,11 @@ sidebar_position: 101
 
 ### 功能投票
 
-你可以在 [GitHub Discussions](https://github.com/clay-wangzhi/KubePolaris/discussions) 中为你希望的功能投票或提出新的功能建议。
+你可以在 [GitHub Discussions](https://github.com/clay-wangzhi/Synapse/discussions) 中为你希望的功能投票或提出新的功能建议。
 
 ### 参与开发
 
-欢迎参与 KubePolaris 的开发！查看 [CONTRIBUTING.md](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md) 了解如何贡献。
+欢迎参与 Synapse 的开发！查看 [CONTRIBUTING.md](https://github.com/clay-wangzhi/Synapse/blob/main/CONTRIBUTING.md) 了解如何贡献。
 
 ### 路线图更新
 

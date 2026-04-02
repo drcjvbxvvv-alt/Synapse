@@ -22,11 +22,13 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import userService from '../../services/userService';
 import type { User, CreateUserRequest, UpdateUserRequest } from '../../types';
 
 const UserManagement: React.FC = () => {
+  const { t } = useTranslation('permission');
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const [resetForm] = Form.useForm();
@@ -61,12 +63,12 @@ const UserManagement: React.FC = () => {
       setUsers(res.items || []);
       setTotal(res.total ?? 0);
     } catch (err) {
-      message.error('获取用户列表失败');
+      message.error(t('user.messages.loadFailed'));
       console.error('Failed to load users:', err);
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, filterStatus, filterAuthType, message]);
+  }, [page, pageSize, search, filterStatus, filterAuthType, message, t]);
 
   useEffect(() => {
     loadUsers();
@@ -101,7 +103,7 @@ const UserManagement: React.FC = () => {
           phone: values.phone,
         };
         await userService.updateUser(editingUser.id, data);
-        message.success('更新成功');
+        message.success(t('user.messages.updateSuccess'));
         setModalVisible(false);
         loadUsers();
       } else {
@@ -113,7 +115,7 @@ const UserManagement: React.FC = () => {
           phone: values.phone,
         };
         await userService.createUser(data);
-        message.success('创建成功');
+        message.success(t('user.messages.createSuccess'));
         setModalVisible(false);
         loadUsers();
       }
@@ -126,23 +128,23 @@ const UserManagement: React.FC = () => {
 
   const handleToggleStatus = async (record: User) => {
     if (record.username === 'admin') {
-      message.warning('admin 用户不能禁用');
+      message.warning(t('user.messages.adminCannotDisable'));
       return;
     }
     const newStatus = record.status === 'active' ? 'inactive' : 'active';
-    const action = newStatus === 'active' ? '启用' : '禁用';
+    const action = newStatus === 'active' ? t('user.actions.enable') : t('user.actions.disable');
     modal.confirm({
-      title: `确认${action}用户`,
-      content: `确定要${action}用户「${record.display_name || record.username}」吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      title: t('user.confirm.toggleStatus', { action }),
+      content: t('user.confirm.toggleStatusContent', { action, name: record.display_name || record.username }),
+      okText: t('user.confirm.ok'),
+      cancelText: t('user.confirm.cancel'),
       onOk: async () => {
         try {
           await userService.updateUserStatus(record.id, newStatus);
-          message.success(`${action}成功`);
+          message.success(newStatus === 'active' ? t('user.messages.enableSuccess') : t('user.messages.disableSuccess'));
           loadUsers();
         } catch (err) {
-          message.error(`${action}失败`);
+          message.error(t('user.messages.toggleFailed'));
           console.error(err);
         }
       },
@@ -161,7 +163,7 @@ const UserManagement: React.FC = () => {
       const values = await resetForm.validateFields();
       setSubmitLoading(true);
       await userService.resetPassword(resetUserId, values.new_password);
-      message.success('密码重置成功');
+      message.success(t('user.messages.passwordResetSuccess'));
       setResetModalVisible(false);
       setResetUserId(null);
     } catch (err) {
@@ -173,22 +175,22 @@ const UserManagement: React.FC = () => {
 
   const handleDelete = (record: User) => {
     if (record.username === 'admin') {
-      message.warning('admin 用户不能删除');
+      message.warning(t('user.messages.adminCannotDelete'));
       return;
     }
     modal.confirm({
-      title: '确认删除',
-      content: `确定要删除用户「${record.display_name || record.username}」吗？此操作不可恢复。`,
-      okText: '确定',
+      title: t('user.confirm.delete'),
+      content: t('user.confirm.deleteContent', { name: record.display_name || record.username }),
+      okText: t('user.confirm.ok'),
       okType: 'danger',
-      cancelText: '取消',
+      cancelText: t('user.confirm.cancel'),
       onOk: async () => {
         try {
           await userService.deleteUser(record.id);
-          message.success('删除成功');
+          message.success(t('user.messages.deleteSuccess'));
           loadUsers();
         } catch (err) {
-          message.error('删除失败');
+          message.error(t('user.messages.deleteFailed'));
           console.error(err);
         }
       },
@@ -199,67 +201,67 @@ const UserManagement: React.FC = () => {
 
   const columns: ColumnsType<User> = [
     {
-      title: '用户名',
+      title: t('user.columns.username'),
       dataIndex: 'username',
       key: 'username',
       width: 120,
     },
     {
-      title: '显示名称',
+      title: t('user.columns.displayName'),
       dataIndex: 'display_name',
       key: 'display_name',
       width: 120,
       render: (text) => text || '-',
     },
     {
-      title: '邮箱',
+      title: t('user.columns.email'),
       dataIndex: 'email',
       key: 'email',
       width: 180,
       render: (text) => text || '-',
     },
     {
-      title: '电话',
+      title: t('user.columns.phone'),
       dataIndex: 'phone',
       key: 'phone',
       width: 130,
       render: (text) => text || '-',
     },
     {
-      title: '状态',
+      title: t('user.columns.status'),
       dataIndex: 'status',
       key: 'status',
       width: 90,
       render: (status: string) =>
         status === 'active' ? (
-          <Tag color="success">启用</Tag>
+          <Tag color="success">{t('user.status.active')}</Tag>
         ) : (
-          <Tag color="error">禁用</Tag>
+          <Tag color="error">{t('user.status.inactive')}</Tag>
         ),
     },
     {
-      title: '认证方式',
+      title: t('user.columns.authType'),
       dataIndex: 'auth_type',
       key: 'auth_type',
       width: 100,
-      render: (authType: string) => (authType === 'ldap' ? 'LDAP' : '本地'),
+      render: (authType: string) => (authType === 'ldap' ? t('user.authType.ldap') : t('user.authType.local')),
     },
     {
-      title: '最后登录',
+      title: t('user.columns.lastLogin'),
       dataIndex: 'last_login_at',
       key: 'last_login_at',
       width: 170,
       render: (val: string) => (val ? dayjs(val).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
-      title: '操作',
+      title: t('user.columns.actions'),
       key: 'action',
       width: 240,
       fixed: 'right',
       render: (_, record) => (
         <Space wrap>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            编辑
+            {t('user.actions.edit')}
           </Button>
           {!isAdmin(record) && (
             <Button
@@ -268,7 +270,7 @@ const UserManagement: React.FC = () => {
               icon={record.status === 'active' ? <StopOutlined /> : <CheckCircleOutlined />}
               onClick={() => handleToggleStatus(record)}
             >
-              {record.status === 'active' ? '禁用' : '启用'}
+              {record.status === 'active' ? t('user.actions.disable') : t('user.actions.enable')}
             </Button>
           )}
           {record.auth_type === 'local' && (
@@ -278,7 +280,7 @@ const UserManagement: React.FC = () => {
               icon={<LockOutlined />}
               onClick={() => handleResetPassword(record)}
             >
-              重置密码
+              {t('user.actions.resetPassword')}
             </Button>
           )}
           {!isAdmin(record) && (
@@ -289,7 +291,7 @@ const UserManagement: React.FC = () => {
               icon={<DeleteOutlined />}
               onClick={() => handleDelete(record)}
             >
-              删除
+              {t('user.actions.delete')}
             </Button>
           )}
         </Space>
@@ -307,16 +309,16 @@ const UserManagement: React.FC = () => {
           alignItems: 'center',
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>用户管理</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>{t('user.title')}</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          创建用户
+          {t('user.createUser')}
         </Button>
       </div>
 
       <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
         <Space size="middle" wrap>
           <Input.Search
-            placeholder="搜索用户名、显示名称、邮箱"
+            placeholder={t('user.searchPlaceholder')}
             allowClear
             style={{ width: 260 }}
             value={searchInput}
@@ -328,7 +330,7 @@ const UserManagement: React.FC = () => {
             enterButton={<SearchOutlined />}
           />
           <Select
-            placeholder="状态"
+            placeholder={t('user.statusFilter')}
             allowClear
             style={{ width: 120 }}
             value={filterStatus || undefined}
@@ -337,12 +339,12 @@ const UserManagement: React.FC = () => {
               setPage(1);
             }}
           >
-            <Select.Option value="">全部</Select.Option>
-            <Select.Option value="active">启用</Select.Option>
-            <Select.Option value="inactive">禁用</Select.Option>
+            <Select.Option value="">{t('user.status.all')}</Select.Option>
+            <Select.Option value="active">{t('user.status.active')}</Select.Option>
+            <Select.Option value="inactive">{t('user.status.inactive')}</Select.Option>
           </Select>
           <Select
-            placeholder="认证方式"
+            placeholder={t('user.authTypeFilter')}
             allowClear
             style={{ width: 120 }}
             value={filterAuthType || undefined}
@@ -351,12 +353,12 @@ const UserManagement: React.FC = () => {
               setPage(1);
             }}
           >
-            <Select.Option value="">全部</Select.Option>
-            <Select.Option value="local">本地</Select.Option>
-            <Select.Option value="ldap">LDAP</Select.Option>
+            <Select.Option value="">{t('user.authType.all')}</Select.Option>
+            <Select.Option value="local">{t('user.authType.local')}</Select.Option>
+            <Select.Option value="ldap">{t('user.authType.ldap')}</Select.Option>
           </Select>
           <Button icon={<ReloadOutlined />} onClick={loadUsers}>
-            刷新
+            {t('user.refresh')}
           </Button>
         </Space>
       </Card>
@@ -373,7 +375,7 @@ const UserManagement: React.FC = () => {
             total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (tot) => t('user.pagination.total', { total: tot }),
             onChange: (p, ps) => {
               setPage(p);
               setPageSize(ps || 20);
@@ -383,7 +385,7 @@ const UserManagement: React.FC = () => {
       </Card>
 
       <Modal
-        title={editingUser ? '编辑用户' : '创建用户'}
+        title={editingUser ? t('user.editUser') : t('user.createUser')}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
@@ -396,34 +398,37 @@ const UserManagement: React.FC = () => {
             <>
               <Form.Item
                 name="username"
-                label="用户名"
-                rules={[{ required: true, message: '请输入用户名' }]}
+                label={t('user.form.username')}
+                rules={[{ required: true, message: t('user.form.usernameRequired') }]}
               >
-                <Input placeholder="请输入用户名" />
+                <Input placeholder={t('user.form.usernamePlaceholder')} />
               </Form.Item>
               <Form.Item
                 name="password"
-                label="密码"
-                rules={[{ required: true, message: '请输入密码' }, { min: 6, message: '密码至少6位' }]}
+                label={t('user.form.password')}
+                rules={[
+                  { required: true, message: t('user.form.passwordRequired') },
+                  { min: 6, message: t('user.form.passwordMinLength') },
+                ]}
               >
-                <Input.Password placeholder="请输入密码" />
+                <Input.Password placeholder={t('user.form.passwordPlaceholder')} />
               </Form.Item>
             </>
           )}
-          <Form.Item name="display_name" label="显示名称">
-            <Input placeholder="请输入显示名称" />
+          <Form.Item name="display_name" label={t('user.form.displayName')}>
+            <Input placeholder={t('user.form.displayNamePlaceholder')} />
           </Form.Item>
-          <Form.Item name="email" label="邮箱">
-            <Input placeholder="请输入邮箱" />
+          <Form.Item name="email" label={t('user.form.email')}>
+            <Input placeholder={t('user.form.emailPlaceholder')} />
           </Form.Item>
-          <Form.Item name="phone" label="电话">
-            <Input placeholder="请输入电话" />
+          <Form.Item name="phone" label={t('user.form.phone')}>
+            <Input placeholder={t('user.form.phonePlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>
 
       <Modal
-        title="重置密码"
+        title={t('user.resetPassword.title')}
         open={resetModalVisible}
         onOk={handleResetSubmit}
         onCancel={() => {
@@ -437,10 +442,13 @@ const UserManagement: React.FC = () => {
         <Form form={resetForm} layout="vertical">
           <Form.Item
             name="new_password"
-            label="新密码"
-            rules={[{ required: true, message: '请输入新密码' }, { min: 6, message: '密码至少6位' }]}
+            label={t('user.resetPassword.newPassword')}
+            rules={[
+              { required: true, message: t('user.resetPassword.newPasswordRequired') },
+              { min: 6, message: t('user.form.passwordMinLength') },
+            ]}
           >
-            <Input.Password placeholder="请输入新密码" />
+            <Input.Password placeholder={t('user.resetPassword.newPasswordPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>

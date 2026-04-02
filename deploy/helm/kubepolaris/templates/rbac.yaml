@@ -3,24 +3,24 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}
+  name: {{ include "synapse.fullname" . }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
 rules:
 {{- toYaml .Values.rbac.rules | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}
+  name: {{ include "synapse.fullname" . }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "kubepolaris.fullname" . }}
+  name: {{ include "synapse.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "kubepolaris.serviceAccountName" . }}
+    name: {{ include "synapse.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}

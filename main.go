@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/config"
-	"github.com/clay-wangzhi/KubePolaris/internal/database"
-	"github.com/clay-wangzhi/KubePolaris/internal/router"
-	"github.com/clay-wangzhi/KubePolaris/pkg/crypto"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/config"
+	"github.com/clay-wangzhi/Synapse/internal/database"
+	"github.com/clay-wangzhi/Synapse/internal/router"
+	"github.com/clay-wangzhi/Synapse/pkg/crypto"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )

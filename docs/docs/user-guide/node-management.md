@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # 节点管理
 
-本文档介绍如何在 KubePolaris 中查看和管理 Kubernetes 集群节点。
+本文档介绍如何在 Synapse 中查看和管理 Kubernetes 集群节点。
 
 ## 查看节点
 

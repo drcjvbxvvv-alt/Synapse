@@ -1952,7 +1952,7 @@
     ]
   },
   "timezone": "",
-  "title": "工作负载详情监控 - KubePolaris",
-  "uid": "kubepolaris-workload-detail",
+  "title": "工作负载详情监控 - Synapse",
+  "uid": "synapse-workload-detail",
   "version": 2
 }

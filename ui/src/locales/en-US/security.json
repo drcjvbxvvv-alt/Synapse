@@ -1,0 +1,78 @@
+{
+  "title": "Security Scanning",
+  "tabs": {
+    "imageScan": "Image Vulnerability Scan",
+    "bench": "CIS Benchmark",
+    "gatekeeper": "OPA/Gatekeeper Violations"
+  },
+  "scan": {
+    "trigger": "Trigger Scan",
+    "triggerAll": "Scan All Images",
+    "image": "Image",
+    "pod": "Pod",
+    "container": "Container",
+    "namespace": "Namespace",
+    "status": "Status",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "unknown": "Unknown",
+    "scannedAt": "Scanned At",
+    "viewDetail": "View Detail",
+    "pending": "Pending",
+    "scanning": "Scanning",
+    "completed": "Completed",
+    "failed": "Failed",
+    "triggerSuccess": "Scan triggered",
+    "noData": "No scan records yet. Click \"Scan All Images\" to start.",
+    "inputImage": "Enter image name (e.g. nginx:latest)",
+    "imagePlaceholder": "nginx:latest",
+    "detail": {
+      "title": "Vulnerability Details",
+      "vulnId": "Vulnerability ID",
+      "package": "Package",
+      "installedVersion": "Installed Version",
+      "fixedVersion": "Fixed Version",
+      "severity": "Severity",
+      "description": "Description"
+    }
+  },
+  "bench": {
+    "trigger": "Run Benchmark",
+    "runAt": "Run At",
+    "status": "Status",
+    "score": "Compliance Score",
+    "pass": "Pass",
+    "fail": "Fail",
+    "warn": "Warn",
+    "info": "Info",
+    "viewDetail": "View Detail",
+    "pending": "Pending",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "triggerSuccess": "Benchmark triggered, please wait…",
+    "noData": "No benchmark records yet",
+    "detail": {
+      "title": "Benchmark Details",
+      "section": "Section",
+      "testNumber": "Test #",
+      "description": "Description",
+      "result": "Result",
+      "remediation": "Remediation"
+    }
+  },
+  "gatekeeper": {
+    "refresh": "Refresh",
+    "totalViolations": "Total Violations",
+    "constraintKind": "Constraint Kind",
+    "constraintName": "Constraint Name",
+    "violationCount": "Violations",
+    "resource": "Resource",
+    "namespace": "Namespace",
+    "message": "Message",
+    "noData": "No violations found, or Gatekeeper is not installed",
+    "notInstalled": "Gatekeeper is not installed or unreachable"
+  }
+}

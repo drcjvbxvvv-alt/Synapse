@@ -24,7 +24,7 @@ GET /api/clusters
 ### 示例
 
 ```bash
-curl -X GET "https://kubepolaris.example.com/api/clusters?page=1&pageSize=10" \
+curl -X GET "https://synapse.example.com/api/clusters?page=1&pageSize=10" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -63,7 +63,7 @@ GET /api/clusters/:id
 ### 示例
 
 ```bash
-curl -X GET https://kubepolaris.example.com/api/clusters/1 \
+curl -X GET https://synapse.example.com/api/clusters/1 \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -122,7 +122,7 @@ POST /api/clusters
 ### 示例
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/clusters \
+curl -X POST https://synapse.example.com/api/clusters \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -161,7 +161,7 @@ PUT /api/clusters/:id
 ### 示例
 
 ```bash
-curl -X PUT https://kubepolaris.example.com/api/clusters/1 \
+curl -X PUT https://synapse.example.com/api/clusters/1 \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -180,7 +180,7 @@ DELETE /api/clusters/:id
 ### 示例
 
 ```bash
-curl -X DELETE https://kubepolaris.example.com/api/clusters/1 \
+curl -X DELETE https://synapse.example.com/api/clusters/1 \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -205,7 +205,7 @@ POST /api/clusters/:id/test
 ### 示例
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/clusters/1/test \
+curl -X POST https://synapse.example.com/api/clusters/1/test \
   -H "Authorization: Bearer <token>"
 ```
 

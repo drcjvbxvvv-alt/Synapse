@@ -12,7 +12,7 @@ import { useGrafanaUrl } from '../../../hooks/useGrafanaUrl';
 
 const { Text } = Typography;
 
-const DASHBOARD_UID = 'kubepolaris-workload-detail';
+const DASHBOARD_UID = 'synapse-workload-detail';
 
 interface MonitoringTabProps {
   clusterId: string;

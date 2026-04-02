@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/response"
 )
 
 // AuthRequired JWT认证中间件

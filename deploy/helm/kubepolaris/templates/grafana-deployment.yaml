@@ -2,31 +2,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana
+  name: {{ include "synapse.fullname" . }}-grafana
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "kubepolaris.selectorLabels" . | nindent 6 }}
+      {{- include "synapse.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: grafana
   template:
     metadata:
       labels:
-        {{- include "kubepolaris.selectorLabels" . | nindent 8 }}
+        {{- include "synapse.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: grafana
     spec:
-      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
+      {{- include "synapse.imagePullSecrets" . | nindent 6 }}
       securityContext:
         fsGroup: 472
         runAsUser: 472
         runAsNonRoot: true
       containers:
       - name: grafana
-        image: {{ include "kubepolaris.image" (dict "repository" .Values.grafana.image.repository "tag" .Values.grafana.image.tag "Values" .Values "Chart" .Chart) }}
+        image: {{ include "synapse.image" (dict "repository" .Values.grafana.image.repository "tag" .Values.grafana.image.tag "Values" .Values "Chart" .Chart) }}
         imagePullPolicy: {{ .Values.grafana.image.pullPolicy }}
         ports:
         - name: http
@@ -38,7 +38,7 @@ spec:
         - name: GF_SECURITY_ADMIN_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "kubepolaris.grafana.secretName" . }}
+              name: {{ include "synapse.grafana.secretName" . }}
               key: {{ .Values.grafana.existingSecretPasswordKey }}
         - name: GF_SERVER_ROOT_URL
           value: "/grafana/"
@@ -96,20 +96,20 @@ spec:
       {{- if .Values.grafana.persistence.enabled }}
       - name: data
         persistentVolumeClaim:
-          claimName: {{ include "kubepolaris.fullname" . }}-grafana
+          claimName: {{ include "synapse.fullname" . }}-grafana
       {{- else }}
       - name: data
         emptyDir: {}
       {{- end }}
       - name: datasources
         configMap:
-          name: {{ include "kubepolaris.fullname" . }}-grafana-datasources
+          name: {{ include "synapse.fullname" . }}-grafana-datasources
       - name: dashboards-provider
         configMap:
-          name: {{ include "kubepolaris.fullname" . }}-grafana-dashboards-provider
+          name: {{ include "synapse.fullname" . }}-grafana-dashboards-provider
       {{- if .Values.grafana.dashboards.enabled }}
       - name: dashboards
         configMap:
-          name: {{ include "kubepolaris.fullname" . }}-grafana-dashboards
+          name: {{ include "synapse.fullname" . }}-grafana-dashboards
       {{- end }}
 {{- end }}

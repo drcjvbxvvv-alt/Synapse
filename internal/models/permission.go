@@ -97,19 +97,19 @@ type PermissionTypeInfo struct {
 // ClusterRole 和 ServiceAccount 常量
 const (
 	// ClusterRole 名称
-	ClusterRoleClusterAdmin = "kubepolaris-cluster-admin"
-	ClusterRoleOps          = "kubepolaris-ops"
-	ClusterRoleDev          = "kubepolaris-dev"
-	ClusterRoleReadonly     = "kubepolaris-readonly"
+	ClusterRoleClusterAdmin = "synapse-cluster-admin"
+	ClusterRoleOps          = "synapse-ops"
+	ClusterRoleDev          = "synapse-dev"
+	ClusterRoleReadonly     = "synapse-readonly"
 
 	// ServiceAccount 名称
-	SAClusterAdmin = "kubepolaris-admin-sa"
-	SAOps          = "kubepolaris-ops-sa"
-	SADev          = "kubepolaris-dev-sa"
-	SAReadonly     = "kubepolaris-readonly-sa"
+	SAClusterAdmin = "synapse-admin-sa"
+	SAOps          = "synapse-ops-sa"
+	SADev          = "synapse-dev-sa"
+	SAReadonly     = "synapse-readonly-sa"
 
 	// Namespace
-	KubePolarisNamespace = "kubepolaris-system"
+	SynapseNamespace = "synapse-system"
 )
 
 // GetPermissionTypes 获取所有权限类型信息

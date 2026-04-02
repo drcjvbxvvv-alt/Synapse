@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
-	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/k8s"
+	"github.com/clay-wangzhi/Synapse/internal/middleware"
+	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	kubectlPodNamespace    = "kubepolaris-system"
+	kubectlPodNamespace    = "synapse-system"
 	kubectlPodImage        = "registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubectl:v0.1"
-	kubectlPodPrefix       = "kubepolaris-kubectl-"
+	kubectlPodPrefix       = "synapse-kubectl-"
 	kubectlIdleTimeout     = 1 * time.Hour
 	kubectlCleanupInterval = 10 * time.Minute
 )
@@ -268,14 +268,14 @@ func (h *KubectlPodTerminalHandler) ensureKubectlPod(client *kubernetes.Clientse
 			Name:      podName,
 			Namespace: kubectlPodNamespace,
 			Labels: map[string]string{
-				"app":             "kubepolaris-kubectl",
+				"app":             "synapse-kubectl",
 				"user-id":         fmt.Sprintf("%d", userID),
 				"permission-type": permissionType,
 			},
 			Annotations: map[string]string{
-				"kubepolaris.io/last-activity":   time.Now().Format(time.RFC3339),
-				"kubepolaris.io/permission-type": permissionType,
-				"kubepolaris.io/service-account": serviceAccount,
+				"synapse.io/last-activity":   time.Now().Format(time.RFC3339),
+				"synapse.io/permission-type": permissionType,
+				"synapse.io/service-account": serviceAccount,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -345,7 +345,7 @@ func (h *KubectlPodTerminalHandler) waitForPodRunningWithProgress(client *kubern
 // updateLastActivity 更新 Pod 最后活动时间
 func (h *KubectlPodTerminalHandler) updateLastActivity(client *kubernetes.Clientset, podName string) {
 	ctx := context.Background()
-	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"kubepolaris.io/last-activity":"%s"}}}`,
+	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"synapse.io/last-activity":"%s"}}}`,
 		time.Now().Format(time.RFC3339)))
 
 	_, err := client.CoreV1().Pods(kubectlPodNamespace).Patch(ctx, podName, types.MergePatchType, patch, metav1.PatchOptions{})
@@ -388,7 +388,7 @@ func (h *KubectlPodTerminalHandler) cleanupClusterIdlePods(cluster *models.Clust
 
 	ctx := context.Background()
 	pods, err := client.CoreV1().Pods(kubectlPodNamespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app=kubepolaris-kubectl",
+		LabelSelector: "app=synapse-kubectl",
 	})
 	if err != nil {
 		return
@@ -406,7 +406,7 @@ func (h *KubectlPodTerminalHandler) cleanupClusterIdlePods(cluster *models.Clust
 		}
 
 		// 检查空闲时间
-		lastActivityStr := pod.Annotations["kubepolaris.io/last-activity"]
+		lastActivityStr := pod.Annotations["synapse.io/last-activity"]
 		if lastActivityStr == "" {
 			continue
 		}

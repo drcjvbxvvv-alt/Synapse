@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # ArgoCD 集成
 
-KubePolaris 支持与 ArgoCD 集成，在统一界面中管理 GitOps 应用。
+Synapse 支持与 ArgoCD 集成，在统一界面中管理 GitOps 应用。
 
 ## 功能介绍
 
@@ -41,7 +41,7 @@ KubePolaris 支持与 ArgoCD 集成，在统一界面中管理 GitOps 应用。
 
 ```bash
 # 创建 ArgoCD API Token
-argocd account generate-token --account admin --id kubepolaris
+argocd account generate-token --account admin --id synapse
 ```
 
 ## 使用

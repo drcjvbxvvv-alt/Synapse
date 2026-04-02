@@ -60,7 +60,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     
     terminal.current.clear();
     terminal.current.writeln('\x1b[32m╭─────────────────────────────────────────────────────────────╮\x1b[0m');
-    terminal.current.writeln('\x1b[32m│                    KubePolaris Pod Terminal                 │\x1b[0m');
+    terminal.current.writeln('\x1b[32m│                    Synapse Pod Terminal                 │\x1b[0m');
     terminal.current.writeln('\x1b[32m╰─────────────────────────────────────────────────────────────╯\x1b[0m');
     terminal.current.writeln('');
     terminal.current.writeln(`\x1b[36mPod:\x1b[0m ${namespace}/${name}`);

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
@@ -105,7 +105,7 @@ func Load() *Config {
 	}
 
 	// 安全检查：JWT Secret 默认值警告
-	if config.JWT.Secret == "kubepolaris-secret" {
+	if config.JWT.Secret == "synapse-secret" {
 		if config.Server.Mode == "release" {
 			logger.Fatal("安全风险: 生产环境必须设置 JWT_SECRET 环境变量，不能使用默认值")
 		} else {
@@ -127,16 +127,16 @@ func setDefaults() {
 
 	// 数据库默认配置
 	viper.SetDefault("database.driver", "sqlite")
-	viper.SetDefault("database.dsn", "./data/kubepolaris.db")
+	viper.SetDefault("database.dsn", "./data/synapse.db")
 	viper.SetDefault("database.host", "localhost")
 	viper.SetDefault("database.port", 3306)
 	viper.SetDefault("database.username", "root")
 	viper.SetDefault("database.password", "")
-	viper.SetDefault("database.database", "kubepolaris")
+	viper.SetDefault("database.database", "synapse")
 	viper.SetDefault("database.charset", "utf8mb4")
 
 	// JWT默认配置
-	viper.SetDefault("jwt.secret", "kubepolaris-secret")
+	viper.SetDefault("jwt.secret", "synapse-secret")
 	viper.SetDefault("jwt.expire_time", 24) // 24小时
 
 	// 日志默认配置

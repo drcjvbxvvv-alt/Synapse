@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: 💬 Discussions
-    url: https://github.com/kubepolaris/kubepolaris/discussions
+    url: https://github.com/synapse/synapse/discussions
     about: Ask questions and discuss ideas
   - name: 📖 Documentation
-    url: https://kubepolaris.io/docs
+    url: https://synapse.io/docs
     about: Check our documentation for answers
   - name: 🔒 Security Issues
-    url: https://github.com/kubepolaris/kubepolaris/security/advisories/new
+    url: https://github.com/synapse/synapse/security/advisories/new
     about: Report security vulnerabilities privately

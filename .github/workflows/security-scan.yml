@@ -1,4 +1,4 @@
-# KubePolaris Security Scan Pipeline
+# Synapse Security Scan Pipeline
 # 安全扫描：容器镜像扫描、代码安全扫描、依赖漏洞扫描
 
 name: Security Scan
@@ -113,14 +113,14 @@ jobs:
           file: ./Dockerfile
           push: false
           load: true
-          tags: kubepolaris:scan
+          tags: synapse:scan
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'kubepolaris:scan'
+          image-ref: 'synapse:scan'
           format: 'sarif'
           output: 'trivy-image-results.sarif'
           severity: 'CRITICAL,HIGH'

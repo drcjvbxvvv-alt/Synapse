@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"

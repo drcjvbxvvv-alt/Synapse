@@ -1,12 +1,20 @@
-import React from 'react';
-import { Avatar, Spin, Tag } from 'antd';
-import { UserOutlined, RobotOutlined, ToolOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Avatar, Spin, Tag, Collapse, Button, message as antMessage, Tooltip } from 'antd';
+import {
+  UserOutlined,
+  RobotOutlined,
+  ToolOutlined,
+  BookOutlined,
+  CopyOutlined,
+  CodeOutlined,
+} from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { DisplayMessage } from '../../types/ai';
 
 interface AIChatMessageProps {
   message: DisplayMessage;
+  onApplyYAML?: (yaml: string) => void;
 }
 
 const markdownStyles: React.CSSProperties = {
@@ -14,8 +22,33 @@ const markdownStyles: React.CSSProperties = {
   fontSize: 14,
 };
 
-const AIChatMessage: React.FC<AIChatMessageProps> = ({ message }) => {
+// Extract YAML code blocks from markdown content
+function extractYAMLBlocks(content: string): string[] {
+  const yamlBlockRegex = /```yaml\n([\s\S]*?)```/g;
+  const blocks: string[] = [];
+  let match;
+  while ((match = yamlBlockRegex.exec(content)) !== null) {
+    blocks.push(match[1].trim());
+  }
+  return blocks;
+}
+
+const AIChatMessage: React.FC<AIChatMessageProps> = ({ message, onApplyYAML }) => {
   const isUser = message.role === 'user';
+  const [copiedBlock, setCopiedBlock] = useState<number | null>(null);
+
+  const yamlBlocks = !isUser && !message.loading ? extractYAMLBlocks(message.content) : [];
+
+  const handleCopyYAML = async (yaml: string, idx: number) => {
+    try {
+      await navigator.clipboard.writeText(yaml);
+      setCopiedBlock(idx);
+      antMessage.success('已複製 YAML');
+      setTimeout(() => setCopiedBlock(null), 2000);
+    } catch {
+      antMessage.error('複製失敗');
+    }
+  };
 
   return (
     <div
@@ -36,12 +69,7 @@ const AIChatMessage: React.FC<AIChatMessageProps> = ({ message }) => {
         }}
       />
 
-      <div
-        style={{
-          maxWidth: '85%',
-          minWidth: 60,
-        }}
-      >
+      <div style={{ maxWidth: '85%', minWidth: 60 }}>
         <div
           style={{
             padding: '8px 14px',
@@ -96,13 +124,7 @@ const AIChatMessage: React.FC<AIChatMessageProps> = ({ message }) => {
                   },
                   table: ({ children }) => (
                     <div style={{ overflowX: 'auto', margin: '8px 0' }}>
-                      <table
-                        style={{
-                          borderCollapse: 'collapse',
-                          width: '100%',
-                          fontSize: 13,
-                        }}
-                      >
+                      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13 }}>
                         {children}
                       </table>
                     </div>
@@ -129,9 +151,7 @@ const AIChatMessage: React.FC<AIChatMessageProps> = ({ message }) => {
                       {children}
                     </td>
                   ),
-                  p: ({ children }) => (
-                    <p style={{ margin: '4px 0' }}>{children}</p>
-                  ),
+                  p: ({ children }) => <p style={{ margin: '4px 0' }}>{children}</p>,
                   ul: ({ children }) => (
                     <ul style={{ margin: '4px 0', paddingLeft: 20 }}>{children}</ul>
                   ),
@@ -146,6 +166,7 @@ const AIChatMessage: React.FC<AIChatMessageProps> = ({ message }) => {
           )}
         </div>
 
+        {/* Tool call tags */}
         {message.toolCalls && message.toolCalls.length > 0 && (
           <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {message.toolCalls.map((tc) => (
@@ -158,6 +179,86 @@ const AIChatMessage: React.FC<AIChatMessageProps> = ({ message }) => {
                 {tc.function.name}
               </Tag>
             ))}
+          </div>
+        )}
+
+        {/* YAML block actions — copy + apply */}
+        {yamlBlocks.length > 0 && (
+          <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {yamlBlocks.map((yaml, idx) => (
+              <React.Fragment key={idx}>
+                <Tooltip title="複製 YAML">
+                  <Button
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={() => handleCopyYAML(yaml, idx)}
+                    type={copiedBlock === idx ? 'primary' : 'default'}
+                    style={{ fontSize: 12 }}
+                  >
+                    {copiedBlock === idx ? '已複製' : '複製 YAML'}
+                  </Button>
+                </Tooltip>
+                {onApplyYAML && (
+                  <Tooltip title="套用至叢集">
+                    <Button
+                      size="small"
+                      icon={<CodeOutlined />}
+                      onClick={() => onApplyYAML(yaml)}
+                      style={{ fontSize: 12 }}
+                    >
+                      套用至叢集
+                    </Button>
+                  </Tooltip>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+
+        {/* Runbook recommendations */}
+        {message.runbooks && message.runbooks.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <Collapse
+              size="small"
+              ghost
+              items={[
+                {
+                  key: 'runbooks',
+                  label: (
+                    <span style={{ fontSize: 12, color: '#1677ff' }}>
+                      <BookOutlined style={{ marginRight: 4 }} />
+                      相關 Runbook（{message.runbooks.length} 筆）
+                    </span>
+                  ),
+                  children: message.runbooks.map((rb) => (
+                    <div
+                      key={rb.id}
+                      style={{
+                        marginBottom: 12,
+                        padding: '8px 10px',
+                        background: '#fafafa',
+                        borderRadius: 6,
+                        border: '1px solid #f0f0f0',
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+                        {rb.title}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
+                        {rb.summary}
+                      </div>
+                      <ol style={{ margin: 0, paddingLeft: 16 }}>
+                        {rb.steps.map((step, i) => (
+                          <li key={i} style={{ fontSize: 12, color: '#444', marginBottom: 2 }}>
+                            {step.replace(/^\d+\.\s*/, '')}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )),
+                },
+              ]}
+            />
           </div>
         )}
       </div>

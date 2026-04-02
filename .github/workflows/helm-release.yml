@@ -1,6 +1,6 @@
-# KubePolaris Helm Chart Release
+# Synapse Helm Chart Release
 # 自动发布 Helm Chart 到 GitHub Pages
-# 用户可通过: helm repo add kubepolaris https://clay-wangzhi.github.io/KubePolaris
+# 用户可通过: helm repo add synapse https://clay-wangzhi.github.io/Synapse
 
 name: Release Helm Chart
 
@@ -9,7 +9,7 @@ on:
     branches:
       - main
     paths:
-      - 'deploy/helm/kubepolaris/**'
+      - 'deploy/helm/synapse/**'
   workflow_dispatch:
 
 permissions:
@@ -42,7 +42,7 @@ jobs:
             echo "Creating helm-charts branch..."
             git checkout --orphan helm-charts
             git rm -rf .
-            echo "# KubePolaris Helm Charts" > README.md
+            echo "# Synapse Helm Charts" > README.md
             echo "" >> README.md
             echo "This branch hosts the Helm chart repository index." >> README.md
             git add README.md

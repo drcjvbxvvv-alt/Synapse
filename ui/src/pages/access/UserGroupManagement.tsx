@@ -13,11 +13,13 @@ import {
 } from 'antd';
 import { PlusOutlined, UserAddOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useTranslation } from 'react-i18next';
 import type { UserGroup, User, CreateUserGroupRequest, UpdateUserGroupRequest } from '../../types';
 import permissionService from '../../services/permissionService';
 import dayjs from 'dayjs';
 
 const UserGroupManagement: React.FC = () => {
+  const { t } = useTranslation('permission');
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
 
@@ -39,11 +41,11 @@ const UserGroupManagement: React.FC = () => {
       const res = await permissionService.getUserGroups();
       setGroups(res || []);
     } catch {
-      message.error('加载用户组列表失败');
+      message.error(t('group.messages.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, [message, t]);
 
   useEffect(() => {
     loadGroups();
@@ -66,18 +68,18 @@ const UserGroupManagement: React.FC = () => {
 
   const handleDelete = (record: UserGroup) => {
     modal.confirm({
-      title: '确认删除',
-      content: `确定要删除用户组「${record.name}」吗？`,
-      okText: '确认',
-      cancelText: '取消',
+      title: t('group.confirm.delete'),
+      content: t('group.confirm.deleteContent', { name: record.name }),
+      okText: t('group.confirm.ok'),
+      cancelText: t('group.confirm.cancel'),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await permissionService.deleteUserGroup(record.id);
-          message.success('删除成功');
+          message.success(t('group.messages.deleteSuccess'));
           loadGroups();
         } catch {
-          message.error('删除失败');
+          message.error(t('group.messages.deleteFailed'));
         }
       },
     });
@@ -92,14 +94,14 @@ const UserGroupManagement: React.FC = () => {
           description: values.description || undefined,
         };
         await permissionService.updateUserGroup(editingGroup.id, data);
-        message.success('更新成功');
+        message.success(t('group.messages.updateSuccess'));
       } else {
         const data: CreateUserGroupRequest = {
           name: values.name,
           description: values.description || undefined,
         };
         await permissionService.createUserGroup(data);
-        message.success('创建成功');
+        message.success(t('group.messages.createSuccess'));
       }
       setModalVisible(false);
       loadGroups();
@@ -107,7 +109,7 @@ const UserGroupManagement: React.FC = () => {
       if ((err as { errorFields?: unknown[] }).errorFields) {
         return;
       }
-      message.error(editingGroup ? '更新失败' : '创建失败');
+      message.error(editingGroup ? t('group.messages.updateFailed') : t('group.messages.createFailed'));
     }
   };
 
@@ -124,12 +126,12 @@ const UserGroupManagement: React.FC = () => {
         setDrawerGroup(groupRes || group);
         setUsers(usersRes || []);
       } catch {
-        message.error('加载数据失败');
+        message.error(t('group.messages.loadDataFailed'));
       } finally {
         setDrawerLoading(false);
       }
     },
-    [message]
+    [message, t]
   );
 
   const closeMemberDrawer = () => {
@@ -141,23 +143,23 @@ const UserGroupManagement: React.FC = () => {
 
   const handleAddMember = async () => {
     if (!drawerGroup || !selectedUserId) {
-      message.warning('请选择要添加的用户');
+      message.warning(t('group.messages.selectUser'));
       return;
     }
     const memberIds = (drawerGroup.users || []).map((u) => u.id);
     if (memberIds.includes(selectedUserId)) {
-      message.warning('该用户已在用户组中');
+      message.warning(t('group.messages.userAlreadyInGroup'));
       return;
     }
     setAddMemberLoading(true);
     try {
       await permissionService.addUserToGroup(drawerGroup.id, selectedUserId);
-      message.success('添加成功');
+      message.success(t('group.messages.addSuccess'));
       setSelectedUserId(null);
       const groupRes = await permissionService.getUserGroup(drawerGroup.id);
       setDrawerGroup(groupRes || drawerGroup);
     } catch {
-      message.error('添加失败');
+      message.error(t('group.messages.addFailed'));
     } finally {
       setAddMemberLoading(false);
     }
@@ -166,19 +168,19 @@ const UserGroupManagement: React.FC = () => {
   const handleRemoveMember = (user: User) => {
     if (!drawerGroup) return;
     modal.confirm({
-      title: '确认移除',
-      content: `确定要将用户「${user.display_name || user.username}」从用户组中移除吗？`,
-      okText: '确认',
-      cancelText: '取消',
+      title: t('group.confirm.remove'),
+      content: t('group.confirm.removeContent', { name: user.display_name || user.username }),
+      okText: t('group.confirm.ok'),
+      cancelText: t('group.confirm.cancel'),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await permissionService.removeUserFromGroup(drawerGroup.id, user.id);
-          message.success('移除成功');
+          message.success(t('group.messages.removeSuccess'));
           const groupRes = await permissionService.getUserGroup(drawerGroup.id);
           setDrawerGroup(groupRes || drawerGroup);
         } catch {
-          message.error('移除失败');
+          message.error(t('group.messages.removeFailed'));
         }
       },
     });
@@ -189,32 +191,32 @@ const UserGroupManagement: React.FC = () => {
 
   const columns: ColumnsType<UserGroup> = [
     {
-      title: '名称',
+      title: t('group.columns.name'),
       dataIndex: 'name',
       key: 'name',
       width: 180,
     },
     {
-      title: '描述',
+      title: t('group.columns.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
     },
     {
-      title: '成员数',
+      title: t('group.columns.memberCount'),
       key: 'memberCount',
       width: 100,
       render: (_, record) => record.users?.length ?? 0,
     },
     {
-      title: '创建时间',
+      title: t('group.columns.createdAt'),
       dataIndex: 'created_at',
       key: 'created_at',
       width: 180,
       render: (val: string) => (val ? dayjs(val).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
-      title: '操作',
+      title: t('group.columns.actions'),
       key: 'action',
       width: 220,
       render: (_, record) => (
@@ -225,10 +227,10 @@ const UserGroupManagement: React.FC = () => {
             icon={<UserAddOutlined />}
             onClick={() => openMemberDrawer(record)}
           >
-            管理成员
+            {t('group.actions.manage')}
           </Button>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            编辑
+            {t('group.actions.edit')}
           </Button>
           <Button
             type="link"
@@ -237,7 +239,7 @@ const UserGroupManagement: React.FC = () => {
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record)}
           >
-            删除
+            {t('group.actions.delete')}
           </Button>
         </Space>
       ),
@@ -247,9 +249,9 @@ const UserGroupManagement: React.FC = () => {
   return (
     <div style={{ padding: 0 }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>用户组管理</h2>
+        <h2 style={{ margin: 0, fontSize: 20 }}>{t('group.title')}</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          创建用户组
+          {t('group.create')}
         </Button>
       </div>
 
@@ -262,13 +264,13 @@ const UserGroupManagement: React.FC = () => {
           pagination={{
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (tot) => t('group.pagination.total', { total: tot }),
           }}
         />
       </Card>
 
       <Modal
-        title={editingGroup ? '编辑用户组' : '创建用户组'}
+        title={editingGroup ? t('group.editTitle') : t('group.createTitle')}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
@@ -277,19 +279,19 @@ const UserGroupManagement: React.FC = () => {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
+            label={t('group.form.name')}
+            rules={[{ required: true, message: t('group.form.nameRequired') }]}
           >
-            <Input placeholder="请输入用户组名称" />
+            <Input placeholder={t('group.form.namePlaceholder')} />
           </Form.Item>
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="请输入描述（可选）" />
+          <Form.Item name="description" label={t('group.form.description')}>
+            <Input.TextArea rows={3} placeholder={t('group.form.descriptionPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>
 
       <Drawer
-        title={`管理成员 - ${drawerGroup?.name ?? ''}`}
+        title={t('group.drawer.title', { name: drawerGroup?.name ?? '' })}
         placement="right"
         width={520}
         open={drawerVisible}
@@ -299,7 +301,7 @@ const UserGroupManagement: React.FC = () => {
         <div style={{ marginBottom: 16 }}>
           <Space.Compact style={{ width: '100%' }}>
             <Select
-              placeholder="选择用户"
+              placeholder={t('group.drawer.selectUser')}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -317,7 +319,7 @@ const UserGroupManagement: React.FC = () => {
               onClick={handleAddMember}
               icon={<UserAddOutlined />}
             >
-              添加
+              {t('group.drawer.add')}
             </Button>
           </Space.Compact>
         </div>
@@ -328,18 +330,18 @@ const UserGroupManagement: React.FC = () => {
           dataSource={drawerGroup?.users || []}
           columns={[
             {
-              title: '用户名',
+              title: t('group.drawer.columns.username'),
               dataIndex: 'username',
               key: 'username',
             },
             {
-              title: '显示名称',
+              title: t('group.drawer.columns.displayName'),
               dataIndex: 'display_name',
               key: 'display_name',
               render: (val: string) => val || '-',
             },
             {
-              title: '操作',
+              title: t('group.drawer.columns.actions'),
               key: 'action',
               width: 80,
               render: (_, record) => (
@@ -349,7 +351,7 @@ const UserGroupManagement: React.FC = () => {
                   danger
                   onClick={() => handleRemoveMember(record)}
                 >
-                  移除
+                  {t('group.drawer.remove')}
                 </Button>
               ),
             },

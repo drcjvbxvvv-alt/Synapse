@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "KubePolaris",
+    "name": "Synapse",
     "tagline": "企業級 Kubernetes 多叢集管理平台"
   },
   "menu": {
@@ -36,6 +36,7 @@
     "helmReleases": "Helm 應用",
     "crdManagement": "CRD 管理",
     "costAnalysis": "成本分析",
+    "securityScan": "安全掃描",
     "eventAlerts": "Event 告警",
     "observability": "雲原生觀測",
     "costGovernance": "雲原生成本治理",
@@ -190,8 +191,8 @@
     "usernameRequired": "請輸入使用者名稱",
     "passwordRequired": "請輸入密碼",
     "ldapHint": "🔐 使用企業帳號登入",
-    "defaultAdminHint": "👤 預設管理員: admin / KubePolaris@2026",
-    "copyright": "© 2026 KubePolaris. 保留所有權利。",
+    "defaultAdminHint": "👤 預設管理員: admin / Synapse@2026",
+    "copyright": "© 2026 Synapse. 保留所有權利。",
     "welcomeBack": "歡迎回來",
     "loginSubtitle": "登入以管理您的叢集與資源。",
     "brandHeadline": "統一管理您的 Kubernetes 叢集",

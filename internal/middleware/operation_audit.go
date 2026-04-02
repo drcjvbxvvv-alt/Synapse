@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/constants"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/constants"
+	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )

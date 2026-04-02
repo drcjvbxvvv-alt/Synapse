@@ -6,9 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/constants"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
+	"github.com/clay-wangzhi/Synapse/internal/constants"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
 )
 
 // OperationLogHandler 操作日志处理器

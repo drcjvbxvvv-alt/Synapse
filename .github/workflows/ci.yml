@@ -1,4 +1,4 @@
-# KubePolaris CI Pipeline
+# Synapse CI Pipeline
 # 主要的持续集成流程：代码检查、测试、构建
 
 name: CI
@@ -58,7 +58,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: testpassword
-          MYSQL_DATABASE: kubepolaris_test
+          MYSQL_DATABASE: synapse_test
         ports:
           - 3306:3306
         options: >-
@@ -92,7 +92,7 @@ jobs:
           DB_PORT: 3306
           DB_USERNAME: root
           DB_PASSWORD: testpassword
-          DB_DATABASE: kubepolaris_test
+          DB_DATABASE: synapse_test
         run: |
           go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
@@ -126,13 +126,13 @@ jobs:
 
       - name: Build binary
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o kubepolaris-server .
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o synapse-server .
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
           name: backend-binary
-          path: kubepolaris-server
+          path: synapse-server
           retention-days: 7
 
   # ==================== 前端 CI ====================
@@ -264,7 +264,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
-          tags: kubepolaris:test
+          tags: synapse:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -279,7 +279,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: testpassword
-          MYSQL_DATABASE: kubepolaris_integration
+          MYSQL_DATABASE: synapse_integration
         ports:
           - 3306:3306
         options: >-
@@ -317,7 +317,7 @@ jobs:
           DB_PORT: 3306
           DB_USERNAME: root
           DB_PASSWORD: testpassword
-          DB_DATABASE: kubepolaris_integration
+          DB_DATABASE: synapse_integration
           INTEGRATION_TEST: true
         run: |
           go test -v -tags=integration ./internal/integration/...

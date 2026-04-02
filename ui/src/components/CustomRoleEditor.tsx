@@ -122,7 +122,7 @@ kind: ClusterRole
 metadata:
   name: ${name}
   labels:
-    app.kubernetes.io/managed-by: kubepolaris
+    app.kubernetes.io/managed-by: synapse
 rules:
 ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(', ')}]
     resources: [${rule.resources.map(r => `"${r}"`).join(', ')}]

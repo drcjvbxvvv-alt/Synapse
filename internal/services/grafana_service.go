@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
 //go:embed dashboards/*.json
@@ -339,7 +339,7 @@ type DashboardStatusItem struct {
 	Exists bool   `json:"exists"`
 }
 
-// EnsureDashboards 确保 KubePolaris 文件夹和 Dashboard 已导入到 Grafana
+// EnsureDashboards 确保 Synapse 文件夹和 Dashboard 已导入到 Grafana
 func (s *GrafanaService) EnsureDashboards() (*DashboardSyncStatus, error) {
 	if !s.IsEnabled() {
 		return nil, fmt.Errorf("grafana 服务未配置")
@@ -349,10 +349,10 @@ func (s *GrafanaService) EnsureDashboards() (*DashboardSyncStatus, error) {
 		Dashboards: []DashboardStatusItem{},
 	}
 
-	// 1. 创建 KubePolaris 文件夹（幂等）
-	folderExists, err := s.ensureFolder("kubepolaris-folder", "KubePolaris")
+	// 1. 创建 Synapse 文件夹（幂等）
+	folderExists, err := s.ensureFolder("synapse-folder", "Synapse")
 	if err != nil {
-		return nil, fmt.Errorf("创建 KubePolaris 文件夹失败: %w", err)
+		return nil, fmt.Errorf("创建 Synapse 文件夹失败: %w", err)
 	}
 	status.FolderExists = folderExists
 
@@ -387,7 +387,7 @@ func (s *GrafanaService) EnsureDashboards() (*DashboardSyncStatus, error) {
 		title, _ := dashboardJSON["title"].(string)
 
 		// 导入 Dashboard
-		if err := s.importDashboard(dashboardJSON, "kubepolaris-folder"); err != nil {
+		if err := s.importDashboard(dashboardJSON, "synapse-folder"); err != nil {
 			logger.Error("导入 Dashboard 失败", "uid", uid, "title", title, "error", err)
 			status.Dashboards = append(status.Dashboards, DashboardStatusItem{
 				UID: uid, Title: title, Exists: false,
@@ -417,7 +417,7 @@ func (s *GrafanaService) GetDashboardSyncStatus() (*DashboardSyncStatus, error) 
 	}
 
 	// 检查文件夹
-	status.FolderExists = s.folderExists("kubepolaris-folder")
+	status.FolderExists = s.folderExists("synapse-folder")
 
 	// 检查每个 Dashboard
 	entries, err := dashboardFS.ReadDir("dashboards")

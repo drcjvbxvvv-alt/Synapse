@@ -2,17 +2,17 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}
+  name: {{ include "synapse.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
     # WebSocket 支持（终端功能需要）
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/websocket-services: "{{ include "kubepolaris.fullname" . }}-backend"
+    nginx.ingress.kubernetes.io/websocket-services: "{{ include "synapse.fullname" . }}-backend"
   {{- end }}
 spec:
   {{- if .Values.ingress.className }}
@@ -38,7 +38,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "kubepolaris.fullname" $ }}-{{ .backend }}
+                name: {{ include "synapse.fullname" $ }}-{{ .backend }}
                 port:
                   {{- if eq .backend "frontend" }}
                   number: {{ $.Values.frontend.service.port }}

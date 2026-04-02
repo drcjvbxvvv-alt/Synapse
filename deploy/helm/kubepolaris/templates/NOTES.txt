@@ -1,4 +1,4 @@
-🎉 KubePolaris 已成功安装！
+🎉 Synapse 已成功安装！
 
 访问信息:
 {{- if .Values.ingress.enabled }}
@@ -8,10 +8,10 @@
 {{- else }}
   使用 kubectl port-forward 访问:
   
-  前端: kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "kubepolaris.fullname" . }}-frontend 8080:80
+  前端: kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "synapse.fullname" . }}-frontend 8080:80
   访问: http://localhost:8080
   
-  后端: kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "kubepolaris.fullname" . }}-backend 8081:8080
+  后端: kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "synapse.fullname" . }}-backend 8081:8080
   API: http://localhost:8081
 {{- end }}
 
@@ -28,8 +28,8 @@
   kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/component=backend --tail=100 -f
 
 获取帮助:
-  文档: https://kubepolaris.clay-wangzhi.com/docs
-  GitHub: https://github.com/clay-wangzhi/KubePolaris
+  文档: https://synapse.clay-wangzhi.com/docs
+  GitHub: https://github.com/clay-wangzhi/Synapse
 
 {{ if not .Values.security.jwtSecret }}
 ℹ️  JWT Secret 已自动生成（32 位随机字符串）
@@ -39,7 +39,7 @@
 {{ if and .Values.mysql.internal.enabled (not .Values.mysql.internal.rootPassword) (not .Values.mysql.internal.existingSecret) }}
 ⚠️  警告: MySQL 密码未设置！
   建议重新安装并设置密码:
-  helm upgrade {{ .Release.Name }} kubepolaris/kubepolaris \
+  helm upgrade {{ .Release.Name }} synapse/synapse \
     --set mysql.internal.rootPassword="your-mysql-root-password" \
     --set mysql.internal.password="your-mysql-password" \
     -n {{ .Release.Namespace }}

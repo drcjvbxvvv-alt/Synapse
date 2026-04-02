@@ -1,0 +1,78 @@
+{
+  "title": "安全掃描",
+  "tabs": {
+    "imageScan": "映像漏洞掃描",
+    "bench": "CIS 基準測試",
+    "gatekeeper": "OPA/Gatekeeper 違規"
+  },
+  "scan": {
+    "trigger": "觸發掃描",
+    "triggerAll": "掃描所有映像",
+    "image": "映像",
+    "pod": "Pod",
+    "container": "容器",
+    "namespace": "命名空間",
+    "status": "狀態",
+    "critical": "嚴重",
+    "high": "高",
+    "medium": "中",
+    "low": "低",
+    "unknown": "未知",
+    "scannedAt": "掃描時間",
+    "viewDetail": "檢視詳情",
+    "pending": "待掃描",
+    "scanning": "掃描中",
+    "completed": "已完成",
+    "failed": "失敗",
+    "triggerSuccess": "掃描已觸發",
+    "noData": "尚無掃描記錄，請點擊「掃描所有映像」開始",
+    "inputImage": "請輸入映像名稱（例：nginx:latest）",
+    "imagePlaceholder": "nginx:latest",
+    "detail": {
+      "title": "漏洞詳情",
+      "vulnId": "漏洞 ID",
+      "package": "套件",
+      "installedVersion": "目前版本",
+      "fixedVersion": "修復版本",
+      "severity": "嚴重度",
+      "description": "說明"
+    }
+  },
+  "bench": {
+    "trigger": "執行基準測試",
+    "runAt": "執行時間",
+    "status": "狀態",
+    "score": "合規分數",
+    "pass": "通過",
+    "fail": "失敗",
+    "warn": "警告",
+    "info": "資訊",
+    "viewDetail": "檢視詳情",
+    "pending": "待執行",
+    "running": "執行中",
+    "completed": "已完成",
+    "failed": "失敗",
+    "triggerSuccess": "基準測試已觸發，請稍候…",
+    "noData": "尚無基準測試記錄",
+    "detail": {
+      "title": "基準測試詳情",
+      "section": "檢查項目",
+      "testNumber": "測試編號",
+      "description": "說明",
+      "result": "結果",
+      "remediation": "修復建議"
+    }
+  },
+  "gatekeeper": {
+    "refresh": "重新整理",
+    "totalViolations": "違規總數",
+    "constraintKind": "約束類型",
+    "constraintName": "約束名稱",
+    "violationCount": "違規數量",
+    "resource": "資源",
+    "namespace": "命名空間",
+    "message": "訊息",
+    "noData": "未發現違規，或 Gatekeeper 尚未安裝",
+    "notInstalled": "Gatekeeper 未安裝或無法存取"
+  }
+}

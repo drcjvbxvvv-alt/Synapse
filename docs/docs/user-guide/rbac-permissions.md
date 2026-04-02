@@ -4,7 +4,7 @@ sidebar_position: 8
 
 # 权限管理
 
-KubePolaris 提供基于角色的访问控制（RBAC），支持细粒度的权限管理。
+Synapse 提供基于角色的访问控制（RBAC），支持细粒度的权限管理。
 
 ## 权限模型
 
@@ -229,7 +229,7 @@ attributes:
 
 ### LDAP 组映射
 
-将 LDAP 组映射到 KubePolaris 角色：
+将 LDAP 组映射到 Synapse 角色：
 
 ```yaml
 group_mappings:

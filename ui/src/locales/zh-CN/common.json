@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "KubePolaris",
+    "name": "Synapse",
     "tagline": "企业级 Kubernetes 多集群管理平台"
   },
   "menu": {
@@ -36,6 +36,7 @@
     "helmReleases": "Helm 应用",
     "crdManagement": "CRD 管理",
     "costAnalysis": "成本分析",
+    "securityScan": "安全扫描",
     "eventAlerts": "Event 告警",
     "observability": "云原生观测",
     "costGovernance": "云原生成本治理",
@@ -190,8 +191,8 @@
     "usernameRequired": "请输入用户名",
     "passwordRequired": "请输入密码",
     "ldapHint": "🔐 使用企业账号登录",
-    "defaultAdminHint": "👤 默认管理员: admin / KubePolaris@2026",
-    "copyright": "© 2026 KubePolaris. 保留所有权利。",
+    "defaultAdminHint": "👤 默认管理员: admin / Synapse@2026",
+    "copyright": "© 2026 Synapse. 保留所有权利。",
     "welcomeBack": "欢迎回来",
     "loginSubtitle": "登录以管理你的集群和资源。",
     "brandHeadline": "统一管理你的 Kubernetes 集群",

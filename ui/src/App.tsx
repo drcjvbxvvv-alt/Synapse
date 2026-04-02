@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { ConfigProvider, App as AntdApp, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import zhCN from 'antd/locale/zh_CN';
+import zhTW from 'antd/locale/zh_TW';
 import enUS from 'antd/locale/en_US';
 import MainLayout from './layouts/MainLayout';
 import ClusterList from './pages/cluster/ClusterList';
@@ -51,6 +52,7 @@ import CRDList from './pages/crd/CRDList';
 import CRDResources from './pages/crd/CRDResources';
 import EventAlertRules from './pages/alert/EventAlertRules';
 import CostDashboard from './pages/cost/CostDashboard';
+import SecurityDashboard from './pages/security/SecurityDashboard';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
 import { PermissionGuard } from './components/PermissionGuard';
@@ -75,6 +77,7 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
 
 // Ant Design locale 映射
 const antdLocaleMap: Record<string, typeof zhCN> = {
+  'zh-TW': zhTW,
   'zh-CN': zhCN,
   'en-US': enUS,
 };
@@ -82,7 +85,7 @@ const antdLocaleMap: Record<string, typeof zhCN> = {
 // 内部 App 组件（需要访问 i18n hook）
 const AppContent: React.FC = () => {
   const { i18n } = useTranslation();
-  const currentLocale = antdLocaleMap[i18n.language] || zhCN;
+  const currentLocale = antdLocaleMap[i18n.language] || zhTW;
 
   return (
     <ConfigProvider locale={currentLocale}>
@@ -205,6 +208,8 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/event-alerts" element={<EventAlertRules />} />
               {/* 資源成本分析 */}
               <Route path="clusters/:clusterId/cost" element={<CostDashboard />} />
+              {/* 安全掃描 */}
+              <Route path="clusters/:id/security" element={<SecurityDashboard />} />
               {/* 审计管理路由 - 仅平台管理员 */}
               <Route path="audit/operations" element={
                 <PermissionGuard platformAdminOnly>

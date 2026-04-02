@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # 部署指南
 
-本文档提供 KubePolaris 生产环境部署的详细指南和最佳实践。
+本文档提供 Synapse 生产环境部署的详细指南和最佳实践。
 
 ## 部署架构
 
@@ -65,8 +65,8 @@ sidebar_position: 1
 
 ### 网络要求
 
-- KubePolaris 服务器需要能访问所有被管理的 Kubernetes API Server
-- 用户需要能访问 KubePolaris Web 界面
+- Synapse 服务器需要能访问所有被管理的 Kubernetes API Server
+- 用户需要能访问 Synapse Web 界面
 - 建议独立网络分区，限制对 API Server 的直接访问
 
 ### 数据库
@@ -81,31 +81,31 @@ sidebar_position: 1
 
 ```bash
 # 创建部署目录
-mkdir -p /opt/kubepolaris
-cd /opt/kubepolaris
+mkdir -p /opt/synapse
+cd /opt/synapse
 
 # 克隆仓库或下载发布包
-git clone https://github.com/clay-wangzhi/KubePolaris.git
+git clone https://github.com/clay-wangzhi/Synapse.git
 # 或
-wget https://github.com/clay-wangzhi/KubePolaris/releases/download/v1.0.0/kubepolaris-v1.0.0.tar.gz
-tar -xzf kubepolaris-v1.0.0.tar.gz
+wget https://github.com/clay-wangzhi/Synapse/releases/download/v1.0.0/synapse-v1.0.0.tar.gz
+tar -xzf synapse-v1.0.0.tar.gz
 ```
 
 ### 2. 准备数据库
 
 ```sql
 -- 创建数据库
-CREATE DATABASE kubepolaris CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE synapse CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- 创建用户
-CREATE USER 'kubepolaris'@'%' IDENTIFIED BY 'your_secure_password';
-GRANT ALL PRIVILEGES ON kubepolaris.* TO 'kubepolaris'@'%';
+CREATE USER 'synapse'@'%' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON synapse.* TO 'synapse'@'%';
 FLUSH PRIVILEGES;
 ```
 
 ### 3. 配置应用
 
-KubePolaris 通过环境变量进行配置。从模板创建 `.env` 文件，修改生产环境配置：
+Synapse 通过环境变量进行配置。从模板创建 `.env` 文件，修改生产环境配置：
 
 ```bash
 cp .env.example .env
@@ -120,9 +120,9 @@ SERVER_MODE=release
 DB_DRIVER=mysql
 DB_HOST=your-mysql-host
 DB_PORT=3306
-DB_USERNAME=kubepolaris
+DB_USERNAME=synapse
 DB_PASSWORD=your_secure_password
-DB_DATABASE=kubepolaris
+DB_DATABASE=synapse
 JWT_SECRET=your-very-secure-jwt-secret-key-at-least-32-chars
 JWT_EXPIRE_TIME=24
 LOG_LEVEL=info
@@ -147,42 +147,42 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ```bash
 # 创建命名空间
-kubectl create namespace kubepolaris
+kubectl create namespace synapse
 
 # 创建 Secret
-kubectl create secret generic kubepolaris-secrets \
+kubectl create secret generic synapse-secrets \
   --from-literal=mysql-password=your_password \
   --from-literal=jwt-secret=your_jwt_secret \
-  -n kubepolaris
+  -n synapse
 
 # 安装 Helm Chart
-helm install kubepolaris kubepolaris/kubepolaris \
+helm install synapse synapse/synapse \
   -f values-production.yaml \
-  -n kubepolaris
+  -n synapse
 ```
 
 ### 5. 配置反向代理
 
 #### Nginx 配置
 
-```nginx title="/etc/nginx/conf.d/kubepolaris.conf"
-upstream kubepolaris_backend {
+```nginx title="/etc/nginx/conf.d/synapse.conf"
+upstream synapse_backend {
     server 127.0.0.1:8080;
     keepalive 32;
 }
 
 server {
     listen 80;
-    server_name kubepolaris.example.com;
+    server_name synapse.example.com;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name kubepolaris.example.com;
+    server_name synapse.example.com;
 
-    ssl_certificate /etc/nginx/ssl/kubepolaris.crt;
-    ssl_certificate_key /etc/nginx/ssl/kubepolaris.key;
+    ssl_certificate /etc/nginx/ssl/synapse.crt;
+    ssl_certificate_key /etc/nginx/ssl/synapse.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
     ssl_prefer_server_ciphers on;
@@ -198,14 +198,14 @@ server {
 
     # 静态文件
     location / {
-        root /opt/kubepolaris/ui/dist;
+        root /opt/synapse/ui/dist;
         try_files $uri $uri/ /index.html;
         expires 1d;
     }
 
     # API 代理
     location /api/ {
-        proxy_pass http://kubepolaris_backend;
+        proxy_pass http://synapse_backend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -216,7 +216,7 @@ server {
 
     # WebSocket 代理
     location /ws/ {
-        proxy_pass http://kubepolaris_backend;
+        proxy_pass http://synapse_backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -232,10 +232,10 @@ server {
 
 ```bash
 # 检查服务状态
-curl https://kubepolaris.example.com/api/health
+curl https://synapse.example.com/api/health
 
 # 检查日志
-tail -f /var/log/kubepolaris/app.log
+tail -f /var/log/synapse/app.log
 ```
 
 ## 初始化配置
@@ -273,20 +273,20 @@ tail -f /var/log/kubepolaris/app.log
 
 ```bash
 # 查看日志
-tail -f /var/log/kubepolaris/app.log
+tail -f /var/log/synapse/app.log
 
 # 日志轮转（已配置自动轮转）
-logrotate -f /etc/logrotate.d/kubepolaris
+logrotate -f /etc/logrotate.d/synapse
 ```
 
 ### 备份
 
 ```bash
 # 数据库备份
-mysqldump -u kubepolaris -p kubepolaris > backup_$(date +%Y%m%d).sql
+mysqldump -u synapse -p synapse > backup_$(date +%Y%m%d).sql
 
 # 配置备份
-tar -czf config_backup_$(date +%Y%m%d).tar.gz /opt/kubepolaris/configs
+tar -czf config_backup_$(date +%Y%m%d).tar.gz /opt/synapse/configs
 ```
 
 ### 监控

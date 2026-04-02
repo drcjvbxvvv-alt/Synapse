@@ -1,5 +1,5 @@
 -- ==========================================
--- KubePolaris 数据库初始化脚本
+-- Synapse 数据库初始化脚本
 -- ==========================================
 -- 
 -- 注意: 所有数据库表结构由 GORM AutoMigrate 自动管理
@@ -19,4 +19,4 @@ SET NAMES utf8mb4;
 SET CHARACTER SET utf8mb4;
 
 -- 完成
-SELECT 'KubePolaris database initialized - tables managed by GORM AutoMigrate' AS message;
+SELECT 'Synapse database initialized - tables managed by GORM AutoMigrate' AS message;

@@ -6,28 +6,28 @@ import (
 )
 
 const (
-	// Namespace for KubePolaris resources
-	KubePolarisNamespace = "kubepolaris-system"
+	// Namespace for Synapse resources
+	SynapseNamespace = "synapse-system"
 
 	// ClusterRole names
-	ClusterRoleClusterAdmin = "kubepolaris-cluster-admin"
-	ClusterRoleOps          = "kubepolaris-ops"
-	ClusterRoleDev          = "kubepolaris-dev"
-	ClusterRoleReadonly     = "kubepolaris-readonly"
+	ClusterRoleClusterAdmin = "synapse-cluster-admin"
+	ClusterRoleOps          = "synapse-ops"
+	ClusterRoleDev          = "synapse-dev"
+	ClusterRoleReadonly     = "synapse-readonly"
 
 	// ServiceAccount names
-	SAClusterAdmin = "kubepolaris-admin-sa"
-	SAOps          = "kubepolaris-ops-sa"
-	SADev          = "kubepolaris-dev-sa"
-	SAReadonly     = "kubepolaris-readonly-sa"
+	SAClusterAdmin = "synapse-admin-sa"
+	SAOps          = "synapse-ops-sa"
+	SADev          = "synapse-dev-sa"
+	SAReadonly     = "synapse-readonly-sa"
 
 	// Labels
 	LabelManagedBy = "app.kubernetes.io/managed-by"
-	LabelValue     = "kubepolaris"
+	LabelValue     = "synapse"
 )
 
-// GetKubePolarisLabels returns common labels for KubePolaris resources
-func GetKubePolarisLabels() map[string]string {
+// GetSynapseLabels returns common labels for Synapse resources
+func GetSynapseLabels() map[string]string {
 	return map[string]string{
 		LabelManagedBy: LabelValue,
 	}
@@ -38,7 +38,7 @@ func GetClusterAdminClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   ClusterRoleClusterAdmin,
-			Labels: GetKubePolarisLabels(),
+			Labels: GetSynapseLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -59,7 +59,7 @@ func GetOpsClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   ClusterRoleOps,
-			Labels: GetKubePolarisLabels(),
+			Labels: GetSynapseLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			// Argo Rollouts - full access
@@ -217,7 +217,7 @@ func GetDevClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   ClusterRoleDev,
-			Labels: GetKubePolarisLabels(),
+			Labels: GetSynapseLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			// Argo Rollouts - full access
@@ -364,7 +364,7 @@ func GetReadonlyClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   ClusterRoleReadonly,
-			Labels: GetKubePolarisLabels(),
+			Labels: GetSynapseLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			// Argo Rollouts - read
@@ -448,7 +448,7 @@ func GetReadonlyClusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-// GetAllClusterRoles returns all KubePolaris ClusterRoles
+// GetAllClusterRoles returns all Synapse ClusterRoles
 func GetAllClusterRoles() []*rbacv1.ClusterRole {
 	return []*rbacv1.ClusterRole{
 		GetClusterAdminClusterRole(),

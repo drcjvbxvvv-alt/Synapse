@@ -143,7 +143,7 @@
     "testConnectionSuccess": "Grafana 连接测试成功",
     "testConnectionFailed": "Grafana 连接测试失败",
     "dashboardSync": "Dashboard 同步",
-    "dashboardSyncDesc": "将 KubePolaris 内置的监控 Dashboard 同步到 Grafana，包括集群总览、工作负载详情和 Pod 详情面板",
+    "dashboardSyncDesc": "将 Synapse 内置的监控 Dashboard 同步到 Grafana，包括集群总览、工作负载详情和 Pod 详情面板",
     "folder": "文件夹",
     "notCreated": "未创建",
     "allSynced": "全部已同步",

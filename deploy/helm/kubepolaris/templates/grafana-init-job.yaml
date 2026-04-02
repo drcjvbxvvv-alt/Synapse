@@ -3,10 +3,10 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  name: {{ include "synapse.fullname" . }}-grafana-init
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-init
   annotations:
     "helm.sh/hook": post-install,post-upgrade
@@ -16,10 +16,10 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  name: {{ include "synapse.fullname" . }}-grafana-init
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-init
   annotations:
     "helm.sh/hook": post-install,post-upgrade
@@ -36,10 +36,10 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  name: {{ include "synapse.fullname" . }}-grafana-init
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-init
   annotations:
     "helm.sh/hook": post-install,post-upgrade
@@ -48,20 +48,20 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  name: {{ include "synapse.fullname" . }}-grafana-init
 subjects:
 - kind: ServiceAccount
-  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  name: {{ include "synapse.fullname" . }}-grafana-init
   namespace: {{ .Release.Namespace }}
 ---
 # Grafana 初始化 Job - 设置文件夹权限、创建 Service Account 并自动创建 API Key Secret
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana-init
+  name: {{ include "synapse.fullname" . }}-grafana-init
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-init
   annotations:
     "helm.sh/hook": post-install,post-upgrade
@@ -73,30 +73,30 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "kubepolaris.selectorLabels" . | nindent 8 }}
+        {{- include "synapse.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: grafana-init
     spec:
-      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
-      serviceAccountName: {{ include "kubepolaris.fullname" . }}-grafana-init
+      {{- include "synapse.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "synapse.fullname" . }}-grafana-init
       restartPolicy: OnFailure
       containers:
       - name: grafana-init
-        image: {{ include "kubepolaris.image" (dict "repository" .Values.grafana.init.image.repository "tag" .Values.grafana.init.image.tag "Values" .Values "Chart" .Chart) }}
+        image: {{ include "synapse.image" (dict "repository" .Values.grafana.init.image.repository "tag" .Values.grafana.init.image.tag "Values" .Values "Chart" .Chart) }}
         imagePullPolicy: {{ .Values.grafana.init.image.pullPolicy }}
         env:
         - name: GRAFANA_URL
-          value: "http://{{ include "kubepolaris.fullname" . }}-grafana:{{ .Values.grafana.service.port }}"
+          value: "http://{{ include "synapse.fullname" . }}-grafana:{{ .Values.grafana.service.port }}"
         - name: GRAFANA_USER
           value: "admin"
         - name: GRAFANA_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "kubepolaris.grafana.secretName" . }}
+              name: {{ include "synapse.grafana.secretName" . }}
               key: {{ .Values.grafana.existingSecretPasswordKey }}
         - name: NAMESPACE
           value: {{ .Release.Namespace | quote }}
         - name: SECRET_NAME
-          value: "{{ include "kubepolaris.fullname" . }}-grafana-api-key"
+          value: "{{ include "synapse.fullname" . }}-grafana-api-key"
         command:
         - /bin/sh
         - -c
@@ -116,12 +116,12 @@ spec:
           sleep 10
 
           echo ""
-          echo "🔧 设置 KubePolaris 文件夹权限..."
+          echo "🔧 设置 Synapse 文件夹权限..."
           PERM_RESULT=$(curl -s -X POST \
             -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
             -H "Content-Type: application/json" \
             -d '{"items":[{"role":"Viewer","permission":1},{"role":"Editor","permission":2}]}' \
-            "${GRAFANA_URL}/api/folders/kubepolaris-folder/permissions")
+            "${GRAFANA_URL}/api/folders/synapse-folder/permissions")
           echo "权限设置结果: ${PERM_RESULT}"
           echo "✅ 权限设置完成"
 
@@ -130,14 +130,14 @@ spec:
 
           # 检查 Service Account 是否存在
           SA_EXISTS=$(curl -s -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
-            "${GRAFANA_URL}/api/serviceaccounts/search?query=kubepolaris" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+            "${GRAFANA_URL}/api/serviceaccounts/search?query=synapse" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
 
           if [ -z "${SA_EXISTS}" ]; then
             echo "  📝 创建新的 Service Account..."
             SA_RESULT=$(curl -s -X POST \
               -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
               -H "Content-Type: application/json" \
-              -d '{"name":"kubepolaris","role":"Admin","isDisabled":false}' \
+              -d '{"name":"synapse","role":"Admin","isDisabled":false}' \
               "${GRAFANA_URL}/api/serviceaccounts")
             SA_ID=$(echo "${SA_RESULT}" | grep -o '"id":[0-9]*' | cut -d: -f2)
             echo "  ✅ Service Account 创建成功，ID: ${SA_ID}"
@@ -159,7 +159,7 @@ spec:
           TOKEN_RESULT=$(curl -s -X POST \
             -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
             -H "Content-Type: application/json" \
-            -d '{"name":"kubepolaris-token","secondsToLive":0}' \
+            -d '{"name":"synapse-token","secondsToLive":0}' \
             "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens")
 
           API_KEY=$(echo "${TOKEN_RESULT}" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
@@ -179,7 +179,7 @@ spec:
               echo "✅ Secret ${SECRET_NAME} 创建/更新成功"
               echo ""
               echo "🔄 重启后端服务以加载新的 API Key..."
-              kubectl rollout restart deployment {{ include "kubepolaris.fullname" . }}-backend -n "${NAMESPACE}"
+              kubectl rollout restart deployment {{ include "synapse.fullname" . }}-backend -n "${NAMESPACE}"
               if [ $? -eq 0 ]; then
                 echo "✅ 后端服务重启成功"
               else
@@ -213,10 +213,10 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  name: {{ include "synapse.fullname" . }}-grafana-cleanup
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-cleanup
   annotations:
     "helm.sh/hook": pre-delete
@@ -226,10 +226,10 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  name: {{ include "synapse.fullname" . }}-grafana-cleanup
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-cleanup
   annotations:
     "helm.sh/hook": pre-delete
@@ -249,10 +249,10 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  name: {{ include "synapse.fullname" . }}-grafana-cleanup
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-cleanup
   annotations:
     "helm.sh/hook": pre-delete
@@ -261,19 +261,19 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  name: {{ include "synapse.fullname" . }}-grafana-cleanup
 subjects:
 - kind: ServiceAccount
-  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  name: {{ include "synapse.fullname" . }}-grafana-cleanup
   namespace: {{ .Release.Namespace }}
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+  name: {{ include "synapse.fullname" . }}-grafana-cleanup
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.labels" . | nindent 4 }}
+    {{- include "synapse.labels" . | nindent 4 }}
     app.kubernetes.io/component: grafana-cleanup
   annotations:
     "helm.sh/hook": pre-delete
@@ -285,15 +285,15 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "kubepolaris.selectorLabels" . | nindent 8 }}
+        {{- include "synapse.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: grafana-cleanup
     spec:
-      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
-      serviceAccountName: {{ include "kubepolaris.fullname" . }}-grafana-cleanup
+      {{- include "synapse.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "synapse.fullname" . }}-grafana-cleanup
       restartPolicy: Never
       containers:
       - name: cleanup
-        image: {{ include "kubepolaris.image" (dict "repository" .Values.grafana.init.image.repository "tag" .Values.grafana.init.image.tag "Values" .Values "Chart" .Chart) }}
+        image: {{ include "synapse.image" (dict "repository" .Values.grafana.init.image.repository "tag" .Values.grafana.init.image.tag "Values" .Values "Chart" .Chart) }}
         imagePullPolicy: {{ .Values.grafana.init.image.pullPolicy }}
         command:
         - /bin/sh
@@ -301,7 +301,7 @@ spec:
         - |
           echo "🧹 开始清理 Grafana 相关资源..."
           NAMESPACE="{{ .Release.Namespace }}"
-          FULLNAME="{{ include "kubepolaris.fullname" . }}"
+          FULLNAME="{{ include "synapse.fullname" . }}"
           
           echo "  删除 Grafana API Key Secret..."
           kubectl delete secret "${FULLNAME}-grafana-api-key" -n "${NAMESPACE}" --ignore-not-found

@@ -4,11 +4,11 @@ sidebar_position: 3
 
 # 配置说明
 
-本文档详细说明 KubePolaris 的所有配置项。
+本文档详细说明 Synapse 的所有配置项。
 
 ## 配置方式
 
-KubePolaris 采用纯环境变量方式进行配置（优先级从高到低）：
+Synapse 采用纯环境变量方式进行配置（优先级从高到低）：
 
 1. 环境变量
 2. 代码默认值
@@ -55,7 +55,7 @@ database:
   password: your_password
   
   # 数据库名称
-  name: kubepolaris
+  name: synapse
   
   # 字符集
   charset: utf8mb4
@@ -83,7 +83,7 @@ jwt:
   refresh_expire: 168h  # 7 天
   
   # Token 签发者
-  issuer: kubepolaris
+  issuer: synapse
 ```
 
 ### 日志配置
@@ -99,7 +99,7 @@ log:
   # 是否输出到文件
   file:
     enabled: false
-    path: ./logs/kubepolaris.log
+    path: ./logs/synapse.log
     max_size: 100      # MB
     max_backups: 10
     max_age: 30        # 天
@@ -270,9 +270,9 @@ ldap:
 oidc:
   enabled: false
   issuer: https://auth.example.com
-  client_id: kubepolaris
+  client_id: synapse
   client_secret: your-client-secret
-  redirect_url: https://kubepolaris.example.com/callback
+  redirect_url: https://synapse.example.com/callback
   scopes:
     - openid
     - profile
@@ -306,7 +306,7 @@ export KUBEPOLARIS_JWT_SECRET=my-secret-key
 ## 命令行参数
 
 ```bash
-./kubepolaris-backend \
+./synapse-backend \
   --config /path/to/config.yaml \
   --port 8080 \
   --mode release \
@@ -341,7 +341,7 @@ go run main.go
 SERVER_PORT=8080
 SERVER_MODE=debug
 DB_DRIVER=sqlite
-DB_DSN=./data/kubepolaris.db
+DB_DSN=./data/synapse.db
 JWT_SECRET=dev-secret-key
 LOG_LEVEL=debug
 ```
@@ -354,11 +354,11 @@ LOG_LEVEL=debug
 SERVER_PORT=8080
 SERVER_MODE=release
 DB_DRIVER=mysql
-DB_HOST=mysql.kubepolaris.svc.cluster.local
+DB_HOST=mysql.synapse.svc.cluster.local
 DB_PORT=3306
-DB_USERNAME=kubepolaris
+DB_USERNAME=synapse
 DB_PASSWORD=your-secure-password
-DB_DATABASE=kubepolaris
+DB_DATABASE=synapse
 JWT_SECRET=your-very-secure-jwt-secret-key-at-least-32-chars
 JWT_EXPIRE_TIME=24
 LOG_LEVEL=info
@@ -367,5 +367,5 @@ LOG_LEVEL=info
 ## 下一步
 
 - [安装指南](./installation) - 选择合适的部署方式
-- [用户指南](../user-guide/cluster-management) - 开始使用 KubePolaris
+- [用户指南](../user-guide/cluster-management) - 开始使用 Synapse
 

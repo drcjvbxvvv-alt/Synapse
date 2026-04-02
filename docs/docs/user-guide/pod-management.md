@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Pod 管理
 
-Pod 是 Kubernetes 中最小的部署单元。本文档介绍如何在 KubePolaris 中查看和管理 Pod。
+Pod 是 Kubernetes 中最小的部署单元。本文档介绍如何在 Synapse 中查看和管理 Pod。
 
 ## 查看 Pod
 

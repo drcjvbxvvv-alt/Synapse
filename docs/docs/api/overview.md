@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # API 概述
 
-KubePolaris 提供 RESTful API，支持通过 API 进行自动化操作。
+Synapse 提供 RESTful API，支持通过 API 进行自动化操作。
 
 ## 基本信息
 
@@ -23,14 +23,14 @@ KubePolaris 提供 RESTful API，支持通过 API 进行自动化操作。
 
 ```bash
 curl -H "Authorization: Bearer <your-token>" \
-  https://kubepolaris.example.com/api/clusters
+  https://synapse.example.com/api/clusters
 ```
 
 ### 获取 Token
 
 ```bash
 # 登录获取 Token
-curl -X POST https://kubepolaris.example.com/api/auth/login \
+curl -X POST https://synapse.example.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "admin", "password": "admin123"}'
 
@@ -47,7 +47,7 @@ curl -X POST https://kubepolaris.example.com/api/auth/login \
 ### 刷新 Token
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/auth/refresh \
+curl -X POST https://synapse.example.com/api/auth/refresh \
   -H "Authorization: Bearer <your-token>"
 ```
 
@@ -169,14 +169,14 @@ curl -X POST https://kubepolaris.example.com/api/auth/refresh \
 ### 获取集群列表
 
 ```bash
-curl -X GET https://kubepolaris.example.com/api/clusters \
+curl -X GET https://synapse.example.com/api/clusters \
   -H "Authorization: Bearer <token>"
 ```
 
 ### 创建集群
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/clusters \
+curl -X POST https://synapse.example.com/api/clusters \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -189,7 +189,7 @@ curl -X POST https://kubepolaris.example.com/api/clusters \
 ### 扩缩容
 
 ```bash
-curl -X POST https://kubepolaris.example.com/api/clusters/1/namespaces/default/deployments/nginx/scale \
+curl -X POST https://synapse.example.com/api/clusters/1/namespaces/default/deployments/nginx/scale \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"replicas": 5}'
@@ -200,11 +200,11 @@ curl -X POST https://kubepolaris.example.com/api/clusters/1/namespaces/default/d
 ### Go SDK
 
 ```go
-import "github.com/clay-wangzhi/KubePolaris-go-sdk"
+import "github.com/clay-wangzhi/Synapse-go-sdk"
 
-client := kubepolaris.NewClient(
-    kubepolaris.WithBaseURL("https://kubepolaris.example.com"),
-    kubepolaris.WithToken("your-token"),
+client := synapse.NewClient(
+    synapse.WithBaseURL("https://synapse.example.com"),
+    synapse.WithToken("your-token"),
 )
 
 clusters, err := client.Clusters.List(context.Background())
@@ -213,10 +213,10 @@ clusters, err := client.Clusters.List(context.Background())
 ### Python SDK
 
 ```python
-from kubepolaris import Client
+from synapse import Client
 
 client = Client(
-    base_url="https://kubepolaris.example.com",
+    base_url="https://synapse.example.com",
     token="your-token"
 )
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/templates/rbac"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/templates/rbac"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +38,7 @@ type SyncPermissionsResult struct {
 	Message string        `json:"message"`
 }
 
-// SyncPermissions syncs all KubePolaris RBAC resources to a cluster
+// SyncPermissions syncs all Synapse RBAC resources to a cluster
 func (s *RBACService) SyncPermissions(clientset *kubernetes.Clientset) (*SyncPermissionsResult, error) {
 	ctx := context.Background()
 	results := make([]*SyncResult, 0)
@@ -71,13 +71,13 @@ func (s *RBACService) SyncPermissions(clientset *kubernetes.Clientset) (*SyncPer
 	}
 
 	// 4. Create ClusterRoleBindings for admin and ops (they always have cluster-wide access)
-	adminBinding := s.ensureClusterRoleBinding(ctx, clientset, "kubepolaris-admin-binding", rbac.ClusterRoleClusterAdmin, rbac.SAClusterAdmin)
+	adminBinding := s.ensureClusterRoleBinding(ctx, clientset, "synapse-admin-binding", rbac.ClusterRoleClusterAdmin, rbac.SAClusterAdmin)
 	results = append(results, adminBinding)
 	if adminBinding.Error != "" {
 		hasError = true
 	}
 
-	opsBinding := s.ensureClusterRoleBinding(ctx, clientset, "kubepolaris-ops-binding", rbac.ClusterRoleOps, rbac.SAOps)
+	opsBinding := s.ensureClusterRoleBinding(ctx, clientset, "synapse-ops-binding", rbac.ClusterRoleOps, rbac.SAOps)
 	results = append(results, opsBinding)
 	if opsBinding.Error != "" {
 		hasError = true
@@ -97,12 +97,12 @@ func (s *RBACService) SyncPermissions(clientset *kubernetes.Clientset) (*SyncPer
 	}, nil
 }
 
-// ensureNamespace creates the KubePolaris namespace if it doesn't exist
+// ensureNamespace creates the Synapse namespace if it doesn't exist
 func (s *RBACService) ensureNamespace(ctx context.Context, clientset *kubernetes.Clientset) *SyncResult {
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   rbac.KubePolarisNamespace,
-			Labels: rbac.GetKubePolarisLabels(),
+			Name:   rbac.SynapseNamespace,
+			Labels: rbac.GetSynapseLabels(),
 		},
 	}
 
@@ -163,15 +163,15 @@ func (s *RBACService) ensureServiceAccount(ctx context.Context, clientset *kuber
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: rbac.KubePolarisNamespace,
-			Labels:    rbac.GetKubePolarisLabels(),
+			Namespace: rbac.SynapseNamespace,
+			Labels:    rbac.GetSynapseLabels(),
 		},
 	}
 
-	existing, err := clientset.CoreV1().ServiceAccounts(rbac.KubePolarisNamespace).Get(ctx, name, metav1.GetOptions{})
+	existing, err := clientset.CoreV1().ServiceAccounts(rbac.SynapseNamespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			_, err = clientset.CoreV1().ServiceAccounts(rbac.KubePolarisNamespace).Create(ctx, sa, metav1.CreateOptions{})
+			_, err = clientset.CoreV1().ServiceAccounts(rbac.SynapseNamespace).Create(ctx, sa, metav1.CreateOptions{})
 			if err != nil {
 				return &SyncResult{Resource: "ServiceAccount", Name: name, Action: "error", Error: err.Error()}
 			}
@@ -185,7 +185,7 @@ func (s *RBACService) ensureServiceAccount(ctx context.Context, clientset *kuber
 		existing.Labels = make(map[string]string)
 	}
 	existing.Labels[rbac.LabelManagedBy] = rbac.LabelValue
-	_, err = clientset.CoreV1().ServiceAccounts(rbac.KubePolarisNamespace).Update(ctx, existing, metav1.UpdateOptions{})
+	_, err = clientset.CoreV1().ServiceAccounts(rbac.SynapseNamespace).Update(ctx, existing, metav1.UpdateOptions{})
 	if err != nil {
 		return &SyncResult{Resource: "ServiceAccount", Name: name, Action: "error", Error: err.Error()}
 	}
@@ -197,13 +197,13 @@ func (s *RBACService) ensureClusterRoleBinding(ctx context.Context, clientset *k
 	crb := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
-			Labels: rbac.GetKubePolarisLabels(),
+			Labels: rbac.GetSynapseLabels(),
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      saName,
-				Namespace: rbac.KubePolarisNamespace,
+				Namespace: rbac.SynapseNamespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -247,7 +247,7 @@ func (s *RBACService) EnsureRoleBinding(clientset *kubernetes.Clientset, namespa
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bindingName,
 			Namespace: namespace,
-			Labels:    rbac.GetKubePolarisLabels(),
+			Labels:    rbac.GetSynapseLabels(),
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -293,7 +293,7 @@ func (s *RBACService) DeleteRoleBinding(clientset *kubernetes.Clientset, namespa
 	return err
 }
 
-// GetSyncStatus checks the sync status of KubePolaris RBAC resources
+// GetSyncStatus checks the sync status of Synapse RBAC resources
 func (s *RBACService) GetSyncStatus(clientset *kubernetes.Clientset) (*SyncStatusResult, error) {
 	ctx := context.Background()
 	result := &SyncStatusResult{
@@ -302,8 +302,8 @@ func (s *RBACService) GetSyncStatus(clientset *kubernetes.Clientset) (*SyncStatu
 	}
 
 	// Check namespace
-	_, err := clientset.CoreV1().Namespaces().Get(ctx, rbac.KubePolarisNamespace, metav1.GetOptions{})
-	nsStatus := &ResourceStatus{Resource: "Namespace", Name: rbac.KubePolarisNamespace}
+	_, err := clientset.CoreV1().Namespaces().Get(ctx, rbac.SynapseNamespace, metav1.GetOptions{})
+	nsStatus := &ResourceStatus{Resource: "Namespace", Name: rbac.SynapseNamespace}
 	if err != nil {
 		nsStatus.Exists = false
 		result.Synced = false
@@ -328,7 +328,7 @@ func (s *RBACService) GetSyncStatus(clientset *kubernetes.Clientset) (*SyncStatu
 	// Check ServiceAccounts
 	saNames := []string{rbac.SAClusterAdmin, rbac.SAOps, rbac.SADev, rbac.SAReadonly}
 	for _, saName := range saNames {
-		_, err := clientset.CoreV1().ServiceAccounts(rbac.KubePolarisNamespace).Get(ctx, saName, metav1.GetOptions{})
+		_, err := clientset.CoreV1().ServiceAccounts(rbac.SynapseNamespace).Get(ctx, saName, metav1.GetOptions{})
 		saStatus := &ResourceStatus{Resource: "ServiceAccount", Name: saName}
 		if err != nil {
 			saStatus.Exists = false
@@ -360,7 +360,7 @@ func (s *RBACService) GetServiceAccountToken(clientset *kubernetes.Clientset, sa
 	ctx := context.Background()
 
 	// Get the ServiceAccount
-	sa, err := clientset.CoreV1().ServiceAccounts(rbac.KubePolarisNamespace).Get(ctx, saName, metav1.GetOptions{})
+	sa, err := clientset.CoreV1().ServiceAccounts(rbac.SynapseNamespace).Get(ctx, saName, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to get ServiceAccount: %w", err)
 	}
@@ -368,7 +368,7 @@ func (s *RBACService) GetServiceAccountToken(clientset *kubernetes.Clientset, sa
 	// For Kubernetes 1.24+, we need to create a token manually
 	// First, try to find an existing secret
 	for _, ref := range sa.Secrets {
-		secret, err := clientset.CoreV1().Secrets(rbac.KubePolarisNamespace).Get(ctx, ref.Name, metav1.GetOptions{})
+		secret, err := clientset.CoreV1().Secrets(rbac.SynapseNamespace).Get(ctx, ref.Name, metav1.GetOptions{})
 		if err != nil {
 			continue
 		}
@@ -378,7 +378,7 @@ func (s *RBACService) GetServiceAccountToken(clientset *kubernetes.Clientset, sa
 	}
 
 	// If no secret found, create a token using TokenRequest API (K8s 1.22+)
-	tokenRequest, err := clientset.CoreV1().ServiceAccounts(rbac.KubePolarisNamespace).CreateToken(
+	tokenRequest, err := clientset.CoreV1().ServiceAccounts(rbac.SynapseNamespace).CreateToken(
 		ctx,
 		saName,
 		&authv1.TokenRequest{
@@ -406,7 +406,7 @@ func (s *RBACService) CreateCustomClusterRole(clientset *kubernetes.Clientset, n
 	cr := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
-			Labels: rbac.GetKubePolarisLabels(),
+			Labels: rbac.GetSynapseLabels(),
 		},
 		Rules: rules,
 	}
@@ -423,7 +423,7 @@ func (s *RBACService) CreateCustomRole(clientset *kubernetes.Clientset, namespac
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    rbac.GetKubePolarisLabels(),
+			Labels:    rbac.GetSynapseLabels(),
 		},
 		Rules: rules,
 	}
@@ -480,17 +480,17 @@ type UserRBACConfig struct {
 
 // GetUserServiceAccountName 获取用户专属 SA 名称
 func GetUserServiceAccountName(userID uint) string {
-	return fmt.Sprintf("kubepolaris-user-%d-sa", userID)
+	return fmt.Sprintf("synapse-user-%d-sa", userID)
 }
 
 // GetUserRoleBindingName 获取用户 RoleBinding 名称
 func GetUserRoleBindingName(userID uint, permissionType string) string {
-	return fmt.Sprintf("kubepolaris-user-%d-%s", userID, permissionType)
+	return fmt.Sprintf("synapse-user-%d-%s", userID, permissionType)
 }
 
 // GetUserClusterRoleBindingName 获取用户 ClusterRoleBinding 名称
 func GetUserClusterRoleBindingName(userID uint, permissionType string) string {
-	return fmt.Sprintf("kubepolaris-user-%d-%s-cluster", userID, permissionType)
+	return fmt.Sprintf("synapse-user-%d-%s-cluster", userID, permissionType)
 }
 
 // hasAllNamespaces 检查命名空间列表是否包含全部权限
@@ -550,7 +550,7 @@ func (s *RBACService) EnsureUserRBAC(clientset *kubernetes.Clientset, config *Us
 			if namespace == "" || namespace == "*" {
 				continue
 			}
-			if err := s.EnsureRoleBinding(clientset, namespace, bindingName, clusterRoleName, saName, rbac.KubePolarisNamespace); err != nil {
+			if err := s.EnsureRoleBinding(clientset, namespace, bindingName, clusterRoleName, saName, rbac.SynapseNamespace); err != nil {
 				return fmt.Errorf("创建 RoleBinding(%s) 失败: %w", namespace, err)
 			}
 		}
@@ -564,15 +564,15 @@ func (s *RBACService) ensureUserServiceAccount(ctx context.Context, clientset *k
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
-			Namespace: rbac.KubePolarisNamespace,
-			Labels:    rbac.GetKubePolarisLabels(),
+			Namespace: rbac.SynapseNamespace,
+			Labels:    rbac.GetSynapseLabels(),
 		},
 	}
 
-	_, err := clientset.CoreV1().ServiceAccounts(rbac.KubePolarisNamespace).Get(ctx, saName, metav1.GetOptions{})
+	_, err := clientset.CoreV1().ServiceAccounts(rbac.SynapseNamespace).Get(ctx, saName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			_, err = clientset.CoreV1().ServiceAccounts(rbac.KubePolarisNamespace).Create(ctx, sa, metav1.CreateOptions{})
+			_, err = clientset.CoreV1().ServiceAccounts(rbac.SynapseNamespace).Create(ctx, sa, metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
@@ -591,13 +591,13 @@ func (s *RBACService) ensureUserClusterRoleBinding(ctx context.Context, clientse
 	crb := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   bindingName,
-			Labels: rbac.GetKubePolarisLabels(),
+			Labels: rbac.GetSynapseLabels(),
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      saName,
-				Namespace: rbac.KubePolarisNamespace,
+				Namespace: rbac.SynapseNamespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{

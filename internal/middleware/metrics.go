@@ -12,7 +12,7 @@ import (
 var (
 	httpRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "kubepolaris",
+			Namespace: "synapse",
 			Name:      "http_requests_total",
 			Help:      "Total number of HTTP requests.",
 		},
@@ -21,7 +21,7 @@ var (
 
 	httpRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: "kubepolaris",
+			Namespace: "synapse",
 			Name:      "http_request_duration_seconds",
 			Help:      "HTTP request latency in seconds.",
 			Buckets:   prometheus.DefBuckets,
@@ -32,7 +32,7 @@ var (
 	// ClusterInformerStatus allows the k8s manager to expose per-cluster sync state.
 	ClusterInformerSynced = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "kubepolaris",
+			Namespace: "synapse",
 			Name:      "cluster_informer_synced",
 			Help:      "1 if the cluster Informer cache is fully synced, 0 otherwise.",
 		},

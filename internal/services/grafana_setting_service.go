@@ -1,7 +1,7 @@
 package services
 
 import (
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
+	"github.com/clay-wangzhi/Synapse/internal/models"
 
 	"gorm.io/gorm"
 )

@@ -11,13 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/config"
-	"github.com/clay-wangzhi/KubePolaris/internal/handlers"
-	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
-	"github.com/clay-wangzhi/KubePolaris/internal/middleware"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/config"
+	"github.com/clay-wangzhi/Synapse/internal/handlers"
+	"github.com/clay-wangzhi/Synapse/internal/k8s"
+	"github.com/clay-wangzhi/Synapse/internal/middleware"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -477,7 +477,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					argocd.GET("/applications/:appName/resources", argoCDHandler.GetApplicationResources)
 				}
 
-				// RBAC 子分组 - KubePolaris 权限管理
+				// RBAC 子分组 - Synapse 权限管理
 				rbacSvc := services.NewRBACService()
 				rbacHandler := handlers.NewRBACHandler(clusterSvc, rbacSvc, k8sMgr)
 				rbacGroup := cluster.Group("/rbac")
@@ -658,8 +658,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 			permAdmin := permissions.Group("")
 			permAdmin.Use(middleware.PlatformAdminRequired(db))
 			{
-				// KubePolaris 预定义 ClusterRole 信息
-				permAdmin.GET("/kubepolaris-roles", globalRbacHandler.GetKubePolarisClusterRoles)
+				// Synapse 预定义 ClusterRole 信息
+				permAdmin.GET("/synapse-roles", globalRbacHandler.GetSynapseClusterRoles)
 
 				// 用户列表（用于权限分配）
 				permAdmin.GET("/users", permissionHandler.ListUsers)
@@ -692,22 +692,46 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		// 集群级权限查询
 		protected.GET("/clusters/:clusterID/my-permissions", permissionHandler.GetMyClusterPermission)
 
-		// AI 配置管理（仅平台管理员）
+		// AI 配置管理（僅平台管理員）
 		aiConfigHandler := handlers.NewAIConfigHandler(db)
 		aiGroup := protected.Group("/ai")
-		aiGroup.Use(middleware.PlatformAdminRequired(db))
 		{
-			aiGroup.GET("/config", aiConfigHandler.GetConfig)
-			aiGroup.PUT("/config", aiConfigHandler.UpdateConfig)
-			aiGroup.POST("/test-connection", aiConfigHandler.TestConnection)
+			aiAdminGroup := aiGroup.Group("")
+			aiAdminGroup.Use(middleware.PlatformAdminRequired(db))
+			aiAdminGroup.GET("/config", aiConfigHandler.GetConfig)
+			aiAdminGroup.PUT("/config", aiConfigHandler.UpdateConfig)
+			aiAdminGroup.POST("/test-connection", aiConfigHandler.TestConnection)
+
+			// Runbook 知識庫（所有已登入使用者）
+			aiRunbookHandler := handlers.NewAIRunbookHandler()
+			aiGroup.GET("/runbooks", aiRunbookHandler.GetRunbooks)
 		}
 
-		// AI Chat（集群级）
+		// AI Chat + NL Query（叢集級）
 		aiChatHandler := handlers.NewAIChatHandler(db, clusterSvc, k8sMgr)
+		aiNLQueryHandler := handlers.NewAINLQueryHandler(db, clusterSvc, k8sMgr)
 		aiChat := clusters.Group("/:clusterID/ai")
 		aiChat.Use(permMiddleware.ClusterAccessRequired())
 		{
 			aiChat.POST("/chat", aiChatHandler.Chat)
+			aiChat.POST("/nl-query", aiNLQueryHandler.NLQuery)
+		}
+
+		// Security Scanning（叢集級）
+		securityHandler := handlers.NewSecurityHandler(db, k8sMgr)
+		securityGroup := clusters.Group("/:clusterID/security")
+		securityGroup.Use(permMiddleware.ClusterAccessRequired())
+		{
+			// Trivy image scanning
+			securityGroup.POST("/scans", securityHandler.TriggerScan)
+			securityGroup.GET("/scans", securityHandler.GetScanResults)
+			securityGroup.GET("/scans/:scanID", securityHandler.GetScanDetail)
+			// CIS kube-bench
+			securityGroup.POST("/bench", securityHandler.TriggerBenchmark)
+			securityGroup.GET("/bench", securityHandler.GetBenchResults)
+			securityGroup.GET("/bench/:benchID", securityHandler.GetBenchDetail)
+			// Gatekeeper / OPA violations
+			securityGroup.GET("/gatekeeper", securityHandler.GetGatekeeperViolations)
 		}
 	}
 

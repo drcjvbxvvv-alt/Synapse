@@ -76,8 +76,8 @@
     "namespacePlaceholder": "Enter namespace name (supports wildcards, e.g. app-*)"
   },
   "sync": {
-    "title": "Sync KubePolaris Permission Resources",
-    "description": "Sync will create RBAC resources (ClusterRole, ServiceAccount, ClusterRoleBinding) required by KubePolaris in the target cluster to support different permission types for kubectl terminal access.",
+    "title": "Sync Synapse Permission Resources",
+    "description": "Sync will create RBAC resources (ClusterRole, ServiceAccount, ClusterRoleBinding) required by Synapse in the target cluster to support different permission types for kubectl terminal access.",
     "clusterName": "Cluster Name",
     "syncStatus": "Sync Status",
     "notChecked": "Not Checked",
@@ -92,5 +92,149 @@
   "loadError": "Failed to load data",
   "pagination": {
     "total": "Total {{total}} items"
+  },
+  "user": {
+    "title": "User Management",
+    "createUser": "Create User",
+    "editUser": "Edit User",
+    "searchPlaceholder": "Search by username, display name, email",
+    "statusFilter": "Status",
+    "authTypeFilter": "Auth Type",
+    "refresh": "Refresh",
+    "columns": {
+      "username": "Username",
+      "displayName": "Display Name",
+      "email": "Email",
+      "phone": "Phone",
+      "status": "Status",
+      "authType": "Auth Type",
+      "lastLogin": "Last Login",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "all": "All"
+    },
+    "authType": {
+      "local": "Local",
+      "ldap": "LDAP",
+      "all": "All"
+    },
+    "actions": {
+      "edit": "Edit",
+      "enable": "Enable",
+      "disable": "Disable",
+      "resetPassword": "Reset Password",
+      "delete": "Delete"
+    },
+    "messages": {
+      "loadFailed": "Failed to load users",
+      "updateSuccess": "Updated successfully",
+      "createSuccess": "Created successfully",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "enableSuccess": "Enabled successfully",
+      "disableSuccess": "Disabled successfully",
+      "toggleFailed": "Operation failed",
+      "adminCannotDisable": "Admin user cannot be disabled",
+      "adminCannotDelete": "Admin user cannot be deleted",
+      "passwordResetSuccess": "Password reset successfully"
+    },
+    "confirm": {
+      "toggleStatus": "Confirm {{action}} User",
+      "toggleStatusContent": "Are you sure you want to {{action}} user \"{{name}}\"?",
+      "delete": "Confirm Delete",
+      "deleteContent": "Are you sure you want to delete user \"{{name}}\"? This action cannot be undone.",
+      "ok": "OK",
+      "cancel": "Cancel"
+    },
+    "form": {
+      "username": "Username",
+      "usernameRequired": "Please enter username",
+      "usernamePlaceholder": "Please enter username",
+      "password": "Password",
+      "passwordRequired": "Please enter password",
+      "passwordMinLength": "Password must be at least 6 characters",
+      "passwordPlaceholder": "Please enter password",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "Please enter display name",
+      "email": "Email",
+      "emailPlaceholder": "Please enter email",
+      "phone": "Phone",
+      "phonePlaceholder": "Please enter phone"
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "newPassword": "New Password",
+      "newPasswordRequired": "Please enter new password",
+      "newPasswordPlaceholder": "Please enter new password"
+    },
+    "pagination": {
+      "total": "Total {{total}} items"
+    }
+  },
+  "group": {
+    "title": "User Group Management",
+    "create": "Create Group",
+    "editTitle": "Edit Group",
+    "createTitle": "Create Group",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "memberCount": "Members",
+      "createdAt": "Created At",
+      "actions": "Actions"
+    },
+    "actions": {
+      "manage": "Manage Members",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "messages": {
+      "loadFailed": "Failed to load groups",
+      "updateSuccess": "Updated successfully",
+      "createSuccess": "Created successfully",
+      "updateFailed": "Update failed",
+      "createFailed": "Create failed",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "loadDataFailed": "Failed to load data",
+      "selectUser": "Please select a user to add",
+      "userAlreadyInGroup": "User is already in this group",
+      "addSuccess": "Added successfully",
+      "addFailed": "Failed to add",
+      "removeSuccess": "Removed successfully",
+      "removeFailed": "Failed to remove"
+    },
+    "confirm": {
+      "delete": "Confirm Delete",
+      "deleteContent": "Are you sure you want to delete group \"{{name}}\"?",
+      "remove": "Confirm Remove",
+      "removeContent": "Are you sure you want to remove user \"{{name}}\" from this group?",
+      "ok": "Confirm",
+      "cancel": "Cancel"
+    },
+    "form": {
+      "name": "Name",
+      "nameRequired": "Please enter name",
+      "namePlaceholder": "Please enter group name",
+      "description": "Description",
+      "descriptionPlaceholder": "Please enter description (optional)"
+    },
+    "drawer": {
+      "title": "Manage Members - {{name}}",
+      "selectUser": "Select User",
+      "add": "Add",
+      "columns": {
+        "username": "Username",
+        "displayName": "Display Name",
+        "actions": "Actions"
+      },
+      "remove": "Remove"
+    },
+    "pagination": {
+      "total": "Total {{total}} items"
+    }
   }
 }

@@ -1,4 +1,4 @@
-# KubePolaris 測試計劃
+# Synapse 測試計劃
 
 > 版本：v1.0 | 日期：2026-04-02 | 狀態：計劃中
 
@@ -147,7 +147,7 @@ rest.get('/api/v1/clusters', (req, res, ctx) =>
 
 | 流程 | 步驟 | 優先級 |
 |------|------|-------|
-| 登入流程 | 開啟首頁 → 輸入 admin/KubePolaris@2026 → 進入 overview | P0 |
+| 登入流程 | 開啟首頁 → 輸入 admin/Synapse@2026 → 進入 overview | P0 |
 | 叢集瀏覽 | 選叢集 → 查看 Pod 列表 → 查看 Node 詳情 | P0 |
 | Helm 安裝 | 進入 Helm 頁 → 新增 Repo → 安裝 Release → 確認列表出現 | P1 |
 | 權限隔離 | 用只讀帳號登入 → 確認安裝/刪除按鈕不可見 | P1 |

@@ -312,7 +312,7 @@ const GrafanaSettings: React.FC = () => {
                     {t('settings:grafana.folder')}:
                     {dashboardStatus.folder_exists ? (
                       <Tag color="green" icon={<CheckCircleOutlined />} style={{ marginLeft: 8 }}>
-                        KubePolaris
+                        Synapse
                       </Tag>
                     ) : (
                       <Tag color="red" icon={<CloseCircleOutlined />} style={{ marginLeft: 8 }}>

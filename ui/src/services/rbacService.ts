@@ -33,11 +33,11 @@ export interface ClusterRoleItem {
   labels: Record<string, string>;
   created_at: string;
   rules_count: number;
-  is_kubepolaris: boolean;
+  is_synapse: boolean;
 }
 
-// KubePolaris 预定义角色信息
-export interface KubePolarisRoleInfo {
+// Synapse 预定义角色信息
+export interface SynapseRoleInfo {
   name: string;
   description: string;
   rules_count: number;
@@ -86,9 +86,9 @@ export const deleteClusterRole = async (clusterId: number, name: string): Promis
   return response.data;
 };
 
-// 获取 KubePolaris 预定义角色信息
-export const getKubePolarisRoles = async (): Promise<ApiResponse<KubePolarisRoleInfo[]>> => {
-  const response = await api.get('/permissions/kubepolaris-roles');
+// 获取 Synapse 预定义角色信息
+export const getSynapseRoles = async (): Promise<ApiResponse<SynapseRoleInfo[]>> => {
+  const response = await api.get('/permissions/synapse-roles');
   return response.data;
 };
 
@@ -98,7 +98,7 @@ export const rbacService = {
   listClusterRoles,
   createCustomClusterRole,
   deleteClusterRole,
-  getKubePolarisRoles,
+  getSynapseRoles,
 };
 
 export default rbacService;

@@ -25,7 +25,7 @@ What actually happened.
 If applicable, add screenshots to help explain your problem.
 
 ## Environment
-- **KubePolaris Version**: [e.g. v1.0.0]
+- **Synapse Version**: [e.g. v1.0.0]
 - **Deployment Method**: [Docker / Kubernetes / Source]
 - **Browser**: [e.g. Chrome 120, Firefox 121]
 - **OS**: [e.g. macOS, Windows, Linux]

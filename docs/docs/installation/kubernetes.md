@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Kubernetes 部署
 
-使用 Helm Chart 在 Kubernetes 上部署 KubePolaris，这是生产环境的推荐方式。
+使用 Helm Chart 在 Kubernetes 上部署 Synapse，这是生产环境的推荐方式。
 
 ## 前置要求
 
@@ -20,7 +20,7 @@ sidebar_position: 2
 ### 1. 添加 Helm 仓库
 
 ```bash
-helm repo add kubepolaris https://clay-wangzhi.github.io/KubePolaris
+helm repo add synapse https://clay-wangzhi.github.io/Synapse
 helm repo update
 ```
 
@@ -28,21 +28,21 @@ helm repo update
 
 ```bash
 # 创建命名空间
-kubectl create namespace kubepolaris
+kubectl create namespace synapse
 
 # 使用默认配置安装
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris
+helm install synapse synapse/synapse \
+  -n synapse
 ```
 
 ### 3. 验证
 
 ```bash
 # 查看 Pod 状态
-kubectl get pods -n kubepolaris
+kubectl get pods -n synapse
 
 # 等待所有 Pod 就绪
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kubepolaris -n kubepolaris --timeout=300s
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=synapse -n synapse --timeout=300s
 ```
 
 ## Helm Chart 配置
@@ -65,7 +65,7 @@ backend:
   replicaCount: 2
 
   image:
-    repository: kubepolaris/kubepolaris-backend
+    repository: synapse/synapse-backend
     tag: "latest"
     pullPolicy: IfNotPresent
 
@@ -110,7 +110,7 @@ backend:
   # 从 Secret 加载环境变量
   envFrom: []
   # - secretRef:
-  #     name: kubepolaris-secrets
+  #     name: synapse-secrets
 
   # 额外的卷挂载
   extraVolumes: []
@@ -147,7 +147,7 @@ frontend:
   replicaCount: 2
 
   image:
-    repository: kubepolaris/kubepolaris-frontend
+    repository: synapse/synapse-frontend
     tag: "latest"
     pullPolicy: IfNotPresent
 
@@ -199,8 +199,8 @@ mysql:
     enabled: false
     host: ""
     port: 3306
-    database: kubepolaris
-    username: kubepolaris
+    database: synapse
+    username: synapse
     password: ""
     existingSecret: ""
     existingSecretPasswordKey: "password"
@@ -218,15 +218,15 @@ ingress:
   # nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
   
   hosts:
-    - host: kubepolaris.local
+    - host: synapse.local
       paths:
         - path: /
           pathType: Prefix
 
   tls: []
-  # - secretName: kubepolaris-tls
+  # - secretName: synapse-tls
   #   hosts:
-  #     - kubepolaris.local
+  #     - synapse.local
 
 # ============== 持久化配置 ==============
 persistence:
@@ -308,8 +308,8 @@ autoscaling:
 最简单的部署，使用内置数据库：
 
 ```bash
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm install synapse synapse/synapse \
+  -n synapse \
   --set security.jwtSecret="your-secure-jwt-secret-at-least-32-chars"
 ```
 
@@ -319,19 +319,19 @@ helm install kubepolaris kubepolaris/kubepolaris \
 
 ```bash
 # 创建数据库密钥
-kubectl create secret generic kubepolaris-mysql \
+kubectl create secret generic synapse-mysql \
   --from-literal=password=your_mysql_password \
-  -n kubepolaris
+  -n synapse
 
 # 安装
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm install synapse synapse/synapse \
+  -n synapse \
   --set mysql.internal.enabled=false \
   --set mysql.external.enabled=true \
   --set mysql.external.host=mysql.database.svc.cluster.local \
-  --set mysql.external.database=kubepolaris \
-  --set mysql.external.username=kubepolaris \
-  --set mysql.external.existingSecret=kubepolaris-mysql \
+  --set mysql.external.database=synapse \
+  --set mysql.external.username=synapse \
+  --set mysql.external.existingSecret=synapse-mysql \
   --set security.jwtSecret="your-secure-jwt-secret"
 ```
 
@@ -347,22 +347,22 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: "100m"
   hosts:
-    - host: kubepolaris.example.com
+    - host: synapse.example.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: kubepolaris-tls
+    - secretName: synapse-tls
       hosts:
-        - kubepolaris.example.com
+        - synapse.example.com
 
 security:
   jwtSecret: "your-secure-jwt-secret-at-least-32-chars"
 ```
 
 ```bash
-helm install kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm install synapse synapse/synapse \
+  -n synapse \
   -f values-ingress.yaml
 ```
 
@@ -386,7 +386,7 @@ backend:
               - key: app.kubernetes.io/name
                 operator: In
                 values:
-                  - kubepolaris-backend
+                  - synapse-backend
           topologyKey: kubernetes.io/hostname
 
 frontend:
@@ -417,38 +417,38 @@ autoscaling:
 helm repo update
 
 # 查看新版本
-helm search repo kubepolaris --versions
+helm search repo synapse --versions
 
 # 升级
-helm upgrade kubepolaris kubepolaris/kubepolaris \
-  -n kubepolaris \
+helm upgrade synapse synapse/synapse \
+  -n synapse \
   -f values.yaml
 
 # 查看升级状态
-helm history kubepolaris -n kubepolaris
+helm history synapse -n synapse
 ```
 
 ### 回滚
 
 ```bash
 # 查看历史版本
-helm history kubepolaris -n kubepolaris
+helm history synapse -n synapse
 
 # 回滚到指定版本
-helm rollback kubepolaris 1 -n kubepolaris
+helm rollback synapse 1 -n synapse
 ```
 
 ## 卸载
 
 ```bash
 # 卸载 Chart
-helm uninstall kubepolaris -n kubepolaris
+helm uninstall synapse -n synapse
 
 # 删除 PVC（注意：会删除所有数据）
-kubectl delete pvc -l app.kubernetes.io/name=kubepolaris -n kubepolaris
+kubectl delete pvc -l app.kubernetes.io/name=synapse -n synapse
 
 # 删除命名空间
-kubectl delete namespace kubepolaris
+kubectl delete namespace synapse
 ```
 
 ## 故障排查
@@ -456,19 +456,19 @@ kubectl delete namespace kubepolaris
 ### 查看 Pod 日志
 
 ```bash
-kubectl logs -f deployment/kubepolaris-backend -n kubepolaris
+kubectl logs -f deployment/synapse-backend -n synapse
 ```
 
 ### 查看事件
 
 ```bash
-kubectl get events -n kubepolaris --sort-by='.lastTimestamp'
+kubectl get events -n synapse --sort-by='.lastTimestamp'
 ```
 
 ### 检查资源状态
 
 ```bash
-kubectl describe pod -l app.kubernetes.io/name=kubepolaris -n kubepolaris
+kubectl describe pod -l app.kubernetes.io/name=synapse -n synapse
 ```
 
 ### 常见问题
@@ -480,17 +480,17 @@ kubectl describe pod -l app.kubernetes.io/name=kubepolaris -n kubepolaris
 kubectl describe nodes
 
 # 检查 PVC 状态
-kubectl get pvc -n kubepolaris
+kubectl get pvc -n synapse
 ```
 
 **数据库连接失败**
 
 ```bash
 # 检查数据库 Pod
-kubectl logs -f deployment/kubepolaris-mysql -n kubepolaris
+kubectl logs -f deployment/synapse-mysql -n synapse
 
 # 验证 Secret
-kubectl get secret kubepolaris-mysql -n kubepolaris -o yaml
+kubectl get secret synapse-mysql -n synapse -o yaml
 ```
 
 ## 下一步

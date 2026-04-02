@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # 源码编译
 
-从源码编译和运行 KubePolaris，适合开发者和有定制需求的用户。
+从源码编译和运行 Synapse，适合开发者和有定制需求的用户。
 
 ## 开发环境要求
 
@@ -21,8 +21,8 @@ sidebar_position: 3
 
 ```bash
 # 克隆仓库
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd synapse
 
 # 查看目录结构
 ls -la
@@ -34,7 +34,7 @@ ls -la
 
 ```bash
 # 进入项目根目录（Go 模块根目录）
-cd kubepolaris
+cd synapse
 
 # 下载依赖
 go mod download
@@ -47,16 +47,16 @@ go mod verify
 
 ```bash
 # 编译后端
-go build -o bin/kubepolaris-backend .
+go build -o bin/synapse-backend .
 
 # 或使用 Makefile
 make build-backend
 
 # 交叉编译（Linux）
-GOOS=linux GOARCH=amd64 go build -o bin/kubepolaris-backend-linux .
+GOOS=linux GOARCH=amd64 go build -o bin/synapse-backend-linux .
 
 # 交叉编译（Windows）
-GOOS=windows GOARCH=amd64 go build -o bin/kubepolaris-backend.exe .
+GOOS=windows GOARCH=amd64 go build -o bin/synapse-backend.exe .
 ```
 
 ### 3. 运行
@@ -66,7 +66,7 @@ GOOS=windows GOARCH=amd64 go build -o bin/kubepolaris-backend.exe .
 cp .env.example .env
 
 # 运行（默认使用 SQLite，零配置启动）
-./bin/kubepolaris-backend
+./bin/synapse-backend
 
 # 或开发模式（热重载）
 go run main.go
@@ -125,9 +125,9 @@ sudo systemctl start mysql
 
 # Docker
 docker run -d \
-  --name kubepolaris-mysql \
+  --name synapse-mysql \
   -e MYSQL_ROOT_PASSWORD=root \
-  -e MYSQL_DATABASE=kubepolaris \
+  -e MYSQL_DATABASE=synapse \
   -p 3306:3306 \
   mysql:8.0
 ```
@@ -139,11 +139,11 @@ docker run -d \
 mysql -u root -p
 
 # 创建数据库
-CREATE DATABASE kubepolaris CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE synapse CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # 创建用户（可选）
-CREATE USER 'kubepolaris'@'%' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON kubepolaris.* TO 'kubepolaris'@'%';
+CREATE USER 'synapse'@'%' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON synapse.* TO 'synapse'@'%';
 FLUSH PRIVILEGES;
 ```
 
@@ -153,7 +153,7 @@ FLUSH PRIVILEGES;
 
 ## 配置
 
-KubePolaris 通过环境变量进行配置，支持 `.env` 文件自动加载。默认使用 SQLite，零配置即可启动。
+Synapse 通过环境变量进行配置，支持 `.env` 文件自动加载。默认使用 SQLite，零配置即可启动。
 
 ```bash
 # 从模板创建 .env 文件，按需修改
@@ -169,7 +169,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USERNAME=root
 DB_PASSWORD=your_password
-DB_DATABASE=kubepolaris
+DB_DATABASE=synapse
 ```
 
 完整环境变量参考请查看项目根目录的 `.env.example` 文件。
@@ -187,7 +187,7 @@ docker-compose up -d mysql
 
 ```bash
 # 终端 1
-cd kubepolaris
+cd synapse
 go run main.go
 ```
 
@@ -195,7 +195,7 @@ go run main.go
 
 ```bash
 # 终端 2
-cd kubepolaris/ui
+cd synapse/ui
 pnpm dev
 ```
 
@@ -237,7 +237,7 @@ make clean
 ## 代码结构
 
 ```
-kubepolaris/
+synapse/
 ├── cmd/
 │   └── main.go              # 主入口
 ├── internal/
@@ -358,6 +358,6 @@ kill -9 <PID>
 
 ## 下一步
 
-- [贡献指南](https://github.com/clay-wangzhi/KubePolaris/blob/main/CONTRIBUTING.md) - 参与贡献
+- [贡献指南](https://github.com/clay-wangzhi/Synapse/blob/main/CONTRIBUTING.md) - 参与贡献
 - [API 文档](../api/overview) - API 参考
 

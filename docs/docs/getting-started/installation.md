@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # 安装指南
 
-本文档提供 KubePolaris 的详细安装说明，支持多种部署方式。
+本文档提供 Synapse 的详细安装说明，支持多种部署方式。
 
 ## 部署方式概览
 
@@ -39,8 +39,8 @@ sidebar_position: 2
 ### 1. 获取代码
 
 ```bash
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd synapse
 ```
 
 ### 2. 配置环境变量（可选）
@@ -58,7 +58,7 @@ vim .env
 ```bash title=".env"
 # 数据库配置
 MYSQL_ROOT_PASSWORD=your_secure_password
-MYSQL_DATABASE=kubepolaris
+MYSQL_DATABASE=synapse
 
 # JWT 密钥（请修改为随机字符串）
 JWT_SECRET=your-secret-key-please-change-it
@@ -108,14 +108,14 @@ docker-compose down -v
 ### 1. 添加 Helm 仓库
 
 ```bash
-helm repo add kubepolaris https://clay-wangzhi.github.io/KubePolaris
+helm repo add synapse https://clay-wangzhi.github.io/Synapse
 helm repo update
 ```
 
 ### 2. 创建命名空间
 
 ```bash
-kubectl create namespace kubepolaris
+kubectl create namespace synapse
 ```
 
 ### 3. 准备配置
@@ -128,7 +128,7 @@ replicaCount: 2
 
 # 镜像配置
 image:
-  repository: kubepolaris/kubepolaris
+  repository: synapse/synapse
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -148,10 +148,10 @@ mysql:
     enabled: true
     host: mysql.example.com
     port: 3306
-    database: kubepolaris
-    username: kubepolaris
+    database: synapse
+    username: synapse
     # 使用 Secret 存储密码
-    existingSecret: kubepolaris-mysql-secret
+    existingSecret: synapse-mysql-secret
     secretKey: password
   
   # 或使用内置数据库
@@ -169,14 +169,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: kubepolaris.example.com
+    - host: synapse.example.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: kubepolaris-tls
+    - secretName: synapse-tls
       hosts:
-        - kubepolaris.example.com
+        - synapse.example.com
 
 # 持久化存储
 persistence:
@@ -197,33 +197,33 @@ monitoring:
 ### 4. 创建数据库密钥
 
 ```bash
-kubectl create secret generic kubepolaris-mysql-secret \
+kubectl create secret generic synapse-mysql-secret \
   --from-literal=password=your_database_password \
-  -n kubepolaris
+  -n synapse
 ```
 
 ### 5. 安装 Chart
 
 ```bash
-helm install kubepolaris kubepolaris/kubepolaris \
+helm install synapse synapse/synapse \
   -f values.yaml \
-  -n kubepolaris
+  -n synapse
 ```
 
 ### 6. 验证部署
 
 ```bash
 # 查看 Pod 状态
-kubectl get pods -n kubepolaris
+kubectl get pods -n synapse
 
 # 查看服务
-kubectl get svc -n kubepolaris
+kubectl get svc -n synapse
 
 # 查看 Ingress
-kubectl get ingress -n kubepolaris
+kubectl get ingress -n synapse
 
 # 查看日志
-kubectl logs -f deployment/kubepolaris -n kubepolaris
+kubectl logs -f deployment/synapse -n synapse
 ```
 
 ### 7. 升级
@@ -233,15 +233,15 @@ kubectl logs -f deployment/kubepolaris -n kubepolaris
 helm repo update
 
 # 升级
-helm upgrade kubepolaris kubepolaris/kubepolaris \
+helm upgrade synapse synapse/synapse \
   -f values.yaml \
-  -n kubepolaris
+  -n synapse
 ```
 
 ### 8. 卸载
 
 ```bash
-helm uninstall kubepolaris -n kubepolaris
+helm uninstall synapse -n synapse
 ```
 
 ## 源码编译
@@ -264,8 +264,8 @@ pnpm --version
 ### 2. 获取代码
 
 ```bash
-git clone https://github.com/clay-wangzhi/KubePolaris.git
-cd kubepolaris
+git clone https://github.com/clay-wangzhi/Synapse.git
+cd synapse
 ```
 
 ### 3. 编译后端
@@ -278,7 +278,7 @@ cd cmd
 go mod download
 
 # 编译
-go build -o kubepolaris-backend main.go
+go build -o synapse-backend main.go
 
 # 或使用 Makefile
 make build-backend
@@ -301,7 +301,7 @@ pnpm build
 
 ### 5. 配置
 
-KubePolaris 通过环境变量进行配置，支持 `.env` 文件自动加载。默认使用 SQLite，零配置即可启动。
+Synapse 通过环境变量进行配置，支持 `.env` 文件自动加载。默认使用 SQLite，零配置即可启动。
 
 ```bash
 # 从模板创建 .env 文件，按需修改
@@ -317,7 +317,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USERNAME=root
 DB_PASSWORD=your_password
-DB_DATABASE=kubepolaris
+DB_DATABASE=synapse
 JWT_SECRET=your-jwt-secret-key
 LOG_LEVEL=info
 SERVER_MODE=release
@@ -329,7 +329,7 @@ SERVER_MODE=release
 
 ```bash
 # 创建数据库
-mysql -u root -p -e "CREATE DATABASE kubepolaris CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p -e "CREATE DATABASE synapse CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # 应用会自动迁移表结构
 ```
@@ -338,7 +338,7 @@ mysql -u root -p -e "CREATE DATABASE kubepolaris CHARACTER SET utf8mb4 COLLATE u
 
 ```bash
 # 运行后端
-./kubepolaris-backend
+./synapse-backend
 
 # 或开发模式
 go run main.go

@@ -11,7 +11,7 @@ import { useGrafanaUrl } from '../hooks/useGrafanaUrl';
 
 const { Text } = Typography;
 
-const DASHBOARD_UID = 'kubepolaris-cluster-overview';
+const DASHBOARD_UID = 'synapse-cluster-overview';
 
 // Grafana 风格的时间范围选项
 const TIME_RANGE_OPTIONS = [

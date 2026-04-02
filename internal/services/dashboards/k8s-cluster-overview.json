@@ -1858,7 +1858,7 @@
   "tags": [
     "kubernetes",
     "cluster",
-    "kubepolaris"
+    "synapse"
   ],
   "templating": {
     "list": [
@@ -1964,8 +1964,8 @@
     ]
   },
   "timezone": "browser",
-  "title": "KubePolaris - K8s 集群总览",
-  "uid": "kubepolaris-cluster-overview",
+  "title": "Synapse - K8s 集群总览",
+  "uid": "synapse-cluster-overview",
   "version": 1,
   "weekStart": ""
 }

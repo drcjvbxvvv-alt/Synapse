@@ -1,13 +1,13 @@
-# KubePolaris Helm Chart 部署指南
+# Synapse Helm Chart 部署指南
 
 ## 📚 文档目录
 
-本目录包含 KubePolaris 的 Kubernetes Helm Chart 部署资源。
+本目录包含 Synapse 的 Kubernetes Helm Chart 部署资源。
 
 ### 📁 目录结构
 
 ```
-deploy/helm/kubepolaris/
+deploy/helm/synapse/
 ├── Chart.yaml                    # Chart 元数据
 ├── values.yaml                   # 默认配置值
 ├── values-ha.yaml                # 高可用配置示例
@@ -41,7 +41,7 @@ deploy/helm/kubepolaris/
 ### 方式一：使用快速部署脚本（推荐）
 
 ```bash
-cd deploy/helm/kubepolaris
+cd deploy/helm/synapse
 ./quick-deploy.sh
 ```
 
@@ -56,16 +56,16 @@ cd deploy/helm/kubepolaris
 
 ```bash
 # 1. 创建命名空间
-kubectl create namespace kubepolaris
+kubectl create namespace synapse
 
 # 2. 安装 Chart
-helm install kubepolaris deploy/helm/kubepolaris \
-  --namespace kubepolaris \
+helm install synapse deploy/helm/synapse \
+  --namespace synapse \
   --set security.jwtSecret="$(openssl rand -base64 32)"
 
 # 3. 查看状态
-helm status kubepolaris -n kubepolaris
-kubectl get pods -n kubepolaris
+helm status synapse -n synapse
+kubectl get pods -n synapse
 ```
 
 ### 方式三：使用 Makefile
@@ -91,8 +91,8 @@ make helm-uninstall
 使用内置 MySQL，最小资源配置：
 
 ```bash
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse deploy/helm/synapse \
+  -n synapse \
   --create-namespace \
   --set security.jwtSecret="your-secure-jwt-secret"
 ```
@@ -103,18 +103,18 @@ helm install kubepolaris deploy/helm/kubepolaris \
 
 ```bash
 # 创建 Secret
-kubectl create secret generic kubepolaris-mysql \
+kubectl create secret generic synapse-mysql \
   --from-literal=password=your_mysql_password \
-  -n kubepolaris
+  -n synapse
 
-kubectl create secret generic kubepolaris-secrets \
+kubectl create secret generic synapse-secrets \
   --from-literal=jwt-secret="$(openssl rand -base64 32)" \
-  -n kubepolaris
+  -n synapse
 
 # 安装
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
-  -f deploy/helm/kubepolaris/values-production.yaml \
+helm install synapse deploy/helm/synapse \
+  -n synapse \
+  -f deploy/helm/synapse/values-production.yaml \
   --set mysql.external.host=your-mysql-host.example.com
 ```
 
@@ -123,9 +123,9 @@ helm install kubepolaris deploy/helm/kubepolaris \
 3 副本 + 反亲和 + 自动扩缩容：
 
 ```bash
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
-  -f deploy/helm/kubepolaris/values-ha.yaml
+helm install synapse deploy/helm/synapse \
+  -n synapse \
+  -f deploy/helm/synapse/values-ha.yaml
 ```
 
 ## 📊 配置说明
@@ -149,14 +149,14 @@ helm install kubepolaris deploy/helm/kubepolaris \
 
 ### Grafana 配置
 
-KubePolaris 内置了 Grafana 用于监控可视化。Grafana 的配置包括：
+Synapse 内置了 Grafana 用于监控可视化。Grafana 的配置包括：
 
 #### 1. 启用/禁用 Grafana
 
 ```bash
 # 禁用内置 Grafana（使用外部 Grafana）
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse deploy/helm/synapse \
+  -n synapse \
   --set grafana.enabled=false \
   --set grafana.external.enabled=true \
   --set grafana.external.url="http://your-grafana:3000"
@@ -168,8 +168,8 @@ Grafana 需要连接到 Prometheus 来获取监控数据：
 
 ```bash
 # 设置 Prometheus 地址
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse deploy/helm/synapse \
+  -n synapse \
   --set grafana.datasource.prometheusUrl="http://prometheus-server:9090"
 ```
 
@@ -180,13 +180,13 @@ Chart 包含了 3 个预定义的 Dashboard：
 - **Pod 详情监控**: Pod 级别的详细监控
 - **工作负载详情**: Deployment/StatefulSet 等工作负载监控
 
-这些 Dashboard 会在部署时自动导入到 Grafana 的 `KubePolaris` 文件夹中。
+这些 Dashboard 会在部署时自动导入到 Grafana 的 `Synapse` 文件夹中。
 
 如果不需要自动导入 Dashboard：
 
 ```bash
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse deploy/helm/synapse \
+  -n synapse \
   --set grafana.dashboards.enabled=false
 ```
 
@@ -195,8 +195,8 @@ helm install kubepolaris deploy/helm/kubepolaris \
 默认情况下，Grafana 使用 emptyDir，重启后数据会丢失。生产环境建议启用持久化：
 
 ```bash
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse deploy/helm/synapse \
+  -n synapse \
   --set grafana.persistence.enabled=true \
   --set grafana.persistence.size=5Gi \
   --set grafana.persistence.storageClass=your-storage-class
@@ -208,7 +208,7 @@ Grafana 默认通过子路径 `/grafana/` 访问：
 
 ```bash
 # Port Forward 方式
-kubectl port-forward -n kubepolaris svc/kubepolaris-grafana 3000:3000
+kubectl port-forward -n synapse svc/synapse-grafana 3000:3000
 
 # 访问地址: http://localhost:3000/grafana/
 # 默认用户名: admin
@@ -252,8 +252,8 @@ grafana:
 然后使用自定义配置安装：
 
 ```bash
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse deploy/helm/synapse \
+  -n synapse \
   -f values-custom.yaml
 ```
 
@@ -269,83 +269,83 @@ helm install kubepolaris deploy/helm/kubepolaris \
 
 ```bash
 # Helm release 状态
-helm status kubepolaris -n kubepolaris
+helm status synapse -n synapse
 
 # Pod 状态
-kubectl get pods -n kubepolaris
+kubectl get pods -n synapse
 
 # 服务状态
-kubectl get svc -n kubepolaris
+kubectl get svc -n synapse
 
 # 所有资源
-kubectl get all -n kubepolaris
+kubectl get all -n synapse
 ```
 
 ### 查看日志
 
 ```bash
 # 后端日志
-kubectl logs -f -l app.kubernetes.io/component=backend -n kubepolaris
+kubectl logs -f -l app.kubernetes.io/component=backend -n synapse
 
 # 前端日志
-kubectl logs -f -l app.kubernetes.io/component=frontend -n kubepolaris
+kubectl logs -f -l app.kubernetes.io/component=frontend -n synapse
 
 # MySQL 日志
-kubectl logs -f -l app.kubernetes.io/component=mysql -n kubepolaris
+kubectl logs -f -l app.kubernetes.io/component=mysql -n synapse
 ```
 
 ### 访问应用
 
 ```bash
 # Port Forward
-kubectl port-forward -n kubepolaris svc/kubepolaris-frontend 8080:80
+kubectl port-forward -n synapse svc/synapse-frontend 8080:80
 
 # 浏览器访问
 # http://localhost:8080
 # 用户名: admin
-# 密码: KubePolaris@2026
+# 密码: Synapse@2026
 ```
 
 ### 升级
 
 ```bash
 # 升级到新版本
-helm upgrade kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm upgrade synapse deploy/helm/synapse \
+  -n synapse \
   -f values.yaml
 
 # 查看升级历史
-helm history kubepolaris -n kubepolaris
+helm history synapse -n synapse
 
 # 回滚
-helm rollback kubepolaris 1 -n kubepolaris
+helm rollback synapse 1 -n synapse
 ```
 
 ### 卸载
 
 ```bash
 # 卸载 Chart
-helm uninstall kubepolaris -n kubepolaris
+helm uninstall synapse -n synapse
 
 # 删除 PVC（注意：会删除所有数据）
-kubectl delete pvc -l app.kubernetes.io/instance=kubepolaris -n kubepolaris
+kubectl delete pvc -l app.kubernetes.io/instance=synapse -n synapse
 
 # 删除命名空间
-kubectl delete namespace kubepolaris
+kubectl delete namespace synapse
 ```
 
 ## 🧪 测试
 
 ```bash
 # 运行 Helm 测试
-helm test kubepolaris -n kubepolaris
+helm test synapse -n synapse
 
 # 手动测试连接
 kubectl run test-connection --rm -i --tty \
   --image=busybox:1.36 \
   --restart=Never \
-  -n kubepolaris \
-  -- wget -qO- kubepolaris-backend:8080/healthz
+  -n synapse \
+  -- wget -qO- synapse-backend:8080/healthz
 ```
 
 ## 📦 打包和发布
@@ -354,10 +354,10 @@ kubectl run test-connection --rm -i --tty \
 
 ```bash
 # 验证 Chart
-helm lint deploy/helm/kubepolaris
+helm lint deploy/helm/synapse
 
 # 打包
-helm package deploy/helm/kubepolaris -d dist/
+helm package deploy/helm/synapse -d dist/
 
 # 生成索引
 helm repo index dist/ --url https://your-repo-url
@@ -367,8 +367,8 @@ helm repo index dist/ --url https://your-repo-url
 
 ```bash
 # 渲染模板
-helm template kubepolaris deploy/helm/kubepolaris \
-  --namespace kubepolaris \
+helm template synapse deploy/helm/synapse \
+  --namespace synapse \
   --set security.jwtSecret="test-secret" \
   > rendered.yaml
 
@@ -382,34 +382,34 @@ kubectl apply --dry-run=client -f rendered.yaml
 
 ```bash
 # 查看 Pod 事件
-kubectl describe pod -l app.kubernetes.io/instance=kubepolaris -n kubepolaris
+kubectl describe pod -l app.kubernetes.io/instance=synapse -n synapse
 
 # 查看 Pod 日志
-kubectl logs -l app.kubernetes.io/instance=kubepolaris -n kubepolaris --all-containers=true
+kubectl logs -l app.kubernetes.io/instance=synapse -n synapse --all-containers=true
 ```
 
 ### 数据库连接失败
 
 ```bash
 # 检查 MySQL Pod
-kubectl get pod -l app.kubernetes.io/component=mysql -n kubepolaris
+kubectl get pod -l app.kubernetes.io/component=mysql -n synapse
 
 # 检查 Secret
-kubectl get secret kubepolaris-mysql -n kubepolaris -o yaml
+kubectl get secret synapse-mysql -n synapse -o yaml
 
 # 测试数据库连接
 kubectl run mysql-client --rm -i --tty \
   --image=mysql:8.0 \
   --restart=Never \
-  -n kubepolaris \
-  -- mysql -h kubepolaris-mysql -u kubepolaris -p
+  -n synapse \
+  -- mysql -h synapse-mysql -u synapse -p
 ```
 
 ### Ingress 无法访问
 
 ```bash
 # 检查 Ingress
-kubectl describe ingress kubepolaris -n kubepolaris
+kubectl describe ingress synapse -n synapse
 
 # 检查 Ingress Controller
 kubectl get pods -n ingress-nginx
@@ -419,8 +419,8 @@ kubectl get pods -n ingress-nginx
 
 - [Helm 官方文档](https://helm.sh/docs/)
 - [Kubernetes 官方文档](https://kubernetes.io/docs/)
-- [KubePolaris 文档](https://kubepolaris.clay-wangzhi.com/docs)
-- [Chart README](./kubepolaris/README.md)
+- [Synapse 文档](https://synapse.clay-wangzhi.com/docs)
+- [Chart README](./synapse/README.md)
 
 ## 🤝 贡献
 
@@ -432,5 +432,5 @@ Apache License 2.0
 
 ---
 
-**维护者:** KubePolaris Team  
+**维护者:** Synapse Team  
 **更新时间:** 2026-01-23

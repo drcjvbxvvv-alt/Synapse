@@ -2,17 +2,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-backend
+  name: {{ include "synapse.fullname" . }}-backend
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.backend.labels" . | nindent 4 }}
+    {{- include "synapse.backend.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.backend.enabled }}
   replicas: {{ .Values.backend.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "kubepolaris.backend.selectorLabels" . | nindent 6 }}
+      {{- include "synapse.backend.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -21,13 +21,13 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "kubepolaris.backend.selectorLabels" . | nindent 8 }}
+        {{- include "synapse.backend.selectorLabels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
-      serviceAccountName: {{ include "kubepolaris.serviceAccountName" . }}
+      {{- include "synapse.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "synapse.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.backend.podSecurityContext | nindent 8 }}
       initContainers:
@@ -37,7 +37,7 @@ spec:
         command: ['sh', '-c']
         args:
         - |
-          until nc -z {{ include "kubepolaris.database.host" . }} {{ include "kubepolaris.database.port" . }}; do
+          until nc -z {{ include "synapse.database.host" . }} {{ include "synapse.database.port" . }}; do
             echo "Waiting for MySQL..."
             sleep 2
           done
@@ -47,7 +47,7 @@ spec:
       - name: backend
         securityContext:
           {{- toYaml .Values.backend.securityContext | nindent 10 }}
-        image: {{ include "kubepolaris.image" (dict "repository" .Values.backend.image.repository "tag" .Values.backend.image.tag "Values" .Values "Chart" .Chart) }}
+        image: {{ include "synapse.image" (dict "repository" .Values.backend.image.repository "tag" .Values.backend.image.tag "Values" .Values "Chart" .Chart) }}
         imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
         ports:
         - name: http
@@ -61,22 +61,22 @@ spec:
         - name: DB_DRIVER
           value: "mysql"
         - name: DB_HOST
-          value: {{ include "kubepolaris.database.host" . | quote }}
+          value: {{ include "synapse.database.host" . | quote }}
         - name: DB_PORT
-          value: {{ include "kubepolaris.database.port" . | quote }}
+          value: {{ include "synapse.database.port" . | quote }}
         - name: DB_USERNAME
-          value: {{ include "kubepolaris.database.username" . | quote }}
+          value: {{ include "synapse.database.username" . | quote }}
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "kubepolaris.mysql.secretName" . }}
+              name: {{ include "synapse.mysql.secretName" . }}
               key: {{ if .Values.mysql.external.enabled }}{{ .Values.mysql.external.existingSecretPasswordKey | default "password" }}{{ else }}{{ .Values.mysql.internal.existingSecretPasswordKey | default "mysql-password" }}{{ end }}
         - name: DB_DATABASE
-          value: {{ include "kubepolaris.database.name" . | quote }}
+          value: {{ include "synapse.database.name" . | quote }}
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
-              name: {{ include "kubepolaris.jwt.secretName" . }}
+              name: {{ include "synapse.jwt.secretName" . }}
               key: {{ .Values.security.existingSecretJwtKey | default "jwt-secret" }}
         - name: JWT_EXPIRE_TIME
           value: "24"

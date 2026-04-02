@@ -23,7 +23,7 @@ test.describe('认证流程', () => {
   test('正确登录后跳转到总览页', async ({ page }) => {
     await page.goto('/login');
     await page.locator('input[type="text"], input#username, input[placeholder*="用户"]').first().fill('admin');
-    await page.locator('input[type="password"]').fill('KubePolaris@2026');
+    await page.locator('input[type="password"]').fill('Synapse@2026');
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(/\/overview/, { timeout: 10000 });
   });
@@ -31,7 +31,7 @@ test.describe('认证流程', () => {
   test('退出登录后回到登录页', async ({ page }) => {
     await page.goto('/login');
     await page.locator('input[type="text"], input#username, input[placeholder*="用户"]').first().fill('admin');
-    await page.locator('input[type="password"]').fill('KubePolaris@2026');
+    await page.locator('input[type="password"]').fill('Synapse@2026');
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(/\/overview/, { timeout: 10000 });
 

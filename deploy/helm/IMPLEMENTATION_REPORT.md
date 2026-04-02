@@ -39,7 +39,7 @@
 
 ### 文档文件 (2)
 - ✅ deploy/helm/README.md - Helm 部署总指南
-- ✅ deploy/helm/kubepolaris/README.md - Chart 详细文档
+- ✅ deploy/helm/synapse/README.md - Chart 详细文档
 
 ## ✨ 功能特性
 
@@ -76,30 +76,30 @@
 
 ### 场景 1: 开发测试环境
 ```bash
-helm install kubepolaris ./deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse ./deploy/helm/synapse \
+  -n synapse \
   --create-namespace \
   --set security.jwtSecret="test-secret"
 ```
 
 ### 场景 2: 高可用环境
 ```bash
-helm install kubepolaris ./deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse ./deploy/helm/synapse \
+  -n synapse \
   -f values-ha.yaml
 ```
 
 ### 场景 3: 生产环境
 ```bash
-helm install kubepolaris ./deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse ./deploy/helm/synapse \
+  -n synapse \
   -f values-production.yaml \
   --set mysql.external.host=your-mysql-host
 ```
 
 ### 场景 4: 一键快速部署
 ```bash
-cd deploy/helm/kubepolaris
+cd deploy/helm/synapse
 ./quick-deploy.sh
 ```
 
@@ -107,13 +107,13 @@ cd deploy/helm/kubepolaris
 
 ### 1. 语法验证
 ```bash
-cd /Users/wangzhi4/Documents/github/KubePolaris
+cd /Users/wangzhi4/Documents/github/Synapse
 make helm-lint
 ```
 
 ### 2. 模板渲染测试
 ```bash
-helm template test deploy/helm/kubepolaris \
+helm template test deploy/helm/synapse \
   --set security.jwtSecret="test-secret" \
   > /tmp/rendered.yaml
 kubectl apply --dry-run=client -f /tmp/rendered.yaml
@@ -122,7 +122,7 @@ kubectl apply --dry-run=client -f /tmp/rendered.yaml
 ### 3. 打包测试
 ```bash
 make helm-package
-ls -lh dist/kubepolaris-*.tgz
+ls -lh dist/synapse-*.tgz
 ```
 
 ### 4. 安装测试（需要 K8s 集群）
@@ -131,8 +131,8 @@ ls -lh dist/kubepolaris-*.tgz
 make helm-install
 
 # 或手动安装
-helm install kubepolaris deploy/helm/kubepolaris \
-  -n kubepolaris \
+helm install synapse deploy/helm/synapse \
+  -n synapse \
   --create-namespace \
   --set security.jwtSecret="$(openssl rand -base64 32)" \
   --dry-run
@@ -146,7 +146,7 @@ helm install kubepolaris deploy/helm/kubepolaris \
 
 ### 新增文档
 - ✅ deploy/helm/README.md - Helm 部署总指南
-- ✅ deploy/helm/kubepolaris/README.md - Chart 详细文档
+- ✅ deploy/helm/synapse/README.md - Chart 详细文档
 
 ## 🎉 完成状态
 
@@ -179,8 +179,8 @@ helm install kubepolaris deploy/helm/kubepolaris \
 ### 快速开始
 请参考：
 - `deploy/helm/README.md` - 总体部署指南
-- `deploy/helm/kubepolaris/README.md` - Chart 详细文档
-- `deploy/helm/kubepolaris/quick-deploy.sh` - 快速部署
+- `deploy/helm/synapse/README.md` - Chart 详细文档
+- `deploy/helm/synapse/quick-deploy.sh` - 快速部署
 
 ### Makefile 命令
 ```bash
@@ -209,7 +209,7 @@ make helm-uninstall  # 卸载 Chart
 
 ## 🎊 总结
 
-✨ **KubePolaris Helm Charts 已完整实现！**
+✨ **Synapse Helm Charts 已完整实现！**
 
 - 📦 25 个文件，涵盖所有必要配置
 - 🎯 支持 4 种典型部署场景
@@ -218,7 +218,7 @@ make helm-uninstall  # 卸载 Chart
 - 🔧 完整的 Makefile 集成
 - ✅ 符合项目文档规划
 
-现在用户可以通过 Helm 在 Kubernetes 上轻松部署 KubePolaris！
+现在用户可以通过 Helm 在 Kubernetes 上轻松部署 Synapse！
 
 ---
 

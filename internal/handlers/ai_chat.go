@@ -12,21 +12,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/clay-wangzhi/KubePolaris/internal/k8s"
-	"github.com/clay-wangzhi/KubePolaris/internal/models"
-	"github.com/clay-wangzhi/KubePolaris/internal/response"
-	"github.com/clay-wangzhi/KubePolaris/internal/services"
-	"github.com/clay-wangzhi/KubePolaris/pkg/logger"
+	"github.com/clay-wangzhi/Synapse/internal/k8s"
+	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/clay-wangzhi/Synapse/internal/response"
+	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// AIChatHandler AI 对话处理器
+// AIChatHandler AI 對話處理器
 type AIChatHandler struct {
 	clusterService  *services.ClusterService
 	aiConfigService *services.AIConfigService
 	toolExecutor    *services.ToolExecutor
 }
 
-// NewAIChatHandler 创建 AI 对话处理器
+// NewAIChatHandler 建立 AI 對話處理器
 func NewAIChatHandler(db *gorm.DB, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *AIChatHandler {
 	return &AIChatHandler{
 		clusterService:  clusterSvc,
@@ -35,44 +35,44 @@ func NewAIChatHandler(db *gorm.DB, clusterSvc *services.ClusterService, k8sMgr *
 	}
 }
 
-// chatRequest 对话请求
+// chatRequest 對話請求
 type chatRequest struct {
 	Messages []services.ChatMessage `json:"messages"`
 }
 
-// Chat 处理 AI 对话请求（SSE 流式响应）
+// Chat 處理 AI 對話請求（SSE 流式響應）
 func (h *AIChatHandler) Chat(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := strconv.ParseUint(clusterIDStr, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	var req chatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误: "+err.Error())
+		response.BadRequest(c, "請求參數錯誤："+err.Error())
 		return
 	}
 
 	if len(req.Messages) == 0 {
-		response.BadRequest(c, "消息不能为空")
+		response.BadRequest(c, "訊息不能為空")
 		return
 	}
 
 	aiConfig, err := h.aiConfigService.GetConfigWithAPIKey()
 	if err != nil || aiConfig == nil {
-		response.BadRequest(c, "AI 功能未配置，请在系统设置中配置 AI")
+		response.BadRequest(c, "AI 功能未設定，請至系統設定配置 AI")
 		return
 	}
 	if !aiConfig.Enabled || aiConfig.APIKey == "" {
-		response.BadRequest(c, "AI 功能未启用")
+		response.BadRequest(c, "AI 功能未啟用")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(uint(clusterID))
 	if err != nil {
-		response.BadRequest(c, "集群不存在")
+		response.BadRequest(c, "叢集不存在")
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		response.InternalError(c, "不支持流式响应")
+		response.InternalError(c, "不支援流式響應")
 		return
 	}
 
@@ -107,7 +107,7 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 		flusher.Flush()
 	}
 
-	// Function Calling 循环：最多 10 轮工具调用
+	// Function Calling 循環：最多 10 輪工具呼叫
 	for round := 0; round < 10; round++ {
 		chatReq := services.ChatRequest{
 			Messages: messages,
@@ -175,14 +175,14 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 				}
 			}
 
-			// 将 assistant 消息（包含 tool_calls）加入历史
+			// 將 assistant 訊息（包含 tool_calls）加入歷史
 			messages = append(messages, services.ChatMessage{
 				Role:      "assistant",
 				Content:   contentBuilder.String(),
 				ToolCalls: toolCalls,
 			})
 
-			// 执行每个工具调用
+			// 執行每個工具呼叫
 			for _, tc := range toolCalls {
 				sendSSE("tool_call", fmt.Sprintf(`{"id":"%s","name":"%s","arguments":%s}`,
 					escapeJSON(tc.ID), escapeJSON(tc.Function.Name), tc.Function.Arguments))
@@ -190,15 +190,18 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 				result, execErr := h.toolExecutor.ExecuteTool(ctx, uint(clusterID), tc.Function.Name, tc.Function.Arguments)
 				if execErr != nil {
 					result = fmt.Sprintf(`{"error":"%s"}`, escapeJSON(execErr.Error()))
-					logger.Error("工具执行失败", "tool", tc.Function.Name, "error", execErr)
+					logger.Error("工具執行失敗", "tool", tc.Function.Name, "error", execErr)
 				}
+
+				// Sanitize tool results before sending to AI to prevent leaking secrets
+				sanitizedResult := services.SanitizeK8sContext(result)
 
 				sendSSE("tool_result", fmt.Sprintf(`{"id":"%s","name":"%s","result":%s}`,
 					escapeJSON(tc.ID), escapeJSON(tc.Function.Name), ensureJSON(result)))
 
 				messages = append(messages, services.ChatMessage{
 					Role:       "tool",
-					Content:    result,
+					Content:    sanitizedResult,
 					ToolCallID: tc.ID,
 				})
 			}
@@ -206,12 +209,12 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 			continue
 		}
 
-		// 文本回复完成
+		// 文字回覆完成
 		sendSSE("done", "{}")
 		return
 	}
 
-	sendSSE("error", `{"error":"工具调用轮次超出限制"}`)
+	sendSSE("error", `{"error":"工具呼叫輪次超出限制"}`)
 	sendSSE("done", "{}")
 }
 
@@ -219,23 +222,29 @@ func buildSystemPrompt(cluster *models.Cluster) string {
 	name := cluster.Name
 	version := cluster.Version
 
-	return fmt.Sprintf(`你是 KubePolaris AI 助手，帮助用户管理和诊断 Kubernetes 集群。
-当前集群：%s，K8s 版本：%s
+	return fmt.Sprintf(`You are Synapse AI Assistant, helping users manage and troubleshoot Kubernetes clusters.
+Current cluster: %s, K8s version: %s
 
-你可以使用以下工具查询集群资源、查看监控指标、分析问题：
-- list_pods / get_pod_detail / get_pod_logs：查看 Pod 信息和日志
-- list_deployments / get_deployment_detail：查看 Deployment 信息
-- list_nodes / get_node_detail：查看节点信息
-- list_events：查看 K8s 事件
-- list_services / list_ingresses：查看网络资源
-- scale_deployment / restart_deployment：扩缩容和重启（需要用户确认）
+You have access to the following tools to query cluster resources and analyze issues:
+- list_pods / get_pod_detail / get_pod_logs: inspect Pod status and logs
+- list_deployments / get_deployment_detail: inspect Deployment state
+- list_nodes / get_node_detail: inspect node health and resources
+- list_events: retrieve K8s events
+- list_services / list_ingresses: inspect network resources
+- scale_deployment / restart_deployment: scale or restart workloads (always ask for confirmation first)
 
-使用规则：
-1. 根据用户问题，主动使用工具获取数据后再回答
-2. 对于写操作（扩缩容、重启等），必须先告知用户操作详情并等待确认
-3. 回答使用 Markdown 格式，表格展示列表数据
-4. 如果工具返回错误，向用户说明原因
-5. 用中文回答`, name, version)
+YAML generation mode:
+- When the user's message starts with /yaml or explicitly asks to generate YAML, respond as a senior K8s engineer producing complete, production-ready YAML
+- Always include correct apiVersion, kind, metadata, and spec fields
+- Include reasonable resources.requests/limits defaults
+- Output the YAML inside a ` + "```" + `yaml code block
+
+Rules:
+1. Proactively call tools to gather data before answering; never guess resource state
+2. For write operations (scale, restart, delete), clearly describe the action and ask for explicit confirmation before proceeding
+3. Format responses in Markdown; use tables for lists of resources
+4. If a tool returns an error, explain the cause clearly to the user
+5. Always reply in the same language the user writes in (Traditional Chinese if they write in Chinese, English if they write in English)`, name, version)
 }
 
 func escapeJSON(s string) string {

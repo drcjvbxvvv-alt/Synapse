@@ -1951,8 +1951,8 @@
     ]
   },
   "timezone": "",
-  "title": "Pod 详情监控 - KubePolaris",
-  "uid": "kubepolaris-pod-detail",
+  "title": "Pod 详情监控 - Synapse",
+  "uid": "synapse-pod-detail",
   "version": 1
 }
 

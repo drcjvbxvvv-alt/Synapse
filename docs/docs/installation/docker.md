@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Docker 部署
 
-使用 Docker 和 Docker Compose 部署 KubePolaris，适合快速体验和开发测试环境。
+使用 Docker 和 Docker Compose 部署 Synapse，适合快速体验和开发测试环境。
 
 ## 前置要求
 
@@ -16,10 +16,10 @@ sidebar_position: 1
 ## 一条命令快速体验
 
 ```bash
-docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:latest
+docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse:latest
 ```
 
-访问 `http://localhost:8080`，使用默认账号 `admin / KubePolaris@2026` 登录。
+访问 `http://localhost:8080`，使用默认账号 `admin / Synapse@2026` 登录。
 
 :::tip
 以上方式使用内置 SQLite，适合快速体验。生产环境建议使用下方 Docker Compose 部署，搭配 MySQL + Grafana。
@@ -30,13 +30,13 @@ docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kube
 ### 1. 获取代码
 
 ```bash
-git clone https://github.com/clay-wangzhi/KubePolaris.git
+git clone https://github.com/clay-wangzhi/Synapse.git
 ```
 
 ### 2. 启动服务
 
 ```bash
-cd KubePolaris
+cd Synapse
 
 # 配置环境变量
 cp .env.example .env
@@ -66,21 +66,21 @@ curl http://localhost:8080/healthz
 services:
   mysql:
     image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/mysql:8.0
-    container_name: kubepolaris-mysql
+    container_name: synapse-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: kubepolaris
-      MYSQL_USER: kubepolaris
+      MYSQL_DATABASE: synapse
+      MYSQL_USER: synapse
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     # ...
 
-  kubepolaris:
+  synapse:
     build:
       context: .
       dockerfile: Dockerfile
-    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubepolaris:${VERSION:-latest}
-    container_name: kubepolaris
+    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse:${VERSION:-latest}
+    container_name: synapse
     restart: unless-stopped
     depends_on:
       mysql:
@@ -101,7 +101,7 @@ services:
     # ...
 ```
 
-完整配置请参考项目根目录的 [docker-compose.yaml](https://github.com/clay-wangzhi/KubePolaris/blob/main/docker-compose.yaml)。
+完整配置请参考项目根目录的 [docker-compose.yaml](https://github.com/clay-wangzhi/Synapse/blob/main/docker-compose.yaml)。
 
 
 ## 数据备份
@@ -110,20 +110,20 @@ services:
 
 ```bash
 # 备份
-docker exec kubepolaris-mysql mysqldump -u root -p kubepolaris > backup_$(date +%Y%m%d).sql
+docker exec synapse-mysql mysqldump -u root -p synapse > backup_$(date +%Y%m%d).sql
 
 # 恢复
-cat backup_20260107.sql | docker exec -i kubepolaris-mysql mysql -u root -p kubepolaris
+cat backup_20260107.sql | docker exec -i synapse-mysql mysql -u root -p synapse
 ```
 
 ### 备份数据卷
 
 ```bash
 # 备份
-docker run --rm -v kubepolaris_mysql_data:/data -v $(pwd):/backup alpine tar czf /backup/mysql_data.tar.gz /data
+docker run --rm -v synapse_mysql_data:/data -v $(pwd):/backup alpine tar czf /backup/mysql_data.tar.gz /data
 
 # 恢复
-docker run --rm -v kubepolaris_mysql_data:/data -v $(pwd):/backup alpine tar xzf /backup/mysql_data.tar.gz -C /
+docker run --rm -v synapse_mysql_data:/data -v $(pwd):/backup alpine tar xzf /backup/mysql_data.tar.gz -C /
 ```
 
 ## 升级
@@ -138,7 +138,7 @@ git pull origin main
 docker compose up -d --build
 
 # 查看日志确认升级成功
-docker compose logs -f kubepolaris
+docker compose logs -f synapse
 ```
 
 ### 回滚
@@ -166,7 +166,7 @@ APP_PORT=9090  # 使用 9090 端口
 ```bash
 # 检查 Docker 网络
 docker network ls
-docker network inspect kubepolaris_default
+docker network inspect synapse_default
 
 # 重建网络
 docker compose down
@@ -178,13 +178,13 @@ docker compose up -d
 
 ```bash
 # 检查 MySQL 容器状态
-docker logs kubepolaris-mysql
+docker logs synapse-mysql
 
 # 测试连接
-docker exec -it kubepolaris-mysql mysql -u root -p
+docker exec -it synapse-mysql mysql -u root -p
 
 # 检查环境变量
-docker exec kubepolaris env | grep DB_
+docker exec synapse env | grep DB_
 ```
 
 ## 下一步

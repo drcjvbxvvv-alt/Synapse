@@ -1,4 +1,4 @@
-# KubePolaris Release Pipeline
+# Synapse Release Pipeline
 # 自动化版本发布：构建、推送镜像、发布 Helm Chart
 
 name: Release
@@ -69,7 +69,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          OUTPUT_NAME=kubepolaris-${{ matrix.goos }}-${{ matrix.goarch }}
+          OUTPUT_NAME=synapse-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             OUTPUT_NAME="${OUTPUT_NAME}.exe"
           fi
@@ -87,8 +87,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kubepolaris-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: kubepolaris-*.tar.gz
+          name: synapse-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: synapse-*.tar.gz
           retention-days: 1
 
   # ==================== 构建前端 ====================
@@ -120,13 +120,13 @@ jobs:
       - name: Create frontend archive
         run: |
           cd ui
-          tar -czvf ../kubepolaris-frontend-${{ needs.validate.outputs.version }}.tar.gz dist
+          tar -czvf ../synapse-frontend-${{ needs.validate.outputs.version }}.tar.gz dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: kubepolaris-frontend-*.tar.gz
+          path: synapse-frontend-*.tar.gz
           retention-days: 1
 
   # ==================== 构建并推送 Docker 镜像 ====================
@@ -193,25 +193,25 @@ jobs:
 
       - name: Update Chart version
         run: |
-          if [ -f deploy/helm/kubepolaris/Chart.yaml ]; then
-            sed -i "s/^version:.*/version: ${{ needs.validate.outputs.version }}/" deploy/helm/kubepolaris/Chart.yaml
-            sed -i "s/^appVersion:.*/appVersion: \"${{ needs.validate.outputs.version }}\"/" deploy/helm/kubepolaris/Chart.yaml
+          if [ -f deploy/helm/synapse/Chart.yaml ]; then
+            sed -i "s/^version:.*/version: ${{ needs.validate.outputs.version }}/" deploy/helm/synapse/Chart.yaml
+            sed -i "s/^appVersion:.*/appVersion: \"${{ needs.validate.outputs.version }}\"/" deploy/helm/synapse/Chart.yaml
           fi
 
       - name: Package Helm Chart
         run: |
-          if [ -d deploy/helm/kubepolaris ]; then
-            helm package deploy/helm/kubepolaris -d .
+          if [ -d deploy/helm/synapse ]; then
+            helm package deploy/helm/synapse -d .
           else
             echo "Helm chart not found, skipping..."
-            touch kubepolaris-chart-placeholder.txt
+            touch synapse-chart-placeholder.txt
           fi
 
       - name: Upload Helm Chart
         uses: actions/upload-artifact@v4
         with:
           name: helm-chart
-          path: kubepolaris-*.tgz
+          path: synapse-*.tgz
           retention-days: 1
           if-no-files-found: ignore
 
@@ -250,7 +250,7 @@ jobs:
           else
             echo "## Initial Release" > CHANGELOG_RELEASE.md
             echo "" >> CHANGELOG_RELEASE.md
-            echo "This is the first release of KubePolaris!" >> CHANGELOG_RELEASE.md
+            echo "This is the first release of Synapse!" >> CHANGELOG_RELEASE.md
           fi
           
           echo "" >> CHANGELOG_RELEASE.md
@@ -264,7 +264,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.validate.outputs.version }}
-          name: KubePolaris v${{ needs.validate.outputs.version }}
+          name: Synapse v${{ needs.validate.outputs.version }}
           body_path: CHANGELOG_RELEASE.md
           draft: false
           prerelease: ${{ needs.validate.outputs.is_prerelease }}

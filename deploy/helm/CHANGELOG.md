@@ -49,10 +49,10 @@ volumes:
 **升级指引:**
 ```bash
 # Helm 升级
-helm upgrade kubepolaris ./deploy/helm/kubepolaris -n kubepolaris
+helm upgrade synapse ./deploy/helm/synapse -n synapse
 
 # 验证
-kubectl rollout status deployment/kubepolaris-frontend -n kubepolaris
+kubectl rollout status deployment/synapse-frontend -n synapse
 ```
 
 ---
@@ -93,7 +93,7 @@ kubectl rollout status deployment/kubepolaris-frontend -n kubepolaris
 
 #### 文档
 - 📚 deploy/helm/README.md - Helm 部署总指南
-- 📚 deploy/helm/kubepolaris/README.md - Chart 详细文档（8KB）
+- 📚 deploy/helm/synapse/README.md - Chart 详细文档（8KB）
 - 📚 deploy/helm/IMPLEMENTATION_REPORT.md - 实现报告
 
 #### Makefile 集成
@@ -161,27 +161,27 @@ kubectl rollout status deployment/kubepolaris-frontend -n kubepolaris
 
 #### 场景 1: 快速体验
 ```bash
-cd deploy/helm/kubepolaris
+cd deploy/helm/synapse
 ./quick-deploy.sh
 ```
 
 #### 场景 2: 基础部署
 ```bash
-helm install kubepolaris ./deploy/helm/kubepolaris \
-  -n kubepolaris --create-namespace \
+helm install synapse ./deploy/helm/synapse \
+  -n synapse --create-namespace \
   --set security.jwtSecret="your-secret"
 ```
 
 #### 场景 3: 高可用部署
 ```bash
-helm install kubepolaris ./deploy/helm/kubepolaris \
-  -n kubepolaris -f values-ha.yaml
+helm install synapse ./deploy/helm/synapse \
+  -n synapse -f values-ha.yaml
 ```
 
 #### 场景 4: 生产环境
 ```bash
-helm install kubepolaris ./deploy/helm/kubepolaris \
-  -n kubepolaris -f values-production.yaml
+helm install synapse ./deploy/helm/synapse \
+  -n synapse -f values-production.yaml
 ```
 
 ### 验证 ✅
@@ -219,7 +219,7 @@ helm install kubepolaris ./deploy/helm/kubepolaris \
 deploy/helm/
 ├── README.md (新增)
 ├── IMPLEMENTATION_REPORT.md (新增)
-└── kubepolaris/ (新增)
+└── synapse/ (新增)
     ├── 25 个文件
     └── templates/ (17 个模板)
 ```
@@ -258,7 +258,7 @@ deploy/helm/
 
 ---
 
-**作者:** KubePolaris Team  
+**作者:** Synapse Team  
 **日期:** 2026-01-23  
 **版本:** 1.0.0  
 **状态:** ✅ 完成

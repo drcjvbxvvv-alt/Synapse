@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # 高可用部署
 
-本文档介绍如何部署高可用的 KubePolaris 集群。
+本文档介绍如何部署高可用的 Synapse 集群。
 
 ## 架构设计
 
@@ -82,9 +82,9 @@ mysql:
     enabled: true
     host: mysql.example.com
     port: 3306
-    database: kubepolaris
-    username: kubepolaris
-    existingSecret: kubepolaris-mysql-secret
+    database: synapse
+    username: synapse
+    existingSecret: synapse-mysql-secret
 
 # Ingress 配置
 ingress:
@@ -95,14 +95,14 @@ ingress:
     nginx.ingress.kubernetes.io/session-cookie-name: "route"
     nginx.ingress.kubernetes.io/session-cookie-max-age: "3600"
   hosts:
-    - host: kubepolaris.example.com
+    - host: synapse.example.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: kubepolaris-tls
+    - secretName: synapse-tls
       hosts:
-        - kubepolaris.example.com
+        - synapse.example.com
 
 # PDB 配置
 podDisruptionBudget:
@@ -121,9 +121,9 @@ autoscaling:
 ### 部署命令
 
 ```bash
-helm install kubepolaris kubepolaris/kubepolaris \
+helm install synapse synapse/synapse \
   -f values-ha.yaml \
-  -n kubepolaris \
+  -n synapse \
   --create-namespace
 ```
 
@@ -167,43 +167,43 @@ database:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: kubepolaris
+  name: synapse
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "100m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     # WebSocket 支持
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
-    nginx.ingress.kubernetes.io/websocket-services: "kubepolaris-backend"
+    nginx.ingress.kubernetes.io/websocket-services: "synapse-backend"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - kubepolaris.example.com
-      secretName: kubepolaris-tls
+        - synapse.example.com
+      secretName: synapse-tls
   rules:
-    - host: kubepolaris.example.com
+    - host: synapse.example.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: kubepolaris-frontend
+                name: synapse-frontend
                 port:
                   number: 80
           - path: /api
             pathType: Prefix
             backend:
               service:
-                name: kubepolaris-backend
+                name: synapse-backend
                 port:
                   number: 8080
           - path: /ws
             pathType: Prefix
             backend:
               service:
-                name: kubepolaris-backend
+                name: synapse-backend
                 port:
                   number: 8080
 ```
@@ -216,7 +216,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kubepolaris-lb
+  name: synapse-lb
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
     service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
@@ -226,7 +226,7 @@ spec:
     - port: 443
       targetPort: 8080
   selector:
-    app: kubepolaris
+    app: synapse
 ```
 
 ## 会话管理
@@ -308,26 +308,26 @@ GET /api/health/ready
 
 ```yaml
 groups:
-  - name: kubepolaris
+  - name: synapse
     rules:
-      - alert: KubePolarisDown
-        expr: up{job="kubepolaris"} == 0
+      - alert: SynapseDown
+        expr: up{job="synapse"} == 0
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: "KubePolaris instance down"
+          summary: "Synapse instance down"
 
-      - alert: KubePolarisHighLatency
-        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job="kubepolaris"}[5m])) > 1
+      - alert: SynapseHighLatency
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job="synapse"}[5m])) > 1
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "High API latency"
 
-      - alert: KubePolarisReplicasLow
-        expr: kube_deployment_status_replicas_available{deployment="kubepolaris"} < 2
+      - alert: SynapseReplicasLow
+        expr: kube_deployment_status_replicas_available{deployment="synapse"} < 2
         for: 5m
         labels:
           severity: warning

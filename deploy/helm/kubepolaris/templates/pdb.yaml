@@ -2,10 +2,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-backend
+  name: {{ include "synapse.fullname" . }}-backend
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.backend.labels" . | nindent 4 }}
+    {{- include "synapse.backend.labels" . | nindent 4 }}
 spec:
   {{- if .Values.podDisruptionBudget.minAvailable }}
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
@@ -15,5 +15,5 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "kubepolaris.backend.selectorLabels" . | nindent 6 }}
+      {{- include "synapse.backend.selectorLabels" . | nindent 6 }}
 {{- end }}

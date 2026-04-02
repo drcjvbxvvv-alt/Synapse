@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # AlertManager 集成
 
-KubePolaris 集成 AlertManager 提供告警管理功能。
+Synapse 集成 AlertManager 提供告警管理功能。
 
 ## 功能
 
@@ -53,7 +53,7 @@ KubePolaris 集成 AlertManager 提供告警管理功能。
 
 ### 配置通知
 
-在 KubePolaris 中配置告警接收方：
+在 Synapse 中配置告警接收方：
 
 1. 进入 **系统设置** → **通知配置**
 2. 添加接收方：
@@ -67,7 +67,7 @@ KubePolaris 集成 AlertManager 提供告警管理功能。
 
 ### 内置规则
 
-KubePolaris 提供常用告警规则：
+Synapse 提供常用告警规则：
 
 | 规则 | 条件 |
 |------|------|
@@ -83,7 +83,7 @@ KubePolaris 提供常用告警规则：
 
 ```yaml
 groups:
-- name: kubepolaris
+- name: synapse
   rules:
   - alert: HighCPU
     expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80

@@ -2,7 +2,7 @@ import { test as base, expect, type Page } from '@playwright/test';
 
 const API_BASE = `http://localhost:${process.env.E2E_BACKEND_PORT || '8001'}/api/v1`;
 const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'KubePolaris@2026';
+const ADMIN_PASS = 'Synapse@2026';
 
 export async function loginViaAPI(username: string, password: string): Promise<string> {
   const res = await fetch(`${API_BASE}/auth/login`, {

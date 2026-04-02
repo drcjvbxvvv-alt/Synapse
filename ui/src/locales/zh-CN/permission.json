@@ -76,8 +76,8 @@
     "namespacePlaceholder": "输入命名空间名称（支持通配符，如 app-*）"
   },
   "sync": {
-    "title": "同步 KubePolaris 权限资源",
-    "description": "同步将在目标集群中创建 KubePolaris 所需的 RBAC 资源（ClusterRole、ServiceAccount、ClusterRoleBinding），以支持不同权限类型的 kubectl 终端访问。",
+    "title": "同步 Synapse 权限资源",
+    "description": "同步将在目标集群中创建 Synapse 所需的 RBAC 资源（ClusterRole、ServiceAccount、ClusterRoleBinding），以支持不同权限类型的 kubectl 终端访问。",
     "clusterName": "集群名称",
     "syncStatus": "同步状态",
     "notChecked": "未检查",
@@ -92,5 +92,149 @@
   "loadError": "加载数据失败",
   "pagination": {
     "total": "共 {{total}} 条"
+  },
+  "user": {
+    "title": "用户管理",
+    "createUser": "创建用户",
+    "editUser": "编辑用户",
+    "searchPlaceholder": "搜索用户名、显示名称、邮箱",
+    "statusFilter": "状态",
+    "authTypeFilter": "认证方式",
+    "refresh": "刷新",
+    "columns": {
+      "username": "用户名",
+      "displayName": "显示名称",
+      "email": "邮箱",
+      "phone": "电话",
+      "status": "状态",
+      "authType": "认证方式",
+      "lastLogin": "最后登录",
+      "actions": "操作"
+    },
+    "status": {
+      "active": "启用",
+      "inactive": "禁用",
+      "all": "全部"
+    },
+    "authType": {
+      "local": "本地",
+      "ldap": "LDAP",
+      "all": "全部"
+    },
+    "actions": {
+      "edit": "编辑",
+      "enable": "启用",
+      "disable": "禁用",
+      "resetPassword": "重置密码",
+      "delete": "删除"
+    },
+    "messages": {
+      "loadFailed": "获取用户列表失败",
+      "updateSuccess": "更新成功",
+      "createSuccess": "创建成功",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "enableSuccess": "启用成功",
+      "disableSuccess": "禁用成功",
+      "toggleFailed": "操作失败",
+      "adminCannotDisable": "admin 用户不能禁用",
+      "adminCannotDelete": "admin 用户不能删除",
+      "passwordResetSuccess": "密码重置成功"
+    },
+    "confirm": {
+      "toggleStatus": "确认{{action}}用户",
+      "toggleStatusContent": "确定要{{action}}用户「{{name}}」吗？",
+      "delete": "确认删除",
+      "deleteContent": "确定要删除用户「{{name}}」吗？此操作不可恢复。",
+      "ok": "确定",
+      "cancel": "取消"
+    },
+    "form": {
+      "username": "用户名",
+      "usernameRequired": "请输入用户名",
+      "usernamePlaceholder": "请输入用户名",
+      "password": "密码",
+      "passwordRequired": "请输入密码",
+      "passwordMinLength": "密码至少6位",
+      "passwordPlaceholder": "请输入密码",
+      "displayName": "显示名称",
+      "displayNamePlaceholder": "请输入显示名称",
+      "email": "邮箱",
+      "emailPlaceholder": "请输入邮箱",
+      "phone": "电话",
+      "phonePlaceholder": "请输入电话"
+    },
+    "resetPassword": {
+      "title": "重置密码",
+      "newPassword": "新密码",
+      "newPasswordRequired": "请输入新密码",
+      "newPasswordPlaceholder": "请输入新密码"
+    },
+    "pagination": {
+      "total": "共 {{total}} 条"
+    }
+  },
+  "group": {
+    "title": "用户组管理",
+    "create": "创建用户组",
+    "editTitle": "编辑用户组",
+    "createTitle": "创建用户组",
+    "columns": {
+      "name": "名称",
+      "description": "描述",
+      "memberCount": "成员数",
+      "createdAt": "创建时间",
+      "actions": "操作"
+    },
+    "actions": {
+      "manage": "管理成员",
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "messages": {
+      "loadFailed": "加载用户组列表失败",
+      "updateSuccess": "更新成功",
+      "createSuccess": "创建成功",
+      "updateFailed": "更新失败",
+      "createFailed": "创建失败",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "loadDataFailed": "加载数据失败",
+      "selectUser": "请选择要添加的用户",
+      "userAlreadyInGroup": "该用户已在用户组中",
+      "addSuccess": "添加成功",
+      "addFailed": "添加失败",
+      "removeSuccess": "移除成功",
+      "removeFailed": "移除失败"
+    },
+    "confirm": {
+      "delete": "确认删除",
+      "deleteContent": "确定要删除用户组「{{name}}」吗？",
+      "remove": "确认移除",
+      "removeContent": "确定要将用户「{{name}}」从用户组中移除吗？",
+      "ok": "确认",
+      "cancel": "取消"
+    },
+    "form": {
+      "name": "名称",
+      "nameRequired": "请输入名称",
+      "namePlaceholder": "请输入用户组名称",
+      "description": "描述",
+      "descriptionPlaceholder": "请输入描述（可选）"
+    },
+    "drawer": {
+      "title": "管理成员 - {{name}}",
+      "selectUser": "选择用户",
+      "add": "添加",
+      "columns": {
+        "username": "用户名",
+        "displayName": "显示名称",
+        "actions": "操作"
+      },
+      "remove": "移除"
+    },
+    "pagination": {
+      "total": "共 {{total}} 条"
+    }
   }
 }

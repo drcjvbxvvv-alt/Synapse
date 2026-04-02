@@ -2,25 +2,25 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "kubepolaris.fullname" . }}-mysql
+  name: {{ include "synapse.fullname" . }}-mysql
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kubepolaris.mysql.labels" . | nindent 4 }}
+    {{- include "synapse.mysql.labels" . | nindent 4 }}
 spec:
-  serviceName: {{ include "kubepolaris.fullname" . }}-mysql
+  serviceName: {{ include "synapse.fullname" . }}-mysql
   replicas: 1
   selector:
     matchLabels:
-      {{- include "kubepolaris.mysql.selectorLabels" . | nindent 6 }}
+      {{- include "synapse.mysql.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "kubepolaris.mysql.selectorLabels" . | nindent 8 }}
+        {{- include "synapse.mysql.selectorLabels" . | nindent 8 }}
     spec:
-      {{- include "kubepolaris.imagePullSecrets" . | nindent 6 }}
+      {{- include "synapse.imagePullSecrets" . | nindent 6 }}
       containers:
       - name: mysql
-        image: {{ include "kubepolaris.image" (dict "repository" .Values.mysql.internal.image.repository "tag" .Values.mysql.internal.image.tag "Values" .Values "Chart" .Chart) }}
+        image: {{ include "synapse.image" (dict "repository" .Values.mysql.internal.image.repository "tag" .Values.mysql.internal.image.tag "Values" .Values "Chart" .Chart) }}
         imagePullPolicy: {{ .Values.mysql.internal.image.pullPolicy }}
         ports:
         - name: mysql
@@ -30,7 +30,7 @@ spec:
         - name: MYSQL_ROOT_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "kubepolaris.mysql.secretName" . }}
+              name: {{ include "synapse.mysql.secretName" . }}
               key: {{ .Values.mysql.internal.existingSecretRootPasswordKey | default "mysql-root-password" }}
         - name: MYSQL_DATABASE
           value: {{ .Values.mysql.internal.database }}
@@ -39,7 +39,7 @@ spec:
         - name: MYSQL_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "kubepolaris.mysql.secretName" . }}
+              name: {{ include "synapse.mysql.secretName" . }}
               key: {{ .Values.mysql.internal.existingSecretPasswordKey | default "mysql-password" }}
         - name: TZ
           value: "Asia/Shanghai"
@@ -78,7 +78,7 @@ spec:
       {{- if .Values.mysql.internal.config }}
       - name: config
         configMap:
-          name: {{ include "kubepolaris.fullname" . }}-mysql-config
+          name: {{ include "synapse.fullname" . }}-mysql-config
       {{- end }}
       {{- if not .Values.mysql.internal.persistence.enabled }}
       - name: data

@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Prometheus 集成
 
-KubePolaris 集成 Prometheus 提供丰富的监控指标。
+Synapse 集成 Prometheus 提供丰富的监控指标。
 
 ## 功能
 

@@ -1,27 +1,27 @@
 # Default owners for everything in the repo
-* @kubepolaris/maintainers
+* @synapse/maintainers
 
 # Backend code
-/cmd/ @kubepolaris/backend
-/internal/ @kubepolaris/backend
-/pkg/ @kubepolaris/backend
-*.go @kubepolaris/backend
+/cmd/ @synapse/backend
+/internal/ @synapse/backend
+/pkg/ @synapse/backend
+*.go @synapse/backend
 
 # Frontend code
-/ui/ @kubepolaris/frontend
-*.tsx @kubepolaris/frontend
-*.ts @kubepolaris/frontend
+/ui/ @synapse/frontend
+*.tsx @synapse/frontend
+*.ts @synapse/frontend
 
 # Documentation
-/website/ @kubepolaris/docs
-/docs/ @kubepolaris/docs
-*.md @kubepolaris/docs
+/website/ @synapse/docs
+/docs/ @synapse/docs
+*.md @synapse/docs
 
 # DevOps / Infrastructure
-/deploy/ @kubepolaris/devops
-/.github/ @kubepolaris/devops
-Dockerfile* @kubepolaris/devops
-docker-compose* @kubepolaris/devops
+/deploy/ @synapse/devops
+/.github/ @synapse/devops
+Dockerfile* @synapse/devops
+docker-compose* @synapse/devops
 
 # Configuration
-/configs/ @kubepolaris/maintainers
+/configs/ @synapse/maintainers
