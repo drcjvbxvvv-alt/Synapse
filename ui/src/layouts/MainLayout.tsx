@@ -209,6 +209,7 @@ const MainLayout: React.FC = () => {
     if (path === '/audit/commands') return ['audit-commands'];
     if (path.startsWith('/audit')) return ['audit-operations'];
     if (path === '/alerts') return ['alert-center'];
+    if (path.startsWith('/multicluster')) return ['multicluster'];
     if (path.startsWith('/settings')) return ['system-settings'];
     
     return ['overview'];
@@ -271,6 +272,12 @@ const MainLayout: React.FC = () => {
           onClick: () => navigate('/audit/commands'),
         },
       ],
+    },
+    {
+      key: 'multicluster',
+      icon: <BranchesOutlined />,
+      label: '多叢集工作流程',
+      onClick: () => navigate('/multicluster'),
     },
     {
       key: 'alert-center',

@@ -34,6 +34,77 @@ export type NetworkPolicyListResponse = ApiResponse<PaginatedResponse<NetworkPol
 export type NetworkPolicyDetailResponse = ApiResponse<NetworkPolicyDetail>;
 export type NetworkPolicyYAMLResponse = ApiResponse<{ yaml: string }>;
 
+// ---- Topology ----
+export interface TopologyNode {
+  id: string;
+  type: 'podgroup' | 'namespace' | 'ipblock' | 'external';
+  label: string;
+  namespace?: string;
+  selector?: Record<string, string>;
+  policyCount?: number;
+}
+
+export interface TopologyEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+  direction: 'ingress' | 'egress';
+  policy: string;
+  namespace: string;
+}
+
+export interface TopologyResponse {
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
+}
+
+// ---- Conflicts ----
+export interface ConflictItem {
+  policyA: string;
+  policyB: string;
+  namespace: string;
+  reason: string;
+  selectorA: Record<string, string>;
+  selectorB: Record<string, string>;
+}
+
+// ---- Wizard ----
+export interface WizardPort {
+  protocol: string;
+  port: string;
+}
+
+export interface WizardIngressRule {
+  ports?: WizardPort[];
+  fromType: 'pod' | 'namespace' | 'ipblock' | 'all';
+  selector?: Record<string, string>;
+  cidr?: string;
+}
+
+export interface WizardEgressRule {
+  ports?: WizardPort[];
+  toType: 'pod' | 'namespace' | 'ipblock' | 'all';
+  selector?: Record<string, string>;
+  cidr?: string;
+}
+
+export interface WizardValidateRequest {
+  step: number;
+  namespace: string;
+  name: string;
+  selector: Record<string, string>;
+  policyTypes: string[];
+  ingress?: WizardIngressRule[];
+  egress?: WizardEgressRule[];
+}
+
+export interface WizardValidateResponse {
+  valid: boolean;
+  message?: string;
+  yaml?: string;
+}
+
 export class NetworkPolicyService {
   static async list(
     clusterId: string,
@@ -71,5 +142,19 @@ export class NetworkPolicyService {
 
   static async delete(clusterId: string, namespace: string, name: string): Promise<ApiResponse<null>> {
     return request.delete(`/clusters/${clusterId}/networkpolicies/${namespace}/${name}`);
+  }
+
+  static async getTopology(clusterId: string, namespace?: string): Promise<ApiResponse<TopologyResponse>> {
+    const params = namespace && namespace !== '_all_' ? `?namespace=${namespace}` : '';
+    return request.get(`/clusters/${clusterId}/networkpolicies/topology${params}`);
+  }
+
+  static async getConflicts(clusterId: string, namespace?: string): Promise<ApiResponse<{ conflicts: ConflictItem[]; total: number }>> {
+    const params = namespace && namespace !== '_all_' ? `?namespace=${namespace}` : '';
+    return request.get(`/clusters/${clusterId}/networkpolicies/conflicts${params}`);
+  }
+
+  static async wizardValidate(clusterId: string, req: WizardValidateRequest): Promise<ApiResponse<WizardValidateResponse>> {
+    return request.post(`/clusters/${clusterId}/networkpolicies/wizard-validate`, req);
   }
 }

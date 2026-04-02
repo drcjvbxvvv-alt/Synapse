@@ -53,6 +53,7 @@ import CRDResources from './pages/crd/CRDResources';
 import EventAlertRules from './pages/alert/EventAlertRules';
 import CostDashboard from './pages/cost/CostDashboard';
 import SecurityDashboard from './pages/security/SecurityDashboard';
+import MultiClusterPage from './pages/multicluster';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
 import { PermissionGuard } from './components/PermissionGuard';
@@ -210,6 +211,8 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/cost" element={<CostDashboard />} />
               {/* 安全掃描 */}
               <Route path="clusters/:id/security" element={<SecurityDashboard />} />
+              {/* 多叢集工作流程 */}
+              <Route path="multicluster" element={<MultiClusterPage />} />
               {/* 审计管理路由 - 仅平台管理员 */}
               <Route path="audit/operations" element={
                 <PermissionGuard platformAdminOnly>

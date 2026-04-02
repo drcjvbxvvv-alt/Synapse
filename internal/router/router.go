@@ -417,6 +417,9 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 				{
 					nps.GET("", npHandler.ListNetworkPolicies)
 					nps.POST("", npHandler.CreateNetworkPolicy)
+					nps.GET("/topology", npHandler.GetTopology)
+					nps.GET("/conflicts", npHandler.GetConflicts)
+					nps.POST("/wizard-validate", npHandler.WizardValidate)
 					nps.GET("/:namespace/:name", npHandler.GetNetworkPolicy)
 					nps.PUT("/:namespace/:name", npHandler.UpdateNetworkPolicy)
 					nps.GET("/:namespace/:name/yaml", npHandler.GetNetworkPolicyYAML)
@@ -562,6 +565,21 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 					cost.GET("/export", costHandler.ExportCSV)
 				}
 			}
+		}
+
+		// 多叢集工作流程
+		mcHandler := handlers.NewMultiClusterHandler(db, clusterSvc, k8sMgr)
+		mc := protected.Group("/multicluster")
+		{
+			mc.POST("/migrate/check", mcHandler.MigrateCheck)
+			mc.POST("/migrate", mcHandler.Migrate)
+			mc.GET("/sync-policies", mcHandler.ListSyncPolicies)
+			mc.POST("/sync-policies", mcHandler.CreateSyncPolicy)
+			mc.GET("/sync-policies/:id", mcHandler.GetSyncPolicy)
+			mc.PUT("/sync-policies/:id", mcHandler.UpdateSyncPolicy)
+			mc.DELETE("/sync-policies/:id", mcHandler.DeleteSyncPolicy)
+			mc.POST("/sync-policies/:id/trigger", mcHandler.TriggerSync)
+			mc.GET("/sync-policies/:id/history", mcHandler.GetSyncHistory)
 		}
 
 		// Helm Repository 管理（global）

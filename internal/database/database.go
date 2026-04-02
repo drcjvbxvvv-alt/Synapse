@@ -29,9 +29,9 @@ func GetCurrentDriver() string {
 // Init 初始化数据库连接
 // 支持 MySQL 和 SQLite 两种数据库驱动
 func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
-	// 配置 GORM 日志
+	// 配置 GORM 日志：只記錄慢查詢與錯誤，避免 AutoMigrate 時大量 I/O
 	gormConfig := &gorm.Config{
-		Logger: gormLogger.Default.LogMode(gormLogger.Info),
+		Logger: gormLogger.Default.LogMode(gormLogger.Warn),
 	}
 
 	var db *gorm.DB
@@ -186,6 +186,8 @@ func autoMigrate(db *gorm.DB) error {
 		&models.ResourceSnapshot{},   // 資源每日快照表
 		&models.ImageScanResult{},    // Trivy 映像掃描結果表
 		&models.BenchResult{},        // CIS kube-bench 評分表
+		&models.SyncPolicy{},         // 多叢集配置同步策略表
+		&models.SyncHistory{},        // 同步歷史紀錄表
 	)
 
 	// 根据数据库驱动类型重新启用外键约束检查
@@ -263,40 +265,38 @@ func createDefaultPermissions(db *gorm.DB) {
 
 // createDefaultUser 创建默认管理员用户
 func createDefaultUser(db *gorm.DB) {
-	// 使用 bcrypt 生成密码哈希
+	// 先查，只有不存在才做 bcrypt（避免每次啟動都跑 ~100ms 的 hash 運算）
+	var user models.User
+	result := db.Where("username = ?", "admin").First(&user)
+	if result.Error == nil {
+		logger.Info("默认管理员用户已存在，跳过创建")
+		return
+	}
+	if result.Error != gorm.ErrRecordNotFound {
+		logger.Error("查询默认用户失败: %v", result.Error)
+		return
+	}
+
 	salt := "synapse_salt"
-	password := "Synapse@2026" + salt
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("Synapse@2026"+salt), bcrypt.DefaultCost)
 	if err != nil {
 		logger.Error("生成密码哈希失败: %v", err)
 		return
 	}
 
-	// 查找是否存在admin用户
-	var user models.User
-	result := db.Where("username = ?", "admin").First(&user)
-
-	if result.Error == gorm.ErrRecordNotFound {
-		// 创建新的默认管理员用户
-		user = models.User{
-			Username:     "admin",
-			PasswordHash: string(hashedPassword),
-			Salt:         salt,
-			Email:        "admin@synapse.io",
-			DisplayName:  "管理员",
-			AuthType:     "local",
-			Status:       "active",
-		}
-
-		if err := db.Create(&user).Error; err != nil {
-			logger.Error("创建默认用户失败: %v", err)
-		} else {
-			logger.Info("默认管理员用户创建成功: admin/Synapse@2026")
-		}
-	} else if result.Error != nil {
-		logger.Error("查询默认用户失败: %v", result.Error)
+	user = models.User{
+		Username:     "admin",
+		PasswordHash: string(hashedPassword),
+		Salt:         salt,
+		Email:        "admin@synapse.io",
+		DisplayName:  "管理员",
+		AuthType:     "local",
+		Status:       "active",
+	}
+	if err := db.Create(&user).Error; err != nil {
+		logger.Error("创建默认用户失败: %v", err)
 	} else {
-		logger.Info("默认管理员用户已存在，跳过创建")
+		logger.Info("默认管理员用户创建成功: admin/Synapse@2026")
 	}
 }
 

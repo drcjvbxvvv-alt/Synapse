@@ -11,6 +11,7 @@ import {
   Typography,
   App,
   Tooltip,
+  Segmented,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -19,11 +20,17 @@ import {
   DeleteOutlined,
   EyeOutlined,
   EditOutlined,
+  UnorderedListOutlined,
+  ApartmentOutlined,
+  ToolOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { TablePaginationConfig } from 'antd/es/table';
 import MonacoEditor from '@monaco-editor/react';
 import { NetworkPolicyService, type NetworkPolicyInfo } from '../../services/networkPolicyService';
+import NetworkPolicyTopology from './NetworkPolicyTopology';
+import NetworkPolicyWizard from './NetworkPolicyWizard';
+import { namespaceService } from '../../services/namespaceService';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -67,6 +74,9 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
   const { t } = useTranslation(['network', 'common']);
   const { message, modal } = App.useApp();
 
+  const [viewMode, setViewMode] = useState<'list' | 'topology'>('list');
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [namespaces, setNamespaces] = useState<string[]>([]);
   const [policies, setPolicies] = useState<NetworkPolicyInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -102,6 +112,12 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
     setCurrentPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId, namespace, search]);
+
+  useEffect(() => {
+    namespaceService.getNamespaces(clusterId)
+      .then(res => setNamespaces((res as { items?: { name: string }[] }).items?.map(n => n.name) ?? []))
+      .catch(() => {});
+  }, [clusterId]);
 
   const handleTableChange = (pagination: TablePaginationConfig) => {
     const p = pagination.current ?? 1;
@@ -280,6 +296,28 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
 
   return (
     <div>
+      {/* 視圖切換 + 精靈按鈕 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Segmented
+          value={viewMode}
+          onChange={v => setViewMode(v as 'list' | 'topology')}
+          options={[
+            { value: 'list', label: '列表', icon: <UnorderedListOutlined /> },
+            { value: 'topology', label: '拓撲圖', icon: <ApartmentOutlined /> },
+          ]}
+        />
+        <Button icon={<ToolOutlined />} onClick={() => setWizardOpen(true)}>
+          精靈建立
+        </Button>
+      </div>
+
+      {/* 拓撲視圖 */}
+      {viewMode === 'topology' && (
+        <NetworkPolicyTopology clusterId={clusterId} namespaces={namespaces} />
+      )}
+
+      {/* 列表視圖 */}
+      {viewMode === 'list' && (<>
       {/* 工具列 */}
       <Space style={{ marginBottom: 16 }} wrap>
         <Select
@@ -355,6 +393,16 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
           }}
         />
       </Drawer>
+      </>)}
+
+      {/* 建立精靈 */}
+      <NetworkPolicyWizard
+        clusterId={clusterId}
+        namespaces={namespaces}
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onCreated={() => { setWizardOpen(false); fetchPolicies(1, pageSize); }}
+      />
     </div>
   );
 };
