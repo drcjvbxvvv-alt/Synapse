@@ -221,3 +221,6 @@ ui/test-results/
 # Embedded frontend build artifacts
 ui/dist
 !ui/dist/index.html
+
+.brain
+.claude
