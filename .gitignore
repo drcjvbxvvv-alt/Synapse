@@ -224,3 +224,8 @@ ui/dist
 
 .brain
 .claude
+# Project Brain（知識圖譜DB和向量記憶不提交，ADR 提交）
+.brain/knowledge_graph.db
+.brain/vectors/
+.brain/sessions/
+brain_hook.py
