@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -86,12 +89,15 @@ func LoginRateLimit() gin.HandlerFunc {
 		// Parse username from JSON body without consuming the body stream.
 		// We peek only when the content-type is JSON.
 		var username string
-		if c.Request.Method == http.MethodPost {
-			// Bind username lazily — if binding fails we still rate-limit by IP.
-			var peek struct {
-				Username string `json:"username"`
-			}
-			if err := c.ShouldBindBodyWithJSON(&peek); err == nil {
+		if c.Request.Method == http.MethodPost && c.Request.Body != nil {
+			// Peek at username without consuming the body — read, unmarshal, then restore.
+			bodyBytes, err := io.ReadAll(c.Request.Body)
+			if err == nil {
+				c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+				var peek struct {
+					Username string `json:"username"`
+				}
+				_ = json.Unmarshal(bodyBytes, &peek)
 				username = peek.Username
 			}
 		}

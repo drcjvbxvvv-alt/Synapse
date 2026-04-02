@@ -46,14 +46,98 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import { tokenManager } from '../services/authService';
 import { usePermission } from '../hooks/usePermission';
 import AIChatPanel from '../components/AIChat/AIChatPanel';
-import {
-  MAIN_MENU_PERMISSIONS,
-  CLUSTER_MENU_PERMISSIONS,
-  hasPermission,
-  isPlatformAdmin,
+import { 
+  MAIN_MENU_PERMISSIONS, 
+  CLUSTER_MENU_PERMISSIONS, 
+  hasPermission, 
+  isPlatformAdmin 
 } from '../config/menuPermissions';
 
-const { Content } = Layout;
+
+const { Header, Sider, Content } = Layout;
+
+// 自定义滚动条和菜单样式
+const scrollbarStyles = `
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #d9d9d9;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #bfbfbf;
+  }
+  
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #d9d9d9 transparent;
+  }
+  
+  .compact-menu .ant-menu-item {
+    height: 32px !important;
+    line-height: 1.2 !important;
+    margin: 2px 0 !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+  }
+  
+  .compact-menu .ant-menu-submenu-title {
+    height: 32px !important;
+    line-height: 1.2 !important;
+    margin: 2px 0 !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+  }
+  
+  .compact-menu .ant-menu-item-group-title {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    padding: 4px 12px !important;
+  }
+  
+  .compact-menu .ant-menu-submenu .ant-menu-item {
+    height: 28px !important;
+    line-height: 1.2 !important;
+    margin: 1px 0 !important;
+    padding: 4px 12px 4px 32px !important;
+    font-size: 12px !important;
+  }
+  
+  .compact-menu .ant-menu-submenu-arrow {
+    font-size: 10px !important;
+  }
+  
+  .compact-menu .ant-menu-submenu-open > .ant-menu-submenu-title {
+    background-color: transparent !important;
+    color: rgba(0, 0, 0, 0.88) !important;
+  }
+  
+  .compact-menu .ant-menu-submenu-open > .ant-menu-submenu-title:hover {
+    background-color: #f5f5f5 !important;
+  }
+  
+  .compact-menu .ant-menu-submenu-open .ant-menu-submenu-arrow {
+    display: none !important;
+  }
+`;
+
+// 注入样式
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = scrollbarStyles;
+  if (!document.head.querySelector('style[data-scrollbar]')) {
+    styleElement.setAttribute('data-scrollbar', 'true');
+    document.head.appendChild(styleElement);
+  }
+}
 
 type MenuItem = Required<AntMenuProps>['items'][number];
 
@@ -68,8 +152,12 @@ const MainLayout: React.FC = () => {
     if (isClusterDetail) {
       return ['kubernetes-resources', 'cluster', 'cloud-native-observability', 'cloud-native-cost'];
     }
-    if (location.pathname.startsWith('/access')) return ['access-control'];
-    if (location.pathname.startsWith('/audit')) return ['audit-management'];
+    if (location.pathname.startsWith('/access')) {
+      return ['access-control'];
+    }
+    if (location.pathname.startsWith('/audit')) {
+      return ['audit-management'];
+    }
     return [];
   }, [isClusterDetail, location.pathname]);
 
@@ -79,14 +167,20 @@ const MainLayout: React.FC = () => {
     setOpenKeys(getDefaultOpenKeys());
   }, [getDefaultOpenKeys]);
 
-  const handleOpenChange = (keys: string[]) => setOpenKeys(keys);
+  // 处理菜单展开/折叠
+  const handleOpenChange = (keys: string[]) => {
+    setOpenKeys(keys);
+  };
 
   const getSelectedKeys = () => {
     const path = location.pathname;
+    
+    // 集群详情页面的路由匹配
     if (path.match(/\/clusters\/[^/]+\/overview/)) return ['cluster-overview'];
     if (path.match(/\/clusters\/[^/]+\/workloads/)) return ['k8s-workloads'];
     if (path.match(/\/clusters\/[^/]+\/pods/)) return ['k8s-pods'];
     if (path.match(/\/clusters\/[^/]+\/network/)) return ['k8s-network'];
+    if (path.match(/\/clusters\/[^/]+\/services/)) return ['k8s-services'];
     if (path.match(/\/clusters\/[^/]+\/storage/)) return ['k8s-storage'];
     if (path.match(/\/clusters\/[^/]+\/configs/)) return ['k8s-configs'];
     if (path.match(/\/clusters\/[^/]+\/namespaces/)) return ['k8s-namespaces'];
@@ -103,6 +197,8 @@ const MainLayout: React.FC = () => {
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
     if (path.match(/\/clusters\/[^/]+\/cost-insights/)) return ['cost-insights'];
+    
+    // 主页面的路由匹配
     if (path === '/overview' || path === '/') return ['overview'];
     if (path.startsWith('/clusters') && !path.match(/\/clusters\/[^/]+\//)) return ['cluster-management'];
     if (path === '/access/users') return ['access-users'];
@@ -114,10 +210,11 @@ const MainLayout: React.FC = () => {
     if (path.startsWith('/audit')) return ['audit-operations'];
     if (path === '/alerts') return ['alert-center'];
     if (path.startsWith('/settings')) return ['system-settings'];
+    
     return ['overview'];
   };
 
-  // ─── Main menu ───────────────────────────────────────────────────
+  // 主页面侧边栏菜单
   const mainMenuItems: MenuItem[] = [
     {
       key: 'overview',
@@ -136,9 +233,24 @@ const MainLayout: React.FC = () => {
       icon: <KeyOutlined />,
       label: '访问控制',
       children: [
-        { key: 'access-users', icon: <UserOutlined />, label: '用户管理', onClick: () => navigate('/access/users') },
-        { key: 'access-user-groups', icon: <ClusterOutlined />, label: '用户组管理', onClick: () => navigate('/access/user-groups') },
-        { key: 'access-permissions', icon: <KeyOutlined />, label: '权限分配', onClick: () => navigate('/access/permissions') },
+        {
+          key: 'access-users',
+          icon: <UserOutlined />,
+          label: '用户管理',
+          onClick: () => navigate('/access/users'),
+        },
+        {
+          key: 'access-user-groups',
+          icon: <ClusterOutlined />,
+          label: '用户组管理',
+          onClick: () => navigate('/access/user-groups'),
+        },
+        {
+          key: 'access-permissions',
+          icon: <KeyOutlined />,
+          label: '权限分配',
+          onClick: () => navigate('/access/permissions'),
+        },
       ],
     },
     {
@@ -146,8 +258,18 @@ const MainLayout: React.FC = () => {
       icon: <AuditOutlined />,
       label: t('menu.audit'),
       children: [
-        { key: 'audit-operations', icon: <AuditOutlined />, label: t('menu.operationLogs'), onClick: () => navigate('/audit/operations') },
-        { key: 'audit-commands', icon: <HistoryOutlined />, label: t('menu.commandHistory'), onClick: () => navigate('/audit/commands') },
+        {
+          key: 'audit-operations',
+          icon: <AuditOutlined />,
+          label: t('menu.operationLogs'),
+          onClick: () => navigate('/audit/operations'),
+        },
+        {
+          key: 'audit-commands',
+          icon: <HistoryOutlined />,
+          label: t('menu.commandHistory'),
+          onClick: () => navigate('/audit/commands'),
+        },
       ],
     },
     {
@@ -164,115 +286,329 @@ const MainLayout: React.FC = () => {
     },
   ];
 
-  // ─── Cluster detail menu ─────────────────────────────────────────
-  const nav = (path: string) => {
-    const m = location.pathname.match(/\/clusters\/([^/]+)/);
-    if (m) navigate(`/clusters/${m[1]}/${path}`);
-  };
-
+  // 集群详情页侧边栏菜单
   const clusterDetailMenuItems: MenuItem[] = [
     {
       key: 'cluster-overview',
       label: t('menu.overview'),
-      onClick: () => nav('overview'),
+      onClick: () => {
+        const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+        if (clusterMatch) {
+          navigate(`/clusters/${clusterMatch[1]}/overview`);
+        }
+      },
     },
     {
       key: 'kubernetes-resources',
       label: t('menu.kubernetesResources'),
       children: [
-        { key: 'k8s-workloads', icon: <RocketOutlined />, label: t('menu.workloads'), onClick: () => nav('workloads') },
-        { key: 'k8s-pods', icon: <ContainerOutlined />, label: t('menu.pods'), onClick: () => nav('pods') },
-        { key: 'k8s-network', icon: <ApiOutlined />, label: t('menu.serviceAndRoutes'), onClick: () => nav('network?tab=service') },
-        { key: 'k8s-storage', icon: <HddOutlined />, label: t('menu.storage'), onClick: () => nav('storage') },
-        { key: 'k8s-configs', icon: <KeyOutlined />, label: t('menu.configsAndSecrets'), onClick: () => nav('configs') },
-        { key: 'k8s-namespaces', icon: <TagsOutlined />, label: t('menu.namespaces'), onClick: () => nav('namespaces') },
+        {
+          key: 'k8s-workloads',
+          icon: <RocketOutlined />,
+          label: t('menu.workloads'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/workloads`);
+            }
+          },
+        },
+        {
+          key: 'k8s-pods',
+          icon: <ContainerOutlined />,
+          label: t('menu.pods'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/pods`);
+            }
+          },
+        },
+        {
+          key: 'k8s-network',
+          icon: <ApiOutlined />,
+          label: t('menu.serviceAndRoutes'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/network?tab=service`);
+            }
+          },
+        },
+        {
+          key: 'k8s-storage',
+          icon: <HddOutlined />,
+          label: t('menu.storage'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/storage`);
+            }
+          },
+        },
+        {
+          key: 'k8s-configs',
+          icon: <KeyOutlined />,
+          label: t('menu.configsAndSecrets'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/configs`);
+            }
+          },
+        },
+        {
+          key: 'k8s-namespaces',
+          icon: <TagsOutlined />,
+          label: t('menu.namespaces'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/namespaces`);
+            }
+          },
+        },
       ],
     },
     {
       key: 'cluster',
       label: t('menu.clusterSection'),
       children: [
-        { key: 'cluster-nodes', icon: <DesktopOutlined />, label: t('menu.nodeManagement'), onClick: () => nav('nodes') },
-        { key: 'cluster-config', icon: <SettingOutlined />, label: t('menu.configCenter'), onClick: () => nav('config-center') },
-        { key: 'cluster-upgrade', icon: <UploadOutlined />, label: t('menu.clusterUpgrade'), onClick: () => nav('upgrade') },
-        { key: 'cluster-plugins', icon: <BranchesOutlined />, label: t('menu.gitopsApps'), onClick: () => nav('plugins') },
-        { key: 'cluster-helm', icon: <DeploymentUnitOutlined />, label: t('menu.helmReleases'), onClick: () => nav('helm') },
-        { key: 'cluster-crds', icon: <ApiOutlined />, label: t('menu.crdManagement', 'CRD 管理'), onClick: () => nav('crds') },
+        {
+          key: 'cluster-nodes',
+          icon: <DesktopOutlined />,
+          label: t('menu.nodeManagement'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/nodes`);
+            }
+          },
+        },
+        {
+          key: 'cluster-config',
+          icon: <SettingOutlined />,
+          label: t('menu.configCenter'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/config-center`);
+            }
+          },
+        },
+        {
+          key: 'cluster-upgrade',
+          icon: <UploadOutlined />,
+          label: t('menu.clusterUpgrade'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/upgrade`);
+            }
+          },
+        },
+        {
+          key: 'cluster-plugins',
+          icon: <BranchesOutlined />,
+          label: t('menu.gitopsApps'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/plugins`);
+            }
+          },
+        },
+        {
+          key: 'cluster-helm',
+          icon: <DeploymentUnitOutlined />,
+          label: t('menu.helmReleases'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/helm`);
+            }
+          },
+        },
+        {
+          key: 'cluster-crds',
+          icon: <ApiOutlined />,
+          label: t('menu.crdManagement', 'CRD 管理'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/crds`);
+            }
+          },
+        },
       ],
     },
     {
       key: 'cloud-native-observability',
       label: t('menu.observability'),
       children: [
-        { key: 'observability-monitoring', icon: <BarChartOutlined />, label: t('menu.monitoring'), onClick: () => nav('monitoring') },
-        { key: 'observability-logs', icon: <FileTextOutlined />, label: t('menu.logs'), onClick: () => nav('logs') },
-        { key: 'observability-alerts', icon: <AlertOutlined />, label: t('menu.alerts'), onClick: () => nav('alerts') },
-        { key: 'cluster-event-alerts', icon: <AlertOutlined />, label: t('menu.eventAlerts', 'Event 告警'), onClick: () => nav('event-alerts') },
-        { key: 'cluster-cost', icon: <DollarOutlined />, label: t('menu.costAnalysis', '成本分析'), onClick: () => nav('cost') },
-        { key: 'cluster-security', icon: <SafetyOutlined />, label: t('menu.securityScan', '安全掃描'), onClick: () => nav('security') },
+        {
+          key: 'observability-monitoring',
+          icon: <BarChartOutlined />,
+          label: t('menu.monitoring'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/monitoring`);
+            }
+          },
+        },
+        {
+          key: 'observability-logs',
+          icon: <FileTextOutlined />,
+          label: t('menu.logs'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/logs`);
+            }
+          },
+        },
+        {
+          key: 'observability-alerts',
+          icon: <AlertOutlined />,
+          label: t('menu.alerts'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/alerts`);
+            }
+          },
+        },
+        {
+          key: 'cluster-event-alerts',
+          icon: <AlertOutlined />,
+          label: t('menu.eventAlerts', 'Event 告警'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/event-alerts`);
+            }
+          },
+        },
+        {
+          key: 'cluster-cost',
+          icon: <DollarOutlined />,
+          label: t('menu.costAnalysis', '成本分析'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/cost`);
+            }
+          },
+        },
+        {
+          key: 'cluster-security',
+          icon: <SafetyOutlined />,
+          label: t('menu.securityScan', '安全掃描'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/security`);
+            }
+          },
+        },
       ],
     },
     {
       key: 'cloud-native-cost',
       label: t('menu.costGovernance'),
       children: [
-        { key: 'cost-insights', icon: <EyeOutlined />, label: t('menu.costInsights'), onClick: () => nav('cost-insights') },
+        {
+          key: 'cost-insights',
+          icon: <EyeOutlined />,
+          label: t('menu.costInsights'),
+          onClick: () => {
+            const clusterMatch = location.pathname.match(/\/clusters\/([^/]+)/);
+            if (clusterMatch) {
+              navigate(`/clusters/${clusterMatch[1]}/cost-insights`);
+            }
+          },
+        },
       ],
     },
   ];
 
-  // ─── Permission filtering ─────────────────────────────────────────
+  // 获取当前用户信息
   const currentUser = tokenManager.getUser();
+  
+  // 获取当前集群权限（用于集群内层菜单过滤）
   const { currentClusterPermission, clusterPermissions } = usePermission();
   const allPerms = useMemo(() => Array.from(clusterPermissions.values()), [clusterPermissions]);
   const isUserPlatformAdmin = useMemo(() => isPlatformAdmin(currentUser?.username, allPerms), [currentUser, allPerms]);
   const currentPermissionType = currentClusterPermission?.permission_type as PermissionType | undefined;
 
+  // 过滤外层主菜单
   const filterMainMenuItems = useCallback((items: MenuItem[]): MenuItem[] => {
     return items.filter((item) => {
       if (!item || typeof item !== 'object' || !('key' in item)) return true;
       const key = item.key as string;
       const config = MAIN_MENU_PERMISSIONS[key];
+      
       if (!config) return true;
-      if (config.platformAdminOnly && !isUserPlatformAdmin) return false;
-      if ('children' in item && Array.isArray(item.children)) {
-        const filtered = filterMainMenuItems(item.children as MenuItem[]);
-        if (filtered.length === 0) return false;
-        (item as MenuItem & { children: MenuItem[] }).children = filtered;
+      
+      if (config.platformAdminOnly && !isUserPlatformAdmin) {
+        return false;
       }
+      
+      // 递归过滤子菜单
+      if ('children' in item && Array.isArray(item.children)) {
+        const filteredChildren = filterMainMenuItems(item.children as MenuItem[]);
+        if (filteredChildren.length === 0) return false;
+        (item as MenuItem & { children: MenuItem[] }).children = filteredChildren;
+      }
+      
       return true;
     });
   }, [isUserPlatformAdmin]);
 
+  // 过滤集群内层菜单
   const filterClusterMenuItems = useCallback((items: MenuItem[]): MenuItem[] => {
     return items.filter((item) => {
       if (!item || typeof item !== 'object' || !('key' in item)) return true;
       const key = item.key as string;
       const config = CLUSTER_MENU_PERMISSIONS[key];
+      
+      // 如果没有配置，默认显示
       if (!config) return true;
-      if (config.requiredPermission && !hasPermission(currentPermissionType, config.requiredPermission)) return false;
-      if ('children' in item && Array.isArray(item.children)) {
-        const filtered = filterClusterMenuItems(item.children as MenuItem[]);
-        if (filtered.length === 0) return false;
-        (item as MenuItem & { children: MenuItem[] }).children = filtered;
+      
+      // 检查权限要求
+      if (config.requiredPermission) {
+        if (!hasPermission(currentPermissionType, config.requiredPermission)) {
+          return false;
+        }
       }
+      
+      // 递归过滤子菜单
+      if ('children' in item && Array.isArray(item.children)) {
+        const filteredChildren = filterClusterMenuItems(item.children as MenuItem[]);
+        if (filteredChildren.length === 0) return false;
+        (item as MenuItem & { children: MenuItem[] }).children = filteredChildren;
+      }
+      
       return true;
     });
   }, [currentPermissionType]);
 
-  const menuItems = useMemo(() =>
+  const menuItems = useMemo(() => 
     isClusterDetail
-      ? filterClusterMenuItems([...clusterDetailMenuItems])
+      ? filterClusterMenuItems([...clusterDetailMenuItems]) 
       : filterMainMenuItems([...mainMenuItems]),
-    [isClusterDetail, filterClusterMenuItems, filterMainMenuItems]
+    [isClusterDetail, filterClusterMenuItems, filterMainMenuItems, clusterDetailMenuItems, mainMenuItems]
   );
-
-  // ─── User menu ────────────────────────────────────────────────────
+  
+  // 处理用户名显示，去掉末尾的数字
   const getDisplayName = () => {
     const name = currentUser?.display_name || currentUser?.username || 'User';
+    // 去掉末尾的数字，例如 "王植4" -> "王植"
     return name.replace(/\d+$/, '');
   };
-
+  
+  // 处理用户菜单点击
   const handleUserMenuClick: AntMenuProps['onClick'] = ({ key }) => {
     if (key === 'logout') {
       tokenManager.clear();
@@ -286,103 +622,177 @@ const MainLayout: React.FC = () => {
   };
 
   const userMenuItems: AntMenuProps['items'] = [
-    { key: 'profile', icon: <UserOutlined />, label: t('menu.profile') },
-    { key: 'settings', icon: <SettingOutlined />, label: t('menu.settings') },
-    { type: 'divider' },
-    { key: 'logout', icon: <LogoutOutlined />, label: t('auth.logout'), danger: true },
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: t('menu.profile'),
+    },
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: t('menu.settings'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: t('auth.logout'),
+      danger: true,
+    },
   ];
 
   const handleSearch = (value: string) => {
-    if (value.trim()) navigate(`/search?q=${encodeURIComponent(value)}`);
+    if (value.trim()) {
+      navigate(`/search?q=${encodeURIComponent(value)}`);
+    }
   };
 
-  const sidebarTop = isClusterDetail ? 'top-24' : 'top-12';
-  const layoutMarginTop = isClusterDetail ? 'mt-24' : 'mt-12';
-
   return (
-    <div className="min-h-screen bg-[var(--color-bg-page)]">
+    <Layout style={{ minHeight: '100vh', background: '#fafbfc' }}>
+      <Header
+        style={{
+          position: 'fixed',
+          top: 0,
+          zIndex: 1000,
+          width: '100%',
+          height: '48px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          background: '#1f2937',
+          borderBottom: '1px solid #f0f0f0',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginLeft: 16, 
+              cursor: 'pointer',
+              transition: 'opacity 0.2s'
+            }}
+            onClick={() => navigate('/')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.8';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            <img 
+              src={kubernetesLogo} 
+              alt="Kubernetes" 
+              style={{ width: '32px', height: '32px', marginRight: 8 }} 
+            />
+            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff' }}>Synapse</span>
+          </div>
+        </div>
 
-      {/* ── Top Header ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-4
-                         bg-slate-900 dark:bg-slate-800 border-b border-slate-700/50">
-        {/* Logo */}
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 opacity-100 hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-0 p-0"
-        >
-          <img src={kubernetesLogo} alt="Kubernetes" className="w-7 h-7" />
-          <span className="text-white font-semibold text-base tracking-wide">Synapse</span>
-        </button>
-
-        {/* Search */}
-        <div className="flex-1 max-w-lg mx-6">
+        <div style={{ flex: 1, maxWidth: 600, margin: '0 24px',display: 'flex', alignItems: 'center' }}>
           <SearchDropdown onSearch={handleSearch} />
         </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-1">
+        <Space size="middle">
           <LanguageSwitcher />
-          <Badge count={3} size="small" offset={[-6, 8]}>
-            <Button
-              type="text"
-              icon={<BellOutlined />}
-              className="!text-slate-300 hover:!text-white hover:!bg-slate-700"
-            />
+          <Badge count={3} size="small" offset={[-8, 10]}>
+            <Button type="text" icon={<BellOutlined />} size="large" style={{ color: '#ffffff' }} />
           </Badge>
-          <Dropdown
-            menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
-            placement="bottomRight"
-          >
-            <button className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-slate-700 transition-colors cursor-pointer bg-transparent border-0">
-              <Avatar
-                icon={<UserOutlined />}
-                size={28}
-                className="!bg-indigo-500"
-              />
-              <span className="text-slate-200 text-sm">{getDisplayName()}</span>
-            </button>
+          <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight">
+            <Space style={{ cursor: 'pointer' }}>
+              <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#667eea' }} />
+              <span style={{ color: '#ffffff' }}>{getDisplayName()}</span>
+            </Space>
           </Dropdown>
-        </div>
-      </header>
+        </Space>
+      </Header>
 
-      {/* ── Cluster Sub-header ── */}
       {isClusterDetail && (
-        <div className="fixed top-12 left-0 right-0 z-40 h-12 flex items-center px-6
-                        bg-[var(--color-bg-card)] border-b border-[var(--color-border)]">
+        <div style={{
+          position: 'fixed',
+          top: '48px',
+          left: '0',
+          right: '0',
+          width: '100%',
+          height: '48px',
+          background: '#f8fafc',
+          borderBottom: '1px solid #f0f0f0',
+          zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 24px'
+        }}>
           <ClusterSelector />
         </div>
       )}
 
-      {/* ── Body ── */}
-      <div className={`flex ${layoutMarginTop}`}>
-
-        {/* ── Sidebar ── */}
-        <aside className={`fixed left-0 ${sidebarTop} bottom-0 z-40 w-48
-                          bg-[var(--color-bg-sidebar)] border-r border-[var(--color-border)]
-                          flex flex-col overflow-hidden`}>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden py-1.5 px-0 custom-scrollbar">
+      <Layout style={{ 
+        marginTop: isClusterDetail ? 112 : 64,
+        }}>
+        <Sider
+          width={192}
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: isClusterDetail ? 112 : 52,
+            bottom: 0,
+            zIndex: 999,
+            background: '#f8fafc',
+            boxShadow: '2px 0 12px 0 rgba(0, 0, 0, 0.08)',
+            borderRight: '1px solid #e0e0e0',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#d9d9d9 transparent',
+              padding: '6px 0',
+            }}
+            className="custom-scrollbar"
+          >
             <Menu
               mode="inline"
               selectedKeys={getSelectedKeys()}
               openKeys={openKeys}
               onOpenChange={handleOpenChange}
               items={menuItems}
-              className="sidebar-menu !border-0 !bg-transparent"
+              className="compact-menu"
+              style={{ 
+                height: 'auto',
+                minHeight: '100%',
+                borderRight: 0,
+                background: 'transparent',
+                padding: '6px 8px',
+              }}
             />
           </div>
-        </aside>
+        </Sider>
 
-        {/* ── Main Content ── */}
-        <Layout className="ml-48 min-h-[calc(100vh-3rem)] !bg-transparent">
-          <Content className="m-1 p-4 rounded-lg bg-[var(--color-bg-card)] border border-[var(--color-border)]
-                              min-h-[calc(100vh-3.5rem)] shadow-[var(--shadow-card)]">
+        <Layout style={{ marginLeft: 192 }}>
+          <Content
+            style={{
+              margin: '0px 4px',
+              padding: 16,
+              minHeight: 'calc(100vh - 96px)',
+              background: '#ffffff',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+            }}
+          >
             <Outlet />
           </Content>
         </Layout>
-      </div>
+      </Layout>
 
       <AIChatPanel />
-    </div>
+    </Layout>
   );
 };
 

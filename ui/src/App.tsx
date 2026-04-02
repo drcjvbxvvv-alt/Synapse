@@ -1,6 +1,6 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { ConfigProvider, App as AntdApp, Spin, theme as antdTheme } from 'antd';
+import { ConfigProvider, App as AntdApp, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import zhCN from 'antd/locale/zh_CN';
 import zhTW from 'antd/locale/zh_TW';
@@ -87,62 +87,8 @@ const AppContent: React.FC = () => {
   const { i18n } = useTranslation();
   const currentLocale = antdLocaleMap[i18n.language] || zhTW;
 
-  const [isDark, setIsDark] = useState(
-    () => window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
-  const antdThemeConfig = {
-    algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
-    token: {
-      colorPrimary: '#006eff',
-      colorLink: '#006eff',
-      borderRadius: 6,
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif",
-      fontSize: 14,
-      colorBgContainer: isDark ? '#1e293b' : '#ffffff',
-      colorBgLayout: isDark ? '#0f172a' : '#f1f5f9',
-      colorBgElevated: isDark ? '#1e293b' : '#ffffff',
-      colorBorder: isDark ? '#334155' : '#e2e8f0',
-      colorBorderSecondary: isDark ? '#334155' : '#f1f5f9',
-      colorText: isDark ? '#f1f5f9' : '#0f172a',
-      colorTextSecondary: isDark ? '#94a3b8' : '#64748b',
-      colorTextTertiary: isDark ? '#64748b' : '#94a3b8',
-      boxShadow: isDark
-        ? '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)'
-        : '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-    },
-    components: {
-      Menu: {
-        itemBorderRadius: 6,
-        itemHeight: 34,
-        itemMarginInline: 8,
-        subMenuItemBorderRadius: 6,
-        colorItemBg: 'transparent',
-        colorItemBgSelected: isDark ? 'rgba(0,110,255,0.15)' : '#e6f0ff',
-        colorItemTextSelected: '#006eff',
-        colorItemTextHover: '#006eff',
-        colorItemBgHover: isDark ? 'rgba(0,110,255,0.10)' : '#e6f0ff',
-      },
-      Table: {
-        headerBg: isDark ? '#273449' : '#f8fafc',
-        rowHoverBg: isDark ? '#273449' : '#f8fafc',
-        borderColor: isDark ? '#334155' : '#e2e8f0',
-      },
-      Card: {
-        borderRadiusLG: 8,
-      },
-    },
-  };
-
   return (
-    <ConfigProvider locale={currentLocale} theme={antdThemeConfig}>
+    <ConfigProvider locale={currentLocale}>
       <AntdApp>
         <Router>
           <ErrorBoundary>
