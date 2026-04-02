@@ -166,8 +166,7 @@ const HelmList: React.FC = () => {
   const handleOpenUpgrade = async (record: HelmRelease) => {
     setUpgradeTarget(record);
     try {
-      const resp = await helmService.getValues(clusterId!, record.namespace, record.name, false);
-      const vals = resp.data as Record<string, unknown>;
+      const vals = await helmService.getValues(clusterId!, record.namespace, record.name, false);
       upgradeForm.setFieldsValue({ values: JSON.stringify(vals, null, 2) });
     } catch {
       upgradeForm.resetFields();
