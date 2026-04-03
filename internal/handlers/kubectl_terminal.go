@@ -83,7 +83,12 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 	userID := c.GetUint("user_id") // 从JWT中获取用户ID
 
 	// 获取集群信息
-	cluster, err := h.clusterService.GetCluster(uint(mustParseUint(clusterID)))
+	cid, parseErr := strconv.ParseUint(clusterID, 10, 32)
+	if parseErr != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	cluster, err := h.clusterService.GetCluster(uint(cid))
 	if err != nil {
 		response.NotFound(c, "集群不存在")
 		return
@@ -640,11 +645,3 @@ func (h *KubectlTerminalHandler) sendMessage(conn *websocket.Conn, msgType, data
 	}
 }
 
-// mustParseUint 解析uint，失败时panic
-func mustParseUint(s string) uint64 {
-	val, err := strconv.ParseUint(s, 10, 32)
-	if err != nil {
-		panic(fmt.Sprintf("解析uint失败: %v", err))
-	}
-	return val
-}

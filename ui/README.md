@@ -386,7 +386,7 @@ Synapse/
 
 | 維度 | 評分 | 核心結論 |
 |------|------|----------|
-| 可靠度 | 7/10 | 主路徑錯誤處理完整；Runbooks 載入失敗會 panic 崩潰整個服務 |
+| 可靠度 | 8/10 | 主路徑錯誤處理完整；已修復 Runbooks panic、kubectl terminal panic 及 Mesh 指標 stub |
 | 實用性 | 8/10 | 涵蓋 90% 日常 K8s 操作；Mesh 指標與部分成本計算為 stub |
 | 可用性 | 7/10 | API 回應格式一致；TLS 預設跳過驗證未在 UI 警示 |
 | 誠實性 | 6/10 | 功能列表大致符實；Istio 指標豐富度與測試覆蓋率未公開揭示 |
@@ -405,9 +405,12 @@ Synapse/
 - Informer 快取同步等待有 timeout 守衛（`internal/k8s/manager.go`）
 - Gin `Recovery()` middleware 兜住未預期 panic，避免服務中斷
 
-**已知缺陷**
-- `internal/runbooks/runbooks.go`：JSON 解析失敗直接呼叫 `panic()`，會讓整個程序崩潰，應改為 error return
-- `internal/services/mesh_service.go`：`enrichWithMetrics()` 為完整 stub，Istio RPS / 錯誤率 / P99 欄位永遠為 0，但呼叫端不知情
+**已修復（2026-04-03）**
+- ~~`internal/runbooks/runbooks.go`：JSON 解析失敗直接呼叫 `panic()`~~ → 改為 `log.Printf` 警告 + 空列表繼續運行
+- ~~`internal/services/mesh_service.go`：`enrichWithMetrics()` 為完整 stub~~ → 已實作 Prometheus `istio_requests_total` RPS 與錯誤率查詢
+- ~~`internal/handlers/kubectl_terminal.go`：`mustParseUint()` 呼叫 `panic()`~~ → 改為 `strconv.ParseUint` + `response.BadRequest` 回傳
+
+**殘餘缺陷**
 - 部分 handler 同時記錄日誌又回傳錯誤，另一些則只做其中一件事，行為不一致
 
 ---
@@ -419,10 +422,12 @@ Synapse/
 - Web Terminal（Pod exec、kubectl、SSH）、日誌串流、YAML 編輯器均已實作
 - AI 診斷整合 4 個 Provider，含敏感資料過濾
 
-**已知缺陷**
+**已修復（2026-04-03）**
+- ~~**多處 `context.TODO()`**：`internal/handlers/namespace.go` 有 18 處 `context.TODO()`~~ → 全部改為 `c.Request.Context()`，K8s 呼叫生命週期與 HTTP 請求綁定
+- ~~**Mesh 拓撲指標**：`MeshNode.RPS / ErrorRate / P99` 永遠為零~~ → 已實作 Prometheus `istio_requests_total` 查詢填充
+
+**殘餘缺陷**
 - **成本分析**：`internal/services/cost_service.go` 有佔位符註解「實際實作需要 metrics-server API；此處為預留 placeholder」，部分成本數字可能為估算值
-- **Mesh 拓撲指標**：`MeshNode.RPS / ErrorRate / P99` 欄位已定義但永遠為零（`internal/services/mesh_service.go:enrichWithMetrics`）
-- **多處 `context.TODO()`**：`internal/handlers/namespace.go` 有 14 處 `context.TODO()`，生產環境應改為帶 deadline 的 context
 
 ---
 
@@ -472,8 +477,10 @@ Synapse/
 - 閒置叢集 GC goroutine（`internal/k8s/manager.go`）防止長時間累積的資源洩漏
 - 所有背景 Worker（EventAlert、Cost、LogRetention）在 `Router.Setup()` 統一啟動，生命週期可管理
 
-**已知缺陷**
-- `internal/runbooks/runbooks.go` 的 `panic` 在服務啟動時若 Runbook JSON 格式有誤，會使整個程序崩潰
+**已修復（2026-04-03）**
+- ~~`internal/runbooks/runbooks.go` 的 `panic`~~ → 改為優雅降級（日誌警告 + 空列表）
+
+**殘餘缺陷**
 - 高並發下無請求佇列保護：K8s client 的 QPS/Burst 設定（100/200）不足時，超出部分會直接回傳錯誤而非排隊等待
 
 ---
@@ -533,9 +540,10 @@ Synapse/
 [ ] 確認 ENCRYPTION_KEY 已設定，且 kubeconfig 欄位加密已啟用
 [ ] 確認 JWT_SECRET 已設定（release 模式下系統會強制驗證）
 [ ] 評估是否為各叢集提供 CA 憑證以啟用 TLS 驗證
-[ ] 將 runbooks.go 的 panic 改為 error return
-[ ] 將 namespace.go 的 context.TODO() 改為帶 timeout 的 context
-[ ] 若使用 Mesh 拓撲，告知使用者 RPS/ErrorRate/P99 指標目前未實作
+[x] runbooks.go panic → 優雅降級（已修復 2026-04-03）
+[x] namespace.go context.TODO() → c.Request.Context()（已修復 2026-04-03）
+[x] kubectl_terminal.go mustParseUint panic → error return（已修復 2026-04-03）
+[x] mesh_service.go enrichWithMetrics stub → 實作 Prometheus 查詢（已修復 2026-04-03）
 [ ] 定期備份資料庫（含所有叢集憑證）並加密備份檔案
 ```
 

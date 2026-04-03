@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -120,10 +122,62 @@ func (s *MeshService) GetTopology(ctx context.Context, clientset kubernetes.Inte
 	return &MeshTopology{Nodes: nodes, Edges: []MeshEdge{}}, nil
 }
 
-// enrichWithMetrics 將 Prometheus Istio 指標附加到節點（best-effort，忽略錯誤）
-func (s *MeshService) enrichWithMetrics(_ context.Context, _ []MeshNode, _ *models.MonitoringConfig) {
-	// Production: call s.promSvc.QueryPrometheus with istio_requests_total metrics
-	// Silently skip if Prometheus not available
+// enrichWithMetrics 從 Prometheus 查詢 Istio 指標並附加到節點（best-effort）
+func (s *MeshService) enrichWithMetrics(ctx context.Context, nodes []MeshNode, monCfg *models.MonitoringConfig) {
+	now := time.Now().Unix()
+
+	// 查詢各目標工作負載的 RPS
+	rpsResp, err := s.promSvc.QueryPrometheus(ctx, monCfg, &models.MetricsQuery{
+		Query: `sum(rate(istio_requests_total[5m])) by (destination_workload, destination_service_namespace)`,
+		Start: now,
+		End:   now,
+		Step:  "30s",
+	})
+	if err != nil {
+		logger.Warn("Mesh enrichWithMetrics: RPS 查詢失敗", "error", err)
+		return
+	}
+
+	// 建立 namespace/workload → RPS 對照表
+	rpsMap := map[string]float64{}
+	for _, r := range rpsResp.Data.Result {
+		key := r.Metric["destination_service_namespace"] + "/" + r.Metric["destination_workload"]
+		if len(r.Value) >= 2 {
+			if v, err := strconv.ParseFloat(fmt.Sprintf("%v", r.Value[1]), 64); err == nil {
+				rpsMap[key] = v
+			}
+		}
+	}
+
+	// 查詢各目標工作負載的錯誤率
+	errResp, err := s.promSvc.QueryPrometheus(ctx, monCfg, &models.MetricsQuery{
+		Query: `sum(rate(istio_requests_total{response_code=~"5.."}[5m])) by (destination_workload, destination_service_namespace) / sum(rate(istio_requests_total[5m])) by (destination_workload, destination_service_namespace)`,
+		Start: now,
+		End:   now,
+		Step:  "30s",
+	})
+	errMap := map[string]float64{}
+	if err == nil {
+		for _, r := range errResp.Data.Result {
+			key := r.Metric["destination_service_namespace"] + "/" + r.Metric["destination_workload"]
+			if len(r.Value) >= 2 {
+				if v, err := strconv.ParseFloat(fmt.Sprintf("%v", r.Value[1]), 64); err == nil {
+					errMap[key] = v
+				}
+			}
+		}
+	}
+
+	// 將指標寫回節點（以 namespace/name 比對）
+	for i := range nodes {
+		key := nodes[i].Namespace + "/" + nodes[i].Name
+		if rps, ok := rpsMap[key]; ok {
+			nodes[i].RPS = rps
+		}
+		if rate, ok := errMap[key]; ok {
+			nodes[i].ErrorRate = rate
+		}
+	}
 }
 
 // ListVirtualServices 列出 VirtualServices

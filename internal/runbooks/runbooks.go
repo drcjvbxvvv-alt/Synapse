@@ -3,6 +3,7 @@ package runbooks
 import (
 	_ "embed"
 	"encoding/json"
+	"log"
 	"strings"
 )
 
@@ -24,7 +25,9 @@ var All []Runbook
 
 func init() {
 	if err := json.Unmarshal(data, &All); err != nil {
-		panic("failed to parse runbooks.json: " + err.Error())
+		// runbooks.json 格式異常時記錄警告並繼續運行，避免整個服務崩潰
+		log.Printf("[WARN] runbooks: 解析 runbooks.json 失敗，AI Runbook 功能將不可用: %v", err)
+		All = []Runbook{}
 	}
 }
 

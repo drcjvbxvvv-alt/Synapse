@@ -141,14 +141,14 @@ func (h *NamespaceHandler) GetNamespaceDetail(c *gin.Context) {
 	clientset := k8sClient.GetClientset()
 
 	// 获取命名空间详情
-	namespace, err := clientset.CoreV1().Namespaces().Get(context.TODO(), namespaceName, metav1.GetOptions{})
+	namespace, err := clientset.CoreV1().Namespaces().Get(c.Request.Context(), namespaceName, metav1.GetOptions{})
 	if err != nil {
 		response.NotFound(c, "命名空间不存在: "+err.Error())
 		return
 	}
 
 	// 获取资源配额
-	quotas, err := clientset.CoreV1().ResourceQuotas(namespaceName).List(context.TODO(), metav1.ListOptions{})
+	quotas, err := clientset.CoreV1().ResourceQuotas(namespaceName).List(c.Request.Context(), metav1.ListOptions{})
 	var resourceQuota *ResourceQuotaInfo
 	if err == nil && len(quotas.Items) > 0 {
 		quota := quotas.Items[0]
@@ -161,16 +161,16 @@ func (h *NamespaceHandler) GetNamespaceDetail(c *gin.Context) {
 	resourceCount := map[string]int{
 		"pods": 0, "services": 0, "configMaps": 0, "secrets": 0,
 	}
-	if pods, err := clientset.CoreV1().Pods(namespaceName).List(context.TODO(), metav1.ListOptions{}); err == nil {
+	if pods, err := clientset.CoreV1().Pods(namespaceName).List(c.Request.Context(), metav1.ListOptions{}); err == nil {
 		resourceCount["pods"] = len(pods.Items)
 	}
-	if svcs, err := clientset.CoreV1().Services(namespaceName).List(context.TODO(), metav1.ListOptions{}); err == nil {
+	if svcs, err := clientset.CoreV1().Services(namespaceName).List(c.Request.Context(), metav1.ListOptions{}); err == nil {
 		resourceCount["services"] = len(svcs.Items)
 	}
-	if cms, err := clientset.CoreV1().ConfigMaps(namespaceName).List(context.TODO(), metav1.ListOptions{}); err == nil {
+	if cms, err := clientset.CoreV1().ConfigMaps(namespaceName).List(c.Request.Context(), metav1.ListOptions{}); err == nil {
 		resourceCount["configMaps"] = len(cms.Items)
 	}
-	if secs, err := clientset.CoreV1().Secrets(namespaceName).List(context.TODO(), metav1.ListOptions{}); err == nil {
+	if secs, err := clientset.CoreV1().Secrets(namespaceName).List(c.Request.Context(), metav1.ListOptions{}); err == nil {
 		resourceCount["secrets"] = len(secs.Items)
 	}
 
@@ -238,7 +238,7 @@ func (h *NamespaceHandler) CreateNamespace(c *gin.Context) {
 	}
 
 	// 创建命名空间
-	createdNs, err := clientset.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})
+	createdNs, err := clientset.CoreV1().Namespaces().Create(c.Request.Context(), namespace, metav1.CreateOptions{})
 	if err != nil {
 		response.InternalError(c, "创建命名空间失败: "+err.Error())
 		return
@@ -287,7 +287,7 @@ func (h *NamespaceHandler) DeleteNamespace(c *gin.Context) {
 	clientset := k8sClient.GetClientset()
 
 	// 删除命名空间
-	err = clientset.CoreV1().Namespaces().Delete(context.TODO(), namespaceName, metav1.DeleteOptions{})
+	err = clientset.CoreV1().Namespaces().Delete(c.Request.Context(), namespaceName, metav1.DeleteOptions{})
 	if err != nil {
 		response.InternalError(c, "删除命名空间失败: "+err.Error())
 		return
@@ -325,7 +325,7 @@ func (h *NamespaceHandler) ListResourceQuotas(c *gin.Context) {
 		response.InternalError(c, "取得 K8s 客戶端失敗: "+err.Error())
 		return
 	}
-	list, err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).List(context.TODO(), metav1.ListOptions{})
+	list, err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).List(c.Request.Context(), metav1.ListOptions{})
 	if err != nil {
 		response.InternalError(c, "取得 ResourceQuota 失敗: "+err.Error())
 		return
@@ -382,7 +382,7 @@ func (h *NamespaceHandler) CreateResourceQuota(c *gin.Context) {
 		ObjectMeta: metav1.ObjectMeta{Name: req.Name, Namespace: namespace},
 		Spec:       corev1.ResourceQuotaSpec{Hard: hard},
 	}
-	created, err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).Create(context.TODO(), quota, metav1.CreateOptions{})
+	created, err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).Create(c.Request.Context(), quota, metav1.CreateOptions{})
 	if err != nil {
 		response.InternalError(c, "建立 ResourceQuota 失敗: "+err.Error())
 		return
@@ -416,7 +416,7 @@ func (h *NamespaceHandler) UpdateResourceQuota(c *gin.Context) {
 		response.InternalError(c, "取得 K8s 客戶端失敗: "+err.Error())
 		return
 	}
-	existing, err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	existing, err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).Get(c.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		response.NotFound(c, "ResourceQuota 不存在")
 		return
@@ -431,7 +431,7 @@ func (h *NamespaceHandler) UpdateResourceQuota(c *gin.Context) {
 		hard[corev1.ResourceName(k)] = qty
 	}
 	existing.Spec.Hard = hard
-	updated, err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).Update(context.TODO(), existing, metav1.UpdateOptions{})
+	updated, err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).Update(c.Request.Context(), existing, metav1.UpdateOptions{})
 	if err != nil {
 		response.InternalError(c, "更新 ResourceQuota 失敗: "+err.Error())
 		return
@@ -458,7 +458,7 @@ func (h *NamespaceHandler) DeleteResourceQuota(c *gin.Context) {
 		response.InternalError(c, "取得 K8s 客戶端失敗: "+err.Error())
 		return
 	}
-	if err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{}); err != nil {
+	if err := k8sClient.GetClientset().CoreV1().ResourceQuotas(namespace).Delete(c.Request.Context(), name, metav1.DeleteOptions{}); err != nil {
 		response.InternalError(c, "刪除 ResourceQuota 失敗: "+err.Error())
 		return
 	}
@@ -485,7 +485,7 @@ func (h *NamespaceHandler) ListLimitRanges(c *gin.Context) {
 		response.InternalError(c, "取得 K8s 客戶端失敗: "+err.Error())
 		return
 	}
-	list, err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).List(context.TODO(), metav1.ListOptions{})
+	list, err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).List(c.Request.Context(), metav1.ListOptions{})
 	if err != nil {
 		response.InternalError(c, "取得 LimitRange 失敗: "+err.Error())
 		return
@@ -589,7 +589,7 @@ func (h *NamespaceHandler) CreateLimitRange(c *gin.Context) {
 		ObjectMeta: metav1.ObjectMeta{Name: req.Name, Namespace: namespace},
 		Spec:       corev1.LimitRangeSpec{Limits: lrItems},
 	}
-	created, err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).Create(context.TODO(), lr, metav1.CreateOptions{})
+	created, err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).Create(c.Request.Context(), lr, metav1.CreateOptions{})
 	if err != nil {
 		response.InternalError(c, "建立 LimitRange 失敗: "+err.Error())
 		return
@@ -623,7 +623,7 @@ func (h *NamespaceHandler) UpdateLimitRange(c *gin.Context) {
 		response.InternalError(c, "取得 K8s 客戶端失敗: "+err.Error())
 		return
 	}
-	existing, err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	existing, err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).Get(c.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		response.NotFound(c, "LimitRange 不存在")
 		return
@@ -634,7 +634,7 @@ func (h *NamespaceHandler) UpdateLimitRange(c *gin.Context) {
 		return
 	}
 	existing.Spec.Limits = lrItems
-	updated, err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).Update(context.TODO(), existing, metav1.UpdateOptions{})
+	updated, err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).Update(c.Request.Context(), existing, metav1.UpdateOptions{})
 	if err != nil {
 		response.InternalError(c, "更新 LimitRange 失敗: "+err.Error())
 		return
@@ -661,7 +661,7 @@ func (h *NamespaceHandler) DeleteLimitRange(c *gin.Context) {
 		response.InternalError(c, "取得 K8s 客戶端失敗: "+err.Error())
 		return
 	}
-	if err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{}); err != nil {
+	if err := k8sClient.GetClientset().CoreV1().LimitRanges(namespace).Delete(c.Request.Context(), name, metav1.DeleteOptions{}); err != nil {
 		response.InternalError(c, "刪除 LimitRange 失敗: "+err.Error())
 		return
 	}
