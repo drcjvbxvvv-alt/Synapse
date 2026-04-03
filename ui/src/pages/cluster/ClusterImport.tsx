@@ -254,6 +254,13 @@ style={{ fontFamily: 'monospace' }}
                     style={{ fontFamily: 'monospace' }}
                   />
                 </Form.Item>
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="TLS 憑證驗證提醒"
+                  description="未填入 CA 憑證時，系統將跳過 TLS 驗證（InsecureSkipVerify）。API Server 的身份將不受驗證，存在中間人攻擊風險。生產環境請務必填入 CA 憑證。"
+                  style={{ marginBottom: 16 }}
+                />
 </>
             )}
 

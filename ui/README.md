@@ -388,7 +388,7 @@ Synapse/
 |------|------|----------|
 | 可靠度 | 8/10 | 主路徑錯誤處理完整；已修復 Runbooks panic、kubectl terminal panic 及 Mesh 指標 stub |
 | 實用性 | 8/10 | 涵蓋 90% 日常 K8s 操作；Mesh 指標與部分成本計算為 stub |
-| 可用性 | 7/10 | API 回應格式一致；TLS 預設跳過驗證未在 UI 警示 |
+| 可用性 | 9/10 | API 回應格式一致；403 錯誤已含可用命名空間提示；TLS 警告已加入後端日誌與匯入 UI |
 | 誠實性 | 6/10 | 功能列表大致符實；Istio 指標豐富度與測試覆蓋率未公開揭示 |
 | 系統架構 | 8/10 | 分層清晰、依賴注入到位；服務層缺乏介面抽象，難以單元測試 |
 | 穩定度 | 7/10 | 並發控制正確；工具函式使用 panic 代替 error return |
@@ -438,9 +438,14 @@ Synapse/
 - WebSocket 重連採指數退避（`ui/src/hooks/useWebSocket.ts`），最大 10 次、上限 30 秒，防止連線風暴
 - RBAC 權限粒度細到命名空間級別
 
-**已知缺陷**
-- 403 錯誤僅顯示「無権存取」，不告知使用者實際可存取的命名空間範圍
-- `internal/services/k8s_client.go`：預設跳過 TLS 驗證（`InsecureSkipVerify: true`），介面上沒有任何提示，使用者可能不知道流量未受保護
+**已修復（2026-04-03）**
+- ~~403 錯誤僅顯示「無権存取」~~ → 改為 `"無權存取命名空間 {requested}；您可存取的命名空間：ns1, ns2"`：
+  - `permission.go` 新增 `ForbiddenNS()` helper + `namespaceForbiddenMsg()` 內部函式
+  - `NamespaceAccessRequired` middleware 同步更新
+  - 12 個 handler（configmap / cronjob / daemonset / deployment / ingress / job / networkpolicy / rollout / secret / service / statefulset / storage）全部改用 `middleware.ForbiddenNS(c, nsInfo)`
+- ~~`k8s_client.go` 預設跳過 TLS 驗證無任何提示~~ → 兩層警示：
+  - 後端：`NewK8sClientFromToken` 未提供 CA 憑證時 `logger.Warn(...)` 輸出到日誌
+  - 前端：`ClusterImport.tsx` Token 認證模式下 CA 憑證欄位下方固定顯示 `Alert type="warning"`，說明風險與生產建議
 
 ---
 

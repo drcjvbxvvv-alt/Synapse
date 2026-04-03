@@ -152,7 +152,7 @@ func (h *RolloutHandler) ListRollouts(c *gin.Context) {
 	// 检查命名空间权限
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
-		response.Forbidden(c, fmt.Sprintf("无权访问命名空间: %s", namespace))
+		middleware.ForbiddenNS(c, nsInfo)
 		return
 	}
 

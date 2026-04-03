@@ -11,6 +11,7 @@ import (
 
 	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
 	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/clay-wangzhi/Synapse/pkg/logger"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -96,6 +97,13 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 		}
 		config.CAData = caCertData
 		config.Insecure = false
+	} else {
+		// 未提供 CA 憑證：TLS 驗證已停用，API Server 憑證不受驗證
+		// 此設定僅適用於開發 / 測試環境，生產環境請提供 CA 憑證
+		logger.Warn("K8s TLS 驗證已停用（未提供 CA 憑證）",
+			"apiServer", apiServer,
+			"hint", "生產環境請在匯入叢集時填入 CA 憑證以防止中間人攻擊",
+		)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)

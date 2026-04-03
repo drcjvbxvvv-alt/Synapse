@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -85,7 +87,7 @@ func (m *PermissionMiddleware) NamespaceAccessRequired() gin.HandlerFunc {
 
 		// 如果有命名空间参数，检查权限
 		if namespace != "" && !services.HasNamespaceAccess(permission, namespace) {
-			response.Forbidden(c, "无权限访问该命名空间")
+			response.Forbidden(c, namespaceForbiddenMsg(namespace, permission.GetNamespaceList()))
 			return
 		}
 
@@ -404,4 +406,19 @@ func matchNamespace(namespace string, allowedNamespaces []string) bool {
 		}
 	}
 	return false
+}
+
+// namespaceForbiddenMsg 產生包含可存取命名空間提示的 403 錯誤訊息
+func namespaceForbiddenMsg(requested string, allowed []string) string {
+	hint := strings.Join(allowed, ", ")
+	if len(allowed) == 0 || (len(allowed) == 1 && allowed[0] == "") {
+		hint = "（無，請聯絡管理員設定權限）"
+	}
+	return fmt.Sprintf("無權存取命名空間 %q；您可存取的命名空間：%s", requested, hint)
+}
+
+// ForbiddenNS 回傳帶命名空間存取提示的 403 回應
+// 供 handler 在呼叫 CheckNamespacePermission 後使用，取代硬編碼錯誤訊息
+func ForbiddenNS(c *gin.Context, info *NamespacePermissionInfo) {
+	response.Forbidden(c, namespaceForbiddenMsg(info.RequestedNs, info.AllowedNamespaces))
 }

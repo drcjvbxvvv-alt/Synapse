@@ -135,7 +135,7 @@ func (h *NetworkPolicyHandler) ListNetworkPolicies(c *gin.Context) {
 	// 命名空間權限檢查
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
-		response.Forbidden(c, fmt.Sprintf("無權存取命名空間: %s", namespace))
+		middleware.ForbiddenNS(c, nsInfo)
 		return
 	}
 
