@@ -239,7 +239,7 @@ const [allSecrets, setAllSecrets] = useState<SecretListItem[]>([]);
         [t('config:list.export.type')]: item.type,
         [t('config:list.export.labels')]: Object.entries(item.labels || {}).map(([k, v]) => `${k}=${v}`).join(', ') || '-',
         [t('config:list.export.dataCount')]: item.dataCount,
-        [t('config:list.export.createdAt')]: item.creationTimestamp ? new Date(item.creationTimestamp).toLocaleString('zh-CN', {
+        [t('config:list.export.createdAt')]: item.creationTimestamp ? new Date(item.creationTimestamp).toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -441,7 +441,7 @@ const [allSecrets, setAllSecrets] = useState<SecretListItem[]>([]);
       render: (time: string) => {
         if (!time) return '-';
         const date = new Date(time);
-        return date.toLocaleString('zh-CN', {
+        return date.toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',

@@ -251,7 +251,7 @@ const [form] = Form.useForm();
         [t('columns.name')]: ns.name,
         [t('columns.status')]: ns.status === 'Active' ? t('common:status.active') : ns.status,
         [t('columns.labels')]: ns.labels ? Object.entries(ns.labels).map(([k, v]) => `${k}=${v}`).join('; ') : '-',
-        [t('columns.createdAt')]: ns.creationTimestamp ? new Date(ns.creationTimestamp).toLocaleString('zh-CN', {
+        [t('columns.createdAt')]: ns.creationTimestamp ? new Date(ns.creationTimestamp).toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -438,7 +438,7 @@ const [form] = Form.useForm();
       render: (text: string) => {
         if (!text) return '-';
         const date = new Date(text);
-        const formatted = date.toLocaleString('zh-CN', {
+        const formatted = date.toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',

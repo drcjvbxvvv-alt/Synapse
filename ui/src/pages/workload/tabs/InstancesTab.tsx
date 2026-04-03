@@ -112,7 +112,7 @@ const [loading, setLoading] = useState(false);
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '-';
     const date = new Date(timeStr);
-    return date.toLocaleString('zh-CN', {
+    return date.toLocaleString('zh-TW', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

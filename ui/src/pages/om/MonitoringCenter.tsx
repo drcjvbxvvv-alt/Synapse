@@ -70,7 +70,7 @@ const formatCPU = (cores: number): string => {
 
 // 格式化时间戳
 const formatTime = (timestamp: number): string => {
-  return new Date(timestamp * 1000).toLocaleString('zh-CN');
+  return new Date(timestamp * 1000).toLocaleString('zh-TW');
 };
 
 const MonitoringCenter: React.FC = () => {

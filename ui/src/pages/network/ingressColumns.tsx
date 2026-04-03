@@ -146,7 +146,7 @@ export function getIngressColumns(
       render: (createdAt: string) => {
         if (!createdAt) return '-';
         const date = new Date(createdAt);
-        const formatted = date.toLocaleString('zh-CN', {
+        const formatted = date.toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',

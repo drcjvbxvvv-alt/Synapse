@@ -171,7 +171,7 @@ const ConfigMapDetail: React.FC = () => {
               <Tag color="blue">{configMap.namespace}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label={t('config:detail.createdAt')}>
-              {new Date(configMap.creationTimestamp).toLocaleString('zh-CN')}
+              {new Date(configMap.creationTimestamp).toLocaleString('zh-TW')}
             </Descriptions.Item>
             <Descriptions.Item label={t('config:detail.age')}>
               {configMap.age}
@@ -261,7 +261,7 @@ const ConfigMapDetail: React.FC = () => {
               {
                 title: '時間',
                 dataIndex: 'changedAt',
-                render: (v: string) => new Date(v).toLocaleString('zh-CN'),
+                render: (v: string) => new Date(v).toLocaleString('zh-TW'),
               },
               {
                 title: '操作',

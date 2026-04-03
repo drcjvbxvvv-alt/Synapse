@@ -222,7 +222,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
         [t('config:list.export.namespace')]: item.namespace,
         [t('config:list.export.labels')]: Object.entries(item.labels || {}).map(([k, v]) => `${k}=${v}`).join(', ') || '-',
         [t('config:list.export.dataCount')]: item.dataCount,
-        [t('config:list.export.createdAt')]: item.creationTimestamp ? new Date(item.creationTimestamp).toLocaleString('zh-CN', {
+        [t('config:list.export.createdAt')]: item.creationTimestamp ? new Date(item.creationTimestamp).toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -406,7 +406,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
       render: (time: string) => {
         if (!time) return '-';
         const date = new Date(time);
-        return date.toLocaleString('zh-CN', {
+        return date.toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',

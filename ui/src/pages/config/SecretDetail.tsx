@@ -174,7 +174,7 @@ const SecretDetail: React.FC = () => {
               <Tag color="orange">{secret.type}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label={t('config:detail.createdAt')}>
-              {new Date(secret.creationTimestamp).toLocaleString('zh-CN')}
+              {new Date(secret.creationTimestamp).toLocaleString('zh-TW')}
             </Descriptions.Item>
             <Descriptions.Item label={t('config:detail.age')}>
               {secret.age}
@@ -235,7 +235,7 @@ const SecretDetail: React.FC = () => {
               {
                 title: '時間',
                 dataIndex: 'changedAt',
-                render: (v: string) => new Date(v).toLocaleString('zh-CN'),
+                render: (v: string) => new Date(v).toLocaleString('zh-TW'),
               },
               {
                 title: 'Key 列表（值不記錄）',

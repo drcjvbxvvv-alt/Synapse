@@ -1099,7 +1099,7 @@ const [activeTab, setActiveTab] = useState('stream');
                 columns={[
                   {
                     title: '時間', dataIndex: 'timestamp', width: 180,
-                    render: (v: string) => new Date(v).toLocaleString('zh-CN'),
+                    render: (v: string) => new Date(v).toLocaleString('zh-TW'),
                   },
                   { title: '級別', dataIndex: 'level', width: 80, render: (v: string) => <Tag color={levelTagColors[v] || 'default'}>{v?.toUpperCase()}</Tag> },
                   { title: '命名空間', dataIndex: 'namespace', width: 130 },

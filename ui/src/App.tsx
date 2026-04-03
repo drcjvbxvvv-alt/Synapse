@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, App as AntdApp, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
-import zhCN from 'antd/locale/zh_CN';
+// import zhCN from 'antd/locale/zh_CN'; // zh-CN 已停用，僅使用 zh-TW
 import zhTW from 'antd/locale/zh_TW';
 import enUS from 'antd/locale/en_US';
 import MainLayout from './layouts/MainLayout';
@@ -77,9 +77,9 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
 };
 
 // Ant Design locale 映射
-const antdLocaleMap: Record<string, typeof zhCN> = {
+const antdLocaleMap: Record<string, typeof zhTW> = {
   'zh-TW': zhTW,
-  'zh-CN': zhCN,
+  // 'zh-CN': zhCN, // zh-CN 已停用
   'en-US': enUS,
 };
 

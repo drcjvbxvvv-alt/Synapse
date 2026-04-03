@@ -443,7 +443,7 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
       render: (createdAt: string) => {
         if (!createdAt) return '-';
         const date = new Date(createdAt);
-        return date.toLocaleString('zh-CN');
+        return date.toLocaleString('zh-TW');
       },
     },
     {

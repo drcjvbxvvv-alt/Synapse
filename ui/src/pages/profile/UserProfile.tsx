@@ -80,7 +80,7 @@ const [user, setUser] = useState<User | null>(null);
 
   const formatDateTime = (dateString?: string | null) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('zh-CN', {
+    return new Date(dateString).toLocaleString('zh-TW', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

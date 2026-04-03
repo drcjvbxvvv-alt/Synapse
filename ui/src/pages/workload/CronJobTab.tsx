@@ -384,7 +384,7 @@ const { t } = useTranslation(['workload', 'common']);
       render: (text: string) => {
         if (!text) return '-';
         const date = new Date(text);
-        const formatted = date.toLocaleString('zh-CN', {
+        const formatted = date.toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -550,7 +550,7 @@ const { t } = useTranslation(['workload', 'common']);
       workload.memoryLimit || '-',
       workload.memoryRequest || '-',
       (workload.images || []).map(img => img.split('/').pop()).join(', '),
-      new Date(workload.createdAt).toLocaleString('zh-CN')
+      new Date(workload.createdAt).toLocaleString('zh-TW')
     ]);
     
     const csvContent = [

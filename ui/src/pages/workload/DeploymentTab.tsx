@@ -288,7 +288,7 @@ return;
         [t('columns.memoryLimit')]: w.memoryLimit || '-',
         [t('columns.memoryRequest')]: w.memoryRequest || '-',
         [t('columns.images')]: w.images?.join(', ') || '-',
-        [t('columns.createdAt')]: w.createdAt ? new Date(w.createdAt).toLocaleString('zh-CN', {
+        [t('columns.createdAt')]: w.createdAt ? new Date(w.createdAt).toLocaleString('zh-TW', {
 year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -530,7 +530,7 @@ message.success(t('messages.columnSettingsSaved'));
         if (!text) return '-';
         const date = new Date(text);
         // 格式化为：YYYY-MM-DD HH:mm:ss
-        const formatted = date.toLocaleString('zh-CN', {
+        const formatted = date.toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
