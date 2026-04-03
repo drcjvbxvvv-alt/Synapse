@@ -88,8 +88,8 @@ func NewPodTerminalHandler(clusterService *services.ClusterService, auditService
 				}
 				return middleware.IsOriginAllowed(origin)
 			},
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			ReadBufferSize:  wsBufferSize,
+			WriteBufferSize: wsBufferSize,
 		},
 		sessions:      make(map[string]*PodTerminalSession),
 		sessionsMutex: sync.RWMutex{},
@@ -404,7 +404,7 @@ func (h *PodTerminalHandler) handleResize(session *PodTerminalSession, cols, row
 
 // readOutput 读取命令输出
 func (h *PodTerminalHandler) readOutput(session *PodTerminalSession) {
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, wsBufferSize)
 	for {
 		n, err := session.stdoutReader.Read(buffer)
 		if err != nil {

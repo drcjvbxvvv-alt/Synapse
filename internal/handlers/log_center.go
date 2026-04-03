@@ -47,8 +47,8 @@ func NewLogCenterHandler(clusterSvc *services.ClusterService, k8sMgr *k8s.Cluste
 				}
 				return middleware.IsOriginAllowed(origin)
 			},
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			ReadBufferSize:  wsBufferSize,
+			WriteBufferSize: wsBufferSize,
 		},
 	}
 }

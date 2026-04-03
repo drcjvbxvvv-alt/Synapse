@@ -5,6 +5,9 @@ import (
 	"strconv"
 )
 
+// wsBufferSize WebSocket 讀寫緩衝區大小（位元組）
+const wsBufferSize = 1024
+
 // ScaleRequest 扩缩容请求
 type ScaleRequest struct {
 	Replicas int32 `json:"replicas" binding:"required,min=0"`

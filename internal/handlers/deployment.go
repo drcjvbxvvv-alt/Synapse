@@ -67,6 +67,47 @@ type DeploymentInfo struct {
 	MemoryRequest     string            `json:"memoryRequest"`
 }
 
+// fetchDeploymentsFromCache 從 Informer 緩存讀取 Deployment 列表
+func (h *DeploymentHandler) fetchDeploymentsFromCache(clusterID uint, namespace string) []DeploymentInfo {
+	sel := labels.Everything()
+	var deployments []DeploymentInfo
+	if namespace != "" {
+		deps, err := h.k8sMgr.DeploymentsLister(clusterID).Deployments(namespace).List(sel)
+		if err != nil {
+			logger.Error("读取Deployment缓存失败", "error", err)
+			return deployments
+		}
+		for _, d := range deps {
+			deployments = append(deployments, h.convertToDeploymentInfo(d))
+		}
+	} else {
+		deps, err := h.k8sMgr.DeploymentsLister(clusterID).List(sel)
+		if err != nil {
+			logger.Error("读取Deployment缓存失败", "error", err)
+			return deployments
+		}
+		for _, d := range deps {
+			deployments = append(deployments, h.convertToDeploymentInfo(d))
+		}
+	}
+	return deployments
+}
+
+// filterDeploymentsByName 按名稱過濾 Deployment 列表
+func filterDeploymentsByName(deployments []DeploymentInfo, search string) []DeploymentInfo {
+	if search == "" {
+		return deployments
+	}
+	searchLower := strings.ToLower(search)
+	var filtered []DeploymentInfo
+	for _, dep := range deployments {
+		if strings.Contains(strings.ToLower(dep.Name), searchLower) {
+			filtered = append(filtered, dep)
+		}
+	}
+	return filtered
+}
+
 // ListDeployments 获取Deployment列表
 func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	clusterId := c.Param("clusterID")
@@ -77,7 +118,6 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 
 	logger.Info("获取Deployment列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
 
-	// 获取集群信息
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
 		response.BadRequest(c, "无效的集群ID")
@@ -92,68 +132,31 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 确保 informer 缓存就绪
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
 		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
 		return
 	}
 
-	// 检查命名空间权限
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
 		middleware.ForbiddenNS(c, nsInfo)
 		return
 	}
 
-	var deployments []DeploymentInfo
-	sel := labels.Everything()
+	deployments := h.fetchDeploymentsFromCache(cluster.ID, namespace)
 
-	// 从Informer缓存读取
-	if namespace != "" {
-		deps, err := h.k8sMgr.DeploymentsLister(cluster.ID).Deployments(namespace).List(sel)
-		if err != nil {
-			logger.Error("读取Deployment缓存失败", "error", err)
-		} else {
-			for _, d := range deps {
-				deployments = append(deployments, h.convertToDeploymentInfo(d))
-			}
-		}
-	} else {
-		deps, err := h.k8sMgr.DeploymentsLister(cluster.ID).List(sel)
-		if err != nil {
-			logger.Error("读取Deployment缓存失败", "error", err)
-		} else {
-			for _, d := range deps {
-				deployments = append(deployments, h.convertToDeploymentInfo(d))
-			}
-		}
-	}
-
-	// 根据命名空间权限过滤
 	if !nsInfo.HasAllAccess && namespace == "" {
 		deployments = middleware.FilterResourcesByNamespace(c, deployments, func(d DeploymentInfo) string {
 			return d.Namespace
 		})
 	}
 
-	// 搜索过滤
-	if searchName != "" {
-		var filtered []DeploymentInfo
-		searchLower := strings.ToLower(searchName)
-		for _, dep := range deployments {
-			if strings.Contains(strings.ToLower(dep.Name), searchLower) {
-				filtered = append(filtered, dep)
-			}
-		}
-		deployments = filtered
-	}
+	deployments = filterDeploymentsByName(deployments, searchName)
 
-	// 排序
 	sort.Slice(deployments, func(i, j int) bool {
 		return deployments[i].CreatedAt.After(deployments[j].CreatedAt)
 	})
 
-	// 分页
 	total := len(deployments)
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -163,9 +166,8 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	if end > total {
 		end = total
 	}
-	pagedDeployments := deployments[start:end]
 
-	response.PagedList(c, pagedDeployments, int64(total), page, pageSize)
+	response.PagedList(c, deployments[start:end], int64(total), page, pageSize)
 }
 
 // GetDeployment 获取Deployment详情

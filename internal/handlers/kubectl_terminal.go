@@ -68,8 +68,8 @@ func NewKubectlTerminalHandler(clusterService *services.ClusterService, auditSer
 				}
 				return middleware.IsOriginAllowed(origin)
 			},
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			ReadBufferSize:  wsBufferSize,
+			WriteBufferSize: wsBufferSize,
 		},
 		sessions:      make(map[string]*KubectlSession),
 		sessionsMutex: sync.RWMutex{},
@@ -345,7 +345,7 @@ func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, 
 
 		// 读取标准输出
 		go func() {
-			buffer := make([]byte, 1024)
+			buffer := make([]byte, wsBufferSize)
 			for {
 				n, err := stdout.Read(buffer)
 				if n > 0 {
@@ -359,7 +359,7 @@ func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, 
 
 		// 读取标准错误
 		go func() {
-			buffer := make([]byte, 1024)
+			buffer := make([]byte, wsBufferSize)
 			for {
 				n, err := stderr.Read(buffer)
 				if n > 0 {

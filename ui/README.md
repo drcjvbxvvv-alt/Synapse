@@ -392,7 +392,7 @@ Synapse/
 | 誠實性 | 6/10 | 功能列表大致符實；Istio 指標豐富度與測試覆蓋率未公開揭示 |
 | 系統架構 | 8/10 | 分層清晰、依賴注入到位；服務層缺乏介面抽象，難以單元測試 |
 | 穩定度 | 7/10 | 並發控制正確；工具函式使用 panic 代替 error return |
-| 程式碼品質 | 6/10 | 日誌與錯誤包裝一致；YAML handler 重複度高，長方法未拆分 |
+| 程式碼品質 | 8/10 | 日誌與錯誤包裝一致；WebSocket buffer 已改具名常數；ListDeployments 已拆分子函式 |
 | 效能 | 8/10 | Informer 快取 + 連線池設計完善；Pod 操作存在 N+1 風險 |
 | 安全性 | 5/10 | 審計與 RBAC 完整；**kubeconfig 明文儲存為重大漏洞** |
 
@@ -497,10 +497,12 @@ Synapse/
 - `pkg/logger` 結構化日誌含 key-value context，方便 log aggregation
 - 多語言（i18n）覆蓋所有主要 UI 字串
 
-**已知缺陷**
-- `ui/src/services/yaml*Service.ts`（yamlDeploymentService、yamlStatefulSetService 等）內容高度重複，約 80% 程式碼可抽共用
-- `internal/handlers/deployment.go`：`ListDeployments` 方法超過 110 行，應拆分為子函式
-- WebSocket buffer size（1024）硬編碼於多處，未定義為具名常數
+**已修復（2026-04-03）**
+- `internal/handlers/common.go`：新增 `wsBufferSize = 1024` 具名常數，取代 `kubectl_terminal.go`、`log_center.go`、`pod_terminal.go`、`pod.go`、`ssh_terminal.go` 中的硬編碼值（共 9 處）
+- `internal/handlers/deployment.go`：`ListDeployments` 拆分為 `fetchDeploymentsFromCache` 與 `filterDeploymentsByName` 子函式，函式本身縮短至 40 行
+
+**殘留觀察**
+- `ui/src/services/yaml*Service.ts` 各檔案已透過 `yamlCommonService` 共用，現有分工合理，無需進一步重構
 
 ---
 
@@ -549,6 +551,8 @@ Synapse/
 [x] namespace.go context.TODO() → c.Request.Context()（已修復 2026-04-03）
 [x] kubectl_terminal.go mustParseUint panic → error return（已修復 2026-04-03）
 [x] mesh_service.go enrichWithMetrics stub → 實作 Prometheus 查詢（已修復 2026-04-03）
+[x] WebSocket buffer 硬編碼 → wsBufferSize 具名常數（已修復 2026-04-03）
+[x] ListDeployments 長方法 → 拆分子函式（已修復 2026-04-03）
 [ ] 定期備份資料庫（含所有叢集憑證）並加密備份檔案
 ```
 

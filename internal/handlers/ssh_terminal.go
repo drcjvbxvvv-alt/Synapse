@@ -394,7 +394,7 @@ func (h *SSHHandler) createSSHConnection(config *SSHConfig) (*ssh.Client, *ssh.S
 func (h *SSHHandler) readSSHOutput(conn *websocket.Conn, stdout, stderr io.Reader, session *SSHSession) {
 	// 读取stdout
 	go func() {
-		buffer := make([]byte, 1024)
+		buffer := make([]byte, wsBufferSize)
 		for {
 			n, err := stdout.Read(buffer)
 			if err != nil {
@@ -425,7 +425,7 @@ func (h *SSHHandler) readSSHOutput(conn *websocket.Conn, stdout, stderr io.Reade
 
 	// 读取stderr
 	go func() {
-		buffer := make([]byte, 1024)
+		buffer := make([]byte, wsBufferSize)
 		for {
 			n, err := stderr.Read(buffer)
 			if err != nil {

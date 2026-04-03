@@ -51,8 +51,8 @@ func NewPodHandler(db *gorm.DB, cfg *config.Config, clusterService *services.Clu
 				}
 				return middleware.IsOriginAllowed(origin)
 			},
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			ReadBufferSize:  wsBufferSize,
+			WriteBufferSize: wsBufferSize,
 		},
 	}
 }
