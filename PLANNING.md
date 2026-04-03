@@ -1,6 +1,6 @@
 # Synapse 系統規劃書
 
-> 版本：v1.3 | 日期：2026-04-02 | 狀態：進行中
+> 版本：v1.4 | 日期：2026-04-03 | 狀態：進行中
 > 已完成項目請見 [COMPLETED.md](./COMPLETED.md)
 
 ---
@@ -82,60 +82,13 @@ Synapse 是以 Go 1.25（Gin）+ React 19（Ant Design）構建的企業級 Kube
 
 ## 4. 待實作優化
 
-### 4.1 後端效能
-
-| 優化項目 | 現況 | 方案 |
-|---------|------|------|
-| K8s Client 連線池 | 預設值 | `MaxIdleConnsPerHost=100`，`Timeout=30s` |
-| 閒置叢集資源回收 | 無 | 超過 N 分鐘無請求的叢集 Informer 暫停 |
-| 資料庫索引 | 未審查 | 操作日誌：`(user_id, created_at)`；叢集資源：`(cluster_id, namespace)` |
-| 日誌表分區 | 無分區 | MySQL 按月 PARTITION BY RANGE；保留 90 天 Cron job |
-
-### 4.2 前端效能
-
-| 優化項目 | 現況 | 方案 |
-|---------|------|------|
-| Bundle 大小 | 未審查 | Monaco Editor、xterm.js 改為動態載入 |
-| WebSocket 重連 | 基本實作 | 自動重連 + 指數退避，統一 WebSocket hook |
-| 錯誤邊界 | ErrorBoundary 存在 | 每個功能區塊獨立 ErrorBoundary |
+> **所有效能優化已於 2026-04-03 完成。** 詳細說明見 [COMPLETED.md](./COMPLETED.md#6-已完成效能優化)。
 
 ---
 
 ## 5. 待實作功能
 
-### 5.1 NetworkPolicy 拓撲內聯編輯 + 策略模擬（M11，2 週）
-
-> **現況：** 拓撲圖（ReactFlow）和建立精靈已完成。待實作：點選連線修改現有規則 + YAML 即時預覽 + 策略模擬。
-
-**待實作任務：**
-
-| 任務 | 檔案 | 週次 |
-|------|------|------|
-| 拓撲圖「編輯模式」：點選現有連線修改 port/protocol | `NetworkPolicyTopology.tsx`（擴充） | W1 |
-| 規則邊 Modal（點選連線 → 修改 ports / protocol / peer） | `NetworkPolicyEdgeModal.tsx`（新增） | W1 |
-| YAML 預覽面板（編輯後即時顯示生成的 NetworkPolicy YAML） | `NetworkPolicyTopology.tsx` | W1 |
-| 策略模擬後端（NP selector matching 引擎，自實作） | `internal/handlers/networkpolicy.go`（擴充） | W1–W2 |
-| 策略模擬前端（來源/目標 label + port → ALLOW/DENY + 決策路徑） | `NetworkPolicySimulator.tsx`（新增） | W2 |
-| 三語 i18n | — | W2 |
-
-**新增 API：**
-```
-POST /clusters/:id/networkpolicies/simulate
-  Body: { fromPodLabels: {}, toPodLabels: {}, port: 80, protocol: "TCP" }
-  Response: { allowed: bool, reason: string, matchedPolicies: [], path: [] }
-```
-
-**模擬引擎邏輯（自實作，無外部依賴）：**
-```
-1. 取得叢集所有 NetworkPolicy
-2. 找出目標 Pod（toPodLabels selector matching）
-3. 無 NP 選中目標 → default allow，回傳 ALLOW
-4. 逐條 ingress rule 評估 peer + port
-5. 有匹配 → ALLOW；無匹配 → DENY（NP 存在時 default deny）
-6. 同理評估 egress
-```
-
-**完成指標：** 可在拓撲圖點選連線修改 port 並看到 YAML 即時更新；輸入來源/目標 Pod 標籤後正確顯示 ALLOW/DENY 及決策規則。
+> **M11 已於 2026-04-03 完成。** 詳細說明見 [COMPLETED.md](./COMPLETED.md#m11networkpolicy-拓撲內聯編輯--策略模擬--2026-04-03)。
 
 ---
 
@@ -174,37 +127,7 @@ type SyncPolicy struct {
 
 ---
 
-### 5.3 Service Mesh 視覺化（M12，5 週）
-
-> **目標：** 為已安裝 Istio 的叢集提供服務依賴拓撲圖、即時流量指標視覺化，以及 VirtualService/DestinationRule 的友善管理介面。未安裝 Istio 時優雅降級。
-
-**待實作任務：**
-
-| 任務 | 檔案 | 週次 |
-|------|------|------|
-| Istio 偵測 + Prometheus 查詢（RPS/錯誤率/P99） | `internal/services/mesh_service.go` | W1 |
-| Topology API + 靜態推斷 fallback | `internal/handlers/mesh.go` | W1–W2 |
-| VirtualService / DestinationRule CRUD API | `internal/handlers/mesh.go` | W2 |
-| 前端服務拓撲圖（ReactFlow，節點顏色/邊粗細代表指標） | `ServiceTopologyGraph.tsx` | W3 |
-| 前端 VS 流量比例表單（金絲雀發布場景） | `VirtualServiceForm.tsx` | W3–W4 |
-| 前端 DR 熔斷設定表單 | `DestinationRuleList.tsx` | W4 |
-| 未安裝 Istio 時降級提示 UI | `ServiceMeshTab.tsx` | W4 |
-| 三語 i18n | — | W5 |
-
-**新增 API：**
-```
-GET  /clusters/:id/service-mesh/status
-GET  /clusters/:id/service-mesh/topology?namespace=&timeRange=5m
-GET/POST/PUT/DELETE /clusters/:id/service-mesh/virtual-services
-GET/POST/PUT/DELETE /clusters/:id/service-mesh/destination-rules
-```
-
-**Prometheus 查詢：**
-```go
-queryRPS    := `sum(rate(istio_requests_total[5m])) by (source_workload, destination_workload, destination_service_namespace)`
-queryErrors := `sum(rate(istio_requests_total{response_code=~"5.."}[5m])) by (...)`
-queryP99    := `histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket[5m])) by (le, ...))`
-```
+> **M12 已於 2026-04-03 完成。** 詳細說明見 [COMPLETED.md](./COMPLETED.md#m12service-mesh-視覺化istio-2026-04-03)。
 
 ---
 
@@ -256,27 +179,22 @@ queryP99    := `histogram_quantile(0.99, sum(rate(istio_request_duration_millise
 | M8 | **多叢集工作流程** | 🔲 待實作 | 🟢 低 | 5 週 |
 | M9 | 合規性與安全掃描 | ✅ 已完成 | — | — |
 | M10 | ~~備份匯出 + CLI 工具~~ → Velero 附加（M16 後）+ CLI（M16 後重新規劃） | ⏸ 延後 | 低 | 重新評估 |
-| M11 | **NetworkPolicy 拓撲內聯編輯 + 策略模擬** | 🔲 待實作 | 🟡 中 | 2 週 |
-| M12 | **Service Mesh 視覺化（Istio）** | 🔲 待實作 | 🟡 中 | 5 週 |
+| M11 | NetworkPolicy 拓撲內聯編輯 + 策略模擬 | ✅ 已完成 | — | — |
+| M12 | Service Mesh 視覺化（Istio） | ✅ 已完成 | — | — |
 | M13 | **原生 CI Pipeline 引擎** | 🔲 待實作 | 🔴 高 | 8 週 |
 | M14 | **Git 整合 + Webhook 觸發** | 🔲 待實作 | 🔴 高 | 4 週 |
 | M15 | **映像 Registry 整合** | 🔲 待實作 | 🟡 中 | 3 週 |
 | M16 | **原生輕量 GitOps** | 🔲 待實作 | 🟡 中 | 6 週 |
 | M17 | **環境管理 + Promotion 流水線** | 🔲 待實作 | 🟢 低 | 5 週 |
 
-**待實作總估計：約 38 週（M8 + M11–M17）**
+**待實作總估計：約 31 週（M8 + M13–M17）**
 
 ### 建議實作順序
 
 ```
 現在（管理平台）
-    │
-    ▼
-M11 NetworkPolicy 模擬（2 週，建立於已有 ReactFlow 基礎，ROI 高）
-    │
-    ▼
-M12 Service Mesh（5 週，Istio 拓撲 + 流量管理，依賴 ReactFlow）
-    │
+    │ M11 ✅ NetworkPolicy 模擬
+    │ M12 ✅ Service Mesh 視覺化
     ▼
 M13 CI Pipeline 引擎（8 週，最大缺口，平台演進關鍵）
     │

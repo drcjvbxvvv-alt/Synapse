@@ -122,7 +122,7 @@ const AppContent: React.FC = () => {
                 </PermissionGuard>
               } />
               <Route path="clusters/import" element={<ClusterImport />} />
-              <Route path="clusters/:id/terminal" element={<KubectlTerminalPage  />} />
+              <Route path="clusters/:id/terminal" element={<ErrorBoundary fallbackType="section"><KubectlTerminalPage /></ErrorBoundary>} />
               {/* 节点管理 - 需要运维权限 */}
               <Route path="clusters/:clusterId/nodes" element={
                 <PermissionGuard requiredPermission="ops">
@@ -139,14 +139,14 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/pods" element={<PodList />} />
               <Route path="clusters/:clusterId/pods/:namespace/:name" element={<PodDetail />} />
               <Route path="clusters/:clusterId/pods/:namespace/:name/logs" element={<PodLogs />} />
-              <Route path="clusters/:clusterId/pods/:namespace/:name/terminal" element={<PodTerminal />} />
+              <Route path="clusters/:clusterId/pods/:namespace/:name/terminal" element={<ErrorBoundary fallbackType="section"><PodTerminal /></ErrorBoundary>} />
               <Route path="clusters/:clusterId/workloads" element={<WorkloadList />} />
               <Route path="clusters/:clusterId/workloads/create" element={<DeploymentCreate />} />
               <Route path="clusters/:clusterId/workloads/deployment/:namespace/:name" element={<DeploymentDetail />} />
               <Route path="clusters/:clusterId/workloads/rollout/:namespace/:name" element={<RolloutDetail />} />
               <Route path="clusters/:clusterId/workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
               <Route path="clusters/:clusterId/workloads/:namespace/:name" element={<WorkloadDetail />} />
-              <Route path="clusters/:clusterId/yaml/apply" element={<YAMLEditor />} />
+              <Route path="clusters/:clusterId/yaml/apply" element={<ErrorBoundary fallbackType="section"><YAMLEditor /></ErrorBoundary>} />
               <Route path="workloads" element={<WorkloadList />} />
               <Route path="workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
               <Route path="search" element={<GlobalSearch />} />
@@ -172,10 +172,10 @@ const AppContent: React.FC = () => {
               {/* 告警中心路由 */}
               <Route path="clusters/:clusterId/alerts" element={<AlertCenter />} />
               {/* 日志中心路由 */}
-              <Route path="clusters/:clusterId/logs" element={<LogCenter />} />
-              <Route path="clusters/:clusterId/logs/events" element={<EventLogs />} />
+              <Route path="clusters/:clusterId/logs" element={<ErrorBoundary fallbackType="section"><LogCenter /></ErrorBoundary>} />
+              <Route path="clusters/:clusterId/logs/events" element={<ErrorBoundary fallbackType="section"><EventLogs /></ErrorBoundary>} />
               {/* 监控中心路由 */}
-              <Route path="clusters/:clusterId/monitoring" element={<MonitoringCenter />} />
+              <Route path="clusters/:clusterId/monitoring" element={<ErrorBoundary fallbackType="section"><MonitoringCenter /></ErrorBoundary>} />
               {/* ArgoCD 应用管理路由 - 需要运维权限 */}
               <Route path="clusters/:clusterId/plugins" element={
                 <PermissionGuard requiredPermission="ops">

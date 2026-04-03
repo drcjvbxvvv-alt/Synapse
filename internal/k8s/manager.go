@@ -26,9 +26,10 @@ import (
 )
 
 type ClusterRuntime struct {
-	k8sClient *services.K8sClient // 缓存的 K8sClient（包含 clientset 和 rest.Config）
-	clientset *kubernetes.Clientset
-	factory   informers.SharedInformerFactory
+	k8sClient    *services.K8sClient // 缓存的 K8sClient（包含 clientset 和 rest.Config）
+	clientset    *kubernetes.Clientset
+	factory      informers.SharedInformerFactory
+	lastAccessAt time.Time // 最後存取時間，用於閒置 GC
 
 	startOnce sync.Once
 	started   bool
@@ -74,6 +75,7 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	defer m.mu.Unlock()
 
 	if rt, ok := m.clusters[cluster.ID]; ok {
+		rt.lastAccessAt = time.Now()
 		return rt, nil
 	}
 
@@ -88,10 +90,11 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 
 	rt := &ClusterRuntime{
-		k8sClient: kc,
-		clientset: clientset,
-		factory:   factory,
-		stopCh:    make(chan struct{}),
+		k8sClient:    kc,
+		clientset:    clientset,
+		factory:      factory,
+		stopCh:       make(chan struct{}),
+		lastAccessAt: time.Now(),
 	}
 
 	// 预创建需要的 informer（pods/nodes/ns/services/deployments）
@@ -422,6 +425,26 @@ func (m *ClusterInformerManager) GetK8sClientByID(clusterID uint) *services.K8sC
 		return rt.k8sClient
 	}
 	return nil
+}
+
+// StartGC 啟動閒置叢集資源回收 Goroutine；interval 為掃描週期，maxIdle 為最大閒置時長
+func (m *ClusterInformerManager) StartGC(interval, maxIdle time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for range ticker.C {
+			m.mu.Lock()
+			now := time.Now()
+			for id, rt := range m.clusters {
+				if now.Sub(rt.lastAccessAt) > maxIdle {
+					logger.Info("GC：停止閒置叢集 informer", "clusterID", id, "idleDuration", now.Sub(rt.lastAccessAt))
+					rt.stopOnce.Do(func() { close(rt.stopCh) })
+					delete(m.clusters, id)
+				}
+			}
+			m.mu.Unlock()
+		}
+	}()
 }
 
 // StopForCluster 停止指定集群的 informer（删除集群时调用）

@@ -105,6 +105,20 @@ export interface WizardValidateResponse {
   yaml?: string;
 }
 
+export interface SimulateRequest {
+  namespace: string;
+  fromPodLabels: Record<string, string>;
+  toPodLabels: Record<string, string>;
+  port: number;
+  protocol: string;
+}
+
+export interface SimulateResult {
+  allowed: boolean;
+  reason: string;
+  matchedPolicies: string[];
+}
+
 export class NetworkPolicyService {
   static async list(
     clusterId: string,
@@ -156,5 +170,9 @@ export class NetworkPolicyService {
 
   static async wizardValidate(clusterId: string, req: WizardValidateRequest): Promise<ApiResponse<WizardValidateResponse>> {
     return request.post(`/clusters/${clusterId}/networkpolicies/wizard-validate`, req);
+  }
+
+  static async simulate(clusterId: string, req: SimulateRequest): Promise<ApiResponse<SimulateResult>> {
+    return request.post(`/clusters/${clusterId}/networkpolicies/simulate`, req);
   }
 }

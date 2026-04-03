@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math"
+	"net/http"
 	"strings"
 	"time"
 
@@ -34,6 +35,14 @@ type ClusterInfo struct {
 	CanAccessServices bool   `json:"canAccessServices,omitempty"`
 }
 
+// connPoolTransport 為 K8s REST client 注入連線池設定
+func connPoolTransport(rt http.RoundTripper) http.RoundTripper {
+	if t, ok := rt.(*http.Transport); ok {
+		t.MaxIdleConnsPerHost = 100
+	}
+	return rt
+}
+
 // NewK8sClientFromKubeconfig 从kubeconfig创建客户端
 func NewK8sClientFromKubeconfig(kubeconfig string) (*K8sClient, error) {
 	config, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
@@ -41,8 +50,11 @@ func NewK8sClientFromKubeconfig(kubeconfig string) (*K8sClient, error) {
 		return nil, fmt.Errorf("解析kubeconfig失败: %v", err)
 	}
 
-	// 设置超时时间
+	// 設置超時、QPS/Burst 與連線池
 	config.Timeout = 30 * time.Second
+	config.QPS = 100
+	config.Burst = 200
+	config.WrapTransport = connPoolTransport
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -65,10 +77,13 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 	config := &rest.Config{
 		Host:        apiServer,
 		BearerToken: token,
-		Timeout:     30 * time.Second, // 增加超时时间
+		Timeout:     30 * time.Second,
+		QPS:         100,
+		Burst:       200,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: true, // 默认跳过TLS验证，避免证书问题
 		},
+		WrapTransport: connPoolTransport,
 	}
 
 	// 如果提供了CA证书，尝试使用它

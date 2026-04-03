@@ -299,6 +299,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				nps.GET("/topology", npHandler.GetTopology)
 				nps.GET("/conflicts", npHandler.GetConflicts)
 				nps.POST("/wizard-validate", npHandler.WizardValidate)
+				nps.POST("/simulate", npHandler.SimulateNetworkPolicy)
 				nps.GET("/:namespace/:name", npHandler.GetNetworkPolicy)
 				nps.PUT("/:namespace/:name", npHandler.UpdateNetworkPolicy)
 				nps.GET("/:namespace/:name/yaml", npHandler.GetNetworkPolicyYAML)
@@ -497,6 +498,25 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			// Port-Forward（per-pod）（§8.3 Phase D）
 			pfHandler := handlers.NewPortForwardHandler(d.db, d.clusterSvc, d.k8sMgr)
 			cluster.POST("/pods/:namespace/:name/portforward", pfHandler.StartPortForward)
+
+			// Service Mesh（Istio）
+			meshSvc := services.NewMeshService(d.prometheusSvc, d.monitoringCfgSvc)
+			meshHandler := handlers.NewMeshHandler(d.clusterSvc, d.k8sMgr, meshSvc)
+			mesh := cluster.Group("/service-mesh")
+			{
+				mesh.GET("/status", meshHandler.GetStatus)
+				mesh.GET("/topology", meshHandler.GetTopology)
+				mesh.GET("/virtual-services", meshHandler.ListVirtualServices)
+				mesh.POST("/virtual-services", meshHandler.CreateVirtualService)
+				mesh.GET("/virtual-services/:namespace/:name", meshHandler.GetVirtualService)
+				mesh.PUT("/virtual-services/:namespace/:name", meshHandler.UpdateVirtualService)
+				mesh.DELETE("/virtual-services/:namespace/:name", meshHandler.DeleteVirtualService)
+				mesh.GET("/destination-rules", meshHandler.ListDestinationRules)
+				mesh.POST("/destination-rules", meshHandler.CreateDestinationRule)
+				mesh.GET("/destination-rules/:namespace/:name", meshHandler.GetDestinationRule)
+				mesh.PUT("/destination-rules/:namespace/:name", meshHandler.UpdateDestinationRule)
+				mesh.DELETE("/destination-rules/:namespace/:name", meshHandler.DeleteDestinationRule)
+			}
 		}
 	}
 }

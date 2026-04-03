@@ -23,6 +23,7 @@ import {
   UnorderedListOutlined,
   ApartmentOutlined,
   ToolOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { TablePaginationConfig } from 'antd/es/table';
@@ -30,6 +31,7 @@ import MonacoEditor from '@monaco-editor/react';
 import { NetworkPolicyService, type NetworkPolicyInfo } from '../../services/networkPolicyService';
 import NetworkPolicyTopology from './NetworkPolicyTopology';
 import NetworkPolicyWizard from './NetworkPolicyWizard';
+import NetworkPolicySimulator from './NetworkPolicySimulator';
 import { namespaceService } from '../../services/namespaceService';
 
 const { Text } = Typography;
@@ -74,7 +76,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
   const { t } = useTranslation(['network', 'common']);
   const { message, modal } = App.useApp();
 
-  const [viewMode, setViewMode] = useState<'list' | 'topology'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'topology' | 'simulate'>('list');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [policies, setPolicies] = useState<NetworkPolicyInfo[]>([]);
@@ -300,10 +302,11 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Segmented
           value={viewMode}
-          onChange={v => setViewMode(v as 'list' | 'topology')}
+          onChange={v => setViewMode(v as 'list' | 'topology' | 'simulate')}
           options={[
             { value: 'list', label: '列表', icon: <UnorderedListOutlined /> },
             { value: 'topology', label: '拓撲圖', icon: <ApartmentOutlined /> },
+            { value: 'simulate', label: '策略模擬', icon: <SafetyCertificateOutlined /> },
           ]}
         />
         <Button icon={<ToolOutlined />} onClick={() => setWizardOpen(true)}>
@@ -314,6 +317,11 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
       {/* 拓撲視圖 */}
       {viewMode === 'topology' && (
         <NetworkPolicyTopology clusterId={clusterId} namespaces={namespaces} />
+      )}
+
+      {/* 策略模擬視圖 */}
+      {viewMode === 'simulate' && (
+        <NetworkPolicySimulator clusterId={clusterId} namespaces={namespaces} />
       )}
 
       {/* 列表視圖 */}

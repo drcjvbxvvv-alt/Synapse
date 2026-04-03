@@ -8,8 +8,8 @@ type OperationLog struct {
 	ID uint `json:"id" gorm:"primaryKey"`
 
 	// 操作者信息
-	UserID   *uint  `json:"user_id" gorm:"index"`           // 可为空（如登录失败场景）
-	Username string `json:"username" gorm:"size:100;index"` // 冗余存储，便于查询
+	UserID   *uint  `json:"user_id" gorm:"index:idx_op_user_time"` // 複合索引（user_id, created_at）
+	Username string `json:"username" gorm:"size:100;index"`        // 冗余存储，便于查询
 
 	// 请求信息
 	Method string `json:"method" gorm:"size:10;index"` // POST/PUT/DELETE/PATCH
@@ -41,7 +41,7 @@ type OperationLog struct {
 
 	// 其他
 	Duration  int64     `json:"duration"` // 请求耗时(ms)
-	CreatedAt time.Time `json:"created_at" gorm:"index"`
+	CreatedAt time.Time `json:"created_at" gorm:"index:idx_op_user_time"`
 }
 
 // TableName 指定表名

@@ -1,6 +1,6 @@
 # Synapse 已完成計劃記錄
 
-> 版本：v1.3 | 最後更新：2026-04-02
+> 版本：v1.4 | 最後更新：2026-04-03
 > 本文件記錄所有已完成或已決策的規劃項目，供歷史參考。
 > 進行中項目請見 [PLANNING.md](./PLANNING.md)
 
@@ -13,6 +13,7 @@
 3. [已修復缺陷](#3-已修復缺陷)
 4. [已決策（不實作）](#4-已決策不實作)
 5. [已完成新功能規劃](#5-已完成新功能規劃)
+6. [已完成效能優化](#6-已完成效能優化2026-04-03)
 
 ---
 
@@ -231,3 +232,50 @@ Release 列表、安裝/升級/回滾/刪除、Chart Repository 管理、Values 
 ### §5.8 合規性與安全掃描 → ✅ M9 完成
 
 Trivy 映像掃描、kube-bench CIS 基準、Gatekeeper 違規統計。
+
+### M11：NetworkPolicy 拓撲內聯編輯 + 策略模擬 → ✅（2026-04-03）
+
+**後端（`internal/handlers/networkpolicy.go`）：**
+- 新增 `SimulateNetworkPolicy` handler（`POST /clusters/:id/networkpolicies/simulate`）
+- 自實作 NP selector matching 引擎（`simulateTraffic`、`labelsMatch`、`portMatches`、`peerMatches`）
+- 支援 ingress 規則評估：找出受控目標 Pod → 逐條 rule 比對 peer + port → ALLOW/DENY + 決策路徑
+
+**前端：**
+- `ui/src/pages/network/NetworkPolicySimulator.tsx`（新增）：來源/目標 Pod 標籤 + port + protocol → 顯示 ALLOW/DENY + 匹配策略名稱
+- `ui/src/services/networkPolicyService.ts`：新增 `SimulateRequest`、`SimulateResult`、`simulate()` 方法
+- `ui/src/pages/network/NetworkPolicyTab.tsx`：Segmented 新增「策略模擬」第三頁籤
+
+### M12：Service Mesh 視覺化（Istio）→ ✅（2026-04-03）
+
+**後端：**
+- `internal/services/mesh_service.go`（新增）：Istio 偵測（istio-system NS + istiod Pod）、拓撲建構（K8s Services + Prometheus 最佳努力）、VirtualService / DestinationRule CRUD via dynamic client（`networking.istio.io/v1beta1`）
+- `internal/handlers/mesh.go`（新增）：`MeshHandler`，12 個 endpoint，Istio 未安裝時優雅降級（回傳 `installed: false`，空列表）
+- `internal/router/routes_cluster.go`：新增 12 條 `/service-mesh/*` 路由
+
+**前端：**
+- `ui/src/services/meshService.ts`（新增）：MeshService API client
+- `ui/src/pages/network/ServiceTopologyGraph.tsx`（新增）：ReactFlow + dagre 拓撲圖，節點顏色依錯誤率（綠<1%、黃1-5%、紅>5%），邊粗細依 RPS
+- `ui/src/pages/network/VirtualServiceForm.tsx`（新增）：金絲雀流量分配 Modal（subset 名稱 + 權重%，驗證總和=100）
+- `ui/src/pages/network/DestinationRuleList.tsx`（新增）：DestinationRule 列表 + 建立 Modal（連線池 + 熔斷設定）
+- `ui/src/pages/network/ServiceMeshTab.tsx`（新增）：Istio 未安裝時顯示提示卡；已安裝時顯示三子頁籤（服務拓撲 / VirtualService / DestinationRule）
+- `ui/src/pages/network/NetworkList.tsx`：新增第四個頁籤「Service Mesh」
+
+---
+
+## 6. 已完成效能優化（2026-04-03）
+
+### 6.1 後端效能優化
+
+| 優化項目 | 實作方式 | 主要檔案 |
+|---------|---------|---------|
+| K8s Client 連線池 | `QPS=100`、`Burst=200`、`WrapTransport` 注入 `MaxIdleConnsPerHost=100` | `internal/services/k8s_client.go` |
+| 閒置叢集資源回收 | `ClusterRuntime.lastAccessAt` + `StartGC(30m, 2h)` 後台 Goroutine | `internal/k8s/manager.go` |
+| 資料庫複合索引 | `OperationLog.(user_id, created_at)` 複合索引 `idx_op_user_time` | `internal/models/operation_log.go` |
+| 日誌保留策略 | `LogRetentionWorker`：每日 00:05 UTC 刪除 90 天前記錄 | `internal/services/log_retention.go` |
+
+### 6.2 前端效能優化
+
+| 優化項目 | 實作方式 | 主要檔案 |
+|---------|---------|---------|
+| WebSocket 重連 hook | `useWebSocket` + 指數退避（baseDelay×2^n，上限 30s）、最大 10 次重試 | `ui/src/hooks/useWebSocket.ts` |
+| 錯誤邊界細化 | Terminal、YAML Editor、Log/Event/Monitoring Center 各套 `<ErrorBoundary mode="section">` | `ui/src/App.tsx` |

@@ -378,6 +378,169 @@ Synapse/
 
 ---
 
+## 系統分析報告
+
+> 本節為對 Synapse 程式庫的深度技術審查，涵蓋可靠度、實用性、架構、安全性等九個維度，基於實際原始碼分析，誠實呈現優勢與已知缺陷。
+
+### 總覽評分
+
+| 維度 | 評分 | 核心結論 |
+|------|------|----------|
+| 可靠度 | 7/10 | 主路徑錯誤處理完整；Runbooks 載入失敗會 panic 崩潰整個服務 |
+| 實用性 | 8/10 | 涵蓋 90% 日常 K8s 操作；Mesh 指標與部分成本計算為 stub |
+| 可用性 | 7/10 | API 回應格式一致；TLS 預設跳過驗證未在 UI 警示 |
+| 誠實性 | 6/10 | 功能列表大致符實；Istio 指標豐富度與測試覆蓋率未公開揭示 |
+| 系統架構 | 8/10 | 分層清晰、依賴注入到位；服務層缺乏介面抽象，難以單元測試 |
+| 穩定度 | 7/10 | 並發控制正確；工具函式使用 panic 代替 error return |
+| 程式碼品質 | 6/10 | 日誌與錯誤包裝一致；YAML handler 重複度高，長方法未拆分 |
+| 效能 | 8/10 | Informer 快取 + 連線池設計完善；Pod 操作存在 N+1 風險 |
+| 安全性 | 5/10 | 審計與 RBAC 完整；**kubeconfig 明文儲存為重大漏洞** |
+
+---
+
+### 1. 可靠度 (Reliability)
+
+**優勢**
+- 所有 K8s 操作帶 `context.WithTimeout`（30 秒），防止無限等待（`internal/services/k8s_client.go`）
+- Informer 快取同步等待有 timeout 守衛（`internal/k8s/manager.go`）
+- Gin `Recovery()` middleware 兜住未預期 panic，避免服務中斷
+
+**已知缺陷**
+- `internal/runbooks/runbooks.go`：JSON 解析失敗直接呼叫 `panic()`，會讓整個程序崩潰，應改為 error return
+- `internal/services/mesh_service.go`：`enrichWithMetrics()` 為完整 stub，Istio RPS / 錯誤率 / P99 欄位永遠為 0，但呼叫端不知情
+- 部分 handler 同時記錄日誌又回傳錯誤，另一些則只做其中一件事，行為不一致
+
+---
+
+### 2. 實用性 (Practicality)
+
+**優勢**
+- Deployment / StatefulSet / DaemonSet / Job / CronJob / Argo Rollouts 完整覆蓋
+- Web Terminal（Pod exec、kubectl、SSH）、日誌串流、YAML 編輯器均已實作
+- AI 診斷整合 4 個 Provider，含敏感資料過濾
+
+**已知缺陷**
+- **成本分析**：`internal/services/cost_service.go` 有佔位符註解「實際實作需要 metrics-server API；此處為預留 placeholder」，部分成本數字可能為估算值
+- **Mesh 拓撲指標**：`MeshNode.RPS / ErrorRate / P99` 欄位已定義但永遠為零（`internal/services/mesh_service.go:enrichWithMetrics`）
+- **多處 `context.TODO()`**：`internal/handlers/namespace.go` 有 14 處 `context.TODO()`，生產環境應改為帶 deadline 的 context
+
+---
+
+### 3. 可用性 (Usability)
+
+**優勢**
+- 統一回應格式（`internal/response/` 模組），前端解析一致
+- WebSocket 重連採指數退避（`ui/src/hooks/useWebSocket.ts`），最大 10 次、上限 30 秒，防止連線風暴
+- RBAC 權限粒度細到命名空間級別
+
+**已知缺陷**
+- 403 錯誤僅顯示「無権存取」，不告知使用者實際可存取的命名空間範圍
+- `internal/services/k8s_client.go`：預設跳過 TLS 驗證（`InsecureSkipVerify: true`），介面上沒有任何提示，使用者可能不知道流量未受保護
+
+---
+
+### 4. 誠實性 (Honesty / Accuracy)
+
+**與實際相符之處**
+- 工作負載、儲存、設定、RBAC、AI、GitOps、Helm、CRD 功能均已實作，與 README 一致
+- 審計日誌、SIEM Webhook、Terminal 回放均有實際 handler 支撐
+
+**需要補充說明之處**
+- Service Mesh 拓撲的流量指標（RPS、P99、錯誤率）目前為預留欄位，資料未實際填入
+- 後端測試覆蓋率約 25%（47 個 handler 對應約 12 個測試檔），前端測試覆蓋率更低，有別於企業級平台通常的期待
+
+---
+
+### 5. 系統架構 (Architecture)
+
+**優勢**
+- Handler → Service → K8s Manager → client-go 分層清晰，無循環依賴
+- `Router.Setup()` 集中建立所有服務實例並注入，依賴關係明確（`internal/router/router.go`）
+- `ClusterInformerManager` 封裝 Informer 生命週期，含閒置 GC（2 小時），防止記憶體洩漏
+
+**已知缺陷**
+- 服務層均為具體型別，無介面定義，難以注入 mock 進行單元測試
+- 每個 handler 直接持有 `*gorm.DB`，無統一的 repository 層；跨表事務邊界不清晰
+- `internal/middleware/permission.go` 中硬編碼 `username == "admin"` 超級管理員邏輯，應改為基於 role 的設計
+
+---
+
+### 6. 穩定度與可靠性 (Stability)
+
+**優勢**
+- `ClusterInformerManager` 使用 `sync.RWMutex` 保護叢集 map，讀多寫少場景下效能與安全性兼顧
+- 閒置叢集 GC goroutine（`internal/k8s/manager.go`）防止長時間累積的資源洩漏
+- 所有背景 Worker（EventAlert、Cost、LogRetention）在 `Router.Setup()` 統一啟動，生命週期可管理
+
+**已知缺陷**
+- `internal/runbooks/runbooks.go` 的 `panic` 在服務啟動時若 Runbook JSON 格式有誤，會使整個程序崩潰
+- 高並發下無請求佇列保護：K8s client 的 QPS/Burst 設定（100/200）不足時，超出部分會直接回傳錯誤而非排隊等待
+
+---
+
+### 7. 程式碼品質 (Code Quality)
+
+**優勢**
+- `fmt.Errorf("...: %w", err)` 錯誤包裝模式全面使用，方便追蹤根源
+- `pkg/logger` 結構化日誌含 key-value context，方便 log aggregation
+- 多語言（i18n）覆蓋所有主要 UI 字串
+
+**已知缺陷**
+- `ui/src/services/yaml*Service.ts`（yamlDeploymentService、yamlStatefulSetService 等）內容高度重複，約 80% 程式碼可抽共用
+- `internal/handlers/deployment.go`：`ListDeployments` 方法超過 110 行，應拆分為子函式
+- WebSocket buffer size（1024）硬編碼於多處，未定義為具名常數
+
+---
+
+### 8. 效能與資源消耗 (Performance)
+
+**優勢**
+- K8s Informer 無週期性 resync（`resyncPeriod = 0`），避免不必要的記憶體寫入壓力
+- HTTP 連線池：`MaxIdleConnsPerHost = 100`（`internal/services/k8s_client.go`）
+- 所有列表 API 均有分頁（預設 pageSize=20），防止大型叢集回應過大
+- Gzip 壓縮套用於所有非 WebSocket 路由（`internal/router/router.go`）
+
+**已知缺陷**
+- Pod 相關操作可能觸發 N+1 問題：列出 Pod 後，再為每個 Pod 個別查詢 metrics/events
+- 全域搜尋為跨多叢集即時查詢，叢集數量多時延遲線性增長，無結果快取層
+- 啟動時 `GetAllClusters()` 將所有叢集資料載入記憶體（`internal/router/router.go`），叢集數量大時影響啟動速度
+
+---
+
+### 9. 安全性 (Security)
+
+**優勢**
+- JWT 驗證、RBAC 中介層、命名空間粒度權限控制完整
+- AI 查詢前自動過濾 PEM 憑證、Secret 值、含 `password/token/key` 的環境變數（`internal/services/ai_sanitizer.go`）
+- 操作稽核日誌覆蓋所有寫入操作，含使用者、資源、結果
+- 登入端點有 Rate Limiting（5次/分鐘，鎖定15分鐘）
+
+**重大風險（需在生產環境修復後才可部署）**
+
+> ⚠️ **CRITICAL**：`internal/handlers/cluster.go` 中的 kubeconfig、SA Token、CA 憑證在程式碼層面標記為待加密（TODO），目前以明文儲存於資料庫。任何能存取資料庫的人可取得所有叢集的完整憑證。
+
+> ⚠️ **HIGH**：`internal/services/k8s_client.go` 預設 `InsecureSkipVerify: true`，除非提供 CA 憑證，否則與 K8s API Server 的通訊不驗證憑證，易受中間人攻擊。
+
+**其他安全建議**
+- 定期輪換 `ENCRYPTION_KEY` 與 `JWT_SECRET`，並確保這兩個環境變數在生產環境中已設定
+- 考慮為 kubeconfig 加入欄位級加密（已有 `pkg/crypto` AES-256-GCM 套件，應在 GORM hooks 中啟用）
+
+---
+
+### 生產部署前必做清單
+
+```
+[ ] 確認 ENCRYPTION_KEY 已設定，且 kubeconfig 欄位加密已啟用
+[ ] 確認 JWT_SECRET 已設定（release 模式下系統會強制驗證）
+[ ] 評估是否為各叢集提供 CA 憑證以啟用 TLS 驗證
+[ ] 將 runbooks.go 的 panic 改為 error return
+[ ] 將 namespace.go 的 context.TODO() 改為帶 timeout 的 context
+[ ] 若使用 Mesh 拓撲，告知使用者 RPS/ErrorRate/P99 指標目前未實作
+[ ] 定期備份資料庫（含所有叢集憑證）並加密備份檔案
+```
+
+---
+
 ## 授權
 
 本專案以 MIT License 授權開源。

@@ -118,6 +118,13 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	costWorker := services.NewCostWorker(db, clusterSvc)
 	costWorker.Start()
 
+	// 啟動日誌保留清理工作器（預設保留 90 天）
+	logRetentionWorker := services.NewLogRetentionWorker(db, 0)
+	logRetentionWorker.Start()
+
+	// 啟動閒置叢集 GC（每 30 分鐘掃描，閒置超過 2 小時則停止 informer）
+	k8sMgr.StartGC(30*time.Minute, 2*time.Hour)
+
 	// /api/v1
 	api := r.Group("/api/v1")
 
