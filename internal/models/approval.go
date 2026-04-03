@@ -10,7 +10,7 @@ import (
 type NamespaceProtection struct {
 	gorm.Model
 	ClusterID       uint   `gorm:"not null;uniqueIndex:idx_ns_protection"`
-	Namespace       string `gorm:"not null;uniqueIndex:idx_ns_protection"`
+	Namespace       string `gorm:"type:varchar(253);not null;uniqueIndex:idx_ns_protection"`
 	RequireApproval bool   `gorm:"default:false"`
 	Description     string // 保護原因說明
 }
@@ -20,7 +20,7 @@ type ApprovalRequest struct {
 	gorm.Model
 	ClusterID     uint       `gorm:"not null;index"`
 	ClusterName   string     // 快取叢集名稱（便於跨叢集展示）
-	Namespace     string     `gorm:"not null;index"`
+	Namespace     string     `gorm:"type:varchar(253);not null;index"`
 	ResourceKind  string     `gorm:"not null"` // Deployment / StatefulSet / DaemonSet
 	ResourceName  string     `gorm:"not null"`
 	Action        string     `gorm:"not null"` // scale / delete / update / apply
