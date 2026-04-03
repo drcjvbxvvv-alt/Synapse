@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import kubernetesLogo from '../assets/kubernetes.png';
+import synapseIcon from '../assets/synapse-icon.svg';
 import {
   Layout,
   Menu,
@@ -690,10 +690,10 @@ const MainLayout: React.FC = () => {
               e.currentTarget.style.opacity = '1';
             }}
           >
-            <img 
-              src={kubernetesLogo} 
-              alt="Kubernetes" 
-              style={{ width: '32px', height: '32px', marginRight: 8 }} 
+            <img
+              src={synapseIcon}
+              alt="Synapse"
+              style={{ width: '32px', height: '32px', marginRight: 8 }}
             />
             <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff' }}>Synapse</span>
           </div>

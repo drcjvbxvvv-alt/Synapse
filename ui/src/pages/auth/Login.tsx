@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import kubernetesLogo from '../../assets/kubernetes.png';
+import synapseIcon from '../../assets/synapse-icon.svg';
 import {
   Form,
   Input,
@@ -149,7 +149,7 @@ const Login: React.FC = () => {
 
         <div className="login-brand-content">
           <div className="login-brand-logo">
-            <img src={kubernetesLogo} alt="" width={48} height={48} />
+            <img src={synapseIcon} alt="Synapse" width={48} height={48} />
             <span className="login-brand-logo-text">Synapse</span>
           </div>
 
