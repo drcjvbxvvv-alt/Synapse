@@ -393,7 +393,7 @@ Synapse/
 | 系統架構 | 8/10 | 分層清晰、依賴注入到位；服務層缺乏介面抽象，難以單元測試 |
 | 穩定度 | 7/10 | 並發控制正確；工具函式使用 panic 代替 error return |
 | 程式碼品質 | 8/10 | 日誌與錯誤包裝一致；WebSocket buffer 已改具名常數；ListDeployments 已拆分子函式 |
-| 效能 | 8/10 | Informer 快取 + 連線池設計完善；Pod 操作存在 N+1 風險 |
+| 效能 | 9/10 | Informer 快取 + 連線池設計完善；GlobalSearch 已並行化；啟動預熱已跳過 unhealthy 叢集 |
 | 安全性 | 5/10 | 審計與 RBAC 完整；**kubeconfig 明文儲存為重大漏洞** |
 
 ---
@@ -514,10 +514,12 @@ Synapse/
 - 所有列表 API 均有分頁（預設 pageSize=20），防止大型叢集回應過大
 - Gzip 壓縮套用於所有非 WebSocket 路由（`internal/router/router.go`）
 
-**已知缺陷**
-- Pod 相關操作可能觸發 N+1 問題：列出 Pod 後，再為每個 Pod 個別查詢 metrics/events
-- 全域搜尋為跨多叢集即時查詢，叢集數量多時延遲線性增長，無結果快取層
-- 啟動時 `GetAllClusters()` 將所有叢集資料載入記憶體（`internal/router/router.go`），叢集數量大時影響啟動速度
+**已修復（2026-04-03）**
+- `GlobalSearch` / `QuickSearch`：改為每叢集一個 goroutine 並行搜尋，消除 O(N) 串行延遲（`internal/handlers/search.go:searchClusterResources`）
+- 啟動 Informer 預熱：改用 `GetConnectableClusters()`（跳過 unhealthy 叢集）並以 goroutine 並行初始化（`internal/router/router.go`、`internal/services/cluster_service.go`）
+
+**殘留觀察**
+- Pod list handler 已使用 Informer 快取，無 K8s API N+1；Prometheus 指標為單 Pod detail query，屬預期模式
 
 ---
 
@@ -553,6 +555,8 @@ Synapse/
 [x] mesh_service.go enrichWithMetrics stub → 實作 Prometheus 查詢（已修復 2026-04-03）
 [x] WebSocket buffer 硬編碼 → wsBufferSize 具名常數（已修復 2026-04-03）
 [x] ListDeployments 長方法 → 拆分子函式（已修復 2026-04-03）
+[x] GlobalSearch 串行叢集查詢 → goroutine 並行化（已修復 2026-04-03）
+[x] 啟動 Informer 預熱：改用 GetConnectableClusters + 並行初始化（已修復 2026-04-03）
 [ ] 定期備份資料庫（含所有叢集憑證）並加密備份檔案
 ```
 

@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/gzip"
@@ -15,6 +16,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/handlers"
 	"github.com/clay-wangzhi/Synapse/internal/k8s"
 	"github.com/clay-wangzhi/Synapse/internal/middleware"
+	"github.com/clay-wangzhi/Synapse/internal/models"
 	"github.com/clay-wangzhi/Synapse/internal/response"
 	"github.com/clay-wangzhi/Synapse/internal/services"
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
@@ -96,18 +98,24 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	if cfg.K8s.InformerSyncTimeout > 0 {
 		k8sMgr.SetSyncTimeout(time.Duration(cfg.K8s.InformerSyncTimeout) * time.Second)
 	}
-	// 预热所有已存在集群的 Informer（后台执行，不阻塞启动）
+	// 預熱可連接叢集的 Informer（後台執行，不阻塞啟動；跳過 unhealthy 叢集，並行初始化）
 	go func() {
-		clusters, err := clusterSvc.GetAllClusters()
+		clusters, err := clusterSvc.GetConnectableClusters()
 		if err != nil {
 			logger.Error("预热 informer 失败", "error", err)
 			return
 		}
+		var wg sync.WaitGroup
 		for _, cl := range clusters {
-			if _, err := k8sMgr.EnsureForCluster(cl); err != nil {
-				logger.Error("初始化集群 informer 失败", "cluster", cl.Name, "error", err)
-			}
+			wg.Add(1)
+			go func(cl *models.Cluster) {
+				defer wg.Done()
+				if _, err := k8sMgr.EnsureForCluster(cl); err != nil {
+					logger.Warn("初始化集群 informer 失败，跳过", "cluster", cl.Name, "error", err)
+				}
+			}(cl)
 		}
+		wg.Wait()
 	}()
 
 	// 啟動 Event 告警工作器（後台週期掃描 K8s Events 並比對規則）

@@ -103,6 +103,16 @@ func (s *ClusterService) GetAllClusters() ([]*models.Cluster, error) {
 	return clusters, nil
 }
 
+// GetConnectableClusters 獲取可連接的叢集（排除 unhealthy 狀態），用於 Informer 預熱
+func (s *ClusterService) GetConnectableClusters() ([]*models.Cluster, error) {
+	var clusters []*models.Cluster
+	if err := s.db.Where("status != ?", "unhealthy").Find(&clusters).Error; err != nil {
+		logger.Error("获取可连接集群列表失败", "error", err)
+		return nil, fmt.Errorf("获取可连接集群列表失败: %w", err)
+	}
+	return clusters, nil
+}
+
 // UpdateClusterStatus 更新集群状态
 func (s *ClusterService) UpdateClusterStatus(id uint, status string, version string) error {
 	now := time.Now()
