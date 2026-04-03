@@ -174,18 +174,21 @@
 | S3 | WebSocket Origin 驗證不完整 | 所有 6 個 WS handler 已使用 `middleware.IsOriginAllowed()` |
 | S4 | Rate Limiting 未實作 | `middleware/rate_limit.go`，IP + 用戶名雙維度，5次/分鐘，鎖定15分鐘 |
 
-### 功能缺陷（部分已修復）
+### 功能缺陷（全部已修復）
 
 | 編號 | 問題 | 狀態 |
 |------|------|------|
-| F1 | 叢集指標回傳硬編碼 0 | ✅ 部分修復：`fetchPodStats()` 取得真實 Pod 數量；CPU/MEM 仍需 Prometheus（保留 TODO） |
+| F1 | 叢集指標回傳硬編碼 0 | ✅ 完整修復（2026-04-03）：`fetchResourceMetrics()` 查詢 metrics-server 取得節點 CPU/MEM 使用率百分比；metrics-server 不可用時優雅 fallback 回傳 0 |
+| F2 | 操作稽核日誌查詢未完整實作 | ✅ 修復（2026-04-03）：`GetAuditLogs` 新增 `userId` 整數篩選；底層 `OperationLogService.List` 已支援完整篩選（時間範圍、使用者、模組、動作、關鍵字） |
 | F3 | Informer 快取同步超時過短 | ✅ 修復：`INFORMER_SYNC_TIMEOUT` env，預設 30 秒 |
 | F4 | 無請求追蹤 ID | ✅ 修復：`middleware/request_id.go`，自動注入 UUID v4 |
 
-### 架構技術債（已完成部分）
+### 架構技術債（全部已完成）
 
 | 編號 | 問題 | 狀態 |
 |------|------|------|
+| A2 | 後端錯誤訊息未國際化 | ✅ 修復（2026-04-03）：`internal/apierrors` 套件定義結構化錯誤碼（`AUTH_*`、`USER_*`、`CLUSTER_*` 等）；`response.FromError` 統一轉換；`handlers/audit.go` 及關鍵 handler 已改用 `apierrors` 構造器 |
+| A3 | router.go 單一檔案過大（800+ 行） | ✅ 修復（2026-04-03）：拆分為 `deps.go`（24 行）+ `router.go`（244 行）+ `routes_cluster.go`（502 行）+ `routes_system.go`（241 行）+ `routes_ws.go`（47 行） |
 | A4 | SQLite 不支援並行寫入 | ✅ 確認：`_journal_mode=WAL&_foreign_keys=on` 已在 database.go 啟用 |
 
 ---

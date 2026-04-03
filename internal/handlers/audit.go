@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/clay-wangzhi/Synapse/internal/apierrors"
 	"github.com/clay-wangzhi/Synapse/internal/config"
 	"github.com/clay-wangzhi/Synapse/internal/response"
 	"github.com/clay-wangzhi/Synapse/internal/services"
@@ -60,6 +61,13 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 		}
 	}
 
+	if userIDStr := c.Query("userId"); userIDStr != "" {
+		if uid, err := strconv.ParseUint(userIDStr, 10, 32); err == nil {
+			uidVal := uint(uid)
+			req.UserID = &uidVal
+		}
+	}
+
 	if startStr := c.Query("startTime"); startStr != "" {
 		if t, err := time.Parse(time.RFC3339, startStr); err == nil {
 			req.StartTime = &t
@@ -73,7 +81,7 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 
 	resp, err := h.opLogService.List(req)
 	if err != nil {
-		response.InternalError(c, "获取审计日志失败: "+err.Error())
+		response.FromError(c, apierrors.ErrInternal("获取审计日志失败"))
 		return
 	}
 
@@ -124,7 +132,7 @@ func (h *AuditHandler) GetTerminalSessions(c *gin.Context) {
 
 	resp, err := h.auditService.GetSessions(req)
 	if err != nil {
-		response.InternalError(c, "获取会话列表失败: "+err.Error())
+		response.FromError(c, apierrors.ErrInternal("获取会话列表失败"))
 		return
 	}
 
@@ -136,13 +144,13 @@ func (h *AuditHandler) GetTerminalSession(c *gin.Context) {
 	sessionIDStr := c.Param("sessionId")
 	sessionID, err := strconv.ParseUint(sessionIDStr, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的会话ID")
+		response.FromError(c, apierrors.ErrBadRequest("无效的会话ID"))
 		return
 	}
 
 	session, err := h.auditService.GetSessionDetail(uint(sessionID))
 	if err != nil {
-		response.NotFound(c, "会话不存在")
+		response.FromError(c, apierrors.ErrInternal("会话不存在"))
 		return
 	}
 
@@ -154,7 +162,7 @@ func (h *AuditHandler) GetTerminalCommands(c *gin.Context) {
 	sessionIDStr := c.Param("sessionId")
 	sessionID, err := strconv.ParseUint(sessionIDStr, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的会话ID")
+		response.FromError(c, apierrors.ErrBadRequest("无效的会话ID"))
 		return
 	}
 
@@ -163,7 +171,7 @@ func (h *AuditHandler) GetTerminalCommands(c *gin.Context) {
 
 	resp, err := h.auditService.GetSessionCommands(uint(sessionID), page, pageSize)
 	if err != nil {
-		response.InternalError(c, "获取命令记录失败: "+err.Error())
+		response.FromError(c, apierrors.ErrInternal("获取命令记录失败"))
 		return
 	}
 
@@ -174,7 +182,7 @@ func (h *AuditHandler) GetTerminalCommands(c *gin.Context) {
 func (h *AuditHandler) GetTerminalStats(c *gin.Context) {
 	stats, err := h.auditService.GetSessionStats()
 	if err != nil {
-		response.InternalError(c, "获取统计信息失败: "+err.Error())
+		response.FromError(c, apierrors.ErrInternal("获取统计信息失败"))
 		return
 	}
 

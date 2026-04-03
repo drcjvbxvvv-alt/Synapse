@@ -51,37 +51,7 @@ Synapse 是以 Go 1.25（Gin）+ React 19（Ant Design）構建的企業級 Kube
 
 ## 2. 待解決技術債
 
-### 🟡 F2 — 操作稽核日誌查詢未完整實作
-
-**問題：** `audit.go:25` 有 `// TODO` 標記，操作日誌的進階篩選（時間範圍、使用者、模組、動作）未完整實作。
-
----
-
-### 🟡 F1（殘留）— 叢集 CPU/MEM 用量仍回傳 0
-
-**問題：** `fetchPodStats()` 已修復 Pod 計數，但 CPU/MEM 用量仍需 Prometheus 查詢，目前仍回傳 0。
-**方向：** 整合 Prometheus `container_cpu_usage_seconds_total` + `kube_pod_container_resource_requests`，或 fallback 到 metrics-server。
-
----
-
-### 🟢 A2 — 後端錯誤訊息未國際化
-
-**問題：** 所有後端錯誤訊息均為中文字串硬編碼，API 回傳的 `message` 在英文介面顯示中文。
-
-**方案：**
-```go
-type APIError struct {
-    Code    string `json:"code"`     // "CLUSTER_NOT_FOUND"
-    Message string `json:"message"`  // fallback 說明
-}
-```
-
----
-
-### 🟢 A3 — router.go 單一檔案過大
-
-**問題：** 所有路由定義在單一檔案，超過 800 行，維護困難。
-**方案：** 按領域拆分（`cluster_routes.go`、`workload_routes.go`、`auth_routes.go` 等）。
+> **所有技術債已於 2026-04-03 完成，本章節保留供記錄。** 詳細說明見 [COMPLETED.md](./COMPLETED.md#4-已修復缺陷)。
 
 ---
 

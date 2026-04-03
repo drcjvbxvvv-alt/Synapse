@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"gorm.io/gorm"
 )
 
@@ -265,6 +266,7 @@ func (s *ClusterService) getClusterRealTimeMetrics(cluster *models.Cluster) *mod
 
 	// 從 K8s API 統計 Pod 數量（使用 15 秒超時避免阻塞）
 	podCount, runningPods := fetchPodStats(k8sClient)
+	cpuPct, memPct := fetchResourceMetrics(k8sClient)
 
 	// 创建指标对象
 	metrics := &models.ClusterMetrics{
@@ -273,8 +275,8 @@ func (s *ClusterService) getClusterRealTimeMetrics(cluster *models.Cluster) *mod
 		ReadyNodes:  clusterInfo.ReadyNodes,
 		PodCount:    podCount,
 		RunningPods: runningPods,
-		CPUUsage:    0, // 需要 Prometheus 整合
-		MemoryUsage: 0, // 需要 Prometheus 整合
+		CPUUsage:    cpuPct,
+		MemoryUsage: memPct,
 		UpdatedAt:   time.Now(),
 	}
 
@@ -298,6 +300,68 @@ func fetchPodStats(kc *K8sClient) (total int, running int) {
 			running++
 		}
 	}
+	return
+}
+
+type nodeMetricsList struct {
+	Items []struct {
+		Metadata struct {
+			Name string `json:"name"`
+		} `json:"metadata"`
+		Usage struct {
+			CPU    string `json:"cpu"`
+			Memory string `json:"memory"`
+		} `json:"usage"`
+	} `json:"items"`
+}
+
+func fetchResourceMetrics(kc *K8sClient) (cpuPercent, memPercent float64) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	raw, err := kc.GetClientset().RESTClient().Get().
+		AbsPath("/apis/metrics.k8s.io/v1beta1/nodes").
+		DoRaw(ctx)
+	if err != nil {
+		logger.Warn("metrics-server 不可用，CPU/MEM 指標返回 0", "error", err)
+		return 0, 0
+	}
+
+	var metricsList nodeMetricsList
+	if err := json.Unmarshal(raw, &metricsList); err != nil {
+		return 0, 0
+	}
+
+	nodes, err := kc.GetClientset().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil || len(nodes.Items) == 0 {
+		return 0, 0
+	}
+
+	var totalCPUCapMillis, totalMemCapKi int64
+	for i := range nodes.Items {
+		if cpu := nodes.Items[i].Status.Allocatable.Cpu(); cpu != nil {
+			totalCPUCapMillis += cpu.MilliValue()
+		}
+		if mem := nodes.Items[i].Status.Allocatable.Memory(); mem != nil {
+			totalMemCapKi += mem.Value() / 1024
+		}
+	}
+	if totalCPUCapMillis == 0 || totalMemCapKi == 0 {
+		return 0, 0
+	}
+
+	var usedCPUMillis, usedMemKi int64
+	for _, item := range metricsList.Items {
+		if q, err := resource.ParseQuantity(item.Usage.CPU); err == nil {
+			usedCPUMillis += q.MilliValue()
+		}
+		if q, err := resource.ParseQuantity(item.Usage.Memory); err == nil {
+			usedMemKi += q.Value() / 1024
+		}
+	}
+
+	cpuPercent = float64(usedCPUMillis) / float64(totalCPUCapMillis) * 100
+	memPercent = float64(usedMemKi) / float64(totalMemCapKi) * 100
 	return
 }
 
