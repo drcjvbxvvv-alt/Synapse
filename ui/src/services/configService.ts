@@ -67,7 +67,7 @@ export interface ListResponse<T> {
   pageSize: number;
 }
 
-// 命名空间对象接口
+// 命名空間物件介面
 interface NamespaceObject {
   name: string;
   status: string;
@@ -76,25 +76,25 @@ interface NamespaceObject {
   creationTimestamp: string;
 }
 
-// 获取命名空间列表（通用）
+// 獲取命名空間列表（通用）
 export const getNamespaces = async (clusterId: number): Promise<string[]> => {
   try {
-    // 直接使用集群的命名空间接口
+    // 直接使用叢集的命名空間介面
     const response = await request.get<NamespaceObject[]>(
       `/clusters/${clusterId}/namespaces`
     );
-    // 提取命名空间名称数组
+    // 提取命名空間名稱陣列
     return response.map((ns) => ns.name);
   } catch (error) {
-    console.error('获取命名空间列表失败:', error);
-    // 返回默认命名空间
+    console.error('獲取命名空間列表失敗:', error);
+    // 返回預設命名空間
     return ['default', 'kube-system', 'kube-public', 'kube-node-lease'];
   }
 };
 
 // ConfigMap API
 export const configMapService = {
-  // 获取ConfigMap列表
+  // 獲取ConfigMap列表
   async getConfigMaps(
     clusterId: number,
     params: {
@@ -115,7 +115,7 @@ export const configMapService = {
     );
   },
 
-  // 获取ConfigMap详情
+  // 獲取ConfigMap詳情
   async getConfigMap(
     clusterId: number,
     namespace: string,
@@ -126,14 +126,14 @@ export const configMapService = {
     );
   },
 
-  // 获取ConfigMap命名空间列表
+  // 獲取ConfigMap命名空間列表
   async getConfigMapNamespaces(clusterId: number): Promise<NamespaceItem[]> {
     return request.get<NamespaceItem[]>(
       `/clusters/${clusterId}/configmaps/namespaces`
     );
   },
 
-  // 创建ConfigMap
+  // 建立ConfigMap
   async createConfigMap(
     clusterId: number,
     data: {
@@ -167,7 +167,7 @@ export const configMapService = {
     );
   },
 
-  // 删除ConfigMap
+  // 刪除ConfigMap
   async deleteConfigMap(
     clusterId: number,
     namespace: string,
@@ -178,14 +178,14 @@ export const configMapService = {
     );
   },
 
-  // 获取版本历史
+  // 獲取版本歷史
   async getVersions(clusterId: number, namespace: string, name: string): Promise<ConfigVersion[]> {
     return request.get<ConfigVersion[]>(
       `/clusters/${clusterId}/configmaps/${namespace}/${name}/versions`
     );
   },
 
-  // 回滚到指定版本
+  // 回滾到指定版本
   async rollback(clusterId: number, namespace: string, name: string, version: number): Promise<void> {
     await request.post(
       `/clusters/${clusterId}/configmaps/${namespace}/${name}/versions/${version}/rollback`,
@@ -196,13 +196,13 @@ export const configMapService = {
 
 // Secret API
 export const secretService = {
-  // 获取Secret列表
+  // 獲取Secret列表
   async getSecrets(
     clusterId: number,
     params: {
       namespace?: string;
       name?: string;
-      type?: string;  // 支持按类型过滤 (如 kubernetes.io/dockerconfigjson)
+      type?: string;  // 支援按型別過濾 (如 kubernetes.io/dockerconfigjson)
       page?: number;
       pageSize?: number;
     }
@@ -219,7 +219,7 @@ export const secretService = {
     );
   },
 
-  // 获取Secret详情
+  // 獲取Secret詳情
   async getSecret(
     clusterId: number,
     namespace: string,
@@ -230,14 +230,14 @@ export const secretService = {
     );
   },
 
-  // 获取Secret命名空间列表
+  // 獲取Secret命名空間列表
   async getSecretNamespaces(clusterId: number): Promise<NamespaceItem[]> {
     return request.get<NamespaceItem[]>(
       `/clusters/${clusterId}/secrets/namespaces`
     );
   },
 
-  // 创建Secret
+  // 建立Secret
   async createSecret(
     clusterId: number,
     data: {
@@ -272,7 +272,7 @@ export const secretService = {
     );
   },
 
-  // 删除Secret
+  // 刪除Secret
   async deleteSecret(
     clusterId: number,
     namespace: string,
@@ -283,7 +283,7 @@ export const secretService = {
     );
   },
 
-  // 获取版本历史（仅记录key列表，不含value）
+  // 獲取版本歷史（僅記錄key列表，不含value）
   async getVersions(clusterId: number, namespace: string, name: string): Promise<ConfigVersion[]> {
     return request.get<ConfigVersion[]>(
       `/clusters/${clusterId}/secrets/${namespace}/${name}/versions`

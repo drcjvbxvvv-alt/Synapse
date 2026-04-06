@@ -67,8 +67,8 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
       const response = await api.get('/monitoring/templates');
       setTemplates(response.data);
     } catch (error: unknown) {
-      console.error('加载监控模板失败:', error);
-      message.error('加载监控模板失败');
+      console.error('載入監控模板失敗:', error);
+      message.error('載入監控模板失敗');
     }
   };
 
@@ -79,8 +79,8 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
       setConfigType(config.type);
       form.setFieldsValue(config);
     } catch (error: unknown) {
-      console.error('加载当前配置失败:', error);
-      message.error('加载当前配置失败');
+      console.error('載入當前配置失敗:', error);
+      message.error('載入當前配置失敗');
     }
   }, [clusterId, form]);
 
@@ -102,23 +102,23 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
       setLoading(true);
       setSaveResult(null);
       
-      // 表单验证
+      // 表單驗證
       const values = await form.validateFields();
       
-      // 发送保存请求
+      // 傳送儲存請求
       const response = await api.put(`/clusters/${clusterId}/monitoring/config`, values);
       
-      // 显示成功消息
-      const successMsg = response.data?.message || '监控配置保存成功';
+      // 顯示成功訊息
+      const successMsg = response.data?.message || '監控配置儲存成功';
       message.success(successMsg);
       setSaveResult({ success: true, message: successMsg });
       onConfigChange?.();
     } catch (error: unknown) {
-      console.error('保存监控配置失败:', error);
+      console.error('儲存監控配置失敗:', error);
       
-      // 处理表单验证错误
+      // 處理表單驗證錯誤
       if (error && typeof error === 'object' && 'errorFields' in error) {
-        const errorMsg = '请检查表单填写是否正确';
+        const errorMsg = '請檢查表單填寫是否正確';
         message.error(errorMsg);
         setSaveResult({ success: false, message: errorMsg });
         return;
@@ -138,29 +138,29 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
       setTesting(true);
       setTestResult(null);
       
-      // 表单验证
+      // 表單驗證
       const values = await form.validateFields();
       
-      // 如果监控类型是禁用，不允许测试
+      // 如果監控型別是禁用，不允許測試
       if (values.type === 'disabled') {
-        message.warning('请先选择监控类型');
-        setTestResult({ success: false, message: '监控功能已禁用，无法测试连接' });
+        message.warning('請先選擇監控型別');
+        setTestResult({ success: false, message: '監控功能已禁用，無法測試連線' });
         return;
       }
       
-      // 发送测试请求
+      // 傳送測試請求
       const response = await api.post(`/clusters/${clusterId}/monitoring/test-connection`, values);
       
-      // 显示成功消息
-      const successMsg = response.data?.message || '连接测试成功';
+      // 顯示成功訊息
+      const successMsg = response.data?.message || '連線測試成功';
       message.success(successMsg);
       setTestResult({ success: true, message: successMsg });
     } catch (error: unknown) {
-      console.error('连接测试失败:', error);
+      console.error('連線測試失敗:', error);
       
-      // 处理表单验证错误
+      // 處理表單驗證錯誤
       if (error && typeof error === 'object' && 'errorFields' in error) {
-        const errorMsg = '请检查表单填写是否正确';
+        const errorMsg = '請檢查表單填寫是否正確';
         message.error(errorMsg);
         setTestResult({ success: false, message: errorMsg });
         return;
@@ -179,15 +179,15 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
     const authType = form.getFieldValue(['auth', 'type']);
     
     return (
-      <Card title="认证配置" size="small">
+      <Card title="認證配置" size="small">
         <Form.Item
           name={['auth', 'type']}
-          label="认证类型"
-          rules={[{ required: configType !== 'disabled', message: '请选择认证类型' }]}
+          label="認證型別"
+          rules={[{ required: configType !== 'disabled', message: '請選擇認證型別' }]}
           initialValue="none"
         >
-          <Select placeholder="选择认证类型">
-            <Option value="none">无需认证</Option>
+          <Select placeholder="選擇認證型別">
+            <Option value="none">無需認證</Option>
             <Option value="basic">Basic Auth</Option>
             <Option value="bearer">Bearer Token</Option>
             <Option value="mtls">mTLS</Option>
@@ -196,8 +196,8 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
 
         {authType === 'none' && (
           <Alert
-            message="无需认证"
-            description="将直接访问监控端点，不进行任何身份验证。"
+            message="無需認證"
+            description="將直接訪問監控端點，不進行任何身份驗證。"
             type="info"
             showIcon
             style={{ marginTop: 16 }}
@@ -208,17 +208,17 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
           <>
             <Form.Item
               name={['auth', 'username']}
-              label="用户名"
-              rules={[{ required: true, message: '请输入用户名' }]}
+              label="使用者名稱"
+              rules={[{ required: true, message: '請輸入使用者名稱' }]}
             >
-              <Input placeholder="请输入用户名" />
+              <Input placeholder="請輸入使用者名稱" />
             </Form.Item>
             <Form.Item
               name={['auth', 'password']}
-              label="密码"
-              rules={[{ required: true, message: '请输入密码' }]}
+              label="密碼"
+              rules={[{ required: true, message: '請輸入密碼' }]}
             >
-              <Input.Password placeholder="请输入密码" />
+              <Input.Password placeholder="請輸入密碼" />
             </Form.Item>
           </>
         )}
@@ -227,9 +227,9 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
           <Form.Item
             name={['auth', 'token']}
             label="Token"
-            rules={[{ required: true, message: '请输入Token' }]}
+            rules={[{ required: true, message: '請輸入Token' }]}
           >
-            <Input.Password placeholder="请输入Bearer Token" />
+            <Input.Password placeholder="請輸入Bearer Token" />
           </Form.Item>
         )}
 
@@ -237,23 +237,23 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
           <>
             <Form.Item
               name={['auth', 'certFile']}
-              label="证书文件路径"
-              rules={[{ required: true, message: '请输入证书文件路径' }]}
+              label="證書檔案路徑"
+              rules={[{ required: true, message: '請輸入證書檔案路徑' }]}
             >
-              <Input placeholder="请输入证书文件路径" />
+              <Input placeholder="請輸入證書檔案路徑" />
             </Form.Item>
             <Form.Item
               name={['auth', 'keyFile']}
-              label="密钥文件路径"
-              rules={[{ required: true, message: '请输入密钥文件路径' }]}
+              label="金鑰檔案路徑"
+              rules={[{ required: true, message: '請輸入金鑰檔案路徑' }]}
             >
-              <Input placeholder="请输入密钥文件路径" />
+              <Input placeholder="請輸入金鑰檔案路徑" />
             </Form.Item>
             <Form.Item
               name={['auth', 'caFile']}
-              label="CA文件路径"
+              label="CA檔案路徑"
             >
-              <Input placeholder="请输入CA文件路径（可选）" />
+              <Input placeholder="請輸入CA檔案路徑（可選）" />
             </Form.Item>
           </>
         )}
@@ -263,23 +263,23 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
 
   const renderLabelsConfig = () => {
     return (
-      <Card title="标签配置" size="small">
+      <Card title="標籤配置" size="small">
         <Alert
-          message="标签配置说明"
-          description="用于统一数据源（如VictoriaMetrics）时区分不同集群的监控数据。"
+          message="標籤配置說明"
+          description="用於統一資料來源（如VictoriaMetrics）時區分不同叢集的監控資料。"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
         />
         <Form.Item
           name={['labels', 'cluster']}
-          label="集群标签"
-          tooltip="用于标识集群的标签键值对"
+          label="叢集標籤"
+          tooltip="用於標識叢集的標籤鍵值對"
         >
           <Input placeholder="例如: cluster-name" />
         </Form.Item>
         <Text type="secondary">
-          其他标签可以通过高级配置添加
+          其他標籤可以透過高階配置新增
         </Text>
       </Card>
     );
@@ -287,7 +287,7 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
 
   return (
     <div>
-      <Card title="监控配置" extra={
+      <Card title="監控配置" extra={
         <Space>
           <Button
             icon={<ExperimentOutlined />}
@@ -295,7 +295,7 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
             loading={testing}
             disabled={configType === 'disabled'}
           >
-            测试连接
+            測試連線
           </Button>
           <Button
             type="primary"
@@ -303,11 +303,11 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
             onClick={handleSave}
             loading={loading}
           >
-            保存配置
+            儲存配置
           </Button>
         </Space>
       }>
-        {/* 测试结果弹窗 */}
+        {/* 測試結果彈窗 */}
         <Modal
           open={testResult !== null}
           title={
@@ -317,20 +317,20 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
               ) : (
                 <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
               )}
-              <span>{testResult?.success ? '连接测试成功' : '连接测试失败'}</span>
+              <span>{testResult?.success ? '連線測試成功' : '連線測試失敗'}</span>
             </Space>
           }
           onCancel={() => setTestResult(null)}
           footer={[
             <Button key="ok" type="primary" onClick={() => setTestResult(null)}>
-              确定
+              確定
             </Button>
           ]}
         >
           <p>{testResult?.message}</p>
         </Modal>
         
-        {/* 保存结果弹窗 */}
+        {/* 儲存結果彈窗 */}
         <Modal
           open={saveResult !== null}
           title={
@@ -340,13 +340,13 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
               ) : (
                 <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
               )}
-              <span>{saveResult?.success ? '配置保存成功' : '配置保存失败'}</span>
+              <span>{saveResult?.success ? '配置儲存成功' : '配置儲存失敗'}</span>
             </Space>
           }
           onCancel={() => setSaveResult(null)}
           footer={[
             <Button key="ok" type="primary" onClick={() => setSaveResult(null)}>
-              确定
+              確定
             </Button>
           ]}
         >
@@ -362,11 +362,11 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
             <Col span={12}>
               <Form.Item
                 name="type"
-                label="监控类型"
-                rules={[{ required: true, message: '请选择监控类型' }]}
+                label="監控型別"
+                rules={[{ required: true, message: '請選擇監控型別' }]}
               >
                 <Select onChange={handleTypeChange}>
-                  <Option value="disabled">禁用监控</Option>
+                  <Option value="disabled">禁用監控</Option>
                   <Option value="prometheus">Prometheus</Option>
                   <Option value="victoriametrics">VictoriaMetrics</Option>
                 </Select>
@@ -375,10 +375,10 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
             <Col span={12}>
               <Form.Item
                 name="endpoint"
-                label="监控端点"
+                label="監控端點"
                 rules={[
-                  { required: configType !== 'disabled', message: '请输入监控端点' },
-                  { type: 'url', message: '请输入有效的URL' }
+                  { required: configType !== 'disabled', message: '請輸入監控端點' },
+                  { type: 'url', message: '請輸入有效的URL' }
                 ]}
               >
                 <Input placeholder="http://prometheus:9090" />
@@ -396,11 +396,11 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
           )}
 
           <Collapse>
-            <Panel header="高级配置" key="advanced">
+            <Panel header="高階配置" key="advanced">
               <Form.Item
                 name="options"
-                label="额外选项"
-                tooltip="JSON格式的额外配置选项"
+                label="額外選項"
+                tooltip="JSON格式的額外配置選項"
               >
                 <TextArea
                   rows={4}
@@ -412,37 +412,37 @@ const MonitoringConfigForm: React.FC<MonitoringConfigFormProps> = ({
         </Form>
       </Card>
 
-      <Card title="配置说明" style={{ marginTop: 16 }}>
+      <Card title="配置說明" style={{ marginTop: 16 }}>
         <Collapse>
           <Panel header="Prometheus 配置" key="prometheus">
             <div>
-              <Text strong>直接连接 Prometheus：</Text>
+              <Text strong>直接連線 Prometheus：</Text>
               <ul>
-                <li>端点：<Text code>http://prometheus-server:9090</Text></li>
-                <li>认证：支持无需认证、Basic Auth、Bearer Token</li>
-                <li>标签：通常不需要额外标签</li>
+                <li>端點：<Text code>http://prometheus-server:9090</Text></li>
+                <li>認證：支援無需認證、Basic Auth、Bearer Token</li>
+                <li>標籤：通常不需要額外標籤</li>
               </ul>
             </div>
           </Panel>
           <Panel header="VictoriaMetrics 配置" key="victoriametrics">
             <div>
-              <Text strong>统一数据源 VictoriaMetrics：</Text>
+              <Text strong>統一資料來源 VictoriaMetrics：</Text>
               <ul>
-                <li>端点：<Text code>http://victoriametrics:8428</Text></li>
-                <li>认证：支持无需认证、Basic Auth、Bearer Token</li>
-                <li>标签：<Text code>cluster="cluster-name"</Text> 用于区分集群</li>
-                <li>优势：支持多集群数据统一存储和查询</li>
+                <li>端點：<Text code>http://victoriametrics:8428</Text></li>
+                <li>認證：支援無需認證、Basic Auth、Bearer Token</li>
+                <li>標籤：<Text code>cluster="cluster-name"</Text> 用於區分叢集</li>
+                <li>優勢：支援多叢集資料統一儲存和查詢</li>
               </ul>
             </div>
           </Panel>
-          <Panel header="标签说明" key="labels">
+          <Panel header="標籤說明" key="labels">
             <div>
-              <Text strong>标签配置说明：</Text>
+              <Text strong>標籤配置說明：</Text>
               <ul>
-                <li><Text code>cluster</Text>：集群标识，用于区分不同集群的监控数据</li>
-                <li><Text code>environment</Text>：环境标识，如 prod、test、dev</li>
-                <li><Text code>region</Text>：地域标识，如 us-east-1、ap-southeast-1</li>
-                <li>其他自定义标签可根据需要添加</li>
+                <li><Text code>cluster</Text>：叢集標識，用於區分不同叢集的監控資料</li>
+                <li><Text code>environment</Text>：環境標識，如 prod、test、dev</li>
+                <li><Text code>region</Text>：地域標識，如 us-east-1、ap-southeast-1</li>
+                <li>其他自定義標籤可根據需要新增</li>
               </ul>
             </div>
           </Panel>

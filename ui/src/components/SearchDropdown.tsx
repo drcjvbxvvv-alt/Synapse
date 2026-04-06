@@ -86,7 +86,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     };
   }, [visible]);
 
-  // 处理搜索
+  // 處理搜尋
   const handleSearch = (value: string) => {
     if (value.trim()) {
       navigate(`/search?q=${encodeURIComponent(value)}`);
@@ -97,7 +97,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     }
   };
 
-  // 获取资源类型图标
+  // 獲取資源型別圖示
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'cluster':
@@ -113,7 +113,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     }
   };
 
-  // 获取状态标签颜色
+  // 獲取狀態標籤顏色
   const getStatusColor = (status: string, type: string) => {
     switch (type) {
       case 'cluster':
@@ -129,7 +129,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     }
   };
 
-  // 处理资源点击
+  // 處理資源點選
   const handleResourceClick = (result: SearchResult) => {
     setVisible(false);
     switch (result.type) {
@@ -148,7 +148,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     }
   };
 
-  // 获取资源类型统计
+  // 獲取資源型別統計
   const getTypeStats = () => {
     const stats = {
       cluster: 0,
@@ -164,7 +164,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     return stats;
   };
 
-  // 按类型过滤结果
+  // 按型別過濾結果
   const getFilteredResults = (type: string) => {
     if (type === 'all') {
       return results;
@@ -174,7 +174,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
 
   const stats = getTypeStats();
 
-  // 渲染搜索结果列表
+  // 渲染搜尋結果列表
   const renderResultsList = (filteredResults: SearchResult[]) => (
     <List
       size="small"
@@ -250,7 +250,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     />
   );
 
-  // 标签项配置
+  // 標籤項配置
   const tabItems = [
     {
       key: 'all',
@@ -279,7 +279,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
     },
   ];
 
-  // 下拉菜单内容
+  // 下拉選單內容
   const dropdownContent = (
     <div 
       ref={dropdownRef}
@@ -305,7 +305,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
         </div>
       ) : results.length > 0 ? (
         <>
-          {/* 使用Tabs组件 */}
+          {/* 使用Tabs元件 */}
           <div onClick={(e) => e.stopPropagation()}>
             <Tabs
               activeKey={activeTab}
@@ -322,7 +322,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
             />
           </div>
 
-          {/* 查看更多 */}
+          {/* 檢視更多 */}
           <div 
             style={{ 
               padding: '12px 20px', 

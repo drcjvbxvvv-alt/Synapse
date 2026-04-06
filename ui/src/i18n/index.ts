@@ -17,7 +17,7 @@ export const defaultLanguage = 'zh-TW';
 i18n
   // 自動偵測使用者語言
   .use(LanguageDetector)
-  // 將 i18n 實例傳遞給 react-i18next
+  // 將 i18n 例項傳遞給 react-i18next
   .use(initReactI18next)
   // 初始化 i18next
   .init({
@@ -28,23 +28,23 @@ i18n
     fallbackLng: defaultLanguage,
     defaultNS: 'common',
 ns: ['common', 'cluster', 'node', 'pod', 'overview', 'workload', 'namespace', 'yaml', 'search', 'terminal', 'storage', 'permission', 'nodeOps', 'settings', 'profile', 'om', 'plugins', 'logs', 'audit', 'alert', 'network', 'config', 'components', 'helm', 'cost', 'security'],
-// 语言检测选项
+// 語言檢測選項
     detection: {
-      // 检测顺序
+      // 檢測順序
       order: ['localStorage', 'navigator', 'htmlTag'],
-      // 缓存用户语言选择
+      // 快取使用者語言選擇
       caches: ['localStorage'],
-      // localStorage 键名
+      // localStorage 鍵名
       lookupLocalStorage: 'synapse-language',
     },
     
     interpolation: {
-      // React 已经处理了 XSS 防护
+      // React 已經處理了 XSS 防護
       escapeValue: false,
     },
     
     react: {
-      // 等待翻译加载完成
+      // 等待翻譯載入完成
       useSuspense: true,
     },
   });

@@ -12,7 +12,7 @@ import type {
   CanaryStep,
 } from '../types/workload';
 
-// ==================== 公共类型 ====================
+// ==================== 公共型別 ====================
 
 export interface CommonBuildParts {
   metadata: Record<string, unknown>;
@@ -42,7 +42,7 @@ export interface CommonParsedFields {
   hostNetwork?: boolean;
 }
 
-// ==================== 辅助函数 ====================
+// ==================== 輔助函式 ====================
 
 export const parseCommaString = (str: string | undefined): string[] => {
   if (!str) return [];
@@ -60,7 +60,7 @@ export const commandArrayToString = (arr: string[] | undefined): string => {
   return arr.join('\n');
 };
 
-// ==================== 构建函数 ====================
+// ==================== 構建函式 ====================
 
 export const buildProbeConfig = (probe: ProbeConfig & { enabled?: boolean; type?: string }): Record<string, unknown> | undefined => {
   if (!probe || !probe.enabled) return undefined;
@@ -281,7 +281,7 @@ export const buildSchedulingSpec = (scheduling: SchedulingConfig | undefined): R
   return Object.keys(affinity).length > 0 ? affinity : undefined;
 };
 
-// ==================== Argo Rollout 策略构建 ====================
+// ==================== Argo Rollout 策略構建 ====================
 
 export const buildCanaryStrategy = (canary: CanaryStrategyConfig | undefined): Record<string, unknown> => {
   if (!canary) {
@@ -419,7 +419,7 @@ export const buildRolloutStrategy = (rolloutStrategy: RolloutStrategyConfig | un
   return buildCanaryStrategy(rolloutStrategy.canary);
 };
 
-// ==================== 亲和性解析 ====================
+// ==================== 親和性解析 ====================
 
 export const parseAffinityToScheduling = (affinity: Record<string, unknown> | undefined): Record<string, unknown> | undefined => {
   if (!affinity) return undefined;
@@ -647,7 +647,7 @@ export const parseAffinityToScheduling = (affinity: Record<string, unknown> | un
   return Object.keys(scheduling).length > 0 ? scheduling : undefined;
 };
 
-// ==================== 表单调度配置构建 ====================
+// ==================== 表單排程配置構建 ====================
 
 export const buildSchedulingFromForm = (formData: Record<string, unknown>): SchedulingConfig | undefined => {
   const scheduling = formData.scheduling as Record<string, unknown> | undefined;
@@ -790,7 +790,7 @@ export const buildSchedulingFromForm = (formData: Record<string, unknown>): Sche
   return Object.keys(result).length > 0 ? result : undefined;
 };
 
-// ==================== 公共构建函数 ====================
+// ==================== 公共構建函式 ====================
 
 export const buildCommonParts = (formData: WorkloadFormData): CommonBuildParts => {
   const labels: Record<string, string> = {};
@@ -868,7 +868,7 @@ export const buildCommonParts = (formData: WorkloadFormData): CommonBuildParts =
   return { metadata, labels, podSpec, podTemplateSpec };
 };
 
-// ==================== 公共解析函数 ====================
+// ==================== 公共解析函式 ====================
 
 const parseProbe = (probe: Record<string, unknown> | undefined) => {
   if (!probe) return undefined;

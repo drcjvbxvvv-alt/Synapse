@@ -137,7 +137,7 @@ const ArgoCDConfigForm: React.FC<ArgoCDConfigFormProps> = ({
   return (
     <div style={{ maxWidth: 900 }}>
       <Form form={form} layout="vertical">
-        {/* 启用开关 */}
+        {/* 啟用開關 */}
         <Card style={{ marginBottom: 24 }}>
           <Form.Item
             name="enabled"
@@ -161,7 +161,7 @@ const ArgoCDConfigForm: React.FC<ArgoCDConfigFormProps> = ({
 
         {enabled && (
           <>
-            {/* ArgoCD 服务器配置 */}
+            {/* ArgoCD 伺服器配置 */}
             <Card 
               title={
                 <Space>
@@ -252,7 +252,7 @@ const ArgoCDConfigForm: React.FC<ArgoCDConfigFormProps> = ({
               </Form.Item>
             </Card>
 
-            {/* Git 仓库配置 */}
+            {/* Git 倉庫配置 */}
             <Card
               title={
                 <Space>
@@ -336,7 +336,7 @@ const ArgoCDConfigForm: React.FC<ArgoCDConfigFormProps> = ({
               </Form.Item>
             </Card>
 
-            {/* 目标集群配置 */}
+            {/* 目標叢集配置 */}
             <Card
               title={
                 <Space>
@@ -384,7 +384,7 @@ const ArgoCDConfigForm: React.FC<ArgoCDConfigFormProps> = ({
           </>
         )}
 
-        {/* 保存按钮 */}
+        {/* 儲存按鈕 */}
         <div style={{ textAlign: 'right', marginTop: 24 }}>
           <Space>
             <Button onClick={loadConfig}>{t('argoCDConfig.reset')}</Button>

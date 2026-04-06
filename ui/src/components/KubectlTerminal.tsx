@@ -31,14 +31,14 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  // selectedNamespace 用于接收 WebSocket 消息中的命名空间变更，当前未在 UI 中显示
+  // selectedNamespace 用於接收 WebSocket 訊息中的命名空間變更，當前未在 UI 中顯示
   const [, setSelectedNamespace] = useState<string>(initialNamespace);
   
-  // 使用 ref 来保存连接状态，避免闭包问题
+  // 使用 ref 來儲存連線狀態，避免閉包問題
   const connectedRef = useRef(false);
   const currentLineRef = useRef('');
 
-  // 初始化终端
+  // 初始化終端
   useEffect(() => {
     const initTerminal = () => {
       if (terminalRef.current && !terminal.current) {
@@ -59,18 +59,18 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
             rightClickSelectsWord: true,
           });
 
-          // 添加插件
+          // 新增外掛
           fitAddon.current = new FitAddon();
           terminal.current.loadAddon(fitAddon.current);
           terminal.current.loadAddon(new WebLinksAddon());
           
-          // 添加剪贴板支持
+          // 新增剪貼簿支援
           const clipboardAddon = new ClipboardAddon();
           terminal.current.loadAddon(clipboardAddon);
 
           terminal.current.open(terminalRef.current);
           
-          // 等待 DOM 完全渲染后再 fit
+          // 等待 DOM 完全渲染後再 fit
           requestAnimationFrame(() => {
             setTimeout(() => {
               if (fitAddon.current && terminal.current && terminalRef.current) {
@@ -83,17 +83,17 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
             }, 300);
           });
 
-          // 显示欢迎信息
+          // 顯示歡迎資訊
           setTimeout(() => {
             showWelcomeMessage();
           }, 500);
 
-          // 设置终端输入处理
+          // 設定終端輸入處理
           terminal.current.onData((data) => {
             handleTerminalInput(data);
           });
 
-          // 添加键盘快捷键支持
+          // 新增鍵盤快捷鍵支援
           terminal.current.attachCustomKeyEventHandler((event) => {
             if (event.type === 'keydown') {
               if (event.ctrlKey && event.key === 'c' && terminal.current?.hasSelection()) {
@@ -112,7 +112,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
             return true;
           });
 
-          // 监听窗口大小变化
+          // 監聽視窗大小變化
           const handleResize = () => {
             if (fitAddon.current && terminal.current && terminalRef.current) {
               requestAnimationFrame(() => {
@@ -146,7 +146,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 显示欢迎信息
+  // 顯示歡迎資訊
   const showWelcomeMessage = () => {
     if (!terminal.current) return;
     
@@ -157,7 +157,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     terminal.current.writeln('');
   };
 
-  // 连接到后端 WebSocket
+  // 連線到後端 WebSocket
   const connectWebSocket = () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -177,7 +177,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
       websocket.current = new WebSocket(wsUrl);
 
       websocket.current.onopen = () => {
-        // 等待服务端 type=connected（Pod/shell 就绪）
+        // 等待服務端 type=connected（Pod/shell 就緒）
       };
 
       websocket.current.onmessage = (event) => {
@@ -233,7 +233,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     }
   };
 
-  // 终端输入处理
+  // 終端輸入處理
   const [, setCurrentLine] = useState('');
   const [, setCommandHistory] = useState<string[]>([]);
 
@@ -310,7 +310,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     }
   };
 
-  // 处理 WebSocket 消息
+  // 處理 WebSocket 訊息
   interface WebSocketMessage {
     type: string;
     data: string;
@@ -359,7 +359,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   };
 
 
-  // 断开连接
+  // 斷開連線
   const disconnect = () => {
     if (websocket.current) {
       websocket.current.close();
@@ -377,7 +377,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     terminal.current?.clear();
   };
 
-  // 全屏切换
+  // 全屏切換
   const toggleFullscreen = () => {
     const terminalContainer = terminalRef.current?.parentElement;
     if (terminalContainer) {
@@ -393,7 +393,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
     showWelcomeMessage();
   }, []);
 
-  // 粘贴剪贴板内容
+  // 貼上剪貼簿內容
   const pasteFromClipboard = () => {
     if (!connected) {
       message.error(t('kubectlTerminal.connectFirst'));
@@ -449,7 +449,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
       }
     >
 
-      {/* 连接状态提示 */}
+      {/* 連線狀態提示 */}
       {connected && (
         <Alert
           message={t('kubectlTerminal.connectedToCluster', { clusterId })}
@@ -459,7 +459,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
         />
       )}
 
-      {/* 终端容器 */}
+      {/* 終端容器 */}
       <div
         ref={terminalRef}
         style={{
@@ -470,7 +470,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
         }}
       />
 
-      {/* 使用说明 */}
+      {/* 使用說明 */}
       <div style={{ marginTop: 16, fontSize: '12px', color: '#666' }}>
         <p dangerouslySetInnerHTML={{ __html: t('kubectlTerminal.helpHint') }} />
       </div>

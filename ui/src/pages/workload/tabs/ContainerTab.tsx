@@ -14,7 +14,7 @@ import {
 import { WorkloadService } from '../../../services/workloadService';
 import { useTranslation } from 'react-i18next';
 
-// 探针类型定义
+// 探針型別定義
 interface ProbeConfig {
   httpGet?: {
     path?: string;
@@ -42,7 +42,7 @@ interface ProbeConfig {
   terminationGracePeriodSeconds?: number;
 }
 
-// 生命周期钩子类型
+// 生命週期鉤子型別
 interface LifecycleHandler {
   exec?: {
     command?: string[];
@@ -132,7 +132,7 @@ interface ContainerInfo {
   terminationMessagePolicy?: string;
 }
 
-// 卷类型定义
+// 卷型別定義
 interface VolumeConfig {
   name: string;
   configMap?: {
@@ -254,7 +254,7 @@ const [loading, setLoading] = useState(false);
   const [selectedContainer, setSelectedContainer] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('basic');
 
-  // 获取工作负载名称和类型
+  // 獲取工作負載名稱和型別
   const workloadName = deploymentName || rolloutName || statefulSetName || daemonSetName || jobName || cronJobName;
   const workloadType = deploymentName ? 'Deployment' 
     : rolloutName ? 'Rollout'
@@ -290,7 +290,7 @@ const [loading, setLoading] = useState(false);
         }
       }
     } catch (error) {
-      console.error('获取容器信息失败:', error);
+      console.error('獲取容器資訊失敗:', error);
       message.error(t('messages.fetchContainerError'));
     } finally {
       setLoading(false);
@@ -316,7 +316,7 @@ const [loading, setLoading] = useState(false);
   const containers = spec.template.spec.containers;
   const currentContainer = containers.find(c => c.name === selectedContainer);
 
-  // 左侧菜单项
+  // 左側選單項
   const menuItems = [
     { key: 'basic', label: t('container.menu.basic') },
     { key: 'lifecycle', label: t('container.menu.lifecycle') },
@@ -325,7 +325,7 @@ const [loading, setLoading] = useState(false);
     { key: 'volume', label: t('container.menu.volume') },
   ];
 
-  // 渲染基本信息
+  // 渲染基本資訊
   const renderBasicInfo = () => {
     if (!currentContainer) return null;
 
@@ -469,7 +469,7 @@ const [loading, setLoading] = useState(false);
     );
   };
 
-  // 渲染生命周期
+  // 渲染生命週期
   const renderLifecycle = () => {
     if (!currentContainer) return null;
 
@@ -567,7 +567,7 @@ const [loading, setLoading] = useState(false);
     );
   };
 
-  // 渲染探针详情的通用组件
+  // 渲染探針詳情的通用元件
   const renderProbeDetail = (probe: ProbeConfig | undefined, title: string) => {
     if (!probe) {
       return (
@@ -577,7 +577,7 @@ const [loading, setLoading] = useState(false);
       );
     }
 
-    // 确定探针类型
+    // 確定探針型別
     let probeType = t('container.probe.unknown');
     if (probe.httpGet) probeType = t('container.probe.httpGet');
     else if (probe.tcpSocket) probeType = t('container.probe.tcpSocket');
@@ -653,7 +653,7 @@ const [loading, setLoading] = useState(false);
     );
   };
 
-  // 渲染健康检查
+  // 渲染健康檢查
   const renderHealthCheck = () => {
     if (!currentContainer) return null;
 
@@ -666,7 +666,7 @@ const [loading, setLoading] = useState(false);
     );
   };
 
-  // 环境变量值来源类型
+  // 環境變數值來源型別
   type EnvValueFrom = {
     configMapKeyRef?: { name: string; key: string; optional?: boolean };
     secretKeyRef?: { name: string; key: string; optional?: boolean };
@@ -674,7 +674,7 @@ const [loading, setLoading] = useState(false);
     resourceFieldRef?: { containerName?: string; resource: string; divisor?: string };
   };
   
-  // 渲染环境变量值来源
+  // 渲染環境變數值來源
   const renderEnvValueFrom = (valueFrom: EnvValueFrom | undefined) => {
     if (!valueFrom) return '-';
     
@@ -716,7 +716,7 @@ const [loading, setLoading] = useState(false);
     return JSON.stringify(valueFrom);
   };
 
-  // 渲染环境变量
+  // 渲染環境變數
   const renderEnvVars = () => {
     const hasEnv = currentContainer?.env && currentContainer.env.length > 0;
     const hasEnvFrom = currentContainer?.envFrom && currentContainer.envFrom.length > 0;
@@ -756,7 +756,7 @@ const [loading, setLoading] = useState(false);
           </Card>
         )}
 
-        {/* 环境变量列表 */}
+        {/* 環境變數列表 */}
         {hasEnv && (
           <Card title={t('container.env.title')} size="small">
             <Descriptions column={1} size="small" bordered>
@@ -776,19 +776,19 @@ const [loading, setLoading] = useState(false);
     );
   };
 
-  // 渲染数据存储
+  // 渲染資料儲存
   const renderVolumeMounts = () => {
     if (!currentContainer || !currentContainer.volumeMounts || currentContainer.volumeMounts.length === 0) {
       return <Empty description={t("container.volume.noMounts")} />;
     }
 
-    // 查找卷的类型信息
+    // 查詢卷的型別資訊
     const getVolumeInfo = (volumeName: string) => {
       if (!spec?.template?.spec?.volumes) return null;
       return spec.template.spec.volumes.find(v => v.name === volumeName);
     };
 
-    // 渲染卷类型
+    // 渲染卷型別
     const renderVolumeType = (volume: VolumeConfig | null | undefined) => {
       if (!volume) return <Tag>{t('container.volume.unknown')}</Tag>;
       if (volume.configMap) return <Tag color="blue">ConfigMap: {volume.configMap.name}</Tag>;
@@ -837,7 +837,7 @@ const [loading, setLoading] = useState(false);
           })}
         </Card>
 
-        {/* 显示所有 volumes 定义 */}
+        {/* 顯示所有 volumes 定義 */}
         {spec?.template?.spec?.volumes && spec.template.spec.volumes.length > 0 && (
           <Card title={t('container.volume.definitions')} size="small">
             {spec.template.spec.volumes.map((volume, index) => (
@@ -917,7 +917,7 @@ const [loading, setLoading] = useState(false);
     );
   };
 
-  // 渲染内容
+  // 渲染內容
   const renderContent = () => {
     switch (selectedSection) {
       case 'basic':
@@ -937,7 +937,7 @@ const [loading, setLoading] = useState(false);
 
   return (
     <div>
-      {/* 容器选择 */}
+      {/* 容器選擇 */}
       {containers.length > 1 && (
         <>
           <div style={{ marginBottom: 16 }}>
@@ -957,7 +957,7 @@ const [loading, setLoading] = useState(false);
         </>
       )}
 
-      {/* 左侧菜单和右侧内容 */}
+      {/* 左側選單和右側內容 */}
       <Row gutter={16}>
         <Col span={4}>
           <Menu

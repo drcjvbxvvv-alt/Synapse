@@ -1,6 +1,6 @@
 import { request } from '../utils/api';
 
-// 终端会话列表项
+// 終端會話列表項
 export interface TerminalSessionItem {
   id: number;
   user_id: number;
@@ -21,7 +21,7 @@ export interface TerminalSessionItem {
   command_count: number;
 }
 
-// 会话列表响应
+// 會話列表響應
 export interface SessionListResponse {
   items: TerminalSessionItem[];
   total: number;
@@ -29,7 +29,7 @@ export interface SessionListResponse {
   pageSize: number;
 }
 
-// 会话详情
+// 會話詳情
 export interface SessionDetailResponse {
   id: number;
   user_id: number;
@@ -51,7 +51,7 @@ export interface SessionDetailResponse {
   duration: string;
 }
 
-// 命令记录
+// 命令記錄
 export interface TerminalCommand {
   id: number;
   session_id: number;
@@ -61,7 +61,7 @@ export interface TerminalCommand {
   exit_code: number | null;
 }
 
-// 命令列表响应
+// 命令列表響應
 export interface CommandListResponse {
   items: TerminalCommand[];
   total: number;
@@ -69,7 +69,7 @@ export interface CommandListResponse {
   pageSize: number;
 }
 
-// 会话统计
+// 會話統計
 export interface SessionStats {
   total_sessions: number;
   active_sessions: number;
@@ -79,7 +79,7 @@ export interface SessionStats {
   node_sessions: number;
 }
 
-// 会话列表查询参数
+// 會話列表查詢參數
 export interface SessionListParams {
   page?: number;
   pageSize?: number;
@@ -92,9 +92,9 @@ export interface SessionListParams {
   keyword?: string;
 }
 
-// ==================== 操作审计相关类型 ====================
+// ==================== 操作審計相關型別 ====================
 
-// 操作日志列表项
+// 操作日誌列表項
 export interface OperationLogItem {
   id: number;
   user_id: number | null;
@@ -118,7 +118,7 @@ export interface OperationLogItem {
   created_at: string;
 }
 
-// 操作日志列表响应
+// 操作日誌列表響應
 export interface OperationLogListResponse {
   items: OperationLogItem[];
   total: number;
@@ -126,35 +126,35 @@ export interface OperationLogListResponse {
   pageSize: number;
 }
 
-// 操作日志详情（含请求体）
+// 操作日誌詳情（含請求體）
 export interface OperationLogDetail extends OperationLogItem {
   query: string;
   request_body: string;
   user_agent: string;
 }
 
-// 模块统计
+// 模組統計
 export interface ModuleStat {
   module: string;
   module_name: string;
   count: number;
 }
 
-// 操作统计
+// 操作統計
 export interface ActionStat {
   action: string;
   action_name: string;
   count: number;
 }
 
-// 用户操作统计
+// 使用者操作統計
 export interface UserOperationStat {
   user_id: number;
   username: string;
   count: number;
 }
 
-// 操作日志统计
+// 操作日誌統計
 export interface OperationLogStats {
   total_count: number;
   today_count: number;
@@ -166,7 +166,7 @@ export interface OperationLogStats {
   user_stats: UserOperationStat[];
 }
 
-// 操作日志查询参数
+// 操作日誌查詢參數
 export interface OperationLogListParams {
   page?: number;
   pageSize?: number;
@@ -182,58 +182,58 @@ export interface OperationLogListParams {
   keyword?: string;
 }
 
-// 模块/操作选项
+// 模組/操作選項
 export interface ModuleOption {
   key: string;
   name: string;
 }
 
 export const auditService = {
-  // ==================== 终端会话审计 ====================
+  // ==================== 終端會話審計 ====================
   
-  // 获取终端会话列表
+  // 獲取終端會話列表
   getTerminalSessions: (params?: SessionListParams) => {
     return request.get<SessionListResponse>('/audit/terminal/sessions', { params });
   },
 
-  // 获取终端会话详情
+  // 獲取終端會話詳情
   getTerminalSession: (sessionId: number) => {
     return request.get<SessionDetailResponse>(`/audit/terminal/sessions/${sessionId}`);
   },
 
-  // 获取终端命令记录
+  // 獲取終端命令記錄
   getTerminalCommands: (sessionId: number, params?: { page?: number; pageSize?: number }) => {
     return request.get<CommandListResponse>(`/audit/terminal/sessions/${sessionId}/commands`, { params });
   },
 
-  // 获取终端会话统计
+  // 獲取終端會話統計
   getTerminalStats: () => {
     return request.get<SessionStats>('/audit/terminal/stats');
   },
 
-  // ==================== 操作审计 ====================
+  // ==================== 操作審計 ====================
 
-  // 获取操作日志列表
+  // 獲取操作日誌列表
   getOperationLogs: (params?: OperationLogListParams) => {
     return request.get<OperationLogListResponse>('/audit/operations', { params });
   },
 
-  // 获取操作日志详情
+  // 獲取操作日誌詳情
   getOperationLog: (id: number) => {
     return request.get<OperationLogDetail>(`/audit/operations/${id}`);
   },
 
-  // 获取操作日志统计
+  // 獲取操作日誌統計
   getOperationLogStats: (params?: { startTime?: string; endTime?: string }) => {
     return request.get<OperationLogStats>('/audit/operations/stats', { params });
   },
 
-  // 获取模块列表
+  // 獲取模組列表
   getModules: () => {
     return request.get<ModuleOption[]>('/audit/modules');
   },
 
-  // 获取操作列表
+  // 獲取操作列表
   getActions: () => {
     return request.get<ModuleOption[]>('/audit/actions');
   },

@@ -1,4 +1,4 @@
-// 集群相关类型定义
+// 叢集相關型別定義
 export interface Cluster {
   id: string;
   name: string;
@@ -14,14 +14,14 @@ export interface Cluster {
   labels?: Record<string, string>;
 }
 
-// 容器子网IP信息
+// 容器子網IP資訊
 export interface ContainerSubnetIPs {
   total_ips: number;
   used_ips: number;
   available_ips: number;
 }
 
-// 集群概览信息
+// 叢集概覽資訊
 export interface ClusterOverview {
   clusterID: number;
   nodes: number;
@@ -45,7 +45,7 @@ export interface ClusterStats {
   runningPods: number;
 }
 
-// 节点相关类型定义
+// 節點相關型別定義
 export interface NodeAddress {
   address: string;
   type: string;
@@ -95,7 +95,7 @@ export interface NodeTaint {
   effect: 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute';
 }
 
-// Pod相关类型定义
+// Pod相關型別定義
 export interface Pod {
   id: string;
   name: string;
@@ -138,7 +138,7 @@ export interface ContainerState {
   };
 }
 
-// 工作负载相关类型定义
+// 工作負載相關型別定義
 export interface Workload {
   id: string;
   name: string;
@@ -154,7 +154,7 @@ export interface Workload {
   updatedAt: string;
 }
 
-// API 响应类型（后端直接返回数据体，无包装）
+// API 響應型別（後端直接返回資料體，無包裝）
 export type ApiResponse<T> = T;
 
 export interface PaginatedResponse<T> {
@@ -164,7 +164,7 @@ export interface PaginatedResponse<T> {
   pageSize: number;
 }
 
-// 搜索相关类型
+// 搜尋相關型別
 export interface SearchResult {
   id: string;
   name: string;
@@ -191,7 +191,7 @@ export interface SearchResponse {
   };
 }
 
-// 监控数据类型
+// 監控資料型別
 export interface MetricData {
   timestamp: number;
   value: number;
@@ -202,7 +202,7 @@ export interface MetricSeries {
   data: MetricData[];
 }
 
- // K8s 事件类型
+ // K8s 事件型別
 export interface K8sEventInvolvedObject {
   kind: string;
   name: string;
@@ -230,7 +230,7 @@ export interface K8sEvent {
   count?: number;
 }
 
-// Service相关类型定义
+// Service相關型別定義
 export interface ServicePort {
   name: string;
   protocol: string;
@@ -261,7 +261,7 @@ export interface Service {
   annotations: Record<string, string>;
 }
 
-// Ingress相关类型定义
+// Ingress相關型別定義
 export interface IngressPathInfo {
   path: string;
   pathType: string;
@@ -296,7 +296,7 @@ export interface Ingress {
   annotations: Record<string, string>;
 }
 
-// Endpoints相关类型定义
+// Endpoints相關型別定義
 export interface EndpointAddress {
   ip: string;
   nodeName?: string;
@@ -324,7 +324,7 @@ export interface Endpoints {
   subsets: EndpointSubset[];
 }
 
-// 存储相关类型定义 - PVC
+// 儲存相關型別定義 - PVC
 export interface PVC {
   name: string;
   namespace: string;
@@ -339,7 +339,7 @@ export interface PVC {
   annotations: Record<string, string>;
 }
 
-// 存储相关类型定义 - PV
+// 儲存相關型別定義 - PV
 export interface PVClaimRef {
   namespace: string;
   name: string;
@@ -362,7 +362,7 @@ export interface PV {
   annotations: Record<string, string>;
 }
 
-// 存储相关类型定义 - StorageClass
+// 儲存相關型別定義 - StorageClass
 export interface StorageClass {
   name: string;
   provisioner: string;
@@ -377,7 +377,7 @@ export interface StorageClass {
   annotations: Record<string, string>;
 }
 
-// 用户相关类型定义
+// 使用者相關型別定義
 export interface User {
   id: number;
   username: string;
@@ -392,7 +392,7 @@ export interface User {
   updated_at: string;
 }
 
-// 用户管理请求类型
+// 使用者管理請求型別
 export interface CreateUserRequest {
   username: string;
   password: string;
@@ -407,7 +407,7 @@ export interface UpdateUserRequest {
   phone?: string;
 }
 
-// LDAP配置类型
+// LDAP配置型別
 export interface LDAPConfig {
   enabled: boolean;
   server: string;
@@ -425,7 +425,7 @@ export interface LDAPConfig {
   group_attr: string;
 }
 
-// SSH配置类型
+// SSH配置型別
 export interface SSHConfig {
   enabled: boolean;
   username: string;
@@ -435,13 +435,40 @@ export interface SSHConfig {
   private_key?: string;
 }
 
-// Grafana 配置类型
+// Grafana 配置型別
 export interface GrafanaConfig {
   url: string;
   api_key: string;
 }
 
-// Grafana Dashboard 同步状态
+// 系統安全設定
+export interface SecurityConfig {
+  session_ttl_minutes: number;
+  login_fail_lock_threshold: number;
+  lock_duration_minutes: number;
+  password_min_length: number;
+}
+
+// API Token
+export interface APIToken {
+  id: number;
+  name: string;
+  scopes: string[];
+  expires_at?: string;
+  last_used_at?: string;
+  created_at: string;
+}
+
+// 建立 API Token 回應（含一次性明文）
+export interface CreateAPITokenResponse {
+  id: number;
+  name: string;
+  token: string;
+  expires_at?: string;
+  created_at: string;
+}
+
+// Grafana Dashboard 同步狀態
 export interface GrafanaDashboardSyncStatus {
   folder_exists: boolean;
   dashboards: GrafanaDashboardStatusItem[];
@@ -454,7 +481,7 @@ export interface GrafanaDashboardStatusItem {
   exists: boolean;
 }
 
-// Grafana 数据源同步状态
+// Grafana 資料來源同步狀態
 export interface GrafanaDataSourceSyncStatus {
   datasources: GrafanaDataSourceStatusItem[];
   all_synced: boolean;
@@ -467,23 +494,23 @@ export interface GrafanaDataSourceStatusItem {
   exists: boolean;
 }
 
-// ========== 权限管理类型 ==========
+// ========== 權限管理型別 ==========
 
-// 权限类型常量
+// 權限型別常量
 export type PermissionType = 'admin' | 'ops' | 'dev' | 'readonly' | 'custom';
 
-// 权限类型信息
+// 權限型別資訊
 export interface PermissionTypeInfo {
   type: PermissionType;
   name: string;
   description: string;
   resources: string[];
   actions: string[];
-  allowPartialNamespaces: boolean;  // 是否允许选择部分命名空间
-  requireAllNamespaces: boolean;    // 是否必须选择全部命名空间
+  allowPartialNamespaces: boolean;  // 是否允許選擇部分命名空間
+  requireAllNamespaces: boolean;    // 是否必須選擇全部命名空間
 }
 
-// 用户组
+// 使用者組
 export interface UserGroup {
   id: number;
   name: string;
@@ -493,7 +520,7 @@ export interface UserGroup {
   users?: User[];
 }
 
-// 集群权限配置
+// 叢集權限配置
 export interface ClusterPermission {
   id: number;
   cluster_id: number;
@@ -510,7 +537,7 @@ export interface ClusterPermission {
   updated_at: string;
 }
 
-// 创建集群权限请求
+// 建立叢集權限請求
 export interface CreateClusterPermissionRequest {
   cluster_id: number;
   user_id?: number;
@@ -522,14 +549,14 @@ export interface CreateClusterPermissionRequest {
   custom_role_ref?: string;
 }
 
-// 更新集群权限请求
+// 更新叢集權限請求
 export interface UpdateClusterPermissionRequest {
   permission_type?: PermissionType;
   namespaces?: string[];
   custom_role_ref?: string;
 }
 
-// 我的权限响应
+// 我的權限響應
 export interface MyPermissionsResponse {
   cluster_id: number;
   cluster_name: string;
@@ -540,13 +567,13 @@ export interface MyPermissionsResponse {
   custom_role_ref?: string;
 }
 
-// 创建用户组请求
+// 建立使用者組請求
 export interface CreateUserGroupRequest {
   name: string;
   description?: string;
 }
 
-// 更新用户组请求
+// 更新使用者組請求
 export interface UpdateUserGroupRequest {
   name: string;
   description?: string;

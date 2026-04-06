@@ -43,18 +43,18 @@ const [loading, setLoading] = useState(true);
   const [yamlContent, setYamlContent] = useState('');
   const [originalYaml, setOriginalYaml] = useState('');
 
-  // 预检相关状态
+  // 預檢相關狀態
   const [dryRunning, setDryRunning] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
 
-  // Diff 对比相关状态
+  // Diff 對比相關狀態
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
 
-  // 加载 Ingress 详情
+  // 載入 Ingress 詳情
   const loadIngress = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     setLoading(true);
@@ -76,11 +76,11 @@ const [loading, setLoading] = useState(true);
     loadIngress();
   }, [loadIngress]);
 
-  // 预检（Dry Run）
+  // 預檢（Dry Run）
   const handleDryRun = async () => {
     if (!clusterId) return;
 
-    // 验证 YAML 格式
+    // 驗證 YAML 格式
     try {
       YAML.parse(yamlContent);
     } catch (error) {
@@ -107,7 +107,7 @@ const [loading, setLoading] = useState(true);
     }
   };
 
-  // 确认 Diff 后提交
+  // 確認 Diff 後提交
   const handleConfirmDiff = async () => {
     if (!clusterId || !pendingYaml) return;
 
@@ -124,11 +124,11 @@ const [loading, setLoading] = useState(true);
     }
   };
 
-  // 提交 - 先预检，再展示 diff
+  // 提交 - 先預檢，再展示 diff
   const handleSubmit = async () => {
     if (!clusterId || !namespace || !name) return;
 
-    // 验证 YAML 格式
+    // 驗證 YAML 格式
     try {
       YAML.parse(yamlContent);
     } catch (error) {
@@ -136,11 +136,11 @@ const [loading, setLoading] = useState(true);
       return;
     }
 
-    // 执行预检
+    // 執行預檢
     setSubmitting(true);
     try {
       await ResourceService.applyYAML(clusterId, 'Ingress', yamlContent, true);
-      // 预检通过，展示 diff 对比
+      // 預檢透過，展示 diff 對比
       setPendingYaml(yamlContent);
       setDiffModalVisible(true);
     } catch (error: unknown) {
@@ -150,7 +150,7 @@ const [loading, setLoading] = useState(true);
     }
   };
 
-  // 返回上一页
+  // 返回上一頁
   const handleBack = () => {
     if (yamlContent !== originalYaml) {
       modal.confirm({
@@ -178,7 +178,7 @@ const [loading, setLoading] = useState(true);
   return (
     <div style={{ padding: '24px' }}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        {/* 头部 */}
+        {/* 頭部 */}
         <Card>
           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
             <Space>
@@ -216,7 +216,7 @@ const [loading, setLoading] = useState(true);
           </Space>
         </Card>
 
-        {/* 预检结果提示 */}
+        {/* 預檢結果提示 */}
         {dryRunResult && (
           <Alert
             message={dryRunResult.success ? t('network:editPage.dryRunSuccessTitle') : t('network:editPage.dryRunFailedTitle')}
@@ -229,7 +229,7 @@ const [loading, setLoading] = useState(true);
           />
         )}
 
-        {/* YAML 编辑器 */}
+        {/* YAML 編輯器 */}
         <Card title={t('network:editPage.yamlEditor')}>
           <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
             <MonacoEditor
@@ -258,7 +258,7 @@ const [loading, setLoading] = useState(true);
         </Card>
       </Space>
 
-      {/* YAML Diff 对比 Modal */}
+      {/* YAML Diff 對比 Modal */}
       <Modal
         title={
           <Space>

@@ -2,7 +2,7 @@ import { request } from '../utils/api';
 import type { Cluster, ClusterStats, PaginatedResponse, K8sEvent } from '../types';
 
 export const clusterService = {
-  // 获取集群列表
+  // 獲取叢集列表
   getClusters: (params?: {
     page?: number;
     pageSize?: number;
@@ -12,12 +12,12 @@ export const clusterService = {
     return request.get<PaginatedResponse<Cluster>>('/clusters', { params });
   },
 
-  // 获取集群详情
+  // 獲取叢集詳情
   getCluster: (clusterId: string) => {
     return request.get<Cluster>(`/clusters/${clusterId}`);
   },
 
-  // 导入集群
+  // 匯入叢集
   importCluster: (data: {
     name: string;
     apiServer: string;
@@ -28,22 +28,22 @@ export const clusterService = {
     return request.post<Cluster>('/clusters/import', data);
   },
 
-  // 删除集群
+  // 刪除叢集
   deleteCluster: (clusterId: string) => {
     return request.delete(`/clusters/${clusterId}`);
   },
 
-  // 获取集群统计信息
+  // 獲取叢集統計資訊
   getClusterStats: () => {
     return request.get<ClusterStats>('/clusters/stats');
   },
 
-  // 获取集群概览信息
+  // 獲取叢集概覽資訊
   getClusterOverview: (clusterId: string) => {
     return request.get(`/clusters/${clusterId}/overview`);
   },
 
-  // 获取集群监控数据
+  // 獲取叢集監控資料
   getClusterMetrics: (clusterId: string, params: {
     range: string;
     step?: string;
@@ -51,7 +51,7 @@ export const clusterService = {
     return request.get(`/clusters/${clusterId}/metrics`, { params });
   },
 
-  // 测试集群连接
+  // 測試叢集連線
   testConnection: (data: {
     apiServer: string;
     kubeconfig?: string;
@@ -61,7 +61,7 @@ export const clusterService = {
     return request.post('/clusters/test-connection', data);
   },
 
-  // 获取集群K8s事件
+  // 獲取叢集K8s事件
   getClusterEvents: (clusterId: string, params?: { search?: string; type?: string }) => {
     return request.get<K8sEvent[]>(`/clusters/${clusterId}/events`, { params });
   },

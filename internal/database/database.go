@@ -195,6 +195,8 @@ func autoMigrate(db *gorm.DB) error {
 		&models.ImageIndex{},           // 映像索引表（跨叢集 Image Tag 搜尋）
 		&models.PortForwardSession{},   // Port-Forward 會話記錄表
 		&models.SIEMWebhookConfig{},    // SIEM Webhook 設定表
+		&models.APIToken{},             // 個人 API Token 表
+		&models.NotifyChannel{},        // 通知渠道設定表
 	)
 
 	// 根据数据库驱动类型重新启用外键约束检查

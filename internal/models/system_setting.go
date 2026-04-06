@@ -89,6 +89,24 @@ func GetDefaultGrafanaSettingConfig() GrafanaSettingConfig {
 	}
 }
 
+// SystemSecurityConfig 登入安全設定（存於 system_settings，key=security_config）
+type SystemSecurityConfig struct {
+	SessionTTLMinutes      int `json:"session_ttl_minutes"`       // Session 逾時（分鐘）
+	LoginFailLockThreshold int `json:"login_fail_lock_threshold"` // 登入失敗鎖定閾值
+	LockDurationMinutes    int `json:"lock_duration_minutes"`     // 鎖定持續時間（分鐘）
+	PasswordMinLength      int `json:"password_min_length"`       // 密碼最短長度
+}
+
+// GetDefaultSystemSecurityConfig 取得預設安全設定
+func GetDefaultSystemSecurityConfig() SystemSecurityConfig {
+	return SystemSecurityConfig{
+		SessionTTLMinutes:      480,
+		LoginFailLockThreshold: 5,
+		LockDurationMinutes:    30,
+		PasswordMinLength:      8,
+	}
+}
+
 // TableName 指定表名
 func (SystemSetting) TableName() string {
 	return "system_settings"

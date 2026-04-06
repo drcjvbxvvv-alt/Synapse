@@ -36,18 +36,18 @@ const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [editMode, setEditMode] = useState<'form' | 'yaml'>('form');
   
-  // 表单模式状态
+  // 表單模式狀態
   const [name, setName] = useState('');
   const [namespace, setNamespace] = useState('default');
   const [labels, setLabels] = useState<Array<{ key: string; value: string }>>([]);
   const [annotations, setAnnotations] = useState<Array<{ key: string; value: string }>>([]);
   const [dataItems, setDataItems] = useState<Array<{ key: string; value: string }>>([]);
   
-  // 命名空间列表
+  // 命名空間列表
   const [namespaces, setNamespaces] = useState<string[]>(['default']);
   const [loadingNamespaces, setLoadingNamespaces] = useState(false);
   
-  // YAML 模式状态
+  // YAML 模式狀態
   const [yamlContent, setYamlContent] = useState(`apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -57,7 +57,7 @@ metadata:
   annotations: {}
 data: {}`);
 
-  // 加载命名空间列表
+  // 載入命名空間列表
   React.useEffect(() => {
     const loadNamespaces = async () => {
       if (!clusterId) return;
@@ -65,12 +65,12 @@ data: {}`);
       try {
         const nsList = await getNamespaces(Number(clusterId));
         setNamespaces(nsList);
-        // 如果当前命名空间不在列表中，设置为第一个
+        // 如果當前命名空間不在列表中，設定為第一個
         if (nsList.length > 0 && !nsList.includes(namespace)) {
           setNamespace(nsList[0]);
         }
       } catch (error) {
-        console.error('加载命名空间失败:', error);
+        console.error('載入命名空間失敗:', error);
       } finally {
         setLoadingNamespaces(false);
       }
@@ -80,68 +80,68 @@ data: {}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId]);
 
-  // 添加标签
+  // 新增標籤
   const handleAddLabel = () => {
     setLabels([...labels, { key: '', value: '' }]);
   };
 
-  // 删除标签
+  // 刪除標籤
   const handleRemoveLabel = (index: number) => {
     const newLabels = labels.filter((_, i) => i !== index);
     setLabels(newLabels);
   };
 
-  // 更新标签
+  // 更新標籤
   const handleLabelChange = (index: number, field: 'key' | 'value', value: string) => {
     const newLabels = [...labels];
     newLabels[index][field] = value;
     setLabels(newLabels);
   };
 
-  // 添加注解
+  // 新增註解
   const handleAddAnnotation = () => {
     setAnnotations([...annotations, { key: '', value: '' }]);
   };
 
-  // 删除注解
+  // 刪除註解
   const handleRemoveAnnotation = (index: number) => {
     const newAnnotations = annotations.filter((_, i) => i !== index);
     setAnnotations(newAnnotations);
   };
 
-  // 更新注解
+  // 更新註解
   const handleAnnotationChange = (index: number, field: 'key' | 'value', value: string) => {
     const newAnnotations = [...annotations];
     newAnnotations[index][field] = value;
     setAnnotations(newAnnotations);
   };
 
-  // 添加数据项
+  // 新增資料項
   const handleAddDataItem = () => {
     setDataItems([...dataItems, { key: '', value: '' }]);
   };
 
-  // 删除数据项
+  // 刪除資料項
   const handleRemoveDataItem = (index: number) => {
     const newDataItems = dataItems.filter((_, i) => i !== index);
     setDataItems(newDataItems);
   };
 
-  // 更新数据项键
+  // 更新資料項鍵
   const handleDataKeyChange = (index: number, value: string) => {
     const newDataItems = [...dataItems];
     newDataItems[index].key = value;
     setDataItems(newDataItems);
   };
 
-  // 更新数据项值
+  // 更新資料項值
   const handleDataValueChange = (index: number, value: string | undefined) => {
     const newDataItems = [...dataItems];
     newDataItems[index].value = value || '';
     setDataItems(newDataItems);
   };
 
-  // 表单模式转YAML模式
+  // 表單模式轉YAML模式
   const formToYaml = () => {
     const labelsObj: Record<string, string> = {};
     labels.forEach((label) => {
@@ -173,12 +173,12 @@ data: {}`);
     return YAML.stringify(yamlObj);
   };
 
-  // YAML模式转表单模式
+  // YAML模式轉表單模式
   const yamlToForm = (yamlStr: string) => {
     try {
       const yamlObj = YAML.parse(yamlStr);
       
-      // 解析基本信息
+      // 解析基本資訊
       setName(yamlObj.metadata?.name || '');
       setNamespace(yamlObj.metadata?.namespace || 'default');
       
@@ -210,24 +210,24 @@ data: {}`);
     }
   };
 
-  // 切换编辑模式
+  // 切換編輯模式
   const handleModeChange = (mode: 'form' | 'yaml') => {
     if (mode === editMode) return;
 
     if (mode === 'yaml') {
-      // 表单 -> YAML
+      // 表單 -> YAML
       const yaml = formToYaml();
       setYamlContent(yaml);
       setEditMode('yaml');
     } else {
-      // YAML -> 表单
+      // YAML -> 表單
       if (yamlToForm(yamlContent)) {
         setEditMode('form');
       }
     }
   };
 
-  // 提交表单
+  // 提交表單
   const handleSubmit = async () => {
     if (!clusterId) return;
 
@@ -256,7 +256,7 @@ data: {}`);
         return;
       }
     } else {
-      // 表单模式：验证和构建数据
+      // 表單模式：驗證和構建資料
       if (!name) {
         message.error(t('config:create.messages.configMapNameRequired'));
         return;
@@ -265,7 +265,7 @@ data: {}`);
       configMapName = name;
       configMapNamespace = namespace;
 
-      // 验证标签和注解
+      // 驗證標籤和註解
       for (const label of labels) {
         if (label.key) {
           if (labelsObj[label.key]) {
@@ -286,7 +286,7 @@ data: {}`);
         }
       }
 
-      // 验证数据项
+      // 驗證資料項
       for (const item of dataItems) {
         if (!item.key) {
           message.error(t('config:create.messages.dataKeyRequired'));
@@ -321,7 +321,7 @@ data: {}`);
   return (
     <div style={{ padding: '24px' }}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        {/* 头部 */}
+        {/* 頭部 */}
         <Card>
           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
             <Space>
@@ -365,7 +365,7 @@ data: {}`);
           </Space>
         </Card>
 
-        {/* YAML 编辑模式 */}
+        {/* YAML 編輯模式 */}
         {editMode === 'yaml' ? (
           <Card title={t('config:create.yamlEditor')}>
             <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
@@ -391,9 +391,9 @@ data: {}`);
             </div>
           </Card>
         ) : (
-          /* 表单编辑模式 */
+          /* 表單編輯模式 */
           <>
-            {/* 基本信息 */}
+            {/* 基本資訊 */}
             <Card title={t('config:create.basicInfo')}>
               <Form form={form} layout="vertical">
                 <Row gutter={16}>
@@ -439,7 +439,7 @@ data: {}`);
               </Form>
             </Card>
 
-            {/* 标签 */}
+            {/* 標籤 */}
             <Card
               title={
                 <Space>
@@ -492,7 +492,7 @@ data: {}`);
               </Space>
             </Card>
 
-            {/* 注解 */}
+            {/* 註解 */}
             <Card
               title={
                 <Space>
@@ -545,7 +545,7 @@ data: {}`);
               </Space>
             </Card>
 
-            {/* 数据内容 */}
+            {/* 資料內容 */}
             <Card
               title={
                 <Space>

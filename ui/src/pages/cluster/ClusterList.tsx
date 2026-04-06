@@ -40,7 +40,7 @@ const ClusterList: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [clusters, setClusters] = useState<Cluster[]>([]);
 
-  // 获取集群列表 - 使用useCallback优化
+  // 獲取叢集列表 - 使用useCallback最佳化
   const fetchClusters = useCallback(async () => {
     setLoading(true);
     try {
@@ -79,7 +79,7 @@ const ClusterList: React.FC = () => {
       key: 'name',
       width: 200,
       fixed: 'left' as const,
-      // 在集群名称列的 render 函数中
+      // 在叢集名稱列的 render 函式中
       render: (text, record) => (
         <div style={{ display: 'flex', alignItems: 'flex-start' }}>
           <ClusterOutlined style={{ marginRight: 8, color: '#1890ff', flexShrink: 0, marginTop: 2 }} />
@@ -89,12 +89,12 @@ const ClusterList: React.FC = () => {
               whiteSpace: 'normal',
               wordBreak: 'break-all',
               lineHeight: '1.4',
-              color: '#1890ff',        // 添加链接颜色
-              cursor: 'pointer',       // 添加手型光标
-              textDecoration: 'none'   // 可选：去掉下划线
+              color: '#1890ff',        // 新增連結顏色
+              cursor: 'pointer',       // 新增手型游標
+              textDecoration: 'none'   // 可選：去掉下劃線
             }}
-            onClick={() => navigate(`/clusters/${record.id}/overview`)}  // 添加点击事件
-            // onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}  // 悬停效果
+            onClick={() => navigate(`/clusters/${record.id}/overview`)}  // 新增點選事件
+            // onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}  // 懸停效果
             // onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
             >
               {text}
@@ -223,7 +223,7 @@ const ClusterList: React.FC = () => {
     },
   ], [t, tc, navigate, modal]);
 
-  // 打开终端
+  // 開啟終端
   const openTerminal = (cluster: Cluster) => {
     if (cluster.id) {
       window.open(`/clusters/${cluster.id}/terminal`);
@@ -233,13 +233,13 @@ const ClusterList: React.FC = () => {
   };
 
 
-  // 刷新集群列表
+  // 重新整理叢集列表
   const handleRefresh = () => {
     setLoading(true);
     fetchClusters();
   };
 
-  // 删除集群
+  // 刪除叢集
   const handleDelete = (cluster: Cluster) => {
     if (!cluster.id) {
       message.error(tc('messages.error'));
@@ -256,7 +256,7 @@ const ClusterList: React.FC = () => {
         try {
           await clusterService.deleteCluster(cluster.id!.toString());
           message.success(tc('messages.deleteSuccess'));
-          // 刷新列表
+          // 重新整理列表
           fetchClusters();
         } catch (error: unknown) {
           const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || tc('messages.deleteError');
@@ -273,17 +273,17 @@ const ClusterList: React.FC = () => {
     return matchesSearch;
   });
 
-  // 统计数据
+  // 統計資料
   const unhealthyClusters = clusters.filter(c => c.status === 'unhealthy').length;
 
   return (
     <div>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1>{t('title')}</h1>
-            {/* // Todo 改为异常节点 */}
+            {/* // Todo 改為異常節點 */}
             <div style={{ display: 'flex', gap: '36px' }}>
               <span>{t('status.unhealthy')}/{tc('table.status')}: <b>{unhealthyClusters}</b>/<b>{clusters.length}</b></span>
             </div>
@@ -296,7 +296,7 @@ const ClusterList: React.FC = () => {
         </div>
       </div>
 
-      {/* 集群列表 */}
+      {/* 叢集列表 */}
       <div className="table-container">
         <div className="toolbar">
           <div className="toolbar-left">

@@ -65,7 +65,7 @@ const { t } = useTranslation(['workload', 'common']);
 const [loading, setLoading] = useState(false);
   const [scheduling, setScheduling] = useState<SchedulingInfo | null>(null);
 
-  // 获取工作负载名称和类型
+  // 獲取工作負載名稱和型別
   const workloadName = deploymentName || rolloutName || statefulSetName || daemonSetName || jobName || cronJobName;
   const workloadType = deploymentName ? 'Deployment' 
     : rolloutName ? 'Rollout'
@@ -75,7 +75,7 @@ const [loading, setLoading] = useState(false);
     : cronJobName ? 'CronJob'
     : '';
 
-  // 加载调度策略
+  // 載入排程策略
   const loadScheduling = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
@@ -101,7 +101,7 @@ const [loading, setLoading] = useState(false);
         }
       }
     } catch (error) {
-      console.error('获取调度策略失败:', error);
+      console.error('獲取排程策略失敗:', error);
       message.error(t('messages.fetchSchedulingError'));
     } finally {
       setLoading(false);
@@ -139,7 +139,7 @@ const [loading, setLoading] = useState(false);
 
   return (
     <div>
-      {/* 节点选择器 */}
+      {/* 節點選擇器 */}
       {hasNodeSelector && (
         <Card title={t('scheduling.nodeSelector')} size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={1} bordered size="small">
@@ -152,7 +152,7 @@ const [loading, setLoading] = useState(false);
         </Card>
       )}
 
-      {/* 节点亲和性 */}
+      {/* 節點親和性 */}
       {hasAffinity && scheduling!.affinity!.nodeAffinity && (
         <Card title={t('scheduling.nodeAffinity')} size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={1} bordered size="small">
@@ -165,7 +165,7 @@ const [loading, setLoading] = useState(false);
         </Card>
       )}
 
-      {/* Pod亲和性 */}
+      {/* Pod親和性 */}
       {hasAffinity && scheduling!.affinity!.podAffinity && (
         <Card title={t('scheduling.podAffinity')} size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={1} bordered size="small">
@@ -178,7 +178,7 @@ const [loading, setLoading] = useState(false);
         </Card>
       )}
 
-      {/* Pod反亲和性 */}
+      {/* Pod反親和性 */}
       {hasAffinity && scheduling!.affinity!.podAntiAffinity && (
         <Card title={t('scheduling.podAntiAffinity')} size="small" style={{ marginBottom: 16 }}>
           <Descriptions column={1} bordered size="small">

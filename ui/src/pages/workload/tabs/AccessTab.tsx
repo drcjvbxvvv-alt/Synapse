@@ -65,7 +65,7 @@ const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<ServiceInfo[]>([]);
   const [ingresses, setIngresses] = useState<IngressInfo[]>([]);
 
-  // 获取工作负载名称和类型
+  // 獲取工作負載名稱和型別
   const workloadName = deploymentName || rolloutName || statefulSetName || daemonSetName || jobName || cronJobName;
   const workloadType = deploymentName ? 'Deployment' 
     : rolloutName ? 'Rollout'
@@ -75,7 +75,7 @@ const [loading, setLoading] = useState(false);
     : cronJobName ? 'CronJob'
     : '';
 
-  // 加载Service列表
+  // 載入Service列表
   const loadServices = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
@@ -90,14 +90,14 @@ const [loading, setLoading] = useState(false);
       
       setServices(((response as unknown as { items?: unknown[] }).items || []) as ServiceInfo[]);
     } catch (error) {
-      console.error('获取Service列表失败:', error);
+      console.error('獲取Service列表失敗:', error);
       message.error(t('messages.fetchServiceError'));
     } finally {
       setLoading(false);
     }
   }, [clusterId, namespace, workloadName, workloadType]);
 
-  // 加载Ingress列表
+  // 載入Ingress列表
   const loadIngresses = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
@@ -112,7 +112,7 @@ const [loading, setLoading] = useState(false);
       
       setIngresses(((response as unknown as { items?: unknown[] }).items || []) as IngressInfo[]);
     } catch (error) {
-      console.error('获取Ingress列表失败:', error);
+      console.error('獲取Ingress列表失敗:', error);
       message.error(t('messages.fetchIngressError'));
     } finally {
       setLoading(false);
@@ -124,7 +124,7 @@ const [loading, setLoading] = useState(false);
     loadIngresses();
   }, [loadServices, loadIngresses]);
 
-  // 格式化时间
+  // 格式化時間
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '-';
     const date = new Date(timeStr);

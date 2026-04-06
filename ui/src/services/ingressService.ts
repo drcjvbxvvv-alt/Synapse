@@ -8,7 +8,7 @@ export type IngressDetailResponse = ApiResponse<Ingress>;
 export type IngressYAMLResponse = ApiResponse<{ yaml: string }>;
 
 export class IngressService {
-  // 获取Ingress列表
+  // 獲取Ingress列表
   static async getIngresses(
     clusterId: string,
     namespace?: string,
@@ -37,7 +37,7 @@ export class IngressService {
     return request.get(`/clusters/${clusterId}/ingresses?${params}`);
   }
 
-  // 获取Ingress详情
+  // 獲取Ingress詳情
   static async getIngress(
     clusterId: string,
     namespace: string,
@@ -46,7 +46,7 @@ export class IngressService {
     return request.get(`/clusters/${clusterId}/ingresses/${namespace}/${name}`);
   }
 
-  // 获取Ingress的YAML
+  // 獲取Ingress的YAML
   static async getIngressYAML(
     clusterId: string,
     namespace: string,
@@ -55,7 +55,7 @@ export class IngressService {
     return request.get(`/clusters/${clusterId}/ingresses/${namespace}/${name}/yaml`);
   }
 
-  // 删除Ingress
+  // 刪除Ingress
   static async deleteIngress(
     clusterId: string,
     namespace: string,
@@ -64,7 +64,7 @@ export class IngressService {
     return request.delete(`/clusters/${clusterId}/ingresses/${namespace}/${name}`);
   }
 
-  // 创建Ingress
+  // 建立Ingress
   static async createIngress(
     clusterId: string,
     data: {
@@ -90,7 +90,7 @@ export class IngressService {
     return request.put(`/clusters/${clusterId}/ingresses/${namespace}/${name}`, data);
   }
 
-  // 获取IngressClass颜色
+  // 獲取IngressClass顏色
   static getIngressClassColor(ingressClassName?: string): string {
     if (!ingressClassName) return 'default';
     
@@ -105,13 +105,13 @@ export class IngressService {
     }
   }
 
-  // 格式化IngressClass显示
+  // 格式化IngressClass顯示
   static formatIngressClass(ingressClassName?: string): string {
     if (!ingressClassName) return '-';
     return ingressClassName;
   }
 
-  // 格式化规则信息
+  // 格式化規則資訊
   static formatRules(ingress: Ingress): string {
     if (!ingress.rules || ingress.rules.length === 0) {
       return '-';
@@ -120,13 +120,13 @@ export class IngressService {
     const rules = ingress.rules.map(rule => {
       const host = rule.host || '*';
       const pathCount = rule.paths?.length || 0;
-      return `${host} (${pathCount}个路径)`;
+      return `${host} (${pathCount}個路徑)`;
     });
 
     return rules.join(', ');
   }
 
-  // 格式化转发策略
+  // 格式化轉發策略
   static formatBackends(ingress: Ingress): string[] {
     if (!ingress.rules || ingress.rules.length === 0) {
       return ['-'];
@@ -143,7 +143,7 @@ export class IngressService {
     return backends.length > 0 ? backends : ['-'];
   }
 
-  // 格式化负载均衡器
+  // 格式化負載均衡器
   static formatLoadBalancers(ingress: Ingress): string[] {
     if (!ingress.loadBalancer || ingress.loadBalancer.length === 0) {
       return ['-'];
@@ -158,12 +158,12 @@ export class IngressService {
     return lbs.length > 0 ? lbs : ['-'];
   }
 
-  // 获取TLS状态
+  // 獲取TLS狀態
   static hasTLS(ingress: Ingress): boolean {
     return !!(ingress.tls && ingress.tls.length > 0);
   }
 
-  // 格式化TLS信息
+  // 格式化TLS資訊
   static formatTLS(ingress: Ingress): string {
     if (!ingress.tls || ingress.tls.length === 0) {
       return '否';
@@ -177,7 +177,7 @@ export class IngressService {
     return tlsInfo.join('; ');
   }
 
-  // 获取Hosts列表
+  // 獲取Hosts列表
   static getHosts(ingress: Ingress): string[] {
     if (!ingress.rules || ingress.rules.length === 0) {
       return ['-'];
@@ -190,7 +190,7 @@ export class IngressService {
     return hosts.length > 0 ? hosts : ['-'];
   }
 
-  // 获取年龄显示
+  // 獲取年齡顯示
   static getAge(createdAt: string): string {
     const now = new Date();
     const created = new Date(createdAt);
@@ -203,29 +203,29 @@ export class IngressService {
     if (diffDays > 0) {
       return `${diffDays}天`;
     } else if (diffHours > 0) {
-      return `${diffHours}小时`;
+      return `${diffHours}小時`;
     } else if (diffMinutes > 0) {
-      return `${diffMinutes}分钟`;
+      return `${diffMinutes}分鐘`;
     } else {
-      return '刚刚';
+      return '剛剛';
     }
   }
 
-  // 格式化路径类型
+  // 格式化路徑型別
   static formatPathType(pathType: string): string {
     switch (pathType) {
       case 'Prefix':
-        return '前缀匹配';
+        return '字首匹配';
       case 'Exact':
-        return '精确匹配';
+        return '精確匹配';
       case 'ImplementationSpecific':
-        return '实现特定';
+        return '實現特定';
       default:
         return pathType;
     }
   }
 
-  // 获取Ingress命名空间列表（带计数）
+  // 獲取Ingress命名空間列表（帶計數）
   static async getIngressNamespaces(clusterId: string): Promise<{ name: string; count: number }[]> {
     return request.get<{ name: string; count: number }[]>(
       `/clusters/${clusterId}/ingresses/namespaces`

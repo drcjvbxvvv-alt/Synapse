@@ -1,6 +1,6 @@
 /**
- * 工作负载监控 Tab - 使用整个 Grafana Dashboard 嵌入
- * 相比多 Panel 分别嵌入，整体嵌入加载更快
+ * 工作負載監控 Tab - 使用整個 Grafana Dashboard 嵌入
+ * 相比多 Panel 分別嵌入，整體嵌入載入更快
  */
 import React, { useState, useMemo, useCallback } from 'react';
 import { Card, Space, Button, Switch, Spin, DatePicker, Popover, Divider, Typography, Empty, Alert } from 'antd';
@@ -31,7 +31,7 @@ const MonitoringTab: React.FC<MonitoringTabProps> = ({
 const { grafanaUrl, loading: grafanaUrlLoading } = useGrafanaUrl();
 const { t } = useTranslation(['workload', 'common']);
 
-// Grafana 风格的时间范围选项
+// Grafana 風格的時間範圍選項
 const TIME_RANGE_OPTIONS = [
   {
     label: t('monitoringTab.quickSelect'),
@@ -61,15 +61,15 @@ const [timeRange, setTimeRange] = useState('1h');
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  // 自定义时间范围状态
+  // 自定義時間範圍狀態
   const [isCustomRange, setIsCustomRange] = useState(false);
   const [customFromTime, setCustomFromTime] = useState<Dayjs | null>(null);
   const [customToTime, setCustomToTime] = useState<Dayjs | null>(null);
 
-  // 根据集群名生成数据源 UID
+  // 根據叢集名生成資料來源 UID
   const dataSourceUid = clusterName ? generateDataSourceUID(clusterName) : '';
 
-  // 获取时间范围参数
+  // 獲取時間範圍參數
   const getFromTime = useCallback(() => {
     if (isCustomRange && customFromTime) {
       return customFromTime.valueOf().toString();
@@ -84,7 +84,7 @@ const [timeRange, setTimeRange] = useState('1h');
     return 'now';
   }, [isCustomRange, customToTime]);
 
-  // 获取显示的时间范围文本
+  // 獲取顯示的時間範圍文字
   const getTimeRangeDisplay = () => {
     if (isCustomRange && customFromTime && customToTime) {
       return `${customFromTime.format('MM-DD HH:mm')} to ${customToTime.format('MM-DD HH:mm')}`;
@@ -93,7 +93,7 @@ const [timeRange, setTimeRange] = useState('1h');
     return option?.label || 'Last 1 hour';
   };
 
-  // 构建完整 Dashboard 嵌入 URL
+  // 構建完整 Dashboard 嵌入 URL
   const dashboardUrl = useMemo(() => {
     const params = new URLSearchParams({
       orgId: '1',
@@ -102,26 +102,26 @@ const [timeRange, setTimeRange] = useState('1h');
       theme: 'light',
     });
 
-    // 添加数据源变量
+    // 新增資料來源變數
     if (dataSourceUid) {
       params.append('var-DS_PROMETHEUS', dataSourceUid);
     }
     
-    // 添加工作负载相关变量
+    // 新增工作負載相關變數
     params.append('var-deployment_namespace', namespace);
     params.append('var-podname', workloadName);
     params.append('var-Interface', 'eth0');
     params.append('var-Intervals', '1m');
 
-    // 添加自动刷新
+    // 新增自動重新整理
     if (autoRefresh) {
       params.append('refresh', '30s');
     }
 
-    // 添加 refreshKey 作为查询参数以强制 iframe 重新加载
+    // 新增 refreshKey 作為查詢參數以強制 iframe 重新載入
     params.append('_refresh', refreshKey.toString());
 
-    // 完全 kiosk 模式：隐藏侧边栏和顶部导航栏
+    // 完全 kiosk 模式：隱藏側邊欄和頂部導航欄
     return `${grafanaUrl}/d/${DASHBOARD_UID}/?${params.toString()}&kiosk`;
   }, [grafanaUrl, getFromTime, getToTime, dataSourceUid, namespace, workloadName, refreshKey, autoRefresh]);
 
@@ -134,7 +134,7 @@ const [timeRange, setTimeRange] = useState('1h');
     setLoading(false);
   };
 
-  // 应用自定义时间范围
+  // 應用自定義時間範圍
   const applyCustomRange = () => {
     if (customFromTime && customToTime) {
       setIsCustomRange(true);
@@ -143,7 +143,7 @@ const [timeRange, setTimeRange] = useState('1h');
     }
   };
 
-  // 选择快速时间范围
+  // 選擇快速時間範圍
   const handleQuickRangeSelect = (value: string) => {
     setTimeRange(value);
     setIsCustomRange(false);
@@ -151,7 +151,7 @@ const [timeRange, setTimeRange] = useState('1h');
     handleRefresh();
   };
 
-  // 检查必要的参数
+  // 檢查必要的參數
   if (!clusterName) {
     return (
       <Empty
@@ -161,7 +161,7 @@ const [timeRange, setTimeRange] = useState('1h');
     );
   }
 
-  // 时间选择器 Popover 内容
+  // 時間選擇器 Popover 內容
   const timePickerContent = (
     <div style={{ display: 'flex', gap: 16, padding: 8 }}>
       <div style={{ width: 240 }}>
@@ -263,7 +263,7 @@ const [timeRange, setTimeRange] = useState('1h');
       ) : !grafanaUrl ? (
         <Alert
           message="Grafana 未配置"
-          description="请在「系统设置 → Grafana 设置」中配置 Grafana 地址，然后刷新页面。"
+          description="請在「系統設定 → Grafana 設定」中配置 Grafana 地址，然後重新整理頁面。"
           type="warning"
           showIcon
           style={{ margin: 24 }}

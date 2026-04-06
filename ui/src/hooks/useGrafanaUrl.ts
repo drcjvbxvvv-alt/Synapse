@@ -4,8 +4,8 @@ import { systemSettingService } from '../services/authService';
 let cachedUrl: string | null = null;
 
 /**
- * 获取系统设置中配置的 Grafana 地址，用于 iframe 直连。
- * 全局缓存，避免重复请求。
+ * 獲取系統設定中配置的 Grafana 地址，用於 iframe 直連。
+ * 全域性快取，避免重複請求。
  */
 export function useGrafanaUrl(): { grafanaUrl: string; loading: boolean } {
   const [url, setUrl] = useState(cachedUrl ?? '');

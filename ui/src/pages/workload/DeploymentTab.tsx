@@ -38,24 +38,24 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
   const navigate = useNavigate();
   const { message } = App.useApp();
 const { t } = useTranslation(['workload', 'common']);
-// 数据状态
-  const [allWorkloads, setAllWorkloads] = useState<WorkloadInfo[]>([]); // 所有原始数据
-  const [workloads, setWorkloads] = useState<WorkloadInfo[]>([]); // 当前页显示的数据
+// 資料狀態
+  const [allWorkloads, setAllWorkloads] = useState<WorkloadInfo[]>([]); // 所有原始資料
+  const [workloads, setWorkloads] = useState<WorkloadInfo[]>([]); // 當前頁顯示的資料
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   
   
-  // 操作状态
+  // 操作狀態
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleWorkload, setScaleWorkload] = useState<WorkloadInfo | null>(null);
   const [scaleReplicas, setScaleReplicas] = useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   
-  // 多条件搜索状态
+  // 多條件搜尋狀態
   interface SearchCondition {
     field: 'name' | 'namespace' | 'image' | 'status' | 'cpuLimit' | 'cpuRequest' | 'memoryLimit' | 'memoryRequest';
     value: string;
@@ -64,18 +64,18 @@ const { t } = useTranslation(['workload', 'common']);
   const [currentSearchField, setCurrentSearchField] = useState<'name' | 'namespace' | 'image' | 'status' | 'cpuLimit' | 'cpuRequest' | 'memoryLimit' | 'memoryRequest'>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
 
-  // 列设置状态
+  // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'namespace', 'status', 'replicas', 'images', 'createdAt'
   ]);
   
-  // 排序状态
+  // 排序狀態
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
 
-  // 添加搜索条件
+  // 新增搜尋條件
   const addSearchCondition = () => {
     if (!currentSearchValue.trim()) return;
     
@@ -88,18 +88,18 @@ const { t } = useTranslation(['workload', 'common']);
     setCurrentSearchValue('');
   };
 
-  // 删除搜索条件
+  // 刪除搜尋條件
   const removeSearchCondition = (index: number) => {
     setSearchConditions(searchConditions.filter((_, i) => i !== index));
   };
 
-  // 清空所有搜索条件
+  // 清空所有搜尋條件
   const clearAllConditions = () => {
     setSearchConditions([]);
     setCurrentSearchValue('');
   };
 
-// 获取搜索字段的显示名称
+// 獲取搜尋欄位的顯示名稱
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('search.workloadName'),
@@ -113,12 +113,12 @@ const { t } = useTranslation(['workload', 'common']);
     };
     return labels[field] || field;
   };
-// 客户端过滤工作负载列表
+// 客戶端過濾工作負載列表
   const filterWorkloads = useCallback((items: WorkloadInfo[]): WorkloadInfo[] => {
     if (searchConditions.length === 0) return items;
 
     return items.filter(workload => {
-      // 按字段分组条件
+      // 按欄位分組條件
       const conditionsByField = searchConditions.reduce((acc, condition) => {
         if (!acc[condition.field]) {
           acc[condition.field] = [];
@@ -127,12 +127,12 @@ const { t } = useTranslation(['workload', 'common']);
         return acc;
       }, {} as Record<string, string[]>);
 
-      // 不同字段之间是 AND 关系
-      // 相同字段之间是 OR 关系
+      // 不同欄位之間是 AND 關係
+      // 相同欄位之間是 OR 關係
       return Object.entries(conditionsByField).every(([field, values]) => {
         const workloadValue = workload[field as keyof WorkloadInfo];
         
-        // CPU和内存字段使用精确匹配
+        // CPU和記憶體欄位使用精確匹配
         const resourceFields = ['cpuLimit', 'cpuRequest', 'memoryLimit', 'memoryRequest'];
         if (resourceFields.includes(field)) {
           const itemStr = String(workloadValue || '-').toLowerCase();
@@ -140,7 +140,7 @@ const { t } = useTranslation(['workload', 'common']);
         }
         
         if (Array.isArray(workloadValue)) {
-          // 对于数组类型（如 images），检查是否有任何值匹配
+          // 對於陣列型別（如 images），檢查是否有任何值匹配
           return values.some(searchValue =>
             workloadValue.some(item =>
               String(item).toLowerCase().includes(searchValue)
@@ -148,40 +148,40 @@ const { t } = useTranslation(['workload', 'common']);
           );
         }
         
-        // 对于其他字符串类型，使用模糊匹配
+        // 對於其他字串型別，使用模糊匹配
         const itemStr = String(workloadValue || '').toLowerCase();
         return values.some(searchValue => itemStr.includes(searchValue));
       });
     });
   }, [searchConditions]);
 
-  // 加载Deployment列表（获取所有数据，不分页）
+  // 載入Deployment列表（獲取所有資料，不分頁）
   const loadWorkloads = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
     try {
-      // 获取所有数据（设置一个很大的pageSize）
+      // 獲取所有資料（設定一個很大的pageSize）
       const response = await WorkloadService.getWorkloads(
         clusterId,
         undefined,
         'Deployment',
         1,
-        10000, // 获取所有数据
+        10000, // 獲取所有資料
         undefined
       );
       
       const items = response.items || [];
       setAllWorkloads(items);
     } catch (error) {
-      console.error('获取Deployment列表失败:', error);
+      console.error('獲取Deployment列表失敗:', error);
 message.error(t('messages.fetchError', { type: 'Deployment' }));
 } finally {
       setLoading(false);
     }
   }, [clusterId, message]);
 
-  // 扩缩容
+  // 擴縮容
   const handleScale = async () => {
     if (!scaleWorkload || !clusterId) return;
     
@@ -198,12 +198,12 @@ message.error(t('messages.fetchError', { type: 'Deployment' }));
       setScaleModalVisible(false);
       loadWorkloads();
     } catch (error) {
-      console.error('扩缩容失败:', error);
+      console.error('擴縮容失敗:', error);
 message.error(t('messages.scaleError'));
 }
   };
 
-  // 删除
+  // 刪除
   const handleDelete = async (workload: WorkloadInfo) => {
     if (!clusterId) return;
     
@@ -218,12 +218,12 @@ message.error(t('messages.scaleError'));
       message.success(t('messages.deleteSuccess'));
       loadWorkloads();
     } catch (error) {
-      console.error('删除失败:', error);
+      console.error('刪除失敗:', error);
 message.error(t('messages.deleteError'));
 }
   };
 
-  // 批量重新部署
+  // 批次重新部署
   const handleBatchRedeploy = async () => {
     if (selectedRowKeys.length === 0) {
 message.warning(t('actions.selectRedeploy', { type: 'Deployment' }));
@@ -241,7 +241,7 @@ onOk: async () => {
             selectedRowKeys.includes(`${w.namespace}/${w.name}`)
     );
     
-          // 重新部署：重启所有Pod（通过更新annotation的方式）
+          // 重新部署：重啟所有Pod（透過更新annotation的方式）
           const redeployPromises = selectedWorkloads.map(workload =>
             WorkloadService.restartWorkload(clusterId, workload.namespace, workload.name, workload.type)
       );
@@ -259,17 +259,17 @@ message.success(t('common:messages.batchRedeploySuccess', { count: successCount 
       setSelectedRowKeys([]);
       loadWorkloads();
     } catch (error) {
-          console.error('批量重新部署失败:', error);
+          console.error('批次重新部署失敗:', error);
 message.error(t('messages.redeployError'));
 }
       }
     });
   };
 
-  // 导出功能（导出所有筛选后的数据，包含所有列）
+  // 匯出功能（匯出所有篩選後的資料，包含所有列）
   const handleExport = () => {
     try {
-      // 获取所有筛选后的数据（不限于当前页）
+      // 獲取所有篩選後的資料（不限於當前頁）
       const filteredData = filterWorkloads(allWorkloads);
       
       if (filteredData.length === 0) {
@@ -277,7 +277,7 @@ message.warning(t('messages.noExportData'));
 return;
       }
 
-// 导出筛选后的所有数据（包含所有列）
+// 匯出篩選後的所有資料（包含所有列）
       const dataToExport = filteredData.map(w => ({
         [t('columns.name')]: w.name,
         [t('columns.namespace')]: w.namespace,
@@ -299,14 +299,14 @@ year: 'numeric',
         }).replace(/\//g, '-') : '-',
       }));
 
-      // 导出为CSV
+      // 匯出為CSV
       const headers = Object.keys(dataToExport[0]);
       const csvContent = [
         headers.join(','),
         ...dataToExport.map(row => 
           headers.map(header => {
             const value = row[header as keyof typeof row];
-            // 对于已经包含公式的单元格（以=开头），不再加引号
+            // 對於已經包含公式的單元格（以=開頭），不再加引號
             if (String(value).startsWith('="')) {
               return value;
             }
@@ -322,46 +322,46 @@ year: 'numeric',
       link.click();
 message.success(t('messages.exportSuccess', { count: filteredData.length }));
     } catch (error) {
-      console.error('导出失败:', error);
+      console.error('匯出失敗:', error);
       message.error(t('messages.exportError'));
 }
   };
 
-  // 列设置保存
+  // 列設定儲存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
 message.success(t('messages.columnSettingsSaved'));
 };
 
-  // 当搜索条件改变时重置到第一页
+  // 當搜尋條件改變時重置到第一頁
   useEffect(() => {
       setCurrentPage(1);
   }, [searchConditions]);
 
-  // 当allWorkloads、搜索条件、分页参数、排序参数改变时，重新计算显示数据
+  // 當allWorkloads、搜尋條件、分頁參數、排序參數改變時，重新計算顯示資料
   useEffect(() => {
     if (allWorkloads.length === 0) return;
     
-    // 1. 应用客户端过滤
+    // 1. 應用客戶端過濾
     let filteredItems = filterWorkloads(allWorkloads);
     
-    // 2. 应用排序
+    // 2. 應用排序
     if (sortField && sortOrder) {
       filteredItems = [...filteredItems].sort((a, b) => {
         const aValue = a[sortField as keyof WorkloadInfo];
         const bValue = b[sortField as keyof WorkloadInfo];
         
-        // 处理 undefined 值
+        // 處理 undefined 值
         if (aValue === undefined && bValue === undefined) return 0;
         if (aValue === undefined) return sortOrder === 'ascend' ? 1 : -1;
         if (bValue === undefined) return sortOrder === 'ascend' ? -1 : 1;
         
-        // 数字类型比较
+        // 數字型別比較
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           return sortOrder === 'ascend' ? aValue - bValue : bValue - aValue;
         }
         
-        // 字符串类型比较
+        // 字串型別比較
         const aStr = String(aValue);
         const bStr = String(bValue);
         
@@ -373,7 +373,7 @@ message.success(t('messages.columnSettingsSaved'));
       });
     }
     
-    // 3. 计算分页
+    // 3. 計算分頁
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedItems = filteredItems.slice(startIndex, endIndex);
@@ -383,12 +383,12 @@ message.success(t('messages.columnSettingsSaved'));
     onCountChange?.(filteredItems.length);
   }, [allWorkloads, filterWorkloads, currentPage, pageSize, sortField, sortOrder, onCountChange]);
 
-  // 初始加载数据
+  // 初始載入資料
   useEffect(() => {
     loadWorkloads();
   }, [loadWorkloads]);
 
-  // 行选择配置
+  // 行選擇配置
   const rowSelection = {
     selectedRowKeys,
     onChange: (keys: React.Key[]) => {
@@ -396,7 +396,7 @@ message.success(t('messages.columnSettingsSaved'));
     },
   };
 
-// 定义所有可用列
+// 定義所有可用列
   const allColumns: ColumnsType<WorkloadInfo> = [
     {
       title: t('columns.name'),
@@ -529,7 +529,7 @@ message.success(t('messages.columnSettingsSaved'));
       render: (text: string) => {
         if (!text) return '-';
         const date = new Date(text);
-        // 格式化为：YYYY-MM-DD HH:mm:ss
+        // 格式化為：YYYY-MM-DD HH:mm:ss
         const formatted = date.toLocaleString('zh-TW', {
           year: 'numeric',
           month: '2-digit',
@@ -593,19 +593,19 @@ message.success(t('messages.columnSettingsSaved'));
       ),
     },
   ];
-// 根据可见性过滤列
+// 根據可見性過濾列
   const columns = allColumns.filter(col => {
-    if (col.key === 'actions') return true; // 操作列始终显示
+    if (col.key === 'actions') return true; // 操作列始終顯示
     return visibleColumns.includes(col.key as string);
   });
 
-  // 表格排序处理（只更新排序状态，实际排序在useEffect中处理）
+  // 表格排序處理（只更新排序狀態，實際排序在useEffect中處理）
   const handleTableChange = (
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
     sorter: SorterResult<WorkloadInfo> | SorterResult<WorkloadInfo>[]
   ) => {
-    // 处理单个排序器
+    // 處理單個排序器
     const singleSorter = Array.isArray(sorter) ? sorter[0] : sorter;
     
     if (singleSorter && singleSorter.field) {
@@ -622,7 +622,7 @@ message.success(t('messages.columnSettingsSaved'));
 
   return (
     <div>
-      {/* 操作按钮栏 */}
+      {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
 <Button
@@ -644,9 +644,9 @@ message.success(t('messages.columnSettingsSaved'));
           </Button>
 </div>
 
-      {/* 多条件搜索栏 */}
+      {/* 多條件搜尋欄 */}
       <div style={{ marginBottom: 16 }}>
-        {/* 搜索输入框 */}
+        {/* 搜尋輸入框 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
@@ -683,7 +683,7 @@ style={{ flex: 1 }}
           <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
         </div>
 
-        {/* 搜索条件标签 */}
+        {/* 搜尋條件標籤 */}
         {searchConditions.length > 0 && (
           <div>
             <Space size="small" wrap>
@@ -735,7 +735,7 @@ onChange: (page, size) => {
         }}
       />
 
-      {/* 扩缩容模态框 */}
+      {/* 擴縮容模態框 */}
 <Modal
         title={t('scale.title', { type: 'Deployment' })}
         open={scaleModalVisible}
@@ -763,7 +763,7 @@ onChange: (page, size) => {
         )}
       </Modal>
 
-      {/* 列设置抽屉 */}
+      {/* 列設定抽屜 */}
 <Drawer
         title={t('columnSettings.title')}
         placement="right"

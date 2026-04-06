@@ -271,7 +271,7 @@ const ServiceMeshTab: React.FC<ServiceMeshTabProps> = ({ clusterId, namespaces }
       {status.version && status.version !== 'unknown' && (
         <Alert
           type="success"
-          message={`Istio ${status.version} 已安裝並運行中`}
+          message={`Istio ${status.version} 已安裝並執行中`}
           style={{ marginBottom: 12 }}
           showIcon
         />

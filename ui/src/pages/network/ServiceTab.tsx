@@ -32,56 +32,56 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
 
-  // 数据状态
+  // 資料狀態
   const [allServices, setAllServices] = useState<Service[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
 
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // 选择行状态
+  // 選擇行狀態
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
-  // 多条件搜索状态
+  // 多條件搜尋狀態
   const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
   const [currentSearchField, setCurrentSearchField] = useState<SearchCondition['field']>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
 
-  // 列设置状态
+  // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'type', 'access', 'ports', 'selector', 'createdAt'
   ]);
 
-  // 排序状态
+  // 排序狀態
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
-  // YAML查看Modal
+  // YAML檢視Modal
   const [yamlModalVisible, setYamlModalVisible] = useState(false);
   const [currentYaml, setCurrentYaml] = useState('');
   const [yamlLoading, setYamlLoading] = useState(false);
 
-  // Endpoints查看Modal
+  // Endpoints檢視Modal
   const [endpointsModalVisible, setEndpointsModalVisible] = useState(false);
   const [currentEndpoints, setCurrentEndpoints] = useState<EndpointsData | null>(null);
   const [endpointsLoading, setEndpointsLoading] = useState(false);
 
-  // 编辑Modal
+  // 編輯Modal
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editYaml, setEditYaml] = useState('');
   const [editingService, setEditingService] = useState<Service | null>(null);
 
-  // 创建Modal
+  // 建立Modal
   const [createModalVisible, setCreateModalVisible] = useState(false);
 
-  // 命名空间列表
+  // 命名空間列表
   const [namespaces, setNamespaces] = useState<{ name: string; count: number }[]>([]);
 
-  // 添加搜索条件
+  // 新增搜尋條件
   const addSearchCondition = () => {
     if (!currentSearchValue.trim()) return;
     setSearchConditions([...searchConditions, {
@@ -111,7 +111,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     return labels[field] || field;
   };
 
-  // 客户端过滤
+  // 客戶端過濾
   const filterServices = useCallback((items: Service[]): Service[] => {
     if (searchConditions.length === 0) return items;
 
@@ -140,7 +140,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     });
   }, [searchConditions]);
 
-  // 加载命名空间列表
+  // 載入命名空間列表
   useEffect(() => {
     const loadNamespaces = async () => {
       if (!clusterId) return;
@@ -148,13 +148,13 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         const nsList = await ServiceService.getServiceNamespaces(clusterId);
         setNamespaces(nsList);
       } catch (error) {
-        console.error('加载命名空间失败:', error);
+        console.error('載入命名空間失敗:', error);
       }
     };
     loadNamespaces();
   }, [clusterId]);
 
-  // 获取Service列表
+  // 獲取Service列表
   const loadServices = useCallback(async () => {
     if (!clusterId) return;
     setLoading(true);
@@ -173,7 +173,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     setCurrentPage(1);
   }, [searchConditions]);
 
-  // 过滤、排序、分页
+  // 過濾、排序、分頁
   useEffect(() => {
     if (allServices.length === 0) {
       setServices([]);
@@ -211,7 +211,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     loadServices();
   }, [loadServices]);
 
-  // --- 操作回调 ---
+  // --- 操作回撥 ---
 
   const handleViewYAML = async (service: Service) => {
     setYamlModalVisible(true);
@@ -339,7 +339,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     message.success(t('common:messages.columnSettingsSaved'));
   };
 
-  // 构建列定义
+  // 構建列定義
   const allColumns = useMemo(() => getServiceColumns({
     sortField,
     sortOrder,
@@ -377,7 +377,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
 
   return (
     <div>
-      {/* 操作按钮栏 */}
+      {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
           <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger>
@@ -392,7 +392,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         </Button>
       </div>
 
-      {/* 多条件搜索栏 */}
+      {/* 多條件搜尋欄 */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input

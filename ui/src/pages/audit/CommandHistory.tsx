@@ -48,14 +48,14 @@ import type {
 const { RangePicker } = DatePicker;
 const { Text, Paragraph } = Typography;
 
-// 终端类型配置
+// 終端型別配置
 const terminalTypeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   kubectl: { label: 'Kubectl', color: 'blue', icon: <CodeOutlined /> },
   pod: { label: 'Pod', color: 'green', icon: <CloudServerOutlined /> },
   node: { label: 'Node SSH', color: 'orange', icon: <DesktopOutlined /> },
 };
 
-// 状态配置
+// 狀態配置
 const statusConfig: Record<string, { label: string; status: 'processing' | 'success' | 'error' | 'default' }> = {
   active: { label: 'active', status: 'processing' },
   closed: { label: 'closed', status: 'success' },
@@ -65,41 +65,41 @@ const statusConfig: Record<string, { label: string; status: 'processing' | 'succ
 const CommandHistory: React.FC = () => {
   const { message } = App.useApp();
 
-  // 数据状态
+  // 資料狀態
 const { t } = useTranslation(['audit', 'common']);
 const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<SessionStats | null>(null);
 
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // 筛选状态
+  // 篩選狀態
   const [targetType, setTargetType] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [keyword, setKeyword] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
-  // 详情抽屉
+  // 詳情抽屜
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionDetailResponse | null>(null);
   const [commands, setCommands] = useState<TerminalCommand[]>([]);
   const [commandsLoading, setCommandsLoading] = useState(false);
   const [commandsTotal, setCommandsTotal] = useState(0);
 
-  // 获取统计数据
+  // 獲取統計資料
   const fetchStats = useCallback(async () => {
     try {
       const res = await auditService.getTerminalStats();
       setStats(res);
     } catch (error) {
-      console.error('获取统计信息失败', error);
+      console.error('獲取統計資訊失敗', error);
     }
   }, []);
 
-  // 获取会话列表
+  // 獲取會話列表
   const fetchSessions = useCallback(async () => {
     setLoading(true);
     try {
@@ -125,7 +125,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
     }
   }, [currentPage, pageSize, targetType, status, keyword, dateRange, message]);
 
-  // 获取会话详情和命令
+  // 獲取會話詳情和命令
   const fetchSessionDetail = useCallback(async (sessionId: number) => {
     setCommandsLoading(true);
     try {
@@ -149,32 +149,32 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
     fetchSessions();
   }, [fetchStats, fetchSessions]);
 
-  // 打开命令详情
+  // 開啟命令詳情
   const handleViewCommands = (record: TerminalSessionItem) => {
     setDrawerVisible(true);
     fetchSessionDetail(record.id);
   };
 
-  // 关闭抽屉
+  // 關閉抽屜
   const handleCloseDrawer = () => {
     setDrawerVisible(false);
     setSelectedSession(null);
     setCommands([]);
   };
 
-  // 刷新数据
+  // 重新整理資料
   const handleRefresh = () => {
     fetchStats();
     fetchSessions();
   };
 
-  // 搜索
+  // 搜尋
   const handleSearch = () => {
     setCurrentPage(1);
     fetchSessions();
   };
 
-  // 获取目标显示
+  // 獲取目標顯示
   const getTargetDisplay = (record: TerminalSessionItem) => {
     if (record.target_type === 'pod') {
       return `${record.namespace}/${record.pod}${record.container ? ` (${record.container})` : ''}`;
@@ -185,7 +185,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
     return record.namespace || 'default';
   };
 
-  // 表格列定义
+  // 表格列定義
   const columns: ColumnsType<TerminalSessionItem> = [
     {
       title: t('audit:commands.user'),
@@ -199,7 +199,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
       ),
     },
     {
-      title: '集群',
+      title: '叢集',
       key: 'cluster',
       width: 140,
       render: (_, record) => (
@@ -284,7 +284,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* 统计卡片 */}
+      {/* 統計卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
           <Card size="small" bordered={false}>
@@ -358,7 +358,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         }
         bordered={false}
       >
-        {/* 筛选区域 */}
+        {/* 篩選區域 */}
         <Space wrap style={{ marginBottom: 16 }}>
           <Select
             placeholder={t('audit:commands.terminalTypeFilter')}
@@ -420,7 +420,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         />
       </Card>
 
-      {/* 命令详情抽屉 */}
+      {/* 命令詳情抽屜 */}
       <Drawer
         title={
           <Space>
@@ -436,7 +436,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           <Button
             icon={<ExportOutlined />}
             onClick={() => {
-              // 导出命令列表
+              // 匯出命令列表
               const content = commands.map(cmd => 
                 `[${dayjs(cmd.timestamp).format('HH:mm:ss')}] ${cmd.parsed_cmd}`
               ).join('\n');
@@ -456,7 +456,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         <Spin spinning={commandsLoading}>
           {selectedSession && (
             <>
-              {/* 会话信息 */}
+              {/* 會話資訊 */}
               <Descriptions
                 title={t('audit:commands.sessionInfo')}
                 bordered
@@ -498,12 +498,12 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
                 </Descriptions.Item>
               </Descriptions>
 
-              {/* 命令时间线 */}
+              {/* 命令時間線 */}
               <div style={{ marginBottom: 16 }}>
                 <Space>
                   <CodeOutlined />
                   <Text strong>{t('audit:commands.commandRecords')}</Text>
-                  <Tag>{commandsTotal} 条</Tag>
+                  <Tag>{commandsTotal} 條</Tag>
                 </Space>
               </div>
 

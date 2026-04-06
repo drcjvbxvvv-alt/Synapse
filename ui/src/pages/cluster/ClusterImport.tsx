@@ -43,7 +43,7 @@ const navigate = useNavigate();
     status?: string;
   } | null>(null);
 
-  // 测试连接
+  // 測試連線
   const handleTestConnection = async () => {
     try {
       const values = await form.validateFields();
@@ -75,7 +75,7 @@ const navigate = useNavigate();
     }
   };
 
-  // 导入集群
+  // 匯入叢集
   const handleImport = async () => {
     try {
       const values = await form.validateFields();
@@ -121,7 +121,7 @@ const steps = [
   ];
 return (
     <div>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
           <Button
@@ -166,7 +166,7 @@ return (
             connectionType: 'kubeconfig',
           }}
         >
-          {/* 步骤1: 基本信息 */}
+          {/* 步驟1: 基本資訊 */}
           <div style={{ display: currentStep === 0 ? 'block' : 'none' }}>
 <Title level={4}>{t('import.clusterBasicInfo')}</Title>
             <Form.Item
@@ -195,7 +195,7 @@ maxLength={200}
             </div>
           </div>
 
-          {/* 步骤2: 连接配置 */}
+          {/* 步驟2: 連線配置 */}
           <div style={{ display: currentStep === 1 ? 'block' : 'none' }}>
 <Title level={4}>{t('import.steps.connectionConfig')}</Title>
             <Form.Item name="connectionType" label={t('import.connectionType')}>
@@ -274,7 +274,7 @@ style={{ fontFamily: 'monospace' }}
             </div>
           </div>
 
-          {/* 步骤3: 测试连接 */}
+          {/* 步驟3: 測試連線 */}
           <div style={{ display: currentStep === 2 ? 'block' : 'none' }}>
 <Title level={4}>{t('import.testResult')}</Title>
             {testResult && (
@@ -303,7 +303,7 @@ style={{ fontFamily: 'monospace' }}
             </div>
 </div>
 
-          {/* 步骤4: 完成导入 */}
+          {/* 步驟4: 完成匯入 */}
           <div style={{ display: currentStep === 3 ? 'block' : 'none' }}>
 <Title level={4}>{t('import.confirmImport')}</Title>
             <Alert

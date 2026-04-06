@@ -58,11 +58,11 @@ spec:
       targetPort: 8080`);
   const [loading, setLoading] = useState(false);
   
-  // 命名空间列表
+  // 命名空間列表
   const [namespaces, setNamespaces] = useState<string[]>(['default']);
   const [loadingNamespaces, setLoadingNamespaces] = useState(false);
   
-  // 加载命名空间列表
+  // 載入命名空間列表
   useEffect(() => {
     const loadNamespaces = async () => {
       if (!clusterId || !visible) return;
@@ -71,7 +71,7 @@ spec:
         const nsList = await getNamespaces(Number(clusterId));
         setNamespaces(nsList);
       } catch (error) {
-        console.error('加载命名空间失败:', error);
+        console.error('載入命名空間失敗:', error);
       } finally {
         setLoadingNamespaces(false);
       }
@@ -84,7 +84,7 @@ spec:
     setLoading(true);
     try {
       if (activeTab === 'yaml') {
-        // YAML方式创建
+        // YAML方式建立
         await ServiceService.createService(clusterId, {
           namespace: 'default',
           yaml: yamlContent,
@@ -157,7 +157,7 @@ spec:
     onClose();
   };
 
-  // 表单转YAML
+  // 表單轉YAML
   const formToYaml = () => {
     try {
       const values = form.getFieldsValue();
@@ -210,7 +210,7 @@ spec:
         },
       };
 
-      // 添加labels和annotations（如果存在）
+      // 新增labels和annotations（如果存在）
       if (values.labels && values.labels.length > 0) {
         serviceObj.metadata.labels = (values.labels as LabelItem[]).reduce((acc: Record<string, string>, item: LabelItem) => {
           if (item.key) acc[item.key] = item.value;
@@ -228,11 +228,11 @@ spec:
       const yaml = YAML.stringify(serviceObj);
       setYamlContent(yaml);
     } catch (error) {
-      console.error('表单转YAML失败:', error);
+      console.error('表單轉YAML失敗:', error);
     }
   };
 
-  // YAML转表单
+  // YAML轉表單
   const yamlToForm = () => {
     try {
       const serviceObj = YAML.parse(yamlContent);
@@ -278,18 +278,18 @@ spec:
         annotations: annotations.length > 0 ? annotations : undefined,
       });
     } catch (error) {
-      console.error('YAML转表单失败:', error);
+      console.error('YAML轉表單失敗:', error);
       message.error(t('network:create.yamlParseError'));
     }
   };
 
-  // 处理Tab切换
+  // 處理Tab切換
   const handleTabChange = (key: string) => {
     if (key === 'yaml' && activeTab === 'form') {
-      // 表单 -> YAML
+      // 表單 -> YAML
       formToYaml();
     } else if (key === 'form' && activeTab === 'yaml') {
-      // YAML -> 表单
+      // YAML -> 表單
       yamlToForm();
     }
     setActiveTab(key);

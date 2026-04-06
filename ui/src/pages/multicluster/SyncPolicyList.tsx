@@ -162,7 +162,7 @@ const SyncPolicyList: React.FC = () => {
   const handleTrigger = async (policy: SyncPolicy) => {
     try {
       await multiclusterService.triggerSync(policy.id!);
-      message.success('同步已觸發，請稍後查看歷史紀錄');
+      message.success('同步已觸發，請稍後檢視歷史紀錄');
       fetchPolicies();
     } catch {
       message.error('觸發失敗');
@@ -354,7 +354,7 @@ const SyncPolicyList: React.FC = () => {
               }}
             />
           </Form.Item>
-          <Form.Item name="resource_type" label="資源類型" rules={[{ required: true }]}>
+          <Form.Item name="resource_type" label="資源型別" rules={[{ required: true }]}>
             <Select
               options={resourceTypeOptions}
               onChange={(type) => {

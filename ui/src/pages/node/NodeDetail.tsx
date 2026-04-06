@@ -59,7 +59,7 @@ const NodeDetail: React.FC = () => {
   const { t } = useTranslation('node');
   const { t: tc } = useTranslation('common');
   
-  // 从 URL 参数读取默认标签页
+  // 從 URL 參數讀取預設標籤頁
   const defaultTab = searchParams.get('tab') || 'overview';
   
   const [loading, setLoading] = useState(false);
@@ -82,7 +82,7 @@ const NodeDetail: React.FC = () => {
     gracePeriodSeconds: 30,
   });
 
-  // 获取节点详情
+  // 獲取節點詳情
   const fetchNodeDetail = useCallback(async () => {
     if (!clusterId || !nodeName) return;
     
@@ -98,29 +98,29 @@ const NodeDetail: React.FC = () => {
     }
   }, [clusterId, nodeName, t]);
 
-  // 获取节点上的Pod列表
+  // 獲取節點上的Pod列表
   const fetchNodePods = useCallback(async () => {
     if (!clusterId || !nodeName) return;
     
     setLoadingPods(true);
     try {
-      // 调用真实API，传入 nodeName 参数过滤该节点上的 Pod
+      // 呼叫真實API，傳入 nodeName 參數過濾該節點上的 Pod
       const response = await PodService.getPods(
         clusterId,
-        undefined, // namespace: 获取所有命名空间
-        nodeName,  // nodeName: 过滤该节点上的 Pod
+        undefined, // namespace: 獲取所有命名空間
+        nodeName,  // nodeName: 過濾該節點上的 Pod
         undefined, // labelSelector
         undefined, // fieldSelector
         undefined, // search
         1,         // page
-        1000       // pageSize: 获取所有 Pod
+        1000       // pageSize: 獲取所有 Pod
       );
       
       if (response?.items) {
         const convertedPods: Pod[] = response.items.map((podInfo) => {
-          // 聚合所有容器的 CPU 和内存 limits
-          let totalCpuLimit = 0; // 单位: m (millicore)
-          let totalMemoryLimit = 0; // 单位: Mi
+          // 聚合所有容器的 CPU 和記憶體 limits
+          let totalCpuLimit = 0; // 單位: m (millicore)
+          let totalMemoryLimit = 0; // 單位: Mi
           
           podInfo.containers.forEach((c) => {
             if (c.resources?.limits) {
@@ -150,7 +150,7 @@ const NodeDetail: React.FC = () => {
                 } else if (memStr.endsWith('K')) {
                   totalMemoryLimit += (parseFloat(memStr.replace('K', '')) || 0) / 1024;
                 } else {
-                  // 纯数字，假设是字节
+                  // 純數字，假設是位元組
                   totalMemoryLimit += (parseFloat(memStr) || 0) / (1024 * 1024);
                 }
               }
@@ -166,8 +166,8 @@ const NodeDetail: React.FC = () => {
             status: podInfo.status as Pod['status'],
             phase: podInfo.phase,
             restartCount: podInfo.restartCount,
-            cpuUsage: totalCpuLimit, // 存储 CPU limit (单位: m)
-            memoryUsage: totalMemoryLimit, // 存储 Memory limit (单位: Mi)
+            cpuUsage: totalCpuLimit, // 儲存 CPU limit (單位: m)
+            memoryUsage: totalMemoryLimit, // 儲存 Memory limit (單位: Mi)
             containers: podInfo.containers.map((c) => ({
               name: c.name,
               image: c.image,
@@ -201,23 +201,23 @@ const NodeDetail: React.FC = () => {
     }
   }, [clusterId, nodeName]);
 
-  // 刷新所有数据
+  // 重新整理所有資料
   const refreshAllData = () => {
     fetchNodeDetail();
     fetchNodePods();
   };
 
-  // 导出 Pod 列表为 CSV
+  // 匯出 Pod 列表為 CSV
   const handleExportPods = () => {
     if (pods.length === 0) {
       message.warning(tc('messages.noData'));
       return;
     }
 
-    // CSV 表头 - 使用翻译键
+    // CSV 表頭 - 使用翻譯鍵
     const headers = [tc('table.name'), tc('table.namespace'), tc('table.status'), t('columns.restarts'), t('resources.cpu'), t('resources.memory'), tc('table.createdAt')];
     
-    // 构建 CSV 数据
+    // 構建 CSV 資料
     const csvData = pods.map((pod) => [
       pod.name,
       pod.namespace,
@@ -228,17 +228,17 @@ const NodeDetail: React.FC = () => {
       new Date(pod.createdAt).toLocaleString(),
     ]);
 
-    // 添加表头
+    // 新增表頭
     csvData.unshift(headers);
 
-    // 转换为 CSV 字符串
+    // 轉換為 CSV 字串
     const csvContent = csvData.map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
 
-    // 添加 BOM 以支持中文
+    // 新增 BOM 以支援中文
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     
-    // 创建下载链接
+    // 建立下載連結
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -251,7 +251,7 @@ const NodeDetail: React.FC = () => {
     message.success(tc('messages.exportSuccess'));
   };
 
-  // 处理节点操作
+  // 處理節點操作
   const handleCordon = async () => {
     try {
       await nodeService.cordonNode(clusterId || '', nodeName || '');
@@ -286,7 +286,7 @@ const NodeDetail: React.FC = () => {
     }
   };
 
-  // 处理标签操作
+  // 處理標籤操作
   const handleAddLabel = () => {
     if (!newLabelKey || !newLabelValue) {
       message.warning(t('messages.labelKeyValueRequired'));
@@ -294,7 +294,7 @@ const NodeDetail: React.FC = () => {
     }
     
     message.success(tc('messages.success'));
-    // TODO: 实现添加标签的API调用
+    // TODO: 實現新增標籤的API呼叫
     setNewLabelKey('');
     setNewLabelValue('');
     setLabelModalVisible(false);
@@ -303,10 +303,10 @@ const NodeDetail: React.FC = () => {
   const handleRemoveLabel = (key: string) => {
     message.success(tc('messages.success'));
     console.log('Remove label:', key);
-    // TODO: 实现移除标签的API调用
+    // TODO: 實現移除標籤的API呼叫
   };
 
-  // 处理污点操作
+  // 處理汙點操作
   const handleAddTaint = () => {
     if (!newTaintKey) {
       message.warning(t('messages.taintKeyRequired'));
@@ -314,7 +314,7 @@ const NodeDetail: React.FC = () => {
     }
     
     message.success(tc('messages.success'));
-    // TODO: 实现添加污点的API调用
+    // TODO: 實現新增汙點的API呼叫
     setNewTaintKey('');
     setNewTaintValue('');
     setNewTaintEffect('NoSchedule');
@@ -324,10 +324,10 @@ const NodeDetail: React.FC = () => {
   const handleRemoveTaint = (taint: NodeTaint) => {
     message.success(tc('messages.success'));
     console.log('Remove taint:', taint.key);
-    // TODO: 实现移除污点的API调用
+    // TODO: 實現移除汙點的API呼叫
   };
 
-  // 获取状态标签
+  // 獲取狀態標籤
   const getStatusTag = (status: string) => {
     switch (status) {
       case 'Ready':
@@ -339,12 +339,12 @@ const NodeDetail: React.FC = () => {
     }
   };
 
-  // 获取节点条件状态
+  // 獲取節點條件狀態
   const getConditionStatus = (condition: NodeCondition) => {
     if (condition.status === 'True') {
       return <Badge status="success" text={tc('status.healthy')} />;
     } else if (condition.status === 'False') {
-      // 对于某些条件，False是正常的（如DiskPressure, MemoryPressure等）
+      // 對於某些條件，False是正常的（如DiskPressure, MemoryPressure等）
       if (['DiskPressure', 'MemoryPressure', 'PIDPressure', 'NetworkUnavailable'].includes(condition.type)) {
         return <Badge status="success" text={tc('status.healthy')} />;
       }
@@ -354,7 +354,7 @@ const NodeDetail: React.FC = () => {
     }
   };
 
-  // Pod表格列定义
+  // Pod表格列定義
   const podColumns: ColumnsType<Pod> = [
     {
       title: tc('table.status'),
@@ -427,7 +427,7 @@ const NodeDetail: React.FC = () => {
     },
   ];
 
-  // 更多操作菜单（未使用，保留以备将来使用）
+  // 更多操作選單（未使用，保留以備將來使用）
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const moreActionsMenu = (
     <Menu>
@@ -461,7 +461,7 @@ const NodeDetail: React.FC = () => {
     </Menu>
   );
 
-  // 初始化加载
+  // 初始化載入
   useEffect(() => {
     if (clusterId && nodeName) {
       fetchNodeDetail();
@@ -488,7 +488,7 @@ const NodeDetail: React.FC = () => {
 
   return (
     <div>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
           <Button
@@ -527,7 +527,7 @@ const NodeDetail: React.FC = () => {
 
       {node && (
         <>
-          {/* 节点基本信息 */}
+          {/* 節點基本資訊 */}
           <Card style={{ marginBottom: 24 }}>
             <Descriptions title={t('detail.info')} column={3}>
               <Descriptions.Item label={t('columns.name')}>{node.name}</Descriptions.Item>
@@ -562,7 +562,7 @@ const NodeDetail: React.FC = () => {
         </>
       )}
 
-      {/* 详细信息标签页 */}
+      {/* 詳細資訊標籤頁 */}
       <Card>
         <Tabs 
           activeKey={activeTab} 
@@ -790,7 +790,7 @@ const NodeDetail: React.FC = () => {
         />
       </Card>
 
-      {/* 标签编辑模态框 */}
+      {/* 標籤編輯模態框 */}
       <Modal
         title={t('detail.editLabels')}
         open={labelModalVisible}
@@ -859,7 +859,7 @@ const NodeDetail: React.FC = () => {
         </div>
       </Modal>
 
-      {/* 污点编辑模态框 */}
+      {/* 汙點編輯模態框 */}
       <Modal
         title={t('detail.manageTaints')}
         open={taintModalVisible}
@@ -913,7 +913,7 @@ const NodeDetail: React.FC = () => {
         </div>
       </Modal>
 
-      {/* 驱逐节点模态框 */}
+      {/* 驅逐節點模態框 */}
       <Modal
         title={t('actions.drain')}
         open={drainModalVisible}

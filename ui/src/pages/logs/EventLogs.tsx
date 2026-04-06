@@ -35,13 +35,13 @@ import { useTranslation } from 'react-i18next';
 
 const { Text, Paragraph } = Typography;
 
-// 事件类型颜色
+// 事件型別顏色
 const eventTypeColors: Record<string, string> = {
   Normal: 'green',
   Warning: 'orange',
 };
 
-// 常见原因分类
+// 常見原因分類
 const reasonCategories: Record<string, { color: string; icon: React.ReactNode }> = {
   Scheduled: { color: 'green', icon: <CheckCircleOutlined /> },
   Pulled: { color: 'blue', icon: <CheckCircleOutlined /> },
@@ -64,35 +64,35 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaces, setNamespaces] = useState<string[]>([]);
   
-  // 筛选状态
+  // 篩選狀態
   const [namespace, setNamespace] = useState<string>('');
   const [eventType, setEventType] = useState<'Normal' | 'Warning' | undefined>();
   const [resourceKind, setResourceKind] = useState<string>('');
   const [keyword, setKeyword] = useState<string>('');
   
-  // 详情抽屉
+  // 詳情抽屜
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventLogEntry | null>(null);
 
-  // 统计
+  // 統計
   const [stats, setStats] = useState({
     total: 0,
     normal: 0,
     warning: 0,
   });
 
-  // 获取命名空间列表
+  // 獲取命名空間列表
   const fetchNamespaces = useCallback(async () => {
     if (!clusterId) return;
     try {
       const res = await logService.getNamespaces(clusterId);
       setNamespaces(res || []);
     } catch (error) {
-      console.error('获取命名空间失败', error);
+      console.error('獲取命名空間失敗', error);
     }
   }, [clusterId]);
 
-  // 获取事件日志
+  // 獲取事件日誌
   const fetchEvents = useCallback(async () => {
     if (!clusterId) return;
     setLoading(true);
@@ -105,7 +105,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
       {
         let items = res?.items || [];
         
-        // 客户端过滤
+        // 客戶端過濾
         if (resourceKind) {
           items = items.filter(e => e.involved_kind === resourceKind);
         }
@@ -120,7 +120,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
         
         setEvents(items);
         
-        // 统计
+        // 統計
         const normal = items.filter(e => e.type === 'Normal').length;
         const warning = items.filter(e => e.type === 'Warning').length;
         setStats({
@@ -130,7 +130,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
         });
       }
     } catch (error) {
-      console.error('获取事件日志失败', error);
+      console.error('獲取事件日誌失敗', error);
       message.error(t('logs:events.fetchFailed'));
     } finally {
       setLoading(false);
@@ -145,16 +145,16 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
     fetchEvents();
   }, [fetchEvents]);
 
-  // 查看详情
+  // 檢視詳情
   const viewDetail = (record: EventLogEntry) => {
     setSelectedEvent(record);
     setDrawerVisible(true);
   };
 
-  // 获取资源类型列表
+  // 獲取資源型別列表
   const resourceKinds = [...new Set(events.map(e => e.involved_kind))].sort();
 
-  // 表格列定义
+  // 表格列定義
   const columns: ColumnsType<EventLogEntry> = [
     {
       title: t('logs:events.time'),
@@ -273,7 +273,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* 统计卡片 */}
+      {/* 統計卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card size="small" bordered={false}>
@@ -331,7 +331,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
         }
         bordered={false}
       >
-        {/* 筛选区域 */}
+        {/* 篩選區域 */}
         <Space wrap style={{ marginBottom: 16 }}>
           <Select
             placeholder={t('logs:events.namespace')}
@@ -392,7 +392,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
         />
       </Card>
 
-      {/* 详情抽屉 */}
+      {/* 詳情抽屜 */}
       <Drawer
         title={
           <Space>
@@ -407,7 +407,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
       >
         {selectedEvent && (
           <>
-            {/* 基本信息 */}
+            {/* 基本資訊 */}
             <Descriptions
               title={t('logs:events.basicInfo')}
               bordered
@@ -440,7 +440,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
               </Descriptions.Item>
             </Descriptions>
 
-            {/* 关联资源 */}
+            {/* 關聯資源 */}
             <Descriptions
               title={t('logs:events.relatedResource')}
               bordered
@@ -459,7 +459,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
               </Descriptions.Item>
             </Descriptions>
 
-            {/* 事件来源 */}
+            {/* 事件來源 */}
             <Descriptions
               title={t('logs:events.eventSource')}
               bordered
@@ -475,7 +475,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
               </Descriptions.Item>
             </Descriptions>
 
-            {/* 事件消息 */}
+            {/* 事件訊息 */}
             <Card title={t('logs:events.eventMessage')} size="small">
               <Paragraph
                 style={{

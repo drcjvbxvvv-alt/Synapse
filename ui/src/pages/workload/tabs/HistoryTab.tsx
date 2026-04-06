@@ -40,7 +40,7 @@ const { t } = useTranslation(['workload', 'common']);
 const [loading, setLoading] = useState(false);
   const [replicaSets, setReplicaSets] = useState<ReplicaSetInfo[]>([]);
 
-  // 获取工作负载名称和类型
+  // 獲取工作負載名稱和型別
   const workloadName = deploymentName || rolloutName || statefulSetName || daemonSetName || jobName || cronJobName;
   const workloadType = deploymentName ? 'Deployment' 
     : rolloutName ? 'Rollout'
@@ -50,7 +50,7 @@ const [loading, setLoading] = useState(false);
     : cronJobName ? 'CronJob'
     : '';
 
-  // 加载ReplicaSet列表
+  // 載入ReplicaSet列表
   const loadReplicaSets = useCallback(async () => {
     if (!clusterId || !namespace || !workloadName || !workloadType) return;
     
@@ -65,7 +65,7 @@ const [loading, setLoading] = useState(false);
       
       setReplicaSets(((response as unknown as { items?: unknown[] }).items || []) as ReplicaSetInfo[]);
     } catch (error) {
-      console.error('获取版本记录失败:', error);
+      console.error('獲取版本記錄失敗:', error);
       message.error(t('messages.fetchHistoryError'));
     } finally {
       setLoading(false);
@@ -76,7 +76,7 @@ const [loading, setLoading] = useState(false);
     loadReplicaSets();
   }, [loadReplicaSets]);
 
-  // 格式化时间
+  // 格式化時間
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '-';
     const date = new Date(timeStr);
@@ -137,7 +137,7 @@ const [loading, setLoading] = useState(false);
       render: (images: string[]) => {
         if (!images || images.length === 0) return '-';
         return images.map((img, index) => {
-          // 只显示 name:version 部分
+          // 只顯示 name:version 部分
           const parts = img.split('/');
           const nameVersion = parts[parts.length - 1];
           return <div key={index}>{nameVersion}</div>;

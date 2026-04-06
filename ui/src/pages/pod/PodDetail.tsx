@@ -54,7 +54,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   const [loading, setLoading] = useState(false);
   const [clusterName, setClusterName] = useState<string>('');
 
-  // 获取Pod详情
+  // 獲取Pod詳情
   const fetchPodDetail = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     
@@ -72,7 +72,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     }
   }, [clusterId, namespace, name]);
 
-  // 删除Pod
+  // 刪除Pod
   const handleDelete = async () => {
     if (!clusterId || !namespace || !name) return;
     
@@ -86,17 +86,17 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     }
   };
 
-  // 查看日志
+  // 檢視日誌
   const handleViewLogs = () => {
     navigate(`/clusters/${clusterId}/pods/${namespace}/${name}/logs`);
   };
 
-  // 进入终端 - 新窗口打开
+  // 進入終端 - 新視窗開啟
   const handleTerminal = () => {
     window.open(`/clusters/${clusterId}/pods/${namespace}/${name}/terminal`, '_blank');
   };
 
-  // AI 诊断：将 Pod 状态信息作为上下文发送给 AI
+  // AI 診斷：將 Pod 狀態資訊作為上下文傳送給 AI
   const handleAIDiagnose = () => {
     if (!pod) return;
     const restarts = pod.containers?.reduce((sum, c) => sum + (c.restartCount || 0), 0) ?? 0;
@@ -121,7 +121,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     fetchPodDetail();
   }, [fetchPodDetail]);
 
-  // 获取集群名用于 Grafana 数据源
+  // 獲取叢集名用於 Grafana 資料來源
   useEffect(() => {
     const fetchClusterName = async () => {
       if (!clusterId) return;
@@ -203,7 +203,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     },
   ];
 
-  // 条件表格列
+  // 條件表格列
   const conditionColumns = [
     {
       title: tc('table.type'),
@@ -239,7 +239,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div style={{ marginBottom: 24 }}>
         <Space>
           <Button
@@ -304,7 +304,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
         </div>
       </div>
 
-      {/* 详情内容 */}
+      {/* 詳情內容 */}
       <Tabs defaultActiveKey={initialTab}>
         <TabPane tab={t('detail.overview')} key="overview">
           <Row gutter={[16, 16]}>

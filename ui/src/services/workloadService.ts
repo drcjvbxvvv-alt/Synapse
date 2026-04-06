@@ -71,14 +71,14 @@ export interface YAMLApplyRequest {
 }
 
 export class WorkloadService {
-  // 检查集群是否安装了 Argo Rollouts CRD
+  // 檢查叢集是否安裝了 Argo Rollouts CRD
   static async checkRolloutCRD(
     clusterId: string
   ): Promise<{ enabled: boolean }> {
     return request.get(`/clusters/${clusterId}/rollouts/crd-check`);
   }
 
-  // 获取工作负载列表
+  // 獲取工作負載列表
   static async getWorkloads(
     clusterId: string,
     namespace?: string,
@@ -100,7 +100,7 @@ export class WorkloadService {
       params.append('search', search);
     }
     
-    // 根据workloadType路由到不同的后端API端点
+    // 根據workloadType路由到不同的後端API端點
     let endpoint = `/clusters/${clusterId}/`;
     switch (workloadType) {
       case 'Deployment':
@@ -114,15 +114,15 @@ export class WorkloadService {
         break;
       case 'DaemonSet':
         endpoint += 'daemonsets';
-        params.append('type', 'DaemonSet'); // 临时保留
+        params.append('type', 'DaemonSet'); // 臨時保留
         break;
       case 'Job':
         endpoint += 'jobs';
-        params.append('type', 'Job'); // 临时保留
+        params.append('type', 'Job'); // 臨時保留
         break;
       case 'CronJob':
         endpoint += 'cronjobs';
-        params.append('type', 'CronJob'); // 临时保留
+        params.append('type', 'CronJob'); // 臨時保留
         break;
       default:
         endpoint += 'workloads';
@@ -134,12 +134,12 @@ export class WorkloadService {
     return request.get(`${endpoint}?${params}`);
   }
 
-  // 获取工作负载命名空间列表
+  // 獲取工作負載命名空間列表
   static async getWorkloadNamespaces(
     clusterId: string,
     workloadType?: string
   ): Promise<Array<{ name: string; count: number }>> {
-    // 根据workloadType路由到不同的后端API端点
+    // 根據workloadType路由到不同的後端API端點
     let endpoint = `/clusters/${clusterId}/`;
     const params = new URLSearchParams();
     
@@ -175,7 +175,7 @@ export class WorkloadService {
     return request.get(`${endpoint}?${params}`);
   }
 
-  // 获取工作负载详情
+  // 獲取工作負載詳情
   static async getWorkloadDetail(
     clusterId: string,
     workloadType: string,
@@ -208,7 +208,7 @@ export class WorkloadService {
     return request.get(endpoint);
   }
 
-  // 扩缩容工作负载
+  // 擴縮容工作負載
   static async scaleWorkload(
     clusterId: string,
     namespace: string,
@@ -233,7 +233,7 @@ export class WorkloadService {
     return request.post(endpoint, { replicas });
   }
 
-  // 删除工作负载
+  // 刪除工作負載
   static async deleteWorkload(
     clusterId: string,
     namespace: string,
@@ -283,7 +283,7 @@ export class WorkloadService {
     return request.get(`/clusters/${clusterId}/rollouts/${namespace}/${name}/analysis-runs`);
   }
 
-  // 重新部署工作负载（重启）
+  // 重新部署工作負載（重啟）
   static async restartWorkload(
     clusterId: string,
     namespace: string,
@@ -310,13 +310,13 @@ export class WorkloadService {
     return request.post(endpoint);
   }
 
-  // 应用YAML
+  // 應用YAML
   static async applyYAML(
     clusterId: string,
     yaml: string,
     dryRun = false
   ): Promise<ApiResponse<unknown>> {
-    // 解析YAML中的kind来确定使用哪个endpoint
+    // 解析YAML中的kind來確定使用哪個endpoint
     try {
       const kindMatch = yaml.match(/kind:\s*(\w+)/);
       if (kindMatch) {
@@ -355,7 +355,7 @@ export class WorkloadService {
     });
   }
 
-  // 获取工作负载类型列表
+  // 獲取工作負載型別列表
   static getWorkloadTypes(): Array<{ value: string; label: string; icon: string }> {
     return [
       { value: 'deployment', label: 'Deployment', icon: '🚀' },
@@ -367,7 +367,7 @@ export class WorkloadService {
     ];
   }
 
-  // 获取工作负载状态颜色
+  // 獲取工作負載狀態顏色
   static getStatusColor(workload: WorkloadInfo): string {
     const { type, status, replicas, readyReplicas } = workload;
     
@@ -375,20 +375,20 @@ export class WorkloadService {
       return status === 'Completed' ? 'success' : 'processing';
     }
     
-    // 如果有副本数信息，使用副本数判断
+    // 如果有副本數資訊，使用副本數判斷
     if (typeof replicas === 'number' && typeof readyReplicas === 'number') {
       if (readyReplicas === 0) return 'error';
       if (readyReplicas < replicas) return 'warning';
       return 'success';
     }
     
-    // 根据状态字段判断
+    // 根據狀態欄位判斷
     if (status === 'Ready') return 'success';
     if (status === 'NotReady') return 'error';
     return 'processing';
   }
 
-  // 格式化工作负载状态
+  // 格式化工作負載狀態
   static formatStatus(workload: WorkloadInfo): { status: string; color: string } {
     const { type, status, replicas, readyReplicas } = workload;
     const color = this.getStatusColor(workload);
@@ -396,9 +396,9 @@ export class WorkloadService {
     let statusText = status || '未知';
     
     if (type === 'job') {
-      statusText = status === 'Completed' ? '已完成' : '运行中';
+      statusText = status === 'Completed' ? '已完成' : '執行中';
     } else if (type === 'cronjob') {
-      statusText = '已调度';
+      statusText = '已排程';
     } else if (typeof replicas === 'number' && typeof readyReplicas === 'number') {
       statusText = `${readyReplicas}/${replicas}`;
     }
@@ -406,7 +406,7 @@ export class WorkloadService {
     return { status: statusText, color };
   }
 
-  // 表单数据转YAML
+  // 表單資料轉YAML
   static formDataToYAML(
     workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob',
     formData: Record<string, unknown>
@@ -424,7 +424,7 @@ export class WorkloadService {
       return result;
     };
 
-    // 处理 labels（支持数组和对象格式）
+    // 處理 labels（支援陣列和物件格式）
     let labels: Record<string, string> = {};
     if (Array.isArray(formData.labels)) {
       formData.labels.forEach((item: { key: string; value: string }) => {
@@ -438,7 +438,7 @@ export class WorkloadService {
       labels = formData.labels as Record<string, string>;
     }
 
-    // 处理 annotations（支持数组和对象格式）
+    // 處理 annotations（支援陣列和物件格式）
     let annotations: Record<string, string> = {};
     if (Array.isArray(formData.annotations)) {
       formData.annotations.forEach((item: { key: string; value: string }) => {
@@ -452,7 +452,7 @@ export class WorkloadService {
       annotations = formData.annotations as Record<string, string>;
     }
 
-    // 基础metadata - 确保 name 不为 undefined
+    // 基礎metadata - 確保 name 不為 undefined
     const workloadName = formData.name || `example-${workloadType.toLowerCase()}`;
     const metadata = {
       name: workloadName,
@@ -461,9 +461,9 @@ export class WorkloadService {
       ...(Object.keys(annotations).length > 0 && { annotations }),
     };
 
-    // 构建容器 YAML 字符串的辅助函数
+    // 構建容器 YAML 字串的輔助函式
     const buildContainerYAML = (): string => {
-      // 确保 image 不为 undefined
+      // 確保 image 不為 undefined
       const containerImage = formData.image || 'nginx:latest';
       const containerName = formData.containerName || 'main';
       
@@ -508,7 +508,7 @@ export class WorkloadService {
         }
       }
       
-      // 生命周期
+      // 生命週期
       if (formData.lifecycle) {
         const lifecycle = formData.lifecycle as { postStart?: { exec?: { command: string | string[] } }; preStop?: { exec?: { command: string | string[] } } };
         containerYAML += `\n        lifecycle:`;
@@ -526,7 +526,7 @@ export class WorkloadService {
         }
       }
       
-      // 健康检查
+      // 健康檢查
       if (formData.livenessProbe) {
         const livenessProbe = formData.livenessProbe as { httpGet?: { path: string; port: number }; initialDelaySeconds?: number; periodSeconds?: number; failureThreshold?: number };
         containerYAML += `\n        livenessProbe:`;
@@ -588,11 +588,11 @@ export class WorkloadService {
       return containerYAML;
     };
     
-    // 构建 PodSpec YAML 字符串的辅助函数
+    // 構建 PodSpec YAML 字串的輔助函式
     const buildPodSpecYAML = (): string => {
       let podSpecYAML = buildContainerYAML();
       
-      // 数据卷挂载（添加到容器）
+      // 資料卷掛載（新增到容器）
       if (formData.volumes && Array.isArray(formData.volumes) && formData.volumes.length > 0) {
         const volumeMounts = (formData.volumes as VolumeItem[]).map((vol) => 
           `\n        - name: ${vol.name}\n          mountPath: ${vol.mountPath}${vol.readOnly ? '\n          readOnly: true' : ''}`
@@ -600,7 +600,7 @@ export class WorkloadService {
         podSpecYAML += `\n        volumeMounts:${volumeMounts}`;
       }
       
-      // 镜像拉取密钥
+      // 映像拉取金鑰
       if (formData.imagePullSecrets && Array.isArray(formData.imagePullSecrets) && formData.imagePullSecrets.length > 0) {
         podSpecYAML += `\n      imagePullSecrets:`;
         (formData.imagePullSecrets as string[]).forEach((secret: string) => {
@@ -608,7 +608,7 @@ export class WorkloadService {
         });
       }
       
-      // 节点选择器
+      // 節點選擇器
       if (formData.nodeSelectorList && Array.isArray(formData.nodeSelectorList) && formData.nodeSelectorList.length > 0) {
         podSpecYAML += `\n      nodeSelector:`;
         (formData.nodeSelectorList as Array<{ key: string; value: string }>).forEach((item: { key: string; value: string }) => {
@@ -645,7 +645,7 @@ export class WorkloadService {
         }
       }
       
-      // 终止宽限期
+      // 終止寬限期
       if (formData.terminationGracePeriodSeconds !== undefined) {
         podSpecYAML += `\n      terminationGracePeriodSeconds: ${formData.terminationGracePeriodSeconds}`;
       }
@@ -940,13 +940,13 @@ ${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && Array.
         break;
 
       default:
-        throw new Error(`不支持的工作负载类型: ${workloadType}`);
+        throw new Error(`不支援的工作負載型別: ${workloadType}`);
     }
 
     return yaml;
   }
   
-  // 获取Deployment关联的Pods
+  // 獲取Deployment關聯的Pods
   static async getWorkloadPods(
     clusterId: string,
     namespace: string,
@@ -967,7 +967,7 @@ ${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && Array.
     return request.get(endpoint);
   }
 
-  // 获取Deployment关联的Services
+  // 獲取Deployment關聯的Services
   static async getWorkloadServices(
     clusterId: string,
     namespace: string,
@@ -988,7 +988,7 @@ ${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && Array.
     return request.get(endpoint);
   }
 
-  // 获取Deployment关联的Ingresses
+  // 獲取Deployment關聯的Ingresses
   static async getWorkloadIngresses(
     clusterId: string,
     namespace: string,
@@ -1009,7 +1009,7 @@ ${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && Array.
     return request.get(endpoint);
   }
 
-  // 获取Deployment的HPA
+  // 獲取Deployment的HPA
   static async getWorkloadHPA(
     clusterId: string,
     namespace: string,
@@ -1051,7 +1051,7 @@ ${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && Array.
     return request.delete(`/clusters/${clusterId}/hpa/${namespace}/${name}`);
   }
 
-  // 获取Deployment的ReplicaSets
+  // 獲取Deployment的ReplicaSets
   static async getWorkloadReplicaSets(
     clusterId: string,
     namespace: string,
@@ -1072,7 +1072,7 @@ ${buildPodSpecYAML().replace(/ {6}/g, '          ')}${formData.volumes && Array.
     return request.get(endpoint);
   }
 
-  // 获取Deployment的Events
+  // 獲取Deployment的Events
   static async getWorkloadEvents(
     clusterId: string,
     namespace: string,

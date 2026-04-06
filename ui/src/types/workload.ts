@@ -1,21 +1,21 @@
-// 容器探针配置
+// 容器探針配置
 export interface ProbeConfig {
-  // HTTP检查
+  // HTTP檢查
   httpGet?: {
     path: string;
     port: number;
     scheme?: 'HTTP' | 'HTTPS';
     httpHeaders?: Array<{ name: string; value: string }>;
   };
-  // 命令检查
+  // 命令檢查
   exec?: {
     command: string[];
   };
-  // TCP检查
+  // TCP檢查
   tcpSocket?: {
     port: number;
   };
-  // 通用参数
+  // 通用參數
   initialDelaySeconds?: number;
   periodSeconds?: number;
   timeoutSeconds?: number;
@@ -23,7 +23,7 @@ export interface ProbeConfig {
   failureThreshold?: number;
 }
 
-// 容器生命周期配置
+// 容器生命週期配置
 export interface LifecycleConfig {
   postStart?: {
     exec?: { command: string[] };
@@ -45,22 +45,22 @@ export interface LifecycleConfig {
   };
 }
 
-// 容器资源配置（支持 cpu、memory、ephemeral-storage、nvidia.com/gpu）
+// 容器資源配置（支援 cpu、memory、ephemeral-storage、nvidia.com/gpu）
 export interface ResourceConfig {
   limits?: {
     cpu?: string;
     memory?: string;
-    'ephemeral-storage'?: string;  // 临时存储限制
+    'ephemeral-storage'?: string;  // 臨時儲存限制
     'nvidia.com/gpu'?: string;
   };
   requests?: {
     cpu?: string;
     memory?: string;
-    'ephemeral-storage'?: string;  // 临时存储请求
+    'ephemeral-storage'?: string;  // 臨時儲存請求
   };
 }
 
-// 数据卷挂载配置
+// 資料卷掛載配置
 export interface VolumeMount {
   name: string;
   mountPath: string;
@@ -68,7 +68,7 @@ export interface VolumeMount {
   readOnly?: boolean;
 }
 
-// 数据卷配置
+// 資料卷配置
 export interface VolumeConfig {
   name: string;
   type: 'emptyDir' | 'hostPath' | 'configMap' | 'secret' | 'persistentVolumeClaim';
@@ -106,18 +106,18 @@ export interface ContainerConfig {
   name: string;
   image: string;
   imagePullPolicy?: 'Always' | 'IfNotPresent' | 'Never';
-  // 启动命令
+  // 啟動命令
   command?: string[];
   args?: string[];
-  // 工作目录
+  // 工作目錄
   workingDir?: string;
-  // 端口配置
+  // 連接埠配置
   ports?: Array<{
     name?: string;
     containerPort: number;
     protocol?: 'TCP' | 'UDP' | 'SCTP';
   }>;
-  // 环境变量
+  // 環境變數
   env?: Array<{
     name: string;
     value?: string;
@@ -128,23 +128,23 @@ export interface ContainerConfig {
       resourceFieldRef?: { containerName?: string; resource: string };
     };
   }>;
-  // 资源配置
+  // 資源配置
   resources?: ResourceConfig;
-  // 数据卷挂载
+  // 資料卷掛載
   volumeMounts?: VolumeMount[];
-  // 生命周期
+  // 生命週期
   lifecycle?: LifecycleConfig;
-  // 健康检查
+  // 健康檢查
   livenessProbe?: ProbeConfig;
   readinessProbe?: ProbeConfig;
   startupProbe?: ProbeConfig;
-  // 标准输入
+  // 標準輸入
   stdin?: boolean;
   stdinOnce?: boolean;
   tty?: boolean;
 }
 
-// 节点亲和性 - 必须满足
+// 節點親和性 - 必須滿足
 export interface NodeSelectorTerm {
   matchExpressions?: Array<{
     key: string;
@@ -158,23 +158,23 @@ export interface NodeSelectorTerm {
   }>;
 }
 
-// 节点亲和性 - 尽量满足
+// 節點親和性 - 儘量滿足
 export interface PreferredSchedulingTerm {
   weight: number;
   preference: NodeSelectorTerm;
 }
 
-// 节点亲和性配置
+// 節點親和性配置
 export interface NodeAffinityConfig {
-  // 必须满足 (requiredDuringSchedulingIgnoredDuringExecution)
+  // 必須滿足 (requiredDuringSchedulingIgnoredDuringExecution)
   required?: {
     nodeSelectorTerms: NodeSelectorTerm[];
   };
-  // 尽量满足 (preferredDuringSchedulingIgnoredDuringExecution)
+  // 儘量滿足 (preferredDuringSchedulingIgnoredDuringExecution)
   preferred?: PreferredSchedulingTerm[];
 }
 
-// Pod亲和性条件
+// Pod親和性條件
 export interface PodAffinityTerm {
   labelSelector?: {
     matchLabels?: Record<string, string>;
@@ -196,27 +196,27 @@ export interface PodAffinityTerm {
   };
 }
 
-// Pod亲和性 - 尽量满足
+// Pod親和性 - 儘量滿足
 export interface WeightedPodAffinityTerm {
   weight: number;
   podAffinityTerm: PodAffinityTerm;
 }
 
-// Pod亲和性配置
+// Pod親和性配置
 export interface PodAffinityConfig {
-  // 必须满足
+  // 必須滿足
   required?: PodAffinityTerm[];
-  // 尽量满足
+  // 儘量滿足
   preferred?: WeightedPodAffinityTerm[];
 }
 
-// 调度策略配置
+// 排程策略配置
 export interface SchedulingConfig {
-  // 节点亲和
+  // 節點親和
   nodeAffinity?: NodeAffinityConfig;
-  // Pod亲和
+  // Pod親和
   podAffinity?: PodAffinityConfig;
-  // Pod反亲和
+  // Pod反親和
   podAntiAffinity?: PodAffinityConfig;
 }
 
@@ -236,7 +236,7 @@ export interface DNSConfig {
   options?: Array<{ name: string; value?: string }>;
 }
 
-// 升级策略配置
+// 升級策略配置
 export interface UpdateStrategyConfig {
   type: 'RollingUpdate' | 'Recreate';
   rollingUpdate?: {
@@ -245,21 +245,21 @@ export interface UpdateStrategyConfig {
   };
 }
 
-// Argo Rollout 金丝雀发布步骤
+// Argo Rollout 金絲雀釋出步驟
 export interface CanaryStep {
-  // 设置流量权重
+  // 設定流量權重
   setWeight?: number;
-  // 暂停 - 可以是无限期暂停或指定时长
+  // 暫停 - 可以是無限期暫停或指定時長
   pause?: {
     duration?: string;  // 例如: "10m", "1h"
   };
-  // 设置金丝雀副本数比例
+  // 設定金絲雀副本數比例
   setCanaryScale?: {
     replicas?: number;
     weight?: number;
     matchTrafficWeight?: boolean;
   };
-  // 分析运行
+  // 分析執行
   analysis?: {
     templates?: Array<{
       templateName: string;
@@ -271,17 +271,17 @@ export interface CanaryStep {
   };
 }
 
-// Argo Rollout 金丝雀策略配置
+// Argo Rollout 金絲雀策略配置
 export interface CanaryStrategyConfig {
-  // 发布步骤
+  // 釋出步驟
   steps?: CanaryStep[];
   // 最大超量
   maxSurge?: string | number;
   // 最大不可用
   maxUnavailable?: string | number;
-  // 金丝雀服务名称 (用于流量路由)
+  // 金絲雀服務名稱 (用於流量路由)
   canaryService?: string;
-  // 稳定版本服务名称
+  // 穩定版本服務名稱
   stableService?: string;
   // 流量路由配置
   trafficRouting?: {
@@ -327,59 +327,59 @@ export interface CanaryStrategyConfig {
       };
     }>;
   };
-  // 反亲和配置
+  // 反親和配置
   antiAffinity?: {
     requiredDuringSchedulingIgnoredDuringExecution?: Record<string, unknown>;
     preferredDuringSchedulingIgnoredDuringExecution?: {
       weight: number;
     };
   };
-  // 金丝雀元数据
+  // 金絲雀後設資料
   canaryMetadata?: {
     labels?: Record<string, string>;
     annotations?: Record<string, string>;
   };
-  // 稳定版本元数据
+  // 穩定版本後設資料
   stableMetadata?: {
     labels?: Record<string, string>;
     annotations?: Record<string, string>;
   };
 }
 
-// Argo Rollout 蓝绿发布策略配置
+// Argo Rollout 藍綠髮布策略配置
 export interface BlueGreenStrategyConfig {
-  // 活跃服务名称 (生产流量)
+  // 活躍服務名稱 (生產流量)
   activeService: string;
-  // 预览服务名称 (测试流量)
+  // 預覽服務名稱 (測試流量)
   previewService?: string;
-  // 自动晋升启用
+  // 自動晉升啟用
   autoPromotionEnabled?: boolean;
-  // 自动晋升延迟时间(秒)
+  // 自動晉升延遲時間(秒)
   autoPromotionSeconds?: number;
-  // 缩容延迟时间(秒)
+  // 縮容延遲時間(秒)
   scaleDownDelaySeconds?: number;
-  // 缩容延迟修订版本限制
+  // 縮容延遲修訂版本限制
   scaleDownDelayRevisionLimit?: number;
-  // 预览副本数
+  // 預覽副本數
   previewReplicaCount?: number;
-  // 预览元数据
+  // 預覽後設資料
   previewMetadata?: {
     labels?: Record<string, string>;
     annotations?: Record<string, string>;
   };
-  // 活跃元数据
+  // 活躍後設資料
   activeMetadata?: {
     labels?: Record<string, string>;
     annotations?: Record<string, string>;
   };
-  // 反亲和配置
+  // 反親和配置
   antiAffinity?: {
     requiredDuringSchedulingIgnoredDuringExecution?: Record<string, unknown>;
     preferredDuringSchedulingIgnoredDuringExecution?: {
       weight: number;
     };
   };
-  // 预晋升分析
+  // 預晉升分析
   prePromotionAnalysis?: {
     templates?: Array<{
       templateName: string;
@@ -389,7 +389,7 @@ export interface BlueGreenStrategyConfig {
       value: string;
     }>;
   };
-  // 后晋升分析
+  // 後晉升分析
   postPromotionAnalysis?: {
     templates?: Array<{
       templateName: string;
@@ -403,17 +403,17 @@ export interface BlueGreenStrategyConfig {
 
 // Argo Rollout 策略配置
 export interface RolloutStrategyConfig {
-  // 策略类型
+  // 策略型別
   type: 'Canary' | 'BlueGreen';
-  // 金丝雀策略
+  // 金絲雀策略
   canary?: CanaryStrategyConfig;
-  // 蓝绿策略
+  // 藍綠策略
   blueGreen?: BlueGreenStrategyConfig;
 }
 
-// 完整的工作负载表单数据
+// 完整的工作負載表單資料
 export interface WorkloadFormData {
-  // 基本信息
+  // 基本資訊
   name: string;
   namespace: string;
   description?: string;
@@ -421,38 +421,38 @@ export interface WorkloadFormData {
   labels?: Array<{ key: string; value: string }>;
   annotations?: Array<{ key: string; value: string }>;
   
-  // 容器配置 - 支持多容器
+  // 容器配置 - 支援多容器
   containers: ContainerConfig[];
   // Init容器
   initContainers?: ContainerConfig[];
   
-  // 数据卷
+  // 資料卷
   volumes?: VolumeConfig[];
   
-  // 镜像拉取凭证
+  // 映像拉取憑證
   imagePullSecrets?: string[];
   
-  // 调度策略
+  // 排程策略
   scheduling?: SchedulingConfig;
-  // 节点选择器 (简化版)
+  // 節點選擇器 (簡化版)
   nodeSelector?: Record<string, string>;
   // 容忍策略
   tolerations?: TolerationConfig[];
   
-  // 升级策略
+  // 升級策略
   strategy?: UpdateStrategyConfig;
   minReadySeconds?: number;
   revisionHistoryLimit?: number;
   progressDeadlineSeconds?: number;
   
-  // 终止配置
+  // 終止配置
   terminationGracePeriodSeconds?: number;
   
   // DNS配置
   dnsPolicy?: 'ClusterFirst' | 'ClusterFirstWithHostNet' | 'Default' | 'None';
   dnsConfig?: DNSConfig;
   
-  // 主机网络
+  // 主機網路
   hostNetwork?: boolean;
   hostPID?: boolean;
   hostIPC?: boolean;
@@ -479,29 +479,29 @@ export interface WorkloadFormData {
   rolloutStrategy?: RolloutStrategyConfig;
 }
 
-// 表单中调度策略的简化格式
+// 表單中排程策略的簡化格式
 export interface SchedulingFormData {
-  // 节点亲和 - 必须满足
+  // 節點親和 - 必須滿足
   nodeAffinityRequired?: Array<{
     key: string;
     operator: string;
     values: string;
   }>;
-  // 节点亲和 - 尽量满足
+  // 節點親和 - 儘量滿足
   nodeAffinityPreferred?: Array<{
     weight: number;
     key: string;
     operator: string;
     values: string;
   }>;
-  // Pod亲和 - 必须满足
+  // Pod親和 - 必須滿足
   podAffinityRequired?: Array<{
     topologyKey: string;
     labelKey: string;
     operator: string;
     labelValues: string;
   }>;
-  // Pod亲和 - 尽量满足
+  // Pod親和 - 儘量滿足
   podAffinityPreferred?: Array<{
     weight: number;
     topologyKey: string;
@@ -509,14 +509,14 @@ export interface SchedulingFormData {
     operator: string;
     labelValues: string;
   }>;
-  // Pod反亲和 - 必须满足
+  // Pod反親和 - 必須滿足
   podAntiAffinityRequired?: Array<{
     topologyKey: string;
     labelKey: string;
     operator: string;
     labelValues: string;
   }>;
-  // Pod反亲和 - 尽量满足
+  // Pod反親和 - 儘量滿足
   podAntiAffinityPreferred?: Array<{
     weight: number;
     topologyKey: string;

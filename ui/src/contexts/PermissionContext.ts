@@ -1,28 +1,28 @@
 import { createContext } from 'react';
 import type { MyPermissionsResponse, PermissionType } from '../types';
 
-// 权限上下文类型
+// 權限上下文型別
 export interface PermissionContextType {
-  // 用户在所有集群的权限
+  // 使用者在所有叢集的權限
   clusterPermissions: Map<number, MyPermissionsResponse>;
-  // 当前集群权限
+  // 當前叢集權限
   currentClusterPermission: MyPermissionsResponse | null;
-  // 加载状态
+  // 載入狀態
   loading: boolean;
-  // 权限检查方法
+  // 權限檢查方法
   hasClusterAccess: (clusterId: number | string) => boolean;
   hasNamespaceAccess: (clusterId: number | string, namespace: string) => boolean;
   canPerformAction: (action: string, clusterId?: number | string) => boolean;
   isAdmin: (clusterId?: number | string) => boolean;
   isReadonly: (clusterId?: number | string) => boolean;
-  canWrite: (clusterId?: number | string) => boolean; // 检查是否有写权限
-  // 获取权限类型
+  canWrite: (clusterId?: number | string) => boolean; // 檢查是否有寫權限
+  // 獲取權限型別
   getPermissionType: (clusterId: number | string) => PermissionType | null;
-  // 刷新权限
+  // 重新整理權限
   refreshPermissions: () => Promise<void>;
-  // 设置当前集群
+  // 設定當前叢集
   setCurrentClusterId: (clusterId: number | string | null) => void;
-  // 命名空间权限相关
+  // 命名空間權限相關
   getAllowedNamespaces: (clusterId?: number | string) => string[];
   hasAllNamespaceAccess: (clusterId?: number | string) => boolean;
   filterNamespaces: (namespaces: string[], clusterId?: number | string) => string[];

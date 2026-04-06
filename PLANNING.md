@@ -150,6 +150,203 @@ type SyncPolicy struct {
 
 ---
 
+### 5.7 安全設定 Tab 完善（小型 Sprint，2 週）
+
+> **目標：** 將現有分散的安全功能整合至「系統設定 → 安全設定」Tab，補充缺失的安全管理功能，消除佔位符狀態。
+
+**現況：**
+- `安全設定` Tab（`SystemSettings.tsx:67-79`）目前顯示「功能開發中」佔位符。
+- `SIEMConfig.tsx` 已完整實作，但**未掛載**至任何 Tab，無法從 UI 存取。
+- 登入鎖定閾值、Session TTL、密碼最低長度等安全參數目前**硬碼**於後端。
+
+**待實作任務：**
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| 建立 `SecuritySettings.tsx`，掛載至安全設定 Tab | `ui/src/pages/settings/SecuritySettings.tsx` + `SystemSettings.tsx` | W1 |
+| 接入現有 `SIEMConfig.tsx`（Section 1：稽核日誌推送） | `ui/src/pages/settings/SecuritySettings.tsx` | W1 |
+| 登入安全設定後端 API | `internal/handlers/system_security.go` + `internal/models/system_config.go` | W1 |
+| 登入安全設定前端（Section 2：Session / 鎖定 / 密碼政策） | `ui/src/pages/settings/SecuritySettings.tsx` | W1–W2 |
+| API Token 管理後端（CRUD + SHA-256 hash 儲存） | `internal/handlers/api_token.go` + `internal/models/api_token.go` | W2 |
+| API Token 管理前端（Section 3：Token 列表 + 建立 Modal + 撤銷） | `ui/src/pages/settings/SecuritySettings.tsx` | W2 |
+| 補齊三語 i18n（zh-TW / en-US） | `ui/src/locales/*/settings.json` | W2 |
+
+**安全設定 Tab 結構（`SecuritySettings.tsx`）：**
+
+```
+SecuritySettings.tsx
+├── Section 1：SIEM / 稽核日誌推送
+│   └── 複用現有 SIEMConfig.tsx（Webhook URL、認證 Header、批次匯出）
+│
+├── Section 2：登入安全
+│   ├── Session 逾時（分鐘，預設 480）
+│   ├── 登入失敗鎖定閾值（次數，預設 5）
+│   ├── 鎖定持續時間（分鐘，預設 30）
+│   └── 密碼最短長度（預設 8）
+│
+└── Section 3：API Token 管理
+    ├── Token 列表（名稱、建立時間、最後使用時間、到期日、權限範圍）
+    ├── 建立 Token（Modal：名稱 + Scopes + 到期日 → 僅顯示一次明文）
+    └── 撤銷 Token（二次確認）
+```
+
+**資料模型：**
+
+```go
+// internal/models/system_config.go（擴充現有 SystemConfig 或新增欄位）
+type SystemSecurityConfig struct {
+    SessionTTLMinutes      int `json:"session_ttl_minutes"`       // 預設 480
+    LoginFailLockThreshold int `json:"login_fail_lock_threshold"` // 預設 5
+    LockDurationMinutes    int `json:"lock_duration_minutes"`     // 預設 30
+    PasswordMinLength      int `json:"password_min_length"`       // 預設 8
+}
+
+// internal/models/api_token.go
+type APIToken struct {
+    ID         uint       `gorm:"primaryKey"`
+    UserID     uint       `gorm:"not null;index"`
+    Name       string     `gorm:"not null"`
+    TokenHash  string     `gorm:"not null;uniqueIndex"` // SHA-256，不儲存明文
+    Scopes     string     // JSON 陣列：["read","write","admin"]
+    ExpiresAt  *time.Time
+    LastUsedAt *time.Time
+    CreatedAt  time.Time
+}
+```
+
+**API 端點：**
+
+```
+GET  /system/security/config          取得安全設定（PlatformAdmin only）
+PUT  /system/security/config          更新安全設定（PlatformAdmin only）
+
+GET    /users/me/tokens               列出個人 API Token（不含 hash）
+POST   /users/me/tokens               建立 Token（回傳一次明文，之後不可再取）
+DELETE /users/me/tokens/:id           撤銷 Token
+```
+
+**完成指標：**
+- 安全設定 Tab 有完整可操作內容，不再顯示佔位符。
+- SIEM Webhook 推送可從 UI 設定與測試。
+- 管理員可動態調整登入鎖定參數，無需重啟服務。
+- 使用者可自助建立、查看、撤銷個人 API Token。
+
+---
+
+### 5.8 通知設定 Tab 完善（小型 Sprint，2–3 週）✅ 已完成
+
+> **目標：** 消除「通知設定」佔位符，建立**集中式通知渠道管理**，解決現有 Event 告警規則 URL 分散問題，並補全缺失的 Email/SMTP 通知。
+
+#### 現況診斷
+
+| 現象 | 位置 | 影響 |
+|------|------|------|
+| 通知設定 Tab 顯示「功能開發中」 | `SystemSettings.tsx:81-89` | 無可操作內容 |
+| 通知 URL 直接嵌入每條告警規則 | `EventAlertRule.NotifyURL` | 渠道變更需逐條修改規則 |
+| `email` 通知類型無後端實作 | `event_alert_service.go:notify()` | 設為 email 的規則靜默失敗 |
+| DingTalk 無加簽（HMAC-SHA256）支援 | `event_alert_service.go:270-278` | 生產環境 DingTalk 安全模式無法使用 |
+| 無渠道測試入口 | — | 設定完才知道是否有效 |
+
+#### 兩條通知鏈路現況
+
+```
+通知鏈路 A（K8s Event）：
+  EventAlertWorker（60 秒掃描）→ matchRule() → notify()（直接推送 per-rule URL）→ recordHistory()
+
+通知鏈路 B（Prometheus）：
+  AlertManager（叢集級別代理）→ 外部 Alertmanager 接管路由（Synapse 不介入 receiver 設定）
+```
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| `NotifyChannel` 資料模型 | `internal/models/notify_channel.go` | W1 |
+| 通知渠道 CRUD + 測試 API | `internal/handlers/notify_channel.go` | W1 |
+| AutoMigrate 加入 NotifyChannel | `internal/database/database.go` | W1 |
+| 路由註冊（PlatformAdmin） | `internal/router/routes_system.go` | W1 |
+| Email/SMTP 通知後端實作 | `internal/services/event_alert_service.go` | W2 |
+| DingTalk 加簽支援（HMAC-SHA256） | `internal/services/event_alert_service.go` | W2 |
+| `EventAlertRule` 新增可選 `ChannelID`（向下相容） | `internal/models/event_alert.go` | W2 |
+| 前端 `NotificationSettings.tsx`（渠道列表 + 新增 Modal + 測試） | `ui/src/pages/settings/NotificationSettings.tsx` | W2–W3 |
+| `SystemSettings.tsx` 替換佔位符 | `ui/src/pages/settings/SystemSettings.tsx` | W3 |
+| 前端 `notifyChannelService.ts` | `ui/src/services/notifyChannelService.ts` | W2 |
+| 補齊三語 i18n（zh-TW / en-US） | `ui/src/locales/*/settings.json` | W3 |
+
+#### 資料模型
+
+```go
+// internal/models/notify_channel.go
+type NotifyChannel struct {
+    ID        uint           `json:"id" gorm:"primaryKey"`
+    Name      string         `json:"name" gorm:"size:100;uniqueIndex;not null"`
+    Type      string         `json:"type" gorm:"size:20;not null"` // webhook/dingtalk/slack/teams/email
+    Config    string         `json:"config" gorm:"type:text"`      // JSON（含加密敏感欄位）
+    Enabled   bool           `json:"enabled" gorm:"default:true"`
+    CreatedAt time.Time      `json:"created_at"`
+    UpdatedAt time.Time      `json:"updated_at"`
+    DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
+}
+
+// Config 各類型 JSON 結構：
+// WebhookChannelConfig  { url, headers? }
+// DingTalkChannelConfig { webhook_url, secret? }  // secret = HMAC-SHA256 加簽
+// SlackChannelConfig    { webhook_url }
+// TeamsChannelConfig    { webhook_url }
+// EmailChannelConfig    { smtp_host, smtp_port, use_tls, username, password*, from, to }
+// *password 以 AES-256-GCM 加密儲存（複用 SSHSettingService 加密模式）
+
+// EventAlertRule 新增可選欄位（向下相容，ChannelID 有值則用渠道，否則退回 NotifyURL）
+// ChannelID *uint `json:"channelId,omitempty" gorm:"index"`
+```
+
+#### API 端點
+
+```
+GET    /system/notify-channels              列出渠道（PlatformAdmin）
+POST   /system/notify-channels              新增渠道（PlatformAdmin）
+GET    /system/notify-channels/:id          取得渠道（PlatformAdmin）
+PUT    /system/notify-channels/:id          更新渠道（PlatformAdmin）
+DELETE /system/notify-channels/:id          刪除渠道（PlatformAdmin）
+POST   /system/notify-channels/:id/test     測試渠道連線（PlatformAdmin）
+```
+
+#### 通知設定 Tab 結構
+
+```
+NotificationSettings.tsx
+├── Section 1：通知渠道管理
+│   ├── 渠道列表（名稱、類型、狀態 Tag、測試、編輯、刪除）
+│   ├── 新增渠道 Modal（名稱 + 類型選擇 → 動態切換設定表單）
+│   │   ├── Webhook   → URL + 自訂 Header
+│   │   ├── DingTalk  → Webhook URL + 可選 Secret（加簽）
+│   │   ├── Slack     → Incoming Webhook URL
+│   │   ├── Teams     → Incoming Webhook URL
+│   │   └── Email     → SMTP Host/Port/TLS + 帳密 + 寄件人 + 收件人
+│   └── 測試連線按鈕（即時推送測試訊息）
+│
+└── Section 2：說明
+    └── 告知使用者如何在 Event 告警規則引擎中引用已設定的渠道
+        （連結至各叢集 /clusters/:id/event-alerts）
+```
+
+#### 可複用現有資產
+
+| 資產 | 複用方式 |
+|------|---------|
+| `event_alert_service.go:notify()` 各渠道格式化邏輯 | 重構抽取為 `SendToChannel(ch *NotifyChannel, payload)` 共用函數 |
+| `siem.go:TestSIEMWebhook()` 測試推送邏輯 | 泛化為渠道測試 handler |
+| SSH 設定的 AES-256-GCM 加密模式 | Email 密碼 / DingTalk Secret 加密儲存 |
+| `SecuritySettings.tsx` Section + Card 佈局 | 前端直接套用 |
+
+#### 完成指標
+- 通知設定 Tab 有完整可操作內容，不再顯示佔位符。
+- 可建立 Webhook / DingTalk（含加簽）/ Slack / Teams / Email 渠道，並即時測試。
+- Event 告警規則可引用預設渠道（ChannelID），不再需要每條填 URL。
+- Email 通知正常傳送（`notifyResult = "sent"`）。
+
+---
+
 ### 5.6 Project 多租戶模型（獨立 Sprint）
 
 > **現況：** 多租戶透過 `ClusterPermission` 實現，無明確的租戶/組織層級，大規模管理困難。
@@ -178,6 +375,8 @@ type SyncPolicy struct {
 | M7 | AI 深度運維 | ✅ 已完成 | — | — |
 | M8 | **多叢集工作流程** | 🔲 待實作 | 🟢 低 | 5 週 |
 | M9 | 合規性與安全掃描 | ✅ 已完成 | — | — |
+| — | **安全設定 Tab 完善**（SIEM 接入 + 登入安全設定 + API Token） | ✅ 已完成 | — | — |
+| — | **通知設定 Tab 完善**（集中渠道管理 + DingTalk HMAC-SHA256 加簽） | ✅ 已完成 | 🟡 中 | 2–3 週 |
 | M10 | ~~備份匯出 + CLI 工具~~ → Velero 附加（M16 後）+ CLI（M16 後重新規劃） | ⏸ 延後 | 低 | 重新評估 |
 | M11 | NetworkPolicy 拓撲內聯編輯 + 策略模擬 | ✅ 已完成 | — | — |
 | M12 | Service Mesh 視覺化（Istio） | ✅ 已完成 | — | — |
@@ -187,7 +386,7 @@ type SyncPolicy struct {
 | M16 | **原生輕量 GitOps** | 🔲 待實作 | 🟡 中 | 6 週 |
 | M17 | **環境管理 + Promotion 流水線** | 🔲 待實作 | 🟢 低 | 5 週 |
 
-**待實作總估計：約 31 週（M8 + M13–M17）**
+**待實作總估計：約 30–31 週（M8 + M13–M17）**
 
 ### 建議實作順序
 

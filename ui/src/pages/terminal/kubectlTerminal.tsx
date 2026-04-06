@@ -38,7 +38,7 @@ const { id: clusterId } = useParams<{ id: string }>();
   
   const connectedRef = useRef(false);
 
-  // 处理终端输入 - 直接发送所有输入到服务端（Pod Terminal 模式）
+  // 處理終端輸入 - 直接傳送所有輸入到服務端（Pod Terminal 模式）
   const handleTerminalInput = useCallback((data: string) => {
     if (!connectedRef.current || !websocket.current) return;
 
@@ -47,14 +47,14 @@ const { id: clusterId } = useParams<{ id: string }>();
       return;
     }
 
-    // 直接发送所有输入到服务端，由服务端处理并回显
+    // 直接傳送所有輸入到服務端，由服務端處理並回顯
     websocket.current.send(JSON.stringify({
       type: 'input',
       data: data,
     }));
   }, []);
 
-  // 粘贴剪贴板内容
+  // 貼上剪貼簿內容
   const pasteFromClipboard = useCallback(() => {
     if (!connectedRef.current) {
       message.error(t('messages.connectFirst'));
@@ -64,7 +64,7 @@ const { id: clusterId } = useParams<{ id: string }>();
     navigator.clipboard.readText()
       .then((text) => {
         if (text && websocket.current && websocket.current.readyState === WebSocket.OPEN) {
-          // 直接作为输入发送
+          // 直接作為輸入傳送
           websocket.current.send(JSON.stringify({
             type: 'input',
             data: text
@@ -72,12 +72,12 @@ const { id: clusterId } = useParams<{ id: string }>();
         }
       })
       .catch((err) => {
-        console.error('粘贴失败:', err);
+        console.error('貼上失敗:', err);
         message.error(t('messages.pasteFailed'));
       });
   }, []);
 
-  // 显示欢迎信息
+  // 顯示歡迎資訊
   const showWelcomeMessage = useCallback(() => {
     if (!terminal.current) return;
     
@@ -92,7 +92,7 @@ const { id: clusterId } = useParams<{ id: string }>();
     terminal.current.writeln('');
   }, [clusterId, t]);
 
-  // 初始化终端
+  // 初始化終端
   useEffect(() => {
     const initTerminal = () => {
       if (terminalRef.current && !terminal.current) {
@@ -113,12 +113,12 @@ const { id: clusterId } = useParams<{ id: string }>();
             rightClickSelectsWord: true,
           });
 
-          // 添加插件
+          // 新增外掛
           fitAddon.current = new FitAddon();
           terminal.current.loadAddon(fitAddon.current);
           terminal.current.loadAddon(new WebLinksAddon());
           
-          // 添加剪贴板支持
+          // 新增剪貼簿支援
           try {
             const clipboardAddon = new ClipboardAddon();
             terminal.current.loadAddon(clipboardAddon);
@@ -128,7 +128,7 @@ const { id: clusterId } = useParams<{ id: string }>();
 
           terminal.current.open(terminalRef.current);
           
-          // 等待 DOM 完全渲染后再 fit
+          // 等待 DOM 完全渲染後再 fit
           const fitTerminal = () => {
             if (fitAddon.current && terminal.current && terminalRef.current) {
               try {
@@ -144,7 +144,7 @@ const { id: clusterId } = useParams<{ id: string }>();
             }
           };
 
-          // 延迟执行 fit 和显示欢迎信息
+          // 延遲執行 fit 和顯示歡迎資訊
           setTimeout(() => {
             fitTerminal();
             setTimeout(() => {
@@ -152,15 +152,15 @@ const { id: clusterId } = useParams<{ id: string }>();
             }, 200);
           }, 100);
 
-          // 设置终端输入处理
+          // 設定終端輸入處理
           terminal.current.onData((data) => {
             handleTerminalInput(data);
           });
 
-          // 添加键盘快捷键支持
+          // 新增鍵盤快捷鍵支援
           terminal.current.attachCustomKeyEventHandler((event) => {
             if (event.type === 'keydown') {
-              // Ctrl+C 复制
+              // Ctrl+C 複製
               if (event.ctrlKey && event.key === 'c' && terminal.current?.hasSelection()) {
                 const selection = terminal.current.getSelection();
                 if (selection) {
@@ -169,7 +169,7 @@ const { id: clusterId } = useParams<{ id: string }>();
                 return false;
               }
               
-              // Ctrl+V 粘贴
+              // Ctrl+V 貼上
               if (event.ctrlKey && event.key === 'v') {
                 pasteFromClipboard();
                 return false;
@@ -179,7 +179,7 @@ const { id: clusterId } = useParams<{ id: string }>();
           });
 
         } catch (error) {
-          console.error('初始化终端失败:', error);
+          console.error('初始化終端失敗:', error);
           message.error(t('messages.initFailed'));
         }
       }
@@ -199,7 +199,7 @@ const { id: clusterId } = useParams<{ id: string }>();
     };
   }, [showWelcomeMessage, handleTerminalInput, pasteFromClipboard]);
 
-  // 处理 WebSocket 消息
+  // 處理 WebSocket 訊息
   interface WebSocketMessage {
     type: string;
     data: string;
@@ -210,19 +210,19 @@ const { id: clusterId } = useParams<{ id: string }>();
 
     switch (msg.type) {
       case 'data':
-        // Pod Terminal 模式：直接写入终端输出
+        // Pod Terminal 模式：直接寫入終端輸出
         terminal.current.write(msg.data);
         break;
       case 'output':
-        // 旧模式兼容
+        // 舊模式相容
         terminal.current.write(msg.data);
         break;
       case 'kubectl_prep':
-        // 由 onmessage 统一单行刷新，此处兜底
+        // 由 onmessage 統一單行重新整理，此處兜底
         terminal.current.write(`\r\x1b[2K\x1b[33m${msg.data}\x1b[0m`);
         break;
       case 'connected':
-        // Pod 连接成功（主流程在 onmessage 里处理 UI 状态）
+        // Pod 連線成功（主流程在 onmessage 裡處理 UI 狀態）
         console.log('Pod terminal connected:', msg.data);
         break;
       case 'disconnected':
@@ -233,7 +233,7 @@ const { id: clusterId } = useParams<{ id: string }>();
         terminal.current.writeln(`\r\n\x1b[31m${msg.data}\x1b[0m`);
         break;
       case 'command_result':
-        // 旧模式兼容
+        // 舊模式相容
         break;
       case 'clear':
         terminal.current.clear();
@@ -243,14 +243,14 @@ const { id: clusterId } = useParams<{ id: string }>();
     }
   };
 
-  // 连接终端
+  // 連線終端
   const connectTerminal = () => {
     if (!clusterId) {
       message.error(t('messages.missingClusterId'));
       return;
     }
     
-    // 获取认证 token
+    // 獲取認證 token
     const token = localStorage.getItem('token');
     if (!token) {
       message.error(t('messages.notLoggedIn'));
@@ -261,7 +261,7 @@ const { id: clusterId } = useParams<{ id: string }>();
     
     if (terminal.current) {
       terminal.current.clear();
-      // 不换行，便于后续 kubectl_prep 用 \r 刷新同一行进度
+      // 不換行，便於後續 kubectl_prep 用 \r 重新整理同一行進度
       terminal.current.write('\x1b[33m' + t('kubectl.connecting') + '\x1b[0m');
     }
     
@@ -274,7 +274,7 @@ const { id: clusterId } = useParams<{ id: string }>();
       websocket.current = ws;
       
       ws.onopen = () => {
-        // WebSocket 已建立；kubectl Pod 可能仍在创建/拉取镜像，等服务端 type=connected 再视为可交互
+        // WebSocket 已建立；kubectl Pod 可能仍在建立/拉取映像，等服務端 type=connected 再視為可互動
       };
       
       ws.onmessage = (event) => {
@@ -311,7 +311,7 @@ const { id: clusterId } = useParams<{ id: string }>();
       };
       
       ws.onerror = (_error) => {
-        console.error('WebSocket错误:', _error);
+        console.error('WebSocket錯誤:', _error);
         message.error(t('messages.connectError'));
         setConnected(false);
         setConnecting(false);
@@ -334,7 +334,7 @@ const { id: clusterId } = useParams<{ id: string }>();
       };
       
     } catch (error) {
-      console.error('创建WebSocket连接失败:', error);
+      console.error('建立WebSocket連線失敗:', error);
       message.error(t('messages.createFailed'));
       setConnecting(false);
       
@@ -344,7 +344,7 @@ const { id: clusterId } = useParams<{ id: string }>();
     }
   };
 
-  // 断开终端连接
+  // 斷開終端連線
   const disconnectTerminal = () => {
     if (websocket.current) {
       websocket.current.close();
@@ -358,7 +358,7 @@ const { id: clusterId } = useParams<{ id: string }>();
     }
   };
 
-  // 清空终端
+  // 清空終端
   const clearTerminal = () => {
     if (terminal.current) {
       terminal.current.clear();
@@ -376,14 +376,14 @@ const { id: clusterId } = useParams<{ id: string }>();
     }
   };
 
-  // 窗口大小变化时重新调整终端大小
+  // 視窗大小變化時重新調整終端大小
   useEffect(() => {
     const handleResize = () => {
       if (fitAddon.current && terminal.current) {
         setTimeout(() => {
           try {
             fitAddon.current?.fit();
-            // 发送新的终端尺寸到服务端
+            // 傳送新的終端尺寸到服務端
             if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
               const dimensions = fitAddon.current?.proposeDimensions();
               if (dimensions) {
@@ -411,7 +411,7 @@ const { id: clusterId } = useParams<{ id: string }>();
 
   return (
     <div style={{ padding: '24px', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div style={{ marginBottom: 16, flexShrink: 0 }}>
         <Space>
           <Title level={3} style={{ margin: 0 }}>
@@ -458,7 +458,7 @@ const { id: clusterId } = useParams<{ id: string }>();
         </Space>
       </div>
 
-      {/* 连接状态提示 */}
+      {/* 連線狀態提示 */}
       {connecting && !connected && (
         <Alert
           message={t('kubectl.prepHint')}
@@ -476,7 +476,7 @@ const { id: clusterId } = useParams<{ id: string }>();
         />
       )}
 
-      {/* 终端界面 */}
+      {/* 終端介面 */}
       <Card 
         style={{ 
           flex: 1, 

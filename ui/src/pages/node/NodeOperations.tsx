@@ -105,7 +105,7 @@ const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   // const [form] = Form.useForm(); // 未使用
 
-  // 初始化节点操作状态
+  // 初始化節點操作狀態
   useEffect(() => {
     if (selectedNodes.length > 0) {
       const initialStatus: NodeOperationStatusItem[] = selectedNodes.map(node => ({
@@ -118,24 +118,24 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   }, [selectedNodes]);
 
-  // 处理操作类型变更
+  // 處理操作型別變更
   const handleOperationTypeChange = (e: RadioChangeEvent) => {
     setOperationType(e.target.value as 'cordon' | 'uncordon' | 'drain');
   };
 
-  // 处理下一步
+  // 處理下一步
   const handleNext = () => {
     if (currentStep === 0) {
-      // 验证操作类型选择
+      // 驗證操作型別選擇
       if (!operationType) {
         message.error(t('nodeOps:operationType.selectRequired'));
         return;
       }
       setCurrentStep(currentStep + 1);
     } else if (currentStep === 1) {
-      // 验证操作配置
+      // 驗證操作配置
       if (operationType === 'drain') {
-        // 验证Drain操作的确认项
+        // 驗證Drain操作的確認項
         if (!confirmChecks.serviceInterruption || !confirmChecks.replicaConfirmed || !confirmChecks.teamNotified) {
           message.error(t('nodeOps:drain.confirmAllRisks'));
           return;
@@ -143,17 +143,17 @@ const [currentStep, setCurrentStep] = useState(0);
       }
       setCurrentStep(currentStep + 1);
     } else if (currentStep === 2) {
-      // 开始执行操作
+      // 開始執行操作
       executeOperation();
     }
   };
 
-  // 处理上一步
+  // 處理上一步
   const handlePrevious = () => {
     setCurrentStep(currentStep - 1);
   };
 
-  // 处理取消
+  // 處理取消
   const handleCancel = () => {
     Modal.confirm({
       title: t('nodeOps:cancel.title'),
@@ -164,7 +164,7 @@ const [currentStep, setCurrentStep] = useState(0);
     });
   };
 
-  // 处理确认项变更
+  // 處理確認項變更
   const handleConfirmChecksChange = (checkedValues: string[]) => {
     setConfirmChecks({
       serviceInterruption: checkedValues.includes('service-interruption'),
@@ -173,7 +173,7 @@ const [currentStep, setCurrentStep] = useState(0);
     });
   };
 
-  // 处理Drain选项变更
+  // 處理Drain選項變更
   const handleDrainOptionsChange = (checkedValues: string[]) => {
     setDrainOptions({
       ...drainOptions,
@@ -183,7 +183,7 @@ const [currentStep, setCurrentStep] = useState(0);
     });
   };
 
-  // 执行节点操作
+  // 執行節點操作
   const executeOperation = async () => {
     setLoading(true);
     const startTime = new Date();
@@ -193,7 +193,7 @@ const [currentStep, setCurrentStep] = useState(0);
     });
 
     try {
-      // 更新所有节点状态为等待中
+      // 更新所有節點狀態為等待中
       const updatedStatus: NodeOperationStatusItem[] = nodeOperationStatus.map(node => ({
         ...node,
         status: 'waiting' as const,
@@ -201,12 +201,12 @@ const [currentStep, setCurrentStep] = useState(0);
       }));
       setNodeOperationStatus(updatedStatus);
 
-      // 根据执行策略处理节点
+      // 根據執行策略處理節點
       if (executionStrategy === 'parallel') {
-        // 并行执行
+        // 並行執行
         await executeParallel();
       } else {
-        // 串行执行
+        // 序列執行
         await executeSerial();
       }
 
@@ -223,24 +223,24 @@ const [currentStep, setCurrentStep] = useState(0);
 
       setCurrentStep(currentStep + 1);
     } catch (error) {
-      console.error('执行节点操作失败:', error);
+      console.error('執行節點操作失敗:', error);
       message.error(t('nodeOps:execution.executeFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  // 并行执行操作
+  // 並行執行操作
   const executeParallel = async () => {
     const operations = selectedNodes.map(async (node, index) => {
       try {
-        // 更新当前节点状态为执行中
+        // 更新當前節點狀態為執行中
         updateNodeStatus(index, 'running', t('nodeOps:execution.executingOperation'), 10);
 
-        // 根据操作类型执行不同的操作
+        // 根據操作型別執行不同的操作
         await executeNodeOperation(node.name, index);
 
-        // 更新成功结果
+        // 更新成功結果
         updateNodeStatus(index, 'success', t('nodeOps:execution.operationSuccess'), 100);
         setOperationResults((prev: OperationResults) => ({
           ...prev,
@@ -252,19 +252,19 @@ const [currentStep, setCurrentStep] = useState(0);
           }],
         }));
       } catch (error) {
-        // 更新失败结果
-        updateNodeStatus(index, 'failed', `操作失败: ${error}`, 100);
+        // 更新失敗結果
+        updateNodeStatus(index, 'failed', `操作失敗: ${error}`, 100);
         setOperationResults((prev: OperationResults) => ({
           ...prev,
           failed: prev.failed + 1,
           details: [...prev.details, {
             nodeName: node.name,
             status: 'failed',
-            message: `${operationType}操作失败: ${error}`,
+            message: `${operationType}操作失敗: ${error}`,
           }],
         }));
 
-        // 如果设置了失败停止，则抛出异常中断后续操作
+        // 如果設定了失敗停止，則丟擲異常中斷後續操作
         if (failureHandling === 'stop') {
           throw error;
         }
@@ -273,22 +273,22 @@ const [currentStep, setCurrentStep] = useState(0);
 
     await Promise.all(operations);
     
-    // 更新总体进度
+    // 更新總體進度
     setOperationProgress(100);
   };
 
-  // 串行执行操作
+  // 序列執行操作
   const executeSerial = async () => {
     for (let i = 0; i < selectedNodes.length; i++) {
       const node = selectedNodes[i];
       try {
-        // 更新当前节点状态为执行中
+        // 更新當前節點狀態為執行中
         updateNodeStatus(i, 'running', t('nodeOps:execution.executingOperation'), 10);
 
-        // 根据操作类型执行不同的操作
+        // 根據操作型別執行不同的操作
         await executeNodeOperation(node.name, i);
 
-        // 更新成功结果
+        // 更新成功結果
         updateNodeStatus(i, 'success', t('nodeOps:execution.operationSuccess'), 100);
         setOperationResults((prev: OperationResults) => ({
           ...prev,
@@ -300,27 +300,27 @@ const [currentStep, setCurrentStep] = useState(0);
           }],
         }));
 
-        // 更新总体进度
+        // 更新總體進度
         setOperationProgress(Math.round(((i + 1) / selectedNodes.length) * 100));
 
-        // 如果不是最后一个节点，等待一段时间再执行下一个
+        // 如果不是最後一個節點，等待一段時間再執行下一個
         if (i < selectedNodes.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
-        // 更新失败结果
-        updateNodeStatus(i, 'failed', `操作失败: ${error}`, 100);
+        // 更新失敗結果
+        updateNodeStatus(i, 'failed', `操作失敗: ${error}`, 100);
         setOperationResults((prev: OperationResults) => ({
           ...prev,
           failed: prev.failed + 1,
           details: [...prev.details, {
             nodeName: node.name,
             status: 'failed',
-            message: `${operationType}操作失败: ${error}`,
+            message: `${operationType}操作失敗: ${error}`,
           }],
         }));
 
-        // 如果设置了失败停止，则中断后续操作
+        // 如果設定了失敗停止，則中斷後續操作
         if (failureHandling === 'stop') {
           break;
         }
@@ -328,7 +328,7 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   };
 
-  // 执行单个节点操作
+  // 執行單個節點操作
   const executeNodeOperation = async (nodeName: string, index: number) => {
     switch (operationType) {
       case 'cordon':
@@ -355,11 +355,11 @@ const [currentStep, setCurrentStep] = useState(0);
         throw new Error(t('nodeOps:execution.unsupportedType'));
     }
 
-    // 模拟操作完成
+    // 模擬操作完成
     await new Promise(resolve => setTimeout(resolve, 500));
   };
 
-  // 更新节点状态
+  // 更新節點狀態
   const updateNodeStatus = (index: number, status: NodeOperationStatusItem['status'], description: string, progress: number) => {
     setNodeOperationStatus(prev => {
       const updated = [...prev];
@@ -373,14 +373,14 @@ const [currentStep, setCurrentStep] = useState(0);
     });
   };
 
-  // 处理完成
+  // 處理完成
   const handleFinish = () => {
     message.success(t('nodeOps:result.nodeOperationComplete'));
     onSuccess();
     onClose();
   };
 
-  // 获取节点状态图标
+  // 獲取節點狀態圖示
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
@@ -396,7 +396,7 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   };
 
-  // 获取操作类型标题
+  // 獲取操作型別標題
   const getOperationTitle = () => {
     switch (operationType) {
       case 'cordon':
@@ -410,7 +410,7 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   };
 
-  // 获取操作类型描述
+  // 獲取操作型別描述
   const getOperationDescription = () => {
     switch (operationType) {
       case 'cordon':
@@ -424,7 +424,7 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   };
 
-  // 渲染步骤内容
+  // 渲染步驟內容
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
@@ -440,7 +440,7 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   };
 
-  // 渲染选择操作类型
+  // 渲染選擇操作型別
   const renderSelectOperationType = () => {
     return (
       <Card title={t('nodeOps:operationType.title')}>
@@ -748,7 +748,7 @@ const [currentStep, setCurrentStep] = useState(0);
     );
   };
 
-  // 渲染确认操作
+  // 渲染確認操作
   const renderConfirmOperation = () => {
     return (
       <Card title={t('nodeOps:execution.executing', { title: getOperationTitle() })}>
@@ -798,7 +798,7 @@ const [currentStep, setCurrentStep] = useState(0);
     );
   };
 
-  // 渲染操作结果
+  // 渲染操作結果
   const renderOperationResult = () => {
     return (
       <Card title={t('nodeOps:result.title')}>

@@ -1,6 +1,6 @@
 import { request } from '../utils/api';
 
-// 资源类型定义
+// 資源型別定義
 export type ResourceKind = 
   | 'ConfigMap'
   | 'Secret'
@@ -10,13 +10,13 @@ export type ResourceKind =
   | 'PersistentVolume'
   | 'StorageClass';
 
-// YAML 应用请求
+// YAML 應用請求
 export interface YAMLApplyRequest {
   yaml: string;
   dryRun?: boolean;
 }
 
-// YAML 应用响应
+// YAML 應用響應
 export interface YAMLApplyResponse {
   name: string;
   namespace?: string;
@@ -25,12 +25,12 @@ export interface YAMLApplyResponse {
   isCreated: boolean;
 }
 
-// YAML 获取响应
+// YAML 獲取響應
 export interface YAMLGetResponse {
   yaml: string;
 }
 
-// 资源端点映射
+// 資源端點對映
 const resourceEndpoints: Record<ResourceKind, string> = {
   ConfigMap: 'configmaps',
   Secret: 'secrets',
@@ -41,7 +41,7 @@ const resourceEndpoints: Record<ResourceKind, string> = {
   StorageClass: 'storageclasses',
 };
 
-// 是否需要命名空间
+// 是否需要命名空間
 const namespaceRequired: Record<ResourceKind, boolean> = {
   ConfigMap: true,
   Secret: true,
@@ -53,16 +53,16 @@ const namespaceRequired: Record<ResourceKind, boolean> = {
 };
 
 /**
- * 通用资源服务
- * 提供所有资源类型的 YAML 应用和获取功能
+ * 通用資源服務
+ * 提供所有資源型別的 YAML 應用和獲取功能
  */
 export class ResourceService {
   /**
-   * 应用 YAML 配置
-   * @param clusterId 集群 ID
-   * @param kind 资源类型
-   * @param yaml YAML 内容
-   * @param dryRun 是否为预检模式
+   * 應用 YAML 配置
+   * @param clusterId 叢集 ID
+   * @param kind 資源型別
+   * @param yaml YAML 內容
+   * @param dryRun 是否為預檢模式
    */
   static async applyYAML(
     clusterId: string,
@@ -78,11 +78,11 @@ export class ResourceService {
   }
 
   /**
-   * 获取资源的 YAML（干净版本，用于编辑）
-   * @param clusterId 集群 ID
-   * @param kind 资源类型
-   * @param namespace 命名空间（集群级资源可不传）
-   * @param name 资源名称
+   * 獲取資源的 YAML（乾淨版本，用於編輯）
+   * @param clusterId 叢集 ID
+   * @param kind 資源型別
+   * @param namespace 命名空間（叢集級資源可不傳）
+   * @param name 資源名稱
    */
   static async getYAML(
     clusterId: string,
@@ -104,13 +104,13 @@ export class ResourceService {
   }
 
   /**
-   * 从 YAML 中解析资源类型
+   * 從 YAML 中解析資源型別
    */
   static parseKindFromYAML(yaml: string): ResourceKind | null {
     const match = yaml.match(/kind:\s*(\w+)/);
     if (match) {
       const kind = match[1];
-      // 映射到标准类型名
+      // 對映到標準型別名
       const kindMap: Record<string, ResourceKind> = {
         ConfigMap: 'ConfigMap',
         Secret: 'Secret',
@@ -126,7 +126,7 @@ export class ResourceService {
   }
 
   /**
-   * 根据资源类型获取显示名称
+   * 根據資源型別獲取顯示名稱
    */
   static getKindDisplayName(kind: ResourceKind): string {
     const displayNames: Record<ResourceKind, string> = {
@@ -142,14 +142,14 @@ export class ResourceService {
   }
 
   /**
-   * 检查资源是否需要命名空间
+   * 檢查資源是否需要命名空間
    */
   static isNamespaced(kind: ResourceKind): boolean {
     return namespaceRequired[kind];
   }
 
   /**
-   * 获取默认 YAML 模板
+   * 獲取預設 YAML 模板
    */
   static getDefaultYAML(kind: ResourceKind, namespace = 'default'): string {
     const templates: Record<ResourceKind, string> = {

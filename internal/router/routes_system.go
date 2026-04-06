@@ -135,6 +135,26 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		systemSettings.GET("/siem/config", siemHandler.GetSIEMConfig)
 		systemSettings.PUT("/siem/config", siemHandler.UpdateSIEMConfig)
 		systemSettings.POST("/siem/test", siemHandler.TestSIEMWebhook)
+		// 安全設定（登入安全參數）
+		sysSecurityHandler := handlers.NewSystemSecurityHandler(d.db)
+		systemSettings.GET("/security/config", sysSecurityHandler.GetSecurityConfig)
+		systemSettings.PUT("/security/config", sysSecurityHandler.UpdateSecurityConfig)
+		// 通知渠道管理
+		notifyChannelHandler := handlers.NewNotifyChannelHandler(d.db)
+		systemSettings.GET("/notify-channels", notifyChannelHandler.ListNotifyChannels)
+		systemSettings.POST("/notify-channels", notifyChannelHandler.CreateNotifyChannel)
+		systemSettings.PUT("/notify-channels/:id", notifyChannelHandler.UpdateNotifyChannel)
+		systemSettings.DELETE("/notify-channels/:id", notifyChannelHandler.DeleteNotifyChannel)
+		systemSettings.POST("/notify-channels/:id/test", notifyChannelHandler.TestNotifyChannel)
+	}
+
+	// API Token 管理（任意已登入使用者，非 PlatformAdmin Only）
+	sysSecurityHandler := handlers.NewSystemSecurityHandler(d.db)
+	userTokens := protected.Group("/users/me/tokens")
+	{
+		userTokens.GET("", sysSecurityHandler.ListAPITokens)
+		userTokens.POST("", sysSecurityHandler.CreateAPIToken)
+		userTokens.DELETE("/:id", sysSecurityHandler.DeleteAPIToken)
 	}
 
 	// Port-Forward 會話管理（全域，§8.3 Phase D）

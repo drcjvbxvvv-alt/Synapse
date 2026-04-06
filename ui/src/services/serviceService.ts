@@ -10,7 +10,7 @@ export type ServiceYAMLResponse = ApiResponse<{ yaml: string }>;
 export type EndpointsResponse = ApiResponse<Endpoints>;
 
 export class ServiceService {
-  // 获取Service列表
+  // 獲取Service列表
   static async getServices(
     clusterId: string,
     namespace?: string,
@@ -39,7 +39,7 @@ export class ServiceService {
     return request.get(`/clusters/${clusterId}/services?${params}`);
   }
 
-  // 获取Service详情
+  // 獲取Service詳情
   static async getService(
     clusterId: string,
     namespace: string,
@@ -48,7 +48,7 @@ export class ServiceService {
     return request.get(`/clusters/${clusterId}/services/${namespace}/${name}`);
   }
 
-  // 获取Service的YAML
+  // 獲取Service的YAML
   static async getServiceYAML(
     clusterId: string,
     namespace: string,
@@ -57,7 +57,7 @@ export class ServiceService {
     return request.get(`/clusters/${clusterId}/services/${namespace}/${name}/yaml`);
   }
 
-  // 获取Service的Endpoints
+  // 獲取Service的Endpoints
   static async getServiceEndpoints(
     clusterId: string,
     namespace: string,
@@ -66,7 +66,7 @@ export class ServiceService {
     return request.get(`/clusters/${clusterId}/services/${namespace}/${name}/endpoints`);
   }
 
-  // 删除Service
+  // 刪除Service
   static async deleteService(
     clusterId: string,
     namespace: string,
@@ -75,7 +75,7 @@ export class ServiceService {
     return request.delete(`/clusters/${clusterId}/services/${namespace}/${name}`);
   }
 
-  // 创建Service
+  // 建立Service
   static async createService(
     clusterId: string,
     data: {
@@ -101,7 +101,7 @@ export class ServiceService {
     return request.put(`/clusters/${clusterId}/services/${namespace}/${name}`, data);
   }
 
-  // 获取Service类型颜色
+  // 獲取Service型別顏色
   static getTypeColor(type: string): string {
     switch (type) {
       case 'ClusterIP':
@@ -117,23 +117,23 @@ export class ServiceService {
     }
   }
 
-  // 获取Service类型标签
+  // 獲取Service型別標籤
   static getTypeTag(type: string): string {
     switch (type) {
       case 'ClusterIP':
-        return '集群内访问';
+        return '叢集內訪問';
       case 'NodePort':
-        return '节点访问';
+        return '節點訪問';
       case 'LoadBalancer':
-        return '负载均衡';
+        return '負載均衡';
       case 'ExternalName':
-        return '外部名称';
+        return '外部名稱';
       default:
         return type;
     }
   }
 
-  // 格式化端口信息
+  // 格式化連接埠資訊
   static formatPorts(service: Service): string {
     if (!service.ports || service.ports.length === 0) {
       return '-';
@@ -154,7 +154,7 @@ export class ServiceService {
     }).join(', ');
   }
 
-  // 格式化访问地址
+  // 格式化訪問地址
   static formatAccessAddress(service: Service): string[] {
     const addresses: string[] = [];
 
@@ -193,7 +193,7 @@ export class ServiceService {
     return addresses.length > 0 ? addresses : ['-'];
   }
 
-  // 格式化选择器
+  // 格式化選擇器
   static formatSelector(selector: Record<string, string>): string {
     if (!selector || Object.keys(selector).length === 0) {
       return '-';
@@ -203,7 +203,7 @@ export class ServiceService {
       .join(', ');
   }
 
-  // 获取年龄显示
+  // 獲取年齡顯示
   static getAge(createdAt: string): string {
     const now = new Date();
     const created = new Date(createdAt);
@@ -216,15 +216,15 @@ export class ServiceService {
     if (diffDays > 0) {
       return `${diffDays}天`;
     } else if (diffHours > 0) {
-      return `${diffHours}小时`;
+      return `${diffHours}小時`;
     } else if (diffMinutes > 0) {
-      return `${diffMinutes}分钟`;
+      return `${diffMinutes}分鐘`;
     } else {
-      return '刚刚';
+      return '剛剛';
     }
   }
 
-  // 获取Service命名空间列表（带计数）
+  // 獲取Service命名空間列表（帶計數）
   static async getServiceNamespaces(clusterId: string): Promise<{ name: string; count: number }[]> {
     return request.get<{ name: string; count: number }[]>(
       `/clusters/${clusterId}/services/namespaces`

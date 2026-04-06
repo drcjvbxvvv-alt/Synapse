@@ -56,7 +56,7 @@ export const aiService = {
 
         const reader = response.body?.getReader();
         if (!reader) {
-          onError('无法读取响应流');
+          onError('無法讀取響應流');
           return;
         }
 

@@ -49,7 +49,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
 const { t } = useTranslation(["workload", "common"]);
 const navigate = useNavigate();
   
-  // URL 路径中的 type 是小写（如 statefulset），需要映射为 API 期望的 PascalCase
+  // URL 路徑中的 type 是小寫（如 statefulset），需要對映為 API 期望的 PascalCase
   const typeMap: Record<string, string> = {
     deployment: 'Deployment',
     statefulset: 'StatefulSet',
@@ -68,7 +68,7 @@ const navigate = useNavigate();
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleReplicas, setScaleReplicas] = useState(1);
 
-  // 获取工作负载详情
+  // 獲取工作負載詳情
   const fetchWorkloadDetail = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     
@@ -115,14 +115,14 @@ const navigate = useNavigate();
         setScaleReplicas(response.workload.replicas || 1);
       }
     } catch (error) {
-      console.error('获取工作负载详情失败:', error);
+      console.error('獲取工作負載詳情失敗:', error);
       message.error(t('detail.fetchError'));
     } finally {
       setLoading(false);
     }
   }, [clusterId, namespace, name, workloadType]);
 
-  // 扩缩容工作负载
+  // 擴縮容工作負載
   const handleScale = async () => {
     if (!clusterId || !namespace || !name) return;
     
@@ -139,12 +139,12 @@ const navigate = useNavigate();
       setScaleModalVisible(false);
       fetchWorkloadDetail();
     } catch (error) {
-      console.error('扩缩容失败:', error);
+      console.error('擴縮容失敗:', error);
       message.error(t('messages.scaleError'));
     }
   };
 
-  // AI 诊断工作负载
+  // AI 診斷工作負載
   const handleAIDiagnose = () => {
     if (!workloadInfo) return;
     const ready = `${workloadInfo.readyReplicas ?? 0}/${workloadInfo.replicas ?? 0}`;
@@ -157,7 +157,7 @@ const navigate = useNavigate();
     window.dispatchEvent(new CustomEvent('ai:diagnose', { detail: { message: prompt } }));
   };
 
-  // 删除工作负载
+  // 刪除工作負載
   const handleDelete = async () => {
     if (!clusterId || !namespace || !name) return;
     
@@ -172,7 +172,7 @@ const navigate = useNavigate();
       message.success(t('messages.deleteSuccess'));
       navigate(`/clusters/${clusterId}/workloads`);
     } catch (error) {
-      console.error('删除失败:', error);
+      console.error('刪除失敗:', error);
       message.error(t('messages.deleteError'));
     }
   };
@@ -188,7 +188,7 @@ const navigate = useNavigate();
   const canScale = ['deployment', 'statefulset'].includes(workloadType);
   const { status, color } = WorkloadService.formatStatus(workloadInfo);
 
-  // 条件表格列
+  // 條件表格列
   const conditionColumns = [
     {
       title: t('condition.type'),
@@ -224,7 +224,7 @@ const navigate = useNavigate();
 
   return (
     <div style={{ padding: '24px' }}>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div style={{ marginBottom: 24 }}>
         <Space>
           <Button
@@ -283,7 +283,7 @@ onConfirm={handleDelete}
         </div>
       </div>
 
-      {/* 详情内容 */}
+      {/* 詳情內容 */}
       <Tabs defaultActiveKey="overview">
         <TabPane 
           tab={
@@ -442,7 +442,7 @@ onConfirm={handleDelete}
         </TabPane>
       </Tabs>
 
-      {/* 扩缩容模态框 */}
+      {/* 擴縮容模態框 */}
       <Modal
         title={t("scale.title", { type: workloadType })}
         open={scaleModalVisible}

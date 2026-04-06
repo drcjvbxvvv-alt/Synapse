@@ -17,10 +17,10 @@ const WorkloadList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const loading = false;
 const { t } = useTranslation(['workload']);
-// 从URL读取当前Tab
+// 從URL讀取當前Tab
   const activeTab = searchParams.get('tab') || 'deployment';
 
-  // 统计信息状态（保留用于回调，但不显示）
+  // 統計資訊狀態（保留用於回撥，但不顯示）
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_deploymentCount, setDeploymentCount] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -34,12 +34,12 @@ const { t } = useTranslation(['workload']);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_cronJobCount, setCronJobCount] = useState(0);
 
-  // Tab切换处理
+  // Tab切換處理
   const handleTabChange = (key: string) => {
     setSearchParams({ tab: key });
   };
 
-  // Tab项配置
+  // Tab項配置
 const tabItems = [
     {
       key: 'deployment',

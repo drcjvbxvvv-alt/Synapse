@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
-// 初始化 i18n（必须在 App 之前导入）
+// 初始化 i18n（必須在 App 之前匯入）
 import './i18n'
 import App from './App.tsx'
 

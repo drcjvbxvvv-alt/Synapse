@@ -3,28 +3,28 @@ import { Card, Button, Space, Spin, Alert, Skeleton } from 'antd';
 import { FullscreenOutlined, ReloadOutlined } from '@ant-design/icons';
 
 interface GrafanaPanelProps {
-  grafanaUrl: string;            // Grafana 外置地址（从系统设置获取）
+  grafanaUrl: string;            // Grafana 外接地址（從系統設定獲取）
   dashboardUid: string;          // Dashboard UID
   panelId: number;               // Panel ID
   
-  // 变量参数
+  // 變數參數
   variables?: Record<string, string>;  // 如 { cluster: 'prod', namespace: 'default', pod: 'nginx-xxx' }
   
-  // 时间范围
-  from?: string;                 // 开始时间，如 'now-1h'
-  to?: string;                   // 结束时间，如 'now'
-  refresh?: string;              // 刷新间隔，如 '30s'
+  // 時間範圍
+  from?: string;                 // 開始時間，如 'now-1h'
+  to?: string;                   // 結束時間，如 'now'
+  refresh?: string;              // 重新整理間隔，如 '30s'
   
-  // 样式
+  // 樣式
   height?: number;               // 高度
-  title?: string;                // 标题
-  showToolbar?: boolean;         // 是否显示工具栏
-  theme?: 'light' | 'dark';      // 主题
+  title?: string;                // 標題
+  showToolbar?: boolean;         // 是否顯示工具欄
+  theme?: 'light' | 'dark';      // 主題
   
-  // 加载优化
-  lazyLoad?: boolean;            // 是否启用懒加载，默认 true
-  loadDelay?: number;            // 延迟加载时间（毫秒），用于分批加载
-  priority?: 'high' | 'normal' | 'low'; // 加载优先级
+  // 載入最佳化
+  lazyLoad?: boolean;            // 是否啟用懶載入，預設 true
+  loadDelay?: number;            // 延遲載入時間（毫秒），用於分批載入
+  priority?: 'high' | 'normal' | 'low'; // 載入優先順序
 }
 
 const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
@@ -46,15 +46,15 @@ const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-  const [isVisible, setIsVisible] = useState(!lazyLoad); // 如果不启用懒加载，默认可见
+  const [isVisible, setIsVisible] = useState(!lazyLoad); // 如果不啟用懶載入，預設可見
   const [shouldRender, setShouldRender] = useState(loadDelay === 0 && priority === 'high');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 延迟加载优化
+  // 延遲載入最佳化
   useEffect(() => {
     if (!isVisible || shouldRender) return;
     
-    // 根据优先级和延迟时间决定何时渲染
+    // 根據優先順序和延遲時間決定何時渲染
     const delay = priority === 'high' ? 0 : (priority === 'low' ? loadDelay + 500 : loadDelay);
     
     const timer = setTimeout(() => {
@@ -64,7 +64,7 @@ const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
     return () => clearTimeout(timer);
   }, [isVisible, shouldRender, loadDelay, priority]);
 
-  // 使用 IntersectionObserver 检测可见性
+  // 使用 IntersectionObserver 檢測可見性
   useEffect(() => {
     if (!lazyLoad) {
       setIsVisible(true);
@@ -76,13 +76,13 @@ const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsVisible(true);
-            // 一旦可见就不需要再观察了
+            // 一旦可見就不需要再觀察了
             observer.disconnect();
           }
         });
       },
       {
-        rootMargin: '200px', // 提前 200px 开始加载（增加预加载距离）
+        rootMargin: '200px', // 提前 200px 開始載入（增加預載入距離）
         threshold: 0.01,
       }
     );
@@ -94,7 +94,7 @@ const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
     return () => observer.disconnect();
   }, [lazyLoad]);
 
-  // 构建嵌入 URL
+  // 構建嵌入 URL
   const embedUrl = useMemo(() => {
     const params = new URLSearchParams({
       orgId: '1',
@@ -104,14 +104,14 @@ const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
       panelId: String(panelId),
     });
 
-    // 添加变量参数
+    // 新增變數參數
     Object.entries(variables).forEach(([key, value]) => {
       if (value) {
         params.append(`var-${key}`, value);
       }
     });
 
-    // 添加刷新间隔
+    // 新增重新整理間隔
     if (refresh) {
       params.append('refresh', refresh);
     }
@@ -120,7 +120,7 @@ const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
     return `${grafanaUrl}/d-solo/${dashboardUid}/?${params.toString()}`;
   }, [grafanaUrl, dashboardUid, panelId, variables, from, to, refresh, theme]);
 
-  // 完整 Dashboard URL（用于"在 Grafana 中打开"）
+  // 完整 Dashboard URL（用於"在 Grafana 中開啟"）
   const fullDashboardUrl = useMemo(() => {
     const params = new URLSearchParams({
       orgId: '1',
@@ -157,27 +157,27 @@ const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
                 icon={<ReloadOutlined />} 
                 size="small" 
                 onClick={handleRefresh}
-                title="刷新"
+                title="重新整理"
               />
               <Button 
                 icon={<FullscreenOutlined />} 
                 size="small" 
                 onClick={handleOpenInGrafana}
-                title="在 Grafana 中打开"
+                title="在 Grafana 中開啟"
               />
             </Space>
           )
         }
         styles={{ body: { padding: 0, position: 'relative', minHeight: height } }}
       >
-        {/* 懒加载占位符 - 不可见或未到渲染时间 */}
+        {/* 懶載入佔位符 - 不可見或未到渲染時間 */}
         {(!isVisible || !shouldRender) && (
           <div style={{ padding: 16, height }}>
             <Skeleton active paragraph={{ rows: Math.max(1, Math.floor(height / 60)) }} />
           </div>
         )}
 
-        {/* 加载状态 */}
+        {/* 載入狀態 */}
         {isVisible && shouldRender && loading && !error && (
           <div style={{ 
             position: 'absolute', 
@@ -186,27 +186,27 @@ const GrafanaPanel: React.FC<GrafanaPanelProps> = ({
             transform: 'translate(-50%, -50%)',
             zIndex: 10
           }}>
-            <Spin tip="加载图表中..." />
+            <Spin tip="載入圖表中..." />
           </div>
         )}
         
-        {/* 错误状态 */}
+        {/* 錯誤狀態 */}
         {isVisible && shouldRender && error && (
           <Alert
-            message="图表加载失败"
-            description="请检查 Grafana 服务是否正常运行，或刷新重试"
+            message="圖表載入失敗"
+            description="請檢查 Grafana 服務是否正常執行，或重新整理重試"
             type="error"
             showIcon
             action={
               <Button size="small" onClick={handleRefresh}>
-                重试
+                重試
               </Button>
             }
             style={{ margin: 16 }}
           />
         )}
         
-        {/* iframe - 只在可见且应该渲染时加载 */}
+        {/* iframe - 只在可見且應該渲染時載入 */}
         {isVisible && shouldRender && (
           <iframe
             key={iframeKey}

@@ -119,7 +119,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
       setSaveResult({ success: true, message: successMsg });
       onConfigChange?.();
       
-      // 如果启用了，重新加载状态
+      // 如果啟用了，重新載入狀態
       if (values.enabled) {
         loadStatus();
       }
@@ -329,7 +329,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
             </Space>
           }
         >
-          {/* 测试结果弹窗 */}
+          {/* 測試結果彈窗 */}
           <Modal
             open={testResult !== null}
             title={
@@ -352,7 +352,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
             <p>{testResult?.message}</p>
           </Modal>
 
-          {/* 保存结果弹窗 */}
+          {/* 儲存結果彈窗 */}
           <Modal
             open={saveResult !== null}
             title={

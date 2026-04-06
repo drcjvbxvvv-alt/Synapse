@@ -74,7 +74,7 @@ const CrossClusterWorkloads: React.FC = () => {
       width: 140,
     },
     {
-      title: '類型',
+      title: '型別',
       dataIndex: 'kind',
       width: 110,
       render: (kind: string) => {
@@ -166,7 +166,7 @@ const CrossClusterWorkloads: React.FC = () => {
       >
         <Space style={{ marginBottom: 16 }} wrap>
           <Select
-            placeholder="類型"
+            placeholder="型別"
             value={filterKind}
             onChange={setFilterKind}
             style={{ width: 130 }}

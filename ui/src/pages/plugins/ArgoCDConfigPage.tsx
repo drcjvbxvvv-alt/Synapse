@@ -53,7 +53,7 @@ const [form] = Form.useForm();
         response.connection_status === 'disconnected' ? 'disconnected' : 'unknown'
       );
     } catch (error) {
-      console.error('加载配置失败:', error);
+      console.error('載入配置失敗:', error);
       message.error(t('plugins:config.loadConfigFailed'));
     } finally {
       setLoading(false);
@@ -129,7 +129,7 @@ const [form] = Form.useForm();
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      {/* 页面标题 */}
+      {/* 頁面標題 */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
           <ApiOutlined style={{ fontSize: 28, color: '#fa8c16' }} />
@@ -141,7 +141,7 @@ const [form] = Form.useForm();
       </div>
 
       <Form form={form} layout="vertical">
-        {/* 启用开关 */}
+        {/* 啟用開關 */}
         <Card style={{ marginBottom: 24 }}>
           <Form.Item
             name="enabled"
@@ -170,7 +170,7 @@ const [form] = Form.useForm();
               title={
                 <Space>
                   <LinkOutlined />
-                  ArgoCD 服务器配置
+                  ArgoCD 伺服器配置
                   {renderConnectionStatus()}
                 </Space>
               }
@@ -218,7 +218,7 @@ const [form] = Form.useForm();
                       rules={[{ required: true, message: t('plugins:config.apiTokenRequired') }]}
                       extra={
                         <span>
-                          在 ArgoCD 设置中创建 API Token: Settings → Accounts → 
+                          在 ArgoCD 設定中建立 API Token: Settings → Accounts → 
                           <Text code>argocd account generate-token</Text>
                         </span>
                       }
@@ -261,7 +261,7 @@ const [form] = Form.useForm();
               title={
                 <Space>
                   <GithubOutlined />
-                  Git 仓库配置
+                  Git 倉庫配置
                 </Space>
               }
               style={{ marginBottom: 24 }}
@@ -345,7 +345,7 @@ const [form] = Form.useForm();
               title={
                 <Space>
                   <ClusterOutlined />
-                  目标集群配置
+                  目標叢集配置
                 </Space>
               }
               style={{ marginBottom: 24 }}
@@ -388,7 +388,7 @@ const [form] = Form.useForm();
           </>
         )}
 
-        {/* 保存按钮 */}
+        {/* 儲存按鈕 */}
         <div style={{ textAlign: 'right', marginTop: 24 }}>
           <Space>
             <Button onClick={loadConfig}>{t('common:actions.reset')}</Button>

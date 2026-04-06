@@ -1,7 +1,7 @@
 import type { WorkloadFormData } from '../types/workload';
 import type { CommonBuildParts } from './yamlCommonService';
 
-// ==================== Job 构建 ====================
+// ==================== Job 構建 ====================
 
 export const buildJobSpec = (
   formData: WorkloadFormData,
@@ -26,7 +26,7 @@ export const buildJobSpec = (
   },
 });
 
-// ==================== CronJob 构建 ====================
+// ==================== CronJob 構建 ====================
 
 export const buildCronJobSpec = (
   formData: WorkloadFormData,

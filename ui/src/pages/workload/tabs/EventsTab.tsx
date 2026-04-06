@@ -50,7 +50,7 @@ const [loading, setLoading] = useState(false);
   const [filteredEvents, setFilteredEvents] = useState<EventInfo[]>([]);
   const [searchText, setSearchText] = useState('');
 
-  // 获取工作负载名称和类型
+  // 獲取工作負載名稱和型別
   const workloadName = deploymentName || rolloutName || statefulSetName || daemonSetName || jobName || cronJobName;
   const workloadType = deploymentName ? 'Deployment' 
     : rolloutName ? 'Rollout'
@@ -76,7 +76,7 @@ const [loading, setLoading] = useState(false);
       setEvents(eventList);
       setFilteredEvents(eventList);
     } catch (error) {
-      console.error('获取事件列表失败:', error);
+      console.error('獲取事件列表失敗:', error);
       message.error(t('messages.fetchEventsError'));
     } finally {
       setLoading(false);
@@ -87,7 +87,7 @@ const [loading, setLoading] = useState(false);
     loadEvents();
   }, [loadEvents]);
 
-  // 搜索事件
+  // 搜尋事件
   const handleSearch = (value: string) => {
     setSearchText(value);
     if (!value.trim()) {
@@ -103,7 +103,7 @@ const [loading, setLoading] = useState(false);
     setFilteredEvents(filtered);
   };
 
-  // 格式化时间
+  // 格式化時間
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '-';
     const date = new Date(timeStr);
@@ -118,7 +118,7 @@ const [loading, setLoading] = useState(false);
     }).replace(/\//g, '-');
   };
 
-  // 渲染事件类型标签
+  // 渲染事件型別標籤
   const renderTypeTag = (type: string) => {
     const colorMap: Record<string, string> = {
       'Normal': 'success',

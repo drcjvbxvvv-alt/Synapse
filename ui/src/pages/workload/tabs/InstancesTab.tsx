@@ -48,7 +48,7 @@ const { t } = useTranslation(['workload', 'common']);
 const [loading, setLoading] = useState(false);
   const [pods, setPods] = useState<PodInfo[]>([]);
 
-  // 获取工作负载名称和类型
+  // 獲取工作負載名稱和型別
   const workloadName = deploymentName || rolloutName || statefulSetName || daemonSetName || jobName || cronJobName;
   const workloadType = deploymentName ? 'Deployment' 
     : rolloutName ? 'Rollout'
@@ -72,7 +72,7 @@ const [loading, setLoading] = useState(false);
 
       setPods(((response as unknown as { items?: unknown[] }).items || []) as PodInfo[]);
     } catch (error) {
-      console.error('获取Pod列表失败:', error);
+      console.error('獲取Pod列表失敗:', error);
       message.error(t('messages.fetchPodListError'));
     } finally {
       setLoading(false);
@@ -83,7 +83,7 @@ const [loading, setLoading] = useState(false);
     loadPods();
   }, [loadPods]);
 
-  // 渲染状态标签
+  // 渲染狀態標籤
   const renderStatusTag = (phase: string) => {
     const colorMap: Record<string, string> = {
       'Running': 'success',
@@ -95,7 +95,7 @@ const [loading, setLoading] = useState(false);
     return <Tag color={colorMap[phase] || 'default'}>{phase}</Tag>;
   };
 
-  // 计算创建时长
+  // 計算建立時長
   const calculateAge = (createdAt: string) => {
     if (!createdAt) return '-';
     const now = new Date().getTime();
@@ -108,7 +108,7 @@ const [loading, setLoading] = useState(false);
     return `${Math.floor(diff / 86400)}${t('instances.days')}`;
   };
 
-  // 格式化时间
+  // 格式化時間
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '-';
     const date = new Date(timeStr);

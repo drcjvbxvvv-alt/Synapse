@@ -1,5 +1,5 @@
 /**
- * ClusterService 测试
+ * ClusterService 測試
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'

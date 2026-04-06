@@ -1,6 +1,6 @@
 /**
- * 集群监控面板组件 - 使用整个 Grafana Dashboard 嵌入
- * 相比多 Panel 分别嵌入，整体嵌入加载更快
+ * 叢集監控面板元件 - 使用整個 Grafana Dashboard 嵌入
+ * 相比多 Panel 分別嵌入，整體嵌入載入更快
  */
 import React, { useState, useMemo, useCallback } from 'react';
 import { Card, Space, Button, Spin, Switch, Popover, Divider, Typography, DatePicker, Alert } from 'antd';
@@ -13,10 +13,10 @@ const { Text } = Typography;
 
 const DASHBOARD_UID = 'synapse-cluster-overview';
 
-// Grafana 风格的时间范围选项
+// Grafana 風格的時間範圍選項
 const TIME_RANGE_OPTIONS = [
   {
-    label: '快速选择',
+    label: '快速選擇',
     options: [
       { value: '5m', label: 'Last 5 minutes' },
       { value: '15m', label: 'Last 15 minutes' },
@@ -29,7 +29,7 @@ const TIME_RANGE_OPTIONS = [
     ],
   },
   {
-    label: '更长时间',
+    label: '更長時間',
     options: [
       { value: '2d', label: 'Last 2 days' },
       { value: '7d', label: 'Last 7 days' },
@@ -55,15 +55,15 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  // 自定义时间范围状态
+  // 自定義時間範圍狀態
   const [isCustomRange, setIsCustomRange] = useState(false);
   const [customFromTime, setCustomFromTime] = useState<Dayjs | null>(null);
   const [customToTime, setCustomToTime] = useState<Dayjs | null>(null);
 
-  // 根据集群名生成数据源 UID
+  // 根據叢集名生成資料來源 UID
   const dataSourceUid = clusterName ? generateDataSourceUID(clusterName) : '';
 
-  // 获取时间范围参数
+  // 獲取時間範圍參數
   const getFromTime = useCallback(() => {
     if (isCustomRange && customFromTime) {
       return customFromTime.valueOf().toString();
@@ -78,7 +78,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
     return 'now';
   }, [isCustomRange, customToTime]);
 
-  // 获取显示的时间范围文本
+  // 獲取顯示的時間範圍文字
   const getTimeRangeDisplay = () => {
     if (isCustomRange && customFromTime && customToTime) {
       return `${customFromTime.format('MM-DD HH:mm')} to ${customToTime.format('MM-DD HH:mm')}`;
@@ -87,7 +87,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
     return option?.label || 'Last 1 hour';
   };
 
-  // 构建完整 Dashboard 嵌入 URL（kiosk 模式隐藏导航）
+  // 構建完整 Dashboard 嵌入 URL（kiosk 模式隱藏導航）
   const dashboardUrl = useMemo(() => {
     const params = new URLSearchParams({
       orgId: '1',
@@ -96,17 +96,17 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
       theme: 'light',
     });
 
-    // 添加数据源变量
+    // 新增資料來源變數
     if (dataSourceUid) {
       params.append('var-DS_PROMETHEUS', dataSourceUid);
     }
 
-    // 添加自动刷新
+    // 新增自動重新整理
     if (autoRefresh) {
       params.append('refresh', '30s');
     }
 
-    // 完全 kiosk 模式：隐藏侧边栏和顶部导航栏
+    // 完全 kiosk 模式：隱藏側邊欄和頂部導航欄
     return `${grafanaUrl}/d/${DASHBOARD_UID}/?${params.toString()}&kiosk`;
   }, [grafanaUrl, getFromTime, getToTime, dataSourceUid, autoRefresh]);
 
@@ -119,7 +119,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
     setLoading(false);
   };
 
-  // 应用自定义时间范围
+  // 應用自定義時間範圍
   const applyCustomRange = () => {
     if (customFromTime && customToTime) {
       setIsCustomRange(true);
@@ -128,7 +128,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
     }
   };
 
-  // 选择快速时间范围
+  // 選擇快速時間範圍
   const handleQuickRangeSelect = (value: string) => {
     setTimeRange(value);
     setIsCustomRange(false);
@@ -136,10 +136,10 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
     handleRefresh();
   };
 
-  // 时间选择器 Popover 内容
+  // 時間選擇器 Popover 內容
   const timePickerContent = (
     <div style={{ display: 'flex', gap: 16, padding: 8 }}>
-      {/* 左侧：自定义时间范围 */}
+      {/* 左側：自定義時間範圍 */}
       <div style={{ width: 240 }}>
         <Text strong style={{ marginBottom: 8, display: 'block' }}>Absolute time range</Text>
         <div style={{ marginBottom: 12 }}>
@@ -149,7 +149,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
             value={customFromTime}
             onChange={setCustomFromTime}
             style={{ width: '100%', marginTop: 4 }}
-            placeholder="开始时间"
+            placeholder="開始時間"
             format="YYYY-MM-DD HH:mm:ss"
           />
         </div>
@@ -160,7 +160,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
             value={customToTime}
             onChange={setCustomToTime}
             style={{ width: '100%', marginTop: 4 }}
-            placeholder="结束时间"
+            placeholder="結束時間"
             format="YYYY-MM-DD HH:mm:ss"
           />
         </div>
@@ -176,7 +176,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
       
       <Divider type="vertical" style={{ height: 'auto' }} />
       
-      {/* 右侧：快速选择 */}
+      {/* 右側：快速選擇 */}
       <div style={{ width: 160 }}>
         {TIME_RANGE_OPTIONS.map(group => (
           <div key={group.label} style={{ marginBottom: 12 }}>
@@ -202,7 +202,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
 
   return (
     <Card
-      title="监控图表"
+      title="監控圖表"
       extra={
         <Space>
           <Popover
@@ -217,22 +217,22 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
             </Button>
           </Popover>
           <Space>
-            <span>自动刷新</span>
+            <span>自動重新整理</span>
             <Switch
               checked={autoRefresh}
               onChange={(checked) => {
                 setAutoRefresh(checked);
                 handleRefresh();
               }}
-              checkedChildren="开"
-              unCheckedChildren="关"
+              checkedChildren="開"
+              unCheckedChildren="關"
             />
           </Space>
           <Button
             icon={<ReloadOutlined />}
             onClick={handleRefresh}
           >
-            刷新
+            重新整理
           </Button>
         </Space>
       }
@@ -245,7 +245,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
       ) : !grafanaUrl ? (
         <Alert
           message="Grafana 未配置"
-          description="请在「系统设置 → Grafana 设置」中配置 Grafana 地址，然后刷新页面。"
+          description="請在「系統設定 → Grafana 設定」中配置 Grafana 地址，然後重新整理頁面。"
           type="warning"
           showIcon
           style={{ margin: 24 }}
@@ -262,7 +262,7 @@ const ClusterMonitoringPanels: React.FC<ClusterMonitoringPanelsProps> = ({
               textAlign: 'center',
             }}>
               <Spin size="large" />
-              <div style={{ marginTop: 16, color: '#666' }}>监控数据加载中...</div>
+              <div style={{ marginTop: 16, color: '#666' }}>監控資料載入中...</div>
             </div>
           )}
           <iframe

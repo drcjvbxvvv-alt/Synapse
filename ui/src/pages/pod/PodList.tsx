@@ -33,7 +33,7 @@ import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 
 const { Option } = Select;
 
-// 解析CPU值（转换为毫核）
+// 解析CPU值（轉換為毫核）
 const parseCpuValue = (value: string): number => {
   if (!value) return 0;
   if (value.endsWith('m')) {
@@ -50,7 +50,7 @@ const formatCpuValue = (milliCores: number): string => {
   return `${milliCores}m`;
 };
 
-// 解析内存值（转换为字节）
+// 解析記憶體值（轉換為位元組）
 const parseMemoryValue = (value: string): number => {
   if (!value) return 0;
   const units: Record<string, number> = {
@@ -72,7 +72,7 @@ const parseMemoryValue = (value: string): number => {
   return parseFloat(value);
 };
 
-// 格式化内存值
+// 格式化記憶體值
 const formatMemoryValue = (bytes: number): string => {
   if (bytes >= 1024 * 1024 * 1024) {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}Gi`;
@@ -86,7 +86,7 @@ const formatMemoryValue = (bytes: number): string => {
   return `${bytes}`;
 };
 
-// 获取Pod的CPU和Memory资源
+// 獲取Pod的CPU和Memory資源
 const getPodResources = (pod: PodInfo) => {
   let cpuRequest = 0;
   let cpuLimit = 0;
@@ -131,18 +131,18 @@ const PodList: React.FC = () => {
   
   const queryClient = useQueryClient();
 
-  // 派生狀態：client-side 篩選和分頁後的顯示數據
+  // 派生狀態：client-side 篩選和分頁後的顯示資料
   const [pods, setPods] = useState<PodInfo[]>([]);
   const [total, setTotal] = useState(0);
   
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   
-  // 操作状态
+  // 操作狀態
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   
-  // 多条件搜索状态
+  // 多條件搜尋狀態
   interface SearchCondition {
     field: 'name' | 'namespace' | 'status' | 'podIP' | 'nodeName' | 'cpuRequest' | 'cpuLimit' | 'memoryRequest' | 'memoryLimit';
     value: string;
@@ -151,17 +151,17 @@ const PodList: React.FC = () => {
   const [currentSearchField, setCurrentSearchField] = useState<SearchCondition['field']>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
 
-  // 列设置状态
+  // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'status', 'namespace', 'podIP', 'nodeName', 'restartCount', 'createdAt', 'age'
   ]);
   
-  // 排序状态
+  // 排序狀態
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
-  // 添加搜索条件
+  // 新增搜尋條件
   const addSearchCondition = () => {
     if (!currentSearchValue.trim()) return;
     
@@ -174,18 +174,18 @@ const PodList: React.FC = () => {
     setCurrentSearchValue('');
   };
 
-  // 删除搜索条件
+  // 刪除搜尋條件
   const removeSearchCondition = (index: number) => {
     setSearchConditions(searchConditions.filter((_, i) => i !== index));
   };
 
-  // 清空所有搜索条件
+  // 清空所有搜尋條件
   const clearAllConditions = () => {
     setSearchConditions([]);
     setCurrentSearchValue('');
   };
 
-  // 获取搜索字段的显示名称
+  // 獲取搜尋欄位的顯示名稱
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('columns.name'),
@@ -201,14 +201,14 @@ const PodList: React.FC = () => {
     return labels[field] || field;
   };
 
-  // 客户端过滤Pod列表
+  // 客戶端過濾Pod列表
   const filterPods = useCallback((items: PodInfo[]): PodInfo[] => {
     if (searchConditions.length === 0) return items;
 
     return items.filter(pod => {
       const resources = getPodResources(pod);
       
-      // 按字段分组条件
+      // 按欄位分組條件
       const conditionsByField = searchConditions.reduce((acc, condition) => {
         if (!acc[condition.field]) {
           acc[condition.field] = [];
@@ -217,8 +217,8 @@ const PodList: React.FC = () => {
         return acc;
       }, {} as Record<string, string[]>);
 
-      // 不同字段之间是 AND 关系
-      // 相同字段之间是 OR 关系
+      // 不同欄位之間是 AND 關係
+      // 相同欄位之間是 OR 關係
       return Object.entries(conditionsByField).every(([field, values]) => {
         let podValue: string;
         
@@ -239,13 +239,13 @@ const PodList: React.FC = () => {
             podValue = String(pod[field as keyof PodInfo] || '');
         }
         
-        // CPU和内存字段使用精确匹配
+        // CPU和記憶體欄位使用精確匹配
         const resourceFields = ['cpuRequest', 'cpuLimit', 'memoryRequest', 'memoryLimit'];
         if (resourceFields.includes(field)) {
           return values.some(searchValue => podValue.toLowerCase() === searchValue);
         }
         
-        // 对于其他字符串类型，使用模糊匹配
+        // 對於其他字串型別，使用模糊匹配
         return values.some(searchValue => podValue.toLowerCase().includes(searchValue));
       });
     });
@@ -273,7 +273,7 @@ const PodList: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['pods', clusterId] });
   }, [queryClient, clusterId]);
 
-  // 删除Pod
+  // 刪除Pod
   const handleDelete = async (pod: PodInfo) => {
     if (!clusterId) return;
     
@@ -287,7 +287,7 @@ const PodList: React.FC = () => {
     }
   };
 
-  // 批量删除
+  // 批次刪除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning(t('messages.selectPodsFirst'));
@@ -327,10 +327,10 @@ const PodList: React.FC = () => {
     });
   };
 
-  // 导出功能（导出所有筛选后的数据，包含所有列）
+  // 匯出功能（匯出所有篩選後的資料，包含所有列）
   const handleExport = () => {
     try {
-      // 获取所有筛选后的数据（不限于当前页）
+      // 獲取所有篩選後的資料（不限於當前頁）
       const filteredData = filterPods(allPods);
       
       if (filteredData.length === 0) {
@@ -338,7 +338,7 @@ const PodList: React.FC = () => {
         return;
       }
 
-      // 导出筛选后的所有数据（包含所有列）
+      // 匯出篩選後的所有資料（包含所有列）
       const dataToExport = filteredData.map(pod => {
         const resources = getPodResources(pod);
         return {
@@ -357,7 +357,7 @@ const PodList: React.FC = () => {
         };
       });
 
-      // 导出为CSV
+      // 匯出為CSV
       const headers = Object.keys(dataToExport[0]);
       const csvContent = [
         headers.join(','),
@@ -381,38 +381,38 @@ const PodList: React.FC = () => {
     }
   };
 
-  // 列设置保存
+  // 列設定儲存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
     message.success(tc('messages.saveSuccess'));
   };
 
-  // 查看Pod日志
+  // 檢視Pod日誌
   const handleViewLogs = (pod: PodInfo) => {
     navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/logs`);
   };
 
-  // 进入Pod终端 - 新窗口打开
+  // 進入Pod終端 - 新視窗開啟
   const handleTerminal = (pod: PodInfo) => {
     window.open(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/terminal`, '_blank');
   };
 
-  // 查看Pod详情（监控）
+  // 檢視Pod詳情（監控）
   const handleViewDetail = (pod: PodInfo) => {
     navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}`);
   };
 
-  // 查看Pod事件
+  // 檢視Pod事件
   const handleViewEvents = (pod: PodInfo) => {
     navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}?tab=events`);
   };
 
-  // 当搜索条件改变时重置到第一页
+  // 當搜尋條件改變時重置到第一頁
   useEffect(() => {
     setCurrentPage(1);
   }, [searchConditions]);
 
-  // 当allPods、搜索条件、分页参数、排序参数改变时，重新计算显示数据
+  // 當allPods、搜尋條件、分頁參數、排序參數改變時，重新計算顯示資料
   useEffect(() => {
     if (allPods.length === 0) {
       setPods([]);
@@ -420,16 +420,16 @@ const PodList: React.FC = () => {
       return;
     }
     
-    // 1. 应用客户端过滤
+    // 1. 應用客戶端過濾
     let filteredItems = filterPods(allPods);
     
-    // 2. 应用排序
+    // 2. 應用排序
     if (sortField && sortOrder) {
       filteredItems = [...filteredItems].sort((a, b) => {
         let aValue: string | number;
         let bValue: string | number;
         
-        // 处理资源字段
+        // 處理資源欄位
         if (['cpuRequest', 'cpuLimit', 'memoryRequest', 'memoryLimit'].includes(sortField)) {
           const aResources = getPodResources(a);
           const bResources = getPodResources(b);
@@ -440,17 +440,17 @@ const PodList: React.FC = () => {
           bValue = b[sortField as keyof PodInfo] as string | number;
         }
         
-        // 处理 undefined 值
+        // 處理 undefined 值
         if (aValue === undefined && bValue === undefined) return 0;
         if (aValue === undefined) return sortOrder === 'ascend' ? 1 : -1;
         if (bValue === undefined) return sortOrder === 'ascend' ? -1 : 1;
         
-        // 数字类型比较
+        // 數字型別比較
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           return sortOrder === 'ascend' ? aValue - bValue : bValue - aValue;
         }
         
-        // 字符串类型比较
+        // 字串型別比較
         const aStr = String(aValue);
         const bStr = String(bValue);
         
@@ -462,7 +462,7 @@ const PodList: React.FC = () => {
       });
     }
     
-    // 3. 计算分页
+    // 3. 計算分頁
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedItems = filteredItems.slice(startIndex, endIndex);
@@ -472,7 +472,7 @@ const PodList: React.FC = () => {
   }, [allPods, filterPods, currentPage, pageSize, sortField, sortOrder]);
 
 
-  // 集群切换时重新加载
+  // 叢集切換時重新載入
   useEffect(() => {
     if (routeClusterId) {
       setCurrentPage(1);
@@ -489,7 +489,7 @@ const PodList: React.FC = () => {
     },
   }), [selectedRowKeys]);
 
-  // 操作菜单
+  // 操作選單
   const getActionMenuItems = (record: PodInfo): MenuProps['items'] => [
     {
       key: 'monitor',
@@ -555,7 +555,7 @@ const PodList: React.FC = () => {
       sortOrder: sortField === 'status' ? sortOrder : null,
       render: (_: unknown, record: PodInfo) => {
         const { status, color } = PodService.formatStatus(record);
-        // 将颜色值映射为Badge组件的status值
+        // 將顏色值對映為Badge元件的status值
         const getBadgeStatus = (color: string): 'success' | 'error' | 'default' | 'processing' | 'warning' => {
           switch (color) {
             case 'green':
@@ -708,13 +708,13 @@ const PodList: React.FC = () => {
     return visibleColumns.includes(col.key as string);
   }), [allColumns, visibleColumns]);
 
-  // 表格排序处理（只更新排序状态，实际排序在useEffect中处理）
+  // 表格排序處理（只更新排序狀態，實際排序在useEffect中處理）
   const handleTableChange = (
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
     sorter: SorterResult<PodInfo> | SorterResult<PodInfo>[]
   ) => {
-    // 处理单个排序器
+    // 處理單個排序器
     const singleSorter = Array.isArray(sorter) ? sorter[0] : sorter;
     
     if (singleSorter && singleSorter.field) {
@@ -728,7 +728,7 @@ const PodList: React.FC = () => {
     }
   };
 
-  // 列设置选项
+  // 列設定選項
   const columnOptions = [
     { key: 'name', label: t('columns.name') },
     { key: 'status', label: tc('table.status') },
@@ -744,14 +744,14 @@ const PodList: React.FC = () => {
     { key: 'age', label: t('columns.age') },
   ];
 
-  // Tab项配置
+  // Tab項配置
   const tabItems = [
     {
       key: 'pod',
       label: t('list.tabTitle'),
       children: (
         <div>
-          {/* 操作按钮栏 */}
+          {/* 操作按鈕欄 */}
           <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Space>
               <Button
@@ -767,9 +767,9 @@ const PodList: React.FC = () => {
             </Space>
           </div>
 
-          {/* 多条件搜索栏 */}
+          {/* 多條件搜尋欄 */}
           <div style={{ marginBottom: 16 }}>
-            {/* 搜索输入框 */}
+            {/* 搜尋輸入框 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
               <Input
                 prefix={<SearchOutlined />}
@@ -807,7 +807,7 @@ const PodList: React.FC = () => {
               <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
             </div>
 
-            {/* 搜索条件标签 */}
+            {/* 搜尋條件標籤 */}
             {searchConditions.length > 0 && (
               <div>
                 <Space size="small" wrap>
@@ -859,7 +859,7 @@ const PodList: React.FC = () => {
             }}
           />
 
-          {/* 列设置抽屉 */}
+          {/* 列設定抽屜 */}
           <Drawer
             title={t('list.columnSettings')}
             placement="right"

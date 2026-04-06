@@ -1,6 +1,6 @@
 import type { CommonBuildParts } from './yamlCommonService';
 
-// ==================== DaemonSet 构建 ====================
+// ==================== DaemonSet 構建 ====================
 
 export const buildDaemonSetSpec = (
   { metadata, labels, podTemplateSpec }: CommonBuildParts,

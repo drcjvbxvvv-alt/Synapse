@@ -6,7 +6,7 @@ export interface ArgoCDConfig {
   cluster_id?: number;
   enabled: boolean;
   
-  // ArgoCD 服务器配置
+  // ArgoCD 伺服器配置
   server_url: string;
   auth_type: 'token' | 'username';
   token?: string;
@@ -14,7 +14,7 @@ export interface ArgoCDConfig {
   password?: string;
   insecure: boolean;
   
-  // Git 仓库配置
+  // Git 倉庫配置
   git_repo_url: string;
   git_branch: string;
   git_path: string;
@@ -23,17 +23,17 @@ export interface ArgoCDConfig {
   git_password?: string;
   git_ssh_key?: string;
   
-  // ArgoCD 集群配置
+  // ArgoCD 叢集配置
   argocd_cluster_name: string;
   argocd_project: string;
   
-  // 状态
+  // 狀態
   connection_status?: string;
   last_test_at?: string;
   error_message?: string;
 }
 
-// ArgoCD 应用
+// ArgoCD 應用
 export interface ArgoCDApplication {
   name: string;
   namespace: string;
@@ -86,7 +86,7 @@ export interface ArgoCDSyncHistory {
   source: ArgoCDSource;
 }
 
-// 创建应用请求
+// 建立應用請求
 export interface CreateApplicationRequest {
   name: string;
   namespace?: string;
@@ -101,26 +101,26 @@ export interface CreateApplicationRequest {
   prune?: boolean;
 }
 
-// 同步请求
+// 同步請求
 export interface SyncApplicationRequest {
   revision?: string;
   prune?: boolean;
   dry_run?: boolean;
 }
 
-// 回滚请求
+// 回滾請求
 export interface RollbackApplicationRequest {
   revision_id: number;
 }
 
-// API 响应类型（后端直接返回数据体，无包装）
+// API 響應型別（後端直接返回資料體，無包裝）
 type ApiResponse<T> = T;
 
 export const argoCDService = {
   // ==================== 配置管理 ====================
   
   /**
-   * 获取 ArgoCD 配置
+   * 獲取 ArgoCD 配置
    */
   async getConfig(clusterId: string): Promise<ApiResponse<ArgoCDConfig>> {
     const response = await api.get(`/clusters/${clusterId}/argocd/config`);
@@ -128,7 +128,7 @@ export const argoCDService = {
   },
 
   /**
-   * 保存 ArgoCD 配置
+   * 儲存 ArgoCD 配置
    */
   async saveConfig(clusterId: string, config: Partial<ArgoCDConfig>): Promise<ApiResponse<null>> {
     const response = await api.put(`/clusters/${clusterId}/argocd/config`, config);
@@ -136,17 +136,17 @@ export const argoCDService = {
   },
 
   /**
-   * 测试 ArgoCD 连接
+   * 測試 ArgoCD 連線
    */
   async testConnection(clusterId: string, config: Partial<ArgoCDConfig>): Promise<ApiResponse<{ connected: boolean }>> {
     const response = await api.post(`/clusters/${clusterId}/argocd/test-connection`, config);
     return response.data;
   },
 
-  // ==================== 应用管理 ====================
+  // ==================== 應用管理 ====================
   
   /**
-   * 获取应用列表
+   * 獲取應用列表
    */
   async listApplications(clusterId: string): Promise<ApiResponse<{ items: ArgoCDApplication[]; total: number }>> {
     const response = await api.get(`/clusters/${clusterId}/argocd/applications`);
@@ -154,7 +154,7 @@ export const argoCDService = {
   },
 
   /**
-   * 获取应用详情
+   * 獲取應用詳情
    */
   async getApplication(clusterId: string, appName: string): Promise<ApiResponse<ArgoCDApplication>> {
     const response = await api.get(`/clusters/${clusterId}/argocd/applications/${appName}`);
@@ -162,7 +162,7 @@ export const argoCDService = {
   },
 
   /**
-   * 创建应用
+   * 建立應用
    */
   async createApplication(clusterId: string, request: CreateApplicationRequest): Promise<ApiResponse<ArgoCDApplication>> {
     const response = await api.post(`/clusters/${clusterId}/argocd/applications`, request);
@@ -170,7 +170,7 @@ export const argoCDService = {
   },
 
   /**
-   * 更新应用
+   * 更新應用
    */
   async updateApplication(clusterId: string, appName: string, request: CreateApplicationRequest): Promise<ApiResponse<ArgoCDApplication>> {
     const response = await api.put(`/clusters/${clusterId}/argocd/applications/${appName}`, request);
@@ -178,7 +178,7 @@ export const argoCDService = {
   },
 
   /**
-   * 删除应用
+   * 刪除應用
    */
   async deleteApplication(clusterId: string, appName: string, cascade = true): Promise<ApiResponse<null>> {
     const response = await api.delete(`/clusters/${clusterId}/argocd/applications/${appName}?cascade=${cascade}`);
@@ -186,7 +186,7 @@ export const argoCDService = {
   },
 
   /**
-   * 同步应用
+   * 同步應用
    */
   async syncApplication(clusterId: string, appName: string, request?: SyncApplicationRequest): Promise<ApiResponse<null>> {
     const response = await api.post(`/clusters/${clusterId}/argocd/applications/${appName}/sync`, request || {});
@@ -194,7 +194,7 @@ export const argoCDService = {
   },
 
   /**
-   * 回滚应用
+   * 回滾應用
    */
   async rollbackApplication(clusterId: string, appName: string, request: RollbackApplicationRequest): Promise<ApiResponse<null>> {
     const response = await api.post(`/clusters/${clusterId}/argocd/applications/${appName}/rollback`, request);
@@ -202,7 +202,7 @@ export const argoCDService = {
   },
 
   /**
-   * 获取应用资源树
+   * 獲取應用資源樹
    */
   async getApplicationResources(clusterId: string, appName: string): Promise<ApiResponse<ArgoCDResource[]>> {
     const response = await api.get(`/clusters/${clusterId}/argocd/applications/${appName}/resources`);

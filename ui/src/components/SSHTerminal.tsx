@@ -41,7 +41,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
   const [connectionModalVisible, setConnectionModalVisible] = useState(false);
   const [form] = Form.useForm();
 
-  // 初始化终端
+  // 初始化終端
   const initTerminal = () => {
     if (!terminalRef.current) return;
 
@@ -113,7 +113,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
     return () => window.removeEventListener('resize', handleResize);
   };
 
-  // 连接SSH
+  // 連線SSH
   const connectSSH = async (connection: SSHConnection) => {
     if (!terminal.current) return;
 
@@ -191,7 +191,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
     }
   };
 
-  // 断开连接
+  // 斷開連線
   const disconnect = () => {
     if (websocket.current) {
       websocket.current.close();
@@ -203,14 +203,14 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
     }
   };
 
-  // 清空终端
+  // 清空終端
   const clearTerminal = () => {
     if (terminal.current) {
       terminal.current.clear();
     }
   };
 
-  // 点击连接按钮
+  // 點選連線按鈕
   const handleConnectClick = async () => {
     if (!nodeIP) {
       message.error(t('sshTerminal.nodeIPUnknown'));
@@ -255,7 +255,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
     }
   };
 
-  // 处理手动连接表单提交
+  // 處理手動連線表單提交
   const handleManualConnect = async (values: Record<string, unknown>) => {
     const connection: SSHConnection = {
       host: (values.host as string) || nodeIP || '',
@@ -272,7 +272,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
     form.resetFields();
   };
 
-  // 组件挂载时初始化终端
+  // 元件掛載時初始化終端
   useEffect(() => {
     const cleanup = initTerminal();
     return () => {
@@ -286,7 +286,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
     };
   }, []);
 
-  // 设置默认连接信息
+  // 設定預設連線資訊
   useEffect(() => {
     if (nodeIP) {
       form.setFieldsValue({
@@ -300,7 +300,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* 工具栏 */}
+      {/* 工具欄 */}
       <Card size="small" style={{ marginBottom: 16 }}>
         <Space>
           <Button
@@ -343,7 +343,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
         </Space>
       </Card>
 
-      {/* 终端容器 */}
+      {/* 終端容器 */}
       <Card 
         style={{ 
           flex: 1, 
@@ -367,7 +367,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
         />
       </Card>
 
-      {/* SSH连接配置模态框 */}
+      {/* SSH連線配置模態框 */}
       <Modal
         title={t('sshTerminal.sshConfig')}
         open={connectionModalVisible}

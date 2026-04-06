@@ -1,8 +1,8 @@
 import { request } from '../utils/api';
 
-// ========== 类型定义 ==========
+// ========== 型別定義 ==========
 
-// 认证配置
+// 認證配置
 export interface MonitoringAuth {
   type: 'none' | 'basic' | 'bearer';
   username?: string;
@@ -18,7 +18,7 @@ export interface AlertManagerConfig {
   options?: Record<string, unknown>;
 }
 
-// 告警状态
+// 告警狀態
 export interface AlertStatus {
   state: 'active' | 'suppressed' | 'resolved';
   silencedBy: string[];
@@ -36,7 +36,7 @@ export interface Alert {
   status: AlertStatus;
 }
 
-// 告警分组
+// 告警分組
 export interface AlertGroup {
   labels: Record<string, string>;
   receiver: string;
@@ -51,12 +51,12 @@ export interface Matcher {
   isEqual: boolean;
 }
 
-// 静默状态
+// 靜默狀態
 export interface SilenceStatus {
   state: 'active' | 'pending' | 'expired';
 }
 
-// 静默规则
+// 靜默規則
 export interface Silence {
   id: string;
   matchers: Matcher[];
@@ -68,7 +68,7 @@ export interface Silence {
   updatedAt?: string;
 }
 
-// 创建静默规则请求
+// 建立靜默規則請求
 export interface CreateSilenceRequest {
   matchers: Matcher[];
   startsAt: string;
@@ -77,7 +77,7 @@ export interface CreateSilenceRequest {
   comment: string;
 }
 
-// 告警统计
+// 告警統計
 export interface AlertStats {
   total: number;
   firing: number;
@@ -92,7 +92,7 @@ export interface Receiver {
   name: string;
 }
 
-// Alertmanager 状态
+// Alertmanager 狀態
 export interface AlertManagerStatus {
   cluster: {
     name: string;
@@ -113,19 +113,19 @@ export interface AlertManagerStatus {
   uptime: string;
 }
 
-// 告警查询参数
+// 告警查詢參數
 export interface AlertQueryParams {
   severity?: string;
   alertname?: string;
   filter?: string;
 }
 
-// ========== API 服务 ==========
+// ========== API 服務 ==========
 
 export const alertService = {
-  // ========== 配置相关 ==========
+  // ========== 配置相關 ==========
   
-  // 获取 Alertmanager 配置
+  // 獲取 Alertmanager 配置
   getConfig: (clusterId: string | number) => {
     return request.get<AlertManagerConfig>(`/clusters/${clusterId}/alertmanager/config`);
   },
@@ -135,58 +135,58 @@ export const alertService = {
     return request.put<void>(`/clusters/${clusterId}/alertmanager/config`, config);
   },
 
-  // 测试 Alertmanager 连接
+  // 測試 Alertmanager 連線
   testConnection: (clusterId: string | number, config: AlertManagerConfig) => {
     return request.post<void>(`/clusters/${clusterId}/alertmanager/test-connection`, config);
   },
 
-  // 获取 Alertmanager 状态
+  // 獲取 Alertmanager 狀態
   getStatus: (clusterId: string | number) => {
     return request.get<AlertManagerStatus>(`/clusters/${clusterId}/alertmanager/status`);
   },
 
-  // 获取配置模板
+  // 獲取配置模板
   getConfigTemplate: (clusterId: string | number) => {
     return request.get<AlertManagerConfig>(`/clusters/${clusterId}/alertmanager/template`);
   },
 
-  // ========== 告警相关 ==========
+  // ========== 告警相關 ==========
 
-  // 获取告警列表
+  // 獲取告警列表
   getAlerts: (clusterId: string | number, params?: AlertQueryParams) => {
     return request.get<Alert[]>(`/clusters/${clusterId}/alerts`, { params });
   },
 
-  // 获取告警分组
+  // 獲取告警分組
   getAlertGroups: (clusterId: string | number) => {
     return request.get<AlertGroup[]>(`/clusters/${clusterId}/alerts/groups`);
   },
 
-  // 获取告警统计
+  // 獲取告警統計
   getAlertStats: (clusterId: string | number) => {
     return request.get<AlertStats>(`/clusters/${clusterId}/alerts/stats`);
   },
 
-  // ========== 静默规则相关 ==========
+  // ========== 靜默規則相關 ==========
 
-  // 获取静默规则列表
+  // 獲取靜默規則列表
   getSilences: (clusterId: string | number) => {
     return request.get<Silence[]>(`/clusters/${clusterId}/silences`);
   },
 
-  // 创建静默规则
+  // 建立靜默規則
   createSilence: (clusterId: string | number, silence: CreateSilenceRequest) => {
     return request.post<Silence>(`/clusters/${clusterId}/silences`, silence);
   },
 
-  // 删除静默规则
+  // 刪除靜默規則
   deleteSilence: (clusterId: string | number, silenceId: string) => {
     return request.delete<void>(`/clusters/${clusterId}/silences/${silenceId}`);
   },
 
-  // ========== 接收器相关 ==========
+  // ========== 接收器相關 ==========
 
-  // 获取接收器列表
+  // 獲取接收器列表
   getReceivers: (clusterId: string | number) => {
     return request.get<Receiver[]>(`/clusters/${clusterId}/receivers`);
   },

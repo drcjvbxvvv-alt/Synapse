@@ -45,7 +45,7 @@ const SecretDetail: React.FC = () => {
   const [versions, setVersions] = useState<ConfigVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
 
-  // 加载Secret详情
+  // 載入Secret詳情
   const loadSecret = React.useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     setLoading(true);
@@ -77,7 +77,7 @@ const SecretDetail: React.FC = () => {
     loadVersions();
   }, [loadSecret, loadVersions]);
 
-  // 删除Secret
+  // 刪除Secret
   const handleDelete = () => {
     Modal.confirm({
       title: t('common:messages.confirmDelete'),
@@ -95,7 +95,7 @@ const SecretDetail: React.FC = () => {
     });
   };
 
-  // Base64解码
+  // Base64解碼
   const decodeBase64 = (str: string): string => {
     try {
       return atob(str);
@@ -104,7 +104,7 @@ const SecretDetail: React.FC = () => {
     }
   };
 
-  // 掩码显示
+  // 掩碼顯示
   const maskValue = (value: string): string => {
     return '*'.repeat(Math.min(value.length, 20));
   };
@@ -130,7 +130,7 @@ const SecretDetail: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        {/* 头部操作栏 */}
+        {/* 頭部操作欄 */}
         <Card>
           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
             <Space>
@@ -163,7 +163,7 @@ const SecretDetail: React.FC = () => {
           </Space>
         </Card>
 
-        {/* 基本信息 */}
+        {/* 基本資訊 */}
         <Card title={t('config:detail.basicInfo')}>
           <Descriptions bordered column={2}>
             <Descriptions.Item label={t('config:detail.name')}>{secret.name}</Descriptions.Item>
@@ -185,7 +185,7 @@ const SecretDetail: React.FC = () => {
           </Descriptions>
         </Card>
 
-        {/* 标签和注解 */}
+        {/* 標籤和註解 */}
         <Card title={t('config:detail.labelsAndAnnotations')}>
           <Tabs defaultActiveKey="labels">
             <TabPane tab={t('config:detail.labels')} key="labels">
@@ -220,7 +220,7 @@ const SecretDetail: React.FC = () => {
         {/* 版本歷史（僅記錄 key 列表，不含 value） */}
         <Card
           title={<Space><HistoryOutlined />版本歷史</Space>}
-          extra={<Button size="small" icon={<ReloadOutlined />} onClick={loadVersions}>刷新</Button>}
+          extra={<Button size="small" icon={<ReloadOutlined />} onClick={loadVersions}>重新整理</Button>}
         >
           <Table<ConfigVersion>
             loading={versionsLoading}
@@ -253,7 +253,7 @@ const SecretDetail: React.FC = () => {
           />
         </Card>
 
-        {/* 数据内容 */}
+        {/* 資料內容 */}
         <Card
           title={t('config:detail.dataContent')}
           extra={

@@ -25,7 +25,7 @@ const CRDList: React.FC = () => {
       const res = await crdService.listCRDs(clusterId);
       setCrds(res.items ?? []);
     } catch {
-      message.error(t('crd.loadFailed', '加载 CRD 列表失败'));
+      message.error(t('crd.loadFailed', '載入 CRD 列表失敗'));
     } finally {
       setLoading(false);
     }
@@ -97,7 +97,7 @@ const CRDList: React.FC = () => {
             )
           }
         >
-          {t('crd.viewResources', '查看實例')}
+          {t('crd.viewResources', '檢視例項')}
         </a>
       ),
     },
@@ -137,7 +137,7 @@ const CRDList: React.FC = () => {
         <Space>
           <Input
             prefix={<SearchOutlined />}
-            placeholder={t('crd.searchPlaceholder', '搜索 Kind / Group')}
+            placeholder={t('crd.searchPlaceholder', '搜尋 Kind / Group')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             allowClear

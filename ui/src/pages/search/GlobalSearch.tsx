@@ -39,13 +39,13 @@ const [searchParams, setSearchParams] = useSearchParams();
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   
-  // 处理标签切换
+  // 處理標籤切換
   const handleTabChange = (key: string) => {
     setActiveTab(key);
   };
   const [query, setQuery] = useState(searchParams.get('q') || '');
 
-  // 从URL参数获取搜索关键词
+  // 從URL參數獲取搜尋關鍵詞
   useEffect(() => {
     const urlQuery = searchParams.get('q');
     if (urlQuery) {
@@ -55,7 +55,7 @@ const [searchParams, setSearchParams] = useSearchParams();
   }, [searchParams]);
 
 
-  // 执行搜索
+  // 執行搜尋
   const performSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -68,20 +68,20 @@ const [searchParams, setSearchParams] = useSearchParams();
       setSearchResults(response.results || []);
     } catch (error) {
       message.error(t('searchFailed'));
-      console.error('搜索失败:', error);
+      console.error('搜尋失敗:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // 处理搜索
+  // 處理搜尋
   const handleSearch = (value: string) => {
     setQuery(value);
     setSearchParams({ q: value });
     performSearch(value);
   };
 
-  // 按类型过滤结果
+  // 按型別過濾結果
   const getFilteredResults = (type: string) => {
     if (type === 'all') {
       return searchResults;
@@ -90,7 +90,7 @@ const [searchParams, setSearchParams] = useSearchParams();
     return filtered;
   };
 
-  // 获取资源类型统计
+  // 獲取資源型別統計
   const getTypeStats = () => {
     const stats = {
       cluster: 0,
@@ -106,7 +106,7 @@ const [searchParams, setSearchParams] = useSearchParams();
     return stats;
   };
 
-  // 获取状态标签颜色
+  // 獲取狀態標籤顏色
   const getStatusColor = (status: string, type: string) => {
     switch (type) {
       case 'cluster':
@@ -122,7 +122,7 @@ const [searchParams, setSearchParams] = useSearchParams();
     }
   };
 
-  // 获取资源类型图标
+  // 獲取資源型別圖示
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'cluster':
@@ -138,7 +138,7 @@ const [searchParams, setSearchParams] = useSearchParams();
     }
   };
 
-  // 处理资源点击
+  // 處理資源點選
   const handleResourceClick = (result: SearchResult) => {
     switch (result.type) {
       case 'cluster':
@@ -412,7 +412,7 @@ const [searchParams, setSearchParams] = useSearchParams();
 
       {query && (
         <>
-          {/* 搜索结果统计 */}
+          {/* 搜尋結果統計 */}
           <Row gutter={16} style={{ marginBottom: '24px' }}>
             <Col span={6}>
               <Card>
@@ -456,7 +456,7 @@ const [searchParams, setSearchParams] = useSearchParams();
             </Col>
           </Row>
 
-          {/* 搜索结果 */}
+          {/* 搜尋結果 */}
           <Card style={{ position: 'relative' }}>
             <Tabs
               activeKey={activeTab}

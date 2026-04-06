@@ -35,7 +35,7 @@ const commonApiGroupValues = [
   { value: '*', labelKey: 'allApiGroup' },
 ];
 
-// 常用资源
+// 常用資源
 const commonResources = [
   'pods', 'pods/log', 'pods/exec', 'pods/portforward',
   'deployments', 'deployments/scale',
@@ -56,7 +56,7 @@ const commonResources = [
   '*',
 ];
 
-// 常用动作 - labels will be translated dynamically
+// 常用動作 - labels will be translated dynamically
 const allVerbValues = [
   { value: 'get', labelKey: 'verbGet' },
   { value: 'list', labelKey: 'verbList' },
@@ -93,12 +93,12 @@ const CustomRoleEditor: React.FC<CustomRoleEditorProps> = ({
   const [activeTab, setActiveTab] = useState<'form' | 'yaml'>('form');
   const [yamlContent, setYamlContent] = useState('');
 
-  // 添加规则
+  // 新增規則
   const addRule = () => {
     setRules([...rules, { apiGroups: [''], resources: [], verbs: [] }]);
   };
 
-  // 删除规则
+  // 刪除規則
   const removeRule = (index: number) => {
     if (rules.length <= 1) {
       message.warning(t('customRoleEditor.atLeastOneRule'));
@@ -107,7 +107,7 @@ const CustomRoleEditor: React.FC<CustomRoleEditorProps> = ({
     setRules(rules.filter((_, i) => i !== index));
   };
 
-  // 更新规则
+  // 更新規則
   const updateRule = (index: number, field: keyof PolicyRule, value: string[]) => {
     const newRules = [...rules];
     newRules[index] = { ...newRules[index], [field]: value };
@@ -137,7 +137,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
       await form.validateFields();
       const name = form.getFieldValue('name');
 
-      // 验证规则
+      // 驗證規則
       for (const rule of rules) {
         if (rule.resources.length === 0) {
           message.error(t('customRoleEditor.resourceRequired'));
@@ -161,7 +161,7 @@ ${rules.map(rule => `  - apiGroups: [${rule.apiGroups.map(g => `"${g}"`).join(',
     }
   };
 
-  // 关闭
+  // 關閉
   const handleClose = () => {
     form.resetFields();
     setRules([{ apiGroups: [''], resources: [], verbs: [] }]);

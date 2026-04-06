@@ -11,7 +11,7 @@ import { buildStatefulSetSpec, parseStatefulSetFields } from './yamlStatefulSetS
 import { buildDaemonSetSpec } from './yamlDaemonSetService';
 import { buildJobSpec, buildCronJobSpec, parseJobFields, parseCronJobFields } from './yamlJobService';
 
-// 主转换函数：表单数据 -> YAML
+// 主轉換函式：表單資料 -> YAML
 export const formDataToYAML = (
   workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob',
   formData: WorkloadFormData,
@@ -55,7 +55,7 @@ export const formDataToYAML = (
   return toYAMLString(workloadSpec);
 };
 
-// YAML -> 表单数据
+// YAML -> 表單資料
 export const yamlToFormData = (yamlContent: string): WorkloadFormData | null => {
   try {
     const obj = parseYAMLString(yamlContent);
@@ -111,12 +111,12 @@ export const yamlToFormData = (yamlContent: string): WorkloadFormData | null => 
 
     return formData;
   } catch (error) {
-    console.error('YAML 解析错误:', error);
+    console.error('YAML 解析錯誤:', error);
     return null;
   }
 };
 
-// 导出服务对象
+// 匯出服務物件
 export const WorkloadYamlService = {
   formDataToYAML,
   yamlToFormData,
@@ -124,7 +124,7 @@ export const WorkloadYamlService = {
 
 export default WorkloadYamlService;
 
-// 重导出子模块，保持向后兼容
+// 重匯出子模組，保持向後相容
 export * from './yamlCommonService';
 export * from './yamlDeploymentService';
 export * from './yamlStatefulSetService';

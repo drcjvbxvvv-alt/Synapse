@@ -190,7 +190,7 @@ const MigrationWizard: React.FC<Props> = ({ open, onClose, onMigrated }) => {
       </Row>
       <Row gutter={16}>
         <Col span={12}>
-          <Form.Item label="工作負載類型" style={{ marginBottom: 8 }}>
+          <Form.Item label="工作負載型別" style={{ marginBottom: 8 }}>
             <Select
               value={workloadKind}
               onChange={v => { setWorkloadKind(v); setWorkloadName(''); if (srcClusterId && srcNamespace) loadWorkloads(srcClusterId, srcNamespace, v); }}

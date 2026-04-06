@@ -38,24 +38,24 @@ const CronJobTab: React.FC<CronJobTabProps> = ({ clusterId, onCountChange }) => 
   const navigate = useNavigate();
   const { message } = App.useApp();
 const { t } = useTranslation(['workload', 'common']);
-// 数据状态
-  const [allWorkloads, setAllWorkloads] = useState<WorkloadInfo[]>([]); // 所有原始数据
-  const [workloads, setWorkloads] = useState<WorkloadInfo[]>([]); // 当前页显示的数据
+// 資料狀態
+  const [allWorkloads, setAllWorkloads] = useState<WorkloadInfo[]>([]); // 所有原始資料
+  const [workloads, setWorkloads] = useState<WorkloadInfo[]>([]); // 當前頁顯示的資料
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   
   
-  // 操作状态
+  // 操作狀態
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleWorkload, setScaleWorkload] = useState<WorkloadInfo | null>(null);
   const [scaleReplicas, setScaleReplicas] = useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   
-  // 多条件搜索状态
+  // 多條件搜尋狀態
   interface SearchCondition {
     field: 'name' | 'namespace' | 'image' | 'status' | 'cpuLimit' | 'cpuRequest' | 'memoryLimit' | 'memoryRequest';
     value: string;
@@ -64,18 +64,18 @@ const { t } = useTranslation(['workload', 'common']);
   const [currentSearchField, setCurrentSearchField] = useState<'name' | 'namespace' | 'image' | 'status' | 'cpuLimit' | 'cpuRequest' | 'memoryLimit' | 'memoryRequest'>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
   
-  // 列设置状态
+  // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'namespace', 'status', 'replicas', 'images', 'createdAt'
   ]);
   
-  // 排序状态
+  // 排序狀態
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
 
-  // 添加搜索条件
+  // 新增搜尋條件
   const addSearchCondition = () => {
     if (!currentSearchValue.trim()) return;
     
@@ -88,25 +88,25 @@ const { t } = useTranslation(['workload', 'common']);
     setCurrentSearchValue('');
   };
 
-  // 删除搜索条件
+  // 刪除搜尋條件
   const removeSearchCondition = (index: number) => {
     setSearchConditions(searchConditions.filter((_, i) => i !== index));
   };
 
-  // 清空所有搜索条件
+  // 清空所有搜尋條件
   const clearAllConditions = () => {
     setSearchConditions([]);
     setCurrentSearchValue('');
   };
 
-  // 处理回车键
+  // 處理回車鍵
   const handleSearchKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       addSearchCondition();
     }
   };
 
-  // 获取字段的中文标签
+  // 獲取欄位的中文標籤
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('search.workloadName'),
@@ -121,7 +121,7 @@ const { t } = useTranslation(['workload', 'common']);
     return labels[field] || field;
   };
 
-  // 客户端过滤
+  // 客戶端過濾
   const filterWorkloads = useCallback((items: WorkloadInfo[]): WorkloadInfo[] => {
     if (searchConditions.length === 0) return items;
 
@@ -137,7 +137,7 @@ const { t } = useTranslation(['workload', 'common']);
       return Object.entries(conditionsByField).every(([field, values]) => {
         const workloadValue = workload[field as keyof WorkloadInfo];
         
-        // CPU和内存字段使用精确匹配
+        // CPU和記憶體欄位使用精確匹配
         const resourceFields = ['cpuLimit', 'cpuRequest', 'memoryLimit', 'memoryRequest'];
         if (resourceFields.includes(field)) {
           const itemStr = String(workloadValue || '-').toLowerCase();
@@ -158,7 +158,7 @@ const { t } = useTranslation(['workload', 'common']);
     });
   }, [searchConditions]);
 
-  // 客户端排序
+  // 客戶端排序
   const sortWorkloads = useCallback((items: WorkloadInfo[]): WorkloadInfo[] => {
     if (!sortField || !sortOrder) return items;
 
@@ -167,7 +167,7 @@ const { t } = useTranslation(['workload', 'common']);
       let bValue: unknown = b[sortField as keyof WorkloadInfo];
 
       if (sortField === 'replicas') {
-        // 按总副本数排序
+        // 按總副本數排序
         aValue = a.replicas || 0;
         bValue = b.replicas || 0;
       } else if (sortField === 'createdAt') {
@@ -175,17 +175,17 @@ const { t } = useTranslation(['workload', 'common']);
         bValue = bValue ? new Date(bValue as string).getTime() : 0;
       }
 
-      // 处理 undefined 值
+      // 處理 undefined 值
       if (aValue === undefined && bValue === undefined) return 0;
       if (aValue === undefined) return sortOrder === 'ascend' ? 1 : -1;
       if (bValue === undefined) return sortOrder === 'ascend' ? -1 : 1;
 
-      // 数字类型比较
+      // 數字型別比較
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortOrder === 'ascend' ? aValue - bValue : bValue - aValue;
       }
 
-      // 字符串类型比较
+      // 字串型別比較
       const aStr = String(aValue);
       const bStr = String(bValue);
 
@@ -197,13 +197,13 @@ const { t } = useTranslation(['workload', 'common']);
     });
   }, [sortField, sortOrder]);
 
-  // 加载CronJob列表
+  // 載入CronJob列表
   const loadWorkloads = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
     try {
-      // 获取所有数据（使用大的pageSize）
+      // 獲取所有資料（使用大的pageSize）
       const response = await WorkloadService.getWorkloads(
         clusterId,
         undefined,
@@ -219,27 +219,27 @@ const { t } = useTranslation(['workload', 'common']);
         onCountChange(items.length);
       }
     } catch (error) {
-      console.error('加载CronJob列表失败:', error);
+      console.error('載入CronJob列表失敗:', error);
       message.error(t('messages.fetchError', { type: 'CronJob' }));
     } finally {
       setLoading(false);
     }
   }, [clusterId, onCountChange, message]);
 
-  // 应用过滤、排序和分页
+  // 應用過濾、排序和分頁
   useEffect(() => {
     let result = [...allWorkloads];
     
-    // 1. 过滤
+    // 1. 過濾
     result = filterWorkloads(result);
     
     // 2. 排序
     result = sortWorkloads(result);
     
-    // 3. 更新总数
+    // 3. 更新總數
     setTotal(result.length);
     
-    // 4. 分页
+    // 4. 分頁
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
     const pagedData = result.slice(start, end);
@@ -247,12 +247,12 @@ const { t } = useTranslation(['workload', 'common']);
     setWorkloads(pagedData);
   }, [allWorkloads, currentPage, pageSize, filterWorkloads, sortWorkloads]);
 
-  // 初始加载
+  // 初始載入
   useEffect(() => {
     loadWorkloads();
   }, [loadWorkloads]);
 
-  // 表格列定义
+  // 表格列定義
   const columns: ColumnsType<WorkloadInfo> = [
     {
       title: t('columns.name'),
@@ -430,14 +430,14 @@ const { t } = useTranslation(['workload', 'common']);
     },
   ];
 
-  // 根据可见列过滤columns
+  // 根據可見列過濾columns
   const filteredColumns = columns.filter(col => {
     if (!col.key) return true;
     if (col.key === 'actions') return true;
     return visibleColumns.includes(col.key as string);
   });
 
-  // 处理表格变化（分页、排序）
+  // 處理表格變化（分頁、排序）
   const handleTableChange = (
     pagination: TablePaginationConfig,
     filters: Record<string, FilterValue | null>,
@@ -457,7 +457,7 @@ const { t } = useTranslation(['workload', 'common']);
     setPageSize(pagination.pageSize || 20);
   };
 
-  // 扩缩容
+  // 擴縮容
   const handleScale = async () => {
     if (!scaleWorkload) return;
     
@@ -473,12 +473,12 @@ const { t } = useTranslation(['workload', 'common']);
       setScaleModalVisible(false);
       loadWorkloads();
     } catch (error) {
-      console.error('扩缩容失败:', error);
+      console.error('擴縮容失敗:', error);
       message.error(t('messages.scaleError'));
     }
   };
 
-  // 删除
+  // 刪除
   const handleDelete = async (record: WorkloadInfo) => {
     try {
       await WorkloadService.deleteWorkload(
@@ -490,12 +490,12 @@ const { t } = useTranslation(['workload', 'common']);
       message.success(t('messages.deleteSuccess'));
       loadWorkloads();
     } catch (error) {
-      console.error('删除失败:', error);
+      console.error('刪除失敗:', error);
       message.error(t('messages.deleteError'));
     }
   };
 
-  // 批量重新部署
+  // 批次重新部署
   const handleBatchRedeploy = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning(t('actions.selectRedeploy', { type: 'CronJob' }));
@@ -518,12 +518,12 @@ const { t } = useTranslation(['workload', 'common']);
       setSelectedRowKeys([]);
       loadWorkloads();
     } catch (error) {
-      console.error('重新部署失败:', error);
+      console.error('重新部署失敗:', error);
       message.error(t('messages.redeployError'));
     }
   };
 
-  // 导出
+  // 匯出
   const handleExport = () => {
     const filteredData = filterWorkloads(sortWorkloads(allWorkloads));
     
@@ -577,7 +577,7 @@ const { t } = useTranslation(['workload', 'common']);
     URL.revokeObjectURL(link.href);
   };
 
-  // 列设置
+  // 列設定
   const allColumns = [
     { key: 'name', title: t('columns.name'), fixed: true },
     { key: 'namespace', title: t('columns.namespace') },
@@ -606,7 +606,7 @@ const { t } = useTranslation(['workload', 'common']);
 
   return (
     <div>
-      {/* 操作按钮栏 */}
+      {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
           <Button
@@ -624,9 +624,9 @@ const { t } = useTranslation(['workload', 'common']);
         </Button>
       </div>
 
-      {/* 多条件搜索栏 */}
+      {/* 多條件搜尋欄 */}
       <div style={{ marginBottom: 16 }}>
-        {/* 搜索输入框 */}
+        {/* 搜尋輸入框 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
             prefix={<SearchOutlined />}
@@ -665,7 +665,7 @@ const { t } = useTranslation(['workload', 'common']);
             </Button>
         </div>
 
-        {/* 搜索条件标签 */}
+        {/* 搜尋條件標籤 */}
         {searchConditions.length > 0 && (
           <div style={{ marginBottom: 8 }}>
           <Space wrap>
@@ -709,7 +709,7 @@ const { t } = useTranslation(['workload', 'common']);
         scroll={{ x: 1500, y: 600 }}
       />
 
-      {/* 扩缩容Modal */}
+      {/* 擴縮容Modal */}
       <Modal
         title={t('scale.title', { type: 'CronJob' })}
         open={scaleModalVisible}
@@ -739,7 +739,7 @@ const { t } = useTranslation(['workload', 'common']);
         </Space>
       </Modal>
 
-      {/* 列设置Drawer */}
+      {/* 列設定Drawer */}
       <Drawer
         title={t('columnSettings.title')}
         placement="right"

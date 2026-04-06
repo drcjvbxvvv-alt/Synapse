@@ -97,7 +97,7 @@ const SessionReplay: React.FC<SessionReplayProps> = ({ sessionId }) => {
     >
       {/* 會話資訊 */}
       <Descriptions size="small" bordered column={3} style={{ marginBottom: 16 }}>
-        <Descriptions.Item label="目標類型">
+        <Descriptions.Item label="目標型別">
           <Tag>{session.targetType}</Tag>
         </Descriptions.Item>
         {session.namespace && (

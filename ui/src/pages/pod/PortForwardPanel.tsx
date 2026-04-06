@@ -98,7 +98,7 @@ const PortForwardPanel: React.FC<PortForwardPanelProps> = ({
       width: 90,
       render: (s: string) =>
         s === 'active'
-          ? <Badge status="success" text="運行中" />
+          ? <Badge status="success" text="執行中" />
           : <Badge status="default" text="已停止" />,
     },
     {
@@ -137,8 +137,8 @@ const PortForwardPanel: React.FC<PortForwardPanelProps> = ({
         <Form form={form} layout="inline" style={{ marginBottom: 12 }}>
           <Form.Item
             name="podPort"
-            label="Pod 埠"
-            rules={[{ required: true, message: '請輸入 Pod 埠號' }]}
+            label="Pod 連接埠"
+            rules={[{ required: true, message: '請輸入 Pod 連接埠號' }]}
           >
             <InputNumber min={1} max={65535} placeholder="例如 8080" style={{ width: 120 }} />
           </Form.Item>

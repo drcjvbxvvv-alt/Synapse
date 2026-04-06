@@ -36,11 +36,11 @@ class ErrorBoundary extends Component<Props, State> {
         return (
           <Result
             status="error"
-            title="组件加载失败"
+            title="元件載入失敗"
             subTitle={this.state.error?.message}
             extra={
               <Button type="primary" onClick={this.handleReset}>
-                重试
+                重試
               </Button>
             }
           />
@@ -51,14 +51,14 @@ class ErrorBoundary extends Component<Props, State> {
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
           <Result
             status="500"
-            title="页面出错了"
-            subTitle={this.state.error?.message || '发生了未知错误，请刷新页面重试'}
+            title="頁面出錯了"
+            subTitle={this.state.error?.message || '發生了未知錯誤，請重新整理頁面重試'}
             extra={[
               <Button type="primary" key="retry" onClick={this.handleReset}>
-                重试
+                重試
               </Button>,
               <Button key="home" onClick={() => window.location.href = '/'}>
-                返回首页
+                返回首頁
               </Button>,
             ]}
           />

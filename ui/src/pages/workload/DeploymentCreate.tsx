@@ -47,39 +47,39 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
   const editName = searchParams.get('name');
   const isEdit = !!(editNamespace && editName);
   
-  // 编辑模式默认使用 YAML 编辑器（避免表单格式化导致字段丢失）
+  // 編輯模式預設使用 YAML 編輯器（避免表單格式化導致欄位丟失）
   const [editMode, setEditMode] = useState<'form' | 'yaml'>(isEdit ? 'yaml' : 'form');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dryRunning, setDryRunning] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<{ success: boolean; message: string } | null>(null);
   
-  // 表单实例
+  // 表單例項
   const [form] = Form.useForm();
   
-  // 表单数据
+  // 表單資料
   const [formData, setFormData] = useState<WorkloadFormData | null>(null);
   
-  // YAML 数据
+  // YAML 資料
   const [yamlContent, setYamlContent] = useState(getDefaultYaml());
   
-  // 原始 YAML（编辑模式用于 diff 对比）
+  // 原始 YAML（編輯模式用於 diff 對比）
   const [originalYaml, setOriginalYaml] = useState<string>('');
   
-  // Diff 弹窗状态
+  // Diff 彈窗狀態
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
   
-  // 命名空间列表
+  // 命名空間列表
   const [namespaces, setNamespaces] = useState<string[]>(['default']);
   
-  // 镜像拉取凭证列表
+  // 映像拉取憑證列表
   const [imagePullSecretsList, setImagePullSecretsList] = useState<string[]>([]);
   
-  // 当前选择的命名空间
+  // 當前選擇的命名空間
   const currentNamespace = Form.useWatch('namespace', form) || 'default';
   
-  // 获取默认YAML
+  // 獲取預設YAML
   function getDefaultYaml(): string {
     const defaultData: WorkloadFormData = {
       name: '',
@@ -100,7 +100,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     return WorkloadYamlService.formDataToYAML(workloadType, defaultData);
   }
 
-  // 加载所有命名空间列表
+  // 載入所有命名空間列表
   useEffect(() => {
     const loadAllNamespaces = async () => {
       if (!clusterId) return;
@@ -112,19 +112,19 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
           setNamespaces(['default']);
         }
       } catch (error) {
-        console.error('获取命名空间列表失败:', error);
+        console.error('獲取命名空間列表失敗:', error);
         setNamespaces(['default']);
       }
     };
     loadAllNamespaces();
   }, [clusterId]);
   
-  // 加载镜像拉取凭证列表 (当命名空间变化时)
+  // 載入映像拉取憑證列表 (當命名空間變化時)
   useEffect(() => {
     const loadImagePullSecrets = async () => {
       if (!clusterId || !currentNamespace) return;
       try {
-        // 调用后端 API 获取 dockerconfigjson 类型的 secrets
+        // 呼叫後端 API 獲取 dockerconfigjson 型別的 secrets
         const data = await secretService.getSecrets(Number(clusterId), {
           namespace: currentNamespace,
           type: 'kubernetes.io/dockerconfigjson',
@@ -135,14 +135,14 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
           setImagePullSecretsList([]);
         }
       } catch (error) {
-        console.error('获取镜像拉取凭证失败:', error);
+        console.error('獲取映像拉取憑證失敗:', error);
         setImagePullSecretsList([]);
       }
     };
     loadImagePullSecrets();
   }, [clusterId, currentNamespace]);
 
-  // 如果是编辑模式，加载现有数据
+  // 如果是編輯模式，載入現有資料
   useEffect(() => {
     const loadWorkload = async () => {
       if (!isEdit || !clusterId || !editNamespace || !editName) return;
@@ -165,23 +165,23 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
             yaml = YAML.stringify(rawResource);
           }
           
-          // 保存原始 YAML 用于 diff 对比
+          // 儲存原始 YAML 用於 diff 對比
           setOriginalYaml(yaml);
           setYamlContent(yaml);
           
-          // 解析为表单数据
+          // 解析為表單資料
           const parsedData = WorkloadYamlService.yamlToFormData(yaml);
           if (parsedData) {
-            // 先设置 formData state，这会触发 WorkloadForm 的 useEffect
+            // 先設定 formData state，這會觸發 WorkloadForm 的 useEffect
             setFormData(parsedData);
-            // 延迟设置表单值，确保组件已挂载
+            // 延遲設定表單值，確保元件已掛載
             setTimeout(() => {
               form.setFieldsValue(parsedData);
             }, 100);
           }
         }
       } catch (error) {
-        console.error('加载工作负载失败:', error);
+        console.error('載入工作負載失敗:', error);
         messageApi.error(t('messages.loadWorkloadFailed'));
       } finally {
         setLoading(false);
@@ -191,12 +191,12 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     loadWorkload();
   }, [isEdit, clusterId, editNamespace, editName, workloadType, messageApi, form]);
 
-  // 表单转YAML
+  // 表單轉YAML
   const formToYaml = useCallback((): string => {
     try {
       const values = form.getFieldsValue(true);
       
-      // 构建完整的表单数据
+      // 構建完整的表單資料
       const formData: WorkloadFormData = {
         name: values.name || '',
         namespace: values.namespace || 'default',
@@ -218,7 +218,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
         dnsPolicy: values.dnsPolicy,
         dnsConfig: values.dnsConfig,
         hostNetwork: values.hostNetwork,
-        // 特定类型字段
+        // 特定型別欄位
         serviceName: values.serviceName,
         schedule: values.schedule,
         suspend: values.suspend,
@@ -233,12 +233,12 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       
       return WorkloadYamlService.formDataToYAML(workloadType, formData);
     } catch (error) {
-      console.error('表单转YAML失败:', error);
+      console.error('表單轉YAML失敗:', error);
       return yamlContent;
     }
   }, [form, workloadType, yamlContent]);
 
-  // YAML转表单
+  // YAML轉表單
   const yamlToForm = useCallback((): boolean => {
     try {
       const parsedData = WorkloadYamlService.yamlToFormData(yamlContent);
@@ -254,18 +254,18 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     }
   }, [yamlContent, form, messageApi]);
 
-  // 切换编辑模式
+  // 切換編輯模式
   const handleModeChange = (newMode: string) => {
     if (newMode === editMode) return;
     
     if (editMode === 'form' && newMode === 'yaml') {
-      // 从表单切换到YAML
+      // 從表單切換到YAML
       const yaml = formToYaml();
       setYamlContent(yaml);
     } else if (editMode === 'yaml' && newMode === 'form') {
-      // 从YAML切换到表单
+      // 從YAML切換到表單
       if (!yamlToForm()) {
-        return; // 解析失败，不切换
+        return; // 解析失敗，不切換
       }
     }
     
@@ -273,7 +273,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     setDryRunResult(null);
   };
 
-  // Dry-run 预检
+  // Dry-run 預檢
   const handleDryRun = async () => {
     let yaml: string;
     
@@ -283,7 +283,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       yaml = yamlContent;
     }
     
-    // 验证 YAML 格式
+    // 驗證 YAML 格式
     try {
       YAML.parse(yaml);
     } catch (err) {
@@ -314,7 +314,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     }
   };
 
-  // 提交创建/更新
+  // 提交建立/更新
   const submitYaml = async (yaml: string) => {
     if (!clusterId) {
       messageApi.error(t('messages.clusterNotFound'));
@@ -328,16 +328,16 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       messageApi.success(isEdit ? t('messages.updateSuccess') : t('messages.createSuccess'));
       navigate(`/clusters/${clusterId}/workloads`);
     } catch (error: unknown) {
-      console.error('提交失败:', error);
+      console.error('提交失敗:', error);
       messageApi.error(error instanceof Error ? error.message : t('messages.operationFailed'));
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 处理提交
+  // 處理提交
   const handleSubmit = async () => {
-    // 先进行预检
+    // 先進行預檢
     let yaml: string;
     
     if (editMode === 'form') {
@@ -352,7 +352,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       yaml = yamlContent;
     }
     
-    // 验证 YAML 格式
+    // 驗證 YAML 格式
     try {
       YAML.parse(yaml);
     } catch (err) {
@@ -360,12 +360,12 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       return;
     }
     
-    // 编辑模式下显示 diff 对比弹窗
+    // 編輯模式下顯示 diff 對比彈窗
     if (isEdit && originalYaml) {
       setPendingYaml(yaml);
       setDiffModalVisible(true);
     } else {
-      // 创建模式直接确认
+      // 建立模式直接確認
       modal.confirm({
         title: t('create.confirmCreate'),
         content: (
@@ -381,13 +381,13 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     }
   };
 
-  // 确认 diff 后提交
+  // 確認 diff 後提交
   const handleConfirmDiff = () => {
     setDiffModalVisible(false);
     submitYaml(pendingYaml);
   };
 
-  // 表单值变化时更新
+  // 表單值變化時更新
   const handleFormValuesChange = (changedValues: Partial<WorkloadFormData>, allValues: WorkloadFormData) => {
     setFormData(allValues);
     setDryRunResult(null);
@@ -403,7 +403,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
 
   return (
     <div style={{ padding: 24 }}>
-      {/* 头部 */}
+      {/* 頭部 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space>
           <Button 
@@ -415,7 +415,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
           <h2 style={{ margin: 0 }}>
             {isEdit ? t('create.edit') : t('create.create')} {workloadType}
           </h2>
-          {/* 编辑模式只支持 YAML 编辑，避免表单格式化导致复杂字段丢失 */}
+          {/* 編輯模式只支援 YAML 編輯，避免表單格式化導致複雜欄位丟失 */}
           {isEdit ? (
             <Tooltip title={t("create.yamlModeOnly")}>
               <Space>
@@ -459,7 +459,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
         </Space>
       </div>
       
-      {/* 预检结果 */}
+      {/* 預檢結果 */}
       {dryRunResult && (
         <Alert
           message={dryRunResult.success ? t('create.dryRunCheckPassed') : t('create.dryRunCheckFailed')}
@@ -472,7 +472,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
         />
       )}
       
-      {/* 内容区域 */}
+      {/* 內容區域 */}
       {editMode === 'form' ? (
         <WorkloadForm
           workloadType={workloadType}
@@ -505,7 +505,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
         </Card>
       )}
 
-      {/* Diff 对比弹窗 */}
+      {/* Diff 對比彈窗 */}
       <Modal
         title={
           <Space>

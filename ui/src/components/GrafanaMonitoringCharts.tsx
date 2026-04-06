@@ -30,7 +30,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
   const [timeRange, setTimeRange] = useState('1h');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  // 构建变量映射
+  // 構建變數對映
   const variables: Record<string, string> = {
     cluster: clusterName || clusterId,
   };
@@ -40,15 +40,15 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
   if (podName) variables.pod = podName;
   if (workloadName) variables.workload = workloadName;
 
-  // 获取配置
+  // 獲取配置
   const config = GRAFANA_CONFIG[type] as { dashboardUid: string; panels: Record<string, number> };
   const { dashboardUid, panels } = config;
 
-  // 时间范围
+  // 時間範圍
   const { from, to } = TIME_RANGE_MAP[timeRange];
   const refresh = autoRefresh ? '30s' : undefined;
 
-  // 渲染 Pod 类型的图表
+  // 渲染 Pod 型別的圖表
   const renderPodCharts = () => (
     <Row gutter={[16, 16]}>
       <Col span={12}>
@@ -73,7 +73,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="内存使用率"
+          title="記憶體使用率"
           height={250}
         />
       </Col>
@@ -86,7 +86,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="网络流量"
+          title="網路流量"
           height={250}
         />
       </Col>
@@ -99,7 +99,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="容器重启次数"
+          title="容器重啟次數"
           height={200}
         />
       </Col>
@@ -119,7 +119,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
     </Row>
   );
 
-  // 渲染集群类型的图表
+  // 渲染叢集型別的圖表
   const renderClusterCharts = () => (
     <Row gutter={[16, 16]}>
       <Col span={12}>
@@ -131,7 +131,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="集群 CPU 使用率"
+          title="叢集 CPU 使用率"
           height={250}
         />
       </Col>
@@ -144,7 +144,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="集群内存使用率"
+          title="叢集記憶體使用率"
           height={250}
         />
       </Col>
@@ -157,7 +157,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="Pod 状态概览"
+          title="Pod 狀態概覽"
           height={250}
         />
       </Col>
@@ -170,7 +170,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="网络流量"
+          title="網路流量"
           height={250}
         />
       </Col>
@@ -183,14 +183,14 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="节点资源使用概览"
+          title="節點資源使用概覽"
           height={300}
         />
       </Col>
     </Row>
   );
 
-  // 渲染节点类型的图表
+  // 渲染節點型別的圖表
   const renderNodeCharts = () => (
     <Row gutter={[16, 16]}>
       <Col span={12}>
@@ -215,7 +215,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="内存使用率"
+          title="記憶體使用率"
           height={250}
         />
       </Col>
@@ -228,7 +228,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="磁盘使用率"
+          title="磁碟使用率"
           height={250}
         />
       </Col>
@@ -241,14 +241,14 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="网络 I/O"
+          title="網路 I/O"
           height={250}
         />
       </Col>
     </Row>
   );
 
-  // 渲染工作负载类型的图表
+  // 渲染工作負載型別的圖表
   const renderWorkloadCharts = () => (
     <Row gutter={[16, 16]}>
       <Col span={24}>
@@ -260,7 +260,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="CPU 使用率（多 Pod 对比）"
+          title="CPU 使用率（多 Pod 對比）"
           height={300}
         />
       </Col>
@@ -273,7 +273,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="内存使用率（多 Pod 对比）"
+          title="記憶體使用率（多 Pod 對比）"
           height={300}
         />
       </Col>
@@ -286,7 +286,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="Pod 状态"
+          title="Pod 狀態"
           height={200}
         />
       </Col>
@@ -299,14 +299,14 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
           from={from}
           to={to}
           refresh={refresh}
-          title="重启次数"
+          title="重啟次數"
           height={200}
         />
       </Col>
     </Row>
   );
 
-  // 根据类型渲染对应图表
+  // 根據型別渲染對應圖表
   const renderCharts = () => {
     switch (type) {
       case 'cluster':
@@ -324,7 +324,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
 
   return (
     <Card
-      title="监控图表 (Grafana)"
+      title="監控圖表 (Grafana)"
       extra={
         <Space>
           <Select
@@ -332,18 +332,18 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
             onChange={setTimeRange}
             style={{ width: 100 }}
           >
-            <Option value="1h">1小时</Option>
-            <Option value="6h">6小时</Option>
-            <Option value="24h">24小时</Option>
+            <Option value="1h">1小時</Option>
+            <Option value="6h">6小時</Option>
+            <Option value="24h">24小時</Option>
             <Option value="7d">7天</Option>
           </Select>
           <Space>
-            <span>自动刷新</span>
+            <span>自動重新整理</span>
             <Switch
               checked={autoRefresh}
               onChange={setAutoRefresh}
-              checkedChildren="开"
-              unCheckedChildren="关"
+              checkedChildren="開"
+              unCheckedChildren="關"
             />
           </Space>
         </Space>
@@ -354,7 +354,7 @@ const GrafanaMonitoringCharts: React.FC<GrafanaMonitoringChartsProps> = ({
       ) : !grafanaUrl ? (
         <Alert
           message="Grafana 未配置"
-          description="请在「系统设置 → Grafana 设置」中配置 Grafana 地址。"
+          description="請在「系統設定 → Grafana 設定」中配置 Grafana 地址。"
           type="warning"
           showIcon
         />

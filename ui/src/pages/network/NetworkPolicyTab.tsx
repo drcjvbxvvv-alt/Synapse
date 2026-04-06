@@ -298,7 +298,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
 
   return (
     <div>
-      {/* 視圖切換 + 精靈按鈕 */}
+      {/* 檢視切換 + 精靈按鈕 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Segmented
           value={viewMode}
@@ -314,17 +314,17 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
         </Button>
       </div>
 
-      {/* 拓撲視圖 */}
+      {/* 拓撲檢視 */}
       {viewMode === 'topology' && (
         <NetworkPolicyTopology clusterId={clusterId} namespaces={namespaces} />
       )}
 
-      {/* 策略模擬視圖 */}
+      {/* 策略模擬檢視 */}
       {viewMode === 'simulate' && (
         <NetworkPolicySimulator clusterId={clusterId} namespaces={namespaces} />
       )}
 
-      {/* 列表視圖 */}
+      {/* 列表檢視 */}
       {viewMode === 'list' && (<>
       {/* 工具列 */}
       <Space style={{ marginBottom: 16 }} wrap>

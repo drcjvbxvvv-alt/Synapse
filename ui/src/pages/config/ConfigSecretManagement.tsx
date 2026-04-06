@@ -11,15 +11,15 @@ const { t } = useTranslation(['config', 'common']);
 const [searchParams, setSearchParams] = useSearchParams();
   const loading = false;
 
-  // 从URL读取当前Tab
+  // 從URL讀取當前Tab
   const activeTab = searchParams.get('tab') || 'configmap';
 
-  // Tab切换处理
+  // Tab切換處理
   const handleTabChange = (key: string) => {
     setSearchParams({ tab: key });
   };
 
-  // Tab项配置
+  // Tab項配置
   const tabItems = [
     {
       key: 'configmap',

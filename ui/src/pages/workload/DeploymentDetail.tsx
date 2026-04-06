@@ -69,7 +69,7 @@ const DeploymentDetail: React.FC = () => {
 const { t } = useTranslation(["workload", "common"]);
 const [loading, setLoading] = useState(false);
   const [deployment, setDeployment] = useState<DeploymentDetailData | null>(null);
-  // 从 URL 参数获取默认 Tab，支持通过 ?tab=monitoring 直接跳转到监控页
+  // 從 URL 參數獲取預設 Tab，支援透過 ?tab=monitoring 直接跳轉到監控頁
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'instances');
   const [clusterName, setClusterName] = useState<string>('');
 
@@ -87,7 +87,7 @@ const [loading, setLoading] = useState(false);
 
       setDeployment(response.workload);
     } catch (error) {
-      console.error('获取Deployment详情失败:', error);
+      console.error('獲取Deployment詳情失敗:', error);
       message.error(t('messages.fetchDetailError', { type: 'Deployment' }));
     } finally {
       setLoading(false);
@@ -98,7 +98,7 @@ const [loading, setLoading] = useState(false);
     loadDeploymentDetail();
   }, [loadDeploymentDetail]);
 
-  // 加载集群信息获取集群名称（用于 Grafana 数据源）
+  // 載入叢集資訊獲取叢集名稱（用於 Grafana 資料來源）
   useEffect(() => {
     const loadClusterInfo = async () => {
       if (!clusterId) return;
@@ -108,7 +108,7 @@ const [loading, setLoading] = useState(false);
           setClusterName(response.name);
         }
       } catch (error) {
-        console.error('获取集群信息失败:', error);
+        console.error('獲取叢集資訊失敗:', error);
       }
     };
     loadClusterInfo();
@@ -119,12 +119,12 @@ const [loading, setLoading] = useState(false);
     navigate(`/clusters/${clusterId}/workloads?tab=deployment`);
   };
 
-  // 刷新
+  // 重新整理
   const handleRefresh = () => {
     loadDeploymentDetail();
   };
 
-  // 渲染状态标签
+  // 渲染狀態標籤
   const renderStatusTag = (status: string) => {
     const statusMap: Record<string, { color: string; text: string }> = {
       'Running': { color: 'success', text: t('detailPage.statusMap.running') },
@@ -137,7 +137,7 @@ const [loading, setLoading] = useState(false);
     return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
   };
 
-  // 格式化时间
+  // 格式化時間
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '-';
     const date = new Date(timeStr);
@@ -268,7 +268,7 @@ const [loading, setLoading] = useState(false);
 
   return (
     <div style={{ padding: '16px 24px', background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* 顶部导航区域 */}
+      {/* 頂部導航區域 */}
       <div style={{ marginBottom: 16 }}>
         <Space>
           <Button 
@@ -281,7 +281,7 @@ const [loading, setLoading] = useState(false);
         </Space>
       </div>
 
-      {/* 标题和操作按钮 */}
+      {/* 標題和操作按鈕 */}
       <div style={{ 
         background: '#fff', 
         padding: '16px 24px', 
@@ -314,7 +314,7 @@ const [loading, setLoading] = useState(false);
         </Space>
       </div>
 
-      {/* 基础信息卡片 */}
+      {/* 基礎資訊卡片 */}
       <Card 
         title={t('detailPage.basicInfo')} 
         style={{ marginBottom: 16 }}
@@ -364,7 +364,7 @@ const [loading, setLoading] = useState(false);
         </Row>
       </Card>
 
-      {/* Tab页内容 */}
+      {/* Tab頁內容 */}
       <Card bordered={false}>
         <Tabs
           activeKey={activeTab}

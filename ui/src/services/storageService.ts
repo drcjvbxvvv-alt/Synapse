@@ -14,9 +14,9 @@ export type StorageClassDetailResponse = ApiResponse<StorageClass>;
 export type StorageClassYAMLResponse = ApiResponse<{ yaml: string }>;
 
 export class StorageService {
-  // ==================== PVC 相关方法 ====================
+  // ==================== PVC 相關方法 ====================
 
-  // 获取PVC列表
+  // 獲取PVC列表
   static async getPVCs(
     clusterId: string,
     namespace?: string,
@@ -45,7 +45,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/pvcs?${params}`);
   }
 
-  // 获取PVC详情
+  // 獲取PVC詳情
   static async getPVC(
     clusterId: string,
     namespace: string,
@@ -54,7 +54,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/pvcs/${namespace}/${name}`);
   }
 
-  // 获取PVC的YAML
+  // 獲取PVC的YAML
   static async getPVCYAML(
     clusterId: string,
     namespace: string,
@@ -63,7 +63,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/pvcs/${namespace}/${name}/yaml`);
   }
 
-  // 删除PVC
+  // 刪除PVC
   static async deletePVC(
     clusterId: string,
     namespace: string,
@@ -72,16 +72,16 @@ export class StorageService {
     return request.delete(`/clusters/${clusterId}/pvcs/${namespace}/${name}`);
   }
 
-  // 获取PVC所在的命名空间列表
+  // 獲取PVC所在的命名空間列表
   static async getPVCNamespaces(
     clusterId: string
   ): Promise<ApiResponse<{ name: string; count: number }[]>> {
     return request.get(`/clusters/${clusterId}/pvcs/namespaces`);
   }
 
-  // ==================== PV 相关方法 ====================
+  // ==================== PV 相關方法 ====================
 
-  // 获取PV列表
+  // 獲取PV列表
   static async getPVs(
     clusterId: string,
     status?: string,
@@ -105,7 +105,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/pvs?${params}`);
   }
 
-  // 获取PV详情
+  // 獲取PV詳情
   static async getPV(
     clusterId: string,
     name: string
@@ -113,7 +113,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/pvs/${name}`);
   }
 
-  // 获取PV的YAML
+  // 獲取PV的YAML
   static async getPVYAML(
     clusterId: string,
     name: string
@@ -121,7 +121,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/pvs/${name}/yaml`);
   }
 
-  // 删除PV
+  // 刪除PV
   static async deletePV(
     clusterId: string,
     name: string
@@ -129,9 +129,9 @@ export class StorageService {
     return request.delete(`/clusters/${clusterId}/pvs/${name}`);
   }
 
-  // ==================== StorageClass 相关方法 ====================
+  // ==================== StorageClass 相關方法 ====================
 
-  // 获取StorageClass列表
+  // 獲取StorageClass列表
   static async getStorageClasses(
     clusterId: string,
     search?: string,
@@ -150,7 +150,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/storageclasses?${params}`);
   }
 
-  // 获取StorageClass详情
+  // 獲取StorageClass詳情
   static async getStorageClass(
     clusterId: string,
     name: string
@@ -158,7 +158,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/storageclasses/${name}`);
   }
 
-  // 获取StorageClass的YAML
+  // 獲取StorageClass的YAML
   static async getStorageClassYAML(
     clusterId: string,
     name: string
@@ -166,7 +166,7 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/storageclasses/${name}/yaml`);
   }
 
-  // 删除StorageClass
+  // 刪除StorageClass
   static async deleteStorageClass(
     clusterId: string,
     name: string
@@ -174,9 +174,9 @@ export class StorageService {
     return request.delete(`/clusters/${clusterId}/storageclasses/${name}`);
   }
 
-  // ==================== 格式化工具函数 ====================
+  // ==================== 格式化工具函式 ====================
 
-  // 格式化访问模式
+  // 格式化訪問模式
   static formatAccessModes(modes: string[]): string {
     if (!modes || modes.length === 0) return '-';
     const shortNames: Record<string, string> = {
@@ -188,7 +188,7 @@ export class StorageService {
     return modes.map(mode => shortNames[mode] || mode).join(', ');
   }
 
-  // 获取PVC状态颜色
+  // 獲取PVC狀態顏色
   static getPVCStatusColor(status: string): string {
     const colorMap: Record<string, string> = {
       'Bound': 'green',
@@ -198,7 +198,7 @@ export class StorageService {
     return colorMap[status] || 'default';
   }
 
-  // 获取PV状态颜色
+  // 獲取PV狀態顏色
   static getPVStatusColor(status: string): string {
     const colorMap: Record<string, string> = {
       'Available': 'blue',
@@ -209,7 +209,7 @@ export class StorageService {
     return colorMap[status] || 'default';
   }
 
-  // 获取回收策略颜色
+  // 獲取回收策略顏色
   static getReclaimPolicyColor(policy: string): string {
     const colorMap: Record<string, string> = {
       'Retain': 'blue',
@@ -219,13 +219,13 @@ export class StorageService {
     return colorMap[policy] || 'default';
   }
 
-  // 格式化容量显示
+  // 格式化容量顯示
   static formatCapacity(capacity: string): string {
     if (!capacity) return '-';
     return capacity;
   }
 
-  // 格式化ClaimRef显示
+  // 格式化ClaimRef顯示
   static formatClaimRef(claimRef?: { namespace: string; name: string }): string {
     if (!claimRef) return '-';
     return `${claimRef.namespace}/${claimRef.name}`;

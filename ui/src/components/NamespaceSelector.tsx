@@ -1,6 +1,6 @@
 /**
- * 命名空间选择器组件
- * 根据用户权限自动过滤可选的命名空间
+ * 命名空間選擇器元件
+ * 根據使用者權限自動過濾可選的命名空間
  */
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -17,10 +17,10 @@ interface NamespaceSelectorProps {
   value?: string;
   onChange?: (value: string) => void;
   placeholder?: string;
-  allowAll?: boolean; // 是否允许选择"全部命名空间"
+  allowAll?: boolean; // 是否允許選擇"全部命名空間"
   style?: React.CSSProperties;
   disabled?: boolean;
-  showPermissionHint?: boolean; // 是否显示权限提示
+  showPermissionHint?: boolean; // 是否顯示權限提示
 }
 
 const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
@@ -38,7 +38,7 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
   const [loading, setLoading] = useState(false);
   const { filterNamespaces, hasAllNamespaceAccess, getAllowedNamespaces } = usePermission();
 
-  // 加载命名空间列表
+  // 載入命名空間列表
   useEffect(() => {
     const fetchNamespaces = async () => {
       if (!clusterId) return;
@@ -62,18 +62,18 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
     fetchNamespaces();
   }, [clusterId]);
 
-  // 根据权限过滤命名空间
+  // 根據權限過濾命名空間
   const filteredNamespaces = useMemo(() => {
     return filterNamespaces(allNamespaces, clusterId);
   }, [allNamespaces, filterNamespaces, clusterId]);
 
-  // 检查是否有全部命名空间权限
+  // 檢查是否有全部命名空間權限
   const hasFullAccess = hasAllNamespaceAccess(clusterId);
   
-  // 获取允许的命名空间配置（用于显示提示）
+  // 獲取允許的命名空間配置（用於顯示提示）
   const allowedConfig = getAllowedNamespaces(clusterId);
 
-  // 权限提示文案
+  // 權限提示文案
   const getPermissionHint = () => {
     if (hasFullAccess) {
       return t('namespaceSelector.fullAccessHint');

@@ -183,7 +183,7 @@ const NamespaceDetail: React.FC = () => {
   return (
     <div style={{ padding: 24 }}>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        {/* 头部操作栏 */}
+        {/* 頭部操作欄 */}
         <Card>
           <Space>
             <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>{t('common:actions.back')}</Button>
@@ -198,7 +198,7 @@ const NamespaceDetail: React.FC = () => {
           </Space>
         </Card>
 
-        {/* 资源统计卡片 */}
+        {/* 資源統計卡片 */}
         <Card title={t("detail.resourceStats")} bordered={false}>
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={6}>
@@ -244,7 +244,7 @@ const NamespaceDetail: React.FC = () => {
           </Row>
         </Card>
 
-        {/* 基本信息 */}
+        {/* 基本資訊 */}
         <Card title={t("detail.basicInfo")}>
           <Descriptions bordered column={2}>
             <Descriptions.Item label={t("detail.name")} span={2}>
@@ -261,7 +261,7 @@ const NamespaceDetail: React.FC = () => {
           </Descriptions>
         </Card>
 
-        {/* 资源配额 */}
+        {/* 資源配額 */}
         {namespaceDetail.resourceQuota && (
           <Card title={t("detail.resourceQuota")}>
             <Row gutter={[16, 16]}>
@@ -339,7 +339,7 @@ const NamespaceDetail: React.FC = () => {
             pagination={false}
             columns={[
               { title: '名稱', dataIndex: 'name', key: 'name' },
-              { title: '類型', dataIndex: 'limits', key: 'type', render: (l: any[]) => l?.map(i => i.type).join(', ') || '-' },
+              { title: '型別', dataIndex: 'limits', key: 'type', render: (l: any[]) => l?.map(i => i.type).join(', ') || '-' },
               { title: 'CPU Max', dataIndex: 'limits', key: 'cpumax', render: (l: any[]) => l?.[0]?.max?.cpu || '-' },
               { title: 'Memory Max', dataIndex: 'limits', key: 'memmax', render: (l: any[]) => l?.[0]?.max?.memory || '-' },
               {
@@ -368,7 +368,7 @@ const NamespaceDetail: React.FC = () => {
         <Modal open={lrModal} title="建立 LimitRange" onCancel={() => setLrModal(false)} onOk={handleSaveLR} okText="建立" cancelText="取消" destroyOnClose>
           <Form form={lrForm} layout="vertical" style={{ marginTop: 12 }}>
             <Form.Item name="name" label="名稱" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="type" label="類型" initialValue="Container" rules={[{ required: true }]}>
+            <Form.Item name="type" label="型別" initialValue="Container" rules={[{ required: true }]}>
               <Select options={[{ value: 'Container' }, { value: 'Pod' }, { value: 'PersistentVolumeClaim' }]} />
             </Form.Item>
             <Row gutter={12}>
@@ -384,7 +384,7 @@ const NamespaceDetail: React.FC = () => {
           </Form>
         </Modal>
 
-        {/* 标签 */}
+        {/* 標籤 */}
         <Card title={t("detail.labels")}>
           {namespaceDetail.labels && Object.keys(namespaceDetail.labels).length > 0 ? (
             <Space size={[8, 8]} wrap>
@@ -399,7 +399,7 @@ const NamespaceDetail: React.FC = () => {
           )}
         </Card>
 
-        {/* 注解 */}
+        {/* 註解 */}
         <Card title={t("detail.annotations")}>
           {namespaceDetail.annotations && Object.keys(namespaceDetail.annotations).length > 0 ? (
             <Descriptions bordered column={1}>

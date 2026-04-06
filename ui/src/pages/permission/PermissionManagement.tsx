@@ -58,10 +58,10 @@ import { parseApiError } from '../../utils/api';
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
-// 默认权限类型key（API未返回时使用）
+// 預設權限型別key（API未返回時使用）
 const defaultPermissionTypeKeys = ['admin', 'ops', 'dev', 'readonly', 'custom'] as const;
 
-// 权限类型卡片组件
+// 權限型別卡片元件
 const PermissionTypeCard: React.FC<{
   type: PermissionTypeInfo;
   selected: boolean;
@@ -94,7 +94,7 @@ const PermissionTypeCard: React.FC<{
 };
 
 const PermissionManagement: React.FC = () => {
-  // 状态
+  // 狀態
 const { t } = useTranslation(['permission', 'common']);
 const { message } = App.useApp();
 
@@ -116,35 +116,35 @@ const [loading, setLoading] = useState(false);
   const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  // 筛选状态
+  // 篩選狀態
   const [filterCluster, setFilterCluster] = useState<string>('');
   const [filterNamespace, setFilterNamespace] = useState<string>('');
   const [searchKeyword, setSearchKeyword] = useState('');
 
-  // 弹窗状态
+  // 彈窗狀態
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPermission, setEditingPermission] = useState<ClusterPermission | null>(null);
   const [form] = Form.useForm();
 
-  // 表单状态
+  // 表單狀態
   const [selectedPermissionType, setSelectedPermissionType] = useState<PermissionType>('admin');
   const [assignType, setAssignType] = useState<'user' | 'group'>('user');
   const [allNamespaces, setAllNamespaces] = useState(true);
   const [namespaceOptions, setNamespaceOptions] = useState<string[]>([]);
   const [namespacesLoading, setNamespacesLoading] = useState(false);
 
-  // 同步权限状态
+  // 同步權限狀態
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<Record<string, SyncStatusResult>>({});
   const [selectedClusterForSync, setSelectedClusterForSync] = useState<string | null>(null);
 
-  // 自定义角色编辑器状态
+  // 自定義角色編輯器狀態
   const [customRoleEditorVisible, setCustomRoleEditorVisible] = useState(false);
   const [customRoleClusterId, setCustomRoleClusterId] = useState<string>('0');
   const [customRoleClusterName, setCustomRoleClusterName] = useState<string>('');
 
-  // 加载数据
+  // 載入資料
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -173,7 +173,7 @@ const [loading, setLoading] = useState(false);
     loadData();
   }, [loadData]);
 
-  // 过滤后的数据
+  // 過濾後的資料
   const filteredPermissions = permissions.filter((p) => {
     if (filterCluster && p.cluster_id.toString() !== filterCluster) return false;
     if (searchKeyword) {
@@ -185,7 +185,7 @@ const [loading, setLoading] = useState(false);
     return true;
   });
 
-  // 打开添加权限弹窗
+  // 開啟新增權限彈窗
   const handleAdd = () => {
     setEditingPermission(null);
     setSelectedPermissionType('admin');
@@ -195,14 +195,14 @@ const [loading, setLoading] = useState(false);
     setModalVisible(true);
   };
 
-  // 打开同步权限弹窗
+  // 開啟同步權限彈窗
   const handleOpenSyncModal = () => {
     setSyncModalVisible(true);
-    // 加载所有集群的同步状态
+    // 載入所有叢集的同步狀態
     loadAllSyncStatus();
   };
 
-  // 加载所有集群的同步状态
+  // 載入所有叢集的同步狀態
   const loadAllSyncStatus = async () => {
     const statusMap: Record<string, SyncStatusResult> = {};
     for (const cluster of clusters) {
@@ -212,13 +212,13 @@ const [loading, setLoading] = useState(false);
           statusMap[cluster.id] = res;
         }
       } catch (err) {
-        console.error(`获取集群 ${cluster.name} 同步状态失败:`, err);
+        console.error(`獲取叢集 ${cluster.name} 同步狀態失敗:`, err);
       }
     }
     setSyncStatus(statusMap);
   };
 
-  // 同步权限到集群
+  // 同步權限到叢集
   const handleSyncPermissions = async (clusterId: string) => {
     setSelectedClusterForSync(clusterId);
     setSyncLoading(true);
@@ -237,7 +237,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 打开编辑权限弹窗
+  // 開啟編輯權限彈窗
   const handleEdit = (record: ClusterPermission) => {
     setEditingPermission(record);
     setSelectedPermissionType(record.permission_type);
@@ -258,7 +258,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 删除权限
+  // 刪除權限
   const handleDelete = async (id: number) => {
     try {
       await permissionService.deleteClusterPermission(id);
@@ -269,7 +269,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 批量删除
+  // 批次刪除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning(t('permission:actions.selectDeleteFirst'));
@@ -285,7 +285,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 提交表单
+  // 提交表單
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
@@ -316,7 +316,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 表格列定义
+  // 表格列定義
   const columns: ColumnsType<ClusterPermission> = [
     {
       title: t('permission:columns.subject'),
@@ -344,7 +344,7 @@ const [loading, setLoading] = useState(false);
       key: 'cluster_name',
       width: 150,
       render: (clusterName: string, record) => {
-        // 如果没有cluster_name，尝试从clusters列表中查找
+        // 如果沒有cluster_name，嘗試從clusters列表中查詢
         const name = clusterName || clusters.find(c => parseInt(c.id) === record.cluster_id)?.name || '-';
         return <Text>{name}</Text>;
       },
@@ -403,7 +403,7 @@ const [loading, setLoading] = useState(false);
 
   return (
     <div style={{ padding: '0' }}>
-      {/* 页面标题 */}
+      {/* 頁面標題 */}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space>
           <Title level={4} style={{ margin: 0 }}>{t('permission:title')}</Title>
@@ -421,7 +421,7 @@ const [loading, setLoading] = useState(false);
         </Space>
       </div>
 
-      {/* 权限类型说明卡片 - CCE风格 */}
+      {/* 權限型別說明卡片 - CCE風格 */}
       <Card style={{ marginBottom: 24 }} styles={{ body: { padding: '20px 24px' } }}>
         <Row gutter={24}>
           {(permissionTypes.length > 0 ? permissionTypes : defaultPermissionTypes).map((type, index, arr) => (
@@ -448,7 +448,7 @@ const [loading, setLoading] = useState(false);
         </Row>
       </Card>
 
-      {/* 筛选栏 */}
+      {/* 篩選欄 */}
       <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
         <Space size="large" wrap>
           <Space>
@@ -503,7 +503,7 @@ const [loading, setLoading] = useState(false);
         </Space>
       </Card>
 
-      {/* 权限列表表格 */}
+      {/* 權限列表表格 */}
       <Card styles={{ body: { padding: 0 } }}>
         <Table
           rowKey="id"
@@ -522,7 +522,7 @@ const [loading, setLoading] = useState(false);
         />
       </Card>
 
-      {/* 添加/编辑权限弹窗 */}
+      {/* 新增/編輯權限彈窗 */}
       <Modal
         title={editingPermission ? t('permission:editPermission') : t('permission:addPermission')}
         open={modalVisible}
@@ -539,7 +539,7 @@ const [loading, setLoading] = useState(false);
               permission_type: 'admin',
             }}
           >
-            {/* 选择集群 */}
+            {/* 選擇叢集 */}
             <Form.Item
               name="cluster_id"
               label={t('permission:form.selectCluster')}
@@ -577,7 +577,7 @@ const [loading, setLoading] = useState(false);
               </Select>
             </Form.Item>
 
-            {/* 权限类型选择 */}
+            {/* 權限型別選擇 */}
             <Form.Item label={t('permission:form.permissionType')} required>
               <Row gutter={12}>
                 {permissionTypes.map((type) => (
@@ -587,7 +587,7 @@ const [loading, setLoading] = useState(false);
                       selected={selectedPermissionType === type.type}
                       onClick={() => {
                         setSelectedPermissionType(type.type as PermissionType);
-                        // 如果权限类型要求全部命名空间，自动设置
+                        // 如果權限型別要求全部命名空間，自動設定
                         if (requiresAllNamespaces(type.type)) {
                           setAllNamespaces(true);
                         }
@@ -598,7 +598,7 @@ const [loading, setLoading] = useState(false);
               </Row>
             </Form.Item>
 
-            {/* 自定义权限时显示角色选择 */}
+            {/* 自定義權限時顯示角色選擇 */}
             {selectedPermissionType === 'custom' && (
               <Form.Item
                 name="custom_role_ref"
@@ -632,7 +632,7 @@ const [loading, setLoading] = useState(false);
               </Form.Item>
             )}
 
-            {/* 分配对象 */}
+            {/* 分配物件 */}
             {!editingPermission && (
               <>
                 <Form.Item label={t('permission:form.assignTo')}>
@@ -689,7 +689,7 @@ const [loading, setLoading] = useState(false);
                       showSearch
                       optionFilterProp="label"
                       options={userGroups.map((g) => ({
-                        label: `${g.name} (${g.users?.length || 0} 成员)`,
+                        label: `${g.name} (${g.users?.length || 0} 成員)`,
                         value: g.id,
                       }))}
                     />
@@ -698,7 +698,7 @@ const [loading, setLoading] = useState(false);
               </>
             )}
 
-            {/* 命名空间范围 */}
+            {/* 命名空間範圍 */}
             <Form.Item 
               label={t('permission:form.namespaceScope')}
               extra={requiresAllNamespaces(selectedPermissionType) 
@@ -738,7 +738,7 @@ const [loading, setLoading] = useState(false);
         </Spin>
       </Modal>
 
-      {/* 同步权限弹窗 */}
+      {/* 同步權限彈窗 */}
       <Modal
         title={t('permission:sync.title')}
         open={syncModalVisible}
@@ -836,7 +836,7 @@ const [loading, setLoading] = useState(false);
         </div>
       </Modal>
 
-      {/* 自定义角色编辑器 */}
+      {/* 自定義角色編輯器 */}
       <CustomRoleEditor
         visible={customRoleEditorVisible}
         clusterId={customRoleClusterId}

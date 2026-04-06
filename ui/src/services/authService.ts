@@ -1,14 +1,14 @@
 import { request } from '../utils/api';
 import type { ApiResponse, User, LDAPConfig, SSHConfig, GrafanaConfig, GrafanaDashboardSyncStatus, GrafanaDataSourceSyncStatus, MyPermissionsResponse } from '../types';
 
-// 登录请求参数
+// 登入請求參數
 export interface LoginRequest {
   username: string;
   password: string;
   auth_type?: 'local' | 'ldap';
 }
 
-// 登录响应
+// 登入響應
 export interface LoginResponse {
   token: string;
   user: User;
@@ -16,18 +16,18 @@ export interface LoginResponse {
   permissions?: MyPermissionsResponse[];
 }
 
-// 认证状态
+// 認證狀態
 export interface AuthStatus {
   ldap_enabled: boolean;
 }
 
-// 修改密码请求
+// 修改密碼請求
 export interface ChangePasswordRequest {
   old_password: string;
   new_password: string;
 }
 
-// LDAP测试认证请求
+// LDAP測試認證請求
 export interface TestLDAPAuthRequest {
   username: string;
   password: string;
@@ -46,7 +46,7 @@ export interface TestLDAPAuthRequest {
   group_attr?: string;
 }
 
-// LDAP测试认证响应
+// LDAP測試認證響應
 export interface TestLDAPAuthResponse {
   success: boolean;
   error?: string;
@@ -56,37 +56,37 @@ export interface TestLDAPAuthResponse {
   groups?: string[];
 }
 
-// 认证服务
+// 認證服務
 export const authService = {
-  // 用户登录
+  // 使用者登入
   login: (data: LoginRequest): Promise<ApiResponse<LoginResponse>> => {
     return request.post<LoginResponse>('/auth/login', data);
   },
 
-  // 用户登出
+  // 使用者登出
   logout: (): Promise<ApiResponse<null>> => {
     return request.post<null>('/auth/logout');
   },
 
-  // 获取当前用户信息
+  // 獲取當前使用者資訊
   getProfile: (): Promise<ApiResponse<User>> => {
     return request.get<User>('/auth/me');
   },
 
-  // 获取认证状态（是否启用LDAP）
+  // 獲取認證狀態（是否啟用LDAP）
   getAuthStatus: (): Promise<ApiResponse<AuthStatus>> => {
     return request.get<AuthStatus>('/auth/status');
   },
 
-  // 修改密码
+  // 修改密碼
   changePassword: (data: ChangePasswordRequest): Promise<ApiResponse<null>> => {
     return request.post<null>('/auth/change-password', data);
   },
 };
 
-// 系统设置服务
+// 系統設定服務
 export const systemSettingService = {
-  // 获取LDAP配置
+  // 獲取LDAP配置
   getLDAPConfig: (): Promise<ApiResponse<LDAPConfig>> => {
     return request.get<LDAPConfig>('/system/ldap/config');
   },
@@ -96,17 +96,17 @@ export const systemSettingService = {
     return request.put<null>('/system/ldap/config', config);
   },
 
-  // 测试LDAP连接
+  // 測試LDAP連線
   testLDAPConnection: (config: LDAPConfig): Promise<ApiResponse<{ success: boolean; error?: string }>> => {
     return request.post<{ success: boolean; error?: string }>('/system/ldap/test-connection', config);
   },
 
-  // 测试LDAP用户认证
+  // 測試LDAP使用者認證
   testLDAPAuth: (data: TestLDAPAuthRequest): Promise<ApiResponse<TestLDAPAuthResponse>> => {
     return request.post<TestLDAPAuthResponse>('/system/ldap/test-auth', data);
   },
 
-  // 获取SSH配置
+  // 獲取SSH配置
   getSSHConfig: (): Promise<ApiResponse<SSHConfig>> => {
     return request.get<SSHConfig>('/system/ssh/config');
   },
@@ -116,12 +116,12 @@ export const systemSettingService = {
     return request.put<null>('/system/ssh/config', config);
   },
 
-  // 获取SSH凭据（用于自动连接）
+  // 獲取SSH憑據（用於自動連線）
   getSSHCredentials: (): Promise<ApiResponse<SSHConfig>> => {
     return request.get<SSHConfig>('/system/ssh/credentials');
   },
 
-  // 获取 Grafana 配置
+  // 獲取 Grafana 配置
   getGrafanaConfig: (): Promise<ApiResponse<GrafanaConfig>> => {
     return request.get<GrafanaConfig>('/system/grafana/config');
   },
@@ -131,12 +131,12 @@ export const systemSettingService = {
     return request.put<null>('/system/grafana/config', config);
   },
 
-  // 测试 Grafana 连接
+  // 測試 Grafana 連線
   testGrafanaConnection: (config: GrafanaConfig): Promise<ApiResponse<{ success: boolean; error?: string }>> => {
     return request.post<{ success: boolean; error?: string }>('/system/grafana/test-connection', config);
   },
 
-  // 获取 Grafana Dashboard 同步状态
+  // 獲取 Grafana Dashboard 同步狀態
   getGrafanaDashboardStatus: (): Promise<ApiResponse<GrafanaDashboardSyncStatus>> => {
     return request.get<GrafanaDashboardSyncStatus>('/system/grafana/dashboard-status');
   },
@@ -146,12 +146,12 @@ export const systemSettingService = {
     return request.post<GrafanaDashboardSyncStatus>('/system/grafana/sync-dashboards');
   },
 
-  // 获取 Grafana 数据源同步状态
+  // 獲取 Grafana 資料來源同步狀態
   getGrafanaDataSourceStatus: (): Promise<ApiResponse<GrafanaDataSourceSyncStatus>> => {
     return request.get<GrafanaDataSourceSyncStatus>('/system/grafana/datasource-status');
   },
 
-  // 同步 Grafana 数据源
+  // 同步 Grafana 資料來源
   syncGrafanaDataSources: (): Promise<ApiResponse<GrafanaDataSourceSyncStatus>> => {
     return request.post<GrafanaDataSourceSyncStatus>('/system/grafana/sync-datasources');
   },
@@ -159,12 +159,12 @@ export const systemSettingService = {
 
 // Token 管理工具
 export const tokenManager = {
-  // 获取 token
+  // 獲取 token
   getToken: (): string | null => {
     return localStorage.getItem('token');
   },
 
-  // 设置 token
+  // 設定 token
   setToken: (token: string): void => {
     localStorage.setItem('token', token);
   },
@@ -174,7 +174,7 @@ export const tokenManager = {
     localStorage.removeItem('token');
   },
 
-  // 获取用户信息
+  // 獲取使用者資訊
   getUser: (): User | null => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -187,17 +187,17 @@ export const tokenManager = {
     return null;
   },
 
-  // 设置用户信息
+  // 設定使用者資訊
   setUser: (user: User): void => {
     localStorage.setItem('user', JSON.stringify(user));
   },
 
-  // 移除用户信息
+  // 移除使用者資訊
   removeUser: (): void => {
     localStorage.removeItem('user');
   },
 
-  // 获取权限信息
+  // 獲取權限資訊
   getPermissions: (): MyPermissionsResponse[] => {
     const permStr = localStorage.getItem('permissions');
     if (permStr) {
@@ -210,17 +210,17 @@ export const tokenManager = {
     return [];
   },
 
-  // 设置权限信息
+  // 設定權限資訊
   setPermissions: (permissions: MyPermissionsResponse[]): void => {
     localStorage.setItem('permissions', JSON.stringify(permissions));
   },
 
-  // 移除权限信息
+  // 移除權限資訊
   removePermissions: (): void => {
     localStorage.removeItem('permissions');
   },
 
-  // 检查是否已登录
+  // 檢查是否已登入
   isLoggedIn: (): boolean => {
     const token = localStorage.getItem('token');
     const expiresAt = localStorage.getItem('token_expires_at');
@@ -229,10 +229,10 @@ export const tokenManager = {
       return false;
     }
 
-    // 检查 token 是否过期
+    // 檢查 token 是否過期
     const expiresAtNum = parseInt(expiresAt, 10);
     if (Date.now() / 1000 > expiresAtNum) {
-      // Token 已过期，清理存储
+      // Token 已過期，清理儲存
       tokenManager.clear();
       return false;
     }
@@ -240,12 +240,12 @@ export const tokenManager = {
     return true;
   },
 
-  // 设置过期时间
+  // 設定過期時間
   setExpiresAt: (expiresAt: number): void => {
     localStorage.setItem('token_expires_at', expiresAt.toString());
   },
 
-  // 清除所有认证信息
+  // 清除所有認證資訊
   clear: (): void => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

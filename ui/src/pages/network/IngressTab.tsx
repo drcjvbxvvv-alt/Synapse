@@ -133,7 +133,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
     setLoadingNamespaces(true);
     IngressService.getIngressNamespaces(clusterId)
       .then(setNamespaces)
-      .catch((err) => console.error('加载命名空间失败:', err))
+      .catch((err) => console.error('載入命名空間失敗:', err))
       .finally(() => setLoadingNamespaces(false));
   }, [clusterId]);
 
@@ -358,7 +358,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
 
   return (
     <div>
-      {/* 操作按钮栏 */}
+      {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
           <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger>
@@ -373,7 +373,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         </Button>
       </div>
 
-      {/* 多条件搜索栏 */}
+      {/* 多條件搜尋欄 */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
@@ -435,7 +435,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         }}
       />
 
-      {/* YAML查看Modal */}
+      {/* YAML檢視Modal */}
       <Modal
         title="Ingress YAML"
         open={yamlModalVisible}

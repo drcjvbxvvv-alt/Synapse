@@ -439,7 +439,7 @@ const AIChatPanel: React.FC = () => {
                       Synapse AI 助手
                     </div>
                     <div style={{ fontSize: 13, color: '#999' }}>
-                      可查看叢集資源、診斷問題、生成 YAML
+                      可檢視叢集資源、診斷問題、生成 YAML
                     </div>
                     <div style={{ fontSize: 12, color: '#bbb', marginTop: 12 }}>
                       試試：「哪些 Pod 異常？」或 /yaml 生成 Deployment

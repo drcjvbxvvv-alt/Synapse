@@ -1,6 +1,6 @@
 /**
- * 权限守卫组件
- * 用于保护需要特定权限才能访问的路由和组件
+ * 權限守衛元件
+ * 用於保護需要特定權限才能訪問的路由和元件
  */
 
 import React from 'react';
@@ -25,8 +25,8 @@ interface PermissionGuardProps {
 }
 
 /**
- * 权限守卫组件
- * 根据用户权限决定是否渲染子组件
+ * 權限守衛元件
+ * 根據使用者權限決定是否渲染子元件
  */
 export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   children,
@@ -46,7 +46,7 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     );
   }
 
-  // 检查平台管理员权限
+  // 檢查平臺管理員權限
   if (platformAdminOnly) {
     const allPerms = Array.from(clusterPermissions.values());
     if (!isPlatformAdmin(currentUser?.username, allPerms)) {
@@ -66,7 +66,7 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     }
   }
 
-  // 检查集群级别权限
+  // 檢查叢集級別權限
   if (requiredPermission) {
     const userPermission = currentClusterPermission?.permission_type as PermissionType | undefined;
     if (!hasPermission(userPermission, requiredPermission)) {
@@ -90,7 +90,7 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
 };
 
 /**
- * 平台管理员路由守卫
+ * 平臺管理員路由守衛
  */
 export const PlatformAdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -108,7 +108,7 @@ export const PlatformAdminGuard: React.FC<{ children: React.ReactNode }> = ({ ch
 };
 
 /**
- * 集群权限路由守卫
+ * 叢集權限路由守衛
  */
 export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation('components');

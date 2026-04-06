@@ -51,7 +51,7 @@ import {
 const { Title, Text, Paragraph } = Typography;
 const { Panel } = Collapse;
 
-// 格式化字节数
+// 格式化位元組數
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
   const k = 1024;
@@ -68,7 +68,7 @@ const formatCPU = (cores: number): string => {
   return cores.toFixed(2) + ' cores';
 };
 
-// 格式化时间戳
+// 格式化時間戳
 const formatTime = (timestamp: number): string => {
   return new Date(timestamp * 1000).toLocaleString('zh-TW');
 };
@@ -77,22 +77,22 @@ const MonitoringCenter: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   // const navigate = useNavigate(); // 未使用
 
-  // 健康诊断状态
+  // 健康診斷狀態
 const { t } = useTranslation(['om', 'common']);
 const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
 
-  // 资源 Top N 状态
+  // 資源 Top N 狀態
   const [resourceTop, setResourceTop] = useState<ResourceTopResponse | null>(null);
   const [resourceLoading, setResourceLoading] = useState(false);
   const [resourceType, setResourceType] = useState<'cpu' | 'memory' | 'disk' | 'network'>('cpu');
   const [resourceLevel, setResourceLevel] = useState<'namespace' | 'workload' | 'pod'>('namespace');
 
-  // 控制面状态
+  // 控制面狀態
   const [controlPlaneStatus, setControlPlaneStatus] = useState<ControlPlaneStatusResponse | null>(null);
   const [controlPlaneLoading, setControlPlaneLoading] = useState(true);
 
-  // 加载健康诊断
+  // 載入健康診斷
   const loadHealthDiagnosis = useCallback(async () => {
     if (!clusterId) return;
     setHealthLoading(true);
@@ -100,14 +100,14 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
       const response = await omService.getHealthDiagnosis(clusterId);
       setHealthDiagnosis(response);
     } catch (error) {
-      console.error('加载健康诊断失败:', error);
+      console.error('載入健康診斷失敗:', error);
       message.error(t('common:messages.fetchError'));
     } finally {
       setHealthLoading(false);
     }
   }, [clusterId]);
 
-  // 加载资源 Top N
+  // 載入資源 Top N
   const loadResourceTop = useCallback(async () => {
     if (!clusterId) return;
     setResourceLoading(true);
@@ -119,14 +119,14 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
       });
       setResourceTop(response);
     } catch (error) {
-      console.error('加载资源 Top N 失败:', error);
+      console.error('載入資源 Top N 失敗:', error);
       message.error(t('common:messages.fetchError'));
     } finally {
       setResourceLoading(false);
     }
   }, [clusterId, resourceType, resourceLevel]);
 
-  // 加载控制面状态
+  // 載入控制面狀態
   const loadControlPlaneStatus = useCallback(async () => {
     if (!clusterId) return;
     setControlPlaneLoading(true);
@@ -134,32 +134,32 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
       const response = await omService.getControlPlaneStatus(clusterId);
       setControlPlaneStatus(response);
     } catch (error) {
-      console.error('加载控制面状态失败:', error);
+      console.error('載入控制面狀態失敗:', error);
       message.error(t('common:messages.fetchError'));
     } finally {
       setControlPlaneLoading(false);
     }
   }, [clusterId]);
 
-  // 初始化加载
+  // 初始化載入
   useEffect(() => {
     loadHealthDiagnosis();
     loadControlPlaneStatus();
   }, [loadHealthDiagnosis, loadControlPlaneStatus]);
 
-  // 资源类型或级别变化时重新加载
+  // 資源型別或級別變化時重新載入
   useEffect(() => {
     loadResourceTop();
   }, [loadResourceTop]);
 
-  // 刷新所有数据
+  // 重新整理所有資料
   const handleRefreshAll = () => {
     loadHealthDiagnosis();
     loadResourceTop();
     loadControlPlaneStatus();
   };
 
-  // 获取健康状态颜色
+  // 獲取健康狀態顏色
   const getHealthColor = (status: string): string => {
     switch (status) {
       case 'healthy':
@@ -173,7 +173,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
     }
   };
 
-  // 获取严重程度标签
+  // 獲取嚴重程度標籤
   const getSeverityTag = (severity: string) => {
     switch (severity) {
       case 'critical':
@@ -187,7 +187,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
     }
   };
 
-  // 获取分类图标
+  // 獲取分類圖示
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'node':
@@ -205,7 +205,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
     }
   };
 
-  // 获取分类名称
+  // 獲取分類名稱
   const getCategoryName = (category: string): string => {
     const names: Record<string, string> = {
       node: t('om:health.categoryNode'),
@@ -218,7 +218,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
     return names[category] || category;
   };
 
-  // 健康评分组件
+  // 健康評分元件
   const HealthScoreCard: React.FC = () => {
     if (healthLoading) {
       return (
@@ -240,7 +240,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
 
     const { health_score, status, risk_items, suggestions, category_scores, diagnosis_time } = healthDiagnosis;
 
-    // 按分类分组风险项
+    // 按分類分組風險項
     const groupedRisks = risk_items.reduce((acc, item) => {
       if (!acc[item.category]) {
         acc[item.category] = [];
@@ -265,7 +265,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
         }
       >
         <Row gutter={[24, 24]}>
-          {/* 健康评分 */}
+          {/* 健康評分 */}
           <Col xs={24} md={8}>
             <div style={{ textAlign: 'center' }}>
               <Progress
@@ -293,7 +293,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
             </div>
           </Col>
 
-          {/* 分类评分 */}
+          {/* 分類評分 */}
           <Col xs={24} md={8}>
             <Title level={5}>{t('om:health.categoryScores')}</Title>
             {Object.entries(category_scores).map(([category, score]) => (
@@ -317,7 +317,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
             ))}
           </Col>
 
-          {/* 诊断建议 */}
+          {/* 診斷建議 */}
           <Col xs={24} md={8}>
             <Title level={5}>{t('om:health.suggestions')}</Title>
             {suggestions.length > 0 ? (
@@ -339,7 +339,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
           </Col>
         </Row>
 
-        {/* 风险项列表 */}
+        {/* 風險項列表 */}
         {risk_items.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <Title level={5}>
@@ -396,7 +396,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
     );
   };
 
-  // 资源 Top N 组件
+  // 資源 Top N 元件
   const ResourceTopCard: React.FC = () => {
     const columns = [
       {
@@ -511,7 +511,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
     );
   };
 
-  // 控制面状态组件
+  // 控制面狀態元件
   const ControlPlaneCard: React.FC = () => {
     const getStatusBadge = (status: string) => {
       switch (status) {
@@ -657,7 +657,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div style={{ marginBottom: 24 }}>
         <Row justify="space-between" align="middle">
           <Col>
@@ -675,19 +675,19 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
         </Row>
       </div>
 
-      {/* 主内容区 */}
+      {/* 主內容區 */}
       <Row gutter={[24, 24]}>
-        {/* 健康诊断 - 全宽 */}
+        {/* 健康診斷 - 全寬 */}
         <Col span={24}>
           <HealthScoreCard />
         </Col>
 
-        {/* 资源 Top N */}
+        {/* 資源 Top N */}
         <Col xs={24} lg={12}>
           <ResourceTopCard />
         </Col>
 
-        {/* 控制面状态 */}
+        {/* 控制面狀態 */}
         <Col xs={24} lg={12}>
           <ControlPlaneCard />
         </Col>

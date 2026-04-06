@@ -51,7 +51,7 @@ import type {
 const { RangePicker } = DatePicker;
 const { Text, Paragraph } = Typography;
 
-// 操作图标映射
+// 操作圖示對映
 const actionIconMap: Record<string, React.ReactNode> = {
   login: <LoginOutlined style={{ color: '#52c41a' }} />,
   logout: <LogoutOutlined style={{ color: '#1890ff' }} />,
@@ -62,7 +62,7 @@ const actionIconMap: Record<string, React.ReactNode> = {
   scale: <EditOutlined style={{ color: '#fa8c16' }} />,
 };
 
-// 模块颜色映射
+// 模組顏色對映
 const moduleColorMap: Record<string, string> = {
   auth: 'purple',
   cluster: 'blue',
@@ -80,7 +80,7 @@ const moduleColorMap: Record<string, string> = {
   argocd: 'blue',
 };
 
-// HTTP 方法颜色映射
+// HTTP 方法顏色對映
 const methodColorMap: Record<string, string> = {
   POST: 'green',
   PUT: 'blue',
@@ -92,25 +92,25 @@ const OperationLogs: React.FC = () => {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
 
-  // 数据状态
+  // 資料狀態
   const { t } = useTranslation(['audit', 'common']);
 
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // 筛选状态
+  // 篩選狀態
   const [module, setModule] = useState<string>('');
   const [action, setAction] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [keyword, setKeyword] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
-  // 详情抽屉
+  // 詳情抽屜
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<OperationLogDetail | null>(null);
 
-  // React Query：模块和操作列表（長期快取，不常變）
+  // React Query：模組和操作列表（長期快取，不常變）
   const { data: modules = [] } = useQuery<ModuleOption[]>({
     queryKey: ['auditModules'],
     queryFn: () => auditService.getModules().then(r => r || []),
@@ -123,7 +123,7 @@ const OperationLogs: React.FC = () => {
     staleTime: 5 * 60_000,
   });
 
-  // React Query：統計數據
+  // React Query：統計資料
   const { data: stats = null } = useQuery<OperationLogStats | null>({
     queryKey: ['auditStats'],
     queryFn: () => auditService.getOperationLogStats(),
@@ -181,31 +181,31 @@ const OperationLogs: React.FC = () => {
     if (detailError) message.error(t('audit:operations.fetchDetailFailed'));
   }, [detailError, message, t]);
 
-  // 查看详情
+  // 檢視詳情
   const handleViewDetail = useCallback((record: OperationLogItem) => {
     setDrawerVisible(true);
     setPendingDetailId(record.id);
   }, []);
 
-  // 关闭抽屉
+  // 關閉抽屜
   const handleCloseDrawer = useCallback(() => {
     setDrawerVisible(false);
     setSelectedLog(null);
     setPendingDetailId(null);
   }, []);
 
-  // 刷新数据
+  // 重新整理資料
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['auditStats'] });
     queryClient.invalidateQueries({ queryKey: ['operationLogs'] });
   }, [queryClient]);
 
-  // 搜索（重置頁碼，React Query 會自動因 logsParams 變更而重新請求）
+  // 搜尋（重置頁碼，React Query 會自動因 logsParams 變更而重新請求）
   const handleSearch = () => {
     setCurrentPage(1);
   };
 
-  // 表格列定义
+  // 表格列定義
   const columns: ColumnsType<OperationLogItem> = [
     {
       title: t('audit:operations.time'),
@@ -333,7 +333,7 @@ const OperationLogs: React.FC = () => {
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* 统计卡片 */}
+      {/* 統計卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
           <Card size="small" bordered={false}>
@@ -405,7 +405,7 @@ const OperationLogs: React.FC = () => {
         }
         bordered={false}
       >
-        {/* 筛选区域 */}
+        {/* 篩選區域 */}
         <Space wrap style={{ marginBottom: 16 }}>
           <Select
             placeholder={t('operations.moduleFilter')}
@@ -486,7 +486,7 @@ const OperationLogs: React.FC = () => {
         />
       </Card>
 
-      {/* 详情抽屉 */}
+      {/* 詳情抽屜 */}
       <Drawer
         title={
           <Space>
@@ -502,7 +502,7 @@ const OperationLogs: React.FC = () => {
         <Spin spinning={detailLoading}>
           {selectedLog && (
             <>
-              {/* 基本信息 */}
+              {/* 基本資訊 */}
               <Descriptions
                 title={t('audit:operations.basicInfo')}
                 bordered
@@ -549,7 +549,7 @@ const OperationLogs: React.FC = () => {
                 </Descriptions.Item>
               </Descriptions>
 
-              {/* 请求信息 */}
+              {/* 請求資訊 */}
               <Descriptions
                 title={t('operations.requestInfo')}
                 bordered
@@ -582,7 +582,7 @@ const OperationLogs: React.FC = () => {
                 )}
               </Descriptions>
 
-              {/* 请求体 */}
+              {/* 請求體 */}
               {selectedLog.request_body && (
                 <Card
                   title={t('operations.requestBody')}
@@ -615,7 +615,7 @@ const OperationLogs: React.FC = () => {
                 </Card>
               )}
 
-              {/* 错误信息 */}
+              {/* 錯誤資訊 */}
               {!selectedLog.success && selectedLog.error_message && (
                 <Card
                   title={t('audit:operations.errorInfo')}

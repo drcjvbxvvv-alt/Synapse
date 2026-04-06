@@ -29,7 +29,7 @@ export const crdService = {
   listCRDs: (clusterId: string) =>
     request.get<ListResponse<CRDInfo>>(`/clusters/${clusterId}/crds`),
 
-  /** 列出特定 CRD 的所有資源實例 */
+  /** 列出特定 CRD 的所有資源例項 */
   listCRDResources: (
     clusterId: string,
     params: { group: string; version: string; plural: string; namespace?: string }
@@ -38,7 +38,7 @@ export const crdService = {
       params,
     }),
 
-  /** 取得單個 CRD 資源實例的完整物件 */
+  /** 取得單個 CRD 資源例項的完整物件 */
   getCRDResource: (
     clusterId: string,
     namespace: string,
@@ -50,7 +50,7 @@ export const crdService = {
       { params }
     ),
 
-  /** 刪除單個 CRD 資源實例 */
+  /** 刪除單個 CRD 資源例項 */
   deleteCRDResource: (
     clusterId: string,
     namespace: string,

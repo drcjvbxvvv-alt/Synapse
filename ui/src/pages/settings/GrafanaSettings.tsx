@@ -48,7 +48,7 @@ const GrafanaSettings: React.FC = () => {
       const response = await systemSettingService.getGrafanaDashboardStatus();
       setDashboardStatus(response);
     } catch {
-      // Dashboard 状态查询失败不影响主流程
+      // Dashboard 狀態查詢失敗不影響主流程
     }
   }, []);
 
@@ -57,7 +57,7 @@ const GrafanaSettings: React.FC = () => {
       const response = await systemSettingService.getGrafanaDataSourceStatus();
       setDataSourceStatus(response);
     } catch {
-      // 数据源状态查询失败不影响主流程
+      // 資料來源狀態查詢失敗不影響主流程
     }
   }, []);
 

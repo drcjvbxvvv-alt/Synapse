@@ -30,21 +30,21 @@ import type {
   GlobalAlertStats,
 } from '../../services/overviewService';
 
-// 图表分布数据接口
+// 圖表分佈資料介面
 interface ChartDistribution {
   name: string;
   value: number;
   clusterId?: number;
 }
 
-// 趋势数据接口
+// 趨勢資料介面
 interface TrendData {
   date: string;
   cluster: string;
   value: number;
 }
 
-// 图表颜色配置
+// 圖表顏色配置
 const CHART_COLORS = [
   '#5B8FF9', '#5AD8A6', '#F6BD16', '#E86452', '#6DC8EC',
   '#945FB9', '#FF9845', '#1E9493', '#FF99C3', '#9270CA',
@@ -62,7 +62,7 @@ const navigate = useNavigate();
   const [refreshInterval, setRefreshInterval] = useState<number>(30);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
 
-  // 数据状态
+  // 資料狀態
   const [stats, setStats] = useState<OverviewStatsResponse | null>(null);
   const [resourceUsage, setResourceUsage] = useState<ResourceUsageResponse | null>(null);
   const [distribution, setDistribution] = useState<ResourceDistributionResponse | null>(null);
@@ -70,7 +70,7 @@ const navigate = useNavigate();
   const [abnormalWorkloads, setAbnormalWorkloads] = useState<AbnormalWorkload[]>([]);
   const [alertStats, setAlertStats] = useState<GlobalAlertStats | null>(null);
 
-  // 获取所有数据
+  // 獲取所有資料
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -96,10 +96,10 @@ console.error('Failed to fetch overview data:', error);
     }
   }, []);
 
-  // 获取趋势数据（使用较长的时间范围，一次请求获取所有数据）
+  // 獲取趨勢資料（使用較長的時間範圍，一次請求獲取所有資料）
   const fetchTrends = useCallback(async (podRange: string, nodeRange: string) => {
     try {
-      // 使用较长的时间范围，一次请求获取所有数据
+      // 使用較長的時間範圍，一次請求獲取所有資料
       const longerRange = podRange === '30d' || nodeRange === '30d' ? '30d' : '7d';
       const trendsRes = await overviewService.getTrends({ timeRange: longerRange });
       
@@ -120,7 +120,7 @@ console.error('Failed to fetch overview data:', error);
     fetchTrends(podTimeRange, nodeTimeRange);
   }, [fetchTrends, podTimeRange, nodeTimeRange]);
 
-  // 自动刷新
+  // 自動重新整理
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (autoRefresh) {
@@ -134,9 +134,9 @@ console.error('Failed to fetch overview data:', error);
     };
   }, [autoRefresh, refreshInterval, fetchData, fetchTrends, podTimeRange, nodeTimeRange]);
 
-  // ========== 数据转换 ==========
+  // ========== 資料轉換 ==========
 
-  // 转换分布数据为图表格式
+  // 轉換分佈資料為圖表格式
   const convertToChartDistribution = (data: ClusterResourceCount[] | undefined): ChartDistribution[] => {
     if (!data) return [];
     return data.map(item => ({
@@ -151,13 +151,13 @@ console.error('Failed to fetch overview data:', error);
   const cpuDistribution = convertToChartDistribution(distribution?.cpuDistribution);
   const memoryDistribution = convertToChartDistribution(distribution?.memoryDistribution);
 
-  // 计算总数
+  // 計算總數
   const totalNodes = nodeDistribution.reduce((sum, c) => sum + c.value, 0);
   const totalPods = podDistribution.reduce((sum, c) => sum + c.value, 0);
   const totalCPU = cpuDistribution.reduce((sum, c) => sum + c.value, 0);
   const totalMemory = memoryDistribution.reduce((sum, c) => sum + c.value, 0);
 
-  // 转换趋势数据为图表格式
+  // 轉換趨勢資料為圖表格式
   const convertTrendData = (trendSeries: TrendResponse['podTrends'] | undefined): TrendData[] => {
     if (!trendSeries || trendSeries.length === 0) return [];
     const result: TrendData[] = [];
@@ -166,7 +166,7 @@ console.error('Failed to fetch overview data:', error);
       series.dataPoints?.forEach(point => {
         const date = new Date(point.timestamp * 1000);
         const dateStr = `${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-        // 处理 null/undefined/NaN 值，使用前一个有效值
+        // 處理 null/undefined/NaN 值，使用前一個有效值
         let value = point.value;
         if (value === null || value === undefined || Number.isNaN(value)) {
           value = lastValidValue;
@@ -176,7 +176,7 @@ console.error('Failed to fetch overview data:', error);
         result.push({
           date: dateStr,
           cluster: series.clusterName,
-          value: Math.round(value), // 取整数
+          value: Math.round(value), // 取整數
         });
       });
     });
@@ -186,9 +186,9 @@ console.error('Failed to fetch overview data:', error);
   const podTrendData = convertTrendData(trends?.podTrends);
   const nodeTrendData = convertTrendData(trends?.nodeTrends);
 
-  // ========== 图表配置 ==========
+  // ========== 圖表配置 ==========
 
-  // 饼图配置
+  // 餅圖配置
   const getPieConfig = (data: ChartDistribution[], labelSuffix: string = '', title: string = '') => ({
     data,
     angleField: 'value',
@@ -248,7 +248,7 @@ tooltip: {
     },
   });
 
-  // 趋势图配置
+  // 趨勢圖配置
   const getTrendConfig = (data: TrendData[], yAxisTitle: string) => ({
     data,
     xField: 'date',
@@ -268,12 +268,12 @@ tooltip: {
     colorField: 'cluster',
   });
 
-// 格式化数字
+// 格式化數字
   const formatNumber = (num: number, unit: string = '') => {
     if (num >= 10000) return `${(num / 10000).toFixed(2)}w${unit}`;
     return `${num}${unit}`;
   };
-// 版本分布表格列
+// 版本分佈表格列
   const versionColumns = [
     {
       title: t('distribution.versionName'),
@@ -300,7 +300,7 @@ tooltip: {
     },
   ];
 
-  // 异常工作负载表格列
+  // 異常工作負載表格列
   const abnormalColumns = [
     {
       title: t('abnormal.workload'),
@@ -308,13 +308,13 @@ tooltip: {
       key: 'name',
       width: 180,
       render: (text: string, record: AbnormalWorkload) => {
-        // 根据类型构建跳转路径
+        // 根據型別構建跳轉路徑
         const getDetailPath = () => {
           const { clusterId, namespace, name, type } = record;
           if (type === 'Pod') {
             return `/clusters/${clusterId}/pods/${namespace}/${name}`;
           }
-          // Deployment/StatefulSet/DaemonSet 等工作负载
+          // Deployment/StatefulSet/DaemonSet 等工作負載
           const workloadType = type.toLowerCase();
           return `/clusters/${clusterId}/workloads/${workloadType}/${namespace}/${name}`;
         };
@@ -381,17 +381,17 @@ tooltip: {
     },
   ];
 
-  // 卡片样式
+  // 卡片樣式
   const cardStyle = { boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderRadius: 8 };
   const cardHeadStyle = { borderBottom: '1px solid #f0f0f0', padding: '12px 16px', minHeight: 48 };
 
-  // 获取统计数据，提供默认值
+  // 獲取統計資料，提供預設值
   const clusterStats = stats?.clusterStats || { total: 0, healthy: 0, unhealthy: 0, unknown: 0 };
   const nodeStats = stats?.nodeStats || { total: 0, ready: 0, notReady: 0 };
   const podStats = stats?.podStats || { total: 0, running: 0, pending: 0, failed: 0, succeeded: 0 };
   const versionDistribution = stats?.versionDistribution || [];
   
-  // 资源使用率
+  // 資源使用率
   const cpuUsage = resourceUsage?.cpu?.usagePercent || 0;
   const memoryUsage = resourceUsage?.memory?.usagePercent || 0;
   const storageUsage = resourceUsage?.storage?.usagePercent || 0;
@@ -406,7 +406,7 @@ tooltip: {
 
   return (
     <div style={{ padding: '0 4px' }}>
-      {/* 顶部工具栏 */}
+      {/* 頂部工具欄 */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -453,7 +453,7 @@ tooltip: {
         </Space>
       </div>
 
-      {/* 第一行: 全局健康状态概览 */}
+      {/* 第一行: 全域性健康狀態概覽 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
           <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
@@ -541,7 +541,7 @@ tooltip: {
         </Col>
       </Row>
 
-      {/* 第二行: 资源使用率 */}
+      {/* 第二行: 資源使用率 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={8}>
           <Card 
@@ -608,7 +608,7 @@ tooltip: {
         </Col>
       </Row>
 
-      {/* 第三行: 版本分布 + 异常工作负载 */}
+      {/* 第三行: 版本分佈 + 異常工作負載 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card
@@ -662,7 +662,7 @@ tooltip: {
         </Col>
       </Row>
 
-      {/* 第四行: Pod分布 + Node分布 */}
+      {/* 第四行: Pod分佈 + Node分佈 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={12}>
           <Card
@@ -710,7 +710,7 @@ tooltip: {
         </Col>
       </Row>
 
-      {/* 第五行: CPU分布 + 内存分布 */}
+      {/* 第五行: CPU分佈 + 記憶體分佈 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={12}>
           <Card
@@ -758,7 +758,7 @@ tooltip: {
         </Col>
       </Row>
 
-      {/* 第六行: Pod趋势 + Node趋势 */}
+      {/* 第六行: Pod趨勢 + Node趨勢 */}
       <Row gutter={16}>
         <Col span={12}>
           <Card

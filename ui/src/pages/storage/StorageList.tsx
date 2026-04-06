@@ -16,10 +16,10 @@ const { t } = useTranslation(['storage', 'common']);
 const [searchParams, setSearchParams] = useSearchParams();
   const loading = false;
   
-  // 从URL读取当前Tab
+  // 從URL讀取當前Tab
   const activeTab = searchParams.get('tab') || 'pvc';
 
-  // 统计信息状态（保留用于回调，但不显示）
+  // 統計資訊狀態（保留用於回撥，但不顯示）
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_pvcCount, setPVCCount] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -27,12 +27,12 @@ const [searchParams, setSearchParams] = useSearchParams();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_scCount, setSCCount] = useState(0);
 
-  // Tab切换处理
+  // Tab切換處理
   const handleTabChange = (key: string) => {
     setSearchParams({ tab: key });
   };
 
-  // Tab项配置
+  // Tab項配置
   const tabItems = [
     {
       key: 'pvc',

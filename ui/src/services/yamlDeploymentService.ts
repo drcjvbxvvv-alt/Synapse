@@ -1,7 +1,7 @@
 import type { WorkloadFormData, CanaryStrategyConfig, BlueGreenStrategyConfig, CanaryStep, RolloutStrategyConfig } from '../types/workload';
 import { buildRolloutStrategy, type CommonBuildParts } from './yamlCommonService';
 
-// ==================== Deployment 构建 ====================
+// ==================== Deployment 構建 ====================
 
 export const buildDeploymentSpec = (
   formData: WorkloadFormData,
@@ -28,7 +28,7 @@ export const buildDeploymentSpec = (
   },
 });
 
-// ==================== Rollout 构建 ====================
+// ==================== Rollout 構建 ====================
 
 export const buildRolloutSpec = (
   formData: WorkloadFormData,

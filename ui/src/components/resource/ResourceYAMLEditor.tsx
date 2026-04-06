@@ -38,7 +38,7 @@ export interface ResourceYAMLEditorProps {
 }
 
 /**
- * 通用资源 YAML 编辑器组件
+ * 通用資源 YAML 編輯器元件
  */
 const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
   clusterId,
@@ -193,7 +193,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
 
   return (
     <div style={{ padding: 24 }}>
-      {/* 头部 */}
+      {/* 頭部 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space>
           {onCancel && (
@@ -234,7 +234,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         </Space>
       </div>
 
-      {/* 预检结果 */}
+      {/* 預檢結果 */}
       {dryRunResult && (
         <Alert
           message={dryRunResult.success ? t('resourceYAMLEditor.dryRunPassTitle') : t('resourceYAMLEditor.dryRunFailTitle')}
@@ -247,7 +247,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         />
       )}
 
-      {/* YAML 编辑器 */}
+      {/* YAML 編輯器 */}
       <Card title={t('resourceYAMLEditor.yamlEdit')}>
         <MonacoEditor
           height="600px"
@@ -269,7 +269,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
         />
       </Card>
 
-      {/* Diff 对比弹窗 */}
+      {/* Diff 對比彈窗 */}
       <Modal
         title={
           <Space>

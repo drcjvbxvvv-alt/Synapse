@@ -40,11 +40,11 @@ const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  // loadingOverview 用于控制概览数据加载状态，当前未在 UI 中使用
+  // loadingOverview 用於控制概覽資料載入狀態，當前未在 UI 中使用
   const [, setLoadingOverview] = useState(false);
   const [cluster, setCluster] = useState<Cluster | null>(null);
   const [clusterOverview, setClusterOverview] = useState<ClusterOverview | null>(null);
-  // 从 URL 参数读取默认 Tab，默认为 events
+  // 從 URL 參數讀取預設 Tab，預設為 events
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'events');
 
   const fetchClusterDetail = useCallback(async () => {
@@ -82,7 +82,7 @@ const { id } = useParams<{ id: string }>();
     fetchClusterOverview();
   }, [fetchClusterDetail, fetchClusterOverview]);
 
-  // 获取状态标签
+  // 獲取狀態標籤
   const getStatusTag = (status: string) => {
 const statusConfig = {
       healthy: { color: 'success', icon: <CheckCircleOutlined />, text: t('status.healthy') },
@@ -101,7 +101,7 @@ const config = statusConfig[status as keyof typeof statusConfig] || statusConfig
   };
 
 
-  // 事件相关
+  // 事件相關
   const [events, setEvents] = useState<K8sEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
@@ -199,7 +199,7 @@ dataIndex: 'lastTimestamp',
     },
   ];
 
-  // 使用 Grafana Panel 嵌入的集群监控组件
+  // 使用 Grafana Panel 嵌入的叢集監控元件
   const ClusterMonitoring = () => (
     <ClusterMonitoringPanels
       clusterId={id || ''}
@@ -207,7 +207,7 @@ dataIndex: 'lastTimestamp',
     />
   );
 
-  // Tabs配置（使用懒加载，只有激活时才渲染）
+  // Tabs配置（使用懶載入，只有啟用時才渲染）
   const tabItems = [
     {
       key: 'monitoring',
@@ -278,7 +278,7 @@ type="error"
     <div>
       {cluster && (
         <>
-          {/* 集群基本信息 */}
+          {/* 叢集基本資訊 */}
           <Card style={{ marginBottom: 24 }}>
 <Descriptions title={t('detail.info')} column={3}>
               <Descriptions.Item label={t('detail.clusterName')}>{cluster.name}</Descriptions.Item>
@@ -310,9 +310,9 @@ type="error"
             </Descriptions>
           </Card>
 
-          {/* 统计卡片 */}
+          {/* 統計卡片 */}
             <Row gutter={[20, 20]} className="stats-grid">
-              {/* 节点概览 */}
+              {/* 節點概覽 */}
                      <Col xs={24} sm={12} lg={6}>
                       <div
                         role="button"
@@ -344,7 +344,7 @@ type="error"
 
 
 
-              {/* 工作负载概览（仅总数，渐变数字卡） */}
+              {/* 工作負載概覽（僅總數，漸變數字卡） */}
                <Col xs={24} sm={12} lg={6}>
                 <div
                   role="button"
@@ -381,13 +381,13 @@ type="error"
               </Col>
             </Row>
 
-          {/* 详细信息标签页 */}
+          {/* 詳細資訊標籤頁 */}
           <Card>
             <Tabs 
               activeKey={activeTab} 
               onChange={(key) => {
                 setActiveTab(key);
-                // 同步更新 URL 参数
+                // 同步更新 URL 參數
                 setSearchParams({ tab: key });
               }}
               items={tabItems}

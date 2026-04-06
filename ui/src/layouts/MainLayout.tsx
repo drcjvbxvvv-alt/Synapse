@@ -56,7 +56,7 @@ import {
 
 const { Header, Sider, Content } = Layout;
 
-// 自定义滚动条和菜单样式
+// 自定義捲軸和選單樣式
 const scrollbarStyles = `
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -129,7 +129,7 @@ const scrollbarStyles = `
   }
 `;
 
-// 注入样式
+// 注入樣式
 if (typeof document !== 'undefined') {
   const styleElement = document.createElement('style');
   styleElement.textContent = scrollbarStyles;
@@ -167,7 +167,7 @@ const MainLayout: React.FC = () => {
     setOpenKeys(getDefaultOpenKeys());
   }, [getDefaultOpenKeys]);
 
-  // 处理菜单展开/折叠
+  // 處理選單展開/摺疊
   const handleOpenChange = (keys: string[]) => {
     setOpenKeys(keys);
   };
@@ -175,7 +175,7 @@ const MainLayout: React.FC = () => {
   const getSelectedKeys = () => {
     const path = location.pathname;
     
-    // 集群详情页面的路由匹配
+    // 叢集詳情頁面的路由匹配
     if (path.match(/\/clusters\/[^/]+\/overview/)) return ['cluster-overview'];
     if (path.match(/\/clusters\/[^/]+\/workloads/)) return ['k8s-workloads'];
     if (path.match(/\/clusters\/[^/]+\/pods/)) return ['k8s-pods'];
@@ -198,7 +198,7 @@ const MainLayout: React.FC = () => {
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
     if (path.match(/\/clusters\/[^/]+\/cost-insights/)) return ['cost-insights'];
     
-    // 主页面的路由匹配
+    // 主頁面的路由匹配
     if (path === '/overview' || path === '/') return ['overview'];
     if (path.startsWith('/clusters') && !path.match(/\/clusters\/[^/]+\//)) return ['cluster-management'];
     if (path === '/access/users') return ['access-users'];
@@ -215,7 +215,7 @@ const MainLayout: React.FC = () => {
     return ['overview'];
   };
 
-  // 主页面侧边栏菜单
+  // 主頁面側邊欄選單
   const mainMenuItems: MenuItem[] = [
     {
       key: 'overview',
@@ -232,24 +232,24 @@ const MainLayout: React.FC = () => {
     {
       key: 'access-control',
       icon: <KeyOutlined />,
-      label: '访问控制',
+      label: '訪問控制',
       children: [
         {
           key: 'access-users',
           icon: <UserOutlined />,
-          label: '用户管理',
+          label: '使用者管理',
           onClick: () => navigate('/access/users'),
         },
         {
           key: 'access-user-groups',
           icon: <ClusterOutlined />,
-          label: '用户组管理',
+          label: '使用者組管理',
           onClick: () => navigate('/access/user-groups'),
         },
         {
           key: 'access-permissions',
           icon: <KeyOutlined />,
-          label: '权限分配',
+          label: '權限分配',
           onClick: () => navigate('/access/permissions'),
         },
       ],
@@ -293,7 +293,7 @@ const MainLayout: React.FC = () => {
     },
   ];
 
-  // 集群详情页侧边栏菜单
+  // 叢集詳情頁側邊欄選單
   const clusterDetailMenuItems: MenuItem[] = [
     {
       key: 'cluster-overview',
@@ -540,16 +540,16 @@ const MainLayout: React.FC = () => {
     },
   ];
 
-  // 获取当前用户信息
+  // 獲取當前使用者資訊
   const currentUser = tokenManager.getUser();
   
-  // 获取当前集群权限（用于集群内层菜单过滤）
+  // 獲取當前叢集權限（用於叢集內層選單過濾）
   const { currentClusterPermission, clusterPermissions } = usePermission();
   const allPerms = useMemo(() => Array.from(clusterPermissions.values()), [clusterPermissions]);
   const isUserPlatformAdmin = useMemo(() => isPlatformAdmin(currentUser?.username, allPerms), [currentUser, allPerms]);
   const currentPermissionType = currentClusterPermission?.permission_type as PermissionType | undefined;
 
-  // 过滤外层主菜单
+  // 過濾外層主選單
   const filterMainMenuItems = useCallback((items: MenuItem[]): MenuItem[] => {
     return items.filter((item) => {
       if (!item || typeof item !== 'object' || !('key' in item)) return true;
@@ -562,7 +562,7 @@ const MainLayout: React.FC = () => {
         return false;
       }
       
-      // 递归过滤子菜单
+      // 遞迴過濾子選單
       if ('children' in item && Array.isArray(item.children)) {
         const filteredChildren = filterMainMenuItems(item.children as MenuItem[]);
         if (filteredChildren.length === 0) return false;
@@ -573,24 +573,24 @@ const MainLayout: React.FC = () => {
     });
   }, [isUserPlatformAdmin]);
 
-  // 过滤集群内层菜单
+  // 過濾叢集內層選單
   const filterClusterMenuItems = useCallback((items: MenuItem[]): MenuItem[] => {
     return items.filter((item) => {
       if (!item || typeof item !== 'object' || !('key' in item)) return true;
       const key = item.key as string;
       const config = CLUSTER_MENU_PERMISSIONS[key];
       
-      // 如果没有配置，默认显示
+      // 如果沒有配置，預設顯示
       if (!config) return true;
       
-      // 检查权限要求
+      // 檢查權限要求
       if (config.requiredPermission) {
         if (!hasPermission(currentPermissionType, config.requiredPermission)) {
           return false;
         }
       }
       
-      // 递归过滤子菜单
+      // 遞迴過濾子選單
       if ('children' in item && Array.isArray(item.children)) {
         const filteredChildren = filterClusterMenuItems(item.children as MenuItem[]);
         if (filteredChildren.length === 0) return false;
@@ -608,14 +608,14 @@ const MainLayout: React.FC = () => {
     [isClusterDetail, filterClusterMenuItems, filterMainMenuItems, clusterDetailMenuItems, mainMenuItems]
   );
   
-  // 处理用户名显示，去掉末尾的数字
+  // 處理使用者名稱顯示，去掉末尾的數字
   const getDisplayName = () => {
     const name = currentUser?.display_name || currentUser?.username || 'User';
-    // 去掉末尾的数字，例如 "王植4" -> "王植"
+    // 去掉末尾的數字，例如 "王植4" -> "王植"
     return name.replace(/\d+$/, '');
   };
   
-  // 处理用户菜单点击
+  // 處理使用者選單點選
   const handleUserMenuClick: AntMenuProps['onClick'] = ({ key }) => {
     if (key === 'logout') {
       tokenManager.clear();

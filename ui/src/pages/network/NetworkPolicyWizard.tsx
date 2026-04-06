@@ -158,7 +158,7 @@ const NetworkPolicyWizard: React.FC<Props> = ({ clusterId, namespaces, open, onC
 
             <Row gutter={12} style={{ marginBottom: 8 }}>
               <Col span={12}>
-                <Text style={{ fontSize: 12 }}>{direction === 'ingress' ? '來源類型' : '目標類型'}</Text>
+                <Text style={{ fontSize: 12 }}>{direction === 'ingress' ? '來源型別' : '目標型別'}</Text>
                 <Select
                   value={rule.type}
                   onChange={v => updateRule(rule.id, { type: v })}
@@ -201,7 +201,7 @@ const NetworkPolicyWizard: React.FC<Props> = ({ clusterId, namespaces, open, onC
             )}
 
             <div>
-              <Text style={{ fontSize: 12 }}>連接埠（留空 = 所有）</Text>
+              <Text style={{ fontSize: 12 }}>連線連接埠（留空 = 所有）</Text>
               {rule.ports.map((p, pi) => (
                 <Row key={pi} gutter={8} style={{ marginTop: 4 }}>
                   <Col span={8}>
@@ -211,7 +211,7 @@ const NetworkPolicyWizard: React.FC<Props> = ({ clusterId, namespaces, open, onC
                       options={[{ value: 'TCP', label: 'TCP' }, { value: 'UDP', label: 'UDP' }, { value: 'SCTP', label: 'SCTP' }]} />
                   </Col>
                   <Col span={12}>
-                    <Input placeholder="連接埠號" value={p.port}
+                    <Input placeholder="連線連接埠號" value={p.port}
                       onChange={e => updateRule(rule.id, { ports: rule.ports.map((pp, i) => i === pi ? { ...pp, port: e.target.value } : pp) })} />
                   </Col>
                   <Col span={4}><Button danger size="small" icon={<DeleteOutlined />}
@@ -220,7 +220,7 @@ const NetworkPolicyWizard: React.FC<Props> = ({ clusterId, namespaces, open, onC
               ))}
               <Button size="small" icon={<PlusOutlined />} style={{ marginTop: 6 }}
                 onClick={() => updateRule(rule.id, { ports: [...rule.ports, { protocol: 'TCP', port: '' }] })}>
-                新增連接埠
+                新增連線連接埠
               </Button>
             </div>
           </div>
@@ -280,7 +280,7 @@ const NetworkPolicyWizard: React.FC<Props> = ({ clusterId, namespaces, open, onC
     // Step 2: Policy types + rules
     <div key="s2" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Title level={5} style={{ margin: 0 }}>流量規則</Title>
-      <Form.Item label="策略類型" required style={{ marginBottom: 0 }}>
+      <Form.Item label="策略型別" required style={{ marginBottom: 0 }}>
         <Select mode="multiple" value={policyTypes} onChange={setPolicyTypes}
           options={[{ value: 'Ingress', label: 'Ingress（入站）' }, { value: 'Egress', label: 'Egress（出站）' }]} />
       </Form.Item>

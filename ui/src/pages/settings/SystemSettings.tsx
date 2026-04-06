@@ -14,6 +14,8 @@ import LDAPSettings from './LDAPSettings';
 import SSHSettings from './SSHSettings';
 import GrafanaSettings from './GrafanaSettings';
 import AISettings from './AISettings';
+import SecuritySettings from './SecuritySettings';
+import NotificationSettings from './NotificationSettings';
 import { useTranslation } from 'react-i18next';
 
 const { Title } = Typography;
@@ -71,11 +73,7 @@ const [activeTab, setActiveTab] = useState('ssh');
           {t('settings:tabs.security')}
         </span>
       ),
-      children: (
-        <div style={{ padding: 24, textAlign: 'center', color: '#999' }}>
-          {t('settings:featureInDev', { feature: t('settings:tabs.security') })}
-        </div>
-      ),
+      children: <SecuritySettings />,
     },
     {
       key: 'notification',
@@ -85,11 +83,7 @@ const [activeTab, setActiveTab] = useState('ssh');
           {t('settings:tabs.notification')}
         </span>
       ),
-      children: (
-        <div style={{ padding: 24, textAlign: 'center', color: '#999' }}>
-          {t('settings:featureInDev', { feature: t('settings:tabs.notification') })}
-        </div>
-      ),
+      children: <NotificationSettings />,
     },
   ];
 

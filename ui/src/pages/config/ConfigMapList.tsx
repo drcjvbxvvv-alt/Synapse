@@ -37,22 +37,22 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
   const navigate = useNavigate();
   const { message } = App.useApp();
   
-  // 数据状态
+  // 資料狀態
 const { t } = useTranslation(['config', 'common']);
 const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
   const [configMaps, setConfigMaps] = useState<ConfigMapListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   
-  // 命名空间
+  // 命名空間
   const [, setNamespaces] = useState<NamespaceItem[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
-  // 多条件搜索状态
+  // 多條件搜尋狀態
   interface SearchCondition {
     field: 'name' | 'namespace' | 'label';
     value: string;
@@ -61,17 +61,17 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
   const [currentSearchField, setCurrentSearchField] = useState<'name' | 'namespace' | 'label'>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
 
-  // 列设置状态
+  // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'namespace', 'labels', 'dataCount', 'creationTimestamp', 'age'
   ]);
 
-  // 排序状态
+  // 排序狀態
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
-  // 添加搜索条件
+  // 新增搜尋條件
   const addSearchCondition = () => {
     if (!currentSearchValue.trim()) return;
     
@@ -84,18 +84,18 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
     setCurrentSearchValue('');
   };
 
-  // 删除搜索条件
+  // 刪除搜尋條件
   const removeSearchCondition = (index: number) => {
     setSearchConditions(searchConditions.filter((_, i) => i !== index));
   };
 
-  // 清空所有搜索条件
+  // 清空所有搜尋條件
   const clearAllConditions = () => {
     setSearchConditions([]);
     setCurrentSearchValue('');
   };
 
-  // 获取搜索字段的显示名称
+  // 獲取搜尋欄位的顯示名稱
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('config:list.searchFields.name'),
@@ -105,7 +105,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
     return labels[field] || field;
   };
 
-  // 客户端过滤ConfigMap列表
+  // 客戶端過濾ConfigMap列表
   const filterConfigMaps = useCallback((items: ConfigMapListItem[]): ConfigMapListItem[] => {
     if (searchConditions.length === 0) return items;
 
@@ -134,18 +134,18 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
     });
   }, [searchConditions]);
 
-  // 加载命名空间列表
+  // 載入命名空間列表
   const loadNamespaces = useCallback(async () => {
     if (!clusterId) return;
     try {
       const data = await configMapService.getConfigMapNamespaces(Number(clusterId));
       setNamespaces(data);
     } catch (error) {
-      console.error('加载命名空间失败:', error);
+      console.error('載入命名空間失敗:', error);
     }
   }, [clusterId]);
 
-  // 加载ConfigMap列表（获取所有数据）
+  // 載入ConfigMap列表（獲取所有資料）
   const loadConfigMaps = useCallback(async () => {
     if (!clusterId) return;
     
@@ -153,19 +153,19 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
     try {
       const response = await configMapService.getConfigMaps(Number(clusterId), {
         page: 1,
-        pageSize: 10000, // 获取所有数据
+        pageSize: 10000, // 獲取所有資料
       });
       
       setAllConfigMaps(response.items || []);
     } catch (error) {
-      console.error('获取ConfigMap列表失败:', error);
+      console.error('獲取ConfigMap列表失敗:', error);
       message.error(t('config:list.messages.fetchConfigMapError'));
     } finally {
       setLoading(false);
     }
   }, [clusterId, message]);
 
-  // 删除ConfigMap
+  // 刪除ConfigMap
   const handleDelete = async (namespace: string, name: string) => {
     if (!clusterId) return;
     try {
@@ -173,12 +173,12 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
       message.success(t('common:messages.deleteSuccess'));
       loadConfigMaps();
     } catch (error) {
-      console.error('删除失败:', error);
+      console.error('刪除失敗:', error);
       message.error(t('common:messages.deleteError'));
     }
   };
 
-  // 批量删除
+  // 批次刪除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning(t('config:list.messages.selectDeleteConfigMap'));
@@ -200,14 +200,14 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
           setSelectedRowKeys([]);
           loadConfigMaps();
         } catch (error) {
-          console.error('批量删除失败:', error);
+          console.error('批次刪除失敗:', error);
           message.error(t('config:list.messages.batchDeleteError'));
         }
       },
     });
   };
 
-  // 导出功能
+  // 匯出功能
   const handleExport = () => {
     try {
       const filteredData = filterConfigMaps(allConfigMaps);
@@ -252,23 +252,23 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
       link.click();
       message.success(t('config:list.messages.exportSuccess', { count: filteredData.length }));
     } catch (error) {
-      console.error('导出失败:', error);
+      console.error('匯出失敗:', error);
       message.error(t('common:messages.exportError'));
     }
   };
 
-  // 列设置保存
+  // 列設定儲存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
     message.success(t('config:list.messages.columnSettingsSaved'));
   };
 
-  // 当搜索条件改变时重置到第一页
+  // 當搜尋條件改變時重置到第一頁
   useEffect(() => {
     setCurrentPage(1);
   }, [searchConditions]);
 
-  // 当allConfigMaps、搜索条件、分页参数、排序参数改变时，重新计算显示数据
+  // 當allConfigMaps、搜尋條件、分頁參數、排序參數改變時，重新計算顯示資料
   useEffect(() => {
     if (allConfigMaps.length === 0) {
       setConfigMaps([]);
@@ -277,10 +277,10 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
       return;
     }
     
-    // 1. 应用客户端过滤
+    // 1. 應用客戶端過濾
     let filteredItems = filterConfigMaps(allConfigMaps);
     
-    // 2. 应用排序
+    // 2. 應用排序
     if (sortField && sortOrder) {
       filteredItems = [...filteredItems].sort((a, b) => {
         const aValue = a[sortField as keyof ConfigMapListItem];
@@ -305,7 +305,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
       });
     }
     
-    // 3. 计算分页
+    // 3. 計算分頁
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedItems = filteredItems.slice(startIndex, endIndex);
@@ -315,13 +315,13 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
     onCountChange?.(filteredItems.length);
   }, [allConfigMaps, filterConfigMaps, currentPage, pageSize, sortField, sortOrder, onCountChange]);
 
-  // 初始加载数据
+  // 初始載入資料
   useEffect(() => {
     loadNamespaces();
     loadConfigMaps();
   }, [loadNamespaces, loadConfigMaps]);
 
-  // 行选择配置
+  // 行選擇配置
   const rowSelection = {
     selectedRowKeys,
     onChange: (keys: React.Key[]) => {
@@ -329,7 +329,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
     },
   };
 
-  // 定义所有可用列
+  // 定義所有可用列
   const allColumns: ColumnsType<ConfigMapListItem> = [
     {
       title: t('common:table.name'),
@@ -464,13 +464,13 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
     },
   ];
 
-  // 根据可见性过滤列
+  // 根據可見性過濾列
   const columns = allColumns.filter(col => {
     if (col.key === 'actions') return true;
     return visibleColumns.includes(col.key as string);
   });
 
-  // 表格排序处理
+  // 表格排序處理
   const handleTableChange = (
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
@@ -490,7 +490,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
 
   return (
     <div>
-      {/* 操作按钮栏 */}
+      {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
           <Button
@@ -514,7 +514,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
         </Button>
       </div>
 
-      {/* 多条件搜索栏 */}
+      {/* 多條件搜尋欄 */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
@@ -547,7 +547,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
           <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
         </div>
 
-        {/* 搜索条件标签 */}
+        {/* 搜尋條件標籤 */}
         {searchConditions.length > 0 && (
           <div>
             <Space size="small" wrap>
@@ -599,7 +599,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
         }}
       />
 
-      {/* 列设置抽屉 */}
+      {/* 列設定抽屜 */}
       <Drawer
         title={t('common:search.columnSettings')}
         placement="right"

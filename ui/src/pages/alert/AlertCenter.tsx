@@ -67,7 +67,7 @@ const AlertCenter: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
 
-  // 状态
+  // 狀態
 const { t } = useTranslation(['alert', 'common']);
 const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -82,7 +82,7 @@ const [loading, setLoading] = useState(false);
   const [configEnabled, setConfigEnabled] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);
 
-  // 加载配置状态
+  // 載入配置狀態
   const loadConfig = useCallback(async () => {
     if (!clusterId) return;
     try {
@@ -90,14 +90,14 @@ const [loading, setLoading] = useState(false);
       const response = await alertService.getConfig(clusterId);
       setConfigEnabled(response?.enabled || false);
     } catch (error) {
-      console.error('加载配置失败:', error);
+      console.error('載入配置失敗:', error);
       setConfigEnabled(false);
     } finally {
       setConfigLoading(false);
     }
   }, [clusterId]);
 
-  // 加载告警数据
+  // 載入告警資料
   const loadAlerts = useCallback(async () => {
     if (!clusterId || !configEnabled) return;
     try {
@@ -111,21 +111,21 @@ const [loading, setLoading] = useState(false);
       setAlerts(alertsRes || []);
       setStats(statsRes);
     } catch (error) {
-      console.error('加载告警失败:', error);
+      console.error('載入告警失敗:', error);
       message.error(t('alert:center.loadFailed'));
     } finally {
       setLoading(false);
     }
   }, [clusterId, configEnabled, severityFilter]);
 
-  // 加载{t('alert:center.silenceRules')}
+  // 載入{t('alert:center.silenceRules')}
   const loadSilences = useCallback(async () => {
     if (!clusterId || !configEnabled) return;
     try {
       const response = await alertService.getSilences(clusterId);
       setSilences(response || []);
     } catch (error) {
-      console.error('加载静默规则失败:', error);
+      console.error('載入靜默規則失敗:', error);
     }
   }, [clusterId, configEnabled]);
 
@@ -140,17 +140,17 @@ const [loading, setLoading] = useState(false);
     }
   }, [configEnabled, loadAlerts, loadSilences]);
 
-  // 刷新数据
+  // 重新整理資料
   const handleRefresh = () => {
     loadAlerts();
     loadSilences();
   };
 
-  // 打开静默弹窗
+  // 開啟靜默彈窗
   const handleOpenSilenceModal = (alert?: Alert) => {
     setSelectedAlert(alert || null);
     if (alert) {
-      // 预填充告警的标签作为匹配器
+      // 預填充告警的標籤作為匹配器
       const matchers: Matcher[] = Object.entries(alert.labels).map(([name, value]) => ({
         name,
         value,
@@ -171,7 +171,7 @@ const [loading, setLoading] = useState(false);
     setSilenceModalVisible(true);
   };
 
-  // 创建静默规则
+  // 建立靜默規則
   const handleCreateSilence = async () => {
     try {
       const values = await silenceForm.validateFields();
@@ -191,7 +191,7 @@ const [loading, setLoading] = useState(false);
       loadSilences();
       loadAlerts();
     } catch (error: unknown) {
-      console.error('创建静默规则失败:', error);
+      console.error('建立靜默規則失敗:', error);
       let errorMsg = t('alert:center.silenceCreateFailed');
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { data?: { message?: string } } };
@@ -201,7 +201,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 删除静默规则
+  // 刪除靜默規則
   const handleDeleteSilence = async (silenceId: string) => {
     try {
       await alertService.deleteSilence(clusterId!, silenceId);
@@ -209,12 +209,12 @@ const [loading, setLoading] = useState(false);
       loadSilences();
       loadAlerts();
     } catch (error: unknown) {
-      console.error('删除静默规则失败:', error);
+      console.error('刪除靜默規則失敗:', error);
       message.error(t('alert:center.silenceDeleteFailed'));
     }
   };
 
-  // 获取严重程度颜色
+  // 獲取嚴重程度顏色
   const getSeverityColor = (severity: string) => {
     switch (severity?.toLowerCase()) {
       case 'critical':
@@ -228,7 +228,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 获取严重程度图标
+  // 獲取嚴重程度圖示
   const getSeverityIcon = (severity: string) => {
     switch (severity?.toLowerCase()) {
       case 'critical':
@@ -242,7 +242,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 获取状态颜色
+  // 獲取狀態顏色
   const getStatusColor = (state: string) => {
     switch (state) {
       case 'active':
@@ -256,7 +256,7 @@ const [loading, setLoading] = useState(false);
     }
   };
 
-  // 过滤告警
+  // 過濾告警
   const filteredAlerts = alerts.filter((alert) => {
     const matchSearch =
       !searchText ||
@@ -366,7 +366,7 @@ const [loading, setLoading] = useState(false);
     },
   ];
 
-  // 静默规则表格列
+  // 靜默規則表格列
   const silenceColumns: ColumnsType<Silence> = [
     {
       title: t('alert:center.matchRules'),
@@ -453,7 +453,7 @@ const [loading, setLoading] = useState(false);
     },
   ];
 
-  // 统计卡片
+  // 統計卡片
   const renderStatsCards = () => (
     <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
       <Col xs={12} sm={6}>
@@ -581,7 +581,7 @@ const [loading, setLoading] = useState(false);
     </div>
   );
 
-  // 静默规则 Tab
+  // 靜默規則 Tab
   const SilencesTab = () => (
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -640,7 +640,7 @@ const [loading, setLoading] = useState(false);
       label: (
         <span>
           <StopOutlined />
-          静默规则
+          靜默規則
           {silences.filter((s) => s.status.state === 'active').length > 0 && (
             <Badge
               count={silences.filter((s) => s.status.state === 'active').length}
@@ -723,7 +723,7 @@ const [loading, setLoading] = useState(false);
         <Tabs defaultActiveKey="alerts" items={tabItems} />
       </Card>
 
-      {/* 创建静默规则弹窗 */}
+      {/* 建立靜默規則彈窗 */}
       <Modal
         title={t('alert:center.createSilenceTitle')}
         open={silenceModalVisible}

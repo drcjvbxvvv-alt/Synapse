@@ -57,7 +57,7 @@ describe('NamespaceSelector', () => {
   it('should render with placeholder', () => {
     vi.mocked(namespaceService.getNamespaces).mockResolvedValue([])
 
-    render(<NamespaceSelector clusterId="1" placeholder="选择命名空间" />)
+    render(<NamespaceSelector clusterId="1" placeholder="選擇命名空間" />)
 
     expect(screen.getByRole('combobox')).toBeInTheDocument()
   })

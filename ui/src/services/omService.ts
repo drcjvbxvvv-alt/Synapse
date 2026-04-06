@@ -1,6 +1,6 @@
 import { request } from '../utils/api';
 
-// 健康诊断响应
+// 健康診斷響應
 export interface HealthDiagnosisResponse {
   health_score: number;
   status: 'healthy' | 'warning' | 'critical';
@@ -10,7 +10,7 @@ export interface HealthDiagnosisResponse {
   category_scores: Record<string, number>;
 }
 
-// 风险项
+// 風險項
 export interface RiskItem {
   id: string;
   category: 'node' | 'workload' | 'resource' | 'storage' | 'control_plane';
@@ -22,14 +22,14 @@ export interface RiskItem {
   solution: string;
 }
 
-// 资源 Top N 请求
+// 資源 Top N 請求
 export interface ResourceTopRequest {
   type: 'cpu' | 'memory' | 'disk' | 'network';
   level: 'namespace' | 'workload' | 'pod';
   limit?: number;
 }
 
-// 资源 Top N 响应
+// 資源 Top N 響應
 export interface ResourceTopResponse {
   type: string;
   level: string;
@@ -37,7 +37,7 @@ export interface ResourceTopResponse {
   query_time: number;
 }
 
-// 资源 Top 项
+// 資源 Top 項
 export interface ResourceTopItem {
   rank: number;
   name: string;
@@ -49,14 +49,14 @@ export interface ResourceTopItem {
   unit: string;
 }
 
-// 控制面状态响应
+// 控制面狀態響應
 export interface ControlPlaneStatusResponse {
   overall: 'healthy' | 'degraded' | 'unhealthy';
   components: ControlPlaneComponent[];
   check_time: number;
 }
 
-// 控制面组件
+// 控制面元件
 export interface ControlPlaneComponent {
   name: string;
   type: string;
@@ -67,7 +67,7 @@ export interface ControlPlaneComponent {
   instances?: ComponentInstance[];
 }
 
-// 组件指标
+// 元件指標
 export interface ComponentMetrics {
   request_rate?: number;
   error_rate?: number;
@@ -78,7 +78,7 @@ export interface ComponentMetrics {
   member_count?: number;
 }
 
-// 组件实例
+// 元件例項
 export interface ComponentInstance {
   name: string;
   node: string;
@@ -88,17 +88,17 @@ export interface ComponentInstance {
 }
 
 export const omService = {
-  // 获取集群健康诊断
+  // 獲取叢集健康診斷
   getHealthDiagnosis: (clusterId: string) => {
     return request.get<HealthDiagnosisResponse>(`/clusters/${clusterId}/om/health-diagnosis`);
   },
 
-  // 获取资源消耗 Top N
+  // 獲取資源消耗 Top N
   getResourceTop: (clusterId: string, params: ResourceTopRequest) => {
     return request.get<ResourceTopResponse>(`/clusters/${clusterId}/om/resource-top`, { params });
   },
 
-  // 获取控制面组件状态
+  // 獲取控制面元件狀態
   getControlPlaneStatus: (clusterId: string) => {
     return request.get<ControlPlaneStatusResponse>(`/clusters/${clusterId}/om/control-plane-status`);
   },

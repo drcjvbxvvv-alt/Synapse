@@ -35,21 +35,21 @@ interface PVTabProps {
 const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   
-  // 数据状态
+  // 資料狀態
 const { t } = useTranslation(['storage', 'common']);
 const [allPVs, setAllPVs] = useState<PV[]>([]);
   const [pvs, setPVs] = useState<PV[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   
-  // 选择行状态
+  // 選擇行狀態
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   
-  // 多条件搜索状态
+  // 多條件搜尋狀態
   interface SearchCondition {
     field: 'name' | 'status' | 'storageClassName' | 'persistentVolumeSource' | 'reclaimPolicy';
     value: string;
@@ -58,22 +58,22 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
   const [currentSearchField, setCurrentSearchField] = useState<'name' | 'status' | 'storageClassName' | 'persistentVolumeSource' | 'reclaimPolicy'>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
 
-  // 列设置状态
+  // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'status', 'capacity', 'accessModes', 'reclaimPolicy', 'storageClassName', 'claimRef', 'persistentVolumeSource', 'createdAt'
   ]);
   
-  // 排序状态
+  // 排序狀態
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
   
-  // YAML查看Modal
+  // YAML檢視Modal
   const [yamlModalVisible, setYamlModalVisible] = useState(false);
   const [currentYaml, setCurrentYaml] = useState('');
   const [yamlLoading, setYamlLoading] = useState(false);
 
-  // 添加搜索条件
+  // 新增搜尋條件
   const addSearchCondition = () => {
     if (!currentSearchValue.trim()) return;
     
@@ -86,18 +86,18 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     setCurrentSearchValue('');
   };
 
-  // 删除搜索条件
+  // 刪除搜尋條件
   const removeSearchCondition = (index: number) => {
     setSearchConditions(searchConditions.filter((_, i) => i !== index));
   };
 
-  // 清空所有搜索条件
+  // 清空所有搜尋條件
   const clearAllConditions = () => {
     setSearchConditions([]);
     setCurrentSearchValue('');
   };
 
-  // 获取搜索字段的显示名称
+  // 獲取搜尋欄位的顯示名稱
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('storage:search.fieldPVName'),
@@ -109,7 +109,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     return labels[field] || field;
   };
 
-  // 客户端过滤PV列表
+  // 客戶端過濾PV列表
   const filterPVs = useCallback((items: PV[]): PV[] => {
     if (searchConditions.length === 0) return items;
 
@@ -130,7 +130,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     });
   }, [searchConditions]);
 
-  // 获取PV列表
+  // 獲取PV列表
   const loadPVs = useCallback(async () => {
     if (!clusterId) return;
     
@@ -154,12 +154,12 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     }
   }, [clusterId, message]);
 
-  // 当搜索条件改变时重置到第一页
+  // 當搜尋條件改變時重置到第一頁
   useEffect(() => {
     setCurrentPage(1);
   }, [searchConditions]);
 
-  // 当allPVs、搜索条件、分页参数、排序参数改变时，重新计算显示数据
+  // 當allPVs、搜尋條件、分頁參數、排序參數改變時，重新計算顯示資料
   useEffect(() => {
     if (allPVs.length === 0) {
       setPVs([]);
@@ -199,12 +199,12 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     onCountChange?.(filteredItems.length);
   }, [allPVs, filterPVs, currentPage, pageSize, sortField, sortOrder, onCountChange]);
 
-  // 初始加载数据
+  // 初始載入資料
   useEffect(() => {
     loadPVs();
   }, [loadPVs]);
 
-  // 查看YAML
+  // 檢視YAML
   const handleViewYAML = async (pv: PV) => {
     setYamlModalVisible(true);
     setYamlLoading(true);
@@ -223,7 +223,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     }
   };
 
-  // 删除PV
+  // 刪除PV
   const handleDelete = async (pv: PV) => {
     try {
       await StorageService.deletePV(
@@ -239,7 +239,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     }
   };
 
-  // 批量删除
+  // 批次刪除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning(t('storage:messages.selectDeletePV'));
@@ -281,7 +281,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     });
   };
 
-  // 导出功能
+  // 匯出功能
   const handleExport = () => {
     try {
       const filteredData = filterPVs(allPVs);
@@ -326,13 +326,13 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     }
   };
 
-  // 列设置保存
+  // 列設定儲存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
     message.success(t('common:messages.columnSettingsSaved'));
   };
 
-  // 行选择配置
+  // 行選擇配置
   const rowSelection = {
     selectedRowKeys,
     onChange: (keys: React.Key[]) => {
@@ -340,7 +340,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     },
   };
 
-  // 定义所有可用列
+  // 定義所有可用列
   const allColumns: ColumnsType<PV> = [
     {
       title: t('storage:columns.pvName'),
@@ -465,14 +465,14 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     },
   ];
 
-  // 根据可见性过滤列
+  // 根據可見性過濾列
   const columns = allColumns.filter(col => {
     if (col.key === 'action') return true;
     if (col.key === 'name') return true;
     return visibleColumns.includes(col.key as string);
   });
 
-  // 表格排序处理
+  // 表格排序處理
   const handleTableChange = (
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
@@ -492,7 +492,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
 
   return (
     <div>
-      {/* 操作按钮栏 */}
+      {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
           <Button
@@ -508,7 +508,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
         </Space>
       </div>
 
-      {/* 多条件搜索栏 */}
+      {/* 多條件搜尋欄 */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
           <Input
@@ -541,7 +541,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
           <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
         </div>
 
-        {/* 搜索条件标签 */}
+        {/* 搜尋條件標籤 */}
         {searchConditions.length > 0 && (
           <div>
             <Space size="small" wrap>
@@ -593,7 +593,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
         }}
       />
 
-      {/* YAML查看Modal */}
+      {/* YAML檢視Modal */}
       <Modal
         title="PV YAML"
         open={yamlModalVisible}
@@ -612,7 +612,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
         )}
       </Modal>
 
-      {/* 列设置抽屉 */}
+      {/* 列設定抽屜 */}
       <Drawer
         title={t('storage:columnSettings.title')}
         placement="right"

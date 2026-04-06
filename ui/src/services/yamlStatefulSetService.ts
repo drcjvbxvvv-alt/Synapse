@@ -1,7 +1,7 @@
 import type { WorkloadFormData } from '../types/workload';
 import type { CommonBuildParts } from './yamlCommonService';
 
-// ==================== StatefulSet 构建 ====================
+// ==================== StatefulSet 構建 ====================
 
 export const buildStatefulSetSpec = (
   formData: WorkloadFormData,

@@ -27,7 +27,7 @@ import { WorkloadService } from '../../services/workloadService';
 import { useTranslation } from 'react-i18next';
 import * as YAML from 'yaml';
 
-// 配置Monaco Editor使用本地资源
+// 配置Monaco Editor使用本地資源
 loader.config({ monaco });
 
 const { Title, Text } = Typography;
@@ -39,7 +39,7 @@ const { clusterId } = useParams<{ clusterId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  // 从URL参数获取工作负载信息
+  // 從URL參數獲取工作負載資訊
   const workloadRef = searchParams.get('workload'); // namespace/name
   const workloadType = searchParams.get('type');
   
@@ -53,7 +53,7 @@ const { clusterId } = useParams<{ clusterId: string }>();
   const [error, setError] = useState<string | null>(null);
   const [editorLoading, setEditorLoading] = useState(true);
   
-  // Diff 对比相关状态
+  // Diff 對比相關狀態
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
   const [dryRunResult, setDryRunResult] = useState<{
@@ -61,10 +61,10 @@ const { clusterId } = useParams<{ clusterId: string }>();
     message: string;
   } | null>(null);
 
-  // 检查是否有未保存的更改
+  // 檢查是否有未儲存的更改
   const hasUnsavedChanges = yaml !== originalYaml;
 
-  // Monaco Editor加载处理
+  // Monaco Editor載入處理
   const handleEditorWillMount = () => {
     setEditorLoading(true);
   };
@@ -74,13 +74,13 @@ const { clusterId } = useParams<{ clusterId: string }>();
   };
 
   const handleEditorValidation = (markers: unknown[]) => {
-    // 处理编辑器验证错误
+    // 處理編輯器驗證錯誤
     if (markers && markers.length > 0) {
       console.warn('Editor validation markers:', markers);
     }
   };
 
-  // 加载现有工作负载的YAML
+  // 載入現有工作負載的YAML
   const loadWorkloadYAML = useCallback(async () => {
     if (!clusterId || !workloadRef || !workloadType) return;
     
@@ -101,7 +101,7 @@ const { clusterId } = useParams<{ clusterId: string }>();
       setYaml(yamlContent);
       setOriginalYaml(yamlContent);
     } catch (error) {
-      console.error('加载YAML失败:', error);
+      console.error('載入YAML失敗:', error);
       const errorMsg = t('messages.loadError') + ': ' + (error instanceof Error ? error.message : t('messages.unknownError'));
       setError(errorMsg);
       message.error(errorMsg);
@@ -110,7 +110,7 @@ const { clusterId } = useParams<{ clusterId: string }>();
     }
   }, [clusterId, workloadRef, workloadType]);
 
-  // 应用YAML
+  // 應用YAML
   const handleApply = async (isDryRun = false) => {
     if (!clusterId || !yaml.trim()) {
       message.error(t('messages.emptyContent'));
@@ -149,19 +149,19 @@ const { clusterId } = useParams<{ clusterId: string }>();
     }
   };
 
-  // 预览YAML (Dry Run)
+  // 預覽YAML (Dry Run)
   const handlePreview = () => {
     handleApply(true);
   };
 
-  // 保存并应用YAML - 先预检，再展示 diff 对比
+  // 儲存並應用YAML - 先預檢，再展示 diff 對比
   const handleSave = async () => {
     if (!clusterId || !yaml.trim()) {
       message.error(t('messages.emptyContent'));
       return;
     }
 
-    // 如果是编辑模式（有原始 YAML），先预检再展示 diff
+    // 如果是編輯模式（有原始 YAML），先預檢再展示 diff
     if (workloadRef && originalYaml) {
       setApplying(true);
       try {
@@ -169,13 +169,13 @@ const { clusterId } = useParams<{ clusterId: string }>();
         setPendingYaml(yaml);
         setDiffModalVisible(true);
       } catch (error) {
-        console.error('预检失败:', error);
+        console.error('預檢失敗:', error);
         message.error(t('messages.preCheckFailed'));
       } finally {
         setApplying(false);
       }
     } else {
-      // 创建模式，直接确认应用
+      // 建立模式，直接確認應用
       modal.confirm({
         title: t('confirm.applyYaml'),
         content: t('confirm.applyYamlDesc'),
@@ -186,7 +186,7 @@ const { clusterId } = useParams<{ clusterId: string }>();
     }
   };
 
-  // 确认 Diff 后提交
+  // 確認 Diff 後提交
   const handleConfirmDiff = () => {
     handleApply(false);
   };
@@ -206,7 +206,7 @@ const { clusterId } = useParams<{ clusterId: string }>();
     });
   };
 
-  // 生成默认YAML模板
+  // 生成預設YAML模板
   const generateDefaultYAML = useCallback((type: string) => {
     const templates: Record<string, string> = {
       'Deployment': `apiVersion: apps/v1
@@ -346,17 +346,17 @@ spec: {}
   }, []);
   
   useEffect(() => {
-    // 检查必要参数
+    // 檢查必要參數
     if (!clusterId || !workloadType) {
       setError(t('messages.missingParams'));
       return;
     }
     
-    // 如果有workloadRef，则是编辑模式，加载现有YAML
+    // 如果有workloadRef，則是編輯模式，載入現有YAML
     if (workloadRef) {
       loadWorkloadYAML();
     } else {
-      // 否则是创建模式，生成默认YAML模板
+      // 否則是建立模式，生成預設YAML模板
       const defaultYAML = generateDefaultYAML(workloadType);
       setYaml(defaultYAML);
       setOriginalYaml(defaultYAML);
@@ -364,7 +364,7 @@ spec: {}
     }
   }, [clusterId, workloadRef, workloadType, loadWorkloadYAML, generateDefaultYAML]);
 
-  // 页面离开前提醒
+  // 頁面離開前提醒
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
@@ -379,7 +379,7 @@ spec: {}
 
   return (
     <div style={{ padding: '24px', height: 'calc(100vh - 64px)' }}>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div style={{ marginBottom: 16 }}>
         <Space>
           <Button
@@ -456,7 +456,7 @@ spec: {}
         </div>
       </div>
 
-      {/* 提示信息 */}
+      {/* 提示資訊 */}
       {error && (
         <Alert
           message={t('alert.loadFailed')}
@@ -472,7 +472,7 @@ spec: {}
         />
       )}
       
-      {/* 预检结果提示 */}
+      {/* 預檢結果提示 */}
       {dryRunResult && (
         <Alert
           message={dryRunResult.success ? t('messages.dryRunCheckPassed') : t('messages.dryRunCheckFailed')}
@@ -496,7 +496,7 @@ spec: {}
         />
       )}
 
-      {/* YAML编辑器 */}
+      {/* YAML編輯器 */}
       <Card style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
         <Spin spinning={loading || editorLoading} tip={loading ? t('messages.loadingYaml') : t('messages.initEditor')}>
           <div style={{ height: '500px', width: '100%' }}>
@@ -543,7 +543,7 @@ spec: {}
         </Spin>
       </Card>
 
-      {/* 预览模态框 */}
+      {/* 預覽模態框 */}
       <Modal
         title={t('preview.title')}
         open={previewVisible}
@@ -587,7 +587,7 @@ spec: {}
         )}
       </Modal>
 
-      {/* YAML Diff 对比 Modal */}
+      {/* YAML Diff 對比 Modal */}
       <Modal
         title={
           <Space>

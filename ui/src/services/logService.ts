@@ -1,7 +1,7 @@
 import { request } from '../utils/api';
 import { buildWebSocketUrl } from '../utils/wsUrl';
 
-// 日志条目类型
+// 日誌條目型別
 export interface LogEntry {
   id: string;
   timestamp: string;
@@ -18,7 +18,7 @@ export interface LogEntry {
   metadata?: Record<string, unknown>;
 }
 
-// K8s 事件日志类型
+// K8s 事件日誌型別
 export interface EventLogEntry {
   id: string;
   type: string;
@@ -34,7 +34,7 @@ export interface EventLogEntry {
   source_host: string;
 }
 
-// 日志统计类型
+// 日誌統計型別
 export interface LogStats {
   total_count: number;
   error_count: number;
@@ -45,14 +45,14 @@ export interface LogStats {
   level_stats?: Array<{ level: string; count: number }>;
 }
 
-// 日志流目标
+// 日誌流目標
 export interface LogStreamTarget {
   namespace: string;
   pod: string;
   container?: string;
 }
 
-// 日志流配置
+// 日誌流配置
 export interface LogStreamConfig {
   targets: LogStreamTarget[];
   tail_lines?: number;
@@ -61,7 +61,7 @@ export interface LogStreamConfig {
   show_source?: boolean;
 }
 
-// 日志查询参数
+// 日誌查詢參數
 export interface LogSearchParams {
   namespaces?: string[];
   pods?: string[];
@@ -76,7 +76,7 @@ export interface LogSearchParams {
   direction?: 'forward' | 'backward';
 }
 
-// Pod信息（用于日志选择）
+// Pod資訊（用於日誌選擇）
 export interface LogPodInfo {
   name: string;
   namespace: string;
@@ -84,9 +84,9 @@ export interface LogPodInfo {
   containers: string[];
 }
 
-// 日志服务
+// 日誌服務
 export const logService = {
-  // 获取容器日志
+  // 獲取容器日誌
   getContainerLogs: (
     clusterId: string,
     params: {
@@ -111,7 +111,7 @@ export const logService = {
     );
   },
 
-  // 获取K8s事件日志
+  // 獲取K8s事件日誌
   getEventLogs: (
     clusterId: string,
     params?: {
@@ -134,7 +134,7 @@ export const logService = {
     );
   },
 
-  // 日志搜索
+  // 日誌搜尋
   searchLogs: (clusterId: string, params: LogSearchParams) => {
     return request.post<{ items: LogEntry[]; total: number }>(
       `/clusters/${clusterId}/logs/search`,
@@ -142,7 +142,7 @@ export const logService = {
     );
   },
 
-  // 获取日志统计
+  // 獲取日誌統計
   getLogStats: (
     clusterId: string,
     params?: { namespace?: string; timeRange?: '1h' | '6h' | '24h' | '7d' }
@@ -156,12 +156,12 @@ export const logService = {
     );
   },
 
-  // 获取命名空间列表
+  // 獲取命名空間列表
   getNamespaces: (clusterId: string) => {
     return request.get<string[]>(`/clusters/${clusterId}/logs/namespaces`);
   },
 
-  // 获取Pod列表
+  // 獲取Pod列表
   getPods: (clusterId: string, namespace?: string) => {
     const query = namespace ? `?namespace=${namespace}` : '';
     return request.get<LogPodInfo[]>(
@@ -169,7 +169,7 @@ export const logService = {
     );
   },
 
-  // 导出日志
+  // 匯出日誌
   exportLogs: async (clusterId: string, params: LogSearchParams) => {
     const response = await request.post(
       `/clusters/${clusterId}/logs/export`,
@@ -179,7 +179,7 @@ export const logService = {
     return response;
   },
 
-  // 创建聚合日志流 WebSocket
+  // 建立聚合日誌流 WebSocket
   createAggregateLogStream: (
     clusterId: string,
     config: LogStreamConfig
@@ -189,11 +189,11 @@ export const logService = {
     
     const ws = new WebSocket(url);
     
-    // 返回 ws 和 config，让调用者在 onopen 中发送配置
+    // 返回 ws 和 config，讓呼叫者在 onopen 中傳送配置
     return { ws, config };
   },
 
-  // 创建单Pod日志流 WebSocket
+  // 建立單Pod日誌流 WebSocket
   createSinglePodLogStream: (
     clusterId: string,
     namespace: string,

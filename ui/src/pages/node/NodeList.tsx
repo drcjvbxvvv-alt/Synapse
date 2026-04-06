@@ -42,7 +42,7 @@ import { nodeService, type NodeListParams, type NodeOverview } from '../../servi
 
 const { Option } = Select;
 
-// 搜索条件类型定义
+// 搜尋條件型別定義
 interface SearchCondition {
   field: 'name' | 'status' | 'version' | 'roles';
   value: string;
@@ -57,32 +57,32 @@ const NodeList: React.FC = () => {
   
   const [loading, setLoading] = useState(false);
   const [nodes, setNodes] = useState<Node[]>([]);
-  const [allNodes, setAllNodes] = useState<Node[]>([]); // 所有原始数据
+  const [allNodes, setAllNodes] = useState<Node[]>([]); // 所有原始資料
   const [overview, setOverview] = useState<NodeOverview | null>(null);
   const [selectedClusterId, setSelectedClusterId] = useState<string>(routeClusterId || '1');
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [selectedNodes, setSelectedNodes] = useState<React.Key[]>([]);
 
-  // 多条件搜索状态
+  // 多條件搜尋狀態
   const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
   const [currentSearchField, setCurrentSearchField] = useState<'name' | 'status' | 'version' | 'roles'>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
 
-  // 列设置状态
+  // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'status', 'name', 'roles', 'version', 'readyStatus', 'cpuUsage', 'memoryUsage', 'podCount', 'taints', 'createdAt'
   ]);
   
-  // 排序状态
+  // 排序狀態
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
 
-  // 获取节点列表 - 使用useCallback优化
+  // 獲取節點列表 - 使用useCallback最佳化
   const fetchNodes = useCallback(async (params: NodeListParams = { clusterId: selectedClusterId }) => {
     if (!params.clusterId) {
       return;
@@ -93,10 +93,10 @@ const NodeList: React.FC = () => {
       const response = await nodeService.getNodes({
         ...params,
         page: 1,
-        pageSize: 10000, // 获取所有数据
+        pageSize: 10000, // 獲取所有資料
       });
       
-      // 保存原始数据
+      // 儲存原始資料
       setAllNodes(response.items || []);
     } catch (error) {
       console.error('Failed to fetch nodes:', error);
@@ -106,7 +106,7 @@ const NodeList: React.FC = () => {
     }
   }, [selectedClusterId]);
 
-  // 获取节点概览 - 使用useCallback优化
+  // 獲取節點概覽 - 使用useCallback最佳化
   const fetchNodeOverview = useCallback(async () => {
     if (!selectedClusterId) {
       return;
@@ -120,46 +120,46 @@ const NodeList: React.FC = () => {
     }
   }, [selectedClusterId]);
 
-  // 集群切换 - 监听路由参数变化
+  // 叢集切換 - 監聽路由參數變化
   useEffect(() => {
     if (routeClusterId && routeClusterId !== selectedClusterId) {
       setSelectedClusterId(routeClusterId);
       setCurrentPage(1);
-      // 重置搜索条件
+      // 重置搜尋條件
       setSearchConditions([]);
       setCurrentSearchValue('');
     }
   }, [routeClusterId, selectedClusterId]);
 
 
-  // 节点选择变化
+  // 節點選擇變化
   const handleSelectionChange = (selectedRowKeys: React.Key[]) => {
     setSelectedNodes(selectedRowKeys);
   };
 
-  // 批量操作
+  // 批次操作
   const handleBatchCordon = () => {
     message.info(`${t('actions.cordon')} ${selectedNodes.length} nodes`);
-    // TODO: 实现批量封锁逻辑
+    // TODO: 實現批次封鎖邏輯
   };
 
   const handleBatchUncordon = () => {
     message.info(`${t('actions.uncordon')} ${selectedNodes.length} nodes`);
-    // TODO: 实现批量解封逻辑
+    // TODO: 實現批次解封邏輯
   };
 
   const handleBatchLabel = () => {
     message.info(`Add labels to ${selectedNodes.length} nodes`);
-    // TODO: 实现批量添加标签逻辑
+    // TODO: 實現批次新增標籤邏輯
   };
 
-  // 单个节点操作
+  // 單個節點操作
   const handleViewDetail = (name: string) => {
     navigate(`/clusters/${selectedClusterId}/nodes/${name}`);
   };
 
   const handleNodeTerminal = (name: string) => {
-    // 导航到节点详情页并自动打开SSH终端标签页
+    // 導航到節點詳情頁並自動開啟SSH終端標籤頁
     navigate(`/clusters/${selectedClusterId}/nodes/${name}?tab=terminal`);
   };
 
@@ -210,7 +210,7 @@ const NodeList: React.FC = () => {
   };
 
 
-  // 获取节点状态标签
+  // 獲取節點狀態標籤
   const getStatusTag = (status: string) => {
     switch (status) {
       case 'Ready':
@@ -222,10 +222,10 @@ const NodeList: React.FC = () => {
     }
   };
 
-  // 获取节点状态图标
+  // 獲取節點狀態圖示
   const getStatusIcon = (node: Node) => {
     if (node.status === 'Ready') {
-      // 检查是否有污点
+      // 檢查是否有汙點
       const hasNoScheduleTaint = node.taints?.some(
         taint => taint.effect === 'NoSchedule' || taint.effect === 'NoExecute'
       );
@@ -234,7 +234,7 @@ const NodeList: React.FC = () => {
         return <Badge status="warning" />;
       }
       
-      // 检查资源使用率
+      // 檢查資源使用率
       if (node.cpuUsage > 80 || node.memoryUsage > 80) {
         return <Badge status="warning" />;
       }
@@ -247,7 +247,7 @@ const NodeList: React.FC = () => {
     }
   };
 
-  // 获取角色标签
+  // 獲取角色標籤
   const getRoleTags = (roles: string[]) => {
     return (
       <Space>
@@ -263,7 +263,7 @@ const NodeList: React.FC = () => {
     );
   };
 
-  // 获取污点提示
+  // 獲取汙點提示
   const getTaintTooltip = (taints: NodeTaint[]) => {
     if (!taints || taints.length === 0) {
       return t('detail.taints') + ': 0';
@@ -281,7 +281,7 @@ const NodeList: React.FC = () => {
     );
   };
 
-  // 添加搜索条件
+  // 新增搜尋條件
   const addSearchCondition = () => {
     if (!currentSearchValue.trim()) return;
     
@@ -294,18 +294,18 @@ const NodeList: React.FC = () => {
     setCurrentSearchValue('');
   };
 
-  // 删除搜索条件
+  // 刪除搜尋條件
   const removeSearchCondition = (index: number) => {
     setSearchConditions(searchConditions.filter((_, i) => i !== index));
   };
 
-  // 清空所有搜索条件
+  // 清空所有搜尋條件
   const clearAllConditions = () => {
     setSearchConditions([]);
     setCurrentSearchValue('');
   };
 
-  // 获取搜索字段的显示名称
+  // 獲取搜尋欄位的顯示名稱
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('columns.name'),
@@ -316,12 +316,12 @@ const NodeList: React.FC = () => {
     return labels[field] || field;
   };
 
-  // 客户端过滤节点列表
+  // 客戶端過濾節點列表
   const filterNodes = useCallback((items: Node[]): Node[] => {
     if (searchConditions.length === 0) return items;
 
     return items.filter(node => {
-      // 按字段分组条件
+      // 按欄位分組條件
       const conditionsByField = searchConditions.reduce((acc, condition) => {
         if (!acc[condition.field]) {
           acc[condition.field] = [];
@@ -330,11 +330,11 @@ const NodeList: React.FC = () => {
         return acc;
       }, {} as Record<string, string[]>);
 
-      // 不同字段之间是 AND 关系
-      // 相同字段之间是 OR 关系
+      // 不同欄位之間是 AND 關係
+      // 相同欄位之間是 OR 關係
       return Object.entries(conditionsByField).every(([field, values]) => {
         if (field === 'roles') {
-          // 角色字段特殊处理
+          // 角色欄位特殊處理
           return values.some(searchValue =>
             node.roles.some(role =>
               role.toLowerCase().includes(searchValue)
@@ -349,10 +349,10 @@ const NodeList: React.FC = () => {
     });
   }, [searchConditions]);
 
-  // 导出功能
+  // 匯出功能
   const handleExport = () => {
     try {
-      // 获取所有筛选后的数据
+      // 獲取所有篩選後的資料
       const filteredData = filterNodes(allNodes);
       
       if (filteredData.length === 0) {
@@ -360,7 +360,7 @@ const NodeList: React.FC = () => {
         return;
       }
 
-      // 导出筛选后的所有数据
+      // 匯出篩選後的所有資料
       const dataToExport = filteredData.map(node => ({
         [t('columns.name')]: node.name,
         [t('columns.status')]: node.status,
@@ -373,7 +373,7 @@ const NodeList: React.FC = () => {
         [tc('table.createdAt')]: node.creationTimestamp ? new Date(node.creationTimestamp).toLocaleString() : '-',
       }));
 
-      // 导出为CSV
+      // 匯出為CSV
       const headers = Object.keys(dataToExport[0]);
       const csvContent = [
         headers.join(','),
@@ -397,18 +397,18 @@ const NodeList: React.FC = () => {
     }
   };
 
-  // 列设置保存
+  // 列設定儲存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
     appMessage.success(tc('messages.saveSuccess'));
   };
 
-  // 当搜索条件改变时重置到第一页
+  // 當搜尋條件改變時重置到第一頁
   useEffect(() => {
     setCurrentPage(1);
   }, [searchConditions]);
 
-  // 当allNodes、搜索条件、分页参数、排序参数改变时，重新计算显示数据
+  // 當allNodes、搜尋條件、分頁參數、排序參數改變時，重新計算顯示資料
   useEffect(() => {
     if (allNodes.length === 0) {
       setNodes([]);
@@ -416,26 +416,26 @@ const NodeList: React.FC = () => {
       return;
     }
     
-    // 1. 应用客户端过滤
+    // 1. 應用客戶端過濾
     let filteredItems = filterNodes(allNodes);
     
-    // 2. 应用排序
+    // 2. 應用排序
     if (sortField && sortOrder) {
       filteredItems = [...filteredItems].sort((a, b) => {
         const aValue = a[sortField as keyof Node];
         const bValue = b[sortField as keyof Node];
         
-        // 处理 undefined 值
+        // 處理 undefined 值
         if (aValue === undefined && bValue === undefined) return 0;
         if (aValue === undefined) return sortOrder === 'ascend' ? 1 : -1;
         if (bValue === undefined) return sortOrder === 'ascend' ? -1 : 1;
         
-        // 数字类型比较
+        // 數字型別比較
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           return sortOrder === 'ascend' ? aValue - bValue : bValue - aValue;
         }
         
-        // 字符串类型比较
+        // 字串型別比較
         const aStr = String(aValue);
         const bStr = String(bValue);
         
@@ -447,7 +447,7 @@ const NodeList: React.FC = () => {
       });
     }
     
-    // 3. 计算分页
+    // 3. 計算分頁
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedItems = filteredItems.slice(startIndex, endIndex);
@@ -644,7 +644,7 @@ const NodeList: React.FC = () => {
     onChange: handleSelectionChange,
   }), [selectedNodes, handleSelectionChange]);
 
-  // 表格排序处理
+  // 表格排序處理
   const handleTableChange = (
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
@@ -662,7 +662,7 @@ const NodeList: React.FC = () => {
     }
   };
 
-  // 刷新节点列表
+  // 重新整理節點列表
   const handleRefresh = () => {
     setLoading(true);
     fetchNodes({ clusterId: selectedClusterId });
@@ -671,7 +671,7 @@ const NodeList: React.FC = () => {
     }
   };
 
-  // 初始化加载
+  // 初始化載入
   useEffect(() => {
     if (selectedClusterId) {
       fetchNodes({ clusterId: selectedClusterId });
@@ -679,7 +679,7 @@ const NodeList: React.FC = () => {
     }
   }, [selectedClusterId, fetchNodes, fetchNodeOverview]);
 
-  // 统计数据
+  // 統計資料
   const totalNodes = overview?.totalNodes || 0;
   const readyNodes = overview?.readyNodes || 0;
   const notReadyNodes = overview?.notReadyNodes || 0;
@@ -688,7 +688,7 @@ const NodeList: React.FC = () => {
   return (
     <App>
       <div style={{ padding: '24px' }}>
-        {/* 统计卡片 */}
+        {/* 統計卡片 */}
         <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={12} lg={6}>
             <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #00d4aa 0%, #00b894 100%)' }}>
@@ -728,9 +728,9 @@ const NodeList: React.FC = () => {
           </Col>
         </Row>
 
-        {/* 节点列表卡片 */}
+        {/* 節點列表卡片 */}
         <Card bordered={false}>
-          {/* 操作按钮栏 */}
+          {/* 操作按鈕欄 */}
           <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Space>
               <Button
@@ -757,9 +757,9 @@ const NodeList: React.FC = () => {
             </Space>
           </div>
 
-          {/* 多条件搜索栏 */}
+          {/* 多條件搜尋欄 */}
           <div style={{ marginBottom: 16 }}>
-            {/* 搜索输入框 */}
+            {/* 搜尋輸入框 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
               <Input
                 prefix={<SearchOutlined />}
@@ -792,7 +792,7 @@ const NodeList: React.FC = () => {
               <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
             </div>
 
-            {/* 搜索条件标签 */}
+            {/* 搜尋條件標籤 */}
             {searchConditions.length > 0 && (
               <div>
                 <Space size="small" wrap>
@@ -855,7 +855,7 @@ const NodeList: React.FC = () => {
           />
         </Card>
 
-        {/* 批量操作栏 */}
+        {/* 批次操作欄 */}
         {selectedNodes.length > 0 && (
           <Card
             style={{
@@ -882,7 +882,7 @@ const NodeList: React.FC = () => {
           </Card>
         )}
 
-        {/* 列设置抽屉 */}
+        {/* 列設定抽屜 */}
         <Drawer
           title={t('list.columnSettings')}
           placement="right"

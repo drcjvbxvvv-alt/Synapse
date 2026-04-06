@@ -27,7 +27,7 @@ interface ContainerConfigFormProps {
   isInitContainer?: boolean;
 }
 
-// 探针配置组件
+// 探針配置元件
 const ProbeConfigForm: React.FC<{
   namePrefix: (string | number)[];
   containerType: 'containers' | 'initContainers';
@@ -35,7 +35,7 @@ const ProbeConfigForm: React.FC<{
 }> = ({ namePrefix, containerType, label }) => {
   const { t } = useTranslation('components');
   const form = Form.useFormInstance();
-  // 构建完整的路径来监听表单值
+  // 構建完整的路徑來監聽表單值
   const fullPath = [containerType, ...namePrefix];
   
   return (

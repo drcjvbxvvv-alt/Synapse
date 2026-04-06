@@ -63,7 +63,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
   const [configEnabled, setConfigEnabled] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);
 
-  // 加载配置状态
+  // 載入配置狀態
   const loadConfig = useCallback(async () => {
     if (!clusterId) return;
     try {
@@ -71,14 +71,14 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
       const response = await argoCDService.getConfig(clusterId);
       setConfigEnabled(response?.enabled || false);
     } catch (error) {
-      console.error('加载配置失败:', error);
+      console.error('載入配置失敗:', error);
       setConfigEnabled(false);
     } finally {
       setConfigLoading(false);
     }
   }, [clusterId]);
 
-  // 加载应用列表
+  // 載入應用列表
   const loadApplications = useCallback(async () => {
     if (!clusterId || !configEnabled) return;
     setLoading(true);
@@ -86,25 +86,25 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
       const response = await argoCDService.listApplications(clusterId);
       setApplications(response.items || []);
     } catch (error: unknown) {
-      console.error('加载应用列表失败:', error);
+      console.error('載入應用列表失敗:', error);
     } finally {
       setLoading(false);
     }
   }, [clusterId, configEnabled]);
 
-  // 先加载配置状态
+  // 先載入配置狀態
   useEffect(() => {
     loadConfig();
   }, [loadConfig]);
 
-  // 配置启用后加载应用列表
+  // 配置啟用後載入應用列表
   useEffect(() => {
     if (configEnabled) {
     loadApplications();
     }
   }, [configEnabled, loadApplications]);
 
-  // 创建应用
+  // 建立應用
   const handleCreate = async () => {
     try {
       const values = await form.validateFields();
@@ -135,7 +135,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     }
   };
 
-  // 同步应用
+  // 同步應用
   const handleSync = async (appName: string) => {
     try {
       message.loading({ content: t('plugins:argocd.syncing'), key: 'sync' });
@@ -148,7 +148,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     }
   };
 
-  // 删除应用
+  // 刪除應用
   const handleDelete = async (appName: string) => {
     try {
       message.loading({ content: t('plugins:argocd.deleting'), key: 'delete' });
@@ -161,13 +161,13 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     }
   };
 
-  // 查看详情
+  // 檢視詳情
   const handleViewDetail = (app: ArgoCDApplication) => {
     setSelectedApp(app);
     setDetailDrawerVisible(true);
   };
 
-  // 回滚应用
+  // 回滾應用
   const handleRollback = async (appName: string, revisionId: number) => {
     try {
       message.loading({ content: t('plugins:argocd.rolling'), key: 'rollback' });
@@ -181,7 +181,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     }
   };
 
-  // 同步状态标签
+  // 同步狀態標籤
   const getSyncStatusTag = (status: string) => {
     const config: Record<string, { color: string; icon: React.ReactNode }> = {
       'Synced': { color: 'success', icon: <CheckCircleOutlined /> },
@@ -192,7 +192,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     return <Tag color={cfg.color} icon={cfg.icon}>{status || 'Unknown'}</Tag>;
   };
 
-  // 健康状态标签
+  // 健康狀態標籤
   const getHealthStatusBadge = (status: string) => {
     const config: Record<string, { status: 'success' | 'error' | 'processing' | 'warning' | 'default'; icon?: React.ReactNode }> = {
       'Healthy': { status: 'success', icon: <CheckCircleOutlined /> },
@@ -206,7 +206,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     return <Badge status={cfg.status} text={status || 'Unknown'} />;
   };
 
-  // 统计数据
+  // 統計資料
   const stats = {
     total: applications.length,
     synced: applications.filter(a => a.sync_status === 'Synced').length,
@@ -215,7 +215,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     degraded: applications.filter(a => a.health_status === 'Degraded').length,
   };
 
-  // 表格列定义
+  // 表格列定義
   const columns: ColumnsType<ArgoCDApplication> = [
     {
       title: t('plugins:argocd.appName'),
@@ -321,7 +321,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     },
   ];
 
-  // 加载配置状态中
+  // 載入配置狀態中
   if (configLoading) {
     return (
       <div style={{ 
@@ -335,7 +335,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
     );
   }
 
-  // 如果未启用配置，显示提示（类似告警中心的设计）
+  // 如果未啟用配置，顯示提示（類似告警中心的設計）
   if (!configEnabled) {
     return (
       <div style={{ padding: 24 }}>
@@ -369,7 +369,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
 
   return (
     <div style={{ padding: 24 }}>
-      {/* 统计卡片 */}
+      {/* 統計卡片 */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={4}>
           <Card size="small">
@@ -409,7 +409,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
         </Col>
       </Row>
 
-      {/* 应用列表 */}
+      {/* 應用列表 */}
       <Card
         title={t('plugins:argocd.title')}
         extra={
@@ -446,7 +446,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
         )}
       </Card>
 
-      {/* 创建应用弹窗 */}
+      {/* 建立應用彈窗 */}
       <Modal
         title={t('plugins:argocd.createAppTitle')}
         open={createModalVisible}
@@ -548,7 +548,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
         </Form>
       </Modal>
 
-      {/* 应用详情抽屉 */}
+      {/* 應用詳情抽屜 */}
       <Drawer
         title={`${t('plugins:argocd.appDetail')}: ${selectedApp?.name || ''}`}
         open={detailDrawerVisible}

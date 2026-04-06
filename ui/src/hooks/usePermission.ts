@@ -1,6 +1,6 @@
 /**
- * 使用权限的 Hook
- * 从 PermissionContext 中获取权限相关的方法和状态
+ * 使用權限的 Hook
+ * 從 PermissionContext 中獲取權限相關的方法和狀態
  */
 
 import { useContext } from 'react';

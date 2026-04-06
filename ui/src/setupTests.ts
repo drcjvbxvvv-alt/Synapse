@@ -1,13 +1,13 @@
 /**
- * Vitest 测试设置文件
- * 在每个测试文件运行前执行
+ * Vitest 測試設定檔案
+ * 在每個測試檔案執行前執行
  */
 
 import '@testing-library/jest-dom'
 import { afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
-// 每个测试后自动清理
+// 每個測試後自動清理
 afterEach(() => {
   cleanup()
 })
@@ -57,7 +57,7 @@ afterAll(() => {
   vi.clearAllMocks()
 })
 
-// 全局 console 错误处理（可选：在测试中忽略某些警告）
+// 全域性 console 錯誤處理（可選：在測試中忽略某些警告）
 const originalError = console.error
 console.error = (...args: unknown[]) => {
   // 忽略 React act() 警告
@@ -96,7 +96,7 @@ Object.defineProperty(window, 'sessionStorage', {
   value: sessionStorageMock,
 })
 
-// 声明全局类型
+// 宣告全域性型別
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Vi {

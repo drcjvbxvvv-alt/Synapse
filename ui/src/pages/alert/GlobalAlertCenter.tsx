@@ -42,7 +42,7 @@ dayjs.locale('zh-cn');
 
 const { Title, Text } = Typography;
 
-// 卡片样式
+// 卡片樣式
 const cardStyle = { 
   boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
   borderRadius: 8 
@@ -54,14 +54,14 @@ const { t } = useTranslation(['alert', 'common']);
 const [loading, setLoading] = useState(true);
   const [alertStats, setAlertStats] = useState<GlobalAlertStats | null>(null);
 
-  // 加载数据
+  // 載入資料
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const response = await overviewService.getAlertStats();
       setAlertStats(response);
     } catch (error) {
-      console.error('加载告警统计失败:', error);
+      console.error('載入告警統計失敗:', error);
       message.error(t('alert:global.loadFailed'));
     } finally {
       setLoading(false);
@@ -72,7 +72,7 @@ const [loading, setLoading] = useState(true);
     loadData();
   }, [loadData]);
 
-  // 获取严重程度颜色（未使用，保留以备将来使用）
+  // 獲取嚴重程度顏色（未使用，保留以備將來使用）
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getSeverityColor = (severity: string) => {
     switch (severity?.toLowerCase()) {
@@ -87,7 +87,7 @@ const [loading, setLoading] = useState(true);
     }
   };
 
-  // 集群告警表格列
+  // 叢集告警表格列
   const clusterColumns: ColumnsType<ClusterAlertCount> = [
     {
       title: t('alert:global.clusterName'),
@@ -143,7 +143,7 @@ const [loading, setLoading] = useState(true);
         }
         const firingPercent = record.total > 0 ? (record.firing / record.total) * 100 : 0;
         return (
-          <Tooltip title={`触发中: ${record.firing} / 总数: ${record.total}`}>
+          <Tooltip title={`觸發中: ${record.firing} / 總數: ${record.total}`}>
             <Progress
               percent={100}
               success={{ percent: 100 - firingPercent }}
@@ -173,7 +173,7 @@ const [loading, setLoading] = useState(true);
     },
   ];
 
-  // 严重程度分布
+  // 嚴重程度分佈
   const renderSeverityDistribution = () => {
     if (!alertStats?.bySeverity) return null;
     
@@ -245,13 +245,13 @@ const [loading, setLoading] = useState(true);
     );
   }
 
-  // 获取有告警的集群列表
+  // 獲取有告警的叢集列表
   const clustersWithAlerts = alertStats.byCluster || [];
   const firingClusters = clustersWithAlerts.filter(c => c.firing > 0);
 
   return (
     <div style={{ padding: '0 4px' }}>
-      {/* 顶部工具栏 */}
+      {/* 頂部工具欄 */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -278,7 +278,7 @@ const [loading, setLoading] = useState(true);
         </Button>
       </div>
 
-      {/* 统计卡片 */}
+      {/* 統計卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
@@ -332,7 +332,7 @@ const [loading, setLoading] = useState(true);
         </Col>
       </Row>
 
-      {/* 严重程度分布 */}
+      {/* 嚴重程度分佈 */}
       <Card 
         title={
           <Space>
@@ -347,7 +347,7 @@ const [loading, setLoading] = useState(true);
         {renderSeverityDistribution()}
       </Card>
 
-      {/* 集群告警分布表格 */}
+      {/* 叢集告警分佈表格 */}
       <Card
         title={
           <Space>
@@ -376,7 +376,7 @@ const [loading, setLoading] = useState(true);
         />
       </Card>
 
-      {/* 添加行样式 */}
+      {/* 新增行樣式 */}
       <style>{`
         .alert-row-firing {
           background-color: #fff2f0;

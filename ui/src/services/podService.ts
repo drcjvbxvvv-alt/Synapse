@@ -77,7 +77,7 @@ export interface PodLogsResponse {
 }
 
 export class PodService {
-  // 获取Pod列表
+  // 獲取Pod列表
   static async getPods(
     clusterId: string,
     namespace?: string,
@@ -116,7 +116,7 @@ export class PodService {
     return request.get(`/clusters/${clusterId}/pods?${params}`);
   }
 
-  // 获取Pod详情
+  // 獲取Pod詳情
   static async getPodDetail(
     clusterId: string,
     namespace: string,
@@ -125,7 +125,7 @@ export class PodService {
     return request.get(`/clusters/${clusterId}/pods/${namespace}/${name}`);
   }
 
-  // 删除Pod
+  // 刪除Pod
   static async deletePod(
     clusterId: string,
     namespace: string,
@@ -134,7 +134,7 @@ export class PodService {
     return request.delete(`/clusters/${clusterId}/pods/${namespace}/${name}`);
   }
 
-  // 批量删除Pod
+  // 批次刪除Pod
   static async batchDeletePods(
     clusterId: string,
     pods: Array<{ namespace: string; name: string }>
@@ -151,7 +151,7 @@ export class PodService {
     }));
   }
 
-  // 获取Pod日志
+  // 獲取Pod日誌
   static async getPodLogs(
     clusterId: string,
     namespace: string,
@@ -187,7 +187,7 @@ export class PodService {
     return request.get(`/clusters/${clusterId}/pods/${namespace}/${name}/logs?${params}`);
   }
 
-  // 获取Pod状态颜色
+  // 獲取Pod狀態顏色
   static getStatusColor(pod: PodInfo): string {
     const { status, phase } = pod;
     
@@ -199,7 +199,7 @@ export class PodService {
     if (status.includes('Error') || status.includes('BackOff')) return 'red';
     if (status.includes('NotReady')) return 'orange';
     
-    // 根据phase判断
+    // 根據phase判斷
     switch (phase) {
       case 'Running':
         return 'green';
@@ -214,25 +214,25 @@ export class PodService {
     }
   }
 
-  // 格式化Pod状态
+  // 格式化Pod狀態
   static formatStatus(pod: PodInfo): { status: string; color: string } {
     const color = this.getStatusColor(pod);
     let statusText = pod.status;
     
-    // 简化状态显示
+    // 簡化狀態顯示
     if (statusText.includes('NotReady')) {
       const match = statusText.match(/\((\d+\/\d+)\)/);
       if (match) {
-        statusText = `未就绪 ${match[1]}`;
+        statusText = `未就緒 ${match[1]}`;
       } else {
-        statusText = '未就绪';
+        statusText = '未就緒';
       }
     }
     
     return { status: statusText, color };
   }
 
-  // 获取Pod年龄
+  // 獲取Pod年齡
   static getAge(createdAt: string): string {
     const now = new Date();
     const created = new Date(createdAt);
@@ -245,15 +245,15 @@ export class PodService {
     if (diffDays > 0) {
       return `${diffDays}天`;
     } else if (diffHours > 0) {
-      return `${diffHours}小时`;
+      return `${diffHours}小時`;
     } else if (diffMinutes > 0) {
-      return `${diffMinutes}分钟`;
+      return `${diffMinutes}分鐘`;
     } else {
-      return '刚刚';
+      return '剛剛';
     }
   }
 
-  // 获取容器状态颜色
+  // 獲取容器狀態顏色
   static getContainerStatusColor(container: ContainerInfo): string {
     if (!container.ready) return 'red';
     if (container.state.state === 'Running') return 'green';
@@ -262,29 +262,29 @@ export class PodService {
     return 'default';
   }
 
-  // 格式化容器状态
+  // 格式化容器狀態
   static formatContainerStatus(container: ContainerInfo): string {
-    if (container.state.state === 'Running') return '运行中';
+    if (container.state.state === 'Running') return '執行中';
     if (container.state.state === 'Waiting') {
       return container.state.reason || '等待中';
     }
     if (container.state.state === 'Terminated') {
-      return container.state.reason || '已终止';
+      return container.state.reason || '已終止';
     }
     return container.state.state;
   }
 
-  // 获取Pod命名空间列表
+  // 獲取Pod命名空間列表
   static async getPodNamespaces(clusterId: string): Promise<string[]> {
     return request.get(`/clusters/${clusterId}/pods/namespaces`);
   }
 
-  // 获取Pod节点列表
+  // 獲取Pod節點列表
   static async getPodNodes(clusterId: string): Promise<string[]> {
     return request.get(`/clusters/${clusterId}/pods/nodes`);
   }
 
-  // 创建WebSocket连接获取实时日志流
+  // 建立WebSocket連線獲取實時日誌流
   static createLogStream(
     clusterId: string,
     namespace: string,

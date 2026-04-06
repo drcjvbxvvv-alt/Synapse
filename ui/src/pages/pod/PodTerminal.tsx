@@ -54,7 +54,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
   
   const connectedRef = useRef(false);
 
-  // 显示欢迎信息
+  // 顯示歡迎資訊
   const showWelcomeMessage = useCallback(() => {
     if (!terminal.current) return;
     
@@ -70,7 +70,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     terminal.current.writeln('');
   }, [namespace, name, clusterId]);
 
-  // 处理终端输入
+  // 處理終端輸入
   const handleTerminalInput = useCallback((data: string) => {
     if (!connectedRef.current || !websocket.current) return;
 
@@ -82,7 +82,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     }
   }, []);
 
-  // 获取Pod详情
+  // 獲取Pod詳情
   const fetchPodDetail = useCallback(async () => {
     if (!clusterId || !namespace || !name) {
       setLoading(false);
@@ -98,21 +98,21 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         setSelectedContainer(response.pod.containers[0].name);
       }
     } catch (error) {
-      console.error('获取Pod详情失败:', error);
+      console.error('獲取Pod詳情失敗:', error);
       message.error(t('pod:terminal.fetchPodError'));
     } finally {
       setLoading(false);
     }
   }, [clusterId, namespace, name, selectedContainer]);
 
-  // 初始化终端 - 只在 pod 加载完成后初始化
+  // 初始化終端 - 只在 pod 載入完成後初始化
   useEffect(() => {
-    // 如果 pod 还没加载完成，不初始化终端
+    // 如果 pod 還沒載入完成，不初始化終端
     if (!pod || !terminalRef.current) {
       return;
     }
 
-    // 如果终端已经初始化，不重复初始化
+    // 如果終端已經初始化，不重複初始化
     if (terminal.current) {
       return;
     }
@@ -136,12 +136,12 @@ const [pod, setPod] = useState<PodInfo | null>(null);
             rightClickSelectsWord: true,
           });
 
-          // 添加插件
+          // 新增外掛
           fitAddon.current = new FitAddon();
           terminal.current.loadAddon(fitAddon.current);
           terminal.current.loadAddon(new WebLinksAddon());
           
-          // 添加剪贴板支持
+          // 新增剪貼簿支援
           try {
             const clipboardAddon = new ClipboardAddon();
             terminal.current.loadAddon(clipboardAddon);
@@ -151,16 +151,16 @@ const [pod, setPod] = useState<PodInfo | null>(null);
 
           terminal.current.open(terminalRef.current);
           
-          // 等待 DOM 完全渲染后再 fit
+          // 等待 DOM 完全渲染後再 fit
           const fitTerminal = () => {
             if (fitAddon.current && terminal.current && terminalRef.current) {
               try {
-                // 确保容器有尺寸
+                // 確保容器有尺寸
                 const rect = terminalRef.current.getBoundingClientRect();
                 if (rect.width > 0 && rect.height > 0) {
                   fitAddon.current.fit();
                 } else {
-                  // 如果容器还没有尺寸，再等一会
+                  // 如果容器還沒有尺寸，再等一會
                   setTimeout(fitTerminal, 100);
                 }
               } catch (e) {
@@ -169,7 +169,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
             }
           };
 
-          // 延迟执行 fit 和显示欢迎信息
+          // 延遲執行 fit 和顯示歡迎資訊
           setTimeout(() => {
             fitTerminal();
             setTimeout(() => {
@@ -177,22 +177,22 @@ const [pod, setPod] = useState<PodInfo | null>(null);
             }, 200);
           }, 100);
 
-          // 设置终端输入处理
+          // 設定終端輸入處理
           terminal.current.onData((data) => {
             handleTerminalInput(data);
           });
 
         } catch (error) {
-          console.error('初始化终端失败:', error);
+          console.error('初始化終端失敗:', error);
           message.error(t('pod:terminal.initFailed'));
         }
       }
     };
 
-    // 延迟初始化，确保 DOM 已经渲染
+    // 延遲初始化，確保 DOM 已經渲染
     const timer = setTimeout(initTerminal, 100);
 
-    // 清理函数
+    // 清理函式
     return () => {
       clearTimeout(timer);
       if (websocket.current) {
@@ -205,7 +205,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     };
   }, [pod, showWelcomeMessage, handleTerminalInput]);
 
-  // 连接终端
+  // 連線終端
   const connectTerminal = () => {
     if (!clusterId || !namespace || !name || !selectedContainer) {
       message.error(t('pod:terminal.missingParams'));
@@ -217,7 +217,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
       return;
     }
     
-    // 获取认证 token
+    // 獲取認證 token
     const token = localStorage.getItem('token');
     if (!token) {
       message.error(t('pod:terminal.notLoggedIn'));
@@ -228,7 +228,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     
     if (terminal.current) {
       terminal.current.clear();
-      terminal.current.writeln('\x1b[33m正在连接终端...\x1b[0m');
+      terminal.current.writeln('\x1b[33m正在連線終端...\x1b[0m');
     }
     
     const wsUrl = buildWebSocketUrl(
@@ -247,13 +247,13 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         
         if (terminal.current) {
           terminal.current.clear();
-          terminal.current.writeln(`\x1b[32m✓ 已连接到 Pod: ${namespace}/${name}\x1b[0m`);
+          terminal.current.writeln(`\x1b[32m✓ 已連線到 Pod: ${namespace}/${name}\x1b[0m`);
           terminal.current.writeln(`\x1b[32m✓ 容器: ${selectedContainer}\x1b[0m`);
-          terminal.current.writeln(`\x1b[32m✓ 集群: ${clusterId}\x1b[0m`);
+          terminal.current.writeln(`\x1b[32m✓ 叢集: ${clusterId}\x1b[0m`);
           terminal.current.writeln('');
         }
         
-        // 发送初始终端尺寸
+        // 傳送初始終端尺寸
         try {
           if (fitAddon.current && terminal.current) {
             const dimensions = fitAddon.current.proposeDimensions();
@@ -266,7 +266,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
             }
           }
         } catch (e) {
-          console.log('发送resize消息失败:', e);
+          console.log('傳送resize訊息失敗:', e);
         }
       };
       
@@ -303,14 +303,14 @@ const [pod, setPod] = useState<PodInfo | null>(null);
       };
       
       ws.onerror = (error) => {
-        console.error('WebSocket错误:', error);
+        console.error('WebSocket錯誤:', error);
         message.error(t('pod:terminal.connectError'));
         setConnected(false);
         setConnecting(false);
         connectedRef.current = false;
         
         if (terminal.current) {
-          terminal.current.writeln('\x1b[31m连接出错\x1b[0m');
+          terminal.current.writeln('\x1b[31m連線出錯\x1b[0m');
         }
       };
       
@@ -321,22 +321,22 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         message.info(t('pod:terminal.disconnectedMsg'));
         
         if (terminal.current) {
-          terminal.current.writeln('\x1b[31m\r\n连接已断开\x1b[0m');
+          terminal.current.writeln('\x1b[31m\r\n連線已斷開\x1b[0m');
         }
       };
       
     } catch (error) {
-      console.error('创建WebSocket连接失败:', error);
+      console.error('建立WebSocket連線失敗:', error);
       message.error(t('pod:terminal.createFailed'));
       setConnecting(false);
       
       if (terminal.current) {
-        terminal.current.writeln('\x1b[31m创建连接失败\x1b[0m');
+        terminal.current.writeln('\x1b[31m建立連線失敗\x1b[0m');
       }
     }
   };
 
-  // 断开终端连接
+  // 斷開終端連線
   const disconnectTerminal = () => {
     if (websocket.current) {
       websocket.current.close();
@@ -346,11 +346,11 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     connectedRef.current = false;
     
     if (terminal.current) {
-      terminal.current.writeln('\x1b[33m\r\n手动断开连接\x1b[0m');
+      terminal.current.writeln('\x1b[33m\r\n手動斷開連線\x1b[0m');
     }
   };
 
-  // 清空终端
+  // 清空終端
   const clearTerminal = () => {
     if (terminal.current) {
       terminal.current.clear();
@@ -368,7 +368,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     }
   };
 
-  // 窗口大小变化时重新调整终端大小
+  // 視窗大小變化時重新調整終端大小
   useEffect(() => {
     const handleResize = () => {
       if (fitAddon.current && terminal.current) {
@@ -376,7 +376,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
           try {
             fitAddon.current?.fit();
             
-            // 发送新的终端尺寸
+            // 傳送新的終端尺寸
             if (connected && websocket.current && websocket.current.readyState === WebSocket.OPEN) {
               const dimensions = fitAddon.current?.proposeDimensions();
               if (dimensions) {
@@ -402,7 +402,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     fetchPodDetail();
   }, [fetchPodDetail]);
 
-  // 参数验证
+  // 參數驗證
   if (!clusterId || !namespace || !name) {
     return (
       <div style={{ 
@@ -438,7 +438,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
 
   return (
     <div style={{ padding: '24px', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div style={{ marginBottom: 16, flexShrink: 0 }}>
         <Space>
           <Title level={3} style={{ margin: 0 }}>
@@ -506,7 +506,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         </Row>
       </div>
 
-      {/* 状态提示 */}
+      {/* 狀態提示 */}
       {pod.status !== 'Running' && (
         <Alert
           message={t('pod:terminal.podStatusAbnormal')}
@@ -517,7 +517,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         />
       )}
 
-      {/* 终端界面 */}
+      {/* 終端介面 */}
       <Card 
         style={{ 
           flex: 1, 

@@ -60,7 +60,7 @@ const { TabPane } = Tabs;
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
-// 日志级别颜色
+// 日誌級別顏色
 const levelColors: Record<string, string> = {
   error: '#ff4d4f',
   warn: '#faad14',
@@ -68,7 +68,7 @@ const levelColors: Record<string, string> = {
   debug: '#8c8c8c',
 };
 
-// 日志级别Tag颜色
+// 日誌級別Tag顏色
 const levelTagColors: Record<string, string> = {
   error: 'red',
   warn: 'orange',
@@ -83,7 +83,7 @@ const [activeTab, setActiveTab] = useState('stream');
   const [stats, setStats] = useState<LogStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  // ===== {t('logs:center.realTimeLogs')}流状态 =====
+  // ===== {t('logs:center.realTimeLogs')}流狀態 =====
   const [streaming, setStreaming] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [targets, setTargets] = useState<LogStreamTarget[]>([]);
@@ -92,7 +92,7 @@ const [activeTab, setActiveTab] = useState('stream');
   const [showSource, setShowSource] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [levelFilter, setLevelFilter] = useState<string[]>([]);
-  const [logSearchKeyword, setLogSearchKeyword] = useState(''); // 实时{t('logs:center.logSearch')}关键字
+  const [logSearchKeyword, setLogSearchKeyword] = useState(''); // 實時{t('logs:center.logSearch')}關鍵字
   const wsRef = useRef<WebSocket | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -109,31 +109,31 @@ const [activeTab, setActiveTab] = useState('stream');
   const [extResults, setExtResults] = useState<LogEntry[]>([]);
   const [extSearchLoading, setExtSearchLoading] = useState(false);
 
-  // Pod选择器状态
+  // Pod選擇器狀態
   const [podSelectorVisible, setPodSelectorVisible] = useState(false);
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState<string>('');
   const [pods, setPods] = useState<LogPodInfo[]>([]);
   const [podsLoading, setPodsLoading] = useState(false);
   const [selectedPods, setSelectedPods] = useState<LogStreamTarget[]>([]);
-  const [podSearchKeyword, setPodSearchKeyword] = useState(''); // Pod搜索关键字
+  const [podSearchKeyword, setPodSearchKeyword] = useState(''); // Pod搜尋關鍵字
 
-  // ===== 性能优化：使用 useMemo =====
-  // 已选 Pod 的 Set，用于 O(1) 查找
+  // ===== 效能最佳化：使用 useMemo =====
+  // 已選 Pod 的 Set，用於 O(1) 查詢
   const selectedPodsSet = useMemo(() => {
     return new Set(selectedPods.map((p) => `${p.namespace}/${p.pod}`));
   }, [selectedPods]);
 
-  // 过滤后的实时日志（日志级别 + 关键字搜索）
+  // 過濾後的實時日誌（日誌級別 + 關鍵字搜尋）
   const filteredLogs = useMemo(() => {
     let result = logs;
     
-    // 1. 日志级别过滤
+    // 1. 日誌級別過濾
     if (levelFilter.length > 0) {
       result = result.filter((log) => levelFilter.includes(log.level));
     }
     
-    // 2. 关键字搜索过滤
+    // 2. 關鍵字搜尋過濾
     if (logSearchKeyword.trim()) {
       const keyword = logSearchKeyword.toLowerCase();
       result = result.filter(
@@ -148,7 +148,7 @@ const [activeTab, setActiveTab] = useState('stream');
     return result;
   }, [logs, levelFilter, logSearchKeyword]);
 
-  // 高亮关键字的函数
+  // 高亮關鍵字的函式
   const highlightKeyword = (text: string, keyword: string) => {
     if (!keyword.trim() || !text) return text;
     const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
@@ -164,7 +164,7 @@ const [activeTab, setActiveTab] = useState('stream');
     );
   };
 
-  // 过滤后的 Pod 列表
+  // 過濾後的 Pod 列表
   const filteredPods = useMemo(() => {
     if (!podSearchKeyword.trim()) return pods;
     const keyword = podSearchKeyword.toLowerCase();
@@ -175,13 +175,13 @@ const [activeTab, setActiveTab] = useState('stream');
     );
   }, [pods, podSearchKeyword]);
 
-  // ===== 事件日志状态 =====
+  // ===== 事件日誌狀態 =====
   const [events, setEvents] = useState<EventLogEntry[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventNamespace, setEventNamespace] = useState<string>('');
   const [eventType, setEventType] = useState<'Normal' | 'Warning' | undefined>();
 
-  // ===== 日志搜索状态 =====
+  // ===== 日誌搜尋狀態 =====
   const [searchResults, setSearchResults] = useState<LogEntry[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -189,7 +189,7 @@ const [activeTab, setActiveTab] = useState('stream');
   const [searchLevels, setSearchLevels] = useState<string[]>([]);
   const [searchDateRange, setSearchDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
-  // 获取统计数据
+  // 獲取統計資料
   const fetchStats = useCallback(async () => {
     if (!clusterId) return;
     setStatsLoading(true);
@@ -197,24 +197,24 @@ const [activeTab, setActiveTab] = useState('stream');
       const res = await logService.getLogStats(clusterId, { timeRange: '1h' });
       setStats(res);
     } catch (error) {
-      console.error('获取日志统计失败', error);
+      console.error('獲取日誌統計失敗', error);
     } finally {
       setStatsLoading(false);
     }
   }, [clusterId]);
 
-  // 获取命名空间列表
+  // 獲取命名空間列表
   const fetchNamespaces = useCallback(async () => {
     if (!clusterId) return;
     try {
       const res = await logService.getNamespaces(clusterId);
       setNamespaces(res || []);
     } catch (error) {
-      console.error('获取命名空间失败', error);
+      console.error('獲取命名空間失敗', error);
     }
   }, [clusterId]);
 
-  // 获取Pod列表
+  // 獲取Pod列表
   const fetchPods = useCallback(async (namespace?: string) => {
     if (!clusterId) return;
     setPodsLoading(true);
@@ -222,13 +222,13 @@ const [activeTab, setActiveTab] = useState('stream');
       const res = await logService.getPods(clusterId, namespace);
       setPods(res || []);
     } catch (error) {
-      console.error('获取Pod列表失败', error);
+      console.error('獲取Pod列表失敗', error);
     } finally {
       setPodsLoading(false);
     }
   }, [clusterId]);
 
-  // 获取事件日志
+  // 獲取事件日誌
   const fetchEvents = useCallback(async () => {
     if (!clusterId) return;
     setEventsLoading(true);
@@ -240,14 +240,14 @@ const [activeTab, setActiveTab] = useState('stream');
       });
       setEvents(res?.items || []);
     } catch (error) {
-      console.error('获取事件日志失败', error);
+      console.error('獲取事件日誌失敗', error);
       message.error(t('logs:center.fetchEventsFailed'));
     } finally {
       setEventsLoading(false);
     }
   }, [clusterId, eventNamespace, eventType]);
 
-  // 日志搜索
+  // 日誌搜尋
   const handleSearch = useCallback(async () => {
     if (!clusterId) return;
     setSearchLoading(true);
@@ -266,7 +266,7 @@ const [activeTab, setActiveTab] = useState('stream');
       const res = await logService.searchLogs(clusterId, params);
       setSearchResults(res?.items || []);
     } catch (error) {
-      console.error('日志搜索失败', error);
+      console.error('日誌搜尋失敗', error);
       message.error(t('logs:center.searchFailed'));
     } finally {
       setSearchLoading(false);
@@ -284,14 +284,14 @@ const [activeTab, setActiveTab] = useState('stream');
     }
   }, [activeTab, fetchEvents]);
 
-  // 自动滚动
+  // 自動滾動
   useEffect(() => {
     if (autoScroll && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs, autoScroll]);
 
-  // 开始/停止日志流
+  // 開始/停止日誌流
   const toggleStream = useCallback(() => {
     if (!clusterId) return;
 
@@ -315,7 +315,7 @@ const [activeTab, setActiveTab] = useState('stream');
       const { ws, config } = logService.createAggregateLogStream(clusterId, streamConfig);
 
       ws.onopen = () => {
-        // 连接成功后发送配置
+        // 連線成功後傳送配置
         ws.send(JSON.stringify(config));
         setStreaming(true);
         message.success(t('logs:center.connectedToSources', { count: targets.length }));
@@ -336,7 +336,7 @@ const [activeTab, setActiveTab] = useState('stream');
             message.error(msg.message);
           }
         } catch (e) {
-          console.error('解析消息失败', e);
+          console.error('解析訊息失敗', e);
         }
       };
 
@@ -353,10 +353,10 @@ const [activeTab, setActiveTab] = useState('stream');
     }
   }, [streaming, targets, clusterId, maxLines, showTimestamp, showSource]);
 
-  // 清空日志
+  // 清空日誌
   const clearLogs = () => setLogs([]);
 
-  // 下载日志
+  // 下載日誌
   const downloadLogs = () => {
     const content = logs
       .map((log) => {
@@ -378,18 +378,18 @@ const [activeTab, setActiveTab] = useState('stream');
     message.success(t('logs:center.downloadSuccess'));
   };
 
-  // 移除目标
+  // 移除目標
   const removeTarget = (index: number) => {
     setTargets(targets.filter((_, i) => i !== index));
   };
 
-  // 打开Pod选择器
+  // 開啟Pod選擇器
   const openPodSelector = () => {
     setPodSelectorVisible(true);
     setSelectedPods([]);
   };
 
-  // 确认选择Pod
+  // 確認選擇Pod
   const confirmPodSelection = () => {
     setTargets([...targets, ...selectedPods]);
     setPodSelectorVisible(false);
@@ -447,7 +447,7 @@ const [activeTab, setActiveTab] = useState('stream');
     },
   ];
 
-  // 搜索结果表格列
+  // 搜尋結果表格列
   const searchColumns: ColumnsType<LogEntry> = [
     {
       title: t('logs:center.time'),
@@ -527,7 +527,7 @@ const [activeTab, setActiveTab] = useState('stream');
       } else {
         await logSourceService.create(clusterId!, { ...values, enabled: true });
       }
-      message.success(editingSrc ? '更新成功' : '創建成功');
+      message.success(editingSrc ? '更新成功' : '建立成功');
       setSrcModalOpen(false);
       srcForm.resetFields();
       setEditingSrc(null);
@@ -576,7 +576,7 @@ const [activeTab, setActiveTab] = useState('stream');
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* 统计概览 */}
+      {/* 統計概覽 */}
       <Spin spinning={statsLoading}>
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={4}>
@@ -631,7 +631,7 @@ const [activeTab, setActiveTab] = useState('stream');
         </Row>
       </Spin>
 
-      {/* 主内容区 */}
+      {/* 主內容區 */}
       <Card bordered={false}>
         <Tabs
           activeKey={activeTab}
@@ -644,17 +644,17 @@ const [activeTab, setActiveTab] = useState('stream');
             </Space>
           }
         >
-          {/* 实时日志流 Tab */}
+          {/* 實時日誌流 Tab */}
           <TabPane
             tab={
               <span>
                 <ThunderboltOutlined />
-                实时日志
+                實時日誌
               </span>
             }
             key="stream"
           >
-            {/* 工具栏 */}
+            {/* 工具欄 */}
             <div
               style={{
                 marginBottom: 16,
@@ -724,7 +724,7 @@ const [activeTab, setActiveTab] = useState('stream');
               </Space>
             </div>
 
-            {/* Pod选择器 */}
+            {/* Pod選擇器 */}
             <Card size="small" style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontWeight: 500 }}>{t('logs:center.monitorTarget')}</span>
@@ -757,7 +757,7 @@ const [activeTab, setActiveTab] = useState('stream');
               </div>
             </Card>
 
-            {/* 日志搜索框 */}
+            {/* 日誌搜尋框 */}
             <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Input
                 placeholder={t('logs:center.searchLogPlaceholder')}
@@ -774,7 +774,7 @@ const [activeTab, setActiveTab] = useState('stream');
               )}
             </div>
 
-            {/* 日志显示区 */}
+            {/* 日誌顯示區 */}
             <div
               style={{
                 height: 'calc(100vh - 540px)',
@@ -842,7 +842,7 @@ const [activeTab, setActiveTab] = useState('stream');
               )}
             </div>
 
-            {/* 状态栏 */}
+            {/* 狀態列 */}
             <div
               style={{
                 marginTop: 8,
@@ -867,7 +867,7 @@ const [activeTab, setActiveTab] = useState('stream');
             }
             key="events"
           >
-            {/* 筛选 */}
+            {/* 篩選 */}
             <Space wrap style={{ marginBottom: 16 }}>
               <Select
                 placeholder={t('common:table.namespace')}
@@ -914,17 +914,17 @@ const [activeTab, setActiveTab] = useState('stream');
             />
           </TabPane>
 
-          {/* 日志搜索 Tab */}
+          {/* 日誌搜尋 Tab */}
           <TabPane
             tab={
               <span>
                 <SearchOutlined />
-                日志搜索
+                日誌搜尋
               </span>
             }
             key="search"
           >
-            {/* 搜索栏 */}
+            {/* 搜尋欄 */}
             <Card size="small" style={{ marginBottom: 16 }}>
               <Space wrap style={{ width: '100%' }}>
                 <Input.Search
@@ -979,7 +979,7 @@ const [activeTab, setActiveTab] = useState('stream');
               </Space>
             </Card>
 
-            {/* 搜索结果 */}
+            {/* 搜尋結果 */}
             <Card
               size="small"
               title={t('logs:center.searchResults', { count: searchResults.length })}
@@ -1027,7 +1027,7 @@ const [activeTab, setActiveTab] = useState('stream');
                 rowKey="id"
                 size="small"
                 pagination={false}
-                locale={{ emptyText: '暫無日誌源，點擊「新增日誌源」配置 Loki 或 Elasticsearch' }}
+                locale={{ emptyText: '暫無日誌源，點選「新增日誌源」配置 Loki 或 Elasticsearch' }}
                 rowSelection={{
                   type: 'radio',
                   selectedRowKeys: selectedSrcId ? [selectedSrcId] : [],
@@ -1035,7 +1035,7 @@ const [activeTab, setActiveTab] = useState('stream');
                 }}
                 columns={[
                   { title: '名稱', dataIndex: 'name' },
-                  { title: '類型', dataIndex: 'type', width: 130, render: (t: string) => <Tag color={t === 'loki' ? 'blue' : 'orange'}>{t.toUpperCase()}</Tag> },
+                  { title: '型別', dataIndex: 'type', width: 130, render: (t: string) => <Tag color={t === 'loki' ? 'blue' : 'orange'}>{t.toUpperCase()}</Tag> },
                   { title: 'URL', dataIndex: 'url', ellipsis: true },
                   { title: '狀態', dataIndex: 'enabled', width: 80, render: (v: boolean) => <Tag color={v ? 'green' : 'red'}>{v ? '啟用' : '停用'}</Tag> },
                   {
@@ -1118,11 +1118,11 @@ const [activeTab, setActiveTab] = useState('stream');
         open={srcModalOpen}
         onOk={handleSaveLogSource}
         onCancel={() => { setSrcModalOpen(false); setEditingSrc(null); srcForm.resetFields(); }}
-        okText="保存"
+        okText="儲存"
         cancelText="取消"
       >
         <Form form={srcForm} layout="vertical">
-          <Form.Item name="type" label="類型" rules={[{ required: true }]}>
+          <Form.Item name="type" label="型別" rules={[{ required: true }]}>
             <Select options={[{ label: 'Loki', value: 'loki' }, { label: 'Elasticsearch', value: 'elasticsearch' }]} disabled={!!editingSrc} />
           </Form.Item>
           <Form.Item name="name" label="名稱" rules={[{ required: true }]}>
@@ -1131,8 +1131,8 @@ const [activeTab, setActiveTab] = useState('stream');
           <Form.Item name="url" label="URL" rules={[{ required: true }]}>
             <Input placeholder="如：http://loki.monitoring:3100" />
           </Form.Item>
-          <Form.Item name="username" label="用戶名（可選）">
-            <Input placeholder="HTTP Basic Auth 用戶名" />
+          <Form.Item name="username" label="使用者名稱（可選）">
+            <Input placeholder="HTTP Basic Auth 使用者名稱" />
           </Form.Item>
           <Form.Item name="password" label="密碼（可選）">
             <Input.Password placeholder="HTTP Basic Auth 密碼" />
@@ -1143,14 +1143,14 @@ const [activeTab, setActiveTab] = useState('stream');
         </Form>
       </Modal>
 
-      {/* Pod选择器弹窗 */}
+      {/* Pod選擇器彈窗 */}
       <Modal
         title={t('logs:center.selectPod')}
         open={podSelectorVisible}
         onOk={confirmPodSelection}
         onCancel={() => {
           setPodSelectorVisible(false);
-          setPodSearchKeyword(''); // 关闭时清空搜索
+          setPodSearchKeyword(''); // 關閉時清空搜尋
         }}
         width={700}
         okText={t('logs:center.confirmAdd')}
@@ -1163,14 +1163,14 @@ const [activeTab, setActiveTab] = useState('stream');
             value={selectedNamespace || undefined}
             onChange={(v) => {
               setSelectedNamespace(v);
-              setPodSearchKeyword(''); // 切换命名空间时清空搜索
+              setPodSearchKeyword(''); // 切換命名空間時清空搜尋
               fetchPods(v);
             }}
             showSearch
             options={namespaces.map((ns) => ({ label: ns, value: ns }))}
           />
 
-          {/* Pod 搜索框 */}
+          {/* Pod 搜尋框 */}
           {pods.length > 0 && (
             <Input
               placeholder={t('logs:center.searchPodPlaceholder')}
@@ -1189,7 +1189,7 @@ const [activeTab, setActiveTab] = useState('stream');
               <Empty description={t('logs:center.noMatchingPods')} />
             ) : (
               <>
-                {/* 显示过滤结果统计和全选按钮 */}
+                {/* 顯示過濾結果統計和全選按鈕 */}
                 <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: '#888' }}>
                     {t('logs:center.totalPods', { total: pods.length })}
@@ -1207,7 +1207,7 @@ const [activeTab, setActiveTab] = useState('stream');
                     }
                     onChange={(e) => {
                       if (e.target.checked) {
-                        // 全选：添加所有过滤后的 Pod（去重）
+                        // 全選：新增所有過濾後的 Pod（去重）
                         const newTargets = filteredPods
                           .filter((p) => !selectedPodsSet.has(`${p.namespace}/${p.name}`))
                           .map((p) => ({
@@ -1217,7 +1217,7 @@ const [activeTab, setActiveTab] = useState('stream');
                           }));
                         setSelectedPods([...selectedPods, ...newTargets]);
                       } else {
-                        // 取消全选：移除所有过滤后的 Pod
+                        // 取消全選：移除所有過濾後的 Pod
                         const filteredSet = new Set(filteredPods.map((p) => `${p.namespace}/${p.name}`));
                         setSelectedPods(selectedPods.filter((p) => !filteredSet.has(`${p.namespace}/${p.pod}`)));
                       }
@@ -1227,7 +1227,7 @@ const [activeTab, setActiveTab] = useState('stream');
                   </Checkbox>
                 </div>
                 
-                {/* 虚拟滚动列表 - 使用 react-window */}
+                {/* 虛擬滾動列表 - 使用 react-window */}
                 <div
                   style={{
                     border: '1px solid #d9d9d9',

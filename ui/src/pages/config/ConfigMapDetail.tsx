@@ -43,7 +43,7 @@ const ConfigMapDetail: React.FC = () => {
   const [versions, setVersions] = useState<ConfigVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
 
-  // 加载ConfigMap详情
+  // 載入ConfigMap詳情
   const loadConfigMap = React.useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     setLoading(true);
@@ -91,7 +91,7 @@ const ConfigMapDetail: React.FC = () => {
     }
   };
 
-  // 删除ConfigMap
+  // 刪除ConfigMap
   const handleDelete = () => {
     Modal.confirm({
       title: t('common:messages.confirmDelete'),
@@ -130,7 +130,7 @@ const ConfigMapDetail: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        {/* 头部操作栏 */}
+        {/* 頭部操作欄 */}
         <Card>
           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
             <Space>
@@ -163,7 +163,7 @@ const ConfigMapDetail: React.FC = () => {
           </Space>
         </Card>
 
-        {/* 基本信息 */}
+        {/* 基本資訊 */}
         <Card title={t('config:detail.basicInfo')}>
           <Descriptions bordered column={2}>
             <Descriptions.Item label={t('config:detail.name')}>{configMap.name}</Descriptions.Item>
@@ -182,7 +182,7 @@ const ConfigMapDetail: React.FC = () => {
           </Descriptions>
         </Card>
 
-        {/* 标签和注解 */}
+        {/* 標籤和註解 */}
         <Card title={t('config:detail.labelsAndAnnotations')}>
           <Tabs defaultActiveKey="labels">
             <TabPane tab={t('config:detail.labels')} key="labels">
@@ -214,7 +214,7 @@ const ConfigMapDetail: React.FC = () => {
           </Tabs>
         </Card>
 
-        {/* 数据内容 */}
+        {/* 資料內容 */}
         <Card title={t('config:detail.dataContent')}>
           {Object.entries(configMap.data || {}).length > 0 ? (
             <Tabs type="card">
@@ -246,7 +246,7 @@ const ConfigMapDetail: React.FC = () => {
         {/* 版本歷史 */}
         <Card
           title={<Space><HistoryOutlined />版本歷史</Space>}
-          extra={<Button size="small" icon={<ReloadOutlined />} onClick={loadVersions}>刷新</Button>}
+          extra={<Button size="small" icon={<ReloadOutlined />} onClick={loadVersions}>重新整理</Button>}
         >
           <Table<ConfigVersion>
             loading={versionsLoading}

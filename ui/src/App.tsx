@@ -60,7 +60,7 @@ import { PermissionGuard } from './components/PermissionGuard';
 import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
-// 认证保护组件
+// 認證保護元件
 interface RequireAuthProps {
   children: React.ReactNode;
 }
@@ -69,21 +69,21 @@ const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
   const location = useLocation();
   
   if (!tokenManager.isLoggedIn()) {
-    // 重定向到登录页，保存当前位置
+    // 重定向到登入頁，儲存當前位置
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
 };
 
-// Ant Design locale 映射
+// Ant Design locale 對映
 const antdLocaleMap: Record<string, typeof zhTW> = {
   'zh-TW': zhTW,
   // 'zh-CN': zhCN, // zh-CN 已停用
   'en-US': enUS,
 };
 
-// 内部 App 组件（需要访问 i18n hook）
+// 內部 App 元件（需要訪問 i18n hook）
 const AppContent: React.FC = () => {
   const { i18n } = useTranslation();
   const currentLocale = antdLocaleMap[i18n.language] || zhTW;
@@ -94,10 +94,10 @@ const AppContent: React.FC = () => {
         <Router>
           <ErrorBoundary>
           <Routes>
-            {/* 登录页面 - 不需要认证 */}
+            {/* 登入頁面 - 不需要認證 */}
             <Route path="/login" element={<Login />} />
             
-            {/* 受保护的路由 */}
+            {/* 受保護的路由 */}
             <Route path="/" element={
               <RequireAuth>
                 <PermissionProvider>
@@ -109,13 +109,13 @@ const AppContent: React.FC = () => {
               <Route path="overview" element={<Overview />} />
               <Route path="clusters" element={<ClusterList />} />
               <Route path="clusters/:id/overview" element={<ClusterDetail />} />
-              {/* 配置中心 - 需要运维权限 */}
+              {/* 配置中心 - 需要運維權限 */}
               <Route path="clusters/:clusterId/config-center" element={
                 <PermissionGuard requiredPermission="ops">
                   <ConfigCenter />
                 </PermissionGuard>
               } />
-              {/* 集群升级 - 需要管理员权限 */}
+              {/* 叢集升級 - 需要管理員權限 */}
               <Route path="clusters/:clusterId/upgrade" element={
                 <PermissionGuard requiredPermission="admin">
                   <ClusterUpgrade />
@@ -123,7 +123,7 @@ const AppContent: React.FC = () => {
               } />
               <Route path="clusters/import" element={<ClusterImport />} />
               <Route path="clusters/:id/terminal" element={<ErrorBoundary fallbackType="section"><KubectlTerminalPage /></ErrorBoundary>} />
-              {/* 节点管理 - 需要运维权限 */}
+              {/* 節點管理 - 需要運維權限 */}
               <Route path="clusters/:clusterId/nodes" element={
                 <PermissionGuard requiredPermission="ops">
                   <NodeList />
@@ -150,12 +150,12 @@ const AppContent: React.FC = () => {
               <Route path="workloads" element={<WorkloadList />} />
               <Route path="workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
               <Route path="search" element={<GlobalSearch />} />
-              {/* 全局告警中心路由 */}
+              {/* 全域性告警中心路由 */}
               <Route path="alerts" element={<GlobalAlertCenter />} />
-              {/* 命名空间路由 */}
+              {/* 命名空間路由 */}
               <Route path="clusters/:clusterId/namespaces" element={<NamespaceList />} />
               <Route path="clusters/:clusterId/namespaces/:namespace" element={<NamespaceDetail />} />
-              {/* 配置与密钥路由 */}
+              {/* 配置與金鑰路由 */}
               <Route path="clusters/:clusterId/configs" element={<ConfigSecretManagement />} />
               <Route path="clusters/:clusterId/configs/configmap/create" element={<ConfigMapCreate />} />
               <Route path="clusters/:clusterId/configs/configmap/:namespace/:name" element={<ConfigMapDetail />} />
@@ -163,20 +163,20 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/configs/secret/create" element={<SecretCreate />} />
               <Route path="clusters/:clusterId/configs/secret/:namespace/:name" element={<SecretDetail />} />
               <Route path="clusters/:clusterId/configs/secret/:namespace/:name/edit" element={<SecretEdit />} />
-              {/* 网络管理路由（Service和Ingress） */}
+              {/* 網路管理路由（Service和Ingress） */}
               <Route path="clusters/:clusterId/network" element={<NetworkList />} />
               <Route path="clusters/:clusterId/network/service/:namespace/:name/edit" element={<ServiceEdit />} />
               <Route path="clusters/:clusterId/network/ingress/:namespace/:name/edit" element={<IngressEdit />} />
-              {/* 存储管理路由（PVC、PV、StorageClass） */}
+              {/* 儲存管理路由（PVC、PV、StorageClass） */}
               <Route path="clusters/:clusterId/storage" element={<StorageList />} />
               {/* 告警中心路由 */}
               <Route path="clusters/:clusterId/alerts" element={<AlertCenter />} />
-              {/* 日志中心路由 */}
+              {/* 日誌中心路由 */}
               <Route path="clusters/:clusterId/logs" element={<ErrorBoundary fallbackType="section"><LogCenter /></ErrorBoundary>} />
               <Route path="clusters/:clusterId/logs/events" element={<ErrorBoundary fallbackType="section"><EventLogs /></ErrorBoundary>} />
-              {/* 监控中心路由 */}
+              {/* 監控中心路由 */}
               <Route path="clusters/:clusterId/monitoring" element={<ErrorBoundary fallbackType="section"><MonitoringCenter /></ErrorBoundary>} />
-              {/* ArgoCD 应用管理路由 - 需要运维权限 */}
+              {/* ArgoCD 應用管理路由 - 需要運維權限 */}
               <Route path="clusters/:clusterId/plugins" element={
                 <PermissionGuard requiredPermission="ops">
                   <ArgoCDApplicationsPage />
@@ -213,7 +213,7 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:id/security" element={<SecurityDashboard />} />
               {/* 多叢集工作流程 */}
               <Route path="multicluster" element={<MultiClusterPage />} />
-              {/* 审计管理路由 - 仅平台管理员 */}
+              {/* 審計管理路由 - 僅平臺管理員 */}
               <Route path="audit/operations" element={
                 <PermissionGuard platformAdminOnly>
                   <OperationLogs />
@@ -224,7 +224,7 @@ const AppContent: React.FC = () => {
                   <CommandHistory />
                 </PermissionGuard>
               } />
-              {/* 访问控制路由 - 仅平台管理员 */}
+              {/* 訪問控制路由 - 僅平臺管理員 */}
               <Route path="access/users" element={
                 <PermissionGuard platformAdminOnly>
                   <UserManagement />
@@ -240,19 +240,19 @@ const AppContent: React.FC = () => {
                   <PermissionManagement />
                 </PermissionGuard>
               } />
-              {/* 权限管理路由 - 兼容旧路由 */}
+              {/* 權限管理路由 - 相容舊路由 */}
               <Route path="permissions" element={
                 <PermissionGuard platformAdminOnly>
                   <PermissionManagement />
                 </PermissionGuard>
               } />
-              {/* 系统设置路由 - 仅平台管理员 */}
+              {/* 系統設定路由 - 僅平臺管理員 */}
               <Route path="settings" element={
                 <PermissionGuard platformAdminOnly>
                   <SystemSettings />
                 </PermissionGuard>
               } />
-              {/* 个人资料路由 */}
+              {/* 個人資料路由 */}
               <Route path="profile" element={<UserProfile />} />
             </Route>
           </Routes>
@@ -263,7 +263,7 @@ const AppContent: React.FC = () => {
   );
 };
 
-// 主 App 组件（包含 Suspense 用于 i18n 加载）
+// 主 App 元件（包含 Suspense 用於 i18n 載入）
 const App: React.FC = () => {
   return (
     <Suspense fallback={

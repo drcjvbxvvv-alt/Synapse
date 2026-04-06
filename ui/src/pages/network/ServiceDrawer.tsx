@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
-// --- YAML 查看 Modal ---
+// --- YAML 檢視 Modal ---
 
 interface YAMLViewModalProps {
   visible: boolean;
@@ -51,7 +51,7 @@ export const YAMLViewModal: React.FC<YAMLViewModalProps> = ({
   );
 };
 
-// --- Endpoints 查看 Modal ---
+// --- Endpoints 檢視 Modal ---
 
 interface EndpointsViewModalProps {
   visible: boolean;
@@ -116,7 +116,7 @@ export const EndpointsViewModal: React.FC<EndpointsViewModalProps> = ({
   );
 };
 
-// --- 列设置抽屉 ---
+// --- 列設定抽屜 ---
 
 interface ColumnSettingsDrawerProps {
   visible: boolean;

@@ -151,7 +151,7 @@ const EventAlertRules: React.FC = () => {
   const ruleColumns = [
     { title: t('table.name'), dataIndex: 'name', key: 'name', render: (v: string) => <Text strong>{v}</Text> },
     {
-      title: '事件類型', dataIndex: 'eventType', key: 'eventType',
+      title: '事件型別', dataIndex: 'eventType', key: 'eventType',
       render: (v: string) => v ? <Tag color={v === 'Warning' ? 'orange' : 'green'}>{v}</Tag> : <Tag>全部</Tag>,
     },
     {
@@ -187,7 +187,7 @@ const EventAlertRules: React.FC = () => {
     { title: t('table.namespace'), dataIndex: 'namespace', key: 'namespace', render: (v: string) => <Tag color="blue">{v}</Tag> },
     { title: '相關物件', dataIndex: 'involvedObj', key: 'involvedObj' },
     {
-      title: '事件類型', dataIndex: 'eventType', key: 'eventType',
+      title: '事件型別', dataIndex: 'eventType', key: 'eventType',
       render: (v: string) => <Tag color={v === 'Warning' ? 'orange' : 'green'}>{v}</Tag>,
     },
     { title: '原因', dataIndex: 'eventReason', key: 'eventReason' },
@@ -279,7 +279,7 @@ const EventAlertRules: React.FC = () => {
           <Form.Item name="namespace" label="命名空間">
             <Input placeholder="留空表示監控全叢集" />
           </Form.Item>
-          <Form.Item name="eventType" label="事件類型">
+          <Form.Item name="eventType" label="事件型別">
             <Select allowClear placeholder="全部">
               <Option value="Warning">Warning</Option>
               <Option value="Normal">Normal</Option>

@@ -27,13 +27,13 @@ export interface SearchResponse {
 }
 
 export const searchService = {
-  // 全局搜索
+  // 全域性搜尋
   async globalSearch(query: string): Promise<SearchResponse> {
     const response = await api.get(`/search?q=${encodeURIComponent(query)}`);
     return response.data;
   },
 
-  // 快速搜索（用于顶部搜索栏）
+  // 快速搜尋（用於頂部搜尋欄）
   async quickSearch(query: string): Promise<SearchResult[]> {
     const response = await api.get(`/search/quick?q=${encodeURIComponent(query)}&limit=10`);
     return response.data.results || [];

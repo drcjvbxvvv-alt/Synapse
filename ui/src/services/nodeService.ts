@@ -20,7 +20,7 @@ export interface NodeOverview {
 }
 
 export const nodeService = {
-  // 获取节点列表
+  // 獲取節點列表
   getNodes: async (params: NodeListParams): Promise<ApiResponse<PaginatedResponse<Node>>> => {
     const { clusterId, page = 1, pageSize = 10, status, search } = params;
     const queryParams = new URLSearchParams();
@@ -33,27 +33,27 @@ export const nodeService = {
     return request.get(`/clusters/${clusterId}/nodes?${queryParams.toString()}`);
   },
 
-  // 获取节点详情
+  // 獲取節點詳情
   getNode: async (clusterId: string, name: string): Promise<ApiResponse<Node>> => {
     return request.get(`/clusters/${clusterId}/nodes/${name}`);
   },
 
-  // 获取节点概览信息
+  // 獲取節點概覽資訊
   getNodeOverview: async (clusterId: string): Promise<ApiResponse<NodeOverview>> => {
     return request.get(`/clusters/${clusterId}/nodes/overview`);
   },
 
-  // 封锁节点 (Cordon)
+  // 封鎖節點 (Cordon)
   cordonNode: async (clusterId: string, name: string): Promise<ApiResponse<null>> => {
     return request.post(`/clusters/${clusterId}/nodes/${name}/cordon`);
   },
 
-  // 解封节点 (Uncordon)
+  // 解封節點 (Uncordon)
   uncordonNode: async (clusterId: string, name: string): Promise<ApiResponse<null>> => {
     return request.post(`/clusters/${clusterId}/nodes/${name}/uncordon`);
   },
 
-  // 驱逐节点 (Drain)
+  // 驅逐節點 (Drain)
   drainNode: async (
     clusterId: string, 
     name: string, 

@@ -94,7 +94,7 @@ interface ClusterMetricsData {
   network?: NetworkMetrics;
   storage?: MetricSeries;
   pods?: PodMetrics;
-  // Pod 级别的扩展指标
+  // Pod 級別的擴充套件指標
   cpu_request?: MetricSeries;
   cpu_limit?: MetricSeries;
   memory_request?: MetricSeries;
@@ -111,10 +111,10 @@ interface ClusterMetricsData {
   cpu_usage_absolute?: MetricSeries;
   memory_usage_bytes?: MetricSeries;
   oom_kills?: MetricSeries;
-  // 集群级别监控指标
+  // 叢集級別監控指標
   cluster_overview?: ClusterOverview;
   node_list?: NodeMetricItem[];
-  // 工作负载多Pod监控指标（显示多条曲线）
+  // 工作負載多Pod監控指標（顯示多條曲線）
   cpu_multi?: MultiSeriesMetric;
   memory_multi?: MultiSeriesMetric;
   container_restarts_multi?: MultiSeriesMetric;
@@ -137,7 +137,7 @@ interface MonitoringChartsProps {
   podName?: string;
   workloadName?: string;
   type: 'cluster' | 'node' | 'pod' | 'workload';
-  lazyLoad?: boolean; // 是否懒加载，默认 false
+  lazyLoad?: boolean; // 是否懶載入，預設 false
 }
 
 const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
@@ -155,18 +155,18 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState('1h');
   const [step, setStep] = useState('15s');
-  const [autoRefresh, setAutoRefresh] = useState(false); // 默认关闭自动刷新
-  const [hasLoaded, setHasLoaded] = useState(false); // 是否已加载过数据
+  const [autoRefresh, setAutoRefresh] = useState(false); // 預設關閉自動重新整理
+  const [hasLoaded, setHasLoaded] = useState(false); // 是否已載入過資料
   const metricsCacheRef = useRef<{ key: string; data: ClusterMetricsData; timestamp: number } | null>(null);
-  const CACHE_DURATION = 30000; // 缓存30秒
+  const CACHE_DURATION = 30000; // 快取30秒
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 生成缓存键
+  // 生成快取鍵
   const cacheKey = useMemo(() => {
     return `${clusterId}-${type}-${timeRange}-${step}-${clusterName || ''}-${nodeName || ''}-${namespace || ''}-${podName || ''}-${workloadName || ''}`;
   }, [clusterId, type, timeRange, step, clusterName, nodeName, namespace, podName, workloadName]);
 
-  // 检查缓存
+  // 檢查快取
   const getCachedData = useCallback(() => {
     if (metricsCacheRef.current && metricsCacheRef.current.key === cacheKey) {
       const now = Date.now();
@@ -178,7 +178,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
   }, [cacheKey]);
 
   const fetchMetrics = useCallback(async (forceRefresh = false) => {
-    // 检查缓存
+    // 檢查快取
     if (!forceRefresh) {
       const cachedData = getCachedData();
       if (cachedData) {
@@ -219,7 +219,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
       const data = response.data;
       setMetrics(data);
       
-      // 更新缓存
+      // 更新快取
       metricsCacheRef.current = {
         key: cacheKey,
         data: data,
@@ -228,18 +228,18 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
       
       setHasLoaded(true);
     } catch (error) {
-      console.error('获取监控数据失败:', error);
+      console.error('獲取監控資料失敗:', error);
     } finally {
       setLoading(false);
     }
   }, [clusterId, timeRange, step, clusterName, nodeName, namespace, podName, workloadName, type, cacheKey, getCachedData]);
 
   useEffect(() => {
-    // 如果是懒加载模式且未加载过，延迟自动加载
+    // 如果是懶載入模式且未載入過，延遲自動載入
     if (lazyLoad && !hasLoaded) {
-      // 延迟自动加载，给用户更好的体验
+      // 延遲自動載入，給使用者更好的體驗
       const timer = setTimeout(() => {
-        // 检查缓存
+        // 檢查快取
         const cachedData = getCachedData();
         if (cachedData) {
           setMetrics(cachedData);
@@ -247,13 +247,13 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
           return;
         }
         fetchMetrics();
-      }, 100); // 100ms 后自动加载
+      }, 100); // 100ms 後自動載入
       return () => clearTimeout(timer);
     }
     
-    // 非懒加载模式或已加载过，正常加载
+    // 非懶載入模式或已載入過，正常載入
     if (!lazyLoad || hasLoaded) {
-      // 检查缓存
+      // 檢查快取
       const cachedData = getCachedData();
       if (cachedData) {
         setMetrics(cachedData);
@@ -264,9 +264,9 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
       fetchMetrics();
     }
     
-    // 只在开启自动刷新时设置定时器
+    // 只在開啟自動重新整理時設定定時器
     if (autoRefresh) {
-      intervalRef.current = setInterval(() => fetchMetrics(true), 30000); // 30秒刷新一次，强制刷新
+      intervalRef.current = setInterval(() => fetchMetrics(true), 30000); // 30秒重新整理一次，強制重新整理
     }
 
     return () => {
@@ -318,11 +318,11 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
       tooltip: {
         formatter: (datum: { value: number; time: string }) => {
           return {
-            name: '数值',
+            name: '數值',
             value: formatValue(datum.value, unit),
           };
         },
-        title: (datum: { time: string }) => `时间: ${datum.time}`,
+        title: (datum: { time: string }) => `時間: ${datum.time}`,
       },
       yAxis: {
         label: {
@@ -334,18 +334,18 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
     return <Line {...config} />;
   };
 
-  // 渲染多时间序列图表（多个Pod的曲线）
+  // 渲染多時間序列圖表（多個Pod的曲線）
   const renderMultiSeriesChart = (data: MultiSeriesDataPoint[], unit: string = '') => {
     if (!data || data.length === 0) {
-      return <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>暂无数据</div>;
+      return <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>暫無資料</div>;
     }
 
-    // 转换数据格式：将 {timestamp, values: {pod1: val1, pod2: val2}} 转为 [{time, pod, value}, ...]
+    // 轉換資料格式：將 {timestamp, values: {pod1: val1, pod2: val2}} 轉為 [{time, pod, value}, ...]
     const chartData: Array<{ time: string; pod: string; value: number }> = [];
     data.forEach(point => {
       const time = formatTimestamp(point.timestamp);
       Object.entries(point.values).forEach(([podName, value]) => {
-        // 只添加有效的数值数据点
+        // 只新增有效的數值資料點
         if (value != null && typeof value === 'number' && !isNaN(value) && isFinite(value)) {
           chartData.push({
             time,
@@ -467,7 +467,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             ];
           }
         },
-        title: (datum: { time: string }) => `时间: ${datum.time}`,
+        title: (datum: { time: string }) => `時間: ${datum.time}`,
       },
       yAxis: {
         label: {
@@ -482,11 +482,11 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
     return <Area {...config} />;
   };
 
-  // 懒加载处理 - 显示骨架屏，自动加载（通过 useEffect 触发）
+  // 懶載入處理 - 顯示骨架屏，自動載入（透過 useEffect 觸發）
   if (lazyLoad && !hasLoaded && !loading) {
     return (
       <div style={{ padding: '24px' }}>
-        <Card title="监控图表">
+        <Card title="監控圖表">
           <Skeleton active paragraph={{ rows: 8 }} />
         </Card>
       </div>
@@ -496,7 +496,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
   if (loading && !metrics) {
     return (
       <div style={{ padding: '24px' }}>
-        <Card title="监控图表">
+        <Card title="監控圖表">
           <Skeleton active paragraph={{ rows: 8 }} />
         </Card>
       </div>
@@ -506,8 +506,8 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
   if (!metrics) {
     return (
       <Alert
-        message="监控数据不可用"
-        description="请检查监控配置是否正确，或监控数据源是否可用。"
+        message="監控資料不可用"
+        description="請檢查監控配置是否正確，或監控資料來源是否可用。"
         type="warning"
         showIcon
       />
@@ -517,7 +517,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
   return (
     <div>
       <Card
-        title="监控图表"
+        title="監控圖表"
         extra={
           <Space>
             <Select
@@ -525,9 +525,9 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               onChange={setTimeRange}
               style={{ width: 100 }}
             >
-              <Option value="1h">1小时</Option>
-              <Option value="6h">6小时</Option>
-              <Option value="24h">24小时</Option>
+              <Option value="1h">1小時</Option>
+              <Option value="6h">6小時</Option>
+              <Option value="24h">24小時</Option>
               <Option value="7d">7天</Option>
             </Select>
             <Select
@@ -536,18 +536,18 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               style={{ width: 100 }}
             >
               <Option value="15s">15秒</Option>
-              <Option value="1m">1分钟</Option>
-              <Option value="5m">5分钟</Option>
-              <Option value="15m">15分钟</Option>
-              <Option value="1h">1小时</Option>
+              <Option value="1m">1分鐘</Option>
+              <Option value="5m">5分鐘</Option>
+              <Option value="15m">15分鐘</Option>
+              <Option value="1h">1小時</Option>
             </Select>
             <Space>
-              <span>自动刷新</span>
+              <span>自動重新整理</span>
               <Switch
                 checked={autoRefresh}
                 onChange={setAutoRefresh}
-                checkedChildren="开"
-                unCheckedChildren="关"
+                checkedChildren="開"
+                unCheckedChildren="關"
               />
             </Space>
             <Button
@@ -555,19 +555,19 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               onClick={() => fetchMetrics()}
               loading={loading}
             >
-              刷新
+              重新整理
             </Button>
           </Space>
         }
       >
         
         <Row gutter={[16, 16]}>
-          {/* 集群概览（仅在集群类型时显示） */}
+          {/* 叢集概覽（僅在叢集型別時顯示） */}
           {type === 'cluster' && metrics.cluster_overview && (
             <>
-              {/* 资源总量 */}
+              {/* 資源總量 */}
               <Col span={24}>
-                <Card size="small" title="集群资源总量">
+                <Card size="small" title="叢集資源總量">
                   <Row gutter={16}>
                     <Col span={6}>
                       <GrafanaPanel
@@ -584,14 +584,14 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                     </Col>
                     <Col span={6}>
                       <Statistic
-                        title="内存总数"
+                        title="記憶體總數"
                         value={formatValue(metrics.cluster_overview.total_memory, 'bytes')}
                         valueStyle={{ color: '#fa8c16' }}
                       />
                     </Col>
                     <Col span={6}>
                       <Statistic
-                        title="Pod 最大可创建数"
+                        title="Pod 最大可建立數"
                         value={metrics.cluster_overview.max_pods}
                         valueStyle={{ color: '#722ed1' }}
                       />
@@ -600,20 +600,20 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                 </Card>
               </Col>
 
-              {/* Pod 状态 */}
+              {/* Pod 狀態 */}
               <Col span={24}>
-                <Card size="small" title="Pod 状态">
+                <Card size="small" title="Pod 狀態">
                   <Row gutter={16}>
                     <Col span={6}>
                       <Statistic
-                        title="Pod 已创建数"
+                        title="Pod 已建立數"
                         value={metrics.cluster_overview.created_pods}
                         valueStyle={{ color: '#1890ff' }}
                       />
                     </Col>
                     <Col span={6}>
                       <Statistic
-                        title="Pod 可创建数"
+                        title="Pod 可建立數"
                         value={metrics.cluster_overview.available_pods}
                         valueStyle={{ color: '#52c41a' }}
                       />
@@ -632,13 +632,13 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                 </Card>
               </Col>
 
-              {/* 集群状态 */}
+              {/* 叢集狀態 */}
               <Col span={24}>
-                <Card size="small" title="集群状态">
+                <Card size="small" title="叢集狀態">
                   <Row gutter={16}>
                     <Col span={8}>
                       <Statistic
-                        title="Etcd Leader 状态"
+                        title="Etcd Leader 狀態"
                         value={metrics.cluster_overview.etcd_has_leader ? 'YES' : 'NO'}
                         valueStyle={{ 
                           color: metrics.cluster_overview.etcd_has_leader ? '#52c41a' : '#cf1322' 
@@ -658,9 +658,9 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                 </Card>
               </Col>
 
-              {/* 资源配额比率 */}
+              {/* 資源配額比率 */}
               <Col span={24}>
-                <Card size="small" title="资源配额比率">
+                <Card size="small" title="資源配額比率">
                   <Row gutter={16}>
                     {metrics.cluster_overview.cpu_request_ratio && (
                       <Col span={12}>
@@ -692,7 +692,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                     )}
                     {metrics.cluster_overview.mem_request_ratio && (
                       <Col span={12}>
-                        <Card size="small" title="内存 Request 比率">
+                        <Card size="small" title="記憶體 Request 比率">
                           <Statistic
                             value={metrics.cluster_overview.mem_request_ratio.current}
                             suffix="%"
@@ -705,7 +705,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                     )}
                     {metrics.cluster_overview.mem_limit_ratio && (
                       <Col span={12}>
-                        <Card size="small" title="内存 Limit 比率">
+                        <Card size="small" title="記憶體 Limit 比率">
                           <Statistic
                             value={metrics.cluster_overview.mem_limit_ratio.current}
                             suffix="%"
@@ -722,10 +722,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                 </Card>
               </Col>
 
-              {/* ApiServer 请求量 */}
+              {/* ApiServer 請求量 */}
               {metrics.cluster_overview.apiserver_request_rate && (
                 <Col span={24}>
-                  <Card size="small" title="ApiServer 总请求量">
+                  <Card size="small" title="ApiServer 總請求量">
                     <Statistic
                       value={metrics.cluster_overview.apiserver_request_rate.current.toFixed(2)}
                       suffix="req/s"
@@ -736,10 +736,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                 </Col>
               )}
 
-              {/* 集群 CPU/内存使用率趋势图 */}
+              {/* 叢集 CPU/記憶體使用率趨勢圖 */}
               {metrics.cluster_overview.cpu_usage_rate && (
                 <Col span={12}>
-                  <Card size="small" title="集群 CPU 使用率">
+                  <Card size="small" title="叢集 CPU 使用率">
                     <Statistic
                       value={metrics.cluster_overview.cpu_usage_rate.current}
                       suffix="%"
@@ -755,7 +755,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
               
               {metrics.cluster_overview.memory_usage_rate && (
                 <Col span={12}>
-                  <Card size="small" title="集群内存使用率">
+                  <Card size="small" title="叢集記憶體使用率">
                     <Statistic
                       value={metrics.cluster_overview.memory_usage_rate.current}
                       suffix="%"
@@ -771,20 +771,20 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </>
           )}
 
-          {/* Node 列表监控（仅在集群类型时显示） */}
+          {/* Node 列表監控（僅在叢集型別時顯示） */}
           {type === 'cluster' && metrics.node_list && metrics.node_list.length > 0 && (
             <Col span={24}>
-              <Card size="small" title="Node 资源使用情况">
+              <Card size="small" title="Node 資源使用情況">
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
-                        <th style={{ padding: '12px', textAlign: 'left' }}>节点名称</th>
-                        <th style={{ padding: '12px', textAlign: 'left' }}>CPU 核数</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>節點名稱</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>CPU 核數</th>
                         <th style={{ padding: '12px', textAlign: 'left' }}>CPU 使用率</th>
-                        <th style={{ padding: '12px', textAlign: 'left' }}>总内存</th>
-                        <th style={{ padding: '12px', textAlign: 'left' }}>内存使用率</th>
-                        <th style={{ padding: '12px', textAlign: 'left' }}>状态</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>總記憶體</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>記憶體使用率</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>狀態</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -825,10 +825,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* Pod/工作负载 资源规格 */}
+          {/* Pod/工作負載 資源規格 */}
           {(type === 'pod' || type === 'workload') && (metrics.cpu_request || metrics.cpu_limit || metrics.memory_request || metrics.memory_limit) && (
             <Col span={24}>
-              <Card size="small" title="资源规格">
+              <Card size="small" title="資源規格">
                 <Row gutter={16}>
                   {metrics.cpu_request && (
                     <Col span={6}>
@@ -891,7 +891,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   {(type === 'pod' || type === 'workload') && metrics.cpu_usage_absolute && (
                     <Col span={12}>
                       <Statistic
-                        title="实际使用"
+                        title="實際使用"
                         value={metrics.cpu_usage_absolute.current.toFixed(3)}
                         suffix="cores"
                         precision={3}
@@ -900,7 +900,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                     </Col>
                   )}
                 </Row>
-                {/* 工作负载类型显示多Pod曲线，Pod类型显示单条曲线 */}
+                {/* 工作負載型別顯示多Pod曲線，Pod型別顯示單條曲線 */}
                 {type === 'workload' && metrics.cpu_multi ? (
                   renderMultiSeriesChart(metrics.cpu_multi.series, '%')
                 ) : (
@@ -910,10 +910,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* 内存使用率 */}
+          {/* 記憶體使用率 */}
           {(type === 'pod' || type === 'workload') && metrics.memory && (
             <Col span={12}>
-              <Card size="small" title="内存使用">
+              <Card size="small" title="記憶體使用">
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
@@ -927,14 +927,14 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   {(type === 'pod' || type === 'workload') && metrics.memory_usage_bytes && (
                     <Col span={12}>
                       <Statistic
-                        title="实际使用"
+                        title="實際使用"
                         value={formatValue(metrics.memory_usage_bytes.current, 'bytes')}
                         valueStyle={{ color: '#52c41a' }}
                       />
                     </Col>
                   )}
                 </Row>
-                {/* 工作负载类型显示多Pod曲线，Pod类型显示单条曲线 */}
+                {/* 工作負載型別顯示多Pod曲線，Pod型別顯示單條曲線 */}
                 {type === 'workload' && metrics.memory_multi ? (
                   renderMultiSeriesChart(metrics.memory_multi.series, '%')
                 ) : (
@@ -944,10 +944,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* 容器重启次数 */}
+          {/* 容器重啟次數 */}
           {(type === 'pod' || type === 'workload') && metrics.container_restarts && (
             <Col span={12}>
-              <Card size="small" title="容器重启次数">
+              <Card size="small" title="容器重啟次數">
                 <Statistic
                   value={metrics.container_restarts.current}
                   precision={0}
@@ -963,10 +963,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* OOM Kill 次数 */}
+          {/* OOM Kill 次數 */}
           {(type === 'pod' || type === 'workload') && metrics.oom_kills && (
             <Col span={12}>
-              <Card size="small" title="OOM Kill 次数">
+              <Card size="small" title="OOM Kill 次數">
                 <Statistic
                   value={metrics.oom_kills.current}
                   precision={0}
@@ -982,14 +982,14 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* 健康检查失败次数 */}
+          {/* 健康檢查失敗次數 */}
           {(type === 'pod' || type === 'workload') && metrics.probe_failures && (
             <Col span={12}>
-              <Card size="small" title="健康检查失败次数">
+              <Card size="small" title="健康檢查失敗次數">
                 <Statistic
                   value={metrics.probe_failures.current}
                   precision={2}
-                  suffix="次/分钟"
+                  suffix="次/分鐘"
                   valueStyle={{ color: metrics.probe_failures.current > 0 ? '#cf1322' : '#3f8600' }}
                 />
                 {type === 'workload' && metrics.probe_failures_multi ? (
@@ -1001,10 +1001,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* 网络流量 */}
+          {/* 網路流量 */}
           {metrics.network && (
             <Col span={24}>
-              <Card size="small" title="网络流量">
+              <Card size="small" title="網路流量">
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
@@ -1028,10 +1028,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* 存储使用率 */}
+          {/* 儲存使用率 */}
           {metrics.storage && (
             <Col span={12}>
-              <Card size="small" title="存储使用率">
+              <Card size="small" title="儲存使用率">
                 <Statistic
                   value={metrics.storage.current}
                   suffix="%"
@@ -1043,21 +1043,21 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* Pod 统计 */}
+          {/* Pod 統計 */}
           {metrics.pods && (
             <Col span={12}>
-              <Card size="small" title="Pod 状态">
+              <Card size="small" title="Pod 狀態">
                 <Row gutter={16}>
                   <Col span={6}>
                     <Statistic
-                      title="总数"
+                      title="總數"
                       value={metrics.pods.total}
                       valueStyle={{ color: '#1890ff' }}
                     />
                   </Col>
                   <Col span={6}>
                     <Statistic
-                      title="运行中"
+                      title="執行中"
                       value={metrics.pods.running}
                       valueStyle={{ color: '#52c41a' }}
                     />
@@ -1071,7 +1071,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   </Col>
                   <Col span={6}>
                     <Statistic
-                      title="失败"
+                      title="失敗"
                       value={metrics.pods.failed}
                       valueStyle={{ color: '#cf1322' }}
                     />
@@ -1081,10 +1081,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* 网络 PPS */}
+          {/* 網路 PPS */}
           {(type === 'pod' || type === 'workload') && metrics.network_pps && (
             <Col span={24}>
-              <Card size="small" title="网络 PPS（包/秒）">
+              <Card size="small" title="網路 PPS（包/秒）">
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
@@ -1106,60 +1106,60 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* 磁盘 IOPS */}
+          {/* 磁碟 IOPS */}
           {(type === 'pod' || type === 'workload') && metrics.disk_iops && (
             <Col span={24}>
-              <Card size="small" title="磁盘 IOPS">
+              <Card size="small" title="磁碟 IOPS">
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
-                      title="读 IOPS"
+                      title="讀 IOPS"
                       value={metrics.disk_iops.read.current.toFixed(2)}
                       suffix="ops/s"
                     />
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="写 IOPS"
+                      title="寫 IOPS"
                       value={metrics.disk_iops.write.current.toFixed(2)}
                       suffix="ops/s"
                     />
                   </Col>
                 </Row>
-                {renderNetworkChart(metrics.disk_iops.read.series, metrics.disk_iops.write.series, '', '读', '写')}
+                {renderNetworkChart(metrics.disk_iops.read.series, metrics.disk_iops.write.series, '', '讀', '寫')}
               </Card>
             </Col>
           )}
 
-          {/* 磁盘吞吐量 */}
+          {/* 磁碟吞吐量 */}
           {(type === 'pod' || type === 'workload') && metrics.disk_throughput && (
             <Col span={24}>
-              <Card size="small" title="磁盘吞吐量">
+              <Card size="small" title="磁碟吞吐量">
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
-                      title="读吞吐量"
+                      title="讀吞吐量"
                       value={formatValue(metrics.disk_throughput.read.current, 'bytes')}
                       suffix="/s"
                     />
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="写吞吐量"
+                      title="寫吞吐量"
                       value={formatValue(metrics.disk_throughput.write.current, 'bytes')}
                       suffix="/s"
                     />
                   </Col>
                 </Row>
-                {renderNetworkChart(metrics.disk_throughput.read.series, metrics.disk_throughput.write.series, 'bytes', '读', '写')}
+                {renderNetworkChart(metrics.disk_throughput.read.series, metrics.disk_throughput.write.series, 'bytes', '讀', '寫')}
               </Card>
             </Col>
           )}
 
-          {/* 线程数 */}
+          {/* 執行緒數 */}
           {(type === 'pod' || type === 'workload') && metrics.threads && (
             <Col span={12}>
-              <Card size="small" title="线程数">
+              <Card size="small" title="執行緒數">
                 <Statistic
                   value={metrics.threads.current}
                   precision={0}
@@ -1174,10 +1174,10 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* CPU 限流情况 */}
+          {/* CPU 限流情況 */}
           {(type === 'pod' || type === 'workload') && (metrics.cpu_throttling || metrics.cpu_throttling_time) && (
             <Col span={24}>
-              <Card size="small" title="CPU 限流情况">
+              <Card size="small" title="CPU 限流情況">
                 <Row gutter={16}>
                   {metrics.cpu_throttling && (
                     <Col span={12}>
@@ -1198,7 +1198,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   )}
                   {metrics.cpu_throttling_time && (
                     <Col span={12}>
-                      <Card size="small" title="CPU 限流时间">
+                      <Card size="small" title="CPU 限流時間">
                         <Statistic
                           value={metrics.cpu_throttling_time.current}
                           suffix="秒"
@@ -1218,14 +1218,14 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
             </Col>
           )}
 
-          {/* 网卡丢包情况 */}
+          {/* 網絡卡丟包情況 */}
           {(type === 'pod' || type === 'workload') && metrics.network_drops && (
             <Col span={24}>
-              <Card size="small" title="网卡丢包情况">
+              <Card size="small" title="網絡卡丟包情況">
                 <Row gutter={16}>
                   <Col span={12}>
                     <Statistic
-                      title="接收丢包"
+                      title="接收丟包"
                       value={metrics.network_drops.receive.current.toFixed(2)}
                       suffix="包/秒"
                       valueStyle={{ color: metrics.network_drops.receive.current > 0 ? '#cf1322' : '#3f8600' }}
@@ -1233,7 +1233,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                   </Col>
                   <Col span={12}>
                     <Statistic
-                      title="发送丢包"
+                      title="傳送丟包"
                       value={metrics.network_drops.transmit.current.toFixed(2)}
                       suffix="包/秒"
                       valueStyle={{ color: metrics.network_drops.transmit.current > 0 ? '#cf1322' : '#3f8600' }}
@@ -1243,7 +1243,7 @@ const MonitoringCharts: React.FC<MonitoringChartsProps> = ({
                 {type === 'workload' && metrics.network_drops_multi ? (
                   renderMultiSeriesChart(metrics.network_drops_multi.series, '包/秒')
                 ) : (
-                  renderNetworkChart(metrics.network_drops.receive.series, metrics.network_drops.transmit.series, '', '接收', '发送')
+                  renderNetworkChart(metrics.network_drops.receive.series, metrics.network_drops.transmit.series, '', '接收', '傳送')
                 )}
               </Card>
             </Col>

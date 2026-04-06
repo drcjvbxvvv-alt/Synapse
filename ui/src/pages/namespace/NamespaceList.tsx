@@ -45,21 +45,21 @@ const NamespaceList: React.FC = () => {
 const { t } = useTranslation(["namespace", "common"]);
 const [form] = Form.useForm();
 
-  // 数据状态
-  const [allNamespaces, setAllNamespaces] = useState<NamespaceData[]>([]); // 所有原始数据
-  const [namespaces, setNamespaces] = useState<NamespaceData[]>([]); // 当前页显示的数据
+  // 資料狀態
+  const [allNamespaces, setAllNamespaces] = useState<NamespaceData[]>([]); // 所有原始資料
+  const [namespaces, setNamespaces] = useState<NamespaceData[]>([]); // 當前頁顯示的資料
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
 
-  // 分页状态
+  // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // 操作状态
+  // 操作狀態
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
-  // 多条件搜索状态
+  // 多條件搜尋狀態
   interface SearchCondition {
     field: 'name' | 'status' | 'label';
     value: string;
@@ -68,17 +68,17 @@ const [form] = Form.useForm();
   const [currentSearchField, setCurrentSearchField] = useState<'name' | 'status' | 'label'>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
 
-  // 列设置状态
+  // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'status', 'labels', 'creationTimestamp'
   ]);
 
-  // 排序状态
+  // 排序狀態
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
-  // 添加搜索条件
+  // 新增搜尋條件
   const addSearchCondition = () => {
     if (!currentSearchValue.trim()) return;
 
@@ -91,18 +91,18 @@ const [form] = Form.useForm();
     setCurrentSearchValue('');
   };
 
-  // 删除搜索条件
+  // 刪除搜尋條件
   const removeSearchCondition = (index: number) => {
     setSearchConditions(searchConditions.filter((_, i) => i !== index));
   };
 
-  // 清空所有搜索条件
+  // 清空所有搜尋條件
   const clearAllConditions = () => {
     setSearchConditions([]);
     setCurrentSearchValue('');
   };
 
-  // 获取搜索字段的显示名称
+  // 獲取搜尋欄位的顯示名稱
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('list.fieldName'),
@@ -112,12 +112,12 @@ const [form] = Form.useForm();
     return labels[field] || field;
   };
 
-  // 客户端过滤命名空间列表
+  // 客戶端過濾命名空間列表
   const filterNamespaces = useCallback((items: NamespaceData[]): NamespaceData[] => {
     if (searchConditions.length === 0) return items;
 
     return items.filter(namespace => {
-      // 按字段分组条件
+      // 按欄位分組條件
       const conditionsByField = searchConditions.reduce((acc, condition) => {
         if (!acc[condition.field]) {
           acc[condition.field] = [];
@@ -126,11 +126,11 @@ const [form] = Form.useForm();
         return acc;
       }, {} as Record<string, string[]>);
 
-      // 不同字段之间是 AND 关系
-      // 相同字段之间是 OR 关系
+      // 不同欄位之間是 AND 關係
+      // 相同欄位之間是 OR 關係
       return Object.entries(conditionsByField).every(([field, values]) => {
         if (field === 'label') {
-          // 对于标签字段，检查任意标签key或value是否匹配
+          // 對於標籤欄位，檢查任意標籤key或value是否匹配
           const labels = namespace.labels || {};
           const labelStr = Object.entries(labels)
             .map(([k, v]) => `${k}:${v}`)
@@ -146,7 +146,7 @@ const [form] = Form.useForm();
     });
   }, [searchConditions]);
 
-  // 获取命名空间列表
+  // 獲取命名空間列表
   const loadNamespaces = useCallback(async () => {
     if (!clusterId) return;
 
@@ -155,14 +155,14 @@ const [form] = Form.useForm();
       const data = await getNamespaces(Number(clusterId));
       setAllNamespaces(data);
     } catch (error) {
-      console.error('获取命名空间列表失败:', error);
+      console.error('獲取命名空間列表失敗:', error);
       message.error(t('list.fetchError'));
     } finally {
       setLoading(false);
     }
   }, [clusterId, message]);
 
-  // 创建命名空间
+  // 建立命名空間
   const handleCreate = async (values: CreateNamespaceRequest) => {
     if (!clusterId) return;
     try {
@@ -177,7 +177,7 @@ const [form] = Form.useForm();
     }
   };
 
-  // 删除命名空间
+  // 刪除命名空間
   const handleDelete = async (namespace: string) => {
     if (!clusterId) return;
     try {
@@ -190,14 +190,14 @@ const [form] = Form.useForm();
     }
   };
 
-  // 批量删除
+  // 批次刪除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
       message.warning(t('common:messages.selectFirst'));
       return;
     }
 
-    // 过滤掉系统命名空间
+    // 過濾掉系統命名空間
     const systemNamespaces = ['default', 'kube-system', 'kube-public', 'kube-node-lease'];
     const toDelete = selectedRowKeys.filter(ns => !systemNamespaces.includes(ns));
 
@@ -228,17 +228,17 @@ const [form] = Form.useForm();
           setSelectedRowKeys([]);
           loadNamespaces();
         } catch (error) {
-          console.error('批量删除失败:', error);
+          console.error('批次刪除失敗:', error);
           message.error(t('messages.batchDeleteError'));
         }
       }
     });
   };
 
-  // 导出功能
+  // 匯出功能
   const handleExport = () => {
     try {
-      // 获取所有筛选后的数据
+      // 獲取所有篩選後的資料
       const filteredData = filterNamespaces(allNamespaces);
 
       if (filteredData.length === 0) {
@@ -246,7 +246,7 @@ const [form] = Form.useForm();
         return;
       }
 
-      // 导出筛选后的所有数据
+      // 匯出篩選後的所有資料
       const dataToExport = filteredData.map(ns => ({
         [t('columns.name')]: ns.name,
         [t('columns.status')]: ns.status === 'Active' ? t('common:status.active') : ns.status,
@@ -262,7 +262,7 @@ const [form] = Form.useForm();
         }).replace(/\//g, '-') : '-',
       }));
 
-      // 导出为CSV
+      // 匯出為CSV
       const headers = Object.keys(dataToExport[0]);
       const csvContent = [
         headers.join(','),
@@ -281,28 +281,28 @@ const [form] = Form.useForm();
       link.click();
       message.success(t('common:messages.exportCount', { count: filteredData.length }));
     } catch (error) {
-      console.error('导出失败:', error);
+      console.error('匯出失敗:', error);
       message.error(t('common:messages.exportError'));
     }
   };
 
-  // 列设置保存
+  // 列設定儲存
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
     message.success(t('common:messages.columnSettingsSaved'));
   };
 
-  // 查看详情
+  // 檢視詳情
   const handleViewDetail = (namespace: string) => {
     navigate(`/clusters/${clusterId}/namespaces/${namespace}`);
   };
 
-  // 当搜索条件改变时重置到第一页
+  // 當搜尋條件改變時重置到第一頁
   useEffect(() => {
     setCurrentPage(1);
   }, [searchConditions]);
 
-  // 当allNamespaces、搜索条件、分页参数、排序参数改变时，重新计算显示数据
+  // 當allNamespaces、搜尋條件、分頁參數、排序參數改變時，重新計算顯示資料
   useEffect(() => {
     if (allNamespaces.length === 0) {
       setNamespaces([]);
@@ -310,21 +310,21 @@ const [form] = Form.useForm();
       return;
     }
 
-    // 1. 应用客户端过滤
+    // 1. 應用客戶端過濾
     let filteredItems = filterNamespaces(allNamespaces);
 
-    // 2. 应用排序
+    // 2. 應用排序
     if (sortField && sortOrder) {
       filteredItems = [...filteredItems].sort((a, b) => {
         const aValue = a[sortField as keyof NamespaceData];
         const bValue = b[sortField as keyof NamespaceData];
 
-        // 处理 undefined 值
+        // 處理 undefined 值
         if (aValue === undefined && bValue === undefined) return 0;
         if (aValue === undefined) return sortOrder === 'ascend' ? 1 : -1;
         if (bValue === undefined) return sortOrder === 'ascend' ? -1 : 1;
 
-        // 字符串类型比较
+        // 字串型別比較
         const aStr = String(aValue);
         const bStr = String(bValue);
 
@@ -336,7 +336,7 @@ const [form] = Form.useForm();
       });
     }
 
-    // 3. 计算分页
+    // 3. 計算分頁
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedItems = filteredItems.slice(startIndex, endIndex);
@@ -345,12 +345,12 @@ const [form] = Form.useForm();
     setTotal(filteredItems.length);
   }, [allNamespaces, filterNamespaces, currentPage, pageSize, sortField, sortOrder]);
 
-  // 初始加载数据
+  // 初始載入資料
   useEffect(() => {
     loadNamespaces();
   }, [loadNamespaces]);
 
-  // 行选择配置
+  // 行選擇配置
   const rowSelection = {
     selectedRowKeys,
     onChange: (keys: React.Key[]) => {
@@ -358,7 +358,7 @@ const [form] = Form.useForm();
     },
   };
 
-  // 定义所有可用列
+  // 定義所有可用列
   const allColumns: ColumnsType<NamespaceData> = [
     {
       title: t('columns.name'),
@@ -466,7 +466,7 @@ const [form] = Form.useForm();
           {!['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(record.name) && (
             <Popconfirm
               title={t('common:actions.delete')}
-              description={`确定要删除命名空间 "${record.name}" 吗？此操作将删除该命名空间下的所有资源。`}
+              description={`確定要刪除命名空間 "${record.name}" 嗎？此操作將刪除該命名空間下的所有資源。`}
               onConfirm={() => handleDelete(record.name)}
               okText={t("common:actions.confirm")}
               cancelText={t("common:actions.cancel")}
@@ -484,13 +484,13 @@ const [form] = Form.useForm();
     },
   ];
 
-  // 根据可见性过滤列
+  // 根據可見性過濾列
   const columns = allColumns.filter(col => {
-    if (col.key === 'actions') return true; // 操作列始终显示
+    if (col.key === 'actions') return true; // 操作列始終顯示
     return visibleColumns.includes(col.key as string);
   });
 
-  // 表格排序处理
+  // 表格排序處理
   const handleTableChange = (
     _pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
@@ -511,7 +511,7 @@ const [form] = Form.useForm();
   return (
     <div style={{ padding: '24px' }}>
       <Card bordered={false}>
-        {/* 操作按钮栏 */}
+        {/* 操作按鈕欄 */}
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Space>
             <Button
@@ -528,9 +528,9 @@ const [form] = Form.useForm();
           >{t('list.createNamespace')}</Button>
         </div>
 
-        {/* 多条件搜索栏 */}
+        {/* 多條件搜尋欄 */}
         <div style={{ marginBottom: 16 }}>
-          {/* 搜索输入框 */}
+          {/* 搜尋輸入框 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
             <Input
               prefix={<SearchOutlined />}
@@ -562,7 +562,7 @@ const [form] = Form.useForm();
             <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
           </div>
 
-          {/* 搜索条件标签 */}
+          {/* 搜尋條件標籤 */}
           {searchConditions.length > 0 && (
             <div>
               <Space size="small" wrap>
@@ -613,7 +613,7 @@ const [form] = Form.useForm();
         />
       </Card>
 
-      {/* 创建命名空间模态框 */}
+      {/* 建立命名空間模態框 */}
       <Modal
         title={t("list.createNamespace")}
         open={createModalVisible}
@@ -658,7 +658,7 @@ const [form] = Form.useForm();
         </Form>
       </Modal>
 
-      {/* 列设置抽屉 */}
+      {/* 列設定抽屜 */}
       <Drawer
         title={t("common:table.columnSettings")}
         placement="right"

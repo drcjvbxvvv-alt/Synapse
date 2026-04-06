@@ -36,7 +36,7 @@ export interface NamespaceListResponse {
 }
 
 /**
- * 获取命名空间列表
+ * 獲取命名空間列表
  */
 export const getNamespaces = async (clusterId: number): Promise<NamespaceData[]> => {
   const res = await request.get<NamespaceListResponse>(`/clusters/${clusterId}/namespaces`);
@@ -44,7 +44,7 @@ export const getNamespaces = async (clusterId: number): Promise<NamespaceData[]>
 };
 
 /**
- * 获取命名空间详情
+ * 獲取命名空間詳情
  */
 export const getNamespaceDetail = async (
   clusterId: number,
@@ -54,7 +54,7 @@ export const getNamespaceDetail = async (
 };
 
 /**
- * 创建命名空间
+ * 建立命名空間
  */
 export const createNamespace = async (
   clusterId: number,
@@ -64,7 +64,7 @@ export const createNamespace = async (
 };
 
 /**
- * 删除命名空间
+ * 刪除命名空間
  */
 export const deleteNamespace = async (
   clusterId: number,
@@ -100,7 +100,7 @@ export const deleteLimitRange = (clusterId: string, namespace: string, name: str
   request.delete(`/clusters/${clusterId}/namespaces/${namespace}/limitranges/${name}`);
 
 /**
- * 命名空间服务对象 - 兼容旧的调用方式
+ * 命名空間服務物件 - 相容舊的呼叫方式
  */
 export const namespaceService = {
   getNamespaces: async (clusterId: string) => {

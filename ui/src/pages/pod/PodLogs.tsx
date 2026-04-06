@@ -29,7 +29,7 @@ import { useTranslation } from 'react-i18next';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// WebSocket消息类型
+// WebSocket訊息型別
 interface LogMessage {
   type: 'connected' | 'start' | 'log' | 'end' | 'error' | 'closed';
   data?: string;
@@ -53,7 +53,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
   const [following, setFollowing] = useState(false);
   const [connected, setConnected] = useState(false);
   
-  // 日志选项
+  // 日誌選項
   const [selectedContainer, setSelectedContainer] = useState<string>('');
   const [previous, setPrevious] = useState(false);
   const [tailLines, setTailLines] = useState<number>(100);
@@ -62,7 +62,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
   const logsRef = useRef<HTMLPreElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // 获取Pod详情
+  // 獲取Pod詳情
   const fetchPodDetail = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
     
@@ -74,12 +74,12 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         setSelectedContainer(response.pod.containers[0].name);
       }
     } catch (error) {
-      console.error('获取Pod详情失败:', error);
+      console.error('獲取Pod詳情失敗:', error);
       message.error(t('pod:logs.fetchPodError'));
     }
   }, [clusterId, namespace, name, selectedContainer]);
 
-  // 获取日志
+  // 獲取日誌
   const fetchLogs = useCallback(async (isFollow = false) => {
     if (!clusterId || !namespace || !name) return;
     
@@ -108,17 +108,17 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         }
       }, 100);
     } catch (error) {
-      console.error('获取日志失败:', error);
+      console.error('獲取日誌失敗:', error);
       message.error(t('pod:logs.fetchError'));
     } finally {
       setLoading(false);
     }
   }, [clusterId, namespace, name, selectedContainer, previous, tailLines, sinceSeconds]);
 
-  // 开始/停止跟踪日志
+  // 開始/停止跟蹤日誌
   const toggleFollow = () => {
     if (following) {
-      // 停止跟踪 - 关闭WebSocket连接
+      // 停止跟蹤 - 關閉WebSocket連線
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
@@ -126,7 +126,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
       setFollowing(false);
       setConnected(false);
     } else {
-      // 开始跟踪 - 建立WebSocket连接
+      // 開始跟蹤 - 建立WebSocket連線
       if (!clusterId || !namespace || !name) {
         message.error(t('pod:logs.missingParams'));
         return;
@@ -136,7 +136,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
       setLoading(true);
       
       try {
-        // 创建WebSocket连接
+        // 建立WebSocket連線
         const ws = PodService.createLogStream(clusterId, namespace, name, {
           container: selectedContainer || undefined,
           previous,
@@ -146,9 +146,9 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         
         wsRef.current = ws;
         
-        // WebSocket事件处理
+        // WebSocket事件處理
         ws.onopen = () => {
-          console.log('WebSocket连接已建立');
+          console.log('WebSocket連線已建立');
           setConnected(true);
           setLoading(false);
         };
@@ -166,11 +166,11 @@ const [pod, setPod] = useState<PodInfo | null>(null);
                 break;
                 
               case 'log':
-                // 追加日志内容
+                // 追加日誌內容
                 if (msg.data) {
                   setLogs((prev) => prev + msg.data);
                   
-                  // 自动滚动到底部
+                  // 自動滾動到底部
                   setTimeout(() => {
                     if (logsRef.current) {
                       logsRef.current.scrollTop = logsRef.current.scrollHeight;
@@ -197,12 +197,12 @@ const [pod, setPod] = useState<PodInfo | null>(null);
                 break;
             }
           } catch (error) {
-            console.error('解析WebSocket消息失败:', error);
+            console.error('解析WebSocket訊息失敗:', error);
           }
         };
         
         ws.onerror = (error) => {
-          console.error('WebSocket错误:', error);
+          console.error('WebSocket錯誤:', error);
           message.error(t('pod:logs.wsConnectionError'));
           setFollowing(false);
           setConnected(false);
@@ -215,7 +215,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
           setLoading(false);
         };
       } catch (error) {
-        console.error('创建WebSocket连接失败:', error);
+        console.error('建立WebSocket連線失敗:', error);
         message.error(t('pod:logs.createConnectionFailed'));
         setFollowing(false);
         setLoading(false);
@@ -223,12 +223,12 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     }
   };
 
-  // 清空日志
+  // 清空日誌
   const clearLogs = () => {
     setLogs('');
   };
 
-  // 下载日志
+  // 下載日誌
   const downloadLogs = () => {
     if (!logs) {
       message.warning(t('pod:logs.noContentToDownload'));
@@ -248,7 +248,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     message.success(t('pod:logs.downloadSuccess'));
   };
 
-  // 刷新日志
+  // 重新整理日誌
   const refreshLogs = () => {
     fetchLogs(false);
   };
@@ -263,7 +263,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     }
   }, [selectedContainer, previous, tailLines, sinceSeconds, fetchLogs]);
 
-  // 组件卸载时清理WebSocket连接
+  // 元件解除安裝時清理WebSocket連線
   useEffect(() => {
     return () => {
       if (wsRef.current) {
@@ -279,7 +279,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
 
   return (
     <div style={{ padding: '24px', height: 'calc(100vh - 64px)' }}>
-      {/* 页面头部 */}
+      {/* 頁面頭部 */}
       <div style={{ marginBottom: 16 }}>
         <Space>
           <Button
@@ -388,7 +388,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         </Row>
       </div>
 
-      {/* 状态提示 */}
+      {/* 狀態提示 */}
       {following && connected && (
         <Alert
           message={t('pod:logs.followingAlert')}
@@ -409,7 +409,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         />
       )}
 
-      {/* 日志内容 */}
+      {/* 日誌內容 */}
       <Card style={{ height: 'calc(100% - 140px)' }}>
         <Spin spinning={loading} tip={t('pod:logs.loadingLogs')}>
           <pre

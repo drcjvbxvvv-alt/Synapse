@@ -29,7 +29,7 @@ const handleTabChange = (key: string) => {
         <MonitoringConfigForm 
           clusterId={clusterId || ''} 
           onConfigChange={() => {
-            // 配置更新后的回调
+            // 配置更新後的回撥
           }}
         />
       ),
@@ -46,7 +46,7 @@ const handleTabChange = (key: string) => {
         <AlertManagerConfigForm 
           clusterId={clusterId || ''} 
           onConfigChange={() => {
-            // 配置更新后的回调
+            // 配置更新後的回撥
           }}
         />
       ),
@@ -63,7 +63,7 @@ const handleTabChange = (key: string) => {
         <ArgoCDConfigForm 
           clusterId={clusterId || ''} 
           onConfigChange={() => {
-            // 配置更新后的回调
+            // 配置更新後的回撥
           }}
         />
       ),

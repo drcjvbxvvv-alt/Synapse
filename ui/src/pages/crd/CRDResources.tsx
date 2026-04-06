@@ -75,7 +75,7 @@ const CRDResources: React.FC = () => {
       const nsSet = new Set(allItems.map((i) => i.namespace).filter(Boolean) as string[]);
       setNamespaces(Array.from(nsSet).sort());
     } catch {
-      message.error(t('crd.loadResourcesFailed', '加载资源失败'));
+      message.error(t('crd.loadResourcesFailed', '載入資源失敗'));
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ const CRDResources: React.FC = () => {
       });
       setDetailData(data as Record<string, unknown>);
     } catch {
-      message.error(t('crd.loadDetailFailed', '加载详情失败'));
+      message.error(t('crd.loadDetailFailed', '載入詳情失敗'));
     } finally {
       setDetailLoading(false);
     }
@@ -107,8 +107,8 @@ const CRDResources: React.FC = () => {
 
   const handleDelete = (record: CRDResourceItem) => {
     modal.confirm({
-      title: t('crd.confirmDelete', '确认删除'),
-      content: t('crd.confirmDeleteMsg', `确定要删除 ${record.name} 吗？此操作不可逆。`),
+      title: t('crd.confirmDelete', '確認刪除'),
+      content: t('crd.confirmDeleteMsg', `確定要刪除 ${record.name} 嗎？此操作不可逆。`),
       okType: 'danger',
       onOk: async () => {
         try {
@@ -119,10 +119,10 @@ const CRDResources: React.FC = () => {
             version: version!,
             plural: plural!,
           });
-          message.success(t('common.deleteSuccess', '删除成功'));
+          message.success(t('common.deleteSuccess', '刪除成功'));
           fetchItems();
         } catch {
-          message.error(t('common.deleteFailed', '删除失败'));
+          message.error(t('common.deleteFailed', '刪除失敗'));
         }
       },
     });
@@ -137,7 +137,7 @@ const CRDResources: React.FC = () => {
 
   const columns: ColumnsType<CRDResourceItem> = [
     {
-      title: t('common.name', '名称'),
+      title: t('common.name', '名稱'),
       dataIndex: 'name',
       key: 'name',
       render: (name: string) => <Text strong>{name}</Text>,
@@ -145,7 +145,7 @@ const CRDResources: React.FC = () => {
     ...(namespaced
       ? [
           {
-            title: t('common.namespace', '命名空间'),
+            title: t('common.namespace', '命名空間'),
             dataIndex: 'namespace',
             key: 'namespace',
             render: (ns: string) => <Tag color="blue">{ns}</Tag>,
@@ -153,13 +153,13 @@ const CRDResources: React.FC = () => {
         ]
       : []),
     {
-      title: t('common.createdAt', '创建时间'),
+      title: t('common.createdAt', '建立時間'),
       dataIndex: 'created',
       key: 'created',
       render: (v: string) => new Date(v).toLocaleString(),
     },
     {
-      title: t('common.labels', '标签'),
+      title: t('common.labels', '標籤'),
       key: 'labels',
       render: (_: unknown, record: CRDResourceItem) =>
         Object.entries(record.labels ?? {})
@@ -181,7 +181,7 @@ const CRDResources: React.FC = () => {
             icon={<EyeOutlined />}
             onClick={() => handleView(record)}
           >
-            {t('common.view', '查看')}
+            {t('common.view', '檢視')}
           </Button>
           <Button
             size="small"
@@ -189,7 +189,7 @@ const CRDResources: React.FC = () => {
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record)}
           >
-            {t('common.delete', '删除')}
+            {t('common.delete', '刪除')}
           </Button>
         </Space>
       ),
@@ -219,7 +219,7 @@ const CRDResources: React.FC = () => {
             {namespaced && (
               <Select
                 allowClear
-                placeholder={t('common.allNamespaces', '所有命名空间')}
+                placeholder={t('common.allNamespaces', '所有命名空間')}
                 value={namespace || undefined}
                 onChange={(v) => setNamespace(v ?? '')}
                 style={{ width: 180 }}
@@ -233,7 +233,7 @@ const CRDResources: React.FC = () => {
             )}
             <Input
               prefix={<SearchOutlined />}
-              placeholder={t('common.search', '搜索名称')}
+              placeholder={t('common.search', '搜尋名稱')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               allowClear
@@ -259,7 +259,7 @@ const CRDResources: React.FC = () => {
       </Card>
 
       <Drawer
-        title={t('crd.resourceDetail', '资源详情')}
+        title={t('crd.resourceDetail', '資源詳情')}
         open={detailVisible}
         onClose={() => setDetailVisible(false)}
         width="50%"

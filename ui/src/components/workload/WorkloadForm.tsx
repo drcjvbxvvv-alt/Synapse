@@ -31,12 +31,12 @@ interface WorkloadFormProps {
   workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob';
   initialData?: Partial<WorkloadFormData>;
   namespaces: string[];
-  // 镜像拉取凭证 secrets 列表
+  // 映像拉取憑證 secrets 列表
   imagePullSecretsList?: string[];
   onValuesChange?: (changedValues: Partial<WorkloadFormData>, allValues: WorkloadFormData) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form?: ReturnType<typeof Form.useForm<any>>[0];
-  // 是否为编辑模式（编辑模式下某些字段不可修改）
+  // 是否為編輯模式（編輯模式下某些欄位不可修改）
   isEdit?: boolean;
 }
 
@@ -53,19 +53,19 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [form] = Form.useForm<WorkloadFormData>(externalForm as any);
 
-  // 是否已初始化（用于区分首次渲染和编辑模式数据加载）
+  // 是否已初始化（用於區分首次渲染和編輯模式資料載入）
   const [initialized, setInitialized] = React.useState(false);
   
-  // 设置初始值
+  // 設定初始值
   React.useEffect(() => {
     if (initialData) {
-      // 编辑模式：使用传入的数据
-      console.log('设置编辑模式数据:', initialData);
+      // 編輯模式：使用傳入的資料
+      console.log('設定編輯模式資料:', initialData);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       form.setFieldsValue(initialData as any);
       setInitialized(true);
     } else if (!initialized) {
-      // 创建模式：仅在首次渲染时设置默认值
+      // 建立模式：僅在首次渲染時設定預設值
       const defaultValues: Record<string, unknown> = {
         namespace: 'default',
         replicas: workloadType === 'DaemonSet' ? undefined : 1,
@@ -82,7 +82,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
         ],
       };
       
-      // 为 Rollout 类型设置默认发布策略
+      // 為 Rollout 型別設定預設釋出策略
       if (workloadType === 'Rollout') {
         defaultValues.rolloutStrategy = {
           type: 'Canary',
@@ -107,7 +107,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
       layout="vertical"
       onValuesChange={onValuesChange}
     >
-      {/* 基本信息 */}
+      {/* 基本資訊 */}
       <Card title={t('workloadForm.basicInfo')} style={{ marginBottom: 16 }}>
         <Row gutter={16}>
           <Col span={12}>
@@ -251,7 +251,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
         }
         style={{ marginBottom: 16 }}
       >
-        {/* 业务容器 */}
+        {/* 業務容器 */}
         <Form.List name="containers">
           {(fields, { add, remove }) => (
             <>
@@ -310,7 +310,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
         </Form.List>
       </Card>
 
-      {/* 数据卷配置 */}
+      {/* 資料卷配置 */}
       <Card title={t('workloadForm.volumeConfig')} style={{ marginBottom: 16 }}>
         <Form.List name="volumes">
           {(fields, { add, remove }) => (
@@ -418,7 +418,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
         </Form.List>
       </Card>
 
-      {/* 镜像拉取凭证 - 常用功能，放在外面 */}
+      {/* 映像拉取憑證 - 常用功能，放在外面 */}
       <Card title={t('workloadForm.imagePullSecrets')} style={{ marginBottom: 16 }}>
         <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
           {t('workloadForm.imagePullSecretsDesc')}
@@ -444,10 +444,10 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
         )}
       </Card>
 
-      {/* 高级配置 */}
+      {/* 高階配置 */}
       <Card title={t('workloadForm.advancedConfig')} style={{ marginBottom: 16 }}>
         <Collapse defaultActiveKey={workloadType === 'Rollout' ? ['rolloutStrategy'] : []} ghost>
-          {/* Deployment 升级策略 */}
+          {/* Deployment 升級策略 */}
           {workloadType === 'Deployment' && (
             <Panel header={t('workloadForm.upgradeStrategy')} key="strategy">
               <Row gutter={16}>
@@ -500,7 +500,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
             </Panel>
           )}
 
-          {/* Argo Rollout 发布策略 */}
+          {/* Argo Rollout 釋出策略 */}
           {workloadType === 'Rollout' && (
             <Panel 
               header={
@@ -550,7 +550,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                 </Col>
               </Row>
 
-              {/* 金丝雀发布配置 */}
+              {/* 金絲雀釋出配置 */}
               <Form.Item noStyle shouldUpdate={(prev, curr) => 
                 prev?.rolloutStrategy?.type !== curr?.rolloutStrategy?.type
               }>
@@ -562,7 +562,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     <>
                       <Divider orientation="left">{t('workloadForm.canaryConfig')}</Divider>
                       
-                      {/* 服务配置 */}
+                      {/* 服務配置 */}
                       <Row gutter={16}>
                         <Col span={8}>
                           <Form.Item 
@@ -616,7 +616,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                         </Col>
                       </Row>
 
-                      {/* 发布步骤 */}
+                      {/* 釋出步驟 */}
                       <Divider orientation="left">
                         <Space>
                           {t('workloadForm.releaseSteps')}
@@ -720,7 +720,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                 }}
               </Form.Item>
 
-              {/* 蓝绿发布配置 */}
+              {/* 藍綠髮布配置 */}
               <Form.Item noStyle shouldUpdate={(prev, curr) => 
                 prev?.rolloutStrategy?.type !== curr?.rolloutStrategy?.type
               }>
@@ -732,7 +732,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                     <>
                       <Divider orientation="left">{t('workloadForm.blueGreenConfig')}</Divider>
                       
-                      {/* 服务配置 */}
+                      {/* 服務配置 */}
                       <Row gutter={16}>
                         <Col span={8}>
                           <Form.Item 
@@ -767,7 +767,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                         </Col>
                       </Row>
 
-                      {/* 晋升配置 */}
+                      {/* 晉升配置 */}
                       <Row gutter={16}>
                         <Col span={8}>
                           <Form.Item 
@@ -803,7 +803,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
                         </Form.Item>
                       </Row>
 
-                      {/* 缩容配置 */}
+                      {/* 縮容配置 */}
                       <Row gutter={16}>
                         <Col span={8}>
                           <Form.Item 
@@ -864,7 +864,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
             </Panel>
           )}
 
-          {/* 调度策略 */}
+          {/* 排程策略 */}
           <Panel header={t('workloadForm.scheduling')} key="scheduling">
             <SchedulingConfigForm />
           </Panel>
@@ -926,7 +926,7 @@ const WorkloadForm: React.FC<WorkloadFormProps> = ({
             </Form.List>
           </Panel>
 
-          {/* 标签与注解 */}
+          {/* 標籤與註解 */}
           <Panel header={t('workloadForm.labelsAnnotations')} key="labels">
             <Divider orientation="left">{t('workloadForm.labels')}</Divider>
             <Form.List name="labels">

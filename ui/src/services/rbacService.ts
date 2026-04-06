@@ -1,7 +1,7 @@
 import api from '../utils/api';
 import type { ApiResponse } from '../types';
 
-// 同步结果类型
+// 同步結果型別
 export interface SyncResult {
   resource: string;
   name: string;
@@ -15,7 +15,7 @@ export interface SyncPermissionsResult {
   message: string;
 }
 
-// 同步状态类型
+// 同步狀態型別
 export interface ResourceStatus {
   resource: string;
   name: string;
@@ -27,7 +27,7 @@ export interface SyncStatusResult {
   resources: ResourceStatus[];
 }
 
-// ClusterRole 类型
+// ClusterRole 型別
 export interface ClusterRoleItem {
   name: string;
   labels: Record<string, string>;
@@ -36,14 +36,14 @@ export interface ClusterRoleItem {
   is_synapse: boolean;
 }
 
-// Synapse 预定义角色信息
+// Synapse 預定義角色資訊
 export interface SynapseRoleInfo {
   name: string;
   description: string;
   rules_count: number;
 }
 
-// PolicyRule 类型（用于创建自定义 ClusterRole）
+// PolicyRule 型別（用於建立自定義 ClusterRole）
 export interface PolicyRule {
   apiGroups: string[];
   resources: string[];
@@ -52,25 +52,25 @@ export interface PolicyRule {
   nonResourceURLs?: string[];
 }
 
-// 同步权限到集群
+// 同步權限到叢集
 export const syncPermissions = async (clusterId: number): Promise<ApiResponse<SyncPermissionsResult>> => {
   const response = await api.post(`/clusters/${clusterId}/rbac/sync`);
   return response.data;
 };
 
-// 获取同步状态
+// 獲取同步狀態
 export const getSyncStatus = async (clusterId: number): Promise<ApiResponse<SyncStatusResult>> => {
   const response = await api.get(`/clusters/${clusterId}/rbac/status`);
   return response.data;
 };
 
-// 获取集群中的 ClusterRole 列表
+// 獲取叢集中的 ClusterRole 列表
 export const listClusterRoles = async (clusterId: number): Promise<ApiResponse<ClusterRoleItem[]>> => {
   const response = await api.get(`/clusters/${clusterId}/rbac/clusterroles`);
   return response.data;
 };
 
-// 创建自定义 ClusterRole
+// 建立自定義 ClusterRole
 export const createCustomClusterRole = async (
   clusterId: number,
   name: string,
@@ -80,13 +80,13 @@ export const createCustomClusterRole = async (
   return response.data;
 };
 
-// 删除 ClusterRole
+// 刪除 ClusterRole
 export const deleteClusterRole = async (clusterId: number, name: string): Promise<ApiResponse<null>> => {
   const response = await api.delete(`/clusters/${clusterId}/rbac/clusterroles/${name}`);
   return response.data;
 };
 
-// 获取 Synapse 预定义角色信息
+// 獲取 Synapse 預定義角色資訊
 export const getSynapseRoles = async (): Promise<ApiResponse<SynapseRoleInfo[]>> => {
   const response = await api.get('/permissions/synapse-roles');
   return response.data;

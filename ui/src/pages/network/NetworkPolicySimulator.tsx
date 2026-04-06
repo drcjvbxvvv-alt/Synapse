@@ -77,7 +77,7 @@ const NetworkPolicySimulator: React.FC<Props> = ({ clusterId, namespaces }) => {
           <Input placeholder="app=backend,env=prod" />
         </Form.Item>
         <Space style={{ width: '100%' }} size={12}>
-          <Form.Item name="port" label="連接埠" style={{ marginBottom: 0, flex: 1 }}>
+          <Form.Item name="port" label="連線連接埠" style={{ marginBottom: 0, flex: 1 }}>
             <InputNumber placeholder="80（0=任意）" min={0} max={65535} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="protocol" label="協定" initialValue="TCP" style={{ marginBottom: 0, flex: 1 }}>

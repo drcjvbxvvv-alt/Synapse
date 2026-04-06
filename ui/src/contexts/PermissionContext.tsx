@@ -4,14 +4,14 @@ import permissionService from '../services/permissionService';
 import { tokenManager } from '../services/authService';
 import { PermissionContext, type PermissionContextType } from './PermissionContext';
 
-// 权限Provider组件
+// 權限Provider元件
 export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [clusterPermissions, setClusterPermissions] = useState<Map<number, MyPermissionsResponse>>(new Map());
   const [currentClusterPermission, setCurrentClusterPermission] = useState<MyPermissionsResponse | null>(null);
   const [currentClusterId, setCurrentClusterIdState] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // 加载用户权限
+  // 載入使用者權限
   const refreshPermissions = useCallback(async () => {
     if (!tokenManager.isLoggedIn()) {
       setClusterPermissions(new Map());
@@ -31,18 +31,18 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
       
       setClusterPermissions(permMap);
       
-      // 更新当前集群权限
+      // 更新當前叢集權限
       if (currentClusterId) {
         setCurrentClusterPermission(permMap.get(currentClusterId) || null);
       }
     } catch (error) {
-      console.error('加载权限失败:', error);
+      console.error('載入權限失敗:', error);
     } finally {
       setLoading(false);
     }
   }, [currentClusterId]);
 
-  // 设置当前集群
+  // 設定當前叢集
   const setCurrentClusterId = useCallback((clusterId: number | string | null) => {
     if (clusterId === null) {
       setCurrentClusterIdState(null);
@@ -55,13 +55,13 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     setCurrentClusterPermission(clusterPermissions.get(id) || null);
   }, [clusterPermissions]);
 
-  // 检查是否有集群访问权限
+  // 檢查是否有叢集訪問權限
   const hasClusterAccess = useCallback((clusterId: number | string): boolean => {
     const id = typeof clusterId === 'string' ? parseInt(clusterId, 10) : clusterId;
     return clusterPermissions.has(id);
   }, [clusterPermissions]);
 
-  // 检查是否有命名空间访问权限
+  // 檢查是否有命名空間訪問權限
   const hasNamespaceAccess = useCallback((clusterId: number | string, namespace: string): boolean => {
     const id = typeof clusterId === 'string' ? parseInt(clusterId, 10) : clusterId;
     const permission = clusterPermissions.get(id);
@@ -71,7 +71,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     if (namespaces.includes('*')) return true;
     if (namespaces.includes(namespace)) return true;
     
-    // 检查通配符匹配
+    // 檢查萬用字元匹配
     for (const ns of namespaces) {
       if (ns.endsWith('*') && namespace.startsWith(ns.slice(0, -1))) {
         return true;
@@ -81,7 +81,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     return false;
   }, [clusterPermissions]);
 
-  // 检查是否可以执行操作
+  // 檢查是否可以執行操作
   const canPerformAction = useCallback((action: string, clusterId?: number | string): boolean => {
     let permission: MyPermissionsResponse | null = null;
     
@@ -100,25 +100,25 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
       case 'admin':
         return true;
       case 'ops': {
-        // 运维权限：排除节点操作和存储管理
+        // 運維權限：排除節點操作和儲存管理
         const restrictedOps = ['node:cordon', 'node:uncordon', 'node:drain', 'pv:create', 'pv:delete'];
         return !restrictedOps.includes(action);
       }
       case 'dev': {
-        // 开发权限：只能操作工作负载相关
+        // 開發權限：只能操作工作負載相關
         const allowedDev = ['pod:', 'deployment:', 'statefulset:', 'service:', 'configmap:', 'secret:'];
         return allowedDev.some(prefix => action.startsWith(prefix)) || action === 'view';
       }
       case 'readonly':
         return action === 'view' || action === 'list' || action === 'get';
       case 'custom':
-        return true; // 自定义权限由 K8s RBAC 控制
+        return true; // 自定義權限由 K8s RBAC 控制
       default:
         return false;
     }
   }, [clusterPermissions, currentClusterPermission]);
 
-  // 检查是否是管理员
+  // 檢查是否是管理員
   const isAdmin = useCallback((clusterId?: number | string): boolean => {
     let permission: MyPermissionsResponse | null = null;
     
@@ -132,7 +132,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     return permission?.permission_type === 'admin';
   }, [clusterPermissions, currentClusterPermission]);
 
-  // 检查是否是只读
+  // 檢查是否是隻讀
   const isReadonly = useCallback((clusterId?: number | string): boolean => {
     let permission: MyPermissionsResponse | null = null;
     
@@ -146,7 +146,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     return permission?.permission_type === 'readonly';
   }, [clusterPermissions, currentClusterPermission]);
 
-  // 检查是否有写权限（非只读权限）
+  // 檢查是否有寫權限（非只讀權限）
   const canWrite = useCallback((clusterId?: number | string): boolean => {
     let permission: MyPermissionsResponse | null = null;
     
@@ -159,18 +159,18 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     
     if (!permission) return false;
     
-    // 只读权限无法执行写操作
+    // 只讀權限無法執行寫操作
     return permission.permission_type !== 'readonly';
   }, [clusterPermissions, currentClusterPermission]);
 
-  // 获取权限类型
+  // 獲取權限型別
   const getPermissionType = useCallback((clusterId: number | string): PermissionType | null => {
     const id = typeof clusterId === 'string' ? parseInt(clusterId, 10) : clusterId;
     const permission = clusterPermissions.get(id);
     return permission?.permission_type || null;
   }, [clusterPermissions]);
 
-  // 获取允许访问的命名空间列表
+  // 獲取允許訪問的命名空間列表
   const getAllowedNamespaces = useCallback((clusterId?: number | string): string[] => {
     let permission: MyPermissionsResponse | null = null;
     
@@ -185,28 +185,28 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     return permission.namespaces || ['*'];
   }, [clusterPermissions, currentClusterPermission]);
 
-  // 检查是否有全部命名空间访问权限
+  // 檢查是否有全部命名空間訪問權限
   const hasAllNamespaceAccess = useCallback((clusterId?: number | string): boolean => {
     const namespaces = getAllowedNamespaces(clusterId);
     return namespaces.includes('*');
   }, [getAllowedNamespaces]);
 
-  // 过滤命名空间列表，只返回用户有权限访问的
+  // 過濾命名空間列表，只返回使用者有權限訪問的
   const filterNamespaces = useCallback((namespaces: string[], clusterId?: number | string): string[] => {
     const allowedNamespaces = getAllowedNamespaces(clusterId);
     
-    // 如果有全部权限，返回全部
+    // 如果有全部權限，返回全部
     if (allowedNamespaces.includes('*')) {
       return namespaces;
     }
     
-    // 过滤只保留有权限的命名空间
+    // 過濾只保留有權限的命名空間
     return namespaces.filter(ns => {
-      // 精确匹配
+      // 精確匹配
       if (allowedNamespaces.includes(ns)) {
         return true;
       }
-      // 通配符匹配
+      // 萬用字元匹配
       for (const allowed of allowedNamespaces) {
         if (allowed.endsWith('*')) {
           const prefix = allowed.slice(0, -1);
@@ -219,7 +219,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     });
   }, [getAllowedNamespaces]);
 
-  // 初始加载
+  // 初始載入
   useEffect(() => {
     refreshPermissions();
   }, [refreshPermissions]);
