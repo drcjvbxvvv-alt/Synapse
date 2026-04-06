@@ -24,7 +24,7 @@ func NewLogSourceHandler(db *gorm.DB) *LogSourceHandler {
 
 // ListLogSources GET /clusters/:id/log-sources
 func (h *LogSourceHandler) ListLogSources(c *gin.Context) {
-	clusterID, err := parseClusterID(c.Param("id"))
+	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
 		response.BadRequest(c, "無效的叢集ID")
 		return
@@ -45,7 +45,7 @@ func (h *LogSourceHandler) ListLogSources(c *gin.Context) {
 
 // CreateLogSource POST /clusters/:id/log-sources
 func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
-	clusterID, err := parseClusterID(c.Param("id"))
+	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
 		response.BadRequest(c, "無效的叢集ID")
 		return
@@ -90,7 +90,7 @@ func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
 
 // UpdateLogSource PUT /clusters/:id/log-sources/:sourceId
 func (h *LogSourceHandler) UpdateLogSource(c *gin.Context) {
-	clusterID, err := parseClusterID(c.Param("id"))
+	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
 		response.BadRequest(c, "無效的叢集ID")
 		return
@@ -149,7 +149,7 @@ func (h *LogSourceHandler) UpdateLogSource(c *gin.Context) {
 
 // DeleteLogSource DELETE /clusters/:id/log-sources/:sourceId
 func (h *LogSourceHandler) DeleteLogSource(c *gin.Context) {
-	clusterID, err := parseClusterID(c.Param("id"))
+	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
 		response.BadRequest(c, "無效的叢集ID")
 		return
@@ -169,7 +169,7 @@ func (h *LogSourceHandler) DeleteLogSource(c *gin.Context) {
 
 // SearchExternalLogs POST /clusters/:id/log-sources/:sourceId/search
 func (h *LogSourceHandler) SearchExternalLogs(c *gin.Context) {
-	clusterID, err := parseClusterID(c.Param("id"))
+	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
 		response.BadRequest(c, "無效的叢集ID")
 		return
