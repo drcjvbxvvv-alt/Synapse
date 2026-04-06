@@ -16,21 +16,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// routeRule 路由规则
+// routeRule 路由規則
 type routeRule struct {
 	Pattern      *regexp.Regexp
 	Module       string
 	Action       string
 	ResourceType string
-	// 动态提取资源名的参数索引
+	// 動態提取資源名的參數索引
 	ResourceNameIndex int
 }
 
-// 预编译的路由规则
+// 預編譯的路由規則
 var routeRules []routeRule
 
 func init() {
-	// 初始化路由规则
+	// 初始化路由規則
 	rules := []struct {
 		Pattern           string
 		Module            string
@@ -38,87 +38,87 @@ func init() {
 		ResourceType      string
 		ResourceNameIndex int // -1 表示不提取
 	}{
-		// 认证模块
+		// 認證模組
 		{`^/api/v1/auth/login$`, constants.ModuleAuth, constants.ActionLogin, "user", -1},
 		{`^/api/v1/auth/logout$`, constants.ModuleAuth, constants.ActionLogout, "user", -1},
 		{`^/api/v1/auth/change-password$`, constants.ModuleAuth, constants.ActionChangePassword, "user", -1},
 
-		// 集群模块
+		// 叢集模組
 		{`^/api/v1/clusters/import$`, constants.ModuleCluster, constants.ActionImport, "cluster", -1},
 		{`^/api/v1/clusters/test-connection$`, constants.ModuleCluster, constants.ActionTest, "cluster", -1},
 		{`^/api/v1/clusters/(\d+)$`, constants.ModuleCluster, "", "cluster", 1},
 
-		// 节点模块
+		// 節點模組
 		{`^/api/v1/clusters/\d+/nodes/([^/]+)/cordon$`, constants.ModuleNode, constants.ActionCordon, "node", 1},
 		{`^/api/v1/clusters/\d+/nodes/([^/]+)/uncordon$`, constants.ModuleNode, constants.ActionUncordon, "node", 1},
 		{`^/api/v1/clusters/\d+/nodes/([^/]+)/drain$`, constants.ModuleNode, constants.ActionDrain, "node", 1},
 
-		// Pod 模块
+		// Pod 模組
 		{`^/api/v1/clusters/\d+/pods/([^/]+)/([^/]+)$`, constants.ModulePod, "", "pod", 2},
 
-		// Deployment 模块
+		// Deployment 模組
 		{`^/api/v1/clusters/\d+/deployments/yaml/apply$`, constants.ModuleWorkload, constants.ActionApply, "deployment", -1},
 		{`^/api/v1/clusters/\d+/deployments/([^/]+)/([^/]+)/scale$`, constants.ModuleWorkload, constants.ActionScale, "deployment", 2},
 		{`^/api/v1/clusters/\d+/deployments/([^/]+)/([^/]+)$`, constants.ModuleWorkload, "", "deployment", 2},
 
-		// Rollout 模块
+		// Rollout 模組
 		{`^/api/v1/clusters/\d+/rollouts/yaml/apply$`, constants.ModuleWorkload, constants.ActionApply, "rollout", -1},
 		{`^/api/v1/clusters/\d+/rollouts/([^/]+)/([^/]+)/scale$`, constants.ModuleWorkload, constants.ActionScale, "rollout", 2},
 		{`^/api/v1/clusters/\d+/rollouts/([^/]+)/([^/]+)$`, constants.ModuleWorkload, "", "rollout", 2},
 
-		// StatefulSet 模块
+		// StatefulSet 模組
 		{`^/api/v1/clusters/\d+/statefulsets/yaml/apply$`, constants.ModuleWorkload, constants.ActionApply, "statefulset", -1},
 		{`^/api/v1/clusters/\d+/statefulsets/([^/]+)/([^/]+)/scale$`, constants.ModuleWorkload, constants.ActionScale, "statefulset", 2},
 		{`^/api/v1/clusters/\d+/statefulsets/([^/]+)/([^/]+)$`, constants.ModuleWorkload, "", "statefulset", 2},
 
-		// DaemonSet 模块
+		// DaemonSet 模組
 		{`^/api/v1/clusters/\d+/daemonsets/yaml/apply$`, constants.ModuleWorkload, constants.ActionApply, "daemonset", -1},
 		{`^/api/v1/clusters/\d+/daemonsets/([^/]+)/([^/]+)$`, constants.ModuleWorkload, "", "daemonset", 2},
 
-		// Job 模块
+		// Job 模組
 		{`^/api/v1/clusters/\d+/jobs/yaml/apply$`, constants.ModuleWorkload, constants.ActionApply, "job", -1},
 		{`^/api/v1/clusters/\d+/jobs/([^/]+)/([^/]+)$`, constants.ModuleWorkload, "", "job", 2},
 
-		// CronJob 模块
+		// CronJob 模組
 		{`^/api/v1/clusters/\d+/cronjobs/yaml/apply$`, constants.ModuleWorkload, constants.ActionApply, "cronjob", -1},
 		{`^/api/v1/clusters/\d+/cronjobs/([^/]+)/([^/]+)$`, constants.ModuleWorkload, "", "cronjob", 2},
 
-		// ConfigMap 模块
+		// ConfigMap 模組
 		{`^/api/v1/clusters/\d+/configmaps$`, constants.ModuleConfig, constants.ActionCreate, "configmap", -1},
 		{`^/api/v1/clusters/\d+/configmaps/([^/]+)/([^/]+)$`, constants.ModuleConfig, "", "configmap", 2},
 
-		// Secret 模块
+		// Secret 模組
 		{`^/api/v1/clusters/\d+/secrets$`, constants.ModuleConfig, constants.ActionCreate, "secret", -1},
 		{`^/api/v1/clusters/\d+/secrets/([^/]+)/([^/]+)$`, constants.ModuleConfig, "", "secret", 2},
 
-		// Service 模块
+		// Service 模組
 		{`^/api/v1/clusters/\d+/services$`, constants.ModuleNetwork, constants.ActionCreate, "service", -1},
 		{`^/api/v1/clusters/\d+/services/([^/]+)/([^/]+)$`, constants.ModuleNetwork, "", "service", 2},
 
-		// Ingress 模块
+		// Ingress 模組
 		{`^/api/v1/clusters/\d+/ingresses$`, constants.ModuleNetwork, constants.ActionCreate, "ingress", -1},
 		{`^/api/v1/clusters/\d+/ingresses/([^/]+)/([^/]+)$`, constants.ModuleNetwork, "", "ingress", 2},
 
-		// Namespace 模块
+		// Namespace 模組
 		{`^/api/v1/clusters/\d+/namespaces$`, constants.ModuleNamespace, constants.ActionCreate, "namespace", -1},
 		{`^/api/v1/clusters/\d+/namespaces/([^/]+)$`, constants.ModuleNamespace, "", "namespace", 1},
 
-		// 存储模块
+		// 儲存模組
 		{`^/api/v1/clusters/\d+/pvcs/([^/]+)/([^/]+)$`, constants.ModuleStorage, "", "pvc", 2},
 		{`^/api/v1/clusters/\d+/pvs/([^/]+)$`, constants.ModuleStorage, "", "pv", 1},
 		{`^/api/v1/clusters/\d+/storageclasses/([^/]+)$`, constants.ModuleStorage, "", "storageclass", 1},
 
-		// 监控配置模块
+		// 監控配置模組
 		{`^/api/v1/clusters/\d+/monitoring/config$`, constants.ModuleMonitoring, "", "monitoring_config", -1},
 		{`^/api/v1/clusters/\d+/monitoring/test-connection$`, constants.ModuleMonitoring, constants.ActionTest, "monitoring_config", -1},
 
-		// AlertManager 模块
+		// AlertManager 模組
 		{`^/api/v1/clusters/\d+/alertmanager/config$`, constants.ModuleAlert, "", "alertmanager_config", -1},
 		{`^/api/v1/clusters/\d+/alertmanager/test-connection$`, constants.ModuleAlert, constants.ActionTest, "alertmanager_config", -1},
 		{`^/api/v1/clusters/\d+/silences$`, constants.ModuleAlert, constants.ActionCreate, "silence", -1},
 		{`^/api/v1/clusters/\d+/silences/([^/]+)$`, constants.ModuleAlert, constants.ActionDelete, "silence", 1},
 
-		// ArgoCD 模块
+		// ArgoCD 模組
 		{`^/api/v1/clusters/\d+/argocd/config$`, constants.ModuleArgoCD, "", "argocd_config", -1},
 		{`^/api/v1/clusters/\d+/argocd/test-connection$`, constants.ModuleArgoCD, constants.ActionTest, "argocd_config", -1},
 		{`^/api/v1/clusters/\d+/argocd/applications$`, constants.ModuleArgoCD, constants.ActionCreate, "application", -1},
@@ -126,7 +126,7 @@ func init() {
 		{`^/api/v1/clusters/\d+/argocd/applications/([^/]+)/sync$`, constants.ModuleArgoCD, constants.ActionSync, "application", 1},
 		{`^/api/v1/clusters/\d+/argocd/applications/([^/]+)/rollback$`, constants.ModuleArgoCD, constants.ActionRollback, "application", 1},
 
-		// 权限模块
+		// 權限模組
 		{`^/api/v1/permissions/user-groups$`, constants.ModulePermission, constants.ActionCreate, "user_group", -1},
 		{`^/api/v1/permissions/user-groups/(\d+)$`, constants.ModulePermission, "", "user_group", 1},
 		{`^/api/v1/permissions/user-groups/(\d+)/users$`, constants.ModulePermission, constants.ActionUpdate, "user_group_member", 1},
@@ -135,7 +135,7 @@ func init() {
 		{`^/api/v1/permissions/cluster-permissions/(\d+)$`, constants.ModulePermission, "", "cluster_permission", 1},
 		{`^/api/v1/permissions/cluster-permissions/batch-delete$`, constants.ModulePermission, constants.ActionDelete, "cluster_permission", -1},
 
-		// 系统设置模块
+		// 系統設定模組
 		{`^/api/v1/system/ldap/config$`, constants.ModuleSystem, "", "ldap_config", -1},
 		{`^/api/v1/system/ldap/test-connection$`, constants.ModuleSystem, constants.ActionTest, "ldap_config", -1},
 		{`^/api/v1/system/ldap/test-auth$`, constants.ModuleSystem, constants.ActionTest, "ldap_auth", -1},
@@ -153,23 +153,23 @@ func init() {
 	}
 }
 
-// OperationAudit 操作审计中间件
+// OperationAudit 操作審計中介軟體
 func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 只记录非 GET 请求
+		// 只記錄非 GET 請求
 		if c.Request.Method == "GET" {
 			c.Next()
 			return
 		}
 
-		// 跳过健康检查等
+		// 跳過健康檢查等
 		path := c.Request.URL.Path
 		if strings.HasPrefix(path, "/healthz") || strings.HasPrefix(path, "/readyz") {
 			c.Next()
 			return
 		}
 
-		// 跳过 WebSocket 请求（由终端审计单独处理）
+		// 跳過 WebSocket 請求（由終端審計單獨處理）
 		if strings.HasPrefix(path, "/ws/") {
 			c.Next()
 			return
@@ -177,7 +177,7 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 
 		startTime := time.Now()
 
-		// 读取并缓存请求体
+		// 讀取並快取請求體
 		var requestBody interface{}
 		if c.Request.Body != nil && c.Request.ContentLength > 0 {
 			bodyBytes, err := io.ReadAll(c.Request.Body)
@@ -187,18 +187,18 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 			}
 		}
 
-		// 执行请求
+		// 執行請求
 		c.Next()
 
-		// 解析路由信息
+		// 解析路由資訊
 		module, action, resourceType, resourceName := parseRoute(c, path)
 
-		// 根据 HTTP 方法确定默认操作
+		// 根據 HTTP 方法確定預設操作
 		if action == "" {
 			action = methodToAction(c.Request.Method)
 		}
 
-		// 获取集群信息
+		// 獲取叢集資訊
 		var clusterID *uint
 		clusterName := ""
 		if cid := c.Param("clusterID"); cid != "" {
@@ -207,12 +207,12 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 				clusterID = &uid
 			}
 		}
-		// 尝试从 context 获取集群名称（如果 handler 设置了）
+		// 嘗試從 context 獲取叢集名稱（如果 handler 設定了）
 		if cn, exists := c.Get("cluster_name"); exists {
 			clusterName = cn.(string)
 		}
 
-		// 获取用户信息
+		// 獲取使用者資訊
 		var userID *uint
 		username := ""
 		if uid := c.GetUint("user_id"); uid > 0 {
@@ -222,7 +222,7 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 			username = un
 		}
 
-		// 获取错误信息
+		// 獲取錯誤資訊
 		errorMessage := ""
 		if err, exists := c.Get("error_message"); exists {
 			if errStr, ok := err.(string); ok {
@@ -230,13 +230,13 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 			}
 		}
 
-		// 从 namespace 参数获取命名空间
+		// 從 namespace 參數獲取命名空間
 		namespace := c.Param("namespace")
 		if namespace == "" {
 			namespace = c.Param("ns")
 		}
 
-		// 如果资源名还是空的，尝试从常见参数获取
+		// 如果資源名還是空的，嘗試從常見參數獲取
 		if resourceName == "" {
 			if name := c.Param("name"); name != "" {
 				resourceName = name
@@ -245,7 +245,7 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 			}
 		}
 
-		// 构建日志条目
+		// 構建日誌條目
 		entry := &services.LogEntry{
 			UserID:       userID,
 			Username:     username,
@@ -268,10 +268,10 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 			Duration:     time.Since(startTime).Milliseconds(),
 		}
 
-		// 异步记录
+		// 非同步記錄
 		logSvc.RecordAsync(entry)
 
-		logger.Debug("操作审计记录",
+		logger.Debug("操作審計記錄",
 			"module", module,
 			"action", action,
 			"path", path,
@@ -280,7 +280,7 @@ func OperationAudit(logSvc *services.OperationLogService) gin.HandlerFunc {
 	}
 }
 
-// parseRoute 从路由解析操作信息
+// parseRoute 從路由解析操作資訊
 func parseRoute(c *gin.Context, path string) (module, action, resourceType, resourceName string) {
 	for _, rule := range routeRules {
 		matches := rule.Pattern.FindStringSubmatch(path)
@@ -289,7 +289,7 @@ func parseRoute(c *gin.Context, path string) (module, action, resourceType, reso
 			action = rule.Action
 			resourceType = rule.ResourceType
 
-			// 提取资源名
+			// 提取資源名
 			if rule.ResourceNameIndex > 0 && rule.ResourceNameIndex < len(matches) {
 				resourceName = matches[rule.ResourceNameIndex]
 			}
@@ -298,7 +298,7 @@ func parseRoute(c *gin.Context, path string) (module, action, resourceType, reso
 		}
 	}
 
-	// 未匹配到规则，尝试从路径推断
+	// 未匹配到規則，嘗試從路徑推斷
 	module = constants.ModuleUnknown
 	action = methodToAction(c.Request.Method)
 	resourceType = guessResourceType(path)
@@ -307,7 +307,7 @@ func parseRoute(c *gin.Context, path string) (module, action, resourceType, reso
 	return
 }
 
-// methodToAction 根据 HTTP 方法返回操作
+// methodToAction 根據 HTTP 方法返回操作
 func methodToAction(method string) string {
 	switch method {
 	case "POST":
@@ -321,10 +321,10 @@ func methodToAction(method string) string {
 	}
 }
 
-// guessResourceType 从路径猜测资源类型
+// guessResourceType 從路徑猜測資源型別
 func guessResourceType(path string) string {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	// 尝试找到有意义的资源类型
+	// 嘗試找到有意義的資源型別
 	resourceTypes := []string{
 		"clusters", "nodes", "pods", "deployments", "statefulsets",
 		"daemonsets", "jobs", "cronjobs", "configmaps", "secrets",
@@ -335,7 +335,7 @@ func guessResourceType(path string) string {
 	for _, part := range parts {
 		for _, rt := range resourceTypes {
 			if part == rt {
-				// 移除复数s
+				// 移除複數s
 				if strings.HasSuffix(rt, "es") {
 					return strings.TrimSuffix(rt, "es")
 				}

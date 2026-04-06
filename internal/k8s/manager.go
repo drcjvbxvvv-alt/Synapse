@@ -26,7 +26,7 @@ import (
 )
 
 type ClusterRuntime struct {
-	k8sClient    *services.K8sClient // 缓存的 K8sClient（包含 clientset 和 rest.Config）
+	k8sClient    *services.K8sClient // 快取的 K8sClient（包含 clientset 和 rest.Config）
 	clientset    *kubernetes.Clientset
 	factory      informers.SharedInformerFactory
 	lastAccessAt time.Time // 最後存取時間，用於閒置 GC
@@ -47,7 +47,7 @@ type ClusterRuntime struct {
 	rolloutGroupVersion schema.GroupVersion
 }
 
-// ClusterInformerManager 统一管理各集群的 Informer 生命周期与缓存访问
+// ClusterInformerManager 統一管理各叢集的 Informer 生命週期與快取訪問
 type ClusterInformerManager struct {
 	mu          sync.RWMutex
 	clusters    map[uint]*ClusterRuntime
@@ -69,7 +69,7 @@ func (m *ClusterInformerManager) SetSyncTimeout(d time.Duration) {
 	}
 }
 
-// EnsureForCluster 确保指定集群的 informer 已创建并启动
+// EnsureForCluster 確保指定叢集的 informer 已建立並啟動
 func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*ClusterRuntime, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -79,14 +79,14 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 		return rt, nil
 	}
 
-	// 使用统一入口创建 K8s 客户端（复用认证/容错逻辑）
+	// 使用統一入口建立 K8s 客戶端（複用認證/容錯邏輯）
 	kc, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
-		return nil, fmt.Errorf("为集群创建客户端失败: %w", err)
+		return nil, fmt.Errorf("為叢集建立客戶端失敗: %w", err)
 	}
 
 	clientset := kc.GetClientset()
-	// resync 为 0 表示关闭周期性全量 Resync，降低压力
+	// resync 為 0 表示關閉週期性全量 Resync，降低壓力
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 
 	rt := &ClusterRuntime{
@@ -97,7 +97,7 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 		lastAccessAt: time.Now(),
 	}
 
-	// 预创建需要的 informer（pods/nodes/ns/services/deployments）
+	// 預建立需要的 informer（pods/nodes/ns/services/deployments）
 	_ = factory.Core().V1().Pods().Informer()
 	_ = factory.Core().V1().Nodes().Informer()
 	_ = factory.Core().V1().Namespaces().Informer()
@@ -114,7 +114,7 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 		cfg := kc.GetRestConfig()
 		if cfg != nil {
 			if roc, err := rolloutsclientset.NewForConfig(cfg); err != nil {
-				logger.Error("创建 Argo Rollouts client 失败", "error", err)
+				logger.Error("建立 Argo Rollouts client 失敗", "error", err)
 			} else {
 				rt.rolloutsClientset = roc
 				rt.rolloutsFactory = rolloutsinformers.NewSharedInformerFactory(roc, 0)
@@ -127,7 +127,7 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 		}
 	}
 
-	// 启动
+	// 啟動
 	rt.startOnce.Do(func() {
 		factory.Start(rt.stopCh)
 		if rt.rolloutsFactory != nil {
@@ -140,7 +140,7 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	return rt, nil
 }
 
-// waitForSync 等待本集群的缓存同步就绪（首次可能需要几十到数百毫秒，取决于资源规模）
+// waitForSync 等待本叢集的快取同步就緒（首次可能需要幾十到數百毫秒，取決於資源規模）
 func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRuntime) bool {
 	if rt.synced {
 		return true
@@ -177,20 +177,20 @@ func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRun
 	}
 }
 
-// GetOverviewSnapshot 从本地缓存即时汇总概览（不触发远端 List）
+// GetOverviewSnapshot 從本地快取即時彙總概覽（不觸發遠端 List）
 func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, clusterID uint) (*OverviewSnapshot, error) {
 	m.mu.RLock()
 	rt, ok := m.clusters[clusterID]
 	m.mu.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("集群 %d 未初始化 informer", clusterID)
+		return nil, fmt.Errorf("叢集 %d 未初始化 informer", clusterID)
 	}
 
-	// 等待缓存同步（使用可設定的逾時，預設 30 秒）
+	// 等待快取同步（使用可設定的逾時，預設 30 秒）
 	sctx, cancel := context.WithTimeout(ctx, m.syncTimeout)
 	defer cancel()
 	if !m.waitForSync(sctx, rt) {
-		return nil, fmt.Errorf("informer 缓存尚未就绪")
+		return nil, fmt.Errorf("informer 快取尚未就緒")
 	}
 
 	snap := &OverviewSnapshot{ClusterID: clusterID}
@@ -198,28 +198,28 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 	// Pods
 	pods, err := rt.factory.Core().V1().Pods().Lister().List(labels.Everything())
 	if err != nil {
-		return nil, fmt.Errorf("读取缓存 pods 失败: %w", err)
+		return nil, fmt.Errorf("讀取快取 pods 失敗: %w", err)
 	}
 	snap.Pods = len(pods)
 
 	// Nodes
 	nodes, err := rt.factory.Core().V1().Nodes().Lister().List(labels.Everything())
 	if err != nil {
-		return nil, fmt.Errorf("读取缓存 nodes 失败: %w", err)
+		return nil, fmt.Errorf("讀取快取 nodes 失敗: %w", err)
 	}
 	snap.Nodes = len(nodes)
 
 	// Namespaces
 	namespaces, err := rt.factory.Core().V1().Namespaces().Lister().List(labels.Everything())
 	if err != nil {
-		return nil, fmt.Errorf("读取缓存 namespaces 失败: %w", err)
+		return nil, fmt.Errorf("讀取快取 namespaces 失敗: %w", err)
 	}
 	snap.Namespace = len(namespaces)
 
 	// Deployments
 	deploys, err := rt.factory.Apps().V1().Deployments().Lister().List(labels.Everything())
 	if err != nil {
-		logger.Error("读取缓存 deployments 失败", "error", err)
+		logger.Error("讀取快取 deployments 失敗", "error", err)
 	} else {
 		snap.Deployments = len(deploys)
 	}
@@ -227,7 +227,7 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 	// StatefulSets
 	statefulsets, err := rt.factory.Apps().V1().StatefulSets().Lister().List(labels.Everything())
 	if err != nil {
-		logger.Error("读取缓存 statefulsets 失败", "error", err)
+		logger.Error("讀取快取 statefulsets 失敗", "error", err)
 	} else {
 		snap.StatefulSets = len(statefulsets)
 	}
@@ -235,7 +235,7 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 	// DaemonSets
 	daemonsets, err := rt.factory.Apps().V1().DaemonSets().Lister().List(labels.Everything())
 	if err != nil {
-		logger.Error("读取缓存 daemonsets 失败", "error", err)
+		logger.Error("讀取快取 daemonsets 失敗", "error", err)
 	} else {
 		snap.DaemonSets = len(daemonsets)
 	}
@@ -243,7 +243,7 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 	// Jobs
 	jobs, err := rt.factory.Batch().V1().Jobs().Lister().List(labels.Everything())
 	if err != nil {
-		logger.Error("读取缓存 jobs 失败", "error", err)
+		logger.Error("讀取快取 jobs 失敗", "error", err)
 	} else {
 		snap.Jobs = len(jobs)
 	}
@@ -252,7 +252,7 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 	if rt.rolloutEnabled && rt.rolloutLister != nil {
 		rollouts, err := rt.rolloutLister.List(labels.Everything())
 		if err != nil {
-			logger.Error("读取缓存 rollouts 失败", "error", err)
+			logger.Error("讀取快取 rollouts 失敗", "error", err)
 		} else {
 			snap.Rollouts = len(rollouts)
 		}
@@ -261,7 +261,7 @@ func (m *ClusterInformerManager) GetOverviewSnapshot(ctx context.Context, cluste
 	return snap, nil
 }
 
-// EnsureAndWait 确保指定集群的 informer 启动并等待缓存同步
+// EnsureAndWait 確保指定叢集的 informer 啟動並等待快取同步
 func (m *ClusterInformerManager) EnsureAndWait(ctx context.Context, cluster *models.Cluster, timeout time.Duration) (*ClusterRuntime, error) {
 	rt, err := m.EnsureForCluster(cluster)
 	if err != nil {
@@ -270,7 +270,7 @@ func (m *ClusterInformerManager) EnsureAndWait(ctx context.Context, cluster *mod
 	wctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	if !m.waitForSync(wctx, rt) {
-		return nil, fmt.Errorf("informer 缓存尚未就绪")
+		return nil, fmt.Errorf("informer 快取尚未就緒")
 	}
 	return rt, nil
 }
@@ -375,7 +375,7 @@ func (m *ClusterInformerManager) JobsLister(clusterID uint) batchv1listers.JobLi
 	return nil
 }
 
-// hasArgoRollouts 探测是否存在 argoproj.io 的 rollouts 资源，返回其 GroupVersion
+// hasArgoRollouts 探測是否存在 argoproj.io 的 rollouts 資源，返回其 GroupVersion
 func hasArgoRollouts(cs *kubernetes.Clientset) (schema.GroupVersion, bool) {
 	groups, resources, err := cs.Discovery().ServerGroupsAndResources()
 	_ = groups // 未直接使用
@@ -408,7 +408,7 @@ func (m *ClusterInformerManager) RolloutsLister(clusterID uint) rolloutslisters.
 	return nil
 }
 
-// GetK8sClient 获取指定集群的缓存 K8sClient（复用 Informer 管理器中已创建的客户端，避免重复创建）
+// GetK8sClient 獲取指定叢集的快取 K8sClient（複用 Informer 管理器中已建立的客戶端，避免重複建立）
 func (m *ClusterInformerManager) GetK8sClient(cluster *models.Cluster) (*services.K8sClient, error) {
 	rt, err := m.EnsureForCluster(cluster)
 	if err != nil {
@@ -417,7 +417,7 @@ func (m *ClusterInformerManager) GetK8sClient(cluster *models.Cluster) (*service
 	return rt.k8sClient, nil
 }
 
-// GetK8sClientByID 根据集群 ID 获取已缓存的 K8sClient（集群必须已通过 EnsureForCluster 初始化）
+// GetK8sClientByID 根據叢集 ID 獲取已快取的 K8sClient（叢集必須已透過 EnsureForCluster 初始化）
 func (m *ClusterInformerManager) GetK8sClientByID(clusterID uint) *services.K8sClient {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -447,7 +447,7 @@ func (m *ClusterInformerManager) StartGC(interval, maxIdle time.Duration) {
 	}()
 }
 
-// StopForCluster 停止指定集群的 informer（删除集群时调用）
+// StopForCluster 停止指定叢集的 informer（刪除叢集時呼叫）
 func (m *ClusterInformerManager) StopForCluster(clusterID uint) {
 	m.mu.Lock()
 	rt, ok := m.clusters[clusterID]
@@ -457,16 +457,16 @@ func (m *ClusterInformerManager) StopForCluster(clusterID uint) {
 	m.mu.Unlock()
 
 	if ok && rt != nil {
-		logger.Info("停止集群 informer", "clusterID", clusterID)
-		// 使用 sync.Once 确保只关闭一次，避免重复关闭导致 panic
+		logger.Info("停止叢集 informer", "clusterID", clusterID)
+		// 使用 sync.Once 確保只關閉一次，避免重複關閉導致 panic
 		rt.stopOnce.Do(func() {
 			close(rt.stopCh)
 		})
-		logger.Info("集群 informer 已停止", "clusterID", clusterID)
+		logger.Info("叢集 informer 已停止", "clusterID", clusterID)
 	}
 }
 
-// Stop 关闭所有集群的 informer（应用退出时调用）
+// Stop 關閉所有叢集的 informer（應用退出時呼叫）
 func (m *ClusterInformerManager) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()

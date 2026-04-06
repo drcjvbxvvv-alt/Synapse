@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-// PodTerminalHandler Pod终端WebSocket处理器
+// PodTerminalHandler Pod終端WebSocket處理器
 type PodTerminalHandler struct {
 	clusterService *services.ClusterService
 	auditService   *services.AuditService
@@ -39,10 +39,10 @@ type PodTerminalHandler struct {
 	sessionsMutex  sync.RWMutex
 }
 
-// PodTerminalSession Pod终端会话
+// PodTerminalSession Pod終端會話
 type PodTerminalSession struct {
 	ID             string
-	AuditSessionID uint // 审计会话ID
+	AuditSessionID uint // 審計會話ID
 	ClusterID      string
 	Namespace      string
 	PodName        string
@@ -52,12 +52,12 @@ type PodTerminalSession struct {
 	Cancel         context.CancelFunc
 	Mutex          sync.Mutex
 
-	// 命令捕获（从终端输出中提取完整命令，包括Tab补全结果）
-	currentLine      strings.Builder // 当前行的输出内容
-	lastCompleteLine string          // 上一个完整行（用于提取命令）
-	pendingEnter     bool            // 是否有待处理的回车键
+	// 命令捕獲（從終端輸出中提取完整命令，包括Tab補全結果）
+	currentLine      strings.Builder // 當前行的輸出內容
+	lastCompleteLine string          // 上一個完整行（用於提取命令）
+	pendingEnter     bool            // 是否有待處理的回車鍵
 
-	// Kubernetes连接相关
+	// Kubernetes連線相關
 	stdinReader  io.ReadCloser
 	stdinWriter  io.WriteCloser
 	stdoutReader io.ReadCloser
@@ -66,7 +66,7 @@ type PodTerminalSession struct {
 	done         chan struct{}
 }
 
-// PodTerminalMessage Pod终端消息
+// PodTerminalMessage Pod終端訊息
 type PodTerminalMessage struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
@@ -74,7 +74,7 @@ type PodTerminalMessage struct {
 	Rows int    `json:"rows,omitempty"`
 }
 
-// NewPodTerminalHandler 创建Pod终端处理器
+// NewPodTerminalHandler 建立Pod終端處理器
 func NewPodTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService, k8sMgr *k8s.ClusterInformerManager) *PodTerminalHandler {
 	return &PodTerminalHandler{
 		clusterService: clusterService,
@@ -96,24 +96,24 @@ func NewPodTerminalHandler(clusterService *services.ClusterService, auditService
 	}
 }
 
-// HandlePodTerminal 处理Pod终端WebSocket连接
+// HandlePodTerminal 處理Pod終端WebSocket連線
 func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	podName := c.Param("name")
 	container := c.DefaultQuery("container", "")
-	userID := c.GetUint("user_id") // 从JWT中获取用户ID
+	userID := c.GetUint("user_id") // 從JWT中獲取使用者ID
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterIDUint, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(uint(clusterIDUint))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		terminalType = services.TerminalTypeKubectl
 	}
 
-	// 升级到WebSocket连接
+	// 升級到WebSocket連線
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		return
@@ -134,7 +134,7 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 	h.RunPodTerminalWithConn(conn, cluster, clusterID, namespace, podName, container, userID, terminalType)
 }
 
-// RunPodTerminalWithConn 在已建立的 WebSocket 上运行 Pod 终端（kubectl Pod 终端等场景先推送进度再复用此逻辑）
+// RunPodTerminalWithConn 在已建立的 WebSocket 上執行 Pod 終端（kubectl Pod 終端等場景先推送進度再複用此邏輯）
 func (h *PodTerminalHandler) RunPodTerminalWithConn(
 	conn *websocket.Conn,
 	cluster *models.Cluster,
@@ -153,7 +153,7 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 			Container:  container,
 		})
 		if err != nil {
-			logger.Error("创建审计会话失败", "error", err)
+			logger.Error("建立審計會話失敗", "error", err)
 		} else {
 			auditSessionID = auditSession.ID
 		}
@@ -191,7 +191,7 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		h.sendMessage(conn, "error", fmt.Sprintf("获取K8s客户端失败: %v", err))
+		h.sendMessage(conn, "error", fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 	client := k8sClient.GetClientset()
@@ -204,7 +204,7 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 	}
 
 	if err := h.startPodTerminal(client, k8sConfig, session, shell); err != nil {
-		h.sendMessage(conn, "error", fmt.Sprintf("启动Pod终端失败: %v", err))
+		h.sendMessage(conn, "error", fmt.Sprintf("啟動Pod終端失敗: %v", err))
 		return
 	}
 
@@ -238,7 +238,7 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 	}
 }
 
-// findAvailableShell 查找可用的shell
+// findAvailableShell 查詢可用的shell
 func (h *PodTerminalHandler) findAvailableShell(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession) (string, error) {
 	shells := []string{"bash", "sh", "ash", "dash", "zsh", "ksh"}
 
@@ -251,7 +251,7 @@ func (h *PodTerminalHandler) findAvailableShell(client *kubernetes.Clientset, k8
 	return "", fmt.Errorf("未找到任何可用的shell")
 }
 
-// hasShellInContainer 检查容器中是否有指定的shell
+// hasShellInContainer 檢查容器中是否有指定的shell
 func (h *PodTerminalHandler) hasShellInContainer(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession, shell string) bool {
 	testScript := fmt.Sprintf("command -v %s", shell)
 	command := []string{"sh", "-c", testScript}
@@ -288,9 +288,9 @@ func (h *PodTerminalHandler) hasShellInContainer(client *kubernetes.Clientset, k
 	return strings.HasSuffix(result, shell)
 }
 
-// startPodTerminal 启动Pod终端连接
+// startPodTerminal 啟動Pod終端連線
 func (h *PodTerminalHandler) startPodTerminal(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession, shell string) error {
-	// 创建管道
+	// 建立管道
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 
@@ -301,16 +301,16 @@ func (h *PodTerminalHandler) startPodTerminal(client *kubernetes.Clientset, k8sC
 	session.winSizeChan = make(chan *remotecommand.TerminalSize, 10)
 	session.done = make(chan struct{})
 
-	// 设置默认终端大小
+	// 設定預設終端大小
 	session.winSizeChan <- &remotecommand.TerminalSize{
 		Width:  120,
 		Height: 30,
 	}
 
-	// 启动输出读取协程
+	// 啟動輸出讀取協程
 	go h.readOutput(session)
 
-	// 启动Kubernetes exec
+	// 啟動Kubernetes exec
 	go func() {
 		defer func() {
 			select {
@@ -318,7 +318,7 @@ func (h *PodTerminalHandler) startPodTerminal(client *kubernetes.Clientset, k8sC
 			default:
 				close(session.done)
 			}
-			h.sendMessage(session.Conn, "disconnected", "Pod终端连接已断开")
+			h.sendMessage(session.Conn, "disconnected", "Pod終端連線已斷開")
 		}()
 
 		req := client.CoreV1().RESTClient().Post().
@@ -338,7 +338,7 @@ func (h *PodTerminalHandler) startPodTerminal(client *kubernetes.Clientset, k8sC
 
 		exec, err := remotecommand.NewSPDYExecutor(k8sConfig, "POST", req.URL())
 		if err != nil {
-			h.sendMessage(session.Conn, "error", fmt.Sprintf("创建执行器失败: %v", err))
+			h.sendMessage(session.Conn, "error", fmt.Sprintf("建立執行器失敗: %v", err))
 			return
 		}
 
@@ -351,14 +351,14 @@ func (h *PodTerminalHandler) startPodTerminal(client *kubernetes.Clientset, k8sC
 		}
 
 		if err := exec.StreamWithContext(session.Context, streamOption); err != nil {
-			h.sendMessage(session.Conn, "error", fmt.Sprintf("执行失败: %v", err))
+			h.sendMessage(session.Conn, "error", fmt.Sprintf("執行失敗: %v", err))
 		}
 	}()
 
 	return nil
 }
 
-// handleInput 处理用户输入
+// handleInput 處理使用者輸入
 func (h *PodTerminalHandler) handleInput(session *PodTerminalSession, input string) {
 	session.Mutex.Lock()
 	defer session.Mutex.Unlock()
@@ -366,23 +366,23 @@ func (h *PodTerminalHandler) handleInput(session *PodTerminalSession, input stri
 	if session.stdinWriter != nil {
 		_, err := session.stdinWriter.Write([]byte(input))
 		if err != nil {
-			h.sendMessage(session.Conn, "error", "写入输入失败")
+			h.sendMessage(session.Conn, "error", "寫入輸入失敗")
 			return
 		}
 	}
 
-	// 检测回车键，标记待处理（命令将从输出中提取）
+	// 檢測回車鍵，標記待處理（命令將從輸出中提取）
 	if h.auditService != nil && session.AuditSessionID > 0 {
 		if strings.Contains(input, "\r") || strings.Contains(input, "\n") {
 			session.pendingEnter = true
 		} else if input == "\x03" {
-			// Ctrl+C 清空当前行
+			// Ctrl+C 清空當前行
 			session.currentLine.Reset()
 		}
 	}
 }
 
-// handleResize 处理终端大小调整
+// handleResize 處理終端大小調整
 func (h *PodTerminalHandler) handleResize(session *PodTerminalSession, cols, rows int) {
 	if session.winSizeChan != nil {
 		if cols < 0 || cols > math.MaxUint16 {
@@ -402,7 +402,7 @@ func (h *PodTerminalHandler) handleResize(session *PodTerminalSession, cols, row
 	}
 }
 
-// readOutput 读取命令输出
+// readOutput 讀取命令輸出
 func (h *PodTerminalHandler) readOutput(session *PodTerminalSession) {
 	buffer := make([]byte, wsBufferSize)
 	for {
@@ -415,7 +415,7 @@ func (h *PodTerminalHandler) readOutput(session *PodTerminalSession) {
 			output := string(buffer[:n])
 			h.sendMessage(session.Conn, "data", output)
 
-			// 追踪终端输出，用于提取完整命令（包括Tab补全结果）
+			// 追蹤終端輸出，用於提取完整命令（包括Tab補全結果）
 			if h.auditService != nil && session.AuditSessionID > 0 {
 				h.trackOutputForCommand(session, output)
 			}
@@ -423,7 +423,7 @@ func (h *PodTerminalHandler) readOutput(session *PodTerminalSession) {
 	}
 }
 
-// trackOutputForCommand 追踪输出以提取命令
+// trackOutputForCommand 追蹤輸出以提取命令
 func (h *PodTerminalHandler) trackOutputForCommand(session *PodTerminalSession, output string) {
 	session.Mutex.Lock()
 	defer session.Mutex.Unlock()
@@ -431,12 +431,12 @@ func (h *PodTerminalHandler) trackOutputForCommand(session *PodTerminalSession, 
 	for _, c := range output {
 		switch c {
 		case '\n':
-			// 遇到换行，保存当前行并检查是否需要记录命令
+			// 遇到換行，儲存當前行並檢查是否需要記錄命令
 			currentContent := session.currentLine.String()
 			session.currentLine.Reset()
 
 			if session.pendingEnter && currentContent != "" {
-				// 用户按了回车，提取命令
+				// 使用者按了回車，提取命令
 				cmd := h.extractCommandFromLine(currentContent)
 				if cmd != "" {
 					h.auditService.RecordCommandAsync(session.AuditSessionID, cmd, cmd, nil)
@@ -446,19 +446,19 @@ func (h *PodTerminalHandler) trackOutputForCommand(session *PodTerminalSession, 
 			session.lastCompleteLine = currentContent
 
 		case '\r':
-			// 回车符，可能是行首返回，暂时忽略
+			// 回車符，可能是行首返回，暫時忽略
 			continue
 
 		case '\x1b':
-			// ESC 字符，可能是 ANSI 转义序列的开始，忽略
+			// ESC 字元，可能是 ANSI 轉義序列的開始，忽略
 			continue
 
 		case '\x07':
-			// Bell 字符，忽略
+			// Bell 字元，忽略
 			continue
 
 		default:
-			// 过滤掉不可打印字符和ANSI序列中的字符
+			// 過濾掉不可列印字元和ANSI序列中的字元
 			if c >= 32 && c < 127 {
 				session.currentLine.WriteRune(c)
 			}
@@ -466,9 +466,9 @@ func (h *PodTerminalHandler) trackOutputForCommand(session *PodTerminalSession, 
 	}
 }
 
-// extractCommandFromLine 从行内容中提取命令（去掉shell提示符）
+// extractCommandFromLine 從行內容中提取命令（去掉shell提示符）
 func (h *PodTerminalHandler) extractCommandFromLine(line string) string {
-	// 去掉 ANSI 转义序列
+	// 去掉 ANSI 轉義序列
 	line = h.stripANSI(line)
 	line = strings.TrimSpace(line)
 
@@ -476,12 +476,12 @@ func (h *PodTerminalHandler) extractCommandFromLine(line string) string {
 		return ""
 	}
 
-	// 尝试识别并去掉常见的 shell 提示符
+	// 嘗試識別並去掉常見的 shell 提示符
 	// 格式如: "bash-4.4#", "root@hostname:~#", "$ ", "# ", "[user@host ~]$ "
 	promptPatterns := []string{
 		"# ", // root 提示符
-		"$ ", // 普通用户提示符
-		"] ", // 方括号结尾的提示符
+		"$ ", // 普通使用者提示符
+		"] ", // 方括號結尾的提示符
 		"> ", // 其他提示符
 	}
 
@@ -494,8 +494,8 @@ func (h *PodTerminalHandler) extractCommandFromLine(line string) string {
 		}
 	}
 
-	// 如果没有找到提示符模式，检查是否看起来像命令
-	// 如果行以常见命令开头，可能就是命令本身
+	// 如果沒有找到提示符模式，檢查是否看起來像命令
+	// 如果行以常見命令開頭，可能就是命令本身
 	commonCommands := []string{"ls", "cd", "cat", "grep", "kubectl", "find", "pwd", "echo", "ps", "top", "vi", "vim", "nano", "apt", "yum", "dnf", "pip", "npm", "go", "python", "java", "curl", "wget", "tar", "cp", "mv", "rm", "mkdir", "chmod", "chown", "df", "du", "free", "whoami", "id", "date", "tail", "head", "less", "more", "sort", "uniq", "wc", "awk", "sed", "cut", "tr", "diff", "patch", "git", "docker", "helm", "make", "sh", "bash", "exit", "clear", "history"}
 
 	lineLower := strings.ToLower(line)
@@ -508,9 +508,9 @@ func (h *PodTerminalHandler) extractCommandFromLine(line string) string {
 	return ""
 }
 
-// stripANSI 去掉ANSI转义序列
+// stripANSI 去掉ANSI轉義序列
 func (h *PodTerminalHandler) stripANSI(s string) string {
-	// 简单的ANSI转义序列过滤
+	// 簡單的ANSI轉義序列過濾
 	result := strings.Builder{}
 	inEscape := false
 	for _, c := range s {
@@ -519,7 +519,7 @@ func (h *PodTerminalHandler) stripANSI(s string) string {
 			continue
 		}
 		if inEscape {
-			// ANSI序列通常以字母结尾
+			// ANSI序列通常以字母結尾
 			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
 				inEscape = false
 			}
@@ -530,7 +530,7 @@ func (h *PodTerminalHandler) stripANSI(s string) string {
 	return result.String()
 }
 
-// closeSession 关闭会话
+// closeSession 關閉會話
 func (h *PodTerminalHandler) closeSession(session *PodTerminalSession) {
 	if session.stdinWriter != nil {
 		_ = session.stdinWriter.Close()
@@ -547,7 +547,7 @@ func (h *PodTerminalHandler) closeSession(session *PodTerminalSession) {
 	}
 }
 
-// sendMessage 发送WebSocket消息
+// sendMessage 傳送WebSocket訊息
 func (h *PodTerminalHandler) sendMessage(conn *websocket.Conn, msgType, data string) {
 	msg := PodTerminalMessage{
 		Type: msgType,
@@ -555,11 +555,11 @@ func (h *PodTerminalHandler) sendMessage(conn *websocket.Conn, msgType, data str
 	}
 
 	if err := conn.WriteJSON(msg); err != nil {
-		logger.Error("发送WebSocket消息失败", "error", err)
+		logger.Error("傳送WebSocket訊息失敗", "error", err)
 	}
 }
 
-// terminalStream 实现io.Reader和io.Writer接口
+// terminalStream 實現io.Reader和io.Writer介面
 type terminalStream struct {
 	session *PodTerminalSession
 }
@@ -569,10 +569,10 @@ func (t *terminalStream) Read(p []byte) (int, error) {
 }
 
 func (t *terminalStream) Write(p []byte) (int, error) {
-	return len(p), nil // 不需要写入
+	return len(p), nil // 不需要寫入
 }
 
-// terminalSizeQueue 实现remotecommand.TerminalSizeQueue接口
+// terminalSizeQueue 實現remotecommand.TerminalSizeQueue介面
 type terminalSizeQueue struct {
 	session *PodTerminalSession
 }

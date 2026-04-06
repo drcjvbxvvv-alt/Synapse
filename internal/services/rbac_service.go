@@ -85,9 +85,9 @@ func (s *RBACService) SyncPermissions(clientset *kubernetes.Clientset) (*SyncPer
 
 	// Dev and readonly bindings are created dynamically based on user permissions
 
-	message := "权限同步完成"
+	message := "權限同步完成"
 	if hasError {
-		message = "权限同步完成，但有部分错误"
+		message = "權限同步完成，但有部分錯誤"
 	}
 
 	return &SyncPermissionsResult{
@@ -468,32 +468,32 @@ func (s *RBACService) DeleteRole(clientset *kubernetes.Clientset, namespace, nam
 	return clientset.RbacV1().Roles(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
-// ========== 动态用户 RBAC 管理 ==========
+// ========== 動態使用者 RBAC 管理 ==========
 
-// UserRBACConfig 用户 RBAC 配置
+// UserRBACConfig 使用者 RBAC 配置
 type UserRBACConfig struct {
 	UserID         uint
 	PermissionType string   // admin, ops, dev, readonly, custom
 	Namespaces     []string // ["*"] 表示全部, ["ns1", "ns2"] 表示部分
-	ClusterRoleRef string   // 自定义权限时使用的 ClusterRole 名称
+	ClusterRoleRef string   // 自定義權限時使用的 ClusterRole 名稱
 }
 
-// GetUserServiceAccountName 获取用户专属 SA 名称
+// GetUserServiceAccountName 獲取使用者專屬 SA 名稱
 func GetUserServiceAccountName(userID uint) string {
 	return fmt.Sprintf("synapse-user-%d-sa", userID)
 }
 
-// GetUserRoleBindingName 获取用户 RoleBinding 名称
+// GetUserRoleBindingName 獲取使用者 RoleBinding 名稱
 func GetUserRoleBindingName(userID uint, permissionType string) string {
 	return fmt.Sprintf("synapse-user-%d-%s", userID, permissionType)
 }
 
-// GetUserClusterRoleBindingName 获取用户 ClusterRoleBinding 名称
+// GetUserClusterRoleBindingName 獲取使用者 ClusterRoleBinding 名稱
 func GetUserClusterRoleBindingName(userID uint, permissionType string) string {
 	return fmt.Sprintf("synapse-user-%d-%s-cluster", userID, permissionType)
 }
 
-// hasAllNamespaces 检查命名空间列表是否包含全部权限
+// hasAllNamespaces 檢查命名空間列表是否包含全部權限
 func hasAllNamespaces(namespaces []string) bool {
 	for _, ns := range namespaces {
 		if ns == "*" {
@@ -503,55 +503,55 @@ func hasAllNamespaces(namespaces []string) bool {
 	return false
 }
 
-// EnsureUserRBAC 确保用户的 RBAC 资源存在
-// 根据权限配置自动创建 SA 和绑定
+// EnsureUserRBAC 確保使用者的 RBAC 資源存在
+// 根據權限配置自動建立 SA 和繫結
 func (s *RBACService) EnsureUserRBAC(clientset *kubernetes.Clientset, config *UserRBACConfig) error {
 	ctx := context.Background()
 	hasAllAccess := hasAllNamespaces(config.Namespaces)
 
-	// 获取对应的 ClusterRole
+	// 獲取對應的 ClusterRole
 	clusterRoleName := config.ClusterRoleRef
 	if clusterRoleName == "" {
 		clusterRoleName = rbac.GetClusterRoleByPermissionType(config.PermissionType)
 	}
 
-	// admin 和 ops 使用固定 SA，不需要动态创建
+	// admin 和 ops 使用固定 SA，不需要動態建立
 	if config.PermissionType == "admin" || config.PermissionType == "ops" {
-		logger.Info("admin/ops 使用固定 SA，无需动态创建", "userID", config.UserID, "permissionType", config.PermissionType)
+		logger.Info("admin/ops 使用固定 SA，無需動態建立", "userID", config.UserID, "permissionType", config.PermissionType)
 		return nil
 	}
 
-	// dev/readonly 全部命名空间时使用固定 SA
+	// dev/readonly 全部命名空間時使用固定 SA
 	if (config.PermissionType == "dev" || config.PermissionType == "readonly") && hasAllAccess {
-		logger.Info("全部命名空间使用固定 SA，无需动态创建", "userID", config.UserID, "permissionType", config.PermissionType)
+		logger.Info("全部命名空間使用固定 SA，無需動態建立", "userID", config.UserID, "permissionType", config.PermissionType)
 		return nil
 	}
 
-	// 需要动态创建用户专属 SA 和绑定
+	// 需要動態建立使用者專屬 SA 和繫結
 	saName := GetUserServiceAccountName(config.UserID)
-	logger.Info("创建用户专属 RBAC", "userID", config.UserID, "saName", saName, "permissionType", config.PermissionType, "namespaces", config.Namespaces)
+	logger.Info("建立使用者專屬 RBAC", "userID", config.UserID, "saName", saName, "permissionType", config.PermissionType, "namespaces", config.Namespaces)
 
-	// 1. 创建用户专属 SA
+	// 1. 建立使用者專屬 SA
 	if err := s.ensureUserServiceAccount(ctx, clientset, saName); err != nil {
-		return fmt.Errorf("创建用户 SA 失败: %w", err)
+		return fmt.Errorf("建立使用者 SA 失敗: %w", err)
 	}
 
-	// 2. 根据命名空间范围创建绑定
+	// 2. 根據命名空間範圍建立繫結
 	if hasAllAccess {
-		// 全部命名空间：创建 ClusterRoleBinding
+		// 全部命名空間：建立 ClusterRoleBinding
 		bindingName := GetUserClusterRoleBindingName(config.UserID, config.PermissionType)
 		if err := s.ensureUserClusterRoleBinding(ctx, clientset, bindingName, clusterRoleName, saName); err != nil {
-			return fmt.Errorf("创建 ClusterRoleBinding 失败: %w", err)
+			return fmt.Errorf("建立 ClusterRoleBinding 失敗: %w", err)
 		}
 	} else {
-		// 部分命名空间：为每个命名空间创建 RoleBinding
+		// 部分命名空間：為每個命名空間建立 RoleBinding
 		bindingName := GetUserRoleBindingName(config.UserID, config.PermissionType)
 		for _, namespace := range config.Namespaces {
 			if namespace == "" || namespace == "*" {
 				continue
 			}
 			if err := s.EnsureRoleBinding(clientset, namespace, bindingName, clusterRoleName, saName, rbac.SynapseNamespace); err != nil {
-				return fmt.Errorf("创建 RoleBinding(%s) 失败: %w", namespace, err)
+				return fmt.Errorf("建立 RoleBinding(%s) 失敗: %w", namespace, err)
 			}
 		}
 	}
@@ -559,7 +559,7 @@ func (s *RBACService) EnsureUserRBAC(clientset *kubernetes.Clientset, config *Us
 	return nil
 }
 
-// ensureUserServiceAccount 创建用户专属 SA
+// ensureUserServiceAccount 建立使用者專屬 SA
 func (s *RBACService) ensureUserServiceAccount(ctx context.Context, clientset *kubernetes.Clientset, saName string) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -576,17 +576,17 @@ func (s *RBACService) ensureUserServiceAccount(ctx context.Context, clientset *k
 			if err != nil {
 				return err
 			}
-			logger.Info("创建用户 SA 成功", "saName", saName)
+			logger.Info("建立使用者 SA 成功", "saName", saName)
 			return nil
 		}
 		return err
 	}
 
-	logger.Info("用户 SA 已存在", "saName", saName)
+	logger.Info("使用者 SA 已存在", "saName", saName)
 	return nil
 }
 
-// ensureUserClusterRoleBinding 创建用户 ClusterRoleBinding
+// ensureUserClusterRoleBinding 建立使用者 ClusterRoleBinding
 func (s *RBACService) ensureUserClusterRoleBinding(ctx context.Context, clientset *kubernetes.Clientset, bindingName, clusterRoleName, saName string) error {
 	crb := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -614,7 +614,7 @@ func (s *RBACService) ensureUserClusterRoleBinding(ctx context.Context, clientse
 			if err != nil {
 				return err
 			}
-			logger.Info("创建用户 ClusterRoleBinding 成功", "bindingName", bindingName)
+			logger.Info("建立使用者 ClusterRoleBinding 成功", "bindingName", bindingName)
 			return nil
 		}
 		return err
@@ -627,38 +627,38 @@ func (s *RBACService) ensureUserClusterRoleBinding(ctx context.Context, clientse
 	return err
 }
 
-// CleanupUserRBAC 清理用户的 RBAC 资源
+// CleanupUserRBAC 清理使用者的 RBAC 資源
 func (s *RBACService) CleanupUserRBAC(clientset *kubernetes.Clientset, userID uint, permissionType string, namespaces []string) error {
 	ctx := context.Background()
 	saName := GetUserServiceAccountName(userID)
 
-	logger.Info("清理用户 RBAC 资源", "userID", userID, "saName", saName)
+	logger.Info("清理使用者 RBAC 資源", "userID", userID, "saName", saName)
 
-	// 1. 删除 ClusterRoleBinding
+	// 1. 刪除 ClusterRoleBinding
 	crbName := GetUserClusterRoleBindingName(userID, permissionType)
 	if err := clientset.RbacV1().ClusterRoleBindings().Delete(ctx, crbName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		logger.Warn("删除 ClusterRoleBinding 失败", "name", crbName, "error", err)
+		logger.Warn("刪除 ClusterRoleBinding 失敗", "name", crbName, "error", err)
 	}
 
-	// 2. 删除 RoleBinding（每个命名空间）
+	// 2. 刪除 RoleBinding（每個命名空間）
 	rbName := GetUserRoleBindingName(userID, permissionType)
 	for _, namespace := range namespaces {
 		if namespace == "" || namespace == "*" {
 			continue
 		}
 		if err := clientset.RbacV1().RoleBindings(namespace).Delete(ctx, rbName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-			logger.Warn("删除 RoleBinding 失败", "namespace", namespace, "name", rbName, "error", err)
+			logger.Warn("刪除 RoleBinding 失敗", "namespace", namespace, "name", rbName, "error", err)
 		}
 	}
 
-	// 3. 检查是否还有其他权限使用这个 SA，如果没有则删除 SA
-	// 暂时不删除 SA，因为可能还有其他集群的权限
-	// TODO: 可以添加引用计数逻辑
+	// 3. 檢查是否還有其他權限使用這個 SA，如果沒有則刪除 SA
+	// 暫時不刪除 SA，因為可能還有其他叢集的權限
+	// TODO: 可以新增引用計數邏輯
 
 	return nil
 }
 
-// GetEffectiveServiceAccount 获取用户应该使用的 SA 名称
+// GetEffectiveServiceAccount 獲取使用者應該使用的 SA 名稱
 func (s *RBACService) GetEffectiveServiceAccount(config *UserRBACConfig) string {
 	hasAllAccess := hasAllNamespaces(config.Namespaces)
 

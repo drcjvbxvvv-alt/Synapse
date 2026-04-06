@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// StorageHandler 存储处理器
+// StorageHandler 儲存處理器
 type StorageHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
@@ -32,7 +32,7 @@ type StorageHandler struct {
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-// NewStorageHandler 创建存储处理器
+// NewStorageHandler 建立儲存處理器
 func NewStorageHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *StorageHandler {
 	return &StorageHandler{
 		db:             db,
@@ -42,9 +42,9 @@ func NewStorageHandler(db *gorm.DB, cfg *config.Config, clusterService *services
 	}
 }
 
-// ==================== PVC 相关结构体和方法 ====================
+// ==================== PVC 相關結構體和方法 ====================
 
-// PVCInfo PVC信息
+// PVCInfo PVC資訊
 type PVCInfo struct {
 	Name             string            `json:"name"`
 	Namespace        string            `json:"namespace"`
@@ -59,63 +59,63 @@ type PVCInfo struct {
 	Annotations      map[string]string `json:"annotations"`
 }
 
-// ListPVCs 获取PVC列表
+// ListPVCs 獲取PVC列表
 func (h *StorageHandler) ListPVCs(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
-	// 获取查询参数
+	// 獲取查詢參數
 	namespace := c.DefaultQuery("namespace", "")
 	status := c.DefaultQuery("status", "")
 	search := c.DefaultQuery("search", "")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 检查命名空间权限
+	// 檢查命名空間權限
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
 		middleware.ForbiddenNS(c, nsInfo)
 		return
 	}
 
-	// 获取PVCs
+	// 獲取PVCs
 	pvcs, err := h.getPVCs(clientset, namespace)
 	if err != nil {
-		logger.Error("获取PVCs失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取PVCs失败: %v", err))
+		logger.Error("獲取PVCs失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取PVCs失敗: %v", err))
 		return
 	}
 
-	// 根据命名空间权限过滤
+	// 根據命名空間權限過濾
 	if !nsInfo.HasAllAccess && namespace == "" {
 		pvcs = middleware.FilterResourcesByNamespace(c, pvcs, func(pvc PVCInfo) string {
 			return pvc.Namespace
 		})
 	}
 
-	// 过滤和搜索
+	// 過濾和搜尋
 	filteredPVCs := h.filterPVCs(pvcs, status, search)
 
 	// 排序
@@ -123,7 +123,7 @@ func (h *StorageHandler) ListPVCs(c *gin.Context) {
 		return filteredPVCs[i].CreatedAt.After(filteredPVCs[j].CreatedAt)
 	})
 
-	// 分页
+	// 分頁
 	total := len(filteredPVCs)
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -138,41 +138,41 @@ func (h *StorageHandler) ListPVCs(c *gin.Context) {
 	response.PagedList(c, pagedPVCs, int64(total), page, pageSize)
 }
 
-// GetPVC 获取单个PVC详情
+// GetPVC 獲取單個PVC詳情
 func (h *StorageHandler) GetPVC(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取PVC
+	// 獲取PVC
 	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取PVC失败", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取PVC失败: %v", err))
+		logger.Error("獲取PVC失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取PVC失敗: %v", err))
 		return
 	}
 
@@ -181,131 +181,131 @@ func (h *StorageHandler) GetPVC(c *gin.Context) {
 	response.OK(c, pvcInfo)
 }
 
-// GetPVCYAML 获取PVC的YAML
+// GetPVCYAML 獲取PVC的YAML
 func (h *StorageHandler) GetPVCYAML(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取PVC
+	// 獲取PVC
 	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取PVC失败", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取PVC失败: %v", err))
+		logger.Error("獲取PVC失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取PVC失敗: %v", err))
 		return
 	}
 
-	// 转换为YAML
+	// 轉換為YAML
 	yamlData, err := yaml.Marshal(pvc)
 	if err != nil {
-		logger.Error("转换YAML失败", "error", err)
-		response.InternalError(c, fmt.Sprintf("转换YAML失败: %v", err))
+		logger.Error("轉換YAML失敗", "error", err)
+		response.InternalError(c, fmt.Sprintf("轉換YAML失敗: %v", err))
 		return
 	}
 
 	response.OK(c, gin.H{"yaml": string(yamlData)})
 }
 
-// DeletePVC 删除PVC
+// DeletePVC 刪除PVC
 func (h *StorageHandler) DeletePVC(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 删除PVC
+	// 刪除PVC
 	err = clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
-		logger.Error("删除PVC失败", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
-		response.InternalError(c, fmt.Sprintf("删除PVC失败: %v", err))
+		logger.Error("刪除PVC失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("刪除PVC失敗: %v", err))
 		return
 	}
 
-	logger.Info("PVC删除成功", "clusterId", clusterID, "namespace", namespace, "name", name)
+	logger.Info("PVC刪除成功", "clusterId", clusterID, "namespace", namespace, "name", name)
 	response.NoContent(c)
 }
 
-// GetPVCNamespaces 获取PVC所在的命名空间列表
+// GetPVCNamespaces 獲取PVC所在的命名空間列表
 func (h *StorageHandler) GetPVCNamespaces(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 	clientset := k8sClient.GetClientset()
 
-	// 获取所有PVCs
+	// 獲取所有PVCs
 	pvcList, err := clientset.CoreV1().PersistentVolumeClaims("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取PVC列表失败", "cluster", cluster.Name, "error", err)
-		response.InternalError(c, fmt.Sprintf("获取PVC列表失败: %v", err))
+		logger.Error("獲取PVC列表失敗", "cluster", cluster.Name, "error", err)
+		response.InternalError(c, fmt.Sprintf("獲取PVC列表失敗: %v", err))
 		return
 	}
 
-	// 统计每个命名空间的PVC数量
+	// 統計每個命名空間的PVC數量
 	nsMap := make(map[string]int)
 	for _, pvc := range pvcList.Items {
 		nsMap[pvc.Namespace]++
@@ -324,7 +324,7 @@ func (h *StorageHandler) GetPVCNamespaces(c *gin.Context) {
 		})
 	}
 
-	// 按名称排序
+	// 按名稱排序
 	sort.Slice(namespaces, func(i, j int) bool {
 		return namespaces[i].Name < namespaces[j].Name
 	})
@@ -332,7 +332,7 @@ func (h *StorageHandler) GetPVCNamespaces(c *gin.Context) {
 	response.OK(c, namespaces)
 }
 
-// getPVCs 获取PVCs
+// getPVCs 獲取PVCs
 func (h *StorageHandler) getPVCs(clientset kubernetes.Interface, namespace string) ([]PVCInfo, error) {
 	var pvcList *corev1.PersistentVolumeClaimList
 	var err error
@@ -355,7 +355,7 @@ func (h *StorageHandler) getPVCs(clientset kubernetes.Interface, namespace strin
 	return pvcs, nil
 }
 
-// convertToPVCInfo 转换为PVCInfo
+// convertToPVCInfo 轉換為PVCInfo
 func (h *StorageHandler) convertToPVCInfo(pvc *corev1.PersistentVolumeClaim) PVCInfo {
 	accessModes := make([]string, 0, len(pvc.Spec.AccessModes))
 	for _, mode := range pvc.Spec.AccessModes {
@@ -394,16 +394,16 @@ func (h *StorageHandler) convertToPVCInfo(pvc *corev1.PersistentVolumeClaim) PVC
 	}
 }
 
-// filterPVCs 过滤PVCs
+// filterPVCs 過濾PVCs
 func (h *StorageHandler) filterPVCs(pvcs []PVCInfo, status, search string) []PVCInfo {
 	filtered := make([]PVCInfo, 0)
 	for _, pvc := range pvcs {
-		// 状态过滤
+		// 狀態過濾
 		if status != "" && pvc.Status != status {
 			continue
 		}
 
-		// 搜索过滤
+		// 搜尋過濾
 		if search != "" {
 			searchLower := strings.ToLower(search)
 			if !strings.Contains(strings.ToLower(pvc.Name), searchLower) &&
@@ -418,9 +418,9 @@ func (h *StorageHandler) filterPVCs(pvcs []PVCInfo, status, search string) []PVC
 	return filtered
 }
 
-// ==================== PV 相关结构体和方法 ====================
+// ==================== PV 相關結構體和方法 ====================
 
-// PVInfo PV信息
+// PVInfo PV資訊
 type PVInfo struct {
 	Name                   string            `json:"name"`
 	Status                 string            `json:"status"`
@@ -438,50 +438,50 @@ type PVInfo struct {
 	Annotations            map[string]string `json:"annotations"`
 }
 
-// PVClaimRef PV声明引用
+// PVClaimRef PV宣告引用
 type PVClaimRef struct {
 	Namespace string `json:"namespace"`
 	Name      string `json:"name"`
 }
 
-// ListPVs 获取PV列表
+// ListPVs 獲取PV列表
 func (h *StorageHandler) ListPVs(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
-	// 获取查询参数
+	// 獲取查詢參數
 	status := c.DefaultQuery("status", "")
 	search := c.DefaultQuery("search", "")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取PVs
+	// 獲取PVs
 	pvList, err := clientset.CoreV1().PersistentVolumes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取PVs失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取PVs失败: %v", err))
+		logger.Error("獲取PVs失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取PVs失敗: %v", err))
 		return
 	}
 
@@ -490,7 +490,7 @@ func (h *StorageHandler) ListPVs(c *gin.Context) {
 		pvs = append(pvs, h.convertToPVInfo(&pv))
 	}
 
-	// 过滤和搜索
+	// 過濾和搜尋
 	filteredPVs := h.filterPVs(pvs, status, search)
 
 	// 排序
@@ -498,7 +498,7 @@ func (h *StorageHandler) ListPVs(c *gin.Context) {
 		return filteredPVs[i].CreatedAt.After(filteredPVs[j].CreatedAt)
 	})
 
-	// 分页
+	// 分頁
 	total := len(filteredPVs)
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -513,40 +513,40 @@ func (h *StorageHandler) ListPVs(c *gin.Context) {
 	response.PagedList(c, pagedPVs, int64(total), page, pageSize)
 }
 
-// GetPV 获取单个PV详情
+// GetPV 獲取單個PV詳情
 func (h *StorageHandler) GetPV(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取PV
+	// 獲取PV
 	pv, err := clientset.CoreV1().PersistentVolumes().Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取PV失败", "error", err, "clusterId", clusterID, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取PV失败: %v", err))
+		logger.Error("獲取PV失敗", "error", err, "clusterId", clusterID, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取PV失敗: %v", err))
 		return
 	}
 
@@ -555,96 +555,96 @@ func (h *StorageHandler) GetPV(c *gin.Context) {
 	response.OK(c, pvInfo)
 }
 
-// GetPVYAML 获取PV的YAML
+// GetPVYAML 獲取PV的YAML
 func (h *StorageHandler) GetPVYAML(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取PV
+	// 獲取PV
 	pv, err := clientset.CoreV1().PersistentVolumes().Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取PV失败", "error", err, "clusterId", clusterID, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取PV失败: %v", err))
+		logger.Error("獲取PV失敗", "error", err, "clusterId", clusterID, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取PV失敗: %v", err))
 		return
 	}
 
-	// 转换为YAML
+	// 轉換為YAML
 	yamlData, err := yaml.Marshal(pv)
 	if err != nil {
-		logger.Error("转换YAML失败", "error", err)
-		response.InternalError(c, fmt.Sprintf("转换YAML失败: %v", err))
+		logger.Error("轉換YAML失敗", "error", err)
+		response.InternalError(c, fmt.Sprintf("轉換YAML失敗: %v", err))
 		return
 	}
 
 	response.OK(c, gin.H{"yaml": string(yamlData)})
 }
 
-// DeletePV 删除PV
+// DeletePV 刪除PV
 func (h *StorageHandler) DeletePV(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 删除PV
+	// 刪除PV
 	err = clientset.CoreV1().PersistentVolumes().Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
-		logger.Error("删除PV失败", "error", err, "clusterId", clusterID, "name", name)
-		response.InternalError(c, fmt.Sprintf("删除PV失败: %v", err))
+		logger.Error("刪除PV失敗", "error", err, "clusterId", clusterID, "name", name)
+		response.InternalError(c, fmt.Sprintf("刪除PV失敗: %v", err))
 		return
 	}
 
-	logger.Info("PV删除成功", "clusterId", clusterID, "name", name)
+	logger.Info("PV刪除成功", "clusterId", clusterID, "name", name)
 	response.NoContent(c)
 }
 
-// convertToPVInfo 转换为PVInfo
+// convertToPVInfo 轉換為PVInfo
 func (h *StorageHandler) convertToPVInfo(pv *corev1.PersistentVolume) PVInfo {
 	accessModes := make([]string, 0, len(pv.Spec.AccessModes))
 	for _, mode := range pv.Spec.AccessModes {
@@ -671,7 +671,7 @@ func (h *StorageHandler) convertToPVInfo(pv *corev1.PersistentVolume) PVInfo {
 		}
 	}
 
-	// 获取PersistentVolumeSource类型
+	// 獲取PersistentVolumeSource型別
 	sourceType := h.getPVSourceType(&pv.Spec.PersistentVolumeSource)
 
 	return PVInfo{
@@ -691,7 +691,7 @@ func (h *StorageHandler) convertToPVInfo(pv *corev1.PersistentVolume) PVInfo {
 	}
 }
 
-// getPVSourceType 获取PV源类型
+// getPVSourceType 獲取PV源型別
 func (h *StorageHandler) getPVSourceType(source *corev1.PersistentVolumeSource) string {
 	if source.HostPath != nil {
 		return "HostPath"
@@ -744,16 +744,16 @@ func (h *StorageHandler) getPVSourceType(source *corev1.PersistentVolumeSource) 
 	return "Unknown"
 }
 
-// filterPVs 过滤PVs
+// filterPVs 過濾PVs
 func (h *StorageHandler) filterPVs(pvs []PVInfo, status, search string) []PVInfo {
 	filtered := make([]PVInfo, 0)
 	for _, pv := range pvs {
-		// 状态过滤
+		// 狀態過濾
 		if status != "" && pv.Status != status {
 			continue
 		}
 
-		// 搜索过滤
+		// 搜尋過濾
 		if search != "" {
 			searchLower := strings.ToLower(search)
 			if !strings.Contains(strings.ToLower(pv.Name), searchLower) &&
@@ -768,9 +768,9 @@ func (h *StorageHandler) filterPVs(pvs []PVInfo, status, search string) []PVInfo
 	return filtered
 }
 
-// ==================== StorageClass 相关结构体和方法 ====================
+// ==================== StorageClass 相關結構體和方法 ====================
 
-// StorageClassInfo StorageClass信息
+// StorageClassInfo StorageClass資訊
 type StorageClassInfo struct {
 	Name                 string            `json:"name"`
 	Provisioner          string            `json:"provisioner"`
@@ -785,43 +785,43 @@ type StorageClassInfo struct {
 	Annotations          map[string]string `json:"annotations"`
 }
 
-// ListStorageClasses 获取StorageClass列表
+// ListStorageClasses 獲取StorageClass列表
 func (h *StorageHandler) ListStorageClasses(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
-	// 获取查询参数
+	// 獲取查詢參數
 	search := c.DefaultQuery("search", "")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取StorageClasses
+	// 獲取StorageClasses
 	scList, err := clientset.StorageV1().StorageClasses().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取StorageClasses失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取StorageClasses失败: %v", err))
+		logger.Error("獲取StorageClasses失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取StorageClasses失敗: %v", err))
 		return
 	}
 
@@ -830,7 +830,7 @@ func (h *StorageHandler) ListStorageClasses(c *gin.Context) {
 		scs = append(scs, h.convertToStorageClassInfo(&sc))
 	}
 
-	// 过滤和搜索
+	// 過濾和搜尋
 	filteredSCs := h.filterStorageClasses(scs, search)
 
 	// 排序
@@ -838,7 +838,7 @@ func (h *StorageHandler) ListStorageClasses(c *gin.Context) {
 		return filteredSCs[i].CreatedAt.After(filteredSCs[j].CreatedAt)
 	})
 
-	// 分页
+	// 分頁
 	total := len(filteredSCs)
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -853,40 +853,40 @@ func (h *StorageHandler) ListStorageClasses(c *gin.Context) {
 	response.PagedList(c, pagedSCs, int64(total), page, pageSize)
 }
 
-// GetStorageClass 获取单个StorageClass详情
+// GetStorageClass 獲取單個StorageClass詳情
 func (h *StorageHandler) GetStorageClass(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取StorageClass
+	// 獲取StorageClass
 	sc, err := clientset.StorageV1().StorageClasses().Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取StorageClass失败", "error", err, "clusterId", clusterID, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取StorageClass失败: %v", err))
+		logger.Error("獲取StorageClass失敗", "error", err, "clusterId", clusterID, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取StorageClass失敗: %v", err))
 		return
 	}
 
@@ -895,96 +895,96 @@ func (h *StorageHandler) GetStorageClass(c *gin.Context) {
 	response.OK(c, scInfo)
 }
 
-// GetStorageClassYAML 获取StorageClass的YAML
+// GetStorageClassYAML 獲取StorageClass的YAML
 func (h *StorageHandler) GetStorageClassYAML(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取StorageClass
+	// 獲取StorageClass
 	sc, err := clientset.StorageV1().StorageClasses().Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取StorageClass失败", "error", err, "clusterId", clusterID, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取StorageClass失败: %v", err))
+		logger.Error("獲取StorageClass失敗", "error", err, "clusterId", clusterID, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取StorageClass失敗: %v", err))
 		return
 	}
 
-	// 转换为YAML
+	// 轉換為YAML
 	yamlData, err := yaml.Marshal(sc)
 	if err != nil {
-		logger.Error("转换YAML失败", "error", err)
-		response.InternalError(c, fmt.Sprintf("转换YAML失败: %v", err))
+		logger.Error("轉換YAML失敗", "error", err)
+		response.InternalError(c, fmt.Sprintf("轉換YAML失敗: %v", err))
 		return
 	}
 
 	response.OK(c, gin.H{"yaml": string(yamlData)})
 }
 
-// DeleteStorageClass 删除StorageClass
+// DeleteStorageClass 刪除StorageClass
 func (h *StorageHandler) DeleteStorageClass(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 删除StorageClass
+	// 刪除StorageClass
 	err = clientset.StorageV1().StorageClasses().Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
-		logger.Error("删除StorageClass失败", "error", err, "clusterId", clusterID, "name", name)
-		response.InternalError(c, fmt.Sprintf("删除StorageClass失败: %v", err))
+		logger.Error("刪除StorageClass失敗", "error", err, "clusterId", clusterID, "name", name)
+		response.InternalError(c, fmt.Sprintf("刪除StorageClass失敗: %v", err))
 		return
 	}
 
-	logger.Info("StorageClass删除成功", "clusterId", clusterID, "name", name)
+	logger.Info("StorageClass刪除成功", "clusterId", clusterID, "name", name)
 	response.NoContent(c)
 }
 
-// convertToStorageClassInfo 转换为StorageClassInfo
+// convertToStorageClassInfo 轉換為StorageClassInfo
 func (h *StorageHandler) convertToStorageClassInfo(sc *storagev1.StorageClass) StorageClassInfo {
 	reclaimPolicy := ""
 	if sc.ReclaimPolicy != nil {
@@ -1001,7 +1001,7 @@ func (h *StorageHandler) convertToStorageClassInfo(sc *storagev1.StorageClass) S
 		allowVolumeExpansion = *sc.AllowVolumeExpansion
 	}
 
-	// 检查是否为默认StorageClass
+	// 檢查是否為預設StorageClass
 	isDefault := false
 	if sc.Annotations != nil {
 		if val, ok := sc.Annotations["storageclass.kubernetes.io/is-default-class"]; ok && val == "true" {
@@ -1027,7 +1027,7 @@ func (h *StorageHandler) convertToStorageClassInfo(sc *storagev1.StorageClass) S
 	}
 }
 
-// filterStorageClasses 过滤StorageClasses
+// filterStorageClasses 過濾StorageClasses
 func (h *StorageHandler) filterStorageClasses(scs []StorageClassInfo, search string) []StorageClassInfo {
 	if search == "" {
 		return scs

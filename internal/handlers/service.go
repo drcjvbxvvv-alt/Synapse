@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// ServiceHandler Service处理器
+// ServiceHandler Service處理器
 type ServiceHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
@@ -32,7 +32,7 @@ type ServiceHandler struct {
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-// NewServiceHandler 创建Service处理器
+// NewServiceHandler 建立Service處理器
 func NewServiceHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *ServiceHandler {
 	return &ServiceHandler{
 		db:             db,
@@ -42,7 +42,7 @@ func NewServiceHandler(db *gorm.DB, cfg *config.Config, clusterService *services
 	}
 }
 
-// ServiceInfo Service信息
+// ServiceInfo Service資訊
 type ServiceInfo struct {
 	Name                string                `json:"name"`
 	Namespace           string                `json:"namespace"`
@@ -60,7 +60,7 @@ type ServiceInfo struct {
 	Annotations         map[string]string     `json:"annotations"`
 }
 
-// ServicePort Service端口信息
+// ServicePort Service連接埠資訊
 type ServicePort struct {
 	Name       string `json:"name"`
 	Protocol   string `json:"protocol"`
@@ -69,69 +69,69 @@ type ServicePort struct {
 	NodePort   int32  `json:"nodePort,omitempty"`
 }
 
-// LoadBalancerIngress 负载均衡器入口信息
+// LoadBalancerIngress 負載均衡器入口資訊
 type LoadBalancerIngress struct {
 	IP       string `json:"ip,omitempty"`
 	Hostname string `json:"hostname,omitempty"`
 }
 
-// ListServices 获取Service列表
+// ListServices 獲取Service列表
 func (h *ServiceHandler) ListServices(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
-	// 获取查询参数
+	// 獲取查詢參數
 	namespace := c.DefaultQuery("namespace", "")
 	serviceType := c.DefaultQuery("type", "")
 	search := c.DefaultQuery("search", "")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 检查命名空间权限
+	// 檢查命名空間權限
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
 		middleware.ForbiddenNS(c, nsInfo)
 		return
 	}
 
-	// 获取Services
+	// 獲取Services
 	services, err := h.getServices(clientset, namespace)
 	if err != nil {
-		logger.Error("获取Services失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取Services失败: %v", err))
+		logger.Error("獲取Services失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取Services失敗: %v", err))
 		return
 	}
 
-	// 根据命名空间权限过滤
+	// 根據命名空間權限過濾
 	if !nsInfo.HasAllAccess && namespace == "" {
 		services = middleware.FilterResourcesByNamespace(c, services, func(s ServiceInfo) string {
 			return s.Namespace
 		})
 	}
 
-	// 过滤和搜索
+	// 過濾和搜尋
 	filteredServices := h.filterServices(services, serviceType, search)
 
 	// 排序
@@ -139,7 +139,7 @@ func (h *ServiceHandler) ListServices(c *gin.Context) {
 		return filteredServices[i].CreatedAt.After(filteredServices[j].CreatedAt)
 	})
 
-	// 分页
+	// 分頁
 	total := len(filteredServices)
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -154,41 +154,41 @@ func (h *ServiceHandler) ListServices(c *gin.Context) {
 	response.PagedList(c, pagedServices, int64(total), page, pageSize)
 }
 
-// GetService 获取单个Service详情
+// GetService 獲取單個Service詳情
 func (h *ServiceHandler) GetService(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取Service
+	// 獲取Service
 	service, err := clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取Service失败", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取Service失败: %v", err))
+		logger.Error("獲取Service失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取Service失敗: %v", err))
 		return
 	}
 
@@ -197,150 +197,150 @@ func (h *ServiceHandler) GetService(c *gin.Context) {
 	response.OK(c, serviceInfo)
 }
 
-// GetServiceYAML 获取Service的YAML
+// GetServiceYAML 獲取Service的YAML
 func (h *ServiceHandler) GetServiceYAML(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取Service
+	// 獲取Service
 	service, err := clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取Service失败", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取Service失败: %v", err))
+		logger.Error("獲取Service失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取Service失敗: %v", err))
 		return
 	}
 
-	// 设置 apiVersion 和 kind（API 返回的对象不包含这些字段）
+	// 設定 apiVersion 和 kind（API 返回的物件不包含這些欄位）
 	cleanSvc := service.DeepCopy()
 	cleanSvc.APIVersion = "v1"
 	cleanSvc.Kind = "Service"
-	cleanSvc.ManagedFields = nil // 移除 managedFields 简化 YAML
+	cleanSvc.ManagedFields = nil // 移除 managedFields 簡化 YAML
 
-	// 转换为YAML
+	// 轉換為YAML
 	yamlData, err := yaml.Marshal(cleanSvc)
 	if err != nil {
-		logger.Error("转换YAML失败", "error", err)
-		response.InternalError(c, fmt.Sprintf("转换YAML失败: %v", err))
+		logger.Error("轉換YAML失敗", "error", err)
+		response.InternalError(c, fmt.Sprintf("轉換YAML失敗: %v", err))
 		return
 	}
 
 	response.OK(c, gin.H{"yaml": string(yamlData)})
 }
 
-// DeleteService 删除Service
+// DeleteService 刪除Service
 func (h *ServiceHandler) DeleteService(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 删除Service
+	// 刪除Service
 	err = clientset.CoreV1().Services(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
-		logger.Error("删除Service失败", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
-		response.InternalError(c, fmt.Sprintf("删除Service失败: %v", err))
+		logger.Error("刪除Service失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("刪除Service失敗: %v", err))
 		return
 	}
 
-	logger.Info("Service删除成功", "clusterId", clusterID, "namespace", namespace, "name", name)
+	logger.Info("Service刪除成功", "clusterId", clusterID, "namespace", namespace, "name", name)
 	response.NoContent(c)
 }
 
-// GetServiceEndpoints 获取Service的Endpoints
+// GetServiceEndpoints 獲取Service的Endpoints
 func (h *ServiceHandler) GetServiceEndpoints(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取Endpoints
+	// 獲取Endpoints
 	endpoints, err := clientset.CoreV1().Endpoints(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取Endpoints失败", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
-		response.InternalError(c, fmt.Sprintf("获取Endpoints失败: %v", err))
+		logger.Error("獲取Endpoints失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("獲取Endpoints失敗: %v", err))
 		return
 	}
 
-	// 转换Endpoints信息
+	// 轉換Endpoints資訊
 	endpointInfo := h.convertEndpointsInfo(endpoints)
 
 	response.OK(c, endpointInfo)
 }
 
-// 辅助函数
+// 輔助函式
 
-// getServices 获取Services
+// getServices 獲取Services
 func (h *ServiceHandler) getServices(clientset kubernetes.Interface, namespace string) ([]ServiceInfo, error) {
 	var serviceList *corev1.ServiceList
 	var err error
@@ -363,7 +363,7 @@ func (h *ServiceHandler) getServices(clientset kubernetes.Interface, namespace s
 	return services, nil
 }
 
-// convertToServiceInfo 转换为ServiceInfo
+// convertToServiceInfo 轉換為ServiceInfo
 func (h *ServiceHandler) convertToServiceInfo(svc *corev1.Service) ServiceInfo {
 	ports := make([]ServicePort, 0, len(svc.Spec.Ports))
 	for _, p := range svc.Spec.Ports {
@@ -402,7 +402,7 @@ func (h *ServiceHandler) convertToServiceInfo(svc *corev1.Service) ServiceInfo {
 	}
 }
 
-// getTargetPortString 获取目标端口字符串
+// getTargetPortString 獲取目標連接埠字串
 func (h *ServiceHandler) getTargetPortString(targetPort intstr.IntOrString) string {
 	if targetPort.Type == intstr.Int {
 		return strconv.Itoa(int(targetPort.IntVal))
@@ -410,16 +410,16 @@ func (h *ServiceHandler) getTargetPortString(targetPort intstr.IntOrString) stri
 	return targetPort.StrVal
 }
 
-// filterServices 过滤Services
+// filterServices 過濾Services
 func (h *ServiceHandler) filterServices(services []ServiceInfo, serviceType, search string) []ServiceInfo {
 	filtered := make([]ServiceInfo, 0)
 	for _, svc := range services {
-		// 类型过滤
+		// 型別過濾
 		if serviceType != "" && svc.Type != serviceType {
 			continue
 		}
 
-		// 搜索过滤
+		// 搜尋過濾
 		if search != "" {
 			searchLower := strings.ToLower(search)
 			if !strings.Contains(strings.ToLower(svc.Name), searchLower) &&
@@ -434,7 +434,7 @@ func (h *ServiceHandler) filterServices(services []ServiceInfo, serviceType, sea
 	return filtered
 }
 
-// convertEndpointsInfo 转换Endpoints信息
+// convertEndpointsInfo 轉換Endpoints資訊
 func (h *ServiceHandler) convertEndpointsInfo(endpoints *corev1.Endpoints) gin.H {
 	subsets := make([]gin.H, 0, len(endpoints.Subsets))
 	for _, subset := range endpoints.Subsets {
@@ -478,14 +478,14 @@ func (h *ServiceHandler) convertEndpointsInfo(endpoints *corev1.Endpoints) gin.H
 	}
 }
 
-// CreateServiceRequest 创建Service请求
+// CreateServiceRequest 建立Service請求
 type CreateServiceRequest struct {
 	Namespace string           `json:"namespace" binding:"required"`
-	YAML      string           `json:"yaml,omitempty"`     // YAML方式创建
-	FormData  *ServiceFormData `json:"formData,omitempty"` // 表单方式创建
+	YAML      string           `json:"yaml,omitempty"`     // YAML方式建立
+	FormData  *ServiceFormData `json:"formData,omitempty"` // 表單方式建立
 }
 
-// ServiceFormData Service表单数据
+// ServiceFormData Service表單資料
 type ServiceFormData struct {
 	Name            string            `json:"name" binding:"required"`
 	Type            string            `json:"type" binding:"required"` // ClusterIP, NodePort, LoadBalancer
@@ -499,43 +499,43 @@ type ServiceFormData struct {
 	Annotations     map[string]string `json:"annotations,omitempty"`
 }
 
-// ServicePortForm Service端口表单
+// ServicePortForm Service連接埠表單
 type ServicePortForm struct {
 	Name       string `json:"name"`
 	Protocol   string `json:"protocol"` // TCP, UDP, SCTP
 	Port       int32  `json:"port" binding:"required"`
-	TargetPort string `json:"targetPort"` // 可以是数字或字符串
+	TargetPort string `json:"targetPort"` // 可以是數字或字串
 	NodePort   int32  `json:"nodePort,omitempty"`
 }
 
-// CreateService 创建Service
+// CreateService 建立Service
 func (h *ServiceHandler) CreateService(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	var req CreateServiceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
@@ -543,25 +543,25 @@ func (h *ServiceHandler) CreateService(c *gin.Context) {
 
 	var service *corev1.Service
 
-	// 根据创建方式选择处理逻辑
+	// 根據建立方式選擇處理邏輯
 	if req.YAML != "" {
-		// YAML方式创建
+		// YAML方式建立
 		service, err = h.createServiceFromYAML(clientset, req.Namespace, req.YAML)
 	} else if req.FormData != nil {
-		// 表单方式创建
+		// 表單方式建立
 		service, err = h.createServiceFromForm(clientset, req.Namespace, req.FormData)
 	} else {
-		response.BadRequest(c, "必须提供YAML或表单数据")
+		response.BadRequest(c, "必須提供YAML或表單資料")
 		return
 	}
 
 	if err != nil {
-		logger.Error("创建Service失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("创建Service失败: %v", err))
+		logger.Error("建立Service失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("建立Service失敗: %v", err))
 		return
 	}
 
-	logger.Info("Service创建成功", "clusterId", clusterID, "namespace", service.Namespace, "name", service.Name)
+	logger.Info("Service建立成功", "clusterId", clusterID, "namespace", service.Namespace, "name", service.Name)
 	response.OK(c, h.convertToServiceInfo(service))
 }
 
@@ -570,7 +570,7 @@ func (h *ServiceHandler) UpdateService(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	namespace := c.Param("namespace")
@@ -578,23 +578,23 @@ func (h *ServiceHandler) UpdateService(c *gin.Context) {
 
 	var req CreateServiceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		logger.Error("获取集群失败", "error", err, "clusterId", clusterID)
-		response.NotFound(c, "集群不存在")
+		logger.Error("獲取叢集失敗", "error", err, "clusterId", clusterID)
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		logger.Error("获取K8s客户端失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		logger.Error("獲取K8s客戶端失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
@@ -602,21 +602,21 @@ func (h *ServiceHandler) UpdateService(c *gin.Context) {
 
 	var service *corev1.Service
 
-	// 根据更新方式选择处理逻辑
+	// 根據更新方式選擇處理邏輯
 	if req.YAML != "" {
 		// YAML方式更新
 		service, err = h.updateServiceFromYAML(clientset, namespace, name, req.YAML)
 	} else if req.FormData != nil {
-		// 表单方式更新
+		// 表單方式更新
 		service, err = h.updateServiceFromForm(clientset, namespace, name, req.FormData)
 	} else {
-		response.BadRequest(c, "必须提供YAML或表单数据")
+		response.BadRequest(c, "必須提供YAML或表單資料")
 		return
 	}
 
 	if err != nil {
-		logger.Error("更新Service失败", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("更新Service失败: %v", err))
+		logger.Error("更新Service失敗", "error", err, "clusterId", clusterID)
+		response.InternalError(c, fmt.Sprintf("更新Service失敗: %v", err))
 		return
 	}
 
@@ -624,14 +624,14 @@ func (h *ServiceHandler) UpdateService(c *gin.Context) {
 	response.OK(c, h.convertToServiceInfo(service))
 }
 
-// createServiceFromYAML 从YAML创建Service
+// createServiceFromYAML 從YAML建立Service
 func (h *ServiceHandler) createServiceFromYAML(clientset kubernetes.Interface, namespace, yamlContent string) (*corev1.Service, error) {
 	var service corev1.Service
 	if err := yaml.Unmarshal([]byte(yamlContent), &service); err != nil {
-		return nil, fmt.Errorf("解析YAML失败: %w", err)
+		return nil, fmt.Errorf("解析YAML失敗: %w", err)
 	}
 
-	// 确保namespace正确
+	// 確保namespace正確
 	if service.Namespace == "" {
 		service.Namespace = namespace
 	}
@@ -644,7 +644,7 @@ func (h *ServiceHandler) createServiceFromYAML(clientset kubernetes.Interface, n
 	return createdService, nil
 }
 
-// createServiceFromForm 从表单创建Service
+// createServiceFromForm 從表單建立Service
 func (h *ServiceHandler) createServiceFromForm(clientset kubernetes.Interface, namespace string, formData *ServiceFormData) (*corev1.Service, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -660,7 +660,7 @@ func (h *ServiceHandler) createServiceFromForm(clientset kubernetes.Interface, n
 		},
 	}
 
-	// 添加端口
+	// 新增連接埠
 	ports := make([]corev1.ServicePort, 0, len(formData.Ports))
 	for _, p := range formData.Ports {
 		port := corev1.ServicePort{
@@ -669,14 +669,14 @@ func (h *ServiceHandler) createServiceFromForm(clientset kubernetes.Interface, n
 			Port:     p.Port,
 		}
 
-		// 处理TargetPort
+		// 處理TargetPort
 		if portNum, err := strconv.Atoi(p.TargetPort); err == nil {
 			port.TargetPort = intstr.FromInt(portNum)
 		} else {
 			port.TargetPort = intstr.FromString(p.TargetPort)
 		}
 
-		// NodePort类型时设置NodePort
+		// NodePort型別時設定NodePort
 		if formData.Type == "NodePort" || formData.Type == "LoadBalancer" {
 			port.NodePort = p.NodePort
 		}
@@ -685,7 +685,7 @@ func (h *ServiceHandler) createServiceFromForm(clientset kubernetes.Interface, n
 	}
 	service.Spec.Ports = ports
 
-	// 其他可选配置
+	// 其他可選配置
 	if len(formData.ExternalIPs) > 0 {
 		service.Spec.ExternalIPs = formData.ExternalIPs
 	}
@@ -704,14 +704,14 @@ func (h *ServiceHandler) createServiceFromForm(clientset kubernetes.Interface, n
 	return createdService, nil
 }
 
-// updateServiceFromYAML 从YAML更新Service
+// updateServiceFromYAML 從YAML更新Service
 func (h *ServiceHandler) updateServiceFromYAML(clientset kubernetes.Interface, namespace, name, yamlContent string) (*corev1.Service, error) {
 	var service corev1.Service
 	if err := yaml.Unmarshal([]byte(yamlContent), &service); err != nil {
-		return nil, fmt.Errorf("解析YAML失败: %w", err)
+		return nil, fmt.Errorf("解析YAML失敗: %w", err)
 	}
 
-	// 获取现有Service
+	// 獲取現有Service
 	existingService, err := clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -730,9 +730,9 @@ func (h *ServiceHandler) updateServiceFromYAML(clientset kubernetes.Interface, n
 	return updatedService, nil
 }
 
-// updateServiceFromForm 从表单更新Service
+// updateServiceFromForm 從表單更新Service
 func (h *ServiceHandler) updateServiceFromForm(clientset kubernetes.Interface, namespace, name string, formData *ServiceFormData) (*corev1.Service, error) {
-	// 获取现有Service
+	// 獲取現有Service
 	existingService, err := clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -743,7 +743,7 @@ func (h *ServiceHandler) updateServiceFromForm(clientset kubernetes.Interface, n
 	existingService.Spec.Selector = formData.Selector
 	existingService.Spec.SessionAffinity = corev1.ServiceAffinity(formData.SessionAffinity)
 
-	// 更新端口
+	// 更新連接埠
 	ports := make([]corev1.ServicePort, 0, len(formData.Ports))
 	for _, p := range formData.Ports {
 		port := corev1.ServicePort{
@@ -752,14 +752,14 @@ func (h *ServiceHandler) updateServiceFromForm(clientset kubernetes.Interface, n
 			Port:     p.Port,
 		}
 
-		// 处理TargetPort
+		// 處理TargetPort
 		if portNum, err := strconv.Atoi(p.TargetPort); err == nil {
 			port.TargetPort = intstr.FromInt(portNum)
 		} else {
 			port.TargetPort = intstr.FromString(p.TargetPort)
 		}
 
-		// NodePort类型时设置NodePort
+		// NodePort型別時設定NodePort
 		if formData.Type == "NodePort" || formData.Type == "LoadBalancer" {
 			port.NodePort = p.NodePort
 		}
@@ -768,7 +768,7 @@ func (h *ServiceHandler) updateServiceFromForm(clientset kubernetes.Interface, n
 	}
 	existingService.Spec.Ports = ports
 
-	// 更新其他可选配置
+	// 更新其他可選配置
 	existingService.Spec.ExternalIPs = formData.ExternalIPs
 	existingService.Spec.LoadBalancerIP = formData.LoadBalancerIP
 	existingService.Spec.ExternalName = formData.ExternalName
@@ -789,40 +789,40 @@ func (h *ServiceHandler) updateServiceFromForm(clientset kubernetes.Interface, n
 	return updatedService, nil
 }
 
-// GetServiceNamespaces 获取Service所在的命名空间列表
+// GetServiceNamespaces 獲取Service所在的命名空間列表
 func (h *ServiceHandler) GetServiceNamespaces(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 	clientset := k8sClient.GetClientset()
 
-	// 获取所有Services
+	// 獲取所有Services
 	serviceList, err := clientset.CoreV1().Services("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取Service列表失败", "cluster", cluster.Name, "error", err)
-		response.InternalError(c, fmt.Sprintf("获取Service列表失败: %v", err))
+		logger.Error("獲取Service列表失敗", "cluster", cluster.Name, "error", err)
+		response.InternalError(c, fmt.Sprintf("獲取Service列表失敗: %v", err))
 		return
 	}
 
-	// 统计每个命名空间的Service数量
+	// 統計每個命名空間的Service數量
 	nsMap := make(map[string]int)
 	for _, svc := range serviceList.Items {
 		nsMap[svc.Namespace]++
@@ -841,7 +841,7 @@ func (h *ServiceHandler) GetServiceNamespaces(c *gin.Context) {
 		})
 	}
 
-	// 按名称排序
+	// 按名稱排序
 	sort.Slice(namespaces, func(i, j int) bool {
 		return namespaces[i].Name < namespaces[j].Name
 	})

@@ -40,7 +40,7 @@ func NewSecretHandler(db *gorm.DB, cfg *config.Config, clusterSvc *services.Clus
 	}
 }
 
-// SecretListItem Secret列表项
+// SecretListItem Secret列表項
 type SecretListItem struct {
 	Name              string            `json:"name"`
 	Namespace         string            `json:"namespace"`
@@ -51,25 +51,25 @@ type SecretListItem struct {
 	Age               string            `json:"age"`
 }
 
-// SecretDetail Secret详情
+// SecretDetail Secret詳情
 type SecretDetail struct {
 	Name              string            `json:"name"`
 	Namespace         string            `json:"namespace"`
 	Type              string            `json:"type"`
 	Labels            map[string]string `json:"labels"`
 	Annotations       map[string]string `json:"annotations"`
-	Data              map[string]string `json:"data"` // Base64编码的数据
+	Data              map[string]string `json:"data"` // Base64編碼的資料
 	CreationTimestamp time.Time         `json:"creationTimestamp"`
 	Age               string            `json:"age"`
 	ResourceVersion   string            `json:"resourceVersion"`
 }
 
-// GetSecrets 获取Secret列表
+// GetSecrets 獲取Secret列表
 func (h *SecretHandler) GetSecrets(c *gin.Context) {
 	clusterID := c.Param("clusterID")
-	namespace := c.Query("namespace") // 支持过滤命名空间
-	name := c.Query("name")           // 支持搜索名称
-	secretType := c.Query("type")     // 支持按类型过滤 (如 kubernetes.io/dockerconfigjson)
+	namespace := c.Query("namespace") // 支援過濾命名空間
+	name := c.Query("name")           // 支援搜尋名稱
+	secretType := c.Query("type")     // 支援按型別過濾 (如 kubernetes.io/dockerconfigjson)
 	pageStr := c.DefaultQuery("page", "1")
 	pageSizeStr := c.DefaultQuery("pageSize", "10")
 
@@ -82,81 +82,81 @@ func (h *SecretHandler) GetSecrets(c *gin.Context) {
 		pageSize = 10
 	}
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 确保 informer 已启动并同步
+	// 確保 informer 已啟動並同步
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 检查命名空间权限
+	// 檢查命名空間權限
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
 		middleware.ForbiddenNS(c, nsInfo)
 		return
 	}
 
-	// 从 informer 缓存获取 Secret 列表
+	// 從 informer 快取獲取 Secret 列表
 	var secrets []corev1.Secret
 	sel := labels.Everything()
 
 	if namespace != "" && namespace != "_all_" {
-		// 获取指定命名空间的 Secrets
+		// 獲取指定命名空間的 Secrets
 		secs, err := h.k8sMgr.SecretsLister(cluster.ID).Secrets(namespace).List(sel)
 		if err != nil {
-			logger.Error("读取Secret缓存失败", "cluster", cluster.Name, "namespace", namespace, "error", err)
-			response.InternalError(c, fmt.Sprintf("获取Secret列表失败: %v", err))
+			logger.Error("讀取Secret快取失敗", "cluster", cluster.Name, "namespace", namespace, "error", err)
+			response.InternalError(c, fmt.Sprintf("獲取Secret列表失敗: %v", err))
 			return
 		}
-		// 转换为 []corev1.Secret
+		// 轉換為 []corev1.Secret
 		for _, sec := range secs {
 			secrets = append(secrets, *sec)
 		}
 	} else {
-		// 获取所有命名空间的 Secrets
+		// 獲取所有命名空間的 Secrets
 		secs, err := h.k8sMgr.SecretsLister(cluster.ID).List(sel)
 		if err != nil {
-			logger.Error("读取Secret缓存失败", "cluster", cluster.Name, "error", err)
-			response.InternalError(c, fmt.Sprintf("获取Secret列表失败: %v", err))
+			logger.Error("讀取Secret快取失敗", "cluster", cluster.Name, "error", err)
+			response.InternalError(c, fmt.Sprintf("獲取Secret列表失敗: %v", err))
 			return
 		}
-		// 转换为 []corev1.Secret
+		// 轉換為 []corev1.Secret
 		for _, sec := range secs {
 			secrets = append(secrets, *sec)
 		}
 	}
 
-	// 根据命名空间权限过滤
+	// 根據命名空間權限過濾
 	if !nsInfo.HasAllAccess && (namespace == "" || namespace == "_all_") {
 		secrets = middleware.FilterResourcesByNamespace(c, secrets, func(s corev1.Secret) string {
 			return s.Namespace
 		})
 	}
 
-	// 过滤和转换
+	// 過濾和轉換
 	var items []SecretListItem
 	for _, secret := range secrets {
-		// 名称过滤
+		// 名稱過濾
 		if name != "" && !strings.Contains(strings.ToLower(secret.Name), strings.ToLower(name)) {
 			continue
 		}
 
-		// 类型过滤
+		// 型別過濾
 		if secretType != "" && string(secret.Type) != secretType {
 			continue
 		}
@@ -173,7 +173,7 @@ func (h *SecretHandler) GetSecrets(c *gin.Context) {
 		items = append(items, item)
 	}
 
-	// 分页
+	// 分頁
 	total := len(items)
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -189,46 +189,46 @@ func (h *SecretHandler) GetSecrets(c *gin.Context) {
 	response.PagedList(c, pagedItems, int64(total), page, pageSize)
 }
 
-// GetSecret 获取Secret详情
+// GetSecret 獲取Secret詳情
 func (h *SecretHandler) GetSecret(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取Secret
+	// 獲取Secret
 	secret, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取Secret失败", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
+		logger.Error("獲取Secret失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.NotFound(c, fmt.Sprintf("Secret不存在: %v", err))
 		return
 	}
 
-	// 将Data字节数组转换为Base64字符串
+	// 將Data位元組陣列轉換為Base64字串
 	dataStr := make(map[string]string)
 	for k, v := range secret.Data {
-		dataStr[k] = string(v) // 前端需要Base64解码显示
+		dataStr[k] = string(v) // 前端需要Base64解碼顯示
 	}
 
 	detail := SecretDetail{
@@ -246,42 +246,42 @@ func (h *SecretHandler) GetSecret(c *gin.Context) {
 	response.OK(c, detail)
 }
 
-// GetSecretNamespaces 获取Secret所在的命名空间列表
+// GetSecretNamespaces 獲取Secret所在的命名空間列表
 func (h *SecretHandler) GetSecretNamespaces(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 创建K8s客户端
-	// 获取缓存的 K8s 客户端
+	// 建立K8s客戶端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取所有Secrets
+	// 獲取所有Secrets
 	secrets, err := clientset.CoreV1().Secrets("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取Secret列表失败", "cluster", cluster.Name, "error", err)
-		response.InternalError(c, fmt.Sprintf("获取Secret列表失败: %v", err))
+		logger.Error("獲取Secret列表失敗", "cluster", cluster.Name, "error", err)
+		response.InternalError(c, fmt.Sprintf("獲取Secret列表失敗: %v", err))
 		return
 	}
 
-	// 统计每个命名空间的Secret数量
+	// 統計每個命名空間的Secret數量
 	nsMap := make(map[string]int)
 	for _, secret := range secrets.Items {
 		nsMap[secret.Namespace]++
@@ -303,46 +303,46 @@ func (h *SecretHandler) GetSecretNamespaces(c *gin.Context) {
 	response.OK(c, namespaces)
 }
 
-// DeleteSecret 删除Secret
+// DeleteSecret 刪除Secret
 func (h *SecretHandler) DeleteSecret(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 删除Secret
+	// 刪除Secret
 	err = clientset.CoreV1().Secrets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
-		logger.Error("删除Secret失败", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
-		response.InternalError(c, fmt.Sprintf("删除Secret失败: %v", err))
+		logger.Error("刪除Secret失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
+		response.InternalError(c, fmt.Sprintf("刪除Secret失敗: %v", err))
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// CreateSecret 创建Secret
+// CreateSecret 建立Secret
 func (h *SecretHandler) CreateSecret(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 
@@ -352,49 +352,49 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 		Type        string            `json:"type"`
 		Labels      map[string]string `json:"labels"`
 		Annotations map[string]string `json:"annotations"`
-		Data        map[string]string `json:"data"` // Base64编码的数据
+		Data        map[string]string `json:"data"` // Base64編碼的資料
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, fmt.Sprintf("请求参数错误: %v", err))
+		response.BadRequest(c, fmt.Sprintf("請求參數錯誤: %v", err))
 		return
 	}
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 将字符串数据转换为字节数组
+	// 將字串資料轉換為位元組陣列
 	dataBytes := make(map[string][]byte)
 	for k, v := range req.Data {
 		dataBytes[k] = []byte(v)
 	}
 
-	// 默认类型
+	// 預設型別
 	secretType := corev1.SecretTypeOpaque
 	if req.Type != "" {
 		secretType = corev1.SecretType(req.Type)
 	}
 
-	// 创建Secret
+	// 建立Secret
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        req.Name,
@@ -408,8 +408,8 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 
 	created, err := clientset.CoreV1().Secrets(req.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
-		logger.Error("创建Secret失败", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
-		response.InternalError(c, fmt.Sprintf("创建Secret失败: %v", err))
+		logger.Error("建立Secret失敗", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
+		response.InternalError(c, fmt.Sprintf("建立Secret失敗: %v", err))
 		return
 	}
 
@@ -428,40 +428,40 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 	var req struct {
 		Labels      map[string]string `json:"labels"`
 		Annotations map[string]string `json:"annotations"`
-		Data        map[string]string `json:"data"` // Base64编码的数据
+		Data        map[string]string `json:"data"` // Base64編碼的資料
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, fmt.Sprintf("请求参数错误: %v", err))
+		response.BadRequest(c, fmt.Sprintf("請求參數錯誤: %v", err))
 		return
 	}
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取现有Secret
+	// 獲取現有Secret
 	secret, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取Secret失败", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
+		logger.Error("獲取Secret失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.NotFound(c, fmt.Sprintf("Secret不存在: %v", err))
 		return
 	}
@@ -469,7 +469,7 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 	// 更新前儲存版本快照（只儲存 key 列表，不存明文 value）
 	h.saveSecretVersion(uint(id), namespace, name, secret.Data, c)
 
-	// 将字符串数据转换为字节数组
+	// 將字串資料轉換為位元組陣列
 	dataBytes := make(map[string][]byte)
 	for k, v := range req.Data {
 		dataBytes[k] = []byte(v)
@@ -482,8 +482,8 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 
 	updated, err := clientset.CoreV1().Secrets(namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
 	if err != nil {
-		logger.Error("更新Secret失败", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
-		response.InternalError(c, fmt.Sprintf("更新Secret失败: %v", err))
+		logger.Error("更新Secret失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
+		response.InternalError(c, fmt.Sprintf("更新Secret失敗: %v", err))
 		return
 	}
 

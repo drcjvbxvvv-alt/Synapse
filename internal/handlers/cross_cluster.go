@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// CrossClusterHandler 跨叢集統一工作負載視圖
+// CrossClusterHandler 跨叢集統一工作負載檢視
 type CrossClusterHandler struct {
 	db            *gorm.DB
 	clusterSvc    *services.ClusterService

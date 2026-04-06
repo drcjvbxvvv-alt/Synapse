@@ -20,7 +20,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		approvals.PUT("/:id/reject", globalApprovalHandler.RejectRequest)
 	}
 
-	// 跨叢集統一工作負載視圖（§8.3 Phase C）
+	// 跨叢集統一工作負載檢視（§8.3 Phase C）
 	crossClusterHandler := handlers.NewCrossClusterHandler(d.db, d.clusterSvc, d.permissionSvc, d.k8sMgr)
 	workloads := protected.Group("/workloads")
 	{
@@ -62,7 +62,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		helmGroup.GET("/repos/charts", helmGlobalHandler.SearchCharts)
 	}
 
-	// overview - 总览大盘
+	// overview - 總覽大盤
 	overview := protected.Group("/overview")
 	{
 		alertManagerCfgSvc := services.NewAlertManagerConfigService(d.db)
@@ -84,18 +84,18 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		search.GET("/quick", searchHandler.QuickSearch)
 	}
 
-	// audit - 审计管理（仅平台管理员）
+	// audit - 審計管理（僅平臺管理員）
 	audit := protected.Group("/audit")
 	audit.Use(middleware.PlatformAdminRequired(d.db))
 	{
-		// 终端会话审计（保持不变）
+		// 終端會話審計（保持不變）
 		terminalAuditHandler := handlers.NewAuditHandler(d.db, d.cfg)
 		audit.GET("/terminal/sessions", terminalAuditHandler.GetTerminalSessions)
 		audit.GET("/terminal/sessions/:sessionId", terminalAuditHandler.GetTerminalSession)
 		audit.GET("/terminal/sessions/:sessionId/commands", terminalAuditHandler.GetTerminalCommands)
 		audit.GET("/terminal/stats", terminalAuditHandler.GetTerminalStats)
 
-		// 操作日志审计（新增）
+		// 操作日誌審計（新增）
 		opLogHandler := handlers.NewOperationLogHandler(d.opLogSvc)
 		audit.GET("/operations", opLogHandler.GetOperationLogs)
 		audit.GET("/operations/:id", opLogHandler.GetOperationLog)
@@ -108,7 +108,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	monitoringHandler := handlers.NewMonitoringHandler(d.monitoringCfgSvc, d.prometheusSvc)
 	protected.GET("/monitoring/templates", monitoringHandler.GetMonitoringTemplates)
 
-	// system settings - 系统设置（仅平台管理员）
+	// system settings - 系統設定（僅平臺管理員）
 	systemSettings := protected.Group("/system")
 	systemSettings.Use(middleware.PlatformAdminRequired(d.db))
 	{
@@ -169,27 +169,27 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	siemExportHandler := handlers.NewSIEMHandler(d.db)
 	protected.GET("/audit/export", siemExportHandler.ExportAuditLogs)
 
-	// permissions - 权限管理
+	// permissions - 權限管理
 	globalRbacSvc := services.NewRBACService()
 	permissionHandler := handlers.NewPermissionHandler(d.permissionSvc, d.clusterSvc, globalRbacSvc)
 	globalRbacHandler := handlers.NewRBACHandler(d.clusterSvc, globalRbacSvc, d.k8sMgr)
 	permissions := protected.Group("/permissions")
 	{
-		// 当前用户权限查询（任意登录用户可访问）
+		// 當前使用者權限查詢（任意登入使用者可訪問）
 		permissions.GET("/my-permissions", permissionHandler.GetMyPermissions)
 		permissions.GET("/types", permissionHandler.GetPermissionTypes)
 
-		// 以下接口需要平台管理员权限
+		// 以下介面需要平臺管理員權限
 		permAdmin := permissions.Group("")
 		permAdmin.Use(middleware.PlatformAdminRequired(d.db))
 		{
-			// Synapse 预定义 ClusterRole 信息
+			// Synapse 預定義 ClusterRole 資訊
 			permAdmin.GET("/synapse-roles", globalRbacHandler.GetSynapseClusterRoles)
 
-			// 用户列表（用于权限分配）
+			// 使用者列表（用於權限分配）
 			permAdmin.GET("/users", permissionHandler.ListUsers)
 
-			// 用户组管理
+			// 使用者組管理
 			userGroups := permAdmin.Group("/user-groups")
 			{
 				userGroups.GET("", permissionHandler.ListUserGroups)
@@ -201,7 +201,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 				userGroups.DELETE("/:id/users/:userId", permissionHandler.RemoveUserFromGroup)
 			}
 
-			// 集群权限管理
+			// 叢集權限管理
 			clusterPerms := permAdmin.Group("/cluster-permissions")
 			{
 				clusterPerms.GET("", permissionHandler.ListAllClusterPermissions)
@@ -214,10 +214,10 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		}
 	}
 
-	// 集群级权限查询
+	// 叢集級權限查詢
 	protected.GET("/clusters/:clusterID/my-permissions", permissionHandler.GetMyClusterPermission)
 
-	// AI 配置管理（僅平台管理員）
+	// AI 配置管理（僅平臺管理員）
 	aiConfigHandler := handlers.NewAIConfigHandler(d.db)
 	aiGroup := protected.Group("/ai")
 	{

@@ -29,7 +29,7 @@ type ApprovalRequest struct {
 	ApproverID    *uint
 	ApproverName  string
 	Status        string     `gorm:"default:'pending';index"` // pending / approved / rejected / expired
-	Payload       string     `gorm:"type:text"` // JSON 原始請求內容，審批通過後可重播
+	Payload       string     `gorm:"type:text"` // JSON 原始請求內容，審批透過後可重播
 	Reason        string     // 審批人填寫的理由
 	ExpiresAt     time.Time
 	ApprovedAt    *time.Time

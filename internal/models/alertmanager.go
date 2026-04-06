@@ -21,33 +21,33 @@ type Alert struct {
 	Status       AlertStatus       `json:"status"`
 }
 
-// AlertStatus 告警状态
+// AlertStatus 告警狀態
 type AlertStatus struct {
 	State       string   `json:"state"` // active, suppressed, resolved
 	SilencedBy  []string `json:"silencedBy"`
 	InhibitedBy []string `json:"inhibitedBy"`
 }
 
-// AlertGroup 告警分组
+// AlertGroup 告警分組
 type AlertGroup struct {
 	Labels   map[string]string `json:"labels"`
 	Receiver string            `json:"receiver"`
 	Alerts   []Alert           `json:"alerts"`
 }
 
-// AlertsResponse Alertmanager 告警响应
+// AlertsResponse Alertmanager 告警響應
 type AlertsResponse struct {
 	Status string  `json:"status"`
 	Data   []Alert `json:"data,omitempty"`
 }
 
-// AlertGroupsResponse Alertmanager 告警分组响应
+// AlertGroupsResponse Alertmanager 告警分組響應
 type AlertGroupsResponse struct {
 	Status string       `json:"status"`
 	Data   []AlertGroup `json:"data,omitempty"`
 }
 
-// Silence 静默规则
+// Silence 靜默規則
 type Silence struct {
 	ID        string        `json:"id"`
 	Matchers  []Matcher     `json:"matchers"`
@@ -67,12 +67,12 @@ type Matcher struct {
 	IsEqual bool   `json:"isEqual"`
 }
 
-// SilenceStatus 静默状态
+// SilenceStatus 靜默狀態
 type SilenceStatus struct {
 	State string `json:"state"` // active, pending, expired
 }
 
-// CreateSilenceRequest 创建静默规则请求
+// CreateSilenceRequest 建立靜默規則請求
 type CreateSilenceRequest struct {
 	Matchers  []Matcher `json:"matchers"`
 	StartsAt  time.Time `json:"startsAt"`
@@ -81,7 +81,7 @@ type CreateSilenceRequest struct {
 	Comment   string    `json:"comment"`
 }
 
-// AlertManagerStatus Alertmanager 状态
+// AlertManagerStatus Alertmanager 狀態
 type AlertManagerStatus struct {
 	Cluster     ClusterStatus `json:"cluster"`
 	VersionInfo VersionInfo   `json:"versionInfo"`
@@ -89,20 +89,20 @@ type AlertManagerStatus struct {
 	Uptime      time.Time     `json:"uptime"`
 }
 
-// ClusterStatus 集群状态
+// ClusterStatus 叢集狀態
 type ClusterStatus struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
 	Peers  []Peer `json:"peers"`
 }
 
-// Peer 对等节点
+// Peer 對等節點
 type Peer struct {
 	Name    string `json:"name"`
 	Address string `json:"address"`
 }
 
-// VersionInfo 版本信息
+// VersionInfo 版本資訊
 type VersionInfo struct {
 	Version   string `json:"version"`
 	Revision  string `json:"revision"`
@@ -112,7 +112,7 @@ type VersionInfo struct {
 	GoVersion string `json:"goVersion"`
 }
 
-// ConfigInfo 配置信息
+// ConfigInfo 配置資訊
 type ConfigInfo struct {
 	Original string `json:"original"`
 }
@@ -122,7 +122,7 @@ type Receiver struct {
 	Name string `json:"name"`
 }
 
-// AlertStats 告警统计
+// AlertStats 告警統計
 type AlertStats struct {
 	Total      int            `json:"total"`
 	Firing     int            `json:"firing"`

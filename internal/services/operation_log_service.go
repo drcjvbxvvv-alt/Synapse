@@ -12,17 +12,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// OperationLogService 操作审计日志服务
+// OperationLogService 操作審計日誌服務
 type OperationLogService struct {
 	db *gorm.DB
 }
 
-// NewOperationLogService 创建操作审计日志服务
+// NewOperationLogService 建立操作審計日誌服務
 func NewOperationLogService(db *gorm.DB) *OperationLogService {
 	return &OperationLogService{db: db}
 }
 
-// LogEntry 日志条目（用于记录）
+// LogEntry 日誌條目（用於記錄）
 type LogEntry struct {
 	UserID       *uint
 	Username     string
@@ -45,7 +45,7 @@ type LogEntry struct {
 	Duration     int64
 }
 
-// Record 记录操作日志
+// Record 記錄操作日誌
 func (s *OperationLogService) Record(entry *LogEntry) error {
 	log := &models.OperationLog{
 		UserID:       entry.UserID,
@@ -70,23 +70,23 @@ func (s *OperationLogService) Record(entry *LogEntry) error {
 	}
 
 	if err := s.db.Create(log).Error; err != nil {
-		logger.Error("记录操作日志失败", "error", err)
+		logger.Error("記錄操作日誌失敗", "error", err)
 		return err
 	}
 
 	return nil
 }
 
-// RecordAsync 异步记录操作日志（不阻塞请求）
+// RecordAsync 非同步記錄操作日誌（不阻塞請求）
 func (s *OperationLogService) RecordAsync(entry *LogEntry) {
 	go func() {
 		if err := s.Record(entry); err != nil {
-			logger.Error("异步记录操作日志失败", "error", err, "path", entry.Path, "action", entry.Action)
+			logger.Error("非同步記錄操作日誌失敗", "error", err, "path", entry.Path, "action", entry.Action)
 		}
 	}()
 }
 
-// sensitiveKeys 敏感字段列表
+// sensitiveKeys 敏感欄位列表
 var sensitiveKeys = map[string]bool{
 	"password":      true,
 	"token":         true,
@@ -104,13 +104,13 @@ var sensitiveKeys = map[string]bool{
 	"salt":          true,
 }
 
-// sanitizeAndMarshal 脱敏并序列化请求体
+// sanitizeAndMarshal 脫敏並序列化請求體
 func sanitizeAndMarshal(body interface{}) string {
 	if body == nil {
 		return ""
 	}
 
-	// 如果是字符串，尝试解析为JSON再脱敏
+	// 如果是字串，嘗試解析為JSON再脫敏
 	if str, ok := body.(string); ok {
 		if str == "" {
 			return ""
@@ -124,7 +124,7 @@ func sanitizeAndMarshal(body interface{}) string {
 		}
 	}
 
-	// 深度脱敏
+	// 深度脫敏
 	sanitized := sanitizeValue(body)
 
 	result, err := json.Marshal(sanitized)
@@ -132,7 +132,7 @@ func sanitizeAndMarshal(body interface{}) string {
 		return ""
 	}
 
-	// 限制长度，避免存储过大
+	// 限制長度，避免儲存過大
 	if len(result) > 4000 {
 		return string(result[:4000]) + "...(truncated)"
 	}
@@ -140,7 +140,7 @@ func sanitizeAndMarshal(body interface{}) string {
 	return string(result)
 }
 
-// sanitizeValue 递归脱敏值
+// sanitizeValue 遞迴脫敏值
 func sanitizeValue(v interface{}) interface{} {
 	if v == nil {
 		return nil
@@ -164,7 +164,7 @@ func sanitizeValue(v interface{}) interface{} {
 		}
 		return result
 	default:
-		// 使用反射处理struct和map
+		// 使用反射處理struct和map
 		rv := reflect.ValueOf(v)
 		if rv.Kind() == reflect.Ptr {
 			if rv.IsNil() {
@@ -186,7 +186,7 @@ func sanitizeValue(v interface{}) interface{} {
 				if fieldName == "" || fieldName == "-" {
 					fieldName = field.Name
 				}
-				// 移除omitempty等标签
+				// 移除omitempty等標籤
 				if idx := strings.Index(fieldName, ","); idx != -1 {
 					fieldName = fieldName[:idx]
 				}
@@ -213,13 +213,13 @@ func sanitizeValue(v interface{}) interface{} {
 	}
 }
 
-// isSensitiveKey 判断是否是敏感字段
+// isSensitiveKey 判斷是否是敏感欄位
 func isSensitiveKey(key string) bool {
 	lowerKey := strings.ToLower(key)
 	if sensitiveKeys[lowerKey] {
 		return true
 	}
-	// 检查是否包含敏感词
+	// 檢查是否包含敏感詞
 	for sensitiveWord := range sensitiveKeys {
 		if strings.Contains(lowerKey, sensitiveWord) {
 			return true
@@ -228,7 +228,7 @@ func isSensitiveKey(key string) bool {
 	return false
 }
 
-// OperationLogListRequest 操作日志列表请求
+// OperationLogListRequest 操作日誌列表請求
 type OperationLogListRequest struct {
 	Page         int
 	PageSize     int
@@ -244,7 +244,7 @@ type OperationLogListRequest struct {
 	Keyword      string
 }
 
-// OperationLogListResponse 操作日志列表响应
+// OperationLogListResponse 操作日誌列表響應
 type OperationLogListResponse struct {
 	Items    []OperationLogItem `json:"items"`
 	Total    int64              `json:"total"`
@@ -252,7 +252,7 @@ type OperationLogListResponse struct {
 	PageSize int                `json:"pageSize"`
 }
 
-// OperationLogItem 操作日志列表项
+// OperationLogItem 操作日誌列表項
 type OperationLogItem struct {
 	ID           uint      `json:"id"`
 	UserID       *uint     `json:"user_id"`
@@ -276,11 +276,11 @@ type OperationLogItem struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// List 获取操作日志列表
+// List 獲取操作日誌列表
 func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogListResponse, error) {
 	query := s.db.Model(&models.OperationLog{})
 
-	// 应用过滤条件
+	// 應用過濾條件
 	if req.UserID != nil {
 		query = query.Where("user_id = ?", *req.UserID)
 	}
@@ -314,13 +314,13 @@ func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogL
 			keyword, keyword, keyword, keyword)
 	}
 
-	// 计算总数
+	// 計算總數
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// 分页
+	// 分頁
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -329,13 +329,13 @@ func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogL
 	}
 	offset := (req.Page - 1) * req.PageSize
 
-	// 查询数据
+	// 查詢資料
 	var logs []models.OperationLog
 	if err := query.Order("created_at DESC").Offset(offset).Limit(req.PageSize).Find(&logs).Error; err != nil {
 		return nil, err
 	}
 
-	// 转换为响应格式
+	// 轉換為響應格式
 	items := make([]OperationLogItem, len(logs))
 	for i, log := range logs {
 		items[i] = OperationLogItem{
@@ -370,7 +370,7 @@ func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogL
 	}, nil
 }
 
-// GetDetail 获取操作日志详情
+// GetDetail 獲取操作日誌詳情
 func (s *OperationLogService) GetDetail(id uint) (*models.OperationLog, error) {
 	var log models.OperationLog
 	if err := s.db.First(&log, id).Error; err != nil {
@@ -379,7 +379,7 @@ func (s *OperationLogService) GetDetail(id uint) (*models.OperationLog, error) {
 	return &log, nil
 }
 
-// OperationLogStats 操作日志统计
+// OperationLogStats 操作日誌統計
 type OperationLogStats struct {
 	TotalCount     int64               `json:"total_count"`
 	TodayCount     int64               `json:"today_count"`
@@ -391,28 +391,28 @@ type OperationLogStats struct {
 	UserStats      []UserOperationStat `json:"user_stats"`
 }
 
-// ModuleStat 模块统计
+// ModuleStat 模組統計
 type ModuleStat struct {
 	Module     string `json:"module"`
 	ModuleName string `json:"module_name"`
 	Count      int64  `json:"count"`
 }
 
-// ActionStat 操作统计
+// ActionStat 操作統計
 type ActionStat struct {
 	Action     string `json:"action"`
 	ActionName string `json:"action_name"`
 	Count      int64  `json:"count"`
 }
 
-// UserOperationStat 用户操作统计
+// UserOperationStat 使用者操作統計
 type UserOperationStat struct {
 	UserID   uint   `json:"user_id"`
 	Username string `json:"username"`
 	Count    int64  `json:"count"`
 }
 
-// GetStats 获取操作日志统计
+// GetStats 獲取操作日誌統計
 func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*OperationLogStats, error) {
 	stats := &OperationLogStats{}
 
@@ -424,18 +424,18 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		baseQuery = baseQuery.Where("created_at <= ?", endTime)
 	}
 
-	// 总数
+	// 總數
 	baseQuery.Count(&stats.TotalCount)
 
-	// 今日数量
+	// 今日數量
 	today := time.Now().Truncate(24 * time.Hour)
 	s.db.Model(&models.OperationLog{}).Where("created_at >= ?", today).Count(&stats.TodayCount)
 
-	// 成功/失败数量
+	// 成功/失敗數量
 	baseQuery.Where("success = ?", true).Count(&stats.SuccessCount)
 	s.db.Model(&models.OperationLog{}).Where("success = ?", false).Count(&stats.FailedCount)
 
-	// 模块统计
+	// 模組統計
 	var moduleStats []struct {
 		Module string
 		Count  int64
@@ -456,7 +456,7 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		}
 	}
 
-	// 操作统计
+	// 操作統計
 	var actionStats []struct {
 		Action string
 		Count  int64
@@ -477,7 +477,7 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		}
 	}
 
-	// 最近失败的操作
+	// 最近失敗的操作
 	var recentFailures []models.OperationLog
 	s.db.Model(&models.OperationLog{}).
 		Where("success = ?", false).
@@ -507,7 +507,7 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		}
 	}
 
-	// 用户操作统计
+	// 使用者操作統計
 	var userStats []struct {
 		UserID   uint
 		Username string
@@ -533,21 +533,21 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 	return stats, nil
 }
 
-// getModuleName 获取模块中文名称
+// getModuleName 獲取模組中文名稱
 func getModuleName(module string) string {
 	names := map[string]string{
-		"auth":       "认证管理",
-		"cluster":    "集群管理",
-		"node":       "节点管理",
+		"auth":       "認證管理",
+		"cluster":    "叢集管理",
+		"node":       "節點管理",
 		"pod":        "Pod管理",
-		"workload":   "工作负载",
+		"workload":   "工作負載",
 		"config":     "配置管理",
-		"network":    "网络管理",
-		"storage":    "存储管理",
-		"namespace":  "命名空间",
-		"permission": "权限管理",
-		"system":     "系统设置",
-		"monitoring": "监控配置",
+		"network":    "網路管理",
+		"storage":    "儲存管理",
+		"namespace":  "命名空間",
+		"permission": "權限管理",
+		"system":     "系統設定",
+		"monitoring": "監控配置",
 		"alert":      "告警管理",
 		"argocd":     "GitOps",
 		"unknown":    "未知",
@@ -558,26 +558,26 @@ func getModuleName(module string) string {
 	return module
 }
 
-// getActionName 获取操作中文名称
+// getActionName 獲取操作中文名稱
 func getActionName(action string) string {
-	names := map[string]string{ // #nosec G101 -- 操作名称映射，非凭据
-		"login":           "登录",
+	names := map[string]string{ // #nosec G101 -- 操作名稱對映，非憑據
+		"login":           "登入",
 		"logout":          "登出",
-		"login_failed":    "登录失败",
-		"change_password": "修改密码",
-		"create":          "创建",
+		"login_failed":    "登入失敗",
+		"change_password": "修改密碼",
+		"create":          "建立",
 		"update":          "更新",
-		"delete":          "删除",
-		"apply":           "应用YAML",
-		"scale":           "扩缩容",
-		"rollback":        "回滚",
-		"restart":         "重启",
-		"cordon":          "禁止调度",
-		"uncordon":        "允许调度",
-		"drain":           "驱逐节点",
+		"delete":          "刪除",
+		"apply":           "應用YAML",
+		"scale":           "擴縮容",
+		"rollback":        "回滾",
+		"restart":         "重啟",
+		"cordon":          "禁止排程",
+		"uncordon":        "允許排程",
+		"drain":           "驅逐節點",
 		"sync":            "同步",
-		"test":            "测试",
-		"import":          "导入",
+		"test":            "測試",
+		"import":          "匯入",
 	}
 	if name, ok := names[action]; ok {
 		return name

@@ -18,7 +18,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// SearchHandler 搜索处理器
+// SearchHandler 搜尋處理器
 type SearchHandler struct {
 	db            *gorm.DB
 	cfg           *config.Config
@@ -27,7 +27,7 @@ type SearchHandler struct {
 	permissionSvc *services.PermissionService
 }
 
-// NewSearchHandler 创建搜索处理器
+// NewSearchHandler 建立搜尋處理器
 func NewSearchHandler(db *gorm.DB, cfg *config.Config, k8sMgr *k8s.ClusterInformerManager, clusterSvc *services.ClusterService, permSvc *services.PermissionService) *SearchHandler {
 	return &SearchHandler{
 		db:            db,
@@ -38,7 +38,7 @@ func NewSearchHandler(db *gorm.DB, cfg *config.Config, k8sMgr *k8s.ClusterInform
 	}
 }
 
-// SearchResult 搜索结果结构
+// SearchResult 搜尋結果結構
 type SearchResult struct {
 	Type        string `json:"type"`
 	ID          string `json:"id"`
@@ -52,21 +52,21 @@ type SearchResult struct {
 	Kind        string `json:"kind,omitempty"`
 }
 
-// GlobalSearch 全局搜索
+// GlobalSearch 全域性搜尋
 func (h *SearchHandler) GlobalSearch(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
-		response.BadRequest(c, "搜索关键词不能为空")
+		response.BadRequest(c, "搜尋關鍵詞不能為空")
 		return
 	}
 
-	logger.Info("全局搜索: %s", query)
+	logger.Info("全域性搜尋: %s", query)
 
-	// 获取用户可访问的集群
+	// 獲取使用者可訪問的叢集
 	clusters, err := h.getAccessibleClusters(c.GetUint("user_id"))
 	if err != nil {
-		logger.Error("获取集群列表失败", "error", err)
-		response.InternalError(c, "获取集群列表失败")
+		logger.Error("獲取叢集列表失敗", "error", err)
+		response.InternalError(c, "獲取叢集列表失敗")
 		return
 	}
 
@@ -78,7 +78,7 @@ func (h *SearchHandler) GlobalSearch(c *gin.Context) {
 
 	queryLower := strings.ToLower(query)
 
-	// 搜索集群本身（快速，無需並行）
+	// 搜尋叢集本身（快速，無需並行）
 	for _, cluster := range clusters {
 		if strings.Contains(strings.ToLower(cluster.Name), queryLower) {
 			clusterIDStr := strconv.FormatUint(uint64(cluster.ID), 10)
@@ -94,7 +94,7 @@ func (h *SearchHandler) GlobalSearch(c *gin.Context) {
 		}
 	}
 
-	// 搜索节点、Pod 和工作负载：每個叢集並行執行
+	// 搜尋節點、Pod 和工作負載：每個叢集並行執行
 	for _, cluster := range clusters {
 		wg.Add(1)
 		go func(cl *models.Cluster) {
@@ -107,7 +107,7 @@ func (h *SearchHandler) GlobalSearch(c *gin.Context) {
 	}
 	wg.Wait()
 
-	// 计算统计信息
+	// 計算統計資訊
 	stats := struct {
 		Cluster  int `json:"cluster"`
 		Node     int `json:"node"`
@@ -135,7 +135,7 @@ func (h *SearchHandler) GlobalSearch(c *gin.Context) {
 	})
 }
 
-// QuickSearch 快速搜索（用于顶部搜索栏）
+// QuickSearch 快速搜尋（用於頂部搜尋欄）
 func (h *SearchHandler) QuickSearch(c *gin.Context) {
 	query := c.Query("q")
 	limitStr := c.DefaultQuery("limit", "10")
@@ -151,17 +151,17 @@ func (h *SearchHandler) QuickSearch(c *gin.Context) {
 		return
 	}
 
-	logger.Info("快速搜索: %s", query)
+	logger.Info("快速搜尋: %s", query)
 
-	// 获取用户可访问的集群
+	// 獲取使用者可訪問的叢集
 	clusters, err := h.getAccessibleClusters(c.GetUint("user_id"))
 	if err != nil {
-		logger.Error("获取集群列表失败", "error", err)
-		response.InternalError(c, "获取集群列表失败")
+		logger.Error("獲取叢集列表失敗", "error", err)
+		response.InternalError(c, "獲取叢集列表失敗")
 		return
 	}
 
-	// 按资源类型分组存储结果，确保每种类型都能被搜索到
+	// 按資源型別分組儲存結果，確保每種型別都能被搜尋到
 	typeResults := map[string][]SearchResult{
 		"cluster":  {},
 		"node":     {},
@@ -169,21 +169,21 @@ func (h *SearchHandler) QuickSearch(c *gin.Context) {
 		"workload": {},
 	}
 
-	// 每种资源类型都有独立的 limit 限制
+	// 每種資源型別都有獨立的 limit 限制
 	typeLimit := limit
 
-	// 遍历所有集群进行搜索
+	// 遍歷所有叢集進行搜尋
 	for _, cluster := range clusters {
-		// 确保集群的 informer 已初始化
+		// 確保叢集的 informer 已初始化
 		_, err := h.k8sMgr.EnsureForCluster(cluster)
 		if err != nil {
-			logger.Error("初始化集群 informer 失败", "cluster", cluster.Name, "error", err)
+			logger.Error("初始化叢集 informer 失敗", "cluster", cluster.Name, "error", err)
 			continue
 		}
 
 		clusterIDStr := strconv.FormatUint(uint64(cluster.ID), 10)
 
-		// 搜索集群本身
+		// 搜尋叢集本身
 		if len(typeResults["cluster"]) < typeLimit && strings.Contains(strings.ToLower(cluster.Name), strings.ToLower(query)) {
 			typeResults["cluster"] = append(typeResults["cluster"], SearchResult{
 				Type:        "cluster",
@@ -196,7 +196,7 @@ func (h *SearchHandler) QuickSearch(c *gin.Context) {
 			})
 		}
 
-		// 搜索节点
+		// 搜尋節點
 		if len(typeResults["node"]) < typeLimit {
 			nodeLister := h.k8sMgr.NodesLister(cluster.ID)
 			if nodeLister != nil {
@@ -223,7 +223,7 @@ func (h *SearchHandler) QuickSearch(c *gin.Context) {
 			}
 		}
 
-		// 搜索Pod
+		// 搜尋Pod
 		if len(typeResults["pod"]) < typeLimit {
 			podLister := h.k8sMgr.PodsLister(cluster.ID)
 			if podLister != nil {
@@ -251,7 +251,7 @@ func (h *SearchHandler) QuickSearch(c *gin.Context) {
 			}
 		}
 
-		// 搜索工作负载
+		// 搜尋工作負載
 		if len(typeResults["workload"]) < typeLimit {
 			// Deployment
 			deploymentLister := h.k8sMgr.DeploymentsLister(cluster.ID)
@@ -373,7 +373,7 @@ func (h *SearchHandler) QuickSearch(c *gin.Context) {
 		}
 	}
 
-	// 合并所有类型的结果
+	// 合併所有型別的結果
 	var results []SearchResult
 	for _, typeResult := range typeResults {
 		results = append(results, typeResult...)
@@ -387,7 +387,7 @@ func (h *SearchHandler) QuickSearch(c *gin.Context) {
 // searchClusterResources 在單一叢集中搜尋節點、Pod 與工作負載（供並行呼叫）
 func (h *SearchHandler) searchClusterResources(cluster *models.Cluster, query, queryLower string) []SearchResult {
 	if _, err := h.k8sMgr.EnsureForCluster(cluster); err != nil {
-		logger.Error("初始化集群 informer 失败", "cluster", cluster.Name, "error", err)
+		logger.Error("初始化叢集 informer 失敗", "cluster", cluster.Name, "error", err)
 		return nil
 	}
 
@@ -508,7 +508,7 @@ func (h *SearchHandler) searchClusterResources(cluster *models.Cluster, query, q
 	return results
 }
 
-// getAccessibleClusters 获取用户可访问的集群列表
+// getAccessibleClusters 獲取使用者可訪問的叢集列表
 func (h *SearchHandler) getAccessibleClusters(userID uint) ([]*models.Cluster, error) {
 	clusterIDs, isAll, err := h.permissionSvc.GetUserAccessibleClusterIDs(userID)
 	if err != nil {
@@ -522,21 +522,21 @@ func (h *SearchHandler) getAccessibleClusters(userID uint) ([]*models.Cluster, e
 	}
 	var clusters []*models.Cluster
 	if err := h.db.Where("id IN ?", clusterIDs).Find(&clusters).Error; err != nil {
-		return nil, fmt.Errorf("获取集群列表失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 	return clusters, nil
 }
 
-// getNodeStatus 获取节点状态
+// getNodeStatus 獲取節點狀態
 func (h *SearchHandler) getNodeStatus(node interface{}) string {
-	// 这里需要根据实际的节点结构来获取状态
-	// 由于我们使用的是 interface{}，这里简化处理
+	// 這裡需要根據實際的節點結構來獲取狀態
+	// 由於我們使用的是 interface{}，這裡簡化處理
 	return "Ready"
 }
 
-// getNodeIP 获取节点的主要IP地址
+// getNodeIP 獲取節點的主要IP地址
 func (h *SearchHandler) getNodeIP(node interface{}) string {
-	// 这里需要根据实际的节点结构来获取IP
-	// 由于我们使用的是 interface{}，这里简化处理
+	// 這裡需要根據實際的節點結構來獲取IP
+	// 由於我們使用的是 interface{}，這裡簡化處理
 	return ""
 }

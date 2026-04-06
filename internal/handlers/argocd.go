@@ -12,13 +12,13 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// ArgoCDHandler ArgoCD 处理器
+// ArgoCDHandler ArgoCD 處理器
 type ArgoCDHandler struct {
 	db        *gorm.DB
 	argoCDSvc *services.ArgoCDService
 }
 
-// NewArgoCDHandler 创建 ArgoCD 处理器
+// NewArgoCDHandler 建立 ArgoCD 處理器
 func NewArgoCDHandler(db *gorm.DB, argoCDSvc *services.ArgoCDService) *ArgoCDHandler {
 	return &ArgoCDHandler{
 		db:        db,
@@ -26,17 +26,17 @@ func NewArgoCDHandler(db *gorm.DB, argoCDSvc *services.ArgoCDService) *ArgoCDHan
 	}
 }
 
-// GetConfig 获取 ArgoCD 配置
-// @Summary 获取 ArgoCD 配置
+// GetConfig 獲取 ArgoCD 配置
+// @Summary 獲取 ArgoCD 配置
 // @Tags ArgoCD/GitOps
 // @Produce json
-// @Param clusterID path int true "集群ID"
+// @Param clusterID path int true "叢集ID"
 // @Success 200 {object} models.ArgoCDConfig
 // @Router /api/v1/clusters/{clusterID}/argocd/config [get]
 func (h *ArgoCDHandler) GetConfig(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
@@ -46,7 +46,7 @@ func (h *ArgoCDHandler) GetConfig(c *gin.Context) {
 		return
 	}
 
-	// 隐藏敏感信息
+	// 隱藏敏感資訊
 	configResp := *config
 	configResp.Token = ""
 	configResp.Password = ""
@@ -56,34 +56,34 @@ func (h *ArgoCDHandler) GetConfig(c *gin.Context) {
 	response.OK(c, configResp)
 }
 
-// SaveConfig 保存 ArgoCD 配置
-// @Summary 保存 ArgoCD 配置
+// SaveConfig 儲存 ArgoCD 配置
+// @Summary 儲存 ArgoCD 配置
 // @Tags ArgoCD/GitOps
 // @Accept json
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param config body models.ArgoCDConfig true "配置信息"
+// @Param clusterID path int true "叢集ID"
+// @Param config body models.ArgoCDConfig true "配置資訊"
 // @Success 200 {object} gin.H
 // @Router /api/v1/clusters/{clusterID}/argocd/config [put]
 func (h *ArgoCDHandler) SaveConfig(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
-	// 使用请求结构体接收前端数据（包含敏感字段）
+	// 使用請求結構體接收前端資料（包含敏感欄位）
 	var req models.ArgoCDConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
-	// 转换为数据库模型
+	// 轉換為資料庫模型
 	config := req.ToModel()
 	config.ClusterID = uint(clusterID)
 
-	// 如果没有传新的密码/Token，保留原有的
+	// 如果沒有傳新的密碼/Token，保留原有的
 	existing, _ := h.argoCDSvc.GetConfig(c.Request.Context(), uint(clusterID))
 	if existing != nil && existing.ID > 0 {
 		if config.Token == "" {
@@ -101,48 +101,48 @@ func (h *ArgoCDHandler) SaveConfig(c *gin.Context) {
 	}
 
 	if err := h.argoCDSvc.SaveConfig(c.Request.Context(), config); err != nil {
-		response.InternalError(c, "保存失败: "+err.Error())
+		response.InternalError(c, "儲存失敗: "+err.Error())
 		return
 	}
 
-	response.OK(c, gin.H{"message": "保存成功"})
+	response.OK(c, gin.H{"message": "儲存成功"})
 }
 
-// TestConnection 测试 ArgoCD 连接
-// @Summary 测试 ArgoCD 连接
+// TestConnection 測試 ArgoCD 連線
+// @Summary 測試 ArgoCD 連線
 // @Tags ArgoCD/GitOps
 // @Accept json
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param config body models.ArgoCDConfig true "配置信息"
+// @Param clusterID path int true "叢集ID"
+// @Param config body models.ArgoCDConfig true "配置資訊"
 // @Success 200 {object} gin.H
 // @Router /api/v1/clusters/{clusterID}/argocd/test-connection [post]
 func (h *ArgoCDHandler) TestConnection(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
-	// 使用请求结构体接收前端数据（包含敏感字段）
+	// 使用請求結構體接收前端資料（包含敏感欄位）
 	var req models.ArgoCDConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误")
+		response.BadRequest(c, "參數錯誤")
 		return
 	}
 
-	// 转换为数据库模型
+	// 轉換為資料庫模型
 	config := req.ToModel()
-	logger.Info("测试 ArgoCD 连接", "serverURL", config.ServerURL, "authType", config.AuthType, "hasToken", config.Token != "", "hasPassword", config.Password != "")
+	logger.Info("測試 ArgoCD 連線", "serverURL", config.ServerURL, "authType", config.AuthType, "hasToken", config.Token != "", "hasPassword", config.Password != "")
 
-	// 如果没有传认证信息，尝试从数据库获取（仅作为回退）
+	// 如果沒有傳認證資訊，嘗試從資料庫獲取（僅作為回退）
 	if config.Token == "" && config.Password == "" {
 		existing, _ := h.argoCDSvc.GetConfig(c.Request.Context(), uint(clusterID))
 		if existing != nil {
 			config.Token = existing.Token
 			config.Username = existing.Username
 			config.Password = existing.Password
-			logger.Info("使用数据库中的认证信息")
+			logger.Info("使用資料庫中的認證資訊")
 		}
 	}
 
@@ -157,17 +157,17 @@ func (h *ArgoCDHandler) TestConnection(c *gin.Context) {
 	response.OK(c, gin.H{"connected": true})
 }
 
-// ListApplications 获取应用列表
-// @Summary 获取 ArgoCD 应用列表
+// ListApplications 獲取應用列表
+// @Summary 獲取 ArgoCD 應用列表
 // @Tags ArgoCD/GitOps
 // @Produce json
-// @Param clusterID path int true "集群ID"
+// @Param clusterID path int true "叢集ID"
 // @Success 200 {array} models.ArgoCDApplication
 // @Router /api/v1/clusters/{clusterID}/argocd/applications [get]
 func (h *ArgoCDHandler) ListApplications(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
@@ -180,18 +180,18 @@ func (h *ArgoCDHandler) ListApplications(c *gin.Context) {
 	response.List(c, apps, int64(len(apps)))
 }
 
-// GetApplication 获取应用详情
-// @Summary 获取 ArgoCD 应用详情
+// GetApplication 獲取應用詳情
+// @Summary 獲取 ArgoCD 應用詳情
 // @Tags ArgoCD/GitOps
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param appName path string true "应用名称"
+// @Param clusterID path int true "叢集ID"
+// @Param appName path string true "應用名稱"
 // @Success 200 {object} models.ArgoCDApplication
 // @Router /api/v1/clusters/{clusterID}/argocd/applications/{appName} [get]
 func (h *ArgoCDHandler) GetApplication(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	appName := c.Param("appName")
@@ -205,25 +205,25 @@ func (h *ArgoCDHandler) GetApplication(c *gin.Context) {
 	response.OK(c, app)
 }
 
-// CreateApplication 创建应用
-// @Summary 创建 ArgoCD 应用
+// CreateApplication 建立應用
+// @Summary 建立 ArgoCD 應用
 // @Tags ArgoCD/GitOps
 // @Accept json
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param request body models.CreateApplicationRequest true "创建请求"
+// @Param clusterID path int true "叢集ID"
+// @Param request body models.CreateApplicationRequest true "建立請求"
 // @Success 200 {object} models.ArgoCDApplication
 // @Router /api/v1/clusters/{clusterID}/argocd/applications [post]
 func (h *ArgoCDHandler) CreateApplication(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	var req models.CreateApplicationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
@@ -236,27 +236,27 @@ func (h *ArgoCDHandler) CreateApplication(c *gin.Context) {
 	response.OK(c, app)
 }
 
-// UpdateApplication 更新应用
-// @Summary 更新 ArgoCD 应用
+// UpdateApplication 更新應用
+// @Summary 更新 ArgoCD 應用
 // @Tags ArgoCD/GitOps
 // @Accept json
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param appName path string true "应用名称"
-// @Param request body models.CreateApplicationRequest true "更新请求"
+// @Param clusterID path int true "叢集ID"
+// @Param appName path string true "應用名稱"
+// @Param request body models.CreateApplicationRequest true "更新請求"
 // @Success 200 {object} models.ArgoCDApplication
 // @Router /api/v1/clusters/{clusterID}/argocd/applications/{appName} [put]
 func (h *ArgoCDHandler) UpdateApplication(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	appName := c.Param("appName")
 
 	var req models.CreateApplicationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
@@ -269,27 +269,27 @@ func (h *ArgoCDHandler) UpdateApplication(c *gin.Context) {
 	response.OK(c, app)
 }
 
-// SyncApplication 同步应用
-// @Summary 同步 ArgoCD 应用
+// SyncApplication 同步應用
+// @Summary 同步 ArgoCD 應用
 // @Tags ArgoCD/GitOps
 // @Accept json
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param appName path string true "应用名称"
-// @Param request body models.SyncApplicationRequest false "同步请求"
+// @Param clusterID path int true "叢集ID"
+// @Param appName path string true "應用名稱"
+// @Param request body models.SyncApplicationRequest false "同步請求"
 // @Success 200 {object} gin.H
 // @Router /api/v1/clusters/{clusterID}/argocd/applications/{appName}/sync [post]
 func (h *ArgoCDHandler) SyncApplication(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	appName := c.Param("appName")
 
 	var req models.SyncApplicationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误: "+err.Error())
+		response.BadRequest(c, "請求參數錯誤: "+err.Error())
 		return
 	}
 
@@ -298,22 +298,22 @@ func (h *ArgoCDHandler) SyncApplication(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, gin.H{"message": "同步已触发"})
+	response.OK(c, gin.H{"message": "同步已觸發"})
 }
 
-// DeleteApplication 删除应用
-// @Summary 删除 ArgoCD 应用
+// DeleteApplication 刪除應用
+// @Summary 刪除 ArgoCD 應用
 // @Tags ArgoCD/GitOps
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param appName path string true "应用名称"
-// @Param cascade query bool false "是否级联删除资源" default(true)
+// @Param clusterID path int true "叢集ID"
+// @Param appName path string true "應用名稱"
+// @Param cascade query bool false "是否級聯刪除資源" default(true)
 // @Success 200 {object} gin.H
 // @Router /api/v1/clusters/{clusterID}/argocd/applications/{appName} [delete]
 func (h *ArgoCDHandler) DeleteApplication(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	appName := c.Param("appName")
@@ -324,30 +324,30 @@ func (h *ArgoCDHandler) DeleteApplication(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, gin.H{"message": "删除成功"})
+	response.OK(c, gin.H{"message": "刪除成功"})
 }
 
-// RollbackApplication 回滚应用
-// @Summary 回滚 ArgoCD 应用
+// RollbackApplication 回滾應用
+// @Summary 回滾 ArgoCD 應用
 // @Tags ArgoCD/GitOps
 // @Accept json
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param appName path string true "应用名称"
-// @Param request body models.RollbackApplicationRequest true "回滚请求"
+// @Param clusterID path int true "叢集ID"
+// @Param appName path string true "應用名稱"
+// @Param request body models.RollbackApplicationRequest true "回滾請求"
 // @Success 200 {object} gin.H
 // @Router /api/v1/clusters/{clusterID}/argocd/applications/{appName}/rollback [post]
 func (h *ArgoCDHandler) RollbackApplication(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	appName := c.Param("appName")
 
 	var req models.RollbackApplicationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误")
+		response.BadRequest(c, "參數錯誤")
 		return
 	}
 
@@ -356,21 +356,21 @@ func (h *ArgoCDHandler) RollbackApplication(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, gin.H{"message": "回滚已触发"})
+	response.OK(c, gin.H{"message": "回滾已觸發"})
 }
 
-// GetApplicationResources 获取应用资源树
-// @Summary 获取 ArgoCD 应用资源树
+// GetApplicationResources 獲取應用資源樹
+// @Summary 獲取 ArgoCD 應用資源樹
 // @Tags ArgoCD/GitOps
 // @Produce json
-// @Param clusterID path int true "集群ID"
-// @Param appName path string true "应用名称"
+// @Param clusterID path int true "叢集ID"
+// @Param appName path string true "應用名稱"
 // @Success 200 {array} models.ArgoCDResource
 // @Router /api/v1/clusters/{clusterID}/argocd/applications/{appName}/resources [get]
 func (h *ArgoCDHandler) GetApplicationResources(c *gin.Context) {
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	appName := c.Param("appName")

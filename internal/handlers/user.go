@@ -10,17 +10,17 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// UserHandler 用户管理处理器
+// UserHandler 使用者管理處理器
 type UserHandler struct {
 	userService *services.UserService
 }
 
-// NewUserHandler 创建用户管理处理器
+// NewUserHandler 建立使用者管理處理器
 func NewUserHandler(userService *services.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 
-// ListUsers 获取用户列表
+// ListUsers 獲取使用者列表
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
@@ -48,11 +48,11 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	response.PagedList(c, users, total, page, pageSize)
 }
 
-// GetUser 获取用户详情
+// GetUser 獲取使用者詳情
 func (h *UserHandler) GetUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户ID")
+		response.BadRequest(c, "無效的使用者ID")
 		return
 	}
 
@@ -65,11 +65,11 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	response.OK(c, user)
 }
 
-// CreateUser 创建用户
+// CreateUser 建立使用者
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req services.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
@@ -79,21 +79,21 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	logger.Info("创建用户: %s", user.Username)
+	logger.Info("建立使用者: %s", user.Username)
 	response.OK(c, user)
 }
 
-// UpdateUser 更新用户
+// UpdateUser 更新使用者
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户ID")
+		response.BadRequest(c, "無效的使用者ID")
 		return
 	}
 
 	var req services.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
@@ -106,18 +106,18 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	response.OK(c, user)
 }
 
-// DeleteUser 删除用户
+// DeleteUser 刪除使用者
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户ID")
+		response.BadRequest(c, "無效的使用者ID")
 		return
 	}
 
-	// 不能删除自己
+	// 不能刪除自己
 	currentUserID := c.GetUint("user_id")
 	if currentUserID == uint(id) {
-		response.BadRequest(c, "不能删除自己")
+		response.BadRequest(c, "不能刪除自己")
 		return
 	}
 
@@ -129,22 +129,22 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	response.OK(c, nil)
 }
 
-// UpdateStatusRequest 更新用户状态请求
+// UpdateStatusRequest 更新使用者狀態請求
 type UpdateStatusRequest struct {
 	Status string `json:"status" binding:"required"`
 }
 
-// UpdateUserStatus 更新用户状态
+// UpdateUserStatus 更新使用者狀態
 func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户ID")
+		response.BadRequest(c, "無效的使用者ID")
 		return
 	}
 
 	var req UpdateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
@@ -156,22 +156,22 @@ func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
 	response.OK(c, nil)
 }
 
-// ResetPasswordRequest 重置密码请求
+// ResetPasswordRequest 重置密碼請求
 type ResetPasswordRequest struct {
 	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
 
-// ResetPassword 重置用户密码
+// ResetPassword 重置使用者密碼
 func (h *UserHandler) ResetPassword(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户ID")
+		response.BadRequest(c, "無效的使用者ID")
 		return
 	}
 
 	var req ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 

@@ -38,7 +38,7 @@ func NewPortForwardHandler(db *gorm.DB, clusterSvc *services.ClusterService, k8s
 	return &PortForwardHandler{db: db, clusterSvc: clusterSvc, k8sMgr: k8sMgr}
 }
 
-// pickFreePort 分配一個空閒的本地埠（12000-13000 範圍）
+// pickFreePort 分配一個空閒的本地連接埠（12000-13000 範圍）
 func pickFreePort() (int, error) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -84,7 +84,7 @@ func (h *PortForwardHandler) StartPortForward(c *gin.Context) {
 
 	localPort, err := pickFreePort()
 	if err != nil {
-		response.InternalError(c, "分配本地埠失敗: "+err.Error())
+		response.InternalError(c, "分配本地連接埠失敗: "+err.Error())
 		return
 	}
 
@@ -180,7 +180,7 @@ func (h *PortForwardHandler) StartPortForward(c *gin.Context) {
 		"sessionId": session.ID,
 		"localPort": localPort,
 		"podPort":   req.PodPort,
-		"message":   fmt.Sprintf("Port-Forward 已啟動：後端埠 %d → Pod %s:%d", localPort, podName, req.PodPort),
+		"message":   fmt.Sprintf("Port-Forward 已啟動：後端連接埠 %d → Pod %s:%d", localPort, podName, req.PodPort),
 	})
 }
 

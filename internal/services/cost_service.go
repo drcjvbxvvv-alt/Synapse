@@ -74,7 +74,7 @@ type CostItem struct {
 	Currency    string  `json:"currency"`
 }
 
-// CostOverview 叢集成本總覽
+// CostOverview 叢整合本總覽
 type CostOverview struct {
 	Month         string     `json:"month"`          // "2026-04"
 	TotalCost     float64    `json:"total_cost"`
@@ -121,7 +121,7 @@ func calcCost(cfg *models.CostConfig, cpuMillicores, memMiB float64) float64 {
 	return cpuHours*cfg.CpuPricePerCore + memGiBHours*cfg.MemPricePerGiB
 }
 
-// GetOverview 取得本月叢集成本總覽
+// GetOverview 取得本月叢整合本總覽
 func (s *CostService) GetOverview(clusterID uint, month string) (*CostOverview, error) {
 	cfg, err := s.GetConfig(clusterID)
 	if err != nil {
@@ -472,7 +472,7 @@ func (s *CostService) ExportCSV(clusterID uint, month string) ([]byte, error) {
 
 // ---- CostWorker ----
 
-// CostWorker 每日資源快照後台工作器
+// CostWorker 每日資源快照後臺工作器
 type CostWorker struct {
 	db         *gorm.DB
 	promSvc    *PrometheusService
@@ -493,7 +493,7 @@ func NewCostWorker(db *gorm.DB, clusterSvc *ClusterService) *CostWorker {
 	}
 }
 
-// Start 啟動後台工作器（每天 00:05 執行一次快照）
+// Start 啟動後臺工作器（每天 00:05 執行一次快照）
 func (w *CostWorker) Start() {
 	go func() {
 		// 計算距離下次 00:05 UTC 的等待時間

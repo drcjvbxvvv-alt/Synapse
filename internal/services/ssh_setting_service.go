@@ -6,17 +6,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// SSHSettingService SSH配置服务
+// SSHSettingService SSH配置服務
 type SSHSettingService struct {
 	db *gorm.DB
 }
 
-// NewSSHSettingService 创建SSH配置服务
+// NewSSHSettingService 建立SSH配置服務
 func NewSSHSettingService(db *gorm.DB) *SSHSettingService {
 	return &SSHSettingService{db: db}
 }
 
-// GetSSHConfig 从数据库获取SSH配置
+// GetSSHConfig 從資料庫獲取SSH配置
 func (s *SSHSettingService) GetSSHConfig() (*models.SSHConfig, error) {
 	var config models.SSHConfig
 	found, err := GetSystemSetting(s.db, "ssh_config", &config)
@@ -30,7 +30,7 @@ func (s *SSHSettingService) GetSSHConfig() (*models.SSHConfig, error) {
 	return &config, nil
 }
 
-// SaveSSHConfig 保存SSH配置到数据库
+// SaveSSHConfig 儲存SSH配置到資料庫
 func (s *SSHSettingService) SaveSSHConfig(config *models.SSHConfig) error {
 	return SaveSystemSetting(s.db, "ssh_config", "ssh", config)
 }

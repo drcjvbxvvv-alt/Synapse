@@ -63,16 +63,16 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 
-	logger.Info("获取Job列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
+	logger.Info("獲取Job列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -80,11 +80,11 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 检查命名空间权限
+	// 檢查命名空間權限
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
 		middleware.ForbiddenNS(c, nsInfo)
@@ -97,7 +97,7 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 	if namespace != "" {
 		js, err := h.k8sMgr.JobsLister(cluster.ID).Jobs(namespace).List(sel)
 		if err != nil {
-			logger.Error("读取Job缓存失败", "error", err)
+			logger.Error("讀取Job快取失敗", "error", err)
 		} else {
 			for _, j := range js {
 				jobs = append(jobs, h.convertToJobInfo(j))
@@ -106,7 +106,7 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 	} else {
 		js, err := h.k8sMgr.JobsLister(cluster.ID).List(sel)
 		if err != nil {
-			logger.Error("读取Job缓存失败", "error", err)
+			logger.Error("讀取Job快取失敗", "error", err)
 		} else {
 			for _, j := range js {
 				jobs = append(jobs, h.convertToJobInfo(j))
@@ -114,7 +114,7 @@ func (h *JobHandler) ListJobs(c *gin.Context) {
 		}
 	}
 
-	// 根据命名空间权限过滤
+	// 根據命名空間權限過濾
 	if !nsInfo.HasAllAccess && namespace == "" {
 		jobs = middleware.FilterResourcesByNamespace(c, jobs, func(j JobInfo) string {
 			return j.Namespace
@@ -155,22 +155,22 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Job详情: %s/%s/%s", clusterId, namespace, name)
+	logger.Info("獲取Job詳情: %s/%s/%s", clusterId, namespace, name)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -188,22 +188,22 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 		LabelSelector: metav1.FormatLabelSelector(job.Spec.Selector),
 	})
 	if err != nil {
-		logger.Error("获取Job关联Pods失败", "error", err)
+		logger.Error("獲取Job關聯Pods失敗", "error", err)
 	}
 
-	// 清理 managed fields 以生成更干净的 YAML
+	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanJob := job.DeepCopy()
 	cleanJob.ManagedFields = nil
-	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanJob.APIVersion = "batch/v1"
 	cleanJob.Kind = "Job"
-	// 将 Job 对象转换为 YAML 字符串
+	// 將 Job 物件轉換為 YAML 字串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanJob)
 	var yamlString string
 	if yamlErr == nil {
 		yamlString = string(yamlBytes)
 	} else {
-		logger.Error("转换Job为YAML失败", "error", yamlErr)
+		logger.Error("轉換Job為YAML失敗", "error", yamlErr)
 		yamlString = ""
 	}
 
@@ -219,12 +219,12 @@ func (h *JobHandler) GetJobNamespaces(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -232,14 +232,14 @@ func (h *JobHandler) GetJobNamespaces(c *gin.Context) {
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
 	sel := labels.Everything()
 	js, err := h.k8sMgr.JobsLister(cluster.ID).List(sel)
 	if err != nil {
-		response.InternalError(c, "读取Job缓存失败: "+err.Error())
+		response.InternalError(c, "讀取Job快取失敗: "+err.Error())
 		return
 	}
 
@@ -269,26 +269,26 @@ func (h *JobHandler) ApplyYAML(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	var req YAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
-	logger.Info("应用Job YAML: cluster=%s, dryRun=%v", clusterId, req.DryRun)
+	logger.Info("應用Job YAML: cluster=%s, dryRun=%v", clusterId, req.DryRun)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -297,24 +297,24 @@ func (h *JobHandler) ApplyYAML(c *gin.Context) {
 
 	var objMap map[string]interface{}
 	if err := yaml.Unmarshal([]byte(req.YAML), &objMap); err != nil {
-		response.BadRequest(c, "YAML格式错误: "+err.Error())
+		response.BadRequest(c, "YAML格式錯誤: "+err.Error())
 		return
 	}
 
 	if objMap["apiVersion"] == nil || objMap["kind"] == nil {
-		response.BadRequest(c, "YAML缺少必要字段: apiVersion 或 kind")
+		response.BadRequest(c, "YAML缺少必要欄位: apiVersion 或 kind")
 		return
 	}
 
 	kind := objMap["kind"].(string)
 	if kind != "Job" {
-		response.BadRequest(c, "YAML类型错误，期望Job，实际为: "+kind)
+		response.BadRequest(c, "YAML型別錯誤，期望Job，實際為: "+kind)
 		return
 	}
 
 	metadata, ok := objMap["metadata"].(map[string]interface{})
 	if !ok {
-		response.BadRequest(c, "YAML缺少 metadata 字段")
+		response.BadRequest(c, "YAML缺少 metadata 欄位")
 		return
 	}
 
@@ -325,7 +325,7 @@ func (h *JobHandler) ApplyYAML(c *gin.Context) {
 
 	result, err := h.applyYAML(ctx, k8sClient, req.YAML, namespace, req.DryRun)
 	if err != nil {
-		response.InternalError(c, "YAML应用失败: "+err.Error())
+		response.InternalError(c, "YAML應用失敗: "+err.Error())
 		return
 	}
 
@@ -337,22 +337,22 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("删除Job: %s/%s/%s", clusterId, namespace, name)
+	logger.Info("刪除Job: %s/%s/%s", clusterId, namespace, name)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -362,11 +362,11 @@ func (h *JobHandler) DeleteJob(c *gin.Context) {
 	clientset := k8sClient.GetClientset()
 	err = clientset.BatchV1().Jobs(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		response.InternalError(c, "删除失败: "+err.Error())
+		response.InternalError(c, "刪除失敗: "+err.Error())
 		return
 	}
 
-	response.OK(c, gin.H{"message": "删除成功"})
+	response.OK(c, gin.H{"message": "刪除成功"})
 }
 
 func (h *JobHandler) convertToJobInfo(j *batchv1.Job) JobInfo {
@@ -428,12 +428,12 @@ func (h *JobHandler) applyYAML(ctx context.Context, k8sClient *services.K8sClien
 	decode := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(yamlContent), nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("解析YAML失败: %w", err)
+		return nil, fmt.Errorf("解析YAML失敗: %w", err)
 	}
 
 	job, ok := obj.(*batchv1.Job)
 	if !ok {
-		return nil, fmt.Errorf("无法转换为Job类型")
+		return nil, fmt.Errorf("無法轉換為Job型別")
 	}
 
 	clientset := k8sClient.GetClientset()

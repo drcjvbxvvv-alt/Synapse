@@ -19,96 +19,96 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// PrometheusService Prometheus 查询服务
+// PrometheusService Prometheus 查詢服務
 type PrometheusService struct {
 	httpClient *http.Client
 }
 
-// NewPrometheusService 创建 Prometheus 服务
+// NewPrometheusService 建立 Prometheus 服務
 func NewPrometheusService() *PrometheusService {
 	return &PrometheusService{
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // #nosec G402 -- 内部集群 Prometheus 通信，用户可自行配置证书
+					InsecureSkipVerify: true, // #nosec G402 -- 內部叢集 Prometheus 通訊，使用者可自行配置證書
 				},
 			},
 		},
 	}
 }
 
-// QueryPrometheus 查询 Prometheus
+// QueryPrometheus 查詢 Prometheus
 func (s *PrometheusService) QueryPrometheus(ctx context.Context, config *models.MonitoringConfig, query *models.MetricsQuery) (*models.MetricsResponse, error) {
 	if config.Type == "disabled" {
-		return nil, fmt.Errorf("监控功能已禁用")
+		return nil, fmt.Errorf("監控功能已禁用")
 	}
 
-	// 构建查询 URL
+	// 構建查詢 URL
 	queryURL, err := s.buildQueryURL(config.Endpoint, query)
 	if err != nil {
-		return nil, fmt.Errorf("构建查询URL失败: %w", err)
+		return nil, fmt.Errorf("構建查詢URL失敗: %w", err)
 	}
 
-	// 创建请求
+	// 建立請求
 	req, err := http.NewRequestWithContext(ctx, "GET", queryURL.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return nil, fmt.Errorf("设置认证失败: %w", err)
+		return nil, fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行请求
+	// 執行請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("执行请求失败: %w", err)
+		return nil, fmt.Errorf("執行請求失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	// 读取响应
+	// 讀取響應
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %w", err)
+		return nil, fmt.Errorf("讀取響應失敗: %w", err)
 	}
 
-	// 检查状态码
+	// 檢查狀態碼
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("查询失败: %s, 状态码: %d", string(body), resp.StatusCode)
+		return nil, fmt.Errorf("查詢失敗: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
-	// 解析响应
+	// 解析響應
 	var result models.MetricsResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %w", err)
+		return nil, fmt.Errorf("解析響應失敗: %w", err)
 	}
 
 	return &result, nil
 }
 
-// QueryClusterMetrics 查询集群监控指标（使用并发查询优化性能）
+// QueryClusterMetrics 查詢叢集監控指標（使用併發查詢最佳化效能）
 func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName string, timeRange string, step string) (*models.ClusterMetricsData, error) {
-	// 解析时间范围
+	// 解析時間範圍
 	start, end, err := s.parseTimeRange(timeRange)
 	if err != nil {
-		return nil, fmt.Errorf("解析时间范围失败: %w", err)
+		return nil, fmt.Errorf("解析時間範圍失敗: %w", err)
 	}
 
 	metrics := &models.ClusterMetricsData{}
 
-	// 构建集群标签选择器
-	// 如果是 prometheus，标签不用过来
+	// 構建叢集標籤選擇器
+	// 如果是 prometheus，標籤不用過來
 	clusterSelector := ""
 
-	// 使用 WaitGroup 和 Mutex 进行并发查询
+	// 使用 WaitGroup 和 Mutex 進行併發查詢
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
-	// 并发查询 CPU 使用率
+	// 併發查詢 CPU 使用率
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -119,7 +119,7 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 		}
 	}()
 
-	// 并发查询内存使用率
+	// 併發查詢記憶體使用率
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -130,7 +130,7 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 		}
 	}()
 
-	// 并发查询网络指标
+	// 併發查詢網路指標
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -141,7 +141,7 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 		}
 	}()
 
-	// 并发查询 Pod 指标
+	// 併發查詢 Pod 指標
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -152,7 +152,7 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 		}
 	}()
 
-	// 并发查询集群概览指标
+	// 併發查詢叢集概覽指標
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -163,7 +163,7 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 		}
 	}()
 
-	// 并发查询节点列表指标
+	// 併發查詢節點列表指標
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -174,41 +174,41 @@ func (s *PrometheusService) QueryClusterMetrics(ctx context.Context, config *mod
 		}
 	}()
 
-	// 等待所有查询完成
+	// 等待所有查詢完成
 	wg.Wait()
 
 	return metrics, nil
 }
 
-// QueryNodeMetrics 查询节点监控指标
+// QueryNodeMetrics 查詢節點監控指標
 func (s *PrometheusService) QueryNodeMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName, nodeName string, timeRange string, step string) (*models.ClusterMetricsData, error) {
-	// 解析时间范围
+	// 解析時間範圍
 	start, end, err := s.parseTimeRange(timeRange)
 	if err != nil {
-		return nil, fmt.Errorf("解析时间范围失败: %w", err)
+		return nil, fmt.Errorf("解析時間範圍失敗: %w", err)
 	}
 
 	metrics := &models.ClusterMetricsData{}
 
-	// 构建节点标签选择器
+	// 構建節點標籤選擇器
 	nodeSelector := s.buildNodeSelector(config.Labels, clusterName, nodeName)
 
-	// 查询节点 CPU 使用率
+	// 查詢節點 CPU 使用率
 	if cpuSeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("rate(node_cpu_seconds_total{mode!=\"idle\",%s}[5m])", nodeSelector), start, end, step); err == nil {
 		metrics.CPU = cpuSeries
 	}
 
-	// 查询节点内存使用率
+	// 查詢節點記憶體使用率
 	if memorySeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("(1 - (node_memory_MemAvailable_bytes{%s} / node_memory_MemTotal_bytes{%s}))", nodeSelector, nodeSelector), start, end, step); err == nil {
 		metrics.Memory = memorySeries
 	}
 
-	// 查询节点网络指标
+	// 查詢節點網路指標
 	if networkMetrics, err := s.queryNodeNetworkMetrics(ctx, config, nodeSelector, start, end, step); err == nil {
 		metrics.Network = networkMetrics
 	}
 
-	// 查询节点存储指标
+	// 查詢節點儲存指標
 	if storageSeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("(1 - (node_filesystem_avail_bytes{%s} / node_filesystem_size_bytes{%s}))", nodeSelector, nodeSelector), start, end, step); err == nil {
 		metrics.Storage = storageSeries
 	}
@@ -216,111 +216,111 @@ func (s *PrometheusService) QueryNodeMetrics(ctx context.Context, config *models
 	return metrics, nil
 }
 
-// QueryPodMetrics 查询 Pod 监控指标
+// QueryPodMetrics 查詢 Pod 監控指標
 func (s *PrometheusService) QueryPodMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName, namespace, podName string, timeRange string, step string) (*models.ClusterMetricsData, error) {
-	// 解析时间范围
+	// 解析時間範圍
 	start, end, err := s.parseTimeRange(timeRange)
 	if err != nil {
-		return nil, fmt.Errorf("解析时间范围失败: %w", err)
+		return nil, fmt.Errorf("解析時間範圍失敗: %w", err)
 	}
 
 	metrics := &models.ClusterMetricsData{}
 
-	// 构建 Pod 标签选择器
+	// 構建 Pod 標籤選擇器
 	podSelector := s.buildPodSelector(config.Labels, clusterName, namespace, podName)
 
-	// 查询 Pod CPU 使用率
+	// 查詢 Pod CPU 使用率
 	if cpuSeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum (rate(container_cpu_usage_seconds_total{container!=\"\",%s}[1m])) by(pod) /( sum (kube_pod_container_resource_limits{container!=\"\",resource=\"cpu\",%s}) by(pod) ) * 100", podSelector, podSelector), start, end, step); err == nil {
 		metrics.CPU = cpuSeries
 	}
 
-	// 查询 Pod 内存使用率
+	// 查詢 Pod 記憶體使用率
 	if memorySeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(container_memory_working_set_bytes{container!=\"\",container!=\"POD\",%s}) by(pod)/sum(kube_pod_container_resource_limits{container!=\"\",container!=\"POD\",resource=\"memory\",%s}) by (pod) * 100", podSelector, podSelector), start, end, step); err == nil {
 		// if memorySeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("container_memory_working_set_bytes{%s}", podSelector), start, end, step); err == nil {
 		metrics.Memory = memorySeries
 	}
 
-	// 查询 Pod 网络指标
+	// 查詢 Pod 網路指標
 	if networkMetrics, err := s.queryPodNetworkMetrics(ctx, config, podSelector, start, end, step); err == nil {
 		metrics.Network = networkMetrics
 	}
 
-	// 查询 CPU Request（固定值）
+	// 查詢 CPU Request（固定值）
 	if cpuRequest, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_resource_requests{resource=\"cpu\",%s}) by (pod)", podSelector), start, end, step); err == nil {
 		metrics.CPURequest = cpuRequest
 	}
 
-	// 查询 CPU Limit（固定值）
+	// 查詢 CPU Limit（固定值）
 	if cpuLimit, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_resource_limits{resource=\"cpu\",%s}) by (pod)", podSelector), start, end, step); err == nil {
 		metrics.CPULimit = cpuLimit
 	}
 
-	// 查询 Memory Request（固定值）
+	// 查詢 Memory Request（固定值）
 	if memoryRequest, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_resource_requests{resource=\"memory\",%s}) by (pod)", podSelector), start, end, step); err == nil {
 		metrics.MemoryRequest = memoryRequest
 	}
 
-	// 查询 Memory Limit（固定值）
+	// 查詢 Memory Limit（固定值）
 	if memoryLimit, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_resource_limits{resource=\"memory\",%s}) by (pod)", podSelector), start, end, step); err == nil {
 		metrics.MemoryLimit = memoryLimit
 	}
 
-	// 查询健康检查失败次数
+	// 查詢健康檢查失敗次數
 	if probeFailures, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("increase(prober_probe_total{result='failed',%s}[1m])", podSelector), start, end, step); err == nil {
 		metrics.ProbeFailures = probeFailures
 	}
 
-	// 查询容器重启次数
+	// 查詢容器重啟次數
 	if restarts, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("kube_pod_container_status_restarts_total{%s}", podSelector), start, end, step); err == nil {
 		metrics.ContainerRestarts = restarts
 	}
 
-	// 查询网络PPS
+	// 查詢網路PPS
 	if networkPPS, err := s.queryPodNetworkPPS(ctx, config, podSelector, start, end, step); err == nil {
 		metrics.NetworkPPS = networkPPS
 	}
 
-	// 查询线程数
+	// 查詢執行緒數
 	if threads, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(container_threads{container!=\"\",container!=\"POD\",%s})", podSelector), start, end, step); err == nil {
 		metrics.Threads = threads
 	}
 
-	// 查询网卡丢包情况
+	// 查詢網絡卡丟包情況
 	if networkDrops, err := s.queryPodNetworkDrops(ctx, config, podSelector, start, end, step); err == nil {
 		metrics.NetworkDrops = networkDrops
 	}
 
-	// 查询 CPU 限流比例
+	// 查詢 CPU 限流比例
 	if cpuThrottling, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(rate(container_cpu_cfs_throttled_periods_total{%s}[1m])) / sum(rate(container_cpu_cfs_periods_total{%s}[5m])) * 100", podSelector, podSelector), start, end, step); err == nil {
 		metrics.CPUThrottling = cpuThrottling
 	}
 
-	// 查询 CPU 限流时间
+	// 查詢 CPU 限流時間
 	if cpuThrottlingTime, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(rate(container_cpu_cfs_throttled_seconds_total{%s}[1m]))", podSelector), start, end, step); err == nil {
 		metrics.CPUThrottlingTime = cpuThrottlingTime
 	}
 
-	// 查询磁盘 IOPS
+	// 查詢磁碟 IOPS
 	if diskIOPS, err := s.queryPodDiskIOPS(ctx, config, podSelector, start, end, step); err == nil {
 		metrics.DiskIOPS = diskIOPS
 	}
 
-	// 查询磁盘吞吐量
+	// 查詢磁碟吞吐量
 	if diskThroughput, err := s.queryPodDiskThroughput(ctx, config, podSelector, start, end, step); err == nil {
 		metrics.DiskThroughput = diskThroughput
 	}
 
-	// 查询 CPU 实际使用量（cores）
+	// 查詢 CPU 實際使用量（cores）
 	if cpuAbsolute, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",%s}[1m]))", podSelector), start, end, step); err == nil {
 		metrics.CPUUsageAbsolute = cpuAbsolute
 	}
 
-	// 查询内存实际使用量（bytes）
+	// 查詢記憶體實際使用量（bytes）
 	if memoryBytes, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(container_memory_working_set_bytes{container!=\"\",container!=\"POD\",%s})", podSelector), start, end, step); err == nil {
 		metrics.MemoryUsageBytes = memoryBytes
 	}
 
-	// 查询 OOM Kill 次数
+	// 查詢 OOM Kill 次數
 	if oomKills, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(container_oom_events_total{container!=\"\",container!=\"POD\",%s})", podSelector), start, end, step); err == nil {
 		metrics.OOMKills = oomKills
 	}
@@ -328,171 +328,171 @@ func (s *PrometheusService) QueryPodMetrics(ctx context.Context, config *models.
 	return metrics, nil
 }
 
-// QueryWorkloadMetrics 查询工作负载监控指标（聚合多个Pod的数据）
+// QueryWorkloadMetrics 查詢工作負載監控指標（聚合多個Pod的資料）
 func (s *PrometheusService) QueryWorkloadMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName, namespace, workloadName string, timeRange string, step string) (*models.ClusterMetricsData, error) {
-	// 解析时间范围
+	// 解析時間範圍
 	start, end, err := s.parseTimeRange(timeRange)
 	if err != nil {
-		return nil, fmt.Errorf("解析时间范围失败: %w", err)
+		return nil, fmt.Errorf("解析時間範圍失敗: %w", err)
 	}
 
 	metrics := &models.ClusterMetricsData{}
 
-	// 构建工作负载标签选择器（使用正则表达式匹配pod名称）
+	// 構建工作負載標籤選擇器（使用正規表示式匹配pod名稱）
 	workloadSelector := s.buildWorkloadSelector(config.Labels, clusterName, namespace, workloadName)
 
-	// 查询工作负载 CPU 使用率
+	// 查詢工作負載 CPU 使用率
 	if cpuSeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum (rate(container_cpu_usage_seconds_total{container!=\"\",%s}[1m])) /( sum (kube_pod_container_resource_limits{container!=\"\",resource=\"cpu\",%s}) ) * 100", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.CPU = cpuSeries
 	}
 
-	// 查询工作负载内存使用率
+	// 查詢工作負載記憶體使用率
 	if memorySeries, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(container_memory_working_set_bytes{container!=\"\",container!=\"POD\",%s})/sum(kube_pod_container_resource_limits{container!=\"\",container!=\"POD\",resource=\"memory\",%s}) * 100", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.Memory = memorySeries
 	}
 
-	// 查询工作负载网络指标
+	// 查詢工作負載網路指標
 	if networkMetrics, err := s.queryWorkloadNetworkMetrics(ctx, config, workloadSelector, start, end, step); err == nil {
 		metrics.Network = networkMetrics
 	}
 
-	// 查询 CPU Request（固定值）
+	// 查詢 CPU Request（固定值）
 	if cpuRequest, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_resource_requests{resource=\"cpu\",%s})/count(kube_pod_container_resource_requests{resource=\"cpu\",%s})", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.CPURequest = cpuRequest
 	}
 
-	// 查询 CPU Limit（固定值）
+	// 查詢 CPU Limit（固定值）
 	if cpuLimit, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_resource_limits{resource=\"cpu\",%s})/count(kube_pod_container_resource_limits{resource=\"cpu\",%s})", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.CPULimit = cpuLimit
 	}
 
-	// 查询 Memory Request（固定值）
+	// 查詢 Memory Request（固定值）
 	if memoryRequest, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_resource_requests{resource=\"memory\",%s})/count(kube_pod_container_resource_requests{resource=\"memory\",%s})", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.MemoryRequest = memoryRequest
 	}
 
-	// 查询 Memory Limit（固定值）
+	// 查詢 Memory Limit（固定值）
 	if memoryLimit, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_resource_limits{resource=\"memory\",%s})/count(kube_pod_container_resource_limits{resource=\"memory\",%s})", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.MemoryLimit = memoryLimit
 	}
 
-	// 查询健康检查失败次数
+	// 查詢健康檢查失敗次數
 	if probeFailures, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(increase(prober_probe_total{result='failed',%s}[1m]))", workloadSelector), start, end, step); err == nil {
 		metrics.ProbeFailures = probeFailures
 	}
 
-	// 查询容器重启次数（总和）
+	// 查詢容器重啟次數（總和）
 	if restarts, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(kube_pod_container_status_restarts_total{%s})", workloadSelector), start, end, step); err == nil {
 		metrics.ContainerRestarts = restarts
 	}
 
-	// 查询网络PPS
+	// 查詢網路PPS
 	if networkPPS, err := s.queryWorkloadNetworkPPS(ctx, config, workloadSelector, start, end, step); err == nil {
 		metrics.NetworkPPS = networkPPS
 	}
 
-	// 查询线程数（总和）
+	// 查詢執行緒數（總和）
 	if threads, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(container_threads{container!=\"\",container!=\"POD\",%s})", workloadSelector), start, end, step); err == nil {
 		metrics.Threads = threads
 	}
 
-	// 查询网卡丢包情况
+	// 查詢網絡卡丟包情況
 	if networkDrops, err := s.queryWorkloadNetworkDrops(ctx, config, workloadSelector, start, end, step); err == nil {
 		metrics.NetworkDrops = networkDrops
 	}
 
-	// 查询 CPU 限流比例
+	// 查詢 CPU 限流比例
 	if cpuThrottling, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(rate(container_cpu_cfs_throttled_periods_total{%s}[1m])) / sum(rate(container_cpu_cfs_periods_total{%s}[5m])) * 100", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.CPUThrottling = cpuThrottling
 	}
 
-	// 查询 CPU 限流时间
+	// 查詢 CPU 限流時間
 	if cpuThrottlingTime, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(rate(container_cpu_cfs_throttled_seconds_total{%s}[1m]))", workloadSelector), start, end, step); err == nil {
 		metrics.CPUThrottlingTime = cpuThrottlingTime
 	}
 
-	// 查询磁盘 IOPS
+	// 查詢磁碟 IOPS
 	if diskIOPS, err := s.queryWorkloadDiskIOPS(ctx, config, workloadSelector, start, end, step); err == nil {
 		metrics.DiskIOPS = diskIOPS
 	}
 
-	// 查询磁盘吞吐量
+	// 查詢磁碟吞吐量
 	if diskThroughput, err := s.queryWorkloadDiskThroughput(ctx, config, workloadSelector, start, end, step); err == nil {
 		metrics.DiskThroughput = diskThroughput
 	}
 
-	// 查询 CPU 实际使用量（cores）
+	// 查詢 CPU 實際使用量（cores）
 	if cpuAbsolute, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",%s}[1m]))", workloadSelector), start, end, step); err == nil {
 		metrics.CPUUsageAbsolute = cpuAbsolute
 	}
 
-	// 查询内存实际使用量（bytes）
+	// 查詢記憶體實際使用量（bytes）
 	if memoryBytes, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(container_memory_working_set_bytes{container!=\"\",container!=\"POD\",%s})", workloadSelector), start, end, step); err == nil {
 		metrics.MemoryUsageBytes = memoryBytes
 	}
 
-	// 查询 OOM Kill 次数（总和）
+	// 查詢 OOM Kill 次數（總和）
 	if oomKills, err := s.queryMetricSeries(ctx, config, fmt.Sprintf("sum(container_oom_events_total{container!=\"\",container!=\"POD\",%s})", workloadSelector), start, end, step); err == nil {
 		metrics.OOMKills = oomKills
 	}
 
-	// 查询多Pod时间序列数据（用于展示多条曲线）
-	// CPU使用率（每个Pod独立）
+	// 查詢多Pod時間序列資料（用於展示多條曲線）
+	// CPU使用率（每個Pod獨立）
 	if cpuMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum (rate(container_cpu_usage_seconds_total{container!=\"\",%s}[1m])) by(pod) /( sum (kube_pod_container_resource_limits{container!=\"\",resource=\"cpu\",%s}) by(pod) ) * 100", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.CPUMulti = cpuMulti
 	}
 
-	// 内存使用率（每个Pod独立）
+	// 記憶體使用率（每個Pod獨立）
 	if memoryMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(container_memory_working_set_bytes{container!=\"\",%s}) by(pod) / sum(kube_pod_container_resource_limits{container!=\"\",container!=\"POD\",resource=\"memory\",%s}) by(pod) * 100", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.MemoryMulti = memoryMulti
 	}
 
-	// 查询容器重启次数（多Pod）
+	// 查詢容器重啟次數（多Pod）
 	if containerRestartsMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(kube_pod_container_status_restarts_total{%s}) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.ContainerRestartsMulti = containerRestartsMulti
 	}
 
-	// 查询 OOM Kill 次数（多Pod）
+	// 查詢 OOM Kill 次數（多Pod）
 	if oomKillsMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(container_oom_events_total{container!=\"\",container!=\"POD\",%s}) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.OOMKillsMulti = oomKillsMulti
 	}
 
-	// 查询网络PPS（多Pod）
+	// 查詢網路PPS（多Pod）
 	if networkPPSMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(network_packets_received_total{%s}) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.NetworkPPSMulti = networkPPSMulti
 	}
 
-	// 查询线程数（多Pod）
+	// 查詢執行緒數（多Pod）
 	if threadsMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(container_threads{container!=\"\",container!=\"POD\",%s}) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.ThreadsMulti = threadsMulti
 	}
 
-	// 查询网卡丢包情况（多Pod）
+	// 查詢網絡卡丟包情況（多Pod）
 	if networkDropsMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(network_packets_dropped_total{%s}) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.NetworkDropsMulti = networkDropsMulti
 	}
 
-	// 查询 CPU 限流比例（多Pod）
+	// 查詢 CPU 限流比例（多Pod）
 	if cpuThrottlingMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(rate(container_cpu_cfs_throttled_periods_total{%s}[1m])) by(pod) / sum(rate(container_cpu_cfs_periods_total{%s}[5m])) by(pod) * 100", workloadSelector, workloadSelector), start, end, step); err == nil {
 		metrics.CPUThrottlingMulti = cpuThrottlingMulti
 	}
 
-	// 查询 CPU 限流时间（多Pod）
+	// 查詢 CPU 限流時間（多Pod）
 	if cpuThrottlingTimeMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(rate(container_cpu_cfs_throttled_seconds_total{%s}[1m])) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.CPUThrottlingTimeMulti = cpuThrottlingTimeMulti
 	}
 
-	// 查询磁盘 IOPS（多Pod）
+	// 查詢磁碟 IOPS（多Pod）
 	if diskIOPSMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(disk_io_now{%s}) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.DiskIOPSMulti = diskIOPSMulti
 	}
 
-	// 查询磁盘吞吐量（多Pod）
+	// 查詢磁碟吞吐量（多Pod）
 	if diskThroughputMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(disk_io_bytes_total{%s}) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.DiskThroughputMulti = diskThroughputMulti
 	}
 
-	// 查询健康检查失败次数（多Pod）
+	// 查詢健康檢查失敗次數（多Pod）
 	if probeFailuresMulti, err := s.queryMultiSeriesMetric(ctx, config, fmt.Sprintf("sum(increase(prober_probe_total{result='failed',%s}[1m])) by(pod)", workloadSelector), start, end, step); err == nil {
 		metrics.ProbeFailuresMulti = probeFailuresMulti
 	}
@@ -500,17 +500,17 @@ func (s *PrometheusService) QueryWorkloadMetrics(ctx context.Context, config *mo
 	return metrics, nil
 }
 
-// buildQueryURL 构建查询 URL
+// buildQueryURL 構建查詢 URL
 func (s *PrometheusService) buildQueryURL(endpoint string, query *models.MetricsQuery) (*url.URL, error) {
 	baseURL, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	// 设置查询路径
+	// 設定查詢路徑
 	baseURL.Path = "/api/v1/query_range"
 
-	// 设置查询参数
+	// 設定查詢參數
 	params := url.Values{}
 	params.Set("query", query.Query)
 	params.Set("start", strconv.FormatInt(query.Start, 10))
@@ -525,12 +525,12 @@ func (s *PrometheusService) buildQueryURL(endpoint string, query *models.Metrics
 	return baseURL, nil
 }
 
-// setAuth 设置认证
+// setAuth 設定認證
 func (s *PrometheusService) setAuth(req *http.Request, auth *models.MonitoringAuth) error {
 	return SetMonitoringAuth(req, auth)
 }
 
-// parseTimeRange 解析时间范围
+// parseTimeRange 解析時間範圍
 func (s *PrometheusService) parseTimeRange(timeRange string) (int64, int64, error) {
 	now := time.Now()
 	var duration time.Duration
@@ -550,7 +550,7 @@ func (s *PrometheusService) parseTimeRange(timeRange string) (int64, int64, erro
 	default:
 		duration, err = time.ParseDuration(timeRange)
 		if err != nil {
-			return 0, 0, fmt.Errorf("无效的时间范围: %s", timeRange)
+			return 0, 0, fmt.Errorf("無效的時間範圍: %s", timeRange)
 		}
 	}
 
@@ -559,18 +559,18 @@ func (s *PrometheusService) parseTimeRange(timeRange string) (int64, int64, erro
 	return start, end, nil
 }
 
-// buildClusterSelector 构建集群标签选择器
+// buildClusterSelector 構建叢集標籤選擇器
 //
-//nolint:unused // 保留用于未来使用
+//nolint:unused // 保留用於未來使用
 func (s *PrometheusService) buildClusterSelector(labels map[string]string, clusterName string) string {
 	selectors := []string{}
 
-	// 添加集群标签
+	// 新增叢集標籤
 	if clusterName != "" {
 		selectors = append(selectors, fmt.Sprintf("cluster=\"%s\"", clusterName))
 	}
 
-	// 添加自定义标签
+	// 新增自定義標籤
 	for key, value := range labels {
 		selectors = append(selectors, fmt.Sprintf("%s=\"%s\"", key, value))
 	}
@@ -578,21 +578,21 @@ func (s *PrometheusService) buildClusterSelector(labels map[string]string, clust
 	return strings.Join(selectors, ",")
 }
 
-// buildNodeSelector 构建节点标签选择器
+// buildNodeSelector 構建節點標籤選擇器
 func (s *PrometheusService) buildNodeSelector(labels map[string]string, clusterName, nodeName string) string {
 	selectors := []string{}
 
-	// 添加集群标签
+	// 新增叢集標籤
 	if clusterName != "" {
 		selectors = append(selectors, fmt.Sprintf("cluster=\"%s\"", clusterName))
 	}
 
-	// 添加节点标签
+	// 新增節點標籤
 	if nodeName != "" {
 		selectors = append(selectors, fmt.Sprintf("instance=~\".*%s.*\"", nodeName))
 	}
 
-	// 添加自定义标签
+	// 新增自定義標籤
 	for key, value := range labels {
 		selectors = append(selectors, fmt.Sprintf("%s=\"%s\"", key, value))
 	}
@@ -600,26 +600,26 @@ func (s *PrometheusService) buildNodeSelector(labels map[string]string, clusterN
 	return strings.Join(selectors, ",")
 }
 
-// buildPodSelector 构建 Pod 标签选择器
+// buildPodSelector 構建 Pod 標籤選擇器
 func (s *PrometheusService) buildPodSelector(labels map[string]string, clusterName, namespace, podName string) string {
 	selectors := []string{}
 
-	// 添加集群标签
+	// 新增叢集標籤
 	if clusterName != "" {
 		selectors = append(selectors, fmt.Sprintf("cluster=\"%s\"", clusterName))
 	}
 
-	// 添加命名空间标签
+	// 新增命名空間標籤
 	if namespace != "" {
 		selectors = append(selectors, fmt.Sprintf("namespace=\"%s\"", namespace))
 	}
 
-	// 添加 Pod 标签
+	// 新增 Pod 標籤
 	if podName != "" {
 		selectors = append(selectors, fmt.Sprintf("pod=\"%s\"", podName))
 	}
 
-	// 添加自定义标签
+	// 新增自定義標籤
 	for key, value := range labels {
 		selectors = append(selectors, fmt.Sprintf("%s=\"%s\"", key, value))
 	}
@@ -627,21 +627,21 @@ func (s *PrometheusService) buildPodSelector(labels map[string]string, clusterNa
 	return strings.Join(selectors, ",")
 }
 
-// buildWorkloadSelector 构建工作负载标签选择器（使用正则表达式匹配pod名称）
+// buildWorkloadSelector 構建工作負載標籤選擇器（使用正規表示式匹配pod名稱）
 func (s *PrometheusService) buildWorkloadSelector(labels map[string]string, clusterName, namespace, workloadName string) string {
 	selectors := []string{}
 
-	// 添加集群标签
+	// 新增叢集標籤
 	if clusterName != "" {
 		selectors = append(selectors, fmt.Sprintf("cluster=\"%s\"", clusterName))
 	}
 
-	// 添加命名空间标签
+	// 新增命名空間標籤
 	if namespace != "" {
 		selectors = append(selectors, fmt.Sprintf("namespace=\"%s\"", namespace))
 	}
 
-	// 使用正则表达式匹配工作负载的Pod名称
+	// 使用正規表示式匹配工作負載的Pod名稱
 	// Deployment: deployment-name-xxx-xxx
 	// StatefulSet: statefulset-name-0, statefulset-name-1, ...
 	// DaemonSet: daemonset-name-xxx
@@ -650,7 +650,7 @@ func (s *PrometheusService) buildWorkloadSelector(labels map[string]string, clus
 		selectors = append(selectors, fmt.Sprintf("pod=~\"%s-.*\"", workloadName))
 	}
 
-	// 添加自定义标签
+	// 新增自定義標籤
 	for key, value := range labels {
 		selectors = append(selectors, fmt.Sprintf("%s=\"%s\"", key, value))
 	}
@@ -658,7 +658,7 @@ func (s *PrometheusService) buildWorkloadSelector(labels map[string]string, clus
 	return strings.Join(selectors, ",")
 }
 
-// queryMetricSeries 查询指标时间序列
+// queryMetricSeries 查詢指標時間序列
 func (s *PrometheusService) queryMetricSeries(ctx context.Context, config *models.MonitoringConfig, query string, start, end int64, step string) (*models.MetricSeries, error) {
 	logger.Debug("query: %s", query)
 	metricsQuery := &models.MetricsQuery{
@@ -677,13 +677,13 @@ func (s *PrometheusService) queryMetricSeries(ctx context.Context, config *model
 		return &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}, nil
 	}
 
-	// 处理第一个结果
+	// 處理第一個結果
 	result := resp.Data.Result[0]
 	var series []models.DataPoint
 	var current float64
 
 	if len(result.Values) > 0 {
-		// 时间序列数据
+		// 時間序列資料
 		for _, value := range result.Values {
 			if len(value) >= 2 {
 				timestamp, _ := strconv.ParseInt(fmt.Sprintf("%.0f", value[0]), 10, 64)
@@ -694,12 +694,12 @@ func (s *PrometheusService) queryMetricSeries(ctx context.Context, config *model
 				})
 			}
 		}
-		// 当前值取最后一个
+		// 當前值取最後一個
 		if len(series) > 0 {
 			current = series[len(series)-1].Value
 		}
 	} else if len(result.Value) >= 2 {
-		// 即时查询数据
+		// 即時查詢資料
 		timestamp, _ := strconv.ParseInt(fmt.Sprintf("%.0f", result.Value[0]), 10, 64)
 		val, _ := strconv.ParseFloat(fmt.Sprintf("%v", result.Value[1]), 64)
 		series = append(series, models.DataPoint{
@@ -715,7 +715,7 @@ func (s *PrometheusService) queryMetricSeries(ctx context.Context, config *model
 	}, nil
 }
 
-// queryMultiSeriesMetric 查询多时间序列指标（每个Pod一条独立曲线）
+// queryMultiSeriesMetric 查詢多時間序列指標（每個Pod一條獨立曲線）
 func (s *PrometheusService) queryMultiSeriesMetric(ctx context.Context, config *models.MonitoringConfig, query string, start, end int64, step string) (*models.MultiSeriesMetric, error) {
 	logger.Debug("query multi-series: %s", query)
 	metricsQuery := &models.MetricsQuery{
@@ -734,12 +734,12 @@ func (s *PrometheusService) queryMultiSeriesMetric(ctx context.Context, config *
 		return &models.MultiSeriesMetric{Series: []models.MultiSeriesDataPoint{}}, nil
 	}
 
-	// 构建时间戳到数据点的映射
+	// 構建時間戳到資料點的對映
 	timestampMap := make(map[int64]map[string]float64)
 
-	// 遍历所有结果（每个结果代表一个Pod）
+	// 遍歷所有結果（每個結果代表一個Pod）
 	for _, result := range resp.Data.Result {
-		// 获取 pod 名称
+		// 獲取 pod 名稱
 		podName := ""
 		if metric, ok := result.Metric["pod"]; ok {
 			podName = fmt.Sprintf("%v", metric)
@@ -748,14 +748,14 @@ func (s *PrometheusService) queryMultiSeriesMetric(ctx context.Context, config *
 			continue
 		}
 
-		// 处理时间序列数据
+		// 處理時間序列資料
 		if len(result.Values) > 0 {
 			for _, value := range result.Values {
 				if len(value) >= 2 {
 					timestamp, _ := strconv.ParseInt(fmt.Sprintf("%.0f", value[0]), 10, 64)
 					valStr := fmt.Sprintf("%v", value[1])
 
-					// 跳过无效值（NaN, +Inf, -Inf等）
+					// 跳過無效值（NaN, +Inf, -Inf等）
 					if valStr == "NaN" || valStr == "+Inf" || valStr == "-Inf" || valStr == "null" {
 						continue
 					}
@@ -765,7 +765,7 @@ func (s *PrometheusService) queryMultiSeriesMetric(ctx context.Context, config *
 						continue
 					}
 
-					// 再次检查值是否有效
+					// 再次檢查值是否有效
 					if math.IsNaN(val) || math.IsInf(val, 0) {
 						continue
 					}
@@ -779,18 +779,18 @@ func (s *PrometheusService) queryMultiSeriesMetric(ctx context.Context, config *
 		}
 	}
 
-	// 将map转换为有序切片
+	// 將map轉換為有序切片
 	var timestamps []int64
 	for ts := range timestampMap {
 		timestamps = append(timestamps, ts)
 	}
 
-	// 排序时间戳
+	// 排序時間戳
 	sort.Slice(timestamps, func(i, j int) bool {
 		return timestamps[i] < timestamps[j]
 	})
 
-	// 构建最终的时间序列数据
+	// 構建最終的時間序列資料
 	var series []models.MultiSeriesDataPoint
 	for _, ts := range timestamps {
 		series = append(series, models.MultiSeriesDataPoint{
@@ -804,13 +804,13 @@ func (s *PrometheusService) queryMultiSeriesMetric(ctx context.Context, config *
 	}, nil
 }
 
-// queryNetworkMetrics 查询网络指标（使用并发查询优化性能）
+// queryNetworkMetrics 查詢網路指標（使用併發查詢最佳化效能）
 func (s *PrometheusService) queryNetworkMetrics(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkMetrics, error) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	networkMetrics := &models.NetworkMetrics{}
 
-	// 并发查询入站流量
+	// 併發查詢入站流量
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -820,14 +820,14 @@ func (s *PrometheusService) queryNetworkMetrics(ctx context.Context, config *mod
 			networkMetrics.In = inSeries
 			mu.Unlock()
 		} else {
-			logger.Error("查询入站网络指标失败", "error", err)
+			logger.Error("查詢入站網路指標失敗", "error", err)
 			mu.Lock()
 			networkMetrics.In = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 			mu.Unlock()
 		}
 	}()
 
-	// 并发查询出站流量
+	// 併發查詢出站流量
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -837,7 +837,7 @@ func (s *PrometheusService) queryNetworkMetrics(ctx context.Context, config *mod
 			networkMetrics.Out = outSeries
 			mu.Unlock()
 		} else {
-			logger.Error("查询出站网络指标失败", "error", err)
+			logger.Error("查詢出站網路指標失敗", "error", err)
 			mu.Lock()
 			networkMetrics.Out = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 			mu.Unlock()
@@ -848,21 +848,21 @@ func (s *PrometheusService) queryNetworkMetrics(ctx context.Context, config *mod
 	return networkMetrics, nil
 }
 
-// queryNodeNetworkMetrics 查询节点网络指标
+// queryNodeNetworkMetrics 查詢節點網路指標
 func (s *PrometheusService) queryNodeNetworkMetrics(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkMetrics, error) {
-	// 查询入站流量
+	// 查詢入站流量
 	inQuery := fmt.Sprintf("rate(node_network_receive_bytes_total{%s}[5m])", selector)
 	inSeries, err := s.queryMetricSeries(ctx, config, inQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询节点入站网络指标失败", "error", err)
+		logger.Error("查詢節點入站網路指標失敗", "error", err)
 		inSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询出站流量
+	// 查詢出站流量
 	outQuery := fmt.Sprintf("rate(node_network_transmit_bytes_total{%s}[5m])", selector)
 	outSeries, err := s.queryMetricSeries(ctx, config, outQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询节点出站网络指标失败", "error", err)
+		logger.Error("查詢節點出站網路指標失敗", "error", err)
 		outSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -872,21 +872,21 @@ func (s *PrometheusService) queryNodeNetworkMetrics(ctx context.Context, config 
 	}, nil
 }
 
-// queryPodNetworkMetrics 查询 Pod 网络指标
+// queryPodNetworkMetrics 查詢 Pod 網路指標
 func (s *PrometheusService) queryPodNetworkMetrics(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkMetrics, error) {
-	// 查询入站流量
+	// 查詢入站流量
 	inQuery := fmt.Sprintf("rate(container_network_receive_bytes_total{%s}[5m])", selector)
 	inSeries, err := s.queryMetricSeries(ctx, config, inQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod入站网络指标失败", "error", err)
+		logger.Error("查詢Pod入站網路指標失敗", "error", err)
 		inSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询出站流量
+	// 查詢出站流量
 	outQuery := fmt.Sprintf("rate(container_network_transmit_bytes_total{%s}[5m])", selector)
 	outSeries, err := s.queryMetricSeries(ctx, config, outQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod出站网络指标失败", "error", err)
+		logger.Error("查詢Pod出站網路指標失敗", "error", err)
 		outSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -896,14 +896,14 @@ func (s *PrometheusService) queryPodNetworkMetrics(ctx context.Context, config *
 	}, nil
 }
 
-// queryPodMetrics 查询 Pod 统计指标（使用并发查询优化性能）
+// queryPodMetrics 查詢 Pod 統計指標（使用併發查詢最佳化效能）
 func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.MonitoringConfig, selector string) (*models.PodMetrics, error) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	podMetrics := &models.PodMetrics{}
 	now := time.Now().Unix()
 
-	// 并发查询总 Pod 数
+	// 併發查詢總 Pod 數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -920,11 +920,11 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 				mu.Unlock()
 			}
 		} else if err != nil {
-			logger.Error("查询Pod总数失败", "error", err)
+			logger.Error("查詢Pod總數失敗", "error", err)
 		}
 	}()
 
-	// 并发查询运行中 Pod 数
+	// 併發查詢執行中 Pod 數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -941,11 +941,11 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 				mu.Unlock()
 			}
 		} else if err != nil {
-			logger.Error("查询运行中Pod数失败", "error", err)
+			logger.Error("查詢執行中Pod數失敗", "error", err)
 		}
 	}()
 
-	// 并发查询 Pending Pod 数
+	// 併發查詢 Pending Pod 數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -962,11 +962,11 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 				mu.Unlock()
 			}
 		} else if err != nil {
-			logger.Error("查询Pending Pod数失败", "error", err)
+			logger.Error("查詢Pending Pod數失敗", "error", err)
 		}
 	}()
 
-	// 并发查询失败 Pod 数
+	// 併發查詢失敗 Pod 數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -983,7 +983,7 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 				mu.Unlock()
 			}
 		} else if err != nil {
-			logger.Error("查询失败Pod数失败", "error", err)
+			logger.Error("查詢失敗Pod數失敗", "error", err)
 		}
 	}()
 
@@ -991,13 +991,13 @@ func (s *PrometheusService) queryPodMetrics(ctx context.Context, config *models.
 	return podMetrics, nil
 }
 
-// QueryContainerSubnetIPs 查询容器子网IP信息
+// QueryContainerSubnetIPs 查詢容器子網IP資訊
 func (s *PrometheusService) QueryContainerSubnetIPs(ctx context.Context, config *models.MonitoringConfig) (*models.ContainerSubnetIPs, error) {
 	if config.Type == "disabled" {
-		return nil, fmt.Errorf("监控功能已禁用")
+		return nil, fmt.Errorf("監控功能已禁用")
 	}
 
-	// 查询总IP数
+	// 查詢總IP數
 	totalIPsQuery := "sum(ipam_ippool_size)"
 	totalResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
 		Query: totalIPsQuery,
@@ -1006,7 +1006,7 @@ func (s *PrometheusService) QueryContainerSubnetIPs(ctx context.Context, config 
 		Step:  "1m",
 	})
 	if err != nil {
-		logger.Error("查询总IP数失败", "error", err)
+		logger.Error("查詢總IP數失敗", "error", err)
 		return &models.ContainerSubnetIPs{}, nil
 	}
 
@@ -1017,7 +1017,7 @@ func (s *PrometheusService) QueryContainerSubnetIPs(ctx context.Context, config 
 		}
 	}
 
-	// 查询已使用IP数
+	// 查詢已使用IP數
 	usedIPsQuery := "sum(ipam_allocations_in_use)"
 	usedResp, err := s.QueryPrometheus(ctx, config, &models.MetricsQuery{
 		Query: usedIPsQuery,
@@ -1026,7 +1026,7 @@ func (s *PrometheusService) QueryContainerSubnetIPs(ctx context.Context, config 
 		Step:  "1m",
 	})
 	if err != nil {
-		logger.Error("查询已使用IP数失败", "error", err)
+		logger.Error("查詢已使用IP數失敗", "error", err)
 		return &models.ContainerSubnetIPs{TotalIPs: totalIPs}, nil
 	}
 
@@ -1037,7 +1037,7 @@ func (s *PrometheusService) QueryContainerSubnetIPs(ctx context.Context, config 
 		}
 	}
 
-	// 计算可用IP数
+	// 計算可用IP數
 	availableIPs := totalIPs - usedIPs
 	if availableIPs < 0 {
 		availableIPs = 0
@@ -1050,35 +1050,35 @@ func (s *PrometheusService) QueryContainerSubnetIPs(ctx context.Context, config 
 	}, nil
 }
 
-// TestConnection 测试监控数据源连接
+// TestConnection 測試監控資料來源連線
 func (s *PrometheusService) TestConnection(ctx context.Context, config *models.MonitoringConfig) error {
 	if config.Type == "disabled" {
-		return fmt.Errorf("监控功能已禁用")
+		return fmt.Errorf("監控功能已禁用")
 	}
 
-	// 构建测试查询 URL
+	// 構建測試查詢 URL
 	testURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return fmt.Errorf("无效的监控端点: %w", err)
+		return fmt.Errorf("無效的監控端點: %w", err)
 	}
 	testURL.Path = "/api/v1/query"
 	testURL.RawQuery = "query=up"
 
-	// 创建测试请求
+	// 建立測試請求
 	req, err := http.NewRequestWithContext(ctx, "GET", testURL.String(), nil)
 	if err != nil {
-		return fmt.Errorf("创建测试请求失败: %w", err)
+		return fmt.Errorf("建立測試請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return fmt.Errorf("设置认证失败: %w", err)
+		return fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行测试请求
+	// 執行測試請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("连接测试失败: %w", err)
+		return fmt.Errorf("連線測試失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -1086,27 +1086,27 @@ func (s *PrometheusService) TestConnection(ctx context.Context, config *models.M
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("监控数据源响应异常: %s", string(body))
+		return fmt.Errorf("監控資料來源響應異常: %s", string(body))
 	}
 
 	return nil
 }
 
-// queryPodNetworkPPS 查询 Pod 网络PPS指标
+// queryPodNetworkPPS 查詢 Pod 網路PPS指標
 func (s *PrometheusService) queryPodNetworkPPS(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkPPS, error) {
-	// 查询入站PPS
+	// 查詢入站PPS
 	inQuery := fmt.Sprintf("sum(rate(container_network_receive_packets_total{%s}[1m]))", selector)
 	inSeries, err := s.queryMetricSeries(ctx, config, inQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod入站PPS失败", "error", err)
+		logger.Error("查詢Pod入站PPS失敗", "error", err)
 		inSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询出站PPS
+	// 查詢出站PPS
 	outQuery := fmt.Sprintf("sum(rate(container_network_transmit_packets_total{%s}[1m]))", selector)
 	outSeries, err := s.queryMetricSeries(ctx, config, outQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod出站PPS失败", "error", err)
+		logger.Error("查詢Pod出站PPS失敗", "error", err)
 		outSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -1116,21 +1116,21 @@ func (s *PrometheusService) queryPodNetworkPPS(ctx context.Context, config *mode
 	}, nil
 }
 
-// queryPodNetworkDrops 查询 Pod 网卡丢包情况
+// queryPodNetworkDrops 查詢 Pod 網絡卡丟包情況
 func (s *PrometheusService) queryPodNetworkDrops(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkDrops, error) {
-	// 查询接收丢包
+	// 查詢接收丟包
 	receiveQuery := fmt.Sprintf("sum(rate(container_network_receive_packets_dropped_total{%s}[1m]))", selector)
 	receiveSeries, err := s.queryMetricSeries(ctx, config, receiveQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod接收丢包失败", "error", err)
+		logger.Error("查詢Pod接收丟包失敗", "error", err)
 		receiveSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询发送丢包
+	// 查詢傳送丟包
 	transmitQuery := fmt.Sprintf("sum(rate(container_network_transmit_packets_dropped_total{%s}[1m]))", selector)
 	transmitSeries, err := s.queryMetricSeries(ctx, config, transmitQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod发送丢包失败", "error", err)
+		logger.Error("查詢Pod傳送丟包失敗", "error", err)
 		transmitSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -1140,21 +1140,21 @@ func (s *PrometheusService) queryPodNetworkDrops(ctx context.Context, config *mo
 	}, nil
 }
 
-// queryPodDiskIOPS 查询 Pod 磁盘IOPS
+// queryPodDiskIOPS 查詢 Pod 磁碟IOPS
 func (s *PrometheusService) queryPodDiskIOPS(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.DiskIOPS, error) {
-	// 查询读IOPS
+	// 查詢讀IOPS
 	readQuery := fmt.Sprintf("sum(rate(container_fs_reads_total{%s}[1m]))", selector)
 	readSeries, err := s.queryMetricSeries(ctx, config, readQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod磁盘读IOPS失败", "error", err)
+		logger.Error("查詢Pod磁碟讀IOPS失敗", "error", err)
 		readSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询写IOPS
+	// 查詢寫IOPS
 	writeQuery := fmt.Sprintf("sum(rate(container_fs_writes_total{%s}[1m]))", selector)
 	writeSeries, err := s.queryMetricSeries(ctx, config, writeQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod磁盘写IOPS失败", "error", err)
+		logger.Error("查詢Pod磁碟寫IOPS失敗", "error", err)
 		writeSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -1164,21 +1164,21 @@ func (s *PrometheusService) queryPodDiskIOPS(ctx context.Context, config *models
 	}, nil
 }
 
-// queryPodDiskThroughput 查询 Pod 磁盘吞吐量
+// queryPodDiskThroughput 查詢 Pod 磁碟吞吐量
 func (s *PrometheusService) queryPodDiskThroughput(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.DiskThroughput, error) {
-	// 查询读吞吐量
+	// 查詢讀吞吐量
 	readQuery := fmt.Sprintf("sum(rate(container_fs_reads_bytes_total{container!=\"\",container!=\"POD\",%s}[1m]))", selector)
 	readSeries, err := s.queryMetricSeries(ctx, config, readQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod磁盘读吞吐量失败", "error", err)
+		logger.Error("查詢Pod磁碟讀吞吐量失敗", "error", err)
 		readSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询写吞吐量
+	// 查詢寫吞吐量
 	writeQuery := fmt.Sprintf("sum(rate(container_fs_writes_bytes_total{container!=\"\",container!=\"POD\",%s}[1m]))", selector)
 	writeSeries, err := s.queryMetricSeries(ctx, config, writeQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询Pod磁盘写吞吐量失败", "error", err)
+		logger.Error("查詢Pod磁碟寫吞吐量失敗", "error", err)
 		writeSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -1188,13 +1188,13 @@ func (s *PrometheusService) queryPodDiskThroughput(ctx context.Context, config *
 	}, nil
 }
 
-// queryClusterOverview 查询集群概览指标（使用并发查询优化性能）
+// queryClusterOverview 查詢叢集概覽指標（使用併發查詢最佳化效能）
 func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *models.MonitoringConfig, clusterName string, start, end int64, step string) (*models.ClusterOverview, error) {
 	overview := &models.ClusterOverview{}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
-	// 并发查询 CPU 总核数
+	// 併發查詢 CPU 總核數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1213,7 +1213,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询内存总数
+	// 併發查詢記憶體總數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1232,7 +1232,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询集群 CPU 使用率
+	// 併發查詢叢集 CPU 使用率
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1244,7 +1244,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询集群内存使用率
+	// 併發查詢叢集記憶體使用率
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1256,7 +1256,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询 Pod 最大可创建数
+	// 併發查詢 Pod 最大可建立數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1275,7 +1275,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询 Pod 已创建数
+	// 併發查詢 Pod 已建立數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1294,7 +1294,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询 Etcd 是否有 Leader
+	// 併發查詢 Etcd 是否有 Leader
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1313,7 +1313,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询 ApiServer 近30天可用率
+	// 併發查詢 ApiServer 近30天可用率
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1332,7 +1332,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询 CPU Request 比值
+	// 併發查詢 CPU Request 比值
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1344,7 +1344,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询 CPU Limit 比值
+	// 併發查詢 CPU Limit 比值
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1356,7 +1356,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询内存 Request 比值
+	// 併發查詢記憶體 Request 比值
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1368,7 +1368,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询内存 Limit 比值
+	// 併發查詢記憶體 Limit 比值
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1380,7 +1380,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 并发查询 ApiServer 总请求量
+	// 併發查詢 ApiServer 總請求量
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1392,10 +1392,10 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 		}
 	}()
 
-	// 等待所有查询完成
+	// 等待所有查詢完成
 	wg.Wait()
 
-	// 计算 Pod 可创建数和使用率（需要等待 MaxPods 和 CreatedPods 查询完成）
+	// 計算 Pod 可建立數和使用率（需要等待 MaxPods 和 CreatedPods 查詢完成）
 	overview.AvailablePods = overview.MaxPods - overview.CreatedPods
 	if overview.MaxPods > 0 {
 		overview.PodUsageRate = float64(overview.CreatedPods) / float64(overview.MaxPods) * 100
@@ -1404,7 +1404,7 @@ func (s *PrometheusService) queryClusterOverview(ctx context.Context, config *mo
 	return overview, nil
 }
 
-// QueryNodeListMetrics 查询节点列表监控指标（使用并发查询优化性能）
+// QueryNodeListMetrics 查詢節點列表監控指標（使用併發查詢最佳化效能）
 func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *models.MonitoringConfig, clusterName string) ([]models.NodeMetricItem, error) {
 	nodeList := []models.NodeMetricItem{}
 	now := time.Now().Unix()
@@ -1413,7 +1413,7 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 	var mu sync.Mutex
 	var cpuResp, memResp, cpuCoresResp, totalMemResp *models.MetricsResponse
 
-	// 并发查询节点 CPU 使用率
+	// 併發查詢節點 CPU 使用率
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1428,11 +1428,11 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 			cpuResp = resp
 			mu.Unlock()
 		} else {
-			logger.Error("查询节点CPU使用率失败", "error", err)
+			logger.Error("查詢節點CPU使用率失敗", "error", err)
 		}
 	}()
 
-	// 并发查询节点内存使用率
+	// 併發查詢節點記憶體使用率
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1447,11 +1447,11 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 			memResp = resp
 			mu.Unlock()
 		} else {
-			logger.Error("查询节点内存使用率失败", "error", err)
+			logger.Error("查詢節點記憶體使用率失敗", "error", err)
 		}
 	}()
 
-	// 并发查询节点CPU核数
+	// 併發查詢節點CPU核數
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1466,11 +1466,11 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 			cpuCoresResp = resp
 			mu.Unlock()
 		} else {
-			logger.Error("查询节点CPU核数失败", "error", err)
+			logger.Error("查詢節點CPU核數失敗", "error", err)
 		}
 	}()
 
-	// 并发查询节点总内存
+	// 併發查詢節點總記憶體
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -1485,17 +1485,17 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 			totalMemResp = resp
 			mu.Unlock()
 		} else {
-			logger.Error("查询节点总内存失败", "error", err)
+			logger.Error("查詢節點總記憶體失敗", "error", err)
 		}
 	}()
 
-	// 等待所有查询完成
+	// 等待所有查詢完成
 	wg.Wait()
 
-	// 构建节点映射
+	// 構建節點對映
 	nodeMap := make(map[string]*models.NodeMetricItem)
 
-	// 处理 CPU 使用率数据
+	// 處理 CPU 使用率資料
 	if cpuResp != nil && len(cpuResp.Data.Result) > 0 {
 		for _, result := range cpuResp.Data.Result {
 			if instance, ok := result.Metric["instance"]; ok {
@@ -1515,7 +1515,7 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 		}
 	}
 
-	// 处理内存使用率数据
+	// 處理記憶體使用率資料
 	if memResp != nil && len(memResp.Data.Result) > 0 {
 		for _, result := range memResp.Data.Result {
 			if instance, ok := result.Metric["instance"]; ok {
@@ -1535,7 +1535,7 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 		}
 	}
 
-	// 处理 CPU 核数数据
+	// 處理 CPU 核數資料
 	if cpuCoresResp != nil && len(cpuCoresResp.Data.Result) > 0 {
 		for _, result := range cpuCoresResp.Data.Result {
 			if instance, ok := result.Metric["instance"]; ok {
@@ -1555,7 +1555,7 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 		}
 	}
 
-	// 处理总内存数据
+	// 處理總記憶體資料
 	if totalMemResp != nil && len(totalMemResp.Data.Result) > 0 {
 		for _, result := range totalMemResp.Data.Result {
 			if instance, ok := result.Metric["instance"]; ok {
@@ -1575,7 +1575,7 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 		}
 	}
 
-	// 转换为列表
+	// 轉換為列表
 	for _, node := range nodeMap {
 		nodeList = append(nodeList, *node)
 	}
@@ -1583,10 +1583,10 @@ func (s *PrometheusService) QueryNodeListMetrics(ctx context.Context, config *mo
 	return nodeList, nil
 }
 
-// extractNodeName 从 instance 标签中提取节点名称
+// extractNodeName 從 instance 標籤中提取節點名稱
 func (s *PrometheusService) extractNodeName(instance string) string {
 	// instance 格式可能是 "node-name:9100" 或 "192.168.1.1:9100"
-	// 简单处理：去除端口号
+	// 簡單處理：去除連接埠號
 	parts := strings.Split(instance, ":")
 	if len(parts) > 0 {
 		return parts[0]
@@ -1594,21 +1594,21 @@ func (s *PrometheusService) extractNodeName(instance string) string {
 	return instance
 }
 
-// queryWorkloadNetworkMetrics 查询工作负载网络指标（聚合所有Pod）
+// queryWorkloadNetworkMetrics 查詢工作負載網路指標（聚合所有Pod）
 func (s *PrometheusService) queryWorkloadNetworkMetrics(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkMetrics, error) {
-	// 查询入站流量（聚合）
+	// 查詢入站流量（聚合）
 	inQuery := fmt.Sprintf("sum(rate(container_network_receive_bytes_total{%s}[5m]))", selector)
 	inSeries, err := s.queryMetricSeries(ctx, config, inQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载入站网络指标失败", "error", err)
+		logger.Error("查詢工作負載入站網路指標失敗", "error", err)
 		inSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询出站流量（聚合）
+	// 查詢出站流量（聚合）
 	outQuery := fmt.Sprintf("sum(rate(container_network_transmit_bytes_total{%s}[5m]))", selector)
 	outSeries, err := s.queryMetricSeries(ctx, config, outQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载出站网络指标失败", "error", err)
+		logger.Error("查詢工作負載出站網路指標失敗", "error", err)
 		outSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -1618,21 +1618,21 @@ func (s *PrometheusService) queryWorkloadNetworkMetrics(ctx context.Context, con
 	}, nil
 }
 
-// queryWorkloadNetworkPPS 查询工作负载网络PPS（聚合所有Pod）
+// queryWorkloadNetworkPPS 查詢工作負載網路PPS（聚合所有Pod）
 func (s *PrometheusService) queryWorkloadNetworkPPS(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkPPS, error) {
-	// 查询入站PPS（聚合）
+	// 查詢入站PPS（聚合）
 	inQuery := fmt.Sprintf("sum(rate(container_network_receive_packets_total{%s}[1m]))", selector)
 	inSeries, err := s.queryMetricSeries(ctx, config, inQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载入站PPS失败", "error", err)
+		logger.Error("查詢工作負載入站PPS失敗", "error", err)
 		inSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询出站PPS（聚合）
+	// 查詢出站PPS（聚合）
 	outQuery := fmt.Sprintf("sum(rate(container_network_transmit_packets_total{%s}[1m]))", selector)
 	outSeries, err := s.queryMetricSeries(ctx, config, outQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载出站PPS失败", "error", err)
+		logger.Error("查詢工作負載出站PPS失敗", "error", err)
 		outSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -1642,21 +1642,21 @@ func (s *PrometheusService) queryWorkloadNetworkPPS(ctx context.Context, config 
 	}, nil
 }
 
-// queryWorkloadNetworkDrops 查询工作负载网络丢包（聚合所有Pod）
+// queryWorkloadNetworkDrops 查詢工作負載網路丟包（聚合所有Pod）
 func (s *PrometheusService) queryWorkloadNetworkDrops(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.NetworkDrops, error) {
-	// 查询接收丢包（聚合）
+	// 查詢接收丟包（聚合）
 	receiveQuery := fmt.Sprintf("sum(rate(container_network_receive_packets_dropped_total{%s}[1m]))", selector)
 	receiveSeries, err := s.queryMetricSeries(ctx, config, receiveQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载接收丢包失败", "error", err)
+		logger.Error("查詢工作負載接收丟包失敗", "error", err)
 		receiveSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询发送丢包（聚合）
+	// 查詢傳送丟包（聚合）
 	transmitQuery := fmt.Sprintf("sum(rate(container_network_transmit_packets_dropped_total{%s}[1m]))", selector)
 	transmitSeries, err := s.queryMetricSeries(ctx, config, transmitQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载发送丢包失败", "error", err)
+		logger.Error("查詢工作負載傳送丟包失敗", "error", err)
 		transmitSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -1666,21 +1666,21 @@ func (s *PrometheusService) queryWorkloadNetworkDrops(ctx context.Context, confi
 	}, nil
 }
 
-// queryWorkloadDiskIOPS 查询工作负载磁盘IOPS（聚合所有Pod）
+// queryWorkloadDiskIOPS 查詢工作負載磁碟IOPS（聚合所有Pod）
 func (s *PrometheusService) queryWorkloadDiskIOPS(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.DiskIOPS, error) {
-	// 查询读IOPS（聚合）
+	// 查詢讀IOPS（聚合）
 	readQuery := fmt.Sprintf("sum(rate(container_fs_reads_total{%s}[1m]))", selector)
 	readSeries, err := s.queryMetricSeries(ctx, config, readQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载磁盘读IOPS失败", "error", err)
+		logger.Error("查詢工作負載磁碟讀IOPS失敗", "error", err)
 		readSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询写IOPS（聚合）
+	// 查詢寫IOPS（聚合）
 	writeQuery := fmt.Sprintf("sum(rate(container_fs_writes_total{%s}[1m]))", selector)
 	writeSeries, err := s.queryMetricSeries(ctx, config, writeQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载磁盘写IOPS失败", "error", err)
+		logger.Error("查詢工作負載磁碟寫IOPS失敗", "error", err)
 		writeSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
@@ -1690,21 +1690,21 @@ func (s *PrometheusService) queryWorkloadDiskIOPS(ctx context.Context, config *m
 	}, nil
 }
 
-// queryWorkloadDiskThroughput 查询工作负载磁盘吞吐量（聚合所有Pod）
+// queryWorkloadDiskThroughput 查詢工作負載磁碟吞吐量（聚合所有Pod）
 func (s *PrometheusService) queryWorkloadDiskThroughput(ctx context.Context, config *models.MonitoringConfig, selector string, start, end int64, step string) (*models.DiskThroughput, error) {
-	// 查询读吞吐量（聚合）
+	// 查詢讀吞吐量（聚合）
 	readQuery := fmt.Sprintf("sum(rate(container_fs_reads_bytes_total{container!=\"\",container!=\"POD\",%s}[1m]))", selector)
 	readSeries, err := s.queryMetricSeries(ctx, config, readQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载磁盘读吞吐量失败", "error", err)
+		logger.Error("查詢工作負載磁碟讀吞吐量失敗", "error", err)
 		readSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 
-	// 查询写吞吐量（聚合）
+	// 查詢寫吞吐量（聚合）
 	writeQuery := fmt.Sprintf("sum(rate(container_fs_writes_bytes_total{container!=\"\",container!=\"POD\",%s}[1m]))", selector)
 	writeSeries, err := s.queryMetricSeries(ctx, config, writeQuery, start, end, step)
 	if err != nil {
-		logger.Error("查询工作负载磁盘写吞吐量失败", "error", err)
+		logger.Error("查詢工作負載磁碟寫吞吐量失敗", "error", err)
 		writeSeries = &models.MetricSeries{Current: 0, Series: []models.DataPoint{}}
 	}
 

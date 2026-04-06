@@ -44,14 +44,14 @@ func connPoolTransport(rt http.RoundTripper) http.RoundTripper {
 	return rt
 }
 
-// NewK8sClientFromKubeconfig 从kubeconfig创建客户端
+// NewK8sClientFromKubeconfig 從kubeconfig建立客戶端
 func NewK8sClientFromKubeconfig(kubeconfig string) (*K8sClient, error) {
 	config, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
 	if err != nil {
-		return nil, fmt.Errorf("解析kubeconfig失败: %v", err)
+		return nil, fmt.Errorf("解析kubeconfig失敗: %v", err)
 	}
 
-	// 設置超時、QPS/Burst 與連線池
+	// 設定超時、QPS/Burst 與連線池
 	config.Timeout = 30 * time.Second
 	config.QPS = 100
 	config.Burst = 200
@@ -59,7 +59,7 @@ func NewK8sClientFromKubeconfig(kubeconfig string) (*K8sClient, error) {
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("创建kubernetes客户端失败: %v", err)
+		return nil, fmt.Errorf("建立kubernetes客戶端失敗: %v", err)
 	}
 
 	return &K8sClient{
@@ -68,9 +68,9 @@ func NewK8sClientFromKubeconfig(kubeconfig string) (*K8sClient, error) {
 	}, nil
 }
 
-// NewK8sClientFromToken 从API Server和Token创建客户端
+// NewK8sClientFromToken 從API Server和Token建立客戶端
 func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) {
-	// 确保API Server地址格式正确
+	// 確保API Server地址格式正確
 	if !strings.HasPrefix(apiServer, "http://") && !strings.HasPrefix(apiServer, "https://") {
 		apiServer = "https://" + apiServer
 	}
@@ -82,17 +82,17 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 		QPS:         100,
 		Burst:       200,
 		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true, // 默认跳过TLS验证，避免证书问题
+			Insecure: true, // 預設跳過TLS驗證，避免證書問題
 		},
 		WrapTransport: connPoolTransport,
 	}
 
-	// 如果提供了CA证书，尝试使用它
+	// 如果提供了CA證書，嘗試使用它
 	if caCert != "" {
-		// 尝试base64解码
+		// 嘗試base64解碼
 		caCertData, err := base64.StdEncoding.DecodeString(caCert)
 		if err != nil {
-			// 如果base64解码失败，尝试直接使用原始数据
+			// 如果base64解碼失敗，嘗試直接使用原始資料
 			caCertData = []byte(caCert)
 		}
 		config.CAData = caCertData
@@ -108,7 +108,7 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("创建kubernetes客户端失败: %v", err)
+		return nil, fmt.Errorf("建立kubernetes客戶端失敗: %v", err)
 	}
 
 	return &K8sClient{
@@ -117,7 +117,7 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 	}, nil
 }
 
-// NewK8sClientForCluster 根据集群模型创建 K8s 客户端（统一入口，消除重复的 if/else 创建逻辑）
+// NewK8sClientForCluster 根據叢集模型建立 K8s 客戶端（統一入口，消除重複的 if/else 建立邏輯）
 func NewK8sClientForCluster(cluster *models.Cluster) (*K8sClient, error) {
 	if cluster.KubeconfigEnc != "" {
 		return NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
@@ -125,24 +125,24 @@ func NewK8sClientForCluster(cluster *models.Cluster) (*K8sClient, error) {
 	return NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
 }
 
-// TestConnection 测试连接并获取集群信息
+// TestConnection 測試連線並獲取叢集資訊
 func (c *K8sClient) TestConnection() (*ClusterInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 1. 测试基本连接 - 获取集群版本信息
+	// 1. 測試基本連線 - 獲取叢集版本資訊
 	version, err := c.clientset.Discovery().ServerVersion()
 	if err != nil {
-		return nil, fmt.Errorf("连接失败，无法获取集群版本: %w", err)
+		return nil, fmt.Errorf("連線失敗，無法獲取叢集版本: %w", err)
 	}
 
-	// 2. 测试权限 - 尝试获取节点列表
+	// 2. 測試權限 - 嘗試獲取節點列表
 	nodes, err := c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("权限不足，无法获取节点列表: %w", err)
+		return nil, fmt.Errorf("權限不足，無法獲取節點列表: %w", err)
 	}
 
-	// 3. 统计节点状态
+	// 3. 統計節點狀態
 	readyNodes := 0
 	notReadyNodes := 0
 	for _, node := range nodes.Items {
@@ -161,15 +161,15 @@ func (c *K8sClient) TestConnection() (*ClusterInfo, error) {
 		}
 	}
 
-	// 4. 测试Pod访问权限
+	// 4. 測試Pod訪問權限
 	pods, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{Limit: 1})
 	canAccessPods := err == nil
 
-	// 5. 测试Service访问权限
+	// 5. 測試Service訪問權限
 	_, err = c.clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{Limit: 1})
 	canAccessServices := err == nil
 
-	// 6. 确定集群整体状态
+	// 6. 確定叢集整體狀態
 	status := "healthy"
 	if notReadyNodes > 0 {
 		if readyNodes == 0 {
@@ -179,7 +179,7 @@ func (c *K8sClient) TestConnection() (*ClusterInfo, error) {
 		}
 	}
 
-	// 7. 获取集群基本信息
+	// 7. 獲取叢集基本資訊
 	clusterInfo := &ClusterInfo{
 		Version:           version.String(),
 		NodeCount:         len(nodes.Items),
@@ -189,9 +189,9 @@ func (c *K8sClient) TestConnection() (*ClusterInfo, error) {
 		CanAccessServices: canAccessServices,
 	}
 
-	// 8. 尝试获取更多统计信息（可选，不影响连接测试结果）
+	// 8. 嘗試獲取更多統計資訊（可選，不影響連線測試結果）
 	if canAccessPods && pods != nil {
-		// 统计Pod数量（仅在有权限时）
+		// 統計Pod數量（僅在有權限時）
 		allPods, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 		if err == nil {
 			clusterInfo.PodCount = len(allPods.Items)
@@ -208,62 +208,62 @@ func (c *K8sClient) TestConnection() (*ClusterInfo, error) {
 	return clusterInfo, nil
 }
 
-// analyzeConnectionError 分析连接错误并提供诊断信息
+// analyzeConnectionError 分析連線錯誤並提供診斷資訊
 //
-//nolint:unused // 保留用于未来使用
+//nolint:unused // 保留用於未來使用
 func analyzeConnectionError(err error) string {
 	errStr := err.Error()
 
 	switch {
 	case strings.Contains(errStr, "unexpected EOF"):
-		return "网络连接意外中断，可能原因：1) API Server地址错误或不可达 2) 网络连接不稳定 3) TLS握手失败 4) 防火墙阻止连接"
+		return "網路連線意外中斷，可能原因：1) API Server地址錯誤或不可達 2) 網路連線不穩定 3) TLS握手失敗 4) 防火牆阻止連線"
 	case strings.Contains(errStr, "connection refused"):
-		return "连接被拒绝，API Server可能未运行或端口不正确"
+		return "連線被拒絕，API Server可能未執行或連接埠不正確"
 	case strings.Contains(errStr, "timeout") || strings.Contains(errStr, "context deadline exceeded"):
-		return "连接超时，可能原因：1) API Server响应过慢 2) 网络延迟过高 3) 防火墙限制 4) 集群负载过高，建议检查网络连接和集群状态"
+		return "連線超時，可能原因：1) API Server響應過慢 2) 網路延遲過高 3) 防火牆限制 4) 叢集負載過高，建議檢查網路連線和叢集狀態"
 	case strings.Contains(errStr, "certificate"):
-		return "TLS证书验证失败，请检查CA证书配置或尝试跳过证书验证"
+		return "TLS證書驗證失敗，請檢查CA證書配置或嘗試跳過證書驗證"
 	case strings.Contains(errStr, "unauthorized") || strings.Contains(errStr, "401"):
-		return "认证失败，请检查Token或kubeconfig中的认证信息"
+		return "認證失敗，請檢查Token或kubeconfig中的認證資訊"
 	case strings.Contains(errStr, "forbidden") || strings.Contains(errStr, "403"):
-		return "权限不足，当前用户没有访问该资源的权限"
+		return "權限不足，當前使用者沒有訪問該資源的權限"
 	case strings.Contains(errStr, "not found") || strings.Contains(errStr, "404"):
-		return "API路径不存在，请检查API Server地址和版本"
+		return "API路徑不存在，請檢查API Server地址和版本"
 	case strings.Contains(errStr, "no such host"):
-		return "域名解析失败，请检查API Server地址是否正确"
+		return "域名解析失敗，請檢查API Server地址是否正確"
 	case strings.Contains(errStr, "network is unreachable"):
-		return "网络不可达，请检查网络连接和路由配置"
+		return "網路不可達，請檢查網路連線和路由配置"
 	default:
-		return "未知连接错误，请检查网络连接和集群配置"
+		return "未知連線錯誤，請檢查網路連線和叢集配置"
 	}
 }
 
-// GetClusterOverview 获取集群概览信息
+// GetClusterOverview 獲取叢集概覽資訊
 func (c *K8sClient) GetClusterOverview() (map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 
 	overview := make(map[string]interface{})
 
-	// 获取节点信息
+	// 獲取節點資訊
 	nodes, err := c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("获取节点信息失败: %v", err)
+		return nil, fmt.Errorf("獲取節點資訊失敗: %v", err)
 	}
 
-	// 获取Pod信息
+	// 獲取Pod資訊
 	pods, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("获取Pod信息失败: %v", err)
+		return nil, fmt.Errorf("獲取Pod資訊失敗: %v", err)
 	}
 
-	// 获取命名空间信息
+	// 獲取命名空間資訊
 	namespaces, err := c.clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("获取命名空间信息失败: %v", err)
+		return nil, fmt.Errorf("獲取命名空間資訊失敗: %v", err)
 	}
 
-	// 统计Pod状态
+	// 統計Pod狀態
 	runningPods := 0
 	pendingPods := 0
 	failedPods := 0
@@ -306,7 +306,7 @@ func (c *K8sClient) GetClusterOverview() (map[string]interface{}, error) {
 	return overview, nil
 }
 
-// CreateKubeconfigFromToken 从token和API server创建kubeconfig内容
+// CreateKubeconfigFromToken 從token和API server建立kubeconfig內容
 func CreateKubeconfigFromToken(clusterName, apiServer, token, caCert string) string {
 	config := api.Config{
 		APIVersion: "v1",
@@ -330,63 +330,63 @@ func CreateKubeconfigFromToken(clusterName, apiServer, token, caCert string) str
 		CurrentContext: clusterName,
 	}
 
-	// 如果提供了CA证书，添加到配置中
+	// 如果提供了CA證書，新增到配置中
 	if caCert != "" {
 		config.Clusters[clusterName].CertificateAuthorityData = []byte(caCert)
 	} else {
 		config.Clusters[clusterName].InsecureSkipTLSVerify = true
 	}
 
-	// 将配置转换为YAML字符串
+	// 將配置轉換為YAML字串
 	configBytes, _ := clientcmd.Write(config)
 	return string(configBytes)
 }
 
-// ValidateKubeconfig 验证kubeconfig格式
+// ValidateKubeconfig 驗證kubeconfig格式
 func ValidateKubeconfig(kubeconfig string) error {
 	_, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
 	return err
 }
 
-// GetClientset 获取kubernetes客户端
+// GetClientset 獲取kubernetes客戶端
 func (c *K8sClient) GetClientset() *kubernetes.Clientset {
 	return c.clientset
 }
 
-// GetRestConfig 返回底层 REST 配置（供动态客户端/Informer 使用）
+// GetRestConfig 返回底層 REST 配置（供動態客戶端/Informer 使用）
 func (c *K8sClient) GetRestConfig() *rest.Config {
 	return c.config
 }
 
-// GetRolloutClient 获取Argo Rollouts客户端
+// GetRolloutClient 獲取Argo Rollouts客戶端
 func (c *K8sClient) GetRolloutClient() (*rolloutsclientset.Clientset, error) {
 	rolloutClient, err := rolloutsclientset.NewForConfig(c.config)
 	if err != nil {
-		return nil, fmt.Errorf("创建Argo Rollouts客户端失败: %w", err)
+		return nil, fmt.Errorf("建立Argo Rollouts客戶端失敗: %w", err)
 	}
 	return rolloutClient, nil
 }
 
-// GetClusterMetrics 获取集群监控数据
+// GetClusterMetrics 獲取叢集監控資料
 func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	metrics := make(map[string]interface{})
 
-	// 获取节点信息
+	// 獲取節點資訊
 	nodes, err := c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("获取节点信息失败: %v", err)
+		return nil, fmt.Errorf("獲取節點資訊失敗: %v", err)
 	}
 
-	// 获取Pod信息
+	// 獲取Pod資訊
 	pods, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("获取Pod信息失败: %v", err)
+		return nil, fmt.Errorf("獲取Pod資訊失敗: %v", err)
 	}
 
-	// 计算时间范围
+	// 計算時間範圍
 	endTime := time.Now()
 	var startTime time.Time
 
@@ -405,25 +405,25 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		startTime = endTime.Add(-1 * time.Hour)
 	}
 
-	// 从节点状态和Pod分布估算资源使用情况
-	// 计算节点资源总量和已分配资源
+	// 從節點狀態和Pod分佈估算資源使用情況
+	// 計算節點資源總量和已分配資源
 	var totalCPUCapacity, allocatableCPU int64
 	var totalMemoryCapacity, allocatableMemory int64
 
 	for _, node := range nodes.Items {
-		// 获取节点总容量
+		// 獲取節點總容量
 		cpuCapacity := node.Status.Capacity.Cpu().MilliValue()
 		memoryCapacity := node.Status.Capacity.Memory().Value()
 
 		totalCPUCapacity += cpuCapacity
 		totalMemoryCapacity += memoryCapacity
 
-		// 获取节点可分配资源
+		// 獲取節點可分配資源
 		allocatableCPU += node.Status.Allocatable.Cpu().MilliValue()
 		allocatableMemory += node.Status.Allocatable.Memory().Value()
 	}
 
-	// 计算Pod请求的资源总量
+	// 計算Pod請求的資源總量
 	var requestedCPU, requestedMemory int64
 	var runningPodCount int
 
@@ -431,7 +431,7 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		if pod.Status.Phase == corev1.PodRunning {
 			runningPodCount++
 
-			// 累加Pod中所有容器请求的资源
+			// 累加Pod中所有容器請求的資源
 			for _, container := range pod.Spec.Containers {
 				if container.Resources.Requests != nil {
 					if cpu, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
@@ -445,7 +445,7 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		}
 	}
 
-	// 计算资源使用率
+	// 計算資源使用率
 	cpuUsagePercent := 0.0
 	memoryUsagePercent := 0.0
 
@@ -457,7 +457,7 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		memoryUsagePercent = math.Min(100, float64(requestedMemory)/float64(allocatableMemory)*100)
 	}
 
-	// 如果无法获取请求资源信息，使用Pod数量和节点数量估算
+	// 如果無法獲取請求資源資訊，使用Pod數量和節點數量估算
 	if requestedCPU == 0 || requestedMemory == 0 {
 		readyNodeCount := 0
 		for _, node := range nodes.Items {
@@ -470,14 +470,14 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		}
 
 		if readyNodeCount > 0 {
-			// 根据运行中的Pod数量和节点数量估算使用率
+			// 根據執行中的Pod數量和節點數量估算使用率
 			podsPerNode := float64(runningPodCount) / float64(readyNodeCount)
-			cpuUsagePercent = math.Min(95, podsPerNode*10)   // 假设每个Pod平均使用10%的CPU
-			memoryUsagePercent = math.Min(90, podsPerNode*8) // 假设每个Pod平均使用8%的内存
+			cpuUsagePercent = math.Min(95, podsPerNode*10)   // 假設每個Pod平均使用10%的CPU
+			memoryUsagePercent = math.Min(90, podsPerNode*8) // 假設每個Pod平均使用8%的記憶體
 		}
 	}
 
-	// 统计Pod状态分布
+	// 統計Pod狀態分佈
 	podStatus := map[string]int{
 		"Running":   0,
 		"Pending":   0,
@@ -495,7 +495,7 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		}
 	}
 
-	// 统计节点状态
+	// 統計節點狀態
 	nodeStatus := map[string]int{
 		"Ready":    0,
 		"NotReady": 0,
@@ -517,13 +517,13 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		}
 	}
 
-	// 生成时间序列数据
-	// 注意：这里我们仍然使用模拟数据生成时间序列，因为获取历史数据需要Prometheus等监控系统
-	// 在实际生产环境中，应该集成Prometheus API来获取真实的历史数据
+	// 生成時間序列資料
+	// 注意：這裡我們仍然使用模擬資料生成時間序列，因為獲取歷史資料需要Prometheus等監控系統
+	// 在實際生產環境中，應該整合Prometheus API來獲取真實的歷史資料
 	var timePoints []time.Time
 	stepDuration, _ := time.ParseDuration(step)
 	if stepDuration == 0 {
-		stepDuration = time.Minute // 默认1分钟
+		stepDuration = time.Minute // 預設1分鐘
 	}
 
 	for t := startTime; t.Before(endTime); t = t.Add(stepDuration) {
@@ -531,15 +531,15 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 	}
 	timePoints = append(timePoints, endTime)
 
-	// 生成CPU使用率数据，但使用当前真实的CPU使用率作为基准
+	// 生成CPU使用率資料，但使用當前真實的CPU使用率作為基準
 	cpuData := make([]map[string]interface{}, 0, len(timePoints))
 	for i, t := range timePoints {
-		// 使用真实的当前值作为基准，历史数据仍然模拟
+		// 使用真實的當前值作為基準，歷史資料仍然模擬
 		var value float64
 		if i == len(timePoints)-1 {
 			value = cpuUsagePercent
 		} else {
-			// 模拟历史数据，但围绕当前真实值波动
+			// 模擬歷史資料，但圍繞當前真實值波動
 			variance := 20.0
 			if cpuUsagePercent > 80 {
 				variance = 10.0
@@ -553,15 +553,15 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		})
 	}
 
-	// 生成内存使用率数据，但使用当前真实的内存使用率作为基准
+	// 生成記憶體使用率資料，但使用當前真實的記憶體使用率作為基準
 	memoryData := make([]map[string]interface{}, 0, len(timePoints))
 	for i, t := range timePoints {
-		// 使用真实的当前值作为基准，历史数据仍然模拟
+		// 使用真實的當前值作為基準，歷史資料仍然模擬
 		var value float64
 		if i == len(timePoints)-1 {
 			value = memoryUsagePercent
 		} else {
-			// 模拟历史数据，但围绕当前真实值波动
+			// 模擬歷史資料，但圍繞當前真實值波動
 			variance := 15.0
 			if memoryUsagePercent > 80 {
 				variance = 8.0
@@ -575,7 +575,7 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		})
 	}
 
-	// 网络和磁盘数据仍然使用模拟数据，因为这些需要特定的监控系统
+	// 網路和磁碟資料仍然使用模擬資料，因為這些需要特定的監控系統
 	networkInData := make([]map[string]interface{}, 0, len(timePoints))
 	networkOutData := make([]map[string]interface{}, 0, len(timePoints))
 	for _, t := range timePoints {
@@ -597,7 +597,7 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 		})
 	}
 
-	// 组装返回数据
+	// 組裝返回資料
 	metrics["cpu"] = map[string]interface{}{
 		"current": cpuUsagePercent,
 		"series":  cpuData,
@@ -627,7 +627,7 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 	metrics["pods"] = podStatus
 	metrics["nodes"] = nodeStatus
 
-	// 添加时间范围信息
+	// 新增時間範圍資訊
 	metrics["timeRange"] = map[string]interface{}{
 		"start": startTime.Unix(),
 		"end":   endTime.Unix(),
@@ -637,61 +637,61 @@ func (c *K8sClient) GetClusterMetrics(timeRange string, step string) (map[string
 	return metrics, nil
 }
 
-// CordonNode 封锁节点（标记为不可调度）
+// CordonNode 封鎖節點（標記為不可排程）
 func (c *K8sClient) CordonNode(nodeName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取节点
+	// 獲取節點
 	node, err := c.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("获取节点失败: %v", err)
+		return fmt.Errorf("獲取節點失敗: %v", err)
 	}
 
-	// 检查节点是否已经被封锁
+	// 檢查節點是否已經被封鎖
 	if node.Spec.Unschedulable {
-		return nil // 节点已经被封锁，无需操作
+		return nil // 節點已經被封鎖，無需操作
 	}
 
-	// 标记节点为不可调度
+	// 標記節點為不可排程
 	node.Spec.Unschedulable = true
 
-	// 更新节点
+	// 更新節點
 	_, err = c.clientset.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("封锁节点失败: %v", err)
+		return fmt.Errorf("封鎖節點失敗: %v", err)
 	}
 
 	return nil
 }
 
-// GetNodeMetrics 获取节点资源使用情况
+// GetNodeMetrics 獲取節點資源使用情況
 func (c *K8sClient) GetNodeMetrics(nodeName string) (map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 获取节点信息
+	// 獲取節點資訊
 	node, err := c.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("获取节点信息失败: %v", err)
+		return nil, fmt.Errorf("獲取節點資訊失敗: %v", err)
 	}
 
-	// 获取节点上的所有Pod
+	// 獲取節點上的所有Pod
 	fieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
 	pods, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 		FieldSelector: fieldSelector,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("获取节点Pod列表失败: %v", err)
+		return nil, fmt.Errorf("獲取節點Pod列表失敗: %v", err)
 	}
 
-	// 计算节点资源容量
+	// 計算節點資源容量
 	cpuCapacity := node.Status.Capacity.Cpu().MilliValue()
 	memoryCapacity := node.Status.Capacity.Memory().Value()
 	allocatableCPU := node.Status.Allocatable.Cpu().MilliValue()
 	allocatableMemory := node.Status.Allocatable.Memory().Value()
 
-	// 计算Pod请求的资源总量
+	// 計算Pod請求的資源總量
 	var requestedCPU, requestedMemory int64
 	var runningPodCount int
 
@@ -699,7 +699,7 @@ func (c *K8sClient) GetNodeMetrics(nodeName string) (map[string]interface{}, err
 		if pod.Status.Phase == corev1.PodRunning {
 			runningPodCount++
 
-			// 累加Pod中所有容器请求的资源
+			// 累加Pod中所有容器請求的資源
 			for _, container := range pod.Spec.Containers {
 				if container.Resources.Requests != nil {
 					if cpu, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
@@ -713,7 +713,7 @@ func (c *K8sClient) GetNodeMetrics(nodeName string) (map[string]interface{}, err
 		}
 	}
 
-	// 计算资源使用率
+	// 計算資源使用率
 	cpuUsagePercent := 0.0
 	memoryUsagePercent := 0.0
 
@@ -725,12 +725,12 @@ func (c *K8sClient) GetNodeMetrics(nodeName string) (map[string]interface{}, err
 		memoryUsagePercent = math.Min(100, float64(requestedMemory)/float64(allocatableMemory)*100)
 	}
 
-	// 如果无法获取请求资源信息，使用Pod数量估算
+	// 如果無法獲取請求資源資訊，使用Pod數量估算
 	if requestedCPU == 0 || requestedMemory == 0 {
 		if runningPodCount > 0 {
-			// 根据运行中的Pod数量估算使用率
-			cpuUsagePercent = math.Min(95, float64(runningPodCount)*8)    // 假设每个Pod平均使用8%的CPU
-			memoryUsagePercent = math.Min(90, float64(runningPodCount)*6) // 假设每个Pod平均使用6%的内存
+			// 根據執行中的Pod數量估算使用率
+			cpuUsagePercent = math.Min(95, float64(runningPodCount)*8)    // 假設每個Pod平均使用8%的CPU
+			memoryUsagePercent = math.Min(90, float64(runningPodCount)*6) // 假設每個Pod平均使用6%的記憶體
 		}
 	}
 
@@ -753,24 +753,24 @@ func (c *K8sClient) GetNodeMetrics(nodeName string) (map[string]interface{}, err
 	}, nil
 }
 
-// GetAllNodesMetrics 获取所有节点的资源使用情况
+// GetAllNodesMetrics 獲取所有節點的資源使用情況
 func (c *K8sClient) GetAllNodesMetrics() (map[string]map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	// 获取所有节点
+	// 獲取所有節點
 	nodes, err := c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("获取节点列表失败: %v", err)
+		return nil, fmt.Errorf("獲取節點列表失敗: %v", err)
 	}
 
-	// 获取所有Pod
+	// 獲取所有Pod
 	pods, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("获取Pod列表失败: %v", err)
+		return nil, fmt.Errorf("獲取Pod列表失敗: %v", err)
 	}
 
-	// 按节点分组Pod
+	// 按節點分組Pod
 	nodePodsMap := make(map[string][]corev1.Pod)
 	for _, pod := range pods.Items {
 		if pod.Spec.NodeName != "" {
@@ -778,18 +778,18 @@ func (c *K8sClient) GetAllNodesMetrics() (map[string]map[string]interface{}, err
 		}
 	}
 
-	// 计算每个节点的资源使用情况
+	// 計算每個節點的資源使用情況
 	result := make(map[string]map[string]interface{})
 	for _, node := range nodes.Items {
 		nodePods := nodePodsMap[node.Name]
 
-		// 计算节点资源容量
+		// 計算節點資源容量
 		cpuCapacity := node.Status.Capacity.Cpu().MilliValue()
 		memoryCapacity := node.Status.Capacity.Memory().Value()
 		allocatableCPU := node.Status.Allocatable.Cpu().MilliValue()
 		allocatableMemory := node.Status.Allocatable.Memory().Value()
 
-		// 计算Pod请求的资源总量
+		// 計算Pod請求的資源總量
 		var requestedCPU, requestedMemory int64
 		var runningPodCount int
 
@@ -797,7 +797,7 @@ func (c *K8sClient) GetAllNodesMetrics() (map[string]map[string]interface{}, err
 			if pod.Status.Phase == corev1.PodRunning {
 				runningPodCount++
 
-				// 累加Pod中所有容器请求的资源
+				// 累加Pod中所有容器請求的資源
 				for _, container := range pod.Spec.Containers {
 					if container.Resources.Requests != nil {
 						if cpu, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
@@ -811,7 +811,7 @@ func (c *K8sClient) GetAllNodesMetrics() (map[string]map[string]interface{}, err
 			}
 		}
 
-		// 计算资源使用率
+		// 計算資源使用率
 		cpuUsagePercent := 0.0
 		memoryUsagePercent := 0.0
 
@@ -823,12 +823,12 @@ func (c *K8sClient) GetAllNodesMetrics() (map[string]map[string]interface{}, err
 			memoryUsagePercent = math.Min(100, float64(requestedMemory)/float64(allocatableMemory)*100)
 		}
 
-		// 如果无法获取请求资源信息，使用Pod数量估算
+		// 如果無法獲取請求資源資訊，使用Pod數量估算
 		if requestedCPU == 0 || requestedMemory == 0 {
 			if runningPodCount > 0 {
-				// 根据运行中的Pod数量估算使用率
-				cpuUsagePercent = math.Min(95, float64(runningPodCount)*8)    // 假设每个Pod平均使用8%的CPU
-				memoryUsagePercent = math.Min(90, float64(runningPodCount)*6) // 假设每个Pod平均使用6%的内存
+				// 根據執行中的Pod數量估算使用率
+				cpuUsagePercent = math.Min(95, float64(runningPodCount)*8)    // 假設每個Pod平均使用8%的CPU
+				memoryUsagePercent = math.Min(90, float64(runningPodCount)*6) // 假設每個Pod平均使用6%的記憶體
 			}
 		}
 
@@ -854,55 +854,55 @@ func (c *K8sClient) GetAllNodesMetrics() (map[string]map[string]interface{}, err
 	return result, nil
 }
 
-// UncordonNode 解封节点（标记为可调度）
+// UncordonNode 解封節點（標記為可排程）
 func (c *K8sClient) UncordonNode(nodeName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取节点
+	// 獲取節點
 	node, err := c.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("获取节点失败: %v", err)
+		return fmt.Errorf("獲取節點失敗: %v", err)
 	}
 
-	// 检查节点是否已经可调度
+	// 檢查節點是否已經可排程
 	if !node.Spec.Unschedulable {
-		return nil // 节点已经可调度，无需操作
+		return nil // 節點已經可排程，無需操作
 	}
 
-	// 标记节点为可调度
+	// 標記節點為可排程
 	node.Spec.Unschedulable = false
 
-	// 更新节点
+	// 更新節點
 	_, err = c.clientset.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("解封节点失败: %v", err)
+		return fmt.Errorf("解封節點失敗: %v", err)
 	}
 
 	return nil
 }
 
-// DrainNode 驱逐节点上的Pod
+// DrainNode 驅逐節點上的Pod
 func (c *K8sClient) DrainNode(nodeName string, options map[string]interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // 驱逐操作可能需要更长时间
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // 驅逐操作可能需要更長時間
 	defer cancel()
 
-	// 获取节点
+	// 獲取節點
 	node, err := c.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("获取节点失败: %v", err)
+		return fmt.Errorf("獲取節點失敗: %v", err)
 	}
 
-	// 1. 首先封锁节点，防止新的Pod调度到该节点
+	// 1. 首先封鎖節點，防止新的Pod排程到該節點
 	if !node.Spec.Unschedulable {
 		node.Spec.Unschedulable = true
 		_, err = c.clientset.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
 		if err != nil {
-			return fmt.Errorf("封锁节点失败: %v", err)
+			return fmt.Errorf("封鎖節點失敗: %v", err)
 		}
 	}
 
-	// 解析选项
+	// 解析選項
 	ignoreDaemonSets := true
 	if val, ok := options["ignoreDaemonSets"]; ok {
 		ignoreDaemonSets = val.(bool)
@@ -925,18 +925,18 @@ func (c *K8sClient) DrainNode(nodeName string, options map[string]interface{}) e
 		}
 	}
 
-	// 2. 获取节点上的所有Pod
+	// 2. 獲取節點上的所有Pod
 	fieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
 	pods, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 		FieldSelector: fieldSelector,
 	})
 	if err != nil {
-		return fmt.Errorf("获取节点上的Pod失败: %v", err)
+		return fmt.Errorf("獲取節點上的Pod失敗: %v", err)
 	}
 
-	// 3. 驱逐Pod
+	// 3. 驅逐Pod
 	for _, pod := range pods.Items {
-		// 如果忽略DaemonSet，检查Pod是否由DaemonSet控制
+		// 如果忽略DaemonSet，檢查Pod是否由DaemonSet控制
 		if ignoreDaemonSets {
 			isDaemonSet := false
 			for _, owner := range pod.OwnerReferences {
@@ -946,11 +946,11 @@ func (c *K8sClient) DrainNode(nodeName string, options map[string]interface{}) e
 				}
 			}
 			if isDaemonSet {
-				continue // 跳过DaemonSet管理的Pod
+				continue // 跳過DaemonSet管理的Pod
 			}
 		}
 
-		// 检查Pod是否使用emptyDir卷
+		// 檢查Pod是否使用emptyDir卷
 		if !deleteLocalData {
 			hasEmptyDir := false
 			for _, volume := range pod.Spec.Volumes {
@@ -960,11 +960,11 @@ func (c *K8sClient) DrainNode(nodeName string, options map[string]interface{}) e
 				}
 			}
 			if hasEmptyDir && !force {
-				return fmt.Errorf("pod %s/%s 使用emptyDir卷，需要设置deleteLocalData=true或force=true", pod.Namespace, pod.Name)
+				return fmt.Errorf("pod %s/%s 使用emptyDir卷，需要設定deleteLocalData=true或force=true", pod.Namespace, pod.Name)
 			}
 		}
 
-		// 删除Pod
+		// 刪除Pod
 		deleteOptions := metav1.DeleteOptions{}
 		if gracePeriodSeconds >= 0 {
 			deleteOptions.GracePeriodSeconds = &gracePeriodSeconds
@@ -973,9 +973,9 @@ func (c *K8sClient) DrainNode(nodeName string, options map[string]interface{}) e
 		err = c.clientset.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, deleteOptions)
 		if err != nil {
 			if !force {
-				return fmt.Errorf("驱逐Pod %s/%s 失败: %v", pod.Namespace, pod.Name, err)
+				return fmt.Errorf("驅逐Pod %s/%s 失敗: %v", pod.Namespace, pod.Name, err)
 			}
-			// 如果设置了force，则忽略错误继续执行
+			// 如果設定了force，則忽略錯誤繼續執行
 		}
 	}
 

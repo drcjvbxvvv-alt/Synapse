@@ -26,13 +26,13 @@ func NewLogSourceHandler(db *gorm.DB) *LogSourceHandler {
 func (h *LogSourceHandler) ListLogSources(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("id"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	var sources []models.LogSourceConfig
 	if err := h.db.Where("cluster_id = ?", clusterID).Find(&sources).Error; err != nil {
-		response.InternalError(c, "查询日志源失败")
+		response.InternalError(c, "查詢日誌源失敗")
 		return
 	}
 	// Mask credentials before returning
@@ -47,7 +47,7 @@ func (h *LogSourceHandler) ListLogSources(c *gin.Context) {
 func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("id"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
@@ -65,7 +65,7 @@ func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
 		return
 	}
 	if req.Type != "loki" && req.Type != "elasticsearch" {
-		response.BadRequest(c, "type 必须为 loki 或 elasticsearch")
+		response.BadRequest(c, "type 必須為 loki 或 elasticsearch")
 		return
 	}
 
@@ -80,7 +80,7 @@ func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
 		Enabled:   req.Enabled,
 	}
 	if err := h.db.Create(src).Error; err != nil {
-		response.InternalError(c, "创建日志源失败")
+		response.InternalError(c, "建立日誌源失敗")
 		return
 	}
 	src.Password = ""
@@ -92,18 +92,18 @@ func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
 func (h *LogSourceHandler) UpdateLogSource(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("id"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	srcID, err := strconv.Atoi(c.Param("sourceId"))
 	if err != nil {
-		response.BadRequest(c, "无效的日志源ID")
+		response.BadRequest(c, "無效的日誌源ID")
 		return
 	}
 
 	var src models.LogSourceConfig
 	if err := h.db.Where("id = ? AND cluster_id = ?", srcID, clusterID).First(&src).Error; err != nil {
-		response.NotFound(c, "日志源不存在")
+		response.NotFound(c, "日誌源不存在")
 		return
 	}
 
@@ -141,7 +141,7 @@ func (h *LogSourceHandler) UpdateLogSource(c *gin.Context) {
 	}
 
 	if err := h.db.Model(&src).Updates(updates).Error; err != nil {
-		response.InternalError(c, "更新日志源失败")
+		response.InternalError(c, "更新日誌源失敗")
 		return
 	}
 	response.OK(c, gin.H{"message": "更新成功"})
@@ -151,38 +151,38 @@ func (h *LogSourceHandler) UpdateLogSource(c *gin.Context) {
 func (h *LogSourceHandler) DeleteLogSource(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("id"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	srcID, err := strconv.Atoi(c.Param("sourceId"))
 	if err != nil {
-		response.BadRequest(c, "无效的日志源ID")
+		response.BadRequest(c, "無效的日誌源ID")
 		return
 	}
 
 	if err := h.db.Where("id = ? AND cluster_id = ?", srcID, clusterID).Delete(&models.LogSourceConfig{}).Error; err != nil {
-		response.InternalError(c, "删除日志源失败")
+		response.InternalError(c, "刪除日誌源失敗")
 		return
 	}
-	response.OK(c, gin.H{"message": "删除成功"})
+	response.OK(c, gin.H{"message": "刪除成功"})
 }
 
 // SearchExternalLogs POST /clusters/:id/log-sources/:sourceId/search
 func (h *LogSourceHandler) SearchExternalLogs(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("id"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	srcID, err := strconv.Atoi(c.Param("sourceId"))
 	if err != nil {
-		response.BadRequest(c, "无效的日志源ID")
+		response.BadRequest(c, "無效的日誌源ID")
 		return
 	}
 
 	var src models.LogSourceConfig
 	if err := h.db.Where("id = ? AND cluster_id = ? AND enabled = ?", srcID, clusterID, true).First(&src).Error; err != nil {
-		response.NotFound(c, "日志源不存在或已禁用")
+		response.NotFound(c, "日誌源不存在或已禁用")
 		return
 	}
 
@@ -221,12 +221,12 @@ func (h *LogSourceHandler) SearchExternalLogs(c *gin.Context) {
 		svc := services.NewElasticsearchService(&src)
 		entries, err = svc.Search(req.Index, req.Query, startTime, endTime, req.Limit)
 	default:
-		response.BadRequest(c, "不支持的日志源类型")
+		response.BadRequest(c, "不支援的日誌源型別")
 		return
 	}
 
 	if err != nil {
-		response.InternalError(c, "查询外部日志失败: "+err.Error())
+		response.InternalError(c, "查詢外部日誌失敗: "+err.Error())
 		return
 	}
 

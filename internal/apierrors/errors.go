@@ -74,95 +74,95 @@ const (
 // Auth errors
 
 func ErrAuthInvalidCredentials() *AppError {
-	return &AppError{Code: CodeAuthInvalidCredentials, HTTPStatus: http.StatusUnauthorized, Message: "用户名或密码错误"}
+	return &AppError{Code: CodeAuthInvalidCredentials, HTTPStatus: http.StatusUnauthorized, Message: "使用者名稱或密碼錯誤"}
 }
 
 func ErrAuthAccountDisabled() *AppError {
-	return &AppError{Code: CodeAuthAccountDisabled, HTTPStatus: http.StatusForbidden, Message: "用户账号已被禁用"}
+	return &AppError{Code: CodeAuthAccountDisabled, HTTPStatus: http.StatusForbidden, Message: "使用者賬號已被禁用"}
 }
 
 func ErrAuthUnsupportedType() *AppError {
-	return &AppError{Code: CodeAuthUnsupportedType, HTTPStatus: http.StatusBadRequest, Message: "不支持的认证类型"}
+	return &AppError{Code: CodeAuthUnsupportedType, HTTPStatus: http.StatusBadRequest, Message: "不支援的認證型別"}
 }
 
 func ErrAuthTokenFailed() *AppError {
-	return &AppError{Code: CodeAuthTokenFailed, HTTPStatus: http.StatusInternalServerError, Message: "JWT token生成失败"}
+	return &AppError{Code: CodeAuthTokenFailed, HTTPStatus: http.StatusInternalServerError, Message: "JWT token生成失敗"}
 }
 
 func ErrAuthWrongPassword() *AppError {
-	return &AppError{Code: CodeAuthWrongPassword, HTTPStatus: http.StatusUnauthorized, Message: "原密码错误"}
+	return &AppError{Code: CodeAuthWrongPassword, HTTPStatus: http.StatusUnauthorized, Message: "原密碼錯誤"}
 }
 
 func ErrAuthLDAPReadonly() *AppError {
-	return &AppError{Code: CodeAuthLDAPReadonly, HTTPStatus: http.StatusForbidden, Message: "LDAP用户不能在此修改密码"}
+	return &AppError{Code: CodeAuthLDAPReadonly, HTTPStatus: http.StatusForbidden, Message: "LDAP使用者不能在此修改密碼"}
 }
 
 func ErrAuthLDAPNotEnabled() *AppError {
-	return &AppError{Code: CodeAuthLDAPNotEnabled, HTTPStatus: http.StatusBadRequest, Message: "LDAP认证未启用"}
+	return &AppError{Code: CodeAuthLDAPNotEnabled, HTTPStatus: http.StatusBadRequest, Message: "LDAP認證未啟用"}
 }
 
 // User errors
 
 func ErrUserNotFound() *AppError {
-	return &AppError{Code: CodeUserNotFound, HTTPStatus: http.StatusNotFound, Message: "用户不存在"}
+	return &AppError{Code: CodeUserNotFound, HTTPStatus: http.StatusNotFound, Message: "使用者不存在"}
 }
 
 func ErrUserDuplicateUsername() *AppError {
-	return &AppError{Code: CodeUserDuplicateUsername, HTTPStatus: http.StatusConflict, Message: "用户名已存在"}
+	return &AppError{Code: CodeUserDuplicateUsername, HTTPStatus: http.StatusConflict, Message: "使用者名稱已存在"}
 }
 
 func ErrUserAdminProtected() *AppError {
-	return &AppError{Code: CodeUserAdminProtected, HTTPStatus: http.StatusForbidden, Message: "不能删除 admin 用户"}
+	return &AppError{Code: CodeUserAdminProtected, HTTPStatus: http.StatusForbidden, Message: "不能刪除 admin 使用者"}
 }
 
 func ErrUserInvalidStatus() *AppError {
-	return &AppError{Code: CodeUserInvalidStatus, HTTPStatus: http.StatusBadRequest, Message: "无效的状态值"}
+	return &AppError{Code: CodeUserInvalidStatus, HTTPStatus: http.StatusBadRequest, Message: "無效的狀態值"}
 }
 
 // Group errors
 
 func ErrGroupNotFound() *AppError {
-	return &AppError{Code: CodeGroupNotFound, HTTPStatus: http.StatusNotFound, Message: "用户组不存在"}
+	return &AppError{Code: CodeGroupNotFound, HTTPStatus: http.StatusNotFound, Message: "使用者組不存在"}
 }
 
 func ErrGroupDuplicateName() *AppError {
-	return &AppError{Code: "GROUP_DUPLICATE_NAME", HTTPStatus: http.StatusConflict, Message: "用户组名称已存在"}
+	return &AppError{Code: "GROUP_DUPLICATE_NAME", HTTPStatus: http.StatusConflict, Message: "使用者組名稱已存在"}
 }
 
 func ErrGroupHasPermissions() *AppError {
-	return &AppError{Code: CodeGroupHasPermissions, HTTPStatus: http.StatusConflict, Message: "该用户组还有关联的权限配置，请先删除相关权限"}
+	return &AppError{Code: CodeGroupHasPermissions, HTTPStatus: http.StatusConflict, Message: "該使用者組還有關聯的權限配置，請先刪除相關權限"}
 }
 
 // Permission errors
 
 func ErrPermissionDuplicate() *AppError {
-	return &AppError{Code: CodePermissionDuplicate, HTTPStatus: http.StatusConflict, Message: "已有权限配置"}
+	return &AppError{Code: CodePermissionDuplicate, HTTPStatus: http.StatusConflict, Message: "已有權限配置"}
 }
 
 func ErrPermissionInvalidType() *AppError {
-	return &AppError{Code: CodePermissionInvalidType, HTTPStatus: http.StatusBadRequest, Message: "无效的权限类型"}
+	return &AppError{Code: CodePermissionInvalidType, HTTPStatus: http.StatusBadRequest, Message: "無效的權限型別"}
 }
 
 func ErrPermissionCustomRoleRequired() *AppError {
-	return &AppError{Code: CodePermissionCustomRoleRequired, HTTPStatus: http.StatusBadRequest, Message: "自定义权限必须指定ClusterRole"}
+	return &AppError{Code: CodePermissionCustomRoleRequired, HTTPStatus: http.StatusBadRequest, Message: "自定義權限必須指定ClusterRole"}
 }
 
 func ErrPermissionAmbiguousTarget() *AppError {
-	return &AppError{Code: CodePermissionAmbiguousTarget, HTTPStatus: http.StatusBadRequest, Message: "不能同时指定用户和用户组"}
+	return &AppError{Code: CodePermissionAmbiguousTarget, HTTPStatus: http.StatusBadRequest, Message: "不能同時指定使用者和使用者組"}
 }
 
 func ErrPermissionNotFound() *AppError {
-	return &AppError{Code: CodePermissionNotFound, HTTPStatus: http.StatusNotFound, Message: "权限配置不存在"}
+	return &AppError{Code: CodePermissionNotFound, HTTPStatus: http.StatusNotFound, Message: "權限配置不存在"}
 }
 
 // Cluster errors
 
 func ErrClusterNotFound() *AppError {
-	return &AppError{Code: CodeClusterNotFound, HTTPStatus: http.StatusNotFound, Message: "集群不存在"}
+	return &AppError{Code: CodeClusterNotFound, HTTPStatus: http.StatusNotFound, Message: "叢集不存在"}
 }
 
 func ErrClusterDuplicateName() *AppError {
-	return &AppError{Code: CodeClusterDuplicateName, HTTPStatus: http.StatusConflict, Message: "集群名称已存在"}
+	return &AppError{Code: CodeClusterDuplicateName, HTTPStatus: http.StatusConflict, Message: "叢集名稱已存在"}
 }
 
 // Generic errors

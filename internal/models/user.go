@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// User 用户模型
+// User 使用者模型
 type User struct {
 	ID           uint           `json:"id" gorm:"primaryKey"`
 	Username     string         `json:"username" gorm:"uniqueIndex;not null;size:50"`

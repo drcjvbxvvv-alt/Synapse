@@ -23,7 +23,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// KubectlTerminalHandler kubectl终端WebSocket处理器
+// KubectlTerminalHandler kubectl終端WebSocket處理器
 type KubectlTerminalHandler struct {
 	clusterService *services.ClusterService
 	auditService   *services.AuditService
@@ -32,10 +32,10 @@ type KubectlTerminalHandler struct {
 	sessionsMutex  sync.RWMutex
 }
 
-// KubectlSession kubectl会话
+// KubectlSession kubectl會話
 type KubectlSession struct {
 	ID             string
-	AuditSessionID uint // 审计会话ID
+	AuditSessionID uint // 審計會話ID
 	ClusterID      string
 	Namespace      string
 	Conn           *websocket.Conn
@@ -49,13 +49,13 @@ type KubectlSession struct {
 	Mutex          sync.Mutex
 }
 
-// TerminalMessage 终端消息
+// TerminalMessage 終端訊息
 type TerminalMessage struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
 }
 
-// NewKubectlTerminalHandler 创建kubectl终端处理器
+// NewKubectlTerminalHandler 建立kubectl終端處理器
 func NewKubectlTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService) *KubectlTerminalHandler {
 	return &KubectlTerminalHandler{
 		clusterService: clusterService,
@@ -76,13 +76,13 @@ func NewKubectlTerminalHandler(clusterService *services.ClusterService, auditSer
 	}
 }
 
-// HandleKubectlTerminal 处理kubectl终端WebSocket连接
+// HandleKubectlTerminal 處理kubectl終端WebSocket連線
 func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 	namespace := c.DefaultQuery("namespace", "default")
-	userID := c.GetUint("user_id") // 从JWT中获取用户ID
+	userID := c.GetUint("user_id") // 從JWT中獲取使用者ID
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	cid, parseErr := strconv.ParseUint(clusterID, 10, 32)
 	if parseErr != nil {
 		response.BadRequest(c, "無效的叢集 ID")
@@ -90,11 +90,11 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 	}
 	cluster, err := h.clusterService.GetCluster(uint(cid))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 创建审计会话
+	// 建立審計會話
 	var auditSessionID uint
 	if h.auditService != nil {
 		auditSession, err := h.auditService.CreateSession(&services.CreateSessionRequest{
@@ -104,17 +104,17 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 			Namespace:  namespace,
 		})
 		if err != nil {
-			logger.Error("创建审计会话失败", "error", err)
+			logger.Error("建立審計會話失敗", "error", err)
 		} else {
 			auditSessionID = auditSession.ID
 		}
 	}
 
-	// 升级到WebSocket连接
+	// 升級到WebSocket連線
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		logger.Error("升级WebSocket连接失败", "error", err)
-		// 关闭审计会话
+		logger.Error("升級WebSocket連線失敗", "error", err)
+		// 關閉審計會話
 		if h.auditService != nil && auditSessionID > 0 {
 			_ = h.auditService.CloseSession(auditSessionID, "error")
 		}
@@ -124,7 +124,7 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		_ = conn.Close()
 	}()
 
-	// 创建会话
+	// 建立會話
 	sessionID := fmt.Sprintf("%s-%d", clusterID, time.Now().Unix())
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -139,12 +139,12 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		History:        make([]string, 0),
 	}
 
-	// 注册会话
+	// 註冊會話
 	h.sessionsMutex.Lock()
 	h.sessions[sessionID] = session
 	h.sessionsMutex.Unlock()
 
-	// 清理会话
+	// 清理會話
 	defer func() {
 		h.sessionsMutex.Lock()
 		delete(h.sessions, sessionID)
@@ -153,33 +153,33 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		if session.Cmd != nil && session.Cmd.Process != nil {
 			_ = session.Cmd.Process.Kill()
 		}
-		// 关闭审计会话
+		// 關閉審計會話
 		if h.auditService != nil && auditSessionID > 0 {
 			_ = h.auditService.CloseSession(auditSessionID, "closed")
 		}
 	}()
 
-	// 创建临时kubeconfig文件
+	// 建立臨時kubeconfig檔案
 	kubeconfigPath, err := h.createTempKubeconfig(cluster)
 	if err != nil {
-		h.sendMessage(conn, "error", fmt.Sprintf("创建kubeconfig失败: %v", err))
+		h.sendMessage(conn, "error", fmt.Sprintf("建立kubeconfig失敗: %v", err))
 		return
 	}
 	defer func() {
 		_ = os.Remove(kubeconfigPath)
 	}()
 
-	// 发送欢迎消息
+	// 傳送歡迎訊息
 	h.sendMessage(conn, "output", fmt.Sprintf("Connected to cluster: %s\n", cluster.Name))
 	h.sendMessage(conn, "output", fmt.Sprintf("Default namespace: %s\n", namespace))
 	h.sendMessage(conn, "command_result", "")
 
-	// 处理WebSocket消息
+	// 處理WebSocket訊息
 	for {
 		var msg TerminalMessage
 		err := conn.ReadJSON(&msg)
 		if err != nil {
-			logger.Error("读取WebSocket消息失败", "error", err)
+			logger.Error("讀取WebSocket訊息失敗", "error", err)
 			break
 		}
 
@@ -200,12 +200,12 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 	}
 }
 
-// handleInput 处理用户输入
+// handleInput 處理使用者輸入
 func (h *KubectlTerminalHandler) handleInput(session *KubectlSession, input string) {
 	session.Mutex.Lock()
 	defer session.Mutex.Unlock()
 
-	if input == "\u007f" { // 退格键
+	if input == "\u007f" { // 退格鍵
 		if len(session.LastCommand) > 0 {
 			session.LastCommand = session.LastCommand[:len(session.LastCommand)-1]
 			h.sendMessage(session.Conn, "output", "\b \b")
@@ -216,12 +216,12 @@ func (h *KubectlTerminalHandler) handleInput(session *KubectlSession, input stri
 	}
 }
 
-// handleCommand 处理命令执行
+// handleCommand 處理命令執行
 func (h *KubectlTerminalHandler) handleCommand(session *KubectlSession, kubeconfigPath, namespace string) {
 	session.Mutex.Lock()
 	command := strings.TrimSpace(session.LastCommand)
 	session.LastCommand = ""
-	// 使用会话中的命名空间，而不是传入的参数
+	// 使用會話中的命名空間，而不是傳入的參數
 	currentNamespace := session.Namespace
 	session.Mutex.Unlock()
 
@@ -230,35 +230,35 @@ func (h *KubectlTerminalHandler) handleCommand(session *KubectlSession, kubeconf
 		return
 	}
 
-	// 添加到历史记录
+	// 新增到歷史記錄
 	session.History = append(session.History, command)
 	if len(session.History) > 100 {
 		session.History = session.History[1:]
 	}
 
-	// 记录命令到审计数据库（异步）
+	// 記錄命令到審計資料庫（非同步）
 	if h.auditService != nil && session.AuditSessionID > 0 {
 		h.auditService.RecordCommandAsync(session.AuditSessionID, command, command, nil)
 	}
 
-	// 执行kubectl命令，使用会话中的命名空间
+	// 執行kubectl命令，使用會話中的命名空間
 	h.executeKubectlCommand(session, kubeconfigPath, currentNamespace, command)
 }
 
-// handleQuickCommand 处理快捷命令
+// handleQuickCommand 處理快捷命令
 func (h *KubectlTerminalHandler) handleQuickCommand(session *KubectlSession, kubeconfigPath, namespace, command string) {
 	h.sendMessage(session.Conn, "output", fmt.Sprintf("\n%s\n", command))
 
-	// 记录快捷命令到审计数据库（异步）
+	// 記錄快捷命令到審計資料庫（非同步）
 	if h.auditService != nil && session.AuditSessionID > 0 {
 		h.auditService.RecordCommandAsync(session.AuditSessionID, command, command, nil)
 	}
 
-	// 使用会话中的命名空间，而不是传入的参数
+	// 使用會話中的命名空間，而不是傳入的參數
 	h.executeKubectlCommand(session, kubeconfigPath, session.Namespace, command)
 }
 
-// executeKubectlCommand 执行kubectl命令
+// executeKubectlCommand 執行kubectl命令
 func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, kubeconfigPath, namespace, command string) {
 	// 解析命令
 	parts := strings.Fields(command)
@@ -267,83 +267,83 @@ func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, 
 		return
 	}
 
-	// 处理特殊命令
+	// 處理特殊命令
 	if h.handleSpecialCommands(session, command) {
 		return
 	}
 
-	// 构建kubectl命令
+	// 構建kubectl命令
 	var args []string
 	if parts[0] == "kubectl" {
 		args = parts[1:]
 	} else {
-		// 如果用户没有输入kubectl前缀，自动添加
+		// 如果使用者沒有輸入kubectl字首，自動新增
 		args = parts
 	}
 
-	// 检查是否需要添加namespace参数
+	// 檢查是否需要新增namespace參數
 	needsNamespace := h.commandNeedsNamespace(args)
 
-	// 添加kubeconfig参数
+	// 新增kubeconfig參數
 	kubectlArgs := []string{"--kubeconfig", kubeconfigPath}
 
-	// 如果命令需要namespace且用户没有指定，则添加默认namespace
+	// 如果命令需要namespace且使用者沒有指定，則新增預設namespace
 	if needsNamespace && !h.hasNamespaceFlag(args) {
 		kubectlArgs = append(kubectlArgs, "--namespace", namespace)
 	}
 
 	kubectlArgs = append(kubectlArgs, args...)
 
-	// 检查是否是流式命令（如 logs -f）
+	// 檢查是否是流式命令（如 logs -f）
 	isStreamingCommand := h.isStreamingCommand(args)
 
-	// 创建命令
+	// 建立命令
 	var ctx context.Context
 	var cancel context.CancelFunc
 
 	if isStreamingCommand {
-		// 流式命令不设置超时
+		// 流式命令不設定超時
 		ctx, cancel = context.WithCancel(session.Context)
 	} else {
-		// 非流式命令设置超时
+		// 非流式命令設定超時
 		ctx, cancel = context.WithTimeout(session.Context, 60*time.Second)
 	}
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "kubectl", kubectlArgs...) // #nosec G204 -- kubectl 参数经过白名单校验
+	cmd := exec.CommandContext(ctx, "kubectl", kubectlArgs...) // #nosec G204 -- kubectl 參數經過白名單校驗
 
-	// 设置环境变量
+	// 設定環境變數
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("KUBECONFIG=%s", kubeconfigPath),
 	)
 
-	// 保存命令到会话，以便可以被中断
+	// 儲存命令到會話，以便可以被中斷
 	session.Mutex.Lock()
 	session.Cmd = cmd
 	session.Mutex.Unlock()
 
-	// 如果是流式命令，使用管道处理输出
+	// 如果是流式命令，使用管道處理輸出
 	if isStreamingCommand {
-		// 创建管道
+		// 建立管道
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			h.sendMessage(session.Conn, "error", fmt.Sprintf("创建输出管道失败: %v", err))
+			h.sendMessage(session.Conn, "error", fmt.Sprintf("建立輸出管道失敗: %v", err))
 			return
 		}
 
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
-			h.sendMessage(session.Conn, "error", fmt.Sprintf("创建错误管道失败: %v", err))
+			h.sendMessage(session.Conn, "error", fmt.Sprintf("建立錯誤管道失敗: %v", err))
 			return
 		}
 
-		// 启动命令
+		// 啟動命令
 		if err := cmd.Start(); err != nil {
-			h.sendMessage(session.Conn, "error", fmt.Sprintf("启动命令失败: %v", err))
+			h.sendMessage(session.Conn, "error", fmt.Sprintf("啟動命令失敗: %v", err))
 			return
 		}
 
-		// 读取标准输出
+		// 讀取標準輸出
 		go func() {
 			buffer := make([]byte, wsBufferSize)
 			for {
@@ -357,7 +357,7 @@ func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, 
 			}
 		}()
 
-		// 读取标准错误
+		// 讀取標準錯誤
 		go func() {
 			buffer := make([]byte, wsBufferSize)
 			for {
@@ -375,11 +375,11 @@ func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, 
 		go func() {
 			err := cmd.Wait()
 			if err != nil && ctx.Err() != context.Canceled {
-				h.sendMessage(session.Conn, "error", fmt.Sprintf("命令执行失败: %v", err))
+				h.sendMessage(session.Conn, "error", fmt.Sprintf("命令執行失敗: %v", err))
 			}
 			h.sendMessage(session.Conn, "command_result", "")
 
-			// 清除会话中的命令引用
+			// 清除會話中的命令引用
 			session.Mutex.Lock()
 			session.Cmd = nil
 			session.Mutex.Unlock()
@@ -388,19 +388,19 @@ func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, 
 		// 非流式命令，使用CombinedOutput
 		output, err := cmd.CombinedOutput()
 
-		// 清除会话中的命令引用
+		// 清除會話中的命令引用
 		session.Mutex.Lock()
 		session.Cmd = nil
 		session.Mutex.Unlock()
 
 		if err != nil {
 			if ctx.Err() == context.DeadlineExceeded {
-				h.sendMessage(session.Conn, "error", "命令执行超时 (60秒)")
+				h.sendMessage(session.Conn, "error", "命令執行超時 (60秒)")
 			} else {
-				h.sendMessage(session.Conn, "error", fmt.Sprintf("命令执行失败: %v\n%s", err, string(output)))
+				h.sendMessage(session.Conn, "error", fmt.Sprintf("命令執行失敗: %v\n%s", err, string(output)))
 			}
 		} else {
-			// 发送输出
+			// 傳送輸出
 			if len(output) > 0 {
 				h.sendMessage(session.Conn, "output", string(output))
 			}
@@ -410,38 +410,38 @@ func (h *KubectlTerminalHandler) executeKubectlCommand(session *KubectlSession, 
 	}
 }
 
-// isStreamingCommand 检查是否是流式命令
+// isStreamingCommand 檢查是否是流式命令
 func (h *KubectlTerminalHandler) isStreamingCommand(args []string) bool {
 	if len(args) == 0 {
 		return false
 	}
 
-	// 检查是否是 logs 命令 (无论是否有 -f 参数，都作为流式处理)
+	// 檢查是否是 logs 命令 (無論是否有 -f 參數，都作為流式處理)
 	if args[0] == "logs" {
 		return true
 	}
 
-	// 检查是否是 exec 命令
+	// 檢查是否是 exec 命令
 	if args[0] == "exec" {
 		return true
 	}
 
-	// 检查是否是 port-forward 命令
+	// 檢查是否是 port-forward 命令
 	if args[0] == "port-forward" {
 		return true
 	}
 
-	// 检查是否是 watch 命令
+	// 檢查是否是 watch 命令
 	if args[0] == "watch" {
 		return true
 	}
 
-	// 检查是否是 top 命令
+	// 檢查是否是 top 命令
 	if args[0] == "top" {
 		return true
 	}
 
-	// 检查命令行中是否包含 --watch 参数
+	// 檢查命令列中是否包含 --watch 參數
 	for _, arg := range args {
 		if arg == "--watch" || arg == "-w" {
 			return true
@@ -451,7 +451,7 @@ func (h *KubectlTerminalHandler) isStreamingCommand(args []string) bool {
 	return false
 }
 
-// handleSpecialCommands 处理特殊命令
+// handleSpecialCommands 處理特殊命令
 func (h *KubectlTerminalHandler) handleSpecialCommands(session *KubectlSession, command string) bool {
 	command = strings.TrimSpace(command)
 
@@ -467,7 +467,7 @@ func (h *KubectlTerminalHandler) handleSpecialCommands(session *KubectlSession, 
 		h.sendHistoryMessage(session)
 		return true
 	case strings.HasPrefix(command, "ns "):
-		// 切换namespace的快捷命令
+		// 切換namespace的快捷命令
 		namespace := strings.TrimSpace(command[3:])
 		if namespace != "" {
 			session.Namespace = namespace
@@ -480,7 +480,7 @@ func (h *KubectlTerminalHandler) handleSpecialCommands(session *KubectlSession, 
 	return false
 }
 
-// commandNeedsNamespace 检查命令是否需要namespace
+// commandNeedsNamespace 檢查命令是否需要namespace
 func (h *KubectlTerminalHandler) commandNeedsNamespace(args []string) bool {
 	if len(args) == 0 {
 		return false
@@ -503,7 +503,7 @@ func (h *KubectlTerminalHandler) commandNeedsNamespace(args []string) bool {
 	return true
 }
 
-// hasNamespaceFlag 检查命令是否已经包含namespace参数
+// hasNamespaceFlag 檢查命令是否已經包含namespace參數
 func (h *KubectlTerminalHandler) hasNamespaceFlag(args []string) bool {
 	for _, arg := range args {
 		if arg == "-n" || arg == "--namespace" {
@@ -519,43 +519,43 @@ func (h *KubectlTerminalHandler) hasNamespaceFlag(args []string) bool {
 	return false
 }
 
-// sendHelpMessage 发送帮助信息
+// sendHelpMessage 傳送幫助資訊
 func (h *KubectlTerminalHandler) sendHelpMessage(session *KubectlSession) {
 	helpText := `
-kubectl终端帮助信息:
+kubectl終端幫助資訊:
 
 基本命令:
-  kubectl get pods              - 查看Pod列表
-  kubectl get nodes             - 查看节点列表
-  kubectl get svc               - 查看服务列表
-  kubectl get deployments      - 查看部署列表
-  kubectl describe pod <name>   - 查看Pod详情
-  kubectl logs <pod-name>       - 查看Pod日志
-  kubectl exec -it <pod> bash   - 进入Pod容器
+  kubectl get pods              - 檢視Pod列表
+  kubectl get nodes             - 檢視節點列表
+  kubectl get svc               - 檢視服務列表
+  kubectl get deployments      - 檢視部署列表
+  kubectl describe pod <name>   - 檢視Pod詳情
+  kubectl logs <pod-name>       - 檢視Pod日誌
+  kubectl exec -it <pod> bash   - 進入Pod容器
 
 快捷命令:
   clear/cls                     - 清屏
-  help/?                        - 显示帮助
-  history                       - 显示命令历史
-  ns <namespace>                - 切换命名空间
+  help/?                        - 顯示幫助
+  history                       - 顯示命令歷史
+  ns <namespace>                - 切換命名空間
 
 提示:
-  - 可以省略kubectl前缀，系统会自动添加
-  - 使用Tab键可以自动补全(部分支持)
-  - 使用上下箭头键浏览历史命令
-  - 当前命名空间会自动应用到相关命令
+  - 可以省略kubectl字首，系統會自動新增
+  - 使用Tab鍵可以自動補全(部分支援)
+  - 使用上下箭頭鍵瀏覽歷史命令
+  - 當前命名空間會自動應用到相關命令
 
 `
 	h.sendMessage(session.Conn, "output", helpText)
 	h.sendMessage(session.Conn, "command_result", "")
 }
 
-// sendHistoryMessage 发送历史命令
+// sendHistoryMessage 傳送歷史命令
 func (h *KubectlTerminalHandler) sendHistoryMessage(session *KubectlSession) {
 	if len(session.History) == 0 {
-		h.sendMessage(session.Conn, "output", "暂无命令历史\n")
+		h.sendMessage(session.Conn, "output", "暫無命令歷史\n")
 	} else {
-		historyText := "命令历史:\n"
+		historyText := "命令歷史:\n"
 		for i, cmd := range session.History {
 			historyText += fmt.Sprintf("  %d: %s\n", i+1, cmd)
 		}
@@ -564,31 +564,31 @@ func (h *KubectlTerminalHandler) sendHistoryMessage(session *KubectlSession) {
 	h.sendMessage(session.Conn, "command_result", "")
 }
 
-// handleInterrupt 处理中断信号
+// handleInterrupt 處理中斷訊號
 func (h *KubectlTerminalHandler) handleInterrupt(session *KubectlSession) {
 	session.Mutex.Lock()
 	cmd := session.Cmd
 	session.LastCommand = ""
 	session.Mutex.Unlock()
 
-	// 发送中断信号到终端
+	// 傳送中斷訊號到終端
 	h.sendMessage(session.Conn, "output", "^C\n")
 
-	// 如果有正在运行的命令，尝试终止它
+	// 如果有正在執行的命令，嘗試終止它
 	if cmd != nil && cmd.Process != nil {
-		logger.Info("正在终止命令", "pid", cmd.Process.Pid)
+		logger.Info("正在終止命令", "pid", cmd.Process.Pid)
 
-		// 在Windows上，Kill()可能不会立即终止进程，尝试使用taskkill
+		// 在Windows上，Kill()可能不會立即終止程序，嘗試使用taskkill
 		if runtime.GOOS == "windows" {
-			_ = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run() // #nosec G204 -- PID 来自已知进程
+			_ = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid)).Run() // #nosec G204 -- PID 來自已知程序
 		} else {
-			// 在Unix系统上，发送SIGINT信号（等同于Ctrl+C）
+			// 在Unix系統上，傳送SIGINT訊號（等同於Ctrl+C）
 			_ = cmd.Process.Signal(syscall.SIGINT)
 
-			// 给进程一点时间响应SIGINT
+			// 給程序一點時間響應SIGINT
 			time.Sleep(100 * time.Millisecond)
 
-			// 如果进程仍在运行，强制终止
+			// 如果程序仍在執行，強制終止
 			if cmd.ProcessState == nil || !cmd.ProcessState.Exited() {
 				_ = cmd.Process.Kill()
 			}
@@ -598,23 +598,23 @@ func (h *KubectlTerminalHandler) handleInterrupt(session *KubectlSession) {
 	h.sendMessage(session.Conn, "command_result", "")
 }
 
-// createTempKubeconfig 创建临时kubeconfig文件
+// createTempKubeconfig 建立臨時kubeconfig檔案
 func (h *KubectlTerminalHandler) createTempKubeconfig(cluster *models.Cluster) (string, error) {
-	// 创建临时文件
+	// 建立臨時檔案
 	tmpFile, err := os.CreateTemp("", "kubeconfig-*.yaml")
 	if err != nil {
-		return "", fmt.Errorf("创建临时文件失败: %v", err)
+		return "", fmt.Errorf("建立臨時檔案失敗: %v", err)
 	}
 	defer func() {
 		_ = tmpFile.Close()
 	}()
 
-	// 写入kubeconfig内容
+	// 寫入kubeconfig內容
 	var kubeconfigContent string
 	if cluster.KubeconfigEnc != "" {
 		kubeconfigContent = cluster.KubeconfigEnc
 	} else if cluster.SATokenEnc != "" {
-		// 从Token创建kubeconfig
+		// 從Token建立kubeconfig
 		kubeconfigContent = services.CreateKubeconfigFromToken(
 			cluster.Name,
 			cluster.APIServer,
@@ -622,18 +622,18 @@ func (h *KubectlTerminalHandler) createTempKubeconfig(cluster *models.Cluster) (
 			cluster.CAEnc,
 		)
 	} else {
-		return "", fmt.Errorf("集群缺少认证信息")
+		return "", fmt.Errorf("叢集缺少認證資訊")
 	}
 
 	_, err = tmpFile.WriteString(kubeconfigContent)
 	if err != nil {
-		return "", fmt.Errorf("写入kubeconfig失败: %v", err)
+		return "", fmt.Errorf("寫入kubeconfig失敗: %v", err)
 	}
 
 	return tmpFile.Name(), nil
 }
 
-// sendMessage 发送WebSocket消息
+// sendMessage 傳送WebSocket訊息
 func (h *KubectlTerminalHandler) sendMessage(conn *websocket.Conn, msgType, data string) {
 	msg := TerminalMessage{
 		Type: msgType,
@@ -641,7 +641,7 @@ func (h *KubectlTerminalHandler) sendMessage(conn *websocket.Conn, msgType, data
 	}
 
 	if err := conn.WriteJSON(msg); err != nil {
-		logger.Error("发送WebSocket消息失败", "error", err)
+		logger.Error("傳送WebSocket訊息失敗", "error", err)
 	}
 }
 

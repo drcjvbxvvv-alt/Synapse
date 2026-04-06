@@ -72,13 +72,13 @@ func (h *HelmHandler) ListReleases(c *gin.Context) {
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "無效的集群 ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -106,13 +106,13 @@ func (h *HelmHandler) GetRelease(c *gin.Context) {
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "無效的集群 ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -151,13 +151,13 @@ func (h *HelmHandler) GetReleaseHistory(c *gin.Context) {
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "無效的集群 ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -216,13 +216,13 @@ func (h *HelmHandler) GetReleaseValues(c *gin.Context) {
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "無效的集群 ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -243,13 +243,13 @@ func (h *HelmHandler) InstallRelease(c *gin.Context) {
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "無效的集群 ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -278,13 +278,13 @@ func (h *HelmHandler) UpgradeRelease(c *gin.Context) {
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "無效的集群 ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -313,13 +313,13 @@ func (h *HelmHandler) RollbackRelease(c *gin.Context) {
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "無效的集群 ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -349,13 +349,13 @@ func (h *HelmHandler) UninstallRelease(c *gin.Context) {
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "無效的集群 ID")
+		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 

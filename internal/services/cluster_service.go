@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// StoredCluster 存储的集群信息结构体
+// StoredCluster 儲存的叢集資訊結構體
 type StoredCluster struct {
 	ID            string            `json:"id"`
 	Name          string            `json:"name"`
@@ -28,92 +28,92 @@ type StoredCluster struct {
 	LastHeartbeat time.Time         `json:"lastHeartbeat"`
 }
 
-// ClusterService 集群服务
+// ClusterService 叢集服務
 type ClusterService struct {
 	db *gorm.DB
 }
 
-// NewClusterService 创建集群服务
+// NewClusterService 建立叢集服務
 func NewClusterService(db *gorm.DB) *ClusterService {
 	return &ClusterService{db: db}
 }
 
-// CreateCluster 创建集群
+// CreateCluster 建立叢集
 func (s *ClusterService) CreateCluster(cluster *models.Cluster) error {
-	// 设置创建时间
+	// 設定建立時間
 	cluster.CreatedAt = time.Now()
 	cluster.UpdatedAt = time.Now()
 	cluster.LastHeartbeat = &cluster.CreatedAt
 
-	// 确保 MonitoringConfig 是有效的 JSON，避免 MySQL JSON 字段报错
+	// 確保 MonitoringConfig 是有效的 JSON，避免 MySQL JSON 欄位報錯
 	if cluster.MonitoringConfig == "" {
 		cluster.MonitoringConfig = "{}"
 	}
-	// 验证 MonitoringConfig 是否为有效的 JSON
+	// 驗證 MonitoringConfig 是否為有效的 JSON
 	if cluster.MonitoringConfig != "" {
 		var testJSON interface{}
 		if err := json.Unmarshal([]byte(cluster.MonitoringConfig), &testJSON); err != nil {
-			// 如果不是有效的 JSON，设置为空对象
+			// 如果不是有效的 JSON，設定為空物件
 			cluster.MonitoringConfig = "{}"
 		}
 	}
 
-	// 确保 AlertManagerConfig 是有效的 JSON，避免 MySQL JSON 字段报错
+	// 確保 AlertManagerConfig 是有效的 JSON，避免 MySQL JSON 欄位報錯
 	if cluster.AlertManagerConfig == "" {
 		cluster.AlertManagerConfig = "{}"
 	}
-	// 验证 AlertManagerConfig 是否为有效的 JSON
+	// 驗證 AlertManagerConfig 是否為有效的 JSON
 	if cluster.AlertManagerConfig != "" {
 		var testJSON interface{}
 		if err := json.Unmarshal([]byte(cluster.AlertManagerConfig), &testJSON); err != nil {
-			// 如果不是有效的 JSON，设置为空对象
+			// 如果不是有效的 JSON，設定為空物件
 			cluster.AlertManagerConfig = "{}"
 		}
 	}
 
-	// 保存到数据库
+	// 儲存到資料庫
 	if err := s.db.Create(cluster).Error; err != nil {
-		logger.Error("创建集群失败", "error", err)
-		return fmt.Errorf("创建集群失败: %w", err)
+		logger.Error("建立叢集失敗", "error", err)
+		return fmt.Errorf("建立叢集失敗: %w", err)
 	}
 
-	logger.Info("集群创建成功", "id", cluster.ID, "name", cluster.Name)
+	logger.Info("叢集建立成功", "id", cluster.ID, "name", cluster.Name)
 	return nil
 }
 
-// GetCluster 获取单个集群
+// GetCluster 獲取單個叢集
 func (s *ClusterService) GetCluster(id uint) (*models.Cluster, error) {
 	var cluster models.Cluster
 	if err := s.db.First(&cluster, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("集群不存在: %d", id)
+			return nil, fmt.Errorf("叢集不存在: %d", id)
 		}
-		return nil, fmt.Errorf("获取集群失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集失敗: %w", err)
 	}
 	return &cluster, nil
 }
 
-// GetAllClusters 获取所有集群
+// GetAllClusters 獲取所有叢集
 func (s *ClusterService) GetAllClusters() ([]*models.Cluster, error) {
 	var clusters []*models.Cluster
 	if err := s.db.Find(&clusters).Error; err != nil {
-		logger.Error("获取集群列表失败", "error", err)
-		return nil, fmt.Errorf("获取集群列表失败: %w", err)
+		logger.Error("獲取叢集列表失敗", "error", err)
+		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 	return clusters, nil
 }
 
-// GetConnectableClusters 獲取可連接的叢集（排除 unhealthy 狀態），用於 Informer 預熱
+// GetConnectableClusters 獲取可連線的叢集（排除 unhealthy 狀態），用於 Informer 預熱
 func (s *ClusterService) GetConnectableClusters() ([]*models.Cluster, error) {
 	var clusters []*models.Cluster
 	if err := s.db.Where("status != ?", "unhealthy").Find(&clusters).Error; err != nil {
-		logger.Error("获取可连接集群列表失败", "error", err)
-		return nil, fmt.Errorf("获取可连接集群列表失败: %w", err)
+		logger.Error("獲取可連線叢集列表失敗", "error", err)
+		return nil, fmt.Errorf("獲取可連線叢集列表失敗: %w", err)
 	}
 	return clusters, nil
 }
 
-// UpdateClusterStatus 更新集群状态
+// UpdateClusterStatus 更新叢集狀態
 func (s *ClusterService) UpdateClusterStatus(id uint, status string, version string) error {
 	now := time.Now()
 	result := s.db.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
@@ -124,119 +124,119 @@ func (s *ClusterService) UpdateClusterStatus(id uint, status string, version str
 	})
 
 	if result.Error != nil {
-		return fmt.Errorf("更新集群状态失败: %w", result.Error)
+		return fmt.Errorf("更新叢集狀態失敗: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("集群不存在: %d", id)
+		return fmt.Errorf("叢集不存在: %d", id)
 	}
 
 	return nil
 }
 
-// DeleteCluster 删除集群
+// DeleteCluster 刪除叢集
 func (s *ClusterService) DeleteCluster(id uint) error {
-	// 使用事务确保数据一致性
+	// 使用事務確保資料一致性
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		// 1. 检查集群是否存在
+		// 1. 檢查叢集是否存在
 		var cluster models.Cluster
 		if err := tx.First(&cluster, id).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
-				return fmt.Errorf("集群不存在: %d", id)
+				return fmt.Errorf("叢集不存在: %d", id)
 			}
-			return fmt.Errorf("查询集群失败: %w", err)
+			return fmt.Errorf("查詢叢集失敗: %w", err)
 		}
 
-		// 2. 删除关联的集群权限（硬删除）
+		// 2. 刪除關聯的叢集權限（硬刪除）
 		if err := tx.Unscoped().Where("cluster_id = ?", id).Delete(&models.ClusterPermission{}).Error; err != nil {
-			logger.Error("删除集群权限失败", "cluster_id", id, "error", err)
-			return fmt.Errorf("删除集群权限失败: %w", err)
+			logger.Error("刪除叢集權限失敗", "cluster_id", id, "error", err)
+			return fmt.Errorf("刪除叢集權限失敗: %w", err)
 		}
-		logger.Info("已删除集群关联的权限", "cluster_id", id)
+		logger.Info("已刪除叢集關聯的權限", "cluster_id", id)
 
-		// 3. 删除关联的终端会话（硬删除）
-		// 先删除终端命令记录
+		// 3. 刪除關聯的終端會話（硬刪除）
+		// 先刪除終端命令記錄
 		if err := tx.Unscoped().Exec(`
 			DELETE FROM terminal_commands 
 			WHERE session_id IN (SELECT id FROM terminal_sessions WHERE cluster_id = ?)
 		`, id).Error; err != nil {
-			logger.Error("删除终端命令记录失败", "cluster_id", id, "error", err)
-			return fmt.Errorf("删除终端命令记录失败: %w", err)
+			logger.Error("刪除終端命令記錄失敗", "cluster_id", id, "error", err)
+			return fmt.Errorf("刪除終端命令記錄失敗: %w", err)
 		}
-		// 再删除终端会话
+		// 再刪除終端會話
 		if err := tx.Unscoped().Where("cluster_id = ?", id).Delete(&models.TerminalSession{}).Error; err != nil {
-			logger.Error("删除终端会话失败", "cluster_id", id, "error", err)
-			return fmt.Errorf("删除终端会话失败: %w", err)
+			logger.Error("刪除終端會話失敗", "cluster_id", id, "error", err)
+			return fmt.Errorf("刪除終端會話失敗: %w", err)
 		}
-		logger.Info("已删除集群关联的终端会话", "cluster_id", id)
+		logger.Info("已刪除叢集關聯的終端會話", "cluster_id", id)
 
-		// 4. 删除关联的 ArgoCD 配置（硬删除）
+		// 4. 刪除關聯的 ArgoCD 配置（硬刪除）
 		if err := tx.Unscoped().Where("cluster_id = ?", id).Delete(&models.ArgoCDConfig{}).Error; err != nil {
-			logger.Error("删除 ArgoCD 配置失败", "cluster_id", id, "error", err)
-			return fmt.Errorf("删除 ArgoCD 配置失败: %w", err)
+			logger.Error("刪除 ArgoCD 配置失敗", "cluster_id", id, "error", err)
+			return fmt.Errorf("刪除 ArgoCD 配置失敗: %w", err)
 		}
-		logger.Info("已删除集群关联的 ArgoCD 配置", "cluster_id", id)
+		logger.Info("已刪除叢集關聯的 ArgoCD 配置", "cluster_id", id)
 
-		// 5. 清空关联的操作日志的集群引用（保留日志记录，只清空集群ID）
+		// 5. 清空關聯的操作日誌的叢集引用（保留日誌記錄，只清空叢集ID）
 		if err := tx.Model(&models.OperationLog{}).Where("cluster_id = ?", id).Update("cluster_id", nil).Error; err != nil {
-			logger.Error("清空操作日志集群引用失败", "cluster_id", id, "error", err)
-			// 操作日志清空失败不阻止删除
+			logger.Error("清空操作日誌叢集引用失敗", "cluster_id", id, "error", err)
+			// 操作日誌清空失敗不阻止刪除
 		}
 
-		// 6. 删除集群监控指标
+		// 6. 刪除叢集監控指標
 		if err := tx.Where("cluster_id = ?", id).Delete(&models.ClusterMetrics{}).Error; err != nil {
-			logger.Error("删除集群监控指标失败", "cluster_id", id, "error", err)
-			// 监控指标删除失败不阻止删除
+			logger.Error("刪除叢集監控指標失敗", "cluster_id", id, "error", err)
+			// 監控指標刪除失敗不阻止刪除
 		}
 
-		// 7. 硬删除集群（使用 Unscoped 绕过软删除）
+		// 7. 硬刪除叢集（使用 Unscoped 繞過軟刪除）
 		if err := tx.Unscoped().Delete(&cluster).Error; err != nil {
-			return fmt.Errorf("删除集群失败: %w", err)
+			return fmt.Errorf("刪除叢集失敗: %w", err)
 		}
 
-		logger.Info("集群删除成功", "id", id, "name", cluster.Name)
+		logger.Info("叢集刪除成功", "id", id, "name", cluster.Name)
 		return nil
 	})
 }
 
-// GetClusterStats 获取集群统计信息
+// GetClusterStats 獲取叢集統計資訊
 func (s *ClusterService) GetClusterStats() (*models.ClusterStats, error) {
 	var stats models.ClusterStats
 	var totalCount, healthyCount, unhealthyCount int64
 
-	// 统计总集群数
+	// 統計總叢集數
 	if err := s.db.Model(&models.Cluster{}).Count(&totalCount).Error; err != nil {
-		return nil, fmt.Errorf("统计总集群数失败: %w", err)
+		return nil, fmt.Errorf("統計總叢集數失敗: %w", err)
 	}
 	stats.TotalClusters = int(totalCount)
 
-	// 统计健康集群数
+	// 統計健康叢集數
 	if err := s.db.Model(&models.Cluster{}).Where("status = ?", "healthy").Count(&healthyCount).Error; err != nil {
-		return nil, fmt.Errorf("统计健康集群数失败: %w", err)
+		return nil, fmt.Errorf("統計健康叢集數失敗: %w", err)
 	}
 	stats.HealthyClusters = int(healthyCount)
 
-	// 统计异常集群数
+	// 統計異常叢集數
 	if err := s.db.Model(&models.Cluster{}).Where("status = ?", "unhealthy").Count(&unhealthyCount).Error; err != nil {
-		return nil, fmt.Errorf("统计异常集群数失败: %w", err)
+		return nil, fmt.Errorf("統計異常叢集數失敗: %w", err)
 	}
 	stats.UnhealthyClusters = int(unhealthyCount)
 
-	// 获取所有集群的实时指标统计
+	// 獲取所有叢集的實時指標統計
 	var clusters []*models.Cluster
 	if err := s.db.Find(&clusters).Error; err != nil {
-		logger.Error("获取集群列表失败", "error", err)
-		return &stats, nil // 返回基础统计，不因为指标获取失败而整体失败
+		logger.Error("獲取叢集列表失敗", "error", err)
+		return &stats, nil // 返回基礎統計，不因為指標獲取失敗而整體失敗
 	}
 
-	// 统计总节点数和就绪节点数
+	// 統計總節點數和就緒節點數
 	totalNodes := 0
 	readyNodes := 0
 	totalPods := 0
 	runningPods := 0
 
 	for _, cluster := range clusters {
-		// 获取集群的实时指标
+		// 獲取叢集的實時指標
 		if metrics := s.getClusterRealTimeMetrics(cluster); metrics != nil {
 			totalNodes += metrics.NodeCount
 			readyNodes += metrics.ReadyNodes
@@ -253,9 +253,9 @@ func (s *ClusterService) GetClusterStats() (*models.ClusterStats, error) {
 	return &stats, nil
 }
 
-// getClusterRealTimeMetrics 获取集群实时指标
+// getClusterRealTimeMetrics 獲取叢集實時指標
 func (s *ClusterService) getClusterRealTimeMetrics(cluster *models.Cluster) *models.ClusterMetrics {
-	// 如果没有连接信息，返回空指标
+	// 如果沒有連線資訊，返回空指標
 	if cluster.KubeconfigEnc == "" && cluster.SATokenEnc == "" {
 		return nil
 	}
@@ -263,14 +263,14 @@ func (s *ClusterService) getClusterRealTimeMetrics(cluster *models.Cluster) *mod
 	k8sClient, err := NewK8sClientForCluster(cluster)
 
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "cluster", cluster.Name, "error", err)
+		logger.Error("建立K8s客戶端失敗", "cluster", cluster.Name, "error", err)
 		return nil
 	}
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterInfo, err := k8sClient.TestConnection()
 	if err != nil {
-		logger.Error("获取集群信息失败", "cluster", cluster.Name, "error", err)
+		logger.Error("獲取叢集資訊失敗", "cluster", cluster.Name, "error", err)
 		return nil
 	}
 
@@ -278,7 +278,7 @@ func (s *ClusterService) getClusterRealTimeMetrics(cluster *models.Cluster) *mod
 	podCount, runningPods := fetchPodStats(k8sClient)
 	cpuPct, memPct := fetchResourceMetrics(k8sClient)
 
-	// 创建指标对象
+	// 建立指標物件
 	metrics := &models.ClusterMetrics{
 		ClusterID:   cluster.ID,
 		NodeCount:   clusterInfo.NodeCount,
@@ -375,25 +375,25 @@ func fetchResourceMetrics(kc *K8sClient) (cpuPercent, memPercent float64) {
 	return
 }
 
-// UpdateClusterMetrics 更新集群指标到数据库
+// UpdateClusterMetrics 更新叢集指標到資料庫
 func (s *ClusterService) UpdateClusterMetrics(clusterID uint, metrics *models.ClusterMetrics) error {
-	// 使用UPSERT操作，如果记录存在则更新，不存在则插入
+	// 使用UPSERT操作，如果記錄存在則更新，不存在則插入
 	return s.db.Save(metrics).Error
 }
 
-// GetClusterMetrics 获取集群指标
+// GetClusterMetrics 獲取叢集指標
 func (s *ClusterService) GetClusterMetrics(clusterID uint) (*models.ClusterMetrics, error) {
 	var metrics models.ClusterMetrics
 	if err := s.db.Where("cluster_id = ?", clusterID).First(&metrics).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, nil // 没有找到指标记录，返回nil而不是错误
+			return nil, nil // 沒有找到指標記錄，返回nil而不是錯誤
 		}
-		return nil, fmt.Errorf("获取集群指标失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集指標失敗: %w", err)
 	}
 	return &metrics, nil
 }
 
-// ConvertToStoredCluster 将数据库模型转换为存储格式
+// ConvertToStoredCluster 將資料庫模型轉換為儲存格式
 func (s *ClusterService) ConvertToStoredCluster(cluster *models.Cluster) *StoredCluster {
 	var labels map[string]string
 	if cluster.Labels != "" {
@@ -406,7 +406,7 @@ func (s *ClusterService) ConvertToStoredCluster(cluster *models.Cluster) *Stored
 	stored := &StoredCluster{
 		ID:          fmt.Sprintf("%d", cluster.ID),
 		Name:        cluster.Name,
-		Description: "", // 数据库模型中没有description字段，可以后续添加
+		Description: "", // 資料庫模型中沒有description欄位，可以後續新增
 		ApiServer:   cluster.APIServer,
 		Version:     cluster.Version,
 		Status:      cluster.Status,
@@ -421,7 +421,7 @@ func (s *ClusterService) ConvertToStoredCluster(cluster *models.Cluster) *Stored
 	return stored
 }
 
-// ConvertFromStoredCluster 将存储格式转换为数据库模型
+// ConvertFromStoredCluster 將儲存格式轉換為資料庫模型
 func (s *ClusterService) ConvertFromStoredCluster(stored *StoredCluster) *models.Cluster {
 	labelsJSON := ""
 	if len(stored.Labels) > 0 {

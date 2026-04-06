@@ -15,7 +15,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/models"
 )
 
-// ClusterServiceTestSuite 定义集群服务测试套件
+// ClusterServiceTestSuite 定義叢集服務測試套件
 type ClusterServiceTestSuite struct {
 	suite.Suite
 	db      *gorm.DB
@@ -23,7 +23,7 @@ type ClusterServiceTestSuite struct {
 	service *ClusterService
 }
 
-// SetupTest 每个测试前的设置
+// SetupTest 每個測試前的設定
 func (s *ClusterServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
@@ -41,7 +41,7 @@ func (s *ClusterServiceTestSuite) SetupTest() {
 	s.service = NewClusterService(gormDB)
 }
 
-// TearDownTest 每个测试后的清理
+// TearDownTest 每個測試後的清理
 func (s *ClusterServiceTestSuite) TearDownTest() {
 	if s.db != nil {
 		sqlDB, _ := s.db.DB()
@@ -51,7 +51,7 @@ func (s *ClusterServiceTestSuite) TearDownTest() {
 	}
 }
 
-// TestCreateCluster 测试创建集群
+// TestCreateCluster 測試建立叢集
 func (s *ClusterServiceTestSuite) TestCreateCluster() {
 	cluster := &models.Cluster{
 		Name:      "test-cluster",
@@ -71,7 +71,7 @@ func (s *ClusterServiceTestSuite) TestCreateCluster() {
 	assert.NotZero(s.T(), cluster.UpdatedAt)
 }
 
-// TestCreateCluster_EmptyName 测试创建空名称集群
+// TestCreateCluster_EmptyName 測試建立空名稱叢集
 func (s *ClusterServiceTestSuite) TestCreateCluster_DBError() {
 	cluster := &models.Cluster{
 		Name:      "test-cluster",
@@ -87,7 +87,7 @@ func (s *ClusterServiceTestSuite) TestCreateCluster_DBError() {
 	assert.Error(s.T(), err)
 }
 
-// TestGetCluster_Success 测试获取集群成功
+// TestGetCluster_Success 測試獲取叢集成功
 func (s *ClusterServiceTestSuite) TestGetCluster_Success() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
@@ -111,7 +111,7 @@ func (s *ClusterServiceTestSuite) TestGetCluster_Success() {
 	assert.Equal(s.T(), "https://kubernetes.example.com:6443", cluster.APIServer)
 }
 
-// TestGetCluster_NotFound 测试获取不存在的集群
+// TestGetCluster_NotFound 測試獲取不存在的叢集
 func (s *ClusterServiceTestSuite) TestGetCluster_NotFound() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
 		WithArgs(999, 1).
@@ -120,10 +120,10 @@ func (s *ClusterServiceTestSuite) TestGetCluster_NotFound() {
 	cluster, err := s.service.GetCluster(999)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), cluster)
-	assert.Contains(s.T(), err.Error(), "集群不存在")
+	assert.Contains(s.T(), err.Error(), "叢集不存在")
 }
 
-// TestGetAllClusters_Success 测试获取所有集群成功
+// TestGetAllClusters_Success 測試獲取所有叢集成功
 func (s *ClusterServiceTestSuite) TestGetAllClusters_Success() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
@@ -146,7 +146,7 @@ func (s *ClusterServiceTestSuite) TestGetAllClusters_Success() {
 	assert.Equal(s.T(), "cluster-2", clusters[1].Name)
 }
 
-// TestGetAllClusters_Empty 测试获取空集群列表
+// TestGetAllClusters_Empty 測試獲取空叢集列表
 func (s *ClusterServiceTestSuite) TestGetAllClusters_Empty() {
 	rows := sqlmock.NewRows([]string{
 		"id", "name", "api_server", "kube_config", "version", "status",
@@ -162,7 +162,7 @@ func (s *ClusterServiceTestSuite) TestGetAllClusters_Empty() {
 	assert.Len(s.T(), clusters, 0)
 }
 
-// TestUpdateClusterStatus_Success 测试更新集群状态成功
+// TestUpdateClusterStatus_Success 測試更新叢集狀態成功
 func (s *ClusterServiceTestSuite) TestUpdateClusterStatus_Success() {
 	s.mock.ExpectBegin()
 	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `clusters`")).
@@ -173,9 +173,9 @@ func (s *ClusterServiceTestSuite) TestUpdateClusterStatus_Success() {
 	assert.NoError(s.T(), err)
 }
 
-// TestDeleteCluster_Success 测试删除集群成功
+// TestDeleteCluster_Success 測試刪除叢集成功
 func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
-	// 先查询集群是否存在
+	// 先查詢叢集是否存在
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
 		"id", "name", "api_server", "kube_config", "version", "status",
@@ -191,7 +191,7 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
 		WithArgs(1, 1).
 		WillReturnRows(rows)
-	// 删除关联数据 - 使用 Unscoped
+	// 刪除關聯資料 - 使用 Unscoped
 	s.mock.ExpectExec(`DELETE FROM.*cluster_permissions.*WHERE.*cluster_id`).
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
@@ -210,7 +210,7 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
 	s.mock.ExpectExec(`DELETE FROM.*cluster_metrics.*WHERE.*cluster_id`).
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	// 删除集群 - 使用 Unscoped
+	// 刪除叢集 - 使用 Unscoped
 	s.mock.ExpectExec(`DELETE FROM.*clusters.*WHERE.*id`).
 		WithArgs(1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -220,7 +220,7 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
 	assert.NoError(s.T(), err)
 }
 
-// TestDeleteCluster_NotFound 测试删除不存在的集群
+// TestDeleteCluster_NotFound 測試刪除不存在的叢集
 func (s *ClusterServiceTestSuite) TestDeleteCluster_NotFound() {
 	s.mock.ExpectBegin()
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
@@ -230,10 +230,10 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_NotFound() {
 
 	err := s.service.DeleteCluster(999)
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "集群不存在")
+	assert.Contains(s.T(), err.Error(), "叢集不存在")
 }
 
-// TestClusterServiceSuite 运行测试套件
+// TestClusterServiceSuite 執行測試套件
 func TestClusterServiceSuite(t *testing.T) {
 	suite.Run(t, new(ClusterServiceTestSuite))
 }

@@ -13,8 +13,8 @@ type PortForwardSession struct {
 	ClusterName   string
 	Namespace     string    `gorm:"not null"`
 	PodName       string    `gorm:"not null"`
-	PodPort       int       `gorm:"not null"` // Pod 側的埠
-	LocalPort     int       `gorm:"not null"` // 後端伺服器監聽埠
+	PodPort       int       `gorm:"not null"` // Pod 側的連接埠
+	LocalPort     int       `gorm:"not null"` // 後端伺服器監聽連接埠
 	UserID        uint      `gorm:"not null"`
 	Username      string
 	Status        string    `gorm:"default:'active'"` // active / stopped

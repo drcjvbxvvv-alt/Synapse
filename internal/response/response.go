@@ -8,24 +8,24 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/apierrors"
 )
 
-// ErrorBody 统一错误响应体
+// ErrorBody 統一錯誤響應體
 type ErrorBody struct {
 	Error ErrorDetail `json:"error"`
 }
 
-// ErrorDetail 错误详情
+// ErrorDetail 錯誤詳情
 type ErrorDetail struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
-// ListResult 列表响应体（含分页）
+// ListResult 列表響應體（含分頁）
 type ListResult struct {
 	Items interface{} `json:"items"`
 	Total int64       `json:"total"`
 }
 
-// PagedListResult 分页列表响应体（含页码信息）
+// PagedListResult 分頁列表響應體（含頁碼資訊）
 type PagedListResult struct {
 	Items    interface{} `json:"items"`
 	Total    int64       `json:"total"`
@@ -33,9 +33,9 @@ type PagedListResult struct {
 	PageSize int         `json:"pageSize"`
 }
 
-// ---- 成功响应 ----
+// ---- 成功響應 ----
 
-// OK 返回 200 + 数据体
+// OK 返回 200 + 資料體
 func OK(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, data)
 }
@@ -45,7 +45,7 @@ func List(c *gin.Context, items interface{}, total int64) {
 	c.JSON(http.StatusOK, ListResult{Items: items, Total: total})
 }
 
-// PagedList 返回 200 + 分页列表（含 page/pageSize）
+// PagedList 返回 200 + 分頁列表（含 page/pageSize）
 func PagedList(c *gin.Context, items interface{}, total int64, page, pageSize int) {
 	c.JSON(http.StatusOK, PagedListResult{
 		Items:    items,
@@ -60,14 +60,14 @@ func Created(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusCreated, data)
 }
 
-// NoContent 返回 204（无响应体）
+// NoContent 返回 204（無響應體）
 func NoContent(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// ---- 错误响应 ----
+// ---- 錯誤響應 ----
 
-// Error 返回自定义状态码 + 结构化错误
+// Error 返回自定義狀態碼 + 結構化錯誤
 func Error(c *gin.Context, status int, code, message string) {
 	c.JSON(status, ErrorBody{Error: ErrorDetail{Code: code, Message: message}})
 	c.Abort()

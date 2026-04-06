@@ -13,7 +13,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/services"
 )
 
-// AuditHandler 审计处理器
+// AuditHandler 審計處理器
 type AuditHandler struct {
 	db           *gorm.DB
 	cfg          *config.Config
@@ -21,7 +21,7 @@ type AuditHandler struct {
 	opLogService *services.OperationLogService
 }
 
-// NewAuditHandler 创建审计处理器
+// NewAuditHandler 建立審計處理器
 func NewAuditHandler(db *gorm.DB, cfg *config.Config) *AuditHandler {
 	return &AuditHandler{
 		db:           db,
@@ -31,7 +31,7 @@ func NewAuditHandler(db *gorm.DB, cfg *config.Config) *AuditHandler {
 	}
 }
 
-// GetAuditLogs 获取统一审计日志（委派 OperationLogService.List）
+// GetAuditLogs 獲取統一審計日誌（委派 OperationLogService.List）
 // 支援查詢參數：page, pageSize, username, module, action, result(success/failed), startTime, endTime, keyword
 func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -81,16 +81,16 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 
 	resp, err := h.opLogService.List(req)
 	if err != nil {
-		response.FromError(c, apierrors.ErrInternal("获取审计日志失败"))
+		response.FromError(c, apierrors.ErrInternal("獲取審計日誌失敗"))
 		return
 	}
 
 	response.OK(c, resp)
 }
 
-// GetTerminalSessions 获取终端会话记录
+// GetTerminalSessions 獲取終端會話記錄
 func (h *AuditHandler) GetTerminalSessions(c *gin.Context) {
-	// 解析查询参数
+	// 解析查詢參數
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 	userIDStr := c.Query("userId")
@@ -132,37 +132,37 @@ func (h *AuditHandler) GetTerminalSessions(c *gin.Context) {
 
 	resp, err := h.auditService.GetSessions(req)
 	if err != nil {
-		response.FromError(c, apierrors.ErrInternal("获取会话列表失败"))
+		response.FromError(c, apierrors.ErrInternal("獲取會話列表失敗"))
 		return
 	}
 
 	response.OK(c, resp)
 }
 
-// GetTerminalSession 获取终端会话详情
+// GetTerminalSession 獲取終端會話詳情
 func (h *AuditHandler) GetTerminalSession(c *gin.Context) {
 	sessionIDStr := c.Param("sessionId")
 	sessionID, err := strconv.ParseUint(sessionIDStr, 10, 32)
 	if err != nil {
-		response.FromError(c, apierrors.ErrBadRequest("无效的会话ID"))
+		response.FromError(c, apierrors.ErrBadRequest("無效的會話ID"))
 		return
 	}
 
 	session, err := h.auditService.GetSessionDetail(uint(sessionID))
 	if err != nil {
-		response.FromError(c, apierrors.ErrInternal("会话不存在"))
+		response.FromError(c, apierrors.ErrInternal("會話不存在"))
 		return
 	}
 
 	response.OK(c, session)
 }
 
-// GetTerminalCommands 获取终端命令记录
+// GetTerminalCommands 獲取終端命令記錄
 func (h *AuditHandler) GetTerminalCommands(c *gin.Context) {
 	sessionIDStr := c.Param("sessionId")
 	sessionID, err := strconv.ParseUint(sessionIDStr, 10, 32)
 	if err != nil {
-		response.FromError(c, apierrors.ErrBadRequest("无效的会话ID"))
+		response.FromError(c, apierrors.ErrBadRequest("無效的會話ID"))
 		return
 	}
 
@@ -171,18 +171,18 @@ func (h *AuditHandler) GetTerminalCommands(c *gin.Context) {
 
 	resp, err := h.auditService.GetSessionCommands(uint(sessionID), page, pageSize)
 	if err != nil {
-		response.FromError(c, apierrors.ErrInternal("获取命令记录失败"))
+		response.FromError(c, apierrors.ErrInternal("獲取命令記錄失敗"))
 		return
 	}
 
 	response.OK(c, resp)
 }
 
-// GetTerminalStats 获取终端会话统计
+// GetTerminalStats 獲取終端會話統計
 func (h *AuditHandler) GetTerminalStats(c *gin.Context) {
 	stats, err := h.auditService.GetSessionStats()
 	if err != nil {
-		response.FromError(c, apierrors.ErrInternal("获取统计信息失败"))
+		response.FromError(c, apierrors.ErrInternal("獲取統計資訊失敗"))
 		return
 	}
 

@@ -10,17 +10,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// AuditService 审计服务
+// AuditService 審計服務
 type AuditService struct {
 	db *gorm.DB
 }
 
-// NewAuditService 创建审计服务
+// NewAuditService 建立審計服務
 func NewAuditService(db *gorm.DB) *AuditService {
 	return &AuditService{db: db}
 }
 
-// TerminalType 终端类型
+// TerminalType 終端型別
 type TerminalType string
 
 const (
@@ -29,7 +29,7 @@ const (
 	TerminalTypeNode    TerminalType = "node"
 )
 
-// CreateSessionRequest 创建会话请求
+// CreateSessionRequest 建立會話請求
 type CreateSessionRequest struct {
 	UserID     uint
 	ClusterID  uint
@@ -42,7 +42,7 @@ type CreateSessionRequest struct {
 	UserAgent  string
 }
 
-// TargetRef 目标引用信息
+// TargetRef 目標引用資訊
 type TargetRef struct {
 	Namespace string `json:"namespace,omitempty"`
 	Pod       string `json:"pod,omitempty"`
@@ -52,9 +52,9 @@ type TargetRef struct {
 	Port      int    `json:"port,omitempty"`
 }
 
-// CreateSession 创建终端会话
+// CreateSession 建立終端會話
 func (s *AuditService) CreateSession(req *CreateSessionRequest) (*models.TerminalSession, error) {
-	// 构建目标引用
+	// 構建目標引用
 	targetRef := TargetRef{
 		Namespace: req.Namespace,
 		Pod:       req.Pod,
@@ -77,15 +77,15 @@ func (s *AuditService) CreateSession(req *CreateSessionRequest) (*models.Termina
 	}
 
 	if err := s.db.Create(session).Error; err != nil {
-		logger.Error("创建终端会话失败", "error", err)
+		logger.Error("建立終端會話失敗", "error", err)
 		return nil, err
 	}
 
-	logger.Info("终端会话已创建", "sessionID", session.ID, "userID", req.UserID, "type", req.TargetType)
+	logger.Info("終端會話已建立", "sessionID", session.ID, "userID", req.UserID, "type", req.TargetType)
 	return session, nil
 }
 
-// CloseSession 关闭终端会话
+// CloseSession 關閉終端會話
 func (s *AuditService) CloseSession(sessionID uint, status string) error {
 	now := time.Now()
 	err := s.db.Model(&models.TerminalSession{}).
@@ -96,15 +96,15 @@ func (s *AuditService) CloseSession(sessionID uint, status string) error {
 		}).Error
 
 	if err != nil {
-		logger.Error("关闭终端会话失败", "error", err, "sessionID", sessionID)
+		logger.Error("關閉終端會話失敗", "error", err, "sessionID", sessionID)
 		return err
 	}
 
-	logger.Info("终端会话已关闭", "sessionID", sessionID, "status", status)
+	logger.Info("終端會話已關閉", "sessionID", sessionID, "status", status)
 	return nil
 }
 
-// RecordCommand 记录命令（异步调用，不阻塞终端）
+// RecordCommand 記錄命令（非同步呼叫，不阻塞終端）
 func (s *AuditService) RecordCommand(sessionID uint, rawInput, parsedCmd string, exitCode *int) error {
 	command := &models.TerminalCommand{
 		SessionID: sessionID,
@@ -115,11 +115,11 @@ func (s *AuditService) RecordCommand(sessionID uint, rawInput, parsedCmd string,
 	}
 
 	if err := s.db.Create(command).Error; err != nil {
-		logger.Error("记录命令失败", "error", err, "sessionID", sessionID)
+		logger.Error("記錄命令失敗", "error", err, "sessionID", sessionID)
 		return err
 	}
 
-	// 更新会话的输入大小
+	// 更新會話的輸入大小
 	s.db.Model(&models.TerminalSession{}).
 		Where("id = ?", sessionID).
 		Update("input_size", gorm.Expr("input_size + ?", len(rawInput)))
@@ -127,16 +127,16 @@ func (s *AuditService) RecordCommand(sessionID uint, rawInput, parsedCmd string,
 	return nil
 }
 
-// RecordCommandAsync 异步记录命令
+// RecordCommandAsync 非同步記錄命令
 func (s *AuditService) RecordCommandAsync(sessionID uint, rawInput, parsedCmd string, exitCode *int) {
 	go func() {
 		if err := s.RecordCommand(sessionID, rawInput, parsedCmd, exitCode); err != nil {
-			logger.Error("异步记录命令失败", "error", err)
+			logger.Error("非同步記錄命令失敗", "error", err)
 		}
 	}()
 }
 
-// SessionListRequest 会话列表请求
+// SessionListRequest 會話列表請求
 type SessionListRequest struct {
 	UserID     uint
 	ClusterID  uint
@@ -149,7 +149,7 @@ type SessionListRequest struct {
 	PageSize   int
 }
 
-// SessionListResponse 会话列表响应
+// SessionListResponse 會話列表響應
 type SessionListResponse struct {
 	Items    []SessionItem `json:"items"`
 	Total    int64         `json:"total"`
@@ -157,7 +157,7 @@ type SessionListResponse struct {
 	PageSize int           `json:"pageSize"`
 }
 
-// SessionItem 会话列表项
+// SessionItem 會話列表項
 type SessionItem struct {
 	ID           uint       `json:"id"`
 	UserID       uint       `json:"user_id"`
@@ -178,7 +178,7 @@ type SessionItem struct {
 	CommandCount int64      `json:"command_count"`
 }
 
-// GetSessions 获取会话列表
+// GetSessions 獲取會話列表
 func (s *AuditService) GetSessions(req *SessionListRequest) (*SessionListResponse, error) {
 	query := s.db.Model(&models.TerminalSession{}).
 		Select(`terminal_sessions.*, 
@@ -188,7 +188,7 @@ func (s *AuditService) GetSessions(req *SessionListRequest) (*SessionListRespons
 		Joins("LEFT JOIN users ON users.id = terminal_sessions.user_id").
 		Joins("LEFT JOIN clusters ON clusters.id = terminal_sessions.cluster_id")
 
-	// 应用过滤条件
+	// 應用過濾條件
 	if req.UserID > 0 {
 		query = query.Where("terminal_sessions.user_id = ?", req.UserID)
 	}
@@ -213,7 +213,7 @@ func (s *AuditService) GetSessions(req *SessionListRequest) (*SessionListRespons
 			keyword, keyword, keyword, keyword, keyword)
 	}
 
-	// 计算总数
+	// 計算總數
 	var total int64
 	countQuery := s.db.Model(&models.TerminalSession{}).
 		Joins("LEFT JOIN users ON users.id = terminal_sessions.user_id").
@@ -244,7 +244,7 @@ func (s *AuditService) GetSessions(req *SessionListRequest) (*SessionListRespons
 	}
 	countQuery.Count(&total)
 
-	// 分页
+	// 分頁
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -265,7 +265,7 @@ func (s *AuditService) GetSessions(req *SessionListRequest) (*SessionListRespons
 		return nil, err
 	}
 
-	// 转换为响应格式
+	// 轉換為響應格式
 	items := make([]SessionItem, len(results))
 	for i, r := range results {
 		items[i] = SessionItem{
@@ -297,7 +297,7 @@ func (s *AuditService) GetSessions(req *SessionListRequest) (*SessionListRespons
 	}, nil
 }
 
-// SessionDetailResponse 会话详情响应
+// SessionDetailResponse 會話詳情響應
 type SessionDetailResponse struct {
 	ID           uint                     `json:"id"`
 	UserID       uint                     `json:"user_id"`
@@ -320,7 +320,7 @@ type SessionDetailResponse struct {
 	Commands     []models.TerminalCommand `json:"commands,omitempty"`
 }
 
-// GetSessionDetail 获取会话详情
+// GetSessionDetail 獲取會話詳情
 func (s *AuditService) GetSessionDetail(sessionID uint) (*SessionDetailResponse, error) {
 	var result struct {
 		models.TerminalSession
@@ -342,18 +342,18 @@ func (s *AuditService) GetSessionDetail(sessionID uint) (*SessionDetailResponse,
 		return nil, err
 	}
 
-	// 获取命令数量
+	// 獲取命令數量
 	var commandCount int64
 	s.db.Model(&models.TerminalCommand{}).Where("session_id = ?", sessionID).Count(&commandCount)
 
-	// 计算持续时间
+	// 計算持續時間
 	var duration string
 	if result.EndAt != nil {
 		d := result.EndAt.Sub(result.StartAt)
 		duration = formatSessionDuration(d)
 	} else {
 		d := time.Since(result.StartAt)
-		duration = formatSessionDuration(d) + " (进行中)"
+		duration = formatSessionDuration(d) + " (進行中)"
 	}
 
 	return &SessionDetailResponse{
@@ -378,7 +378,7 @@ func (s *AuditService) GetSessionDetail(sessionID uint) (*SessionDetailResponse,
 	}, nil
 }
 
-// CommandListResponse 命令列表响应
+// CommandListResponse 命令列表響應
 type CommandListResponse struct {
 	Items    []models.TerminalCommand `json:"items"`
 	Total    int64                    `json:"total"`
@@ -386,7 +386,7 @@ type CommandListResponse struct {
 	PageSize int                      `json:"pageSize"`
 }
 
-// GetSessionCommands 获取会话命令
+// GetSessionCommands 獲取會話命令
 func (s *AuditService) GetSessionCommands(sessionID uint, page, pageSize int) (*CommandListResponse, error) {
 	var commands []models.TerminalCommand
 	var total int64
@@ -414,7 +414,7 @@ func (s *AuditService) GetSessionCommands(sessionID uint, page, pageSize int) (*
 	}, nil
 }
 
-// GetSessionStats 获取会话统计信息
+// GetSessionStats 獲取會話統計資訊
 type SessionStats struct {
 	TotalSessions   int64 `json:"total_sessions"`
 	ActiveSessions  int64 `json:"active_sessions"`
@@ -424,20 +424,20 @@ type SessionStats struct {
 	NodeSessions    int64 `json:"node_sessions"`
 }
 
-// GetSessionStats 获取会话统计
+// GetSessionStats 獲取會話統計
 func (s *AuditService) GetSessionStats() (*SessionStats, error) {
 	stats := &SessionStats{}
 
-	// 总会话数
+	// 總會話數
 	s.db.Model(&models.TerminalSession{}).Count(&stats.TotalSessions)
 
-	// 活跃会话数
+	// 活躍會話數
 	s.db.Model(&models.TerminalSession{}).Where("status = ?", "active").Count(&stats.ActiveSessions)
 
-	// 总命令数
+	// 總命令數
 	s.db.Model(&models.TerminalCommand{}).Count(&stats.TotalCommands)
 
-	// 各类型会话数
+	// 各型別會話數
 	s.db.Model(&models.TerminalSession{}).Where("target_type = ?", "kubectl").Count(&stats.KubectlSessions)
 	s.db.Model(&models.TerminalSession{}).Where("target_type = ?", "pod").Count(&stats.PodSessions)
 	s.db.Model(&models.TerminalSession{}).Where("target_type = ?", "node").Count(&stats.NodeSessions)
@@ -445,7 +445,7 @@ func (s *AuditService) GetSessionStats() (*SessionStats, error) {
 	return stats, nil
 }
 
-// formatSessionDuration 格式化会话持续时间
+// formatSessionDuration 格式化會話持續時間
 func formatSessionDuration(d time.Duration) string {
 	if d < time.Minute {
 		return d.Round(time.Second).String()

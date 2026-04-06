@@ -22,7 +22,7 @@ func NewLogRetentionWorker(db *gorm.DB, retention time.Duration) *LogRetentionWo
 	return &LogRetentionWorker{db: db, retention: retention}
 }
 
-// Start 啟動後台清理 Goroutine（每天 00:05 UTC 執行一次）
+// Start 啟動後臺清理 Goroutine（每天 00:05 UTC 執行一次）
 func (w *LogRetentionWorker) Start() {
 	go func() {
 		// 首次啟動時延遲至下個 00:05 UTC

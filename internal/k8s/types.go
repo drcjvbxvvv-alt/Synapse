@@ -1,6 +1,6 @@
 package k8s
 
-// OverviewSnapshot 统一的集群概览快照（由本地 Informer 缓存即时汇总）
+// OverviewSnapshot 統一的叢集概覽快照（由本地 Informer 快取即時彙總）
 type OverviewSnapshot struct {
 	ClusterID uint `json:"clusterID"`
 
@@ -16,11 +16,11 @@ type OverviewSnapshot struct {
 	Jobs         int `json:"jobs"`
 	Rollouts     int `json:"rollouts"`
 
-	// 容器子网IP信息
+	// 容器子網IP資訊
 	ContainerSubnetIPs *ContainerSubnetIPs `json:"containerSubnetIPs,omitempty"`
 }
 
-// ContainerSubnetIPs 容器子网IP信息
+// ContainerSubnetIPs 容器子網IP資訊
 type ContainerSubnetIPs struct {
 	TotalIPs     int `json:"total_ips"`
 	UsedIPs      int `json:"used_ips"`

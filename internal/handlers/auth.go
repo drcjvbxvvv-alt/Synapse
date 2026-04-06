@@ -12,13 +12,13 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// AuthHandler 认证处理器
+// AuthHandler 認證處理器
 type AuthHandler struct {
 	authService *services.AuthService
 	opLogSvc    *services.OperationLogService
 }
 
-// NewAuthHandler 创建认证处理器
+// NewAuthHandler 建立認證處理器
 func NewAuthHandler(authService *services.AuthService, opLogSvc *services.OperationLogService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
@@ -26,32 +26,32 @@ func NewAuthHandler(authService *services.AuthService, opLogSvc *services.Operat
 	}
 }
 
-// LoginRequest 登录请求结构
+// LoginRequest 登入請求結構
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
-	AuthType string `json:"auth_type"` // 认证类型：local, ldap，默认local
+	AuthType string `json:"auth_type"` // 認證型別：local, ldap，預設local
 }
 
-// Login 用户登录 - 支持本地密码和LDAP两种认证方式
+// Login 使用者登入 - 支援本地密碼和LDAP兩種認證方式
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
 	result, err := h.authService.Login(req.Username, req.Password, req.AuthType, c.ClientIP())
 	if err != nil {
-		logger.Warn("用户登录失败: %s, 错误: %v", req.Username, err)
+		logger.Warn("使用者登入失敗: %s, 錯誤: %v", req.Username, err)
 
-		// 从 AppError 中提取状态码（fallback 401）
+		// 從 AppError 中提取狀態碼（fallback 401）
 		statusCode := http.StatusUnauthorized
 		if ae, ok := apierrors.As(err); ok {
 			statusCode = ae.HTTPStatus
 		}
 
-		// 记录登录失败审计日志
+		// 記錄登入失敗審計日誌
 		if h.opLogSvc != nil {
 			h.opLogSvc.RecordAsync(&services.LogEntry{
 				Username:     req.Username,
@@ -73,7 +73,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// 记录登录成功审计日志
+	// 記錄登入成功審計日誌
 	if h.opLogSvc != nil {
 		userID := result.User.ID
 		h.opLogSvc.RecordAsync(&services.LogEntry{
@@ -95,7 +95,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	response.OK(c, result)
 }
 
-// Logout 用户登出
+// Logout 使用者登出
 func (h *AuthHandler) Logout(c *gin.Context) {
 	var userID *uint
 	username := ""
@@ -106,7 +106,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		username = un
 	}
 
-	// 记录登出审计日志
+	// 記錄登出審計日誌
 	if h.opLogSvc != nil {
 		h.opLogSvc.RecordAsync(&services.LogEntry{
 			UserID:       userID,
@@ -127,29 +127,29 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	response.OK(c, nil)
 }
 
-// GetProfile 获取用户信息
+// GetProfile 獲取使用者資訊
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	if userID == 0 {
-		response.Unauthorized(c, "无效的用户认证信息")
+		response.Unauthorized(c, "無效的使用者認證資訊")
 		return
 	}
 
 	user, err := h.authService.GetProfile(userID)
 	if err != nil {
-		response.NotFound(c, "用户不存在")
+		response.NotFound(c, "使用者不存在")
 		return
 	}
 
 	response.OK(c, user)
 }
 
-// AuthStatusResponse 认证状态响应
+// AuthStatusResponse 認證狀態響應
 type AuthStatusResponse struct {
 	LDAPEnabled bool `json:"ldap_enabled"`
 }
 
-// GetAuthStatus 获取认证状态（无需登录即可访问）
+// GetAuthStatus 獲取認證狀態（無需登入即可訪問）
 func (h *AuthHandler) GetAuthStatus(c *gin.Context) {
 	ldapEnabled, _ := h.authService.GetAuthStatus()
 
@@ -158,23 +158,23 @@ func (h *AuthHandler) GetAuthStatus(c *gin.Context) {
 	})
 }
 
-// ChangePasswordRequest 修改密码请求
+// ChangePasswordRequest 修改密碼請求
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
 
-// ChangePassword 修改密码（仅限本地用户）
+// ChangePassword 修改密碼（僅限本地使用者）
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	if userID == 0 {
-		response.Unauthorized(c, "无效的用户认证信息")
+		response.Unauthorized(c, "無效的使用者認證資訊")
 		return
 	}
 
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 

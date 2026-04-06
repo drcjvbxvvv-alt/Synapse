@@ -359,7 +359,7 @@ func (h *MultiClusterHandler) getWorkloadResources(
 		cpuMillicores, memMiB = sumContainerRequests(ds.Spec.Template.Spec.Containers)
 		cmNames, secNames = extractEnvRefs(ds.Spec.Template.Spec)
 	default:
-		err = fmt.Errorf("不支援的工作負載類型: %s", req.WorkloadKind)
+		err = fmt.Errorf("不支援的工作負載型別: %s", req.WorkloadKind)
 	}
 	return
 }
@@ -495,7 +495,7 @@ func (h *MultiClusterHandler) syncConfigMaps(
 	return synced, nil
 }
 
-// syncSecrets 同步與工作負載關聯的 Secret（跳過 SA token 等系統類型）
+// syncSecrets 同步與工作負載關聯的 Secret（跳過 SA token 等系統型別）
 func (h *MultiClusterHandler) syncSecrets(
 	ctx context.Context, src, dst kubernetes.Interface, srcNS, dstNS, workload string,
 ) ([]string, error) {
@@ -573,10 +573,10 @@ func (h *MultiClusterHandler) migrateWorkload(ctx context.Context, src, dst kube
 		}
 		return err
 	}
-	return fmt.Errorf("不支援的工作負載類型: %s", req.WorkloadKind)
+	return fmt.Errorf("不支援的工作負載型別: %s", req.WorkloadKind)
 }
 
-// cleanDeployment 去除運行時欄位，準備跨叢集 apply
+// cleanDeployment 去除執行時欄位，準備跨叢集 apply
 func cleanDeployment(dep *appsv1.Deployment, targetNS string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -673,7 +673,7 @@ func (h *MultiClusterHandler) executeSync(policy *models.SyncPolicy) (status, me
 		case "Secret":
 			syncErr = h.syncSpecificSecrets(ctx, srcClient, dstClient, policy.SourceNamespace, resourceNames, policy.ConflictPolicy)
 		default:
-			syncErr = fmt.Errorf("不支援的資源類型: %s", policy.ResourceType)
+			syncErr = fmt.Errorf("不支援的資源型別: %s", policy.ResourceType)
 		}
 
 		if syncErr != nil {

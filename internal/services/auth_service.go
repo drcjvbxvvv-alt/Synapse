@@ -13,7 +13,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// LoginResult 登录结果
+// LoginResult 登入結果
 type LoginResult struct {
 	Token       string                         `json:"token"`
 	User        models.User                    `json:"user"`
@@ -21,16 +21,16 @@ type LoginResult struct {
 	Permissions []models.MyPermissionsResponse `json:"permissions,omitempty"`
 }
 
-// AuthService 认证服务
+// AuthService 認證服務
 type AuthService struct {
 	db            *gorm.DB
 	ldapService   *LDAPService
 	permissionSvc *PermissionService
 	jwtSecret     string
-	jwtExpireTime int // 小时
+	jwtExpireTime int // 小時
 }
 
-// NewAuthService 创建认证服务
+// NewAuthService 建立認證服務
 func NewAuthService(db *gorm.DB, jwtSecret string, jwtExpireTime int) *AuthService {
 	return &AuthService{
 		db:            db,
@@ -41,7 +41,7 @@ func NewAuthService(db *gorm.DB, jwtSecret string, jwtExpireTime int) *AuthServi
 	}
 }
 
-// Login 用户登录，支持 local 和 ldap 两种认证方式
+// Login 使用者登入，支援 local 和 ldap 兩種認證方式
 func (s *AuthService) Login(username, password, authType, clientIP string) (*LoginResult, error) {
 	if authType == "" {
 		authType = "local"
@@ -72,16 +72,16 @@ func (s *AuthService) Login(username, password, authType, clientIP string) (*Log
 		return nil, apierrors.ErrAuthTokenFailed()
 	}
 
-	// 更新最后登录时间和IP
+	// 更新最後登入時間和IP
 	now := time.Now()
 	user.LastLoginAt = &now
 	user.LastLoginIP = clientIP
 	s.db.Save(user)
 
-	// 获取用户权限信息
+	// 獲取使用者權限資訊
 	permissions := s.buildPermissions(user.ID)
 
-	logger.Info("用户登录成功: %s (认证类型: %s)", user.Username, user.AuthType)
+	logger.Info("使用者登入成功: %s (認證型別: %s)", user.Username, user.AuthType)
 
 	return &LoginResult{
 		Token:       tokenString,
@@ -91,7 +91,7 @@ func (s *AuthService) Login(username, password, authType, clientIP string) (*Log
 	}, nil
 }
 
-// ChangePassword 修改密码（仅限本地用户）
+// ChangePassword 修改密碼（僅限本地使用者）
 func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword string) error {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
@@ -102,27 +102,27 @@ func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword strin
 		return apierrors.ErrAuthLDAPReadonly()
 	}
 
-	// 验证旧密码
+	// 驗證舊密碼
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword+user.Salt)); err != nil {
 		return apierrors.ErrAuthWrongPassword()
 	}
 
-	// 生成新密码哈希
+	// 生成新密碼雜湊
 	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword+user.Salt), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("密码加密失败: %w", err)
+		return fmt.Errorf("密碼加密失敗: %w", err)
 	}
 
 	user.PasswordHash = string(newHashedPassword)
 	if err := s.db.Save(&user).Error; err != nil {
-		return fmt.Errorf("密码更新失败: %w", err)
+		return fmt.Errorf("密碼更新失敗: %w", err)
 	}
 
-	logger.Info("用户修改密码成功: %s", user.Username)
+	logger.Info("使用者修改密碼成功: %s", user.Username)
 	return nil
 }
 
-// GetProfile 获取用户信息
+// GetProfile 獲取使用者資訊
 func (s *AuthService) GetProfile(userID uint) (*models.User, error) {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
@@ -131,7 +131,7 @@ func (s *AuthService) GetProfile(userID uint) (*models.User, error) {
 	return &user, nil
 }
 
-// GetAuthStatus 获取LDAP认证是否启用
+// GetAuthStatus 獲取LDAP認證是否啟用
 func (s *AuthService) GetAuthStatus() (bool, error) {
 	ldapConfig, err := s.ldapService.GetLDAPConfig()
 	if err != nil {
@@ -140,7 +140,7 @@ func (s *AuthService) GetAuthStatus() (bool, error) {
 	return ldapConfig.Enabled, nil
 }
 
-// authenticateLocal 本地密码认证
+// authenticateLocal 本地密碼認證
 func (s *AuthService) authenticateLocal(username, password string) (*models.User, error) {
 	var user models.User
 	if err := s.db.Where("username = ?", username).First(&user).Error; err != nil {
@@ -148,21 +148,21 @@ func (s *AuthService) authenticateLocal(username, password string) (*models.User
 	}
 
 	passwordWithSalt := password + user.Salt
-	logger.Info("验证密码 - 用户: %s, Salt: %s", username, user.Salt)
+	logger.Info("驗證密碼 - 使用者: %s, Salt: %s", username, user.Salt)
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(passwordWithSalt)); err != nil {
-		logger.Warn("密码验证失败 - 用户: %s, 错误: %v", username, err)
+		logger.Warn("密碼驗證失敗 - 使用者: %s, 錯誤: %v", username, err)
 		return nil, apierrors.ErrAuthInvalidCredentials()
 	}
 
 	return &user, nil
 }
 
-// authenticateLDAP LDAP认证
+// authenticateLDAP LDAP認證
 func (s *AuthService) authenticateLDAP(username, password string) (*models.User, error) {
 	ldapConfig, err := s.ldapService.GetLDAPConfig()
 	if err != nil {
-		return nil, fmt.Errorf("获取LDAP配置失败")
+		return nil, fmt.Errorf("獲取LDAP配置失敗")
 	}
 
 	if !ldapConfig.Enabled {
@@ -171,7 +171,7 @@ func (s *AuthService) authenticateLDAP(username, password string) (*models.User,
 
 	ldapUser, err := s.ldapService.Authenticate(username, password)
 	if err != nil {
-		return nil, fmt.Errorf("LDAP认证失败: %v", err)
+		return nil, fmt.Errorf("LDAP認證失敗: %v", err)
 	}
 
 	var user models.User
@@ -186,11 +186,11 @@ func (s *AuthService) authenticateLDAP(username, password string) (*models.User,
 			Status:      "active",
 		}
 		if err := s.db.Create(&user).Error; err != nil {
-			return nil, fmt.Errorf("创建用户记录失败")
+			return nil, fmt.Errorf("建立使用者記錄失敗")
 		}
-		logger.Info("LDAP用户首次登录，已创建本地记录: %s", username)
+		logger.Info("LDAP使用者首次登入，已建立本地記錄: %s", username)
 	} else if result.Error != nil {
-		return nil, fmt.Errorf("查询用户失败")
+		return nil, fmt.Errorf("查詢使用者失敗")
 	} else {
 		user.Email = ldapUser.Email
 		user.DisplayName = ldapUser.DisplayName
@@ -212,13 +212,13 @@ func (s *AuthService) generateJWT(user *models.User) (string, int64, error) {
 
 	tokenString, err := token.SignedString([]byte(s.jwtSecret))
 	if err != nil {
-		return "", 0, fmt.Errorf("签名token失败: %w", err)
+		return "", 0, fmt.Errorf("簽名token失敗: %w", err)
 	}
 
 	return tokenString, expiresAt.Unix(), nil
 }
 
-// buildPermissions 构建用户权限响应
+// buildPermissions 構建使用者權限響應
 func (s *AuthService) buildPermissions(userID uint) []models.MyPermissionsResponse {
 	clusterPermissions, _ := s.permissionSvc.GetUserAllClusterPermissions(userID)
 

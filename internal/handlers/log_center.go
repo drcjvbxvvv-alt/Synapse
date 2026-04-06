@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// LogCenterHandler 日志中心处理器
+// LogCenterHandler 日誌中心處理器
 type LogCenterHandler struct {
 	clusterSvc *services.ClusterService
 	k8sMgr     *k8s.ClusterInformerManager
@@ -33,7 +33,7 @@ type LogCenterHandler struct {
 	upgrader   websocket.Upgrader
 }
 
-// NewLogCenterHandler 创建日志中心处理器
+// NewLogCenterHandler 建立日誌中心處理器
 func NewLogCenterHandler(clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *LogCenterHandler {
 	return &LogCenterHandler{
 		clusterSvc: clusterSvc,
@@ -53,11 +53,11 @@ func NewLogCenterHandler(clusterSvc *services.ClusterService, k8sMgr *k8s.Cluste
 	}
 }
 
-// GetContainerLogs 获取容器日志
+// GetContainerLogs 獲取容器日誌
 func (h *LogCenterHandler) GetContainerLogs(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	namespace := c.Query("namespace")
@@ -68,13 +68,13 @@ func (h *LogCenterHandler) GetContainerLogs(c *gin.Context) {
 	previous := c.Query("previous") == "true"
 
 	if namespace == "" || podName == "" {
-		response.BadRequest(c, "namespace 和 pod 参数必填")
+		response.BadRequest(c, "namespace 和 pod 參數必填")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -83,7 +83,7 @@ func (h *LogCenterHandler) GetContainerLogs(c *gin.Context) {
 
 	logs, err := h.aggregator.GetContainerLogs(ctx, cluster, namespace, podName, container, tailLines, sinceSeconds, previous)
 	if err != nil {
-		response.InternalError(c, "获取日志失败: "+err.Error())
+		response.InternalError(c, "獲取日誌失敗: "+err.Error())
 		return
 	}
 
@@ -92,11 +92,11 @@ func (h *LogCenterHandler) GetContainerLogs(c *gin.Context) {
 	})
 }
 
-// GetEventLogs 获取K8s事件日志
+// GetEventLogs 獲取K8s事件日誌
 func (h *LogCenterHandler) GetEventLogs(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	namespace := c.Query("namespace")
@@ -107,14 +107,14 @@ func (h *LogCenterHandler) GetEventLogs(c *gin.Context) {
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -125,7 +125,7 @@ func (h *LogCenterHandler) GetEventLogs(c *gin.Context) {
 		Limit: int64(limit),
 	}
 
-	// 构建字段选择器
+	// 構建欄位選擇器
 	var fieldSelectors []string
 	if resourceType != "" {
 		fieldSelectors = append(fieldSelectors, fmt.Sprintf("involvedObject.kind=%s", resourceType))
@@ -142,11 +142,11 @@ func (h *LogCenterHandler) GetEventLogs(c *gin.Context) {
 
 	events, err := k8sClient.GetClientset().CoreV1().Events(namespace).List(ctx, listOpts)
 	if err != nil {
-		response.InternalError(c, "获取事件失败: "+err.Error())
+		response.InternalError(c, "獲取事件失敗: "+err.Error())
 		return
 	}
 
-	// 转换为统一格式
+	// 轉換為統一格式
 	eventLogs := make([]models.EventLogEntry, 0, len(events.Items))
 	for _, e := range events.Items {
 		eventLogs = append(eventLogs, models.EventLogEntry{
@@ -165,7 +165,7 @@ func (h *LogCenterHandler) GetEventLogs(c *gin.Context) {
 		})
 	}
 
-	// 按时间排序（最新的在前）
+	// 按時間排序（最新的在前）
 	sort.Slice(eventLogs, func(i, j int) bool {
 		return eventLogs[i].LastTimestamp.After(eventLogs[j].LastTimestamp)
 	})
@@ -173,23 +173,23 @@ func (h *LogCenterHandler) GetEventLogs(c *gin.Context) {
 	response.List(c, eventLogs, int64(len(eventLogs)))
 }
 
-// SearchLogs 日志搜索
+// SearchLogs 日誌搜尋
 func (h *LogCenterHandler) SearchLogs(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	var query models.LogQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -198,18 +198,18 @@ func (h *LogCenterHandler) SearchLogs(c *gin.Context) {
 
 	results, total, err := h.aggregator.SearchLogs(ctx, cluster, &query)
 	if err != nil {
-		response.InternalError(c, "搜索失败: "+err.Error())
+		response.InternalError(c, "搜尋失敗: "+err.Error())
 		return
 	}
 
 	response.List(c, results, int64(total))
 }
 
-// GetLogStats 获取日志统计
+// GetLogStats 獲取日誌統計
 func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	namespace := c.Query("namespace")
@@ -217,11 +217,11 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 计算时间范围
+	// 計算時間範圍
 	var since time.Duration
 	switch timeRange {
 	case "1h":
@@ -237,20 +237,20 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 	}
 	startTime := time.Now().Add(-since)
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取事件统计
+	// 獲取事件統計
 	events, err := k8sClient.GetClientset().CoreV1().Events(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		response.InternalError(c, "获取事件失败: "+err.Error())
+		response.InternalError(c, "獲取事件失敗: "+err.Error())
 		return
 	}
 
@@ -259,7 +259,7 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 	nsCount := make(map[string]int64)
 
 	for _, e := range events.Items {
-		// 过滤时间范围
+		// 過濾時間範圍
 		if e.LastTimestamp.Time.Before(startTime) {
 			continue
 		}
@@ -274,7 +274,7 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 			levelCount["info"]++
 		}
 
-		// 检查是否包含错误关键词
+		// 檢查是否包含錯誤關鍵詞
 		lowerMsg := strings.ToLower(e.Message)
 		if strings.Contains(lowerMsg, "error") ||
 			strings.Contains(lowerMsg, "fail") ||
@@ -286,7 +286,7 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 		nsCount[e.Namespace]++
 	}
 
-	// 转换为统计数组
+	// 轉換為統計陣列
 	for level, count := range levelCount {
 		stats.LevelStats = append(stats.LevelStats, models.LevelStat{Level: level, Count: count})
 	}
@@ -294,7 +294,7 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 		stats.NamespaceStats = append(stats.NamespaceStats, models.NamespaceStat{Namespace: ns, Count: count})
 	}
 
-	// 按数量排序命名空间统计
+	// 按數量排序命名空間統計
 	sort.Slice(stats.NamespaceStats, func(i, j int) bool {
 		return stats.NamespaceStats[i].Count > stats.NamespaceStats[j].Count
 	})
@@ -302,24 +302,24 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 	response.OK(c, stats)
 }
 
-// HandleAggregateLogStream 处理聚合日志流 WebSocket
+// HandleAggregateLogStream 處理聚合日誌流 WebSocket
 func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 升级WebSocket
+	// 升級WebSocket
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		logger.Error("WebSocket升级失败", "error", err)
+		logger.Error("WebSocket升級失敗", "error", err)
 		return
 	}
 	defer func() {
@@ -329,25 +329,25 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 读取客户端配置消息
+	// 讀取客戶端配置訊息
 	var config models.LogStreamConfig
 	if err := conn.ReadJSON(&config); err != nil {
-		_ = conn.WriteJSON(gin.H{"type": "error", "message": "无效的配置: " + err.Error()})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "無效的配置: " + err.Error()})
 		return
 	}
 
 	if len(config.Targets) == 0 {
-		_ = conn.WriteJSON(gin.H{"type": "error", "message": "至少需要一个日志目标"})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "至少需要一個日誌目標"})
 		return
 	}
 
-	// 发送连接成功消息
+	// 傳送連線成功訊息
 	_ = conn.WriteJSON(gin.H{
 		"type":    "connected",
-		"message": fmt.Sprintf("已连接到 %d 个日志源", len(config.Targets)),
+		"message": fmt.Sprintf("已連線到 %d 個日誌源", len(config.Targets)),
 	})
 
-	// 启动聚合日志流
+	// 啟動聚合日誌流
 	opts := &models.LogStreamOptions{
 		TailLines:     config.TailLines,
 		SinceSeconds:  config.SinceSeconds,
@@ -360,7 +360,7 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 		return
 	}
 
-	// 监听客户端断开
+	// 監聽客戶端斷開
 	go func() {
 		for {
 			if _, _, err := conn.ReadMessage(); err != nil {
@@ -370,13 +370,13 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 		}
 	}()
 
-	// 发送日志开始消息
+	// 傳送日誌開始訊息
 	_ = conn.WriteJSON(gin.H{
 		"type":    "start",
-		"message": "开始接收日志流",
+		"message": "開始接收日誌流",
 	})
 
-	// 转发日志
+	// 轉發日誌
 	for entry := range logCh {
 		msg := gin.H{
 			"type":      "log",
@@ -390,22 +390,22 @@ func (h *LogCenterHandler) HandleAggregateLogStream(c *gin.Context) {
 		}
 
 		if err := conn.WriteJSON(msg); err != nil {
-			logger.Info("发送日志失败，客户端可能已断开", "error", err)
+			logger.Info("傳送日誌失敗，客戶端可能已斷開", "error", err)
 			return
 		}
 	}
 
 	_ = conn.WriteJSON(gin.H{
 		"type":    "end",
-		"message": "日志流已结束",
+		"message": "日誌流已結束",
 	})
 }
 
-// HandleSinglePodLogStream 处理单个Pod日志流 WebSocket
+// HandleSinglePodLogStream 處理單個Pod日誌流 WebSocket
 func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	namespace := c.Param("namespace")
@@ -417,37 +417,37 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 升级WebSocket
+	// 升級WebSocket
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		logger.Error("WebSocket升级失败", "error", err)
+		logger.Error("WebSocket升級失敗", "error", err)
 		return
 	}
 	defer func() {
 		_ = conn.Close()
 	}()
 
-	// 发送连接成功消息
+	// 傳送連線成功訊息
 	_ = conn.WriteJSON(gin.H{
 		"type":    "connected",
-		"message": "WebSocket连接已建立",
+		"message": "WebSocket連線已建立",
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		_ = conn.WriteJSON(gin.H{"type": "error", "message": "获取K8s客户端失败: " + err.Error()})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "獲取K8s客戶端失敗: " + err.Error()})
 		return
 	}
 
-	// 构建日志选项
+	// 構建日誌選項
 	podLogOpts := &corev1.PodLogOptions{
 		Follow:     true,
 		Timestamps: true,
@@ -466,17 +466,17 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 		podLogOpts.SinceSeconds = &sinceSeconds
 	}
 
-	// 获取日志流
+	// 獲取日誌流
 	stream, err := k8sClient.GetClientset().CoreV1().Pods(namespace).GetLogs(podName, podLogOpts).Stream(ctx)
 	if err != nil {
-		_ = conn.WriteJSON(gin.H{"type": "error", "message": "获取日志流失败: " + err.Error()})
+		_ = conn.WriteJSON(gin.H{"type": "error", "message": "獲取日誌流失敗: " + err.Error()})
 		return
 	}
 	defer func() {
 		_ = stream.Close()
 	}()
 
-	// 监听客户端断开
+	// 監聽客戶端斷開
 	go func() {
 		for {
 			_, _, err := conn.ReadMessage()
@@ -488,18 +488,18 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 		}
 	}()
 
-	// 发送日志开始消息
+	// 傳送日誌開始訊息
 	_ = conn.WriteJSON(gin.H{
 		"type":    "start",
-		"message": "开始接收日志流",
+		"message": "開始接收日誌流",
 	})
 
-	// 读取并转发日志
+	// 讀取並轉發日誌
 	reader := bufio.NewReader(stream)
 	for {
 		select {
 		case <-ctx.Done():
-			_ = conn.WriteJSON(gin.H{"type": "closed", "message": "日志流已关闭"})
+			_ = conn.WriteJSON(gin.H{"type": "closed", "message": "日誌流已關閉"})
 			return
 		default:
 			line, err := reader.ReadString('\n')
@@ -510,11 +510,11 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 				if strings.Contains(err.Error(), "closed") || strings.Contains(err.Error(), "canceled") {
 					return
 				}
-				_ = conn.WriteJSON(gin.H{"type": "end", "message": "日志流已结束"})
+				_ = conn.WriteJSON(gin.H{"type": "end", "message": "日誌流已結束"})
 				return
 			}
 
-			// 解析日志级别
+			// 解析日誌級別
 			level := "info"
 			lowerLine := strings.ToLower(line)
 			if strings.Contains(lowerLine, "error") || strings.Contains(lowerLine, "fail") {
@@ -541,38 +541,38 @@ func (h *LogCenterHandler) HandleSinglePodLogStream(c *gin.Context) {
 	}
 }
 
-// GetNamespacesForLogs 获取日志中心可用的命名空间列表
+// GetNamespacesForLogs 獲取日誌中心可用的命名空間列表
 func (h *LogCenterHandler) GetNamespacesForLogs(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 确保 informer 缓存就绪
+	// 確保 informer 快取就緒
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 使用 informer 获取命名空间列表（通过获取所有 Pod 的命名空间）
+	// 使用 informer 獲取命名空間列表（透過獲取所有 Pod 的命名空間）
 	sel := labels.Everything()
 	pods, err := h.k8sMgr.PodsLister(cluster.ID).List(sel)
 	if err != nil {
-		response.InternalError(c, "获取命名空间失败: "+err.Error())
+		response.InternalError(c, "獲取命名空間失敗: "+err.Error())
 		return
 	}
 
-	// 收集所有有 Pod 的命名空间
+	// 收集所有有 Pod 的命名空間
 	nsSet := make(map[string]bool)
 	for _, pod := range pods {
 		nsSet[pod.Namespace] = true
@@ -587,31 +587,31 @@ func (h *LogCenterHandler) GetNamespacesForLogs(c *gin.Context) {
 	response.OK(c, nsList)
 }
 
-// GetPodsForLogs 获取指定命名空间的Pod列表（用于日志选择）
+// GetPodsForLogs 獲取指定命名空間的Pod列表（用於日誌選擇）
 func (h *LogCenterHandler) GetPodsForLogs(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	namespace := c.Query("namespace")
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 确保 informer 缓存就绪
+	// 確保 informer 快取就緒
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 使用 informer 获取 Pod 列表
+	// 使用 informer 獲取 Pod 列表
 	sel := labels.Everything()
 	var podObjs []*corev1.Pod
 
@@ -622,7 +622,7 @@ func (h *LogCenterHandler) GetPodsForLogs(c *gin.Context) {
 	}
 
 	if err != nil {
-		response.InternalError(c, "获取Pod列表失败: "+err.Error())
+		response.InternalError(c, "獲取Pod列表失敗: "+err.Error())
 		return
 	}
 
@@ -647,7 +647,7 @@ func (h *LogCenterHandler) GetPodsForLogs(c *gin.Context) {
 		})
 	}
 
-	// 按名称排序
+	// 按名稱排序
 	sort.Slice(podList, func(i, j int) bool {
 		return podList[i].Name < podList[j].Name
 	})
@@ -655,41 +655,41 @@ func (h *LogCenterHandler) GetPodsForLogs(c *gin.Context) {
 	response.OK(c, podList)
 }
 
-// ExportLogs 导出日志
+// ExportLogs 匯出日誌
 func (h *LogCenterHandler) ExportLogs(c *gin.Context) {
 	clusterID, err := parseClusterID(c.Param("clusterID"))
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	var query models.LogQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	// 设置较大的限制用于导出
+	// 設定較大的限制用於匯出
 	if query.Limit <= 0 || query.Limit > 10000 {
 		query.Limit = 10000
 	}
 
 	results, _, err := h.aggregator.SearchLogs(ctx, cluster, &query)
 	if err != nil {
-		response.InternalError(c, "获取日志失败: "+err.Error())
+		response.InternalError(c, "獲取日誌失敗: "+err.Error())
 		return
 	}
 
-	// 构建导出内容
+	// 構建匯出內容
 	var builder strings.Builder
 	for _, entry := range results {
 		builder.WriteString(fmt.Sprintf("%s [%s] [%s/%s] %s\n",
@@ -701,7 +701,7 @@ func (h *LogCenterHandler) ExportLogs(c *gin.Context) {
 		))
 	}
 
-	// 设置响应头
+	// 設定響應頭
 	filename := fmt.Sprintf("logs-%s-%s.txt", cluster.Name, time.Now().Format("20060102-150405"))
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	c.Header("Content-Type", "text/plain; charset=utf-8")

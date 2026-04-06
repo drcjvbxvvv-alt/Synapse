@@ -37,7 +37,7 @@ func (h *NotifyChannelHandler) ListNotifyChannels(c *gin.Context) {
 		response.InternalError(c, "查詢通知渠道失敗")
 		return
 	}
-	// 遮蔽 DingTalk 簽名密鑰
+	// 遮蔽 DingTalk 簽名金鑰
 	for i := range channels {
 		if channels[i].DingTalkSecret != "" {
 			channels[i].DingTalkSecret = "******"
@@ -54,7 +54,7 @@ func (h *NotifyChannelHandler) CreateNotifyChannel(c *gin.Context) {
 		return
 	}
 	if req.Name == "" || req.Type == "" || req.WebhookURL == "" {
-		response.BadRequest(c, "名稱、類型和 Webhook URL 為必填")
+		response.BadRequest(c, "名稱、型別和 Webhook URL 為必填")
 		return
 	}
 	if err := h.db.Create(&req).Error; err != nil {
@@ -144,17 +144,17 @@ func (h *NotifyChannelHandler) TestNotifyChannel(c *gin.Context) {
 
 	if err := sendTestNotification(&channel); err != nil {
 		logger.Error("測試通知失敗", "channel", channel.Name, "error", err)
-		response.BadRequest(c, "測試通知發送失敗: "+err.Error())
+		response.BadRequest(c, "測試通知傳送失敗: "+err.Error())
 		return
 	}
-	response.OK(c, gin.H{"message": "測試通知已發送"})
+	response.OK(c, gin.H{"message": "測試通知已傳送"})
 }
 
-// sendTestNotification 發送測試通知
+// sendTestNotification 傳送測試通知
 func sendTestNotification(ch *models.NotifyChannel) error {
 	var payload interface{}
 
-	testMsg := fmt.Sprintf("[Synapse] 通知渠道「%s」測試訊息，發送時間：%s", ch.Name, time.Now().Format("2006-01-02 15:04:05"))
+	testMsg := fmt.Sprintf("[Synapse] 通知渠道「%s」測試訊息，傳送時間：%s", ch.Name, time.Now().Format("2006-01-02 15:04:05"))
 
 	switch ch.Type {
 	case "dingtalk":
@@ -220,7 +220,7 @@ func dingTalkSign(secret string, timestamp int64) string {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
-// SendToChannel 透過指定渠道發送通知（供 EventAlertWorker 使用）
+// SendToChannel 透過指定渠道傳送通知（供 EventAlertWorker 使用）
 func SendToChannel(ch *models.NotifyChannel, title, content string) error {
 	var payload interface{}
 

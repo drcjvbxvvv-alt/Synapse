@@ -101,7 +101,7 @@ func (s *AuthServiceTestSuite) TestLogin_WrongPassword() {
 
 	_, err := s.service.Login("admin", "wrongpassword", "local", "127.0.0.1")
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "用户名或密码错误")
+	assert.Contains(s.T(), err.Error(), "使用者名稱或密碼錯誤")
 }
 
 func (s *AuthServiceTestSuite) TestLogin_UserNotFound() {
@@ -111,7 +111,7 @@ func (s *AuthServiceTestSuite) TestLogin_UserNotFound() {
 
 	_, err := s.service.Login("nobody", "password", "local", "127.0.0.1")
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "用户名或密码错误")
+	assert.Contains(s.T(), err.Error(), "使用者名稱或密碼錯誤")
 }
 
 func (s *AuthServiceTestSuite) TestLogin_DisabledUser() {
@@ -121,13 +121,13 @@ func (s *AuthServiceTestSuite) TestLogin_DisabledUser() {
 
 	_, err := s.service.Login("disabled", "password123", "local", "127.0.0.1")
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "用户账号已被禁用")
+	assert.Contains(s.T(), err.Error(), "使用者賬號已被禁用")
 }
 
 func (s *AuthServiceTestSuite) TestLogin_UnsupportedAuthType() {
 	_, err := s.service.Login("admin", "password", "oauth2", "127.0.0.1")
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "不支持的认证类型")
+	assert.Contains(s.T(), err.Error(), "不支援的認證型別")
 }
 
 // ---- ChangePassword ----
@@ -150,7 +150,7 @@ func (s *AuthServiceTestSuite) TestChangePassword_WrongOldPassword() {
 
 	err := s.service.ChangePassword(1, "wrongoldpassword", "newpassword")
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "原密码错误")
+	assert.Contains(s.T(), err.Error(), "原密碼錯誤")
 }
 
 func (s *AuthServiceTestSuite) TestChangePassword_LDAPUser() {
@@ -166,7 +166,7 @@ func (s *AuthServiceTestSuite) TestChangePassword_LDAPUser() {
 
 	err := s.service.ChangePassword(3, "anypassword", "newpassword")
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "LDAP用户不能在此修改密码")
+	assert.Contains(s.T(), err.Error(), "LDAP使用者不能在此修改密碼")
 }
 
 func (s *AuthServiceTestSuite) TestChangePassword_UserNotFound() {
@@ -175,7 +175,7 @@ func (s *AuthServiceTestSuite) TestChangePassword_UserNotFound() {
 
 	err := s.service.ChangePassword(999, "old", "new")
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "用户不存在")
+	assert.Contains(s.T(), err.Error(), "使用者不存在")
 }
 
 // ---- GetProfile ----

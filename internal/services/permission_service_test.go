@@ -14,7 +14,7 @@ import (
 	permModels "github.com/clay-wangzhi/Synapse/internal/models"
 )
 
-// PermissionServiceTestSuite 定义权限服务测试套件
+// PermissionServiceTestSuite 定義權限服務測試套件
 type PermissionServiceTestSuite struct {
 	suite.Suite
 	db      *gorm.DB
@@ -22,7 +22,7 @@ type PermissionServiceTestSuite struct {
 	service *PermissionService
 }
 
-// SetupTest 每个测试前的设置
+// SetupTest 每個測試前的設定
 func (s *PermissionServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
@@ -40,7 +40,7 @@ func (s *PermissionServiceTestSuite) SetupTest() {
 	s.service = NewPermissionService(gormDB)
 }
 
-// TearDownTest 每个测试后的清理
+// TearDownTest 每個測試後的清理
 func (s *PermissionServiceTestSuite) TearDownTest() {
 	if s.db != nil {
 		sqlDB, _ := s.db.DB()
@@ -50,7 +50,7 @@ func (s *PermissionServiceTestSuite) TearDownTest() {
 	}
 }
 
-// TestCreateUserGroup 测试创建用户组
+// TestCreateUserGroup 測試建立使用者組
 func (s *PermissionServiceTestSuite) TestCreateUserGroup() {
 	s.mock.ExpectBegin()
 	s.mock.ExpectExec(`INSERT INTO .user_groups.`).
@@ -63,20 +63,20 @@ func (s *PermissionServiceTestSuite) TestCreateUserGroup() {
 	assert.Equal(s.T(), "test-group", group.Name)
 }
 
-// TestGetUserGroup_Success 测试获取用户组成功
+// TestGetUserGroup_Success 測試獲取使用者組成功
 func (s *PermissionServiceTestSuite) TestGetUserGroup_Success() {
 	now := time.Now()
 
-	// 使用非常宽松的正则表达式来匹配 GORM 生成的 SQL
+	// 使用非常寬鬆的正規表示式來匹配 GORM 生成的 SQL
 	// GORM First 生成: SELECT * FROM `user_groups` WHERE `user_groups`.`id` = ? AND `user_groups`.`deleted_at` IS NULL ORDER BY `user_groups`.`id` LIMIT 1
 	groupRows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at", "deleted_at"}).
 		AddRow(1, "test-group", "Test description", now, now, nil)
 
-	// 使用 AnyArg 来匹配任意参数
+	// 使用 AnyArg 來匹配任意參數
 	s.mock.ExpectQuery(`SELECT`).
 		WillReturnRows(groupRows)
 
-	// Preload Users: GORM 首先查询 user_group_members 关联表
+	// Preload Users: GORM 首先查詢 user_group_members 關聯表
 	memberRows := sqlmock.NewRows([]string{"user_id", "user_group_id"})
 	s.mock.ExpectQuery(`SELECT`).
 		WillReturnRows(memberRows)
@@ -89,7 +89,7 @@ func (s *PermissionServiceTestSuite) TestGetUserGroup_Success() {
 	}
 }
 
-// TestGetUserGroup_NotFound 测试获取不存在的用户组
+// TestGetUserGroup_NotFound 測試獲取不存在的使用者組
 func (s *PermissionServiceTestSuite) TestGetUserGroup_NotFound() {
 	s.mock.ExpectQuery(`SELECT`).
 		WillReturnError(gorm.ErrRecordNotFound)
@@ -99,10 +99,10 @@ func (s *PermissionServiceTestSuite) TestGetUserGroup_NotFound() {
 	assert.Nil(s.T(), group)
 }
 
-// TestListUserGroups 测试列出所有用户组
+// TestListUserGroups 測試列出所有使用者組
 func (s *PermissionServiceTestSuite) TestListUserGroups() {
 	now := time.Now()
-	// 主查询：获取所有用户组
+	// 主查詢：獲取所有使用者組
 	groupRows := sqlmock.NewRows([]string{"id", "name", "description", "created_at", "updated_at", "deleted_at"}).
 		AddRow(1, "group-1", "Group 1", now, now, nil).
 		AddRow(2, "group-2", "Group 2", now, now, nil)
@@ -110,7 +110,7 @@ func (s *PermissionServiceTestSuite) TestListUserGroups() {
 	s.mock.ExpectQuery(`SELECT`).
 		WillReturnRows(groupRows)
 
-	// Preload Users 查询 - 查询用户组成员关联
+	// Preload Users 查詢 - 查詢使用者組成員關聯
 	s.mock.ExpectQuery(`SELECT`).
 		WillReturnRows(sqlmock.NewRows([]string{"user_id", "user_group_id"}))
 
@@ -119,19 +119,19 @@ func (s *PermissionServiceTestSuite) TestListUserGroups() {
 	assert.Len(s.T(), groups, 2)
 }
 
-// TestDeleteUserGroup_Success 测试删除用户组成功
+// TestDeleteUserGroup_Success 測試刪除使用者組成功
 func (s *PermissionServiceTestSuite) TestDeleteUserGroup_Success() {
-	// 1. 检查关联的权限配置 - Count 查询
+	// 1. 檢查關聯的權限配置 - Count 查詢
 	s.mock.ExpectQuery(`SELECT count`).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
-	// 2. 删除关联的用户组成员（GORM 的 Where().Delete() 会启动事务）
+	// 2. 刪除關聯的使用者組成員（GORM 的 Where().Delete() 會啟動事務）
 	s.mock.ExpectBegin()
 	s.mock.ExpectExec(`DELETE FROM`).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	s.mock.ExpectCommit()
 
-	// 3. 删除用户组（GORM 软删除 - 直接执行 UPDATE deleted_at）
+	// 3. 刪除使用者組（GORM 軟刪除 - 直接執行 UPDATE deleted_at）
 	s.mock.ExpectBegin()
 	s.mock.ExpectExec(`UPDATE`).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -141,20 +141,20 @@ func (s *PermissionServiceTestSuite) TestDeleteUserGroup_Success() {
 	assert.NoError(s.T(), err)
 }
 
-// TestHasClusterAccess 测试检查集群访问权限
+// TestHasClusterAccess 測試檢查叢集訪問權限
 func (s *PermissionServiceTestSuite) TestHasClusterAccess() {
 	now := time.Now()
 
-	// 1. 先查找用户直接权限（不存在）
+	// 1. 先查詢使用者直接權限（不存在）
 	s.mock.ExpectQuery(`SELECT`).
 		WillReturnError(gorm.ErrRecordNotFound)
 
-	// 2. 查找用户组权限（返回空结果）
+	// 2. 查詢使用者組權限（返回空結果）
 	s.mock.ExpectQuery(`SELECT`).
 		WillReturnRows(sqlmock.NewRows([]string{"user_id", "user_group_id"}))
 
-	// 3. 查询用户信息以获取默认权限（admin 用户会有管理员权限）
-	// 用户模型字段顺序：id, username, password_hash, salt, email, display_name, auth_type, status, last_login_at, last_login_ip, created_at, updated_at, deleted_at
+	// 3. 查詢使用者資訊以獲取預設權限（admin 使用者會有管理員權限）
+	// 使用者模型欄位順序：id, username, password_hash, salt, email, display_name, auth_type, status, last_login_at, last_login_ip, created_at, updated_at, deleted_at
 	userRows := sqlmock.NewRows([]string{
 		"id", "username", "password_hash", "salt", "email", "display_name", "auth_type", "status",
 		"last_login_at", "last_login_ip", "created_at", "updated_at", "deleted_at",
@@ -166,12 +166,12 @@ func (s *PermissionServiceTestSuite) TestHasClusterAccess() {
 	s.mock.ExpectQuery(`SELECT`).
 		WillReturnRows(userRows)
 
-	// 管理员应该有所有集群的访问权限
+	// 管理員應該有所有叢集的訪問權限
 	hasAccess := s.service.HasClusterAccess(1, 1)
 	assert.True(s.T(), hasAccess)
 }
 
-// TestListUsers 测试列出用户
+// TestListUsers 測試列出使用者
 func (s *PermissionServiceTestSuite) TestListUsers() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
@@ -200,7 +200,7 @@ func (s *PermissionServiceTestSuite) TestCanPerformAction_Admin() {
 	assert.True(s.T(), CanPerformAction(perm, "pod:delete"))
 }
 
-// TestCanPerformAction_Ops 運維不可操作節點/存儲/配額敏感操作
+// TestCanPerformAction_Ops 運維不可操作節點/儲存/配額敏感操作
 func (s *PermissionServiceTestSuite) TestCanPerformAction_Ops() {
 	perm := &permModels.ClusterPermission{
 		PermissionType: permModels.PermissionTypeOps,
@@ -255,7 +255,7 @@ func (s *PermissionServiceTestSuite) TestHasNamespaceAccess_Specific() {
 	assert.False(s.T(), HasNamespaceAccess(perm, "kube-system"))
 }
 
-// TestCreateClusterPermission_DuplicateRejected 同一使用者不可重複設定同集群權限
+// TestCreateClusterPermission_DuplicateRejected 同一使用者不可重複設定同叢集權限
 func (s *PermissionServiceTestSuite) TestCreateClusterPermission_DuplicateRejected() {
 	userID := uint(1)
 	req := &CreateClusterPermissionRequest{
@@ -270,10 +270,10 @@ func (s *PermissionServiceTestSuite) TestCreateClusterPermission_DuplicateReject
 
 	_, err := s.service.CreateClusterPermission(req)
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "已有权限配置")
+	assert.Contains(s.T(), err.Error(), "已有權限配置")
 }
 
-// TestCreateClusterPermission_InvalidType 非法權限類型應被拒絕
+// TestCreateClusterPermission_InvalidType 非法權限型別應被拒絕
 func (s *PermissionServiceTestSuite) TestCreateClusterPermission_InvalidType() {
 	userID := uint(1)
 	req := &CreateClusterPermissionRequest{
@@ -284,7 +284,7 @@ func (s *PermissionServiceTestSuite) TestCreateClusterPermission_InvalidType() {
 
 	_, err := s.service.CreateClusterPermission(req)
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "无效的权限类型")
+	assert.Contains(s.T(), err.Error(), "無效的權限型別")
 }
 
 // TestCreateClusterPermission_CustomWithoutRole 自訂權限必須指定 ClusterRole
@@ -299,7 +299,7 @@ func (s *PermissionServiceTestSuite) TestCreateClusterPermission_CustomWithoutRo
 
 	_, err := s.service.CreateClusterPermission(req)
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "必须指定ClusterRole")
+	assert.Contains(s.T(), err.Error(), "必須指定ClusterRole")
 }
 
 // TestCreateClusterPermission_BothUserAndGroup 不可同時指定使用者與群組
@@ -315,10 +315,10 @@ func (s *PermissionServiceTestSuite) TestCreateClusterPermission_BothUserAndGrou
 
 	_, err := s.service.CreateClusterPermission(req)
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "不能同时指定用户和用户组")
+	assert.Contains(s.T(), err.Error(), "不能同時指定使用者和使用者組")
 }
 
-// TestPermissionServiceSuite 运行测试套件
+// TestPermissionServiceSuite 執行測試套件
 func TestPermissionServiceSuite(t *testing.T) {
 	suite.Run(t, new(PermissionServiceTestSuite))
 }

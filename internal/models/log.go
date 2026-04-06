@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// LogEntry 统一日志条目模型
+// LogEntry 統一日誌條目模型
 type LogEntry struct {
 	ID          string                 `json:"id"`
 	Timestamp   time.Time              `json:"timestamp"`
@@ -23,7 +23,7 @@ type LogEntry struct {
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// LogQuery 日志查询参数
+// LogQuery 日誌查詢參數
 type LogQuery struct {
 	ClusterID  uint      `form:"clusterId"`
 	Namespaces []string  `form:"namespaces"`
@@ -41,7 +41,7 @@ type LogQuery struct {
 	Direction  string    `form:"direction"` // forward, backward
 }
 
-// LogStats 日志统计模型
+// LogStats 日誌統計模型
 type LogStats struct {
 	TotalCount       int64           `json:"total_count"`
 	ErrorCount       int64           `json:"error_count"`
@@ -52,25 +52,25 @@ type LogStats struct {
 	LevelStats       []LevelStat     `json:"level_stats,omitempty"`
 }
 
-// TimePoint 时间点统计
+// TimePoint 時間點統計
 type TimePoint struct {
 	Time  time.Time `json:"time"`
 	Count int64     `json:"count"`
 }
 
-// NamespaceStat 命名空间统计
+// NamespaceStat 命名空間統計
 type NamespaceStat struct {
 	Namespace string `json:"namespace"`
 	Count     int64  `json:"count"`
 }
 
-// LevelStat 日志级别统计
+// LevelStat 日誌級別統計
 type LevelStat struct {
 	Level string `json:"level"`
 	Count int64  `json:"count"`
 }
 
-// LogStreamConfig 日志流配置
+// LogStreamConfig 日誌流配置
 type LogStreamConfig struct {
 	ClusterID     uint              `json:"cluster_id"`
 	Targets       []LogStreamTarget `json:"targets"`
@@ -80,14 +80,14 @@ type LogStreamConfig struct {
 	ShowSource    bool              `json:"show_source"`
 }
 
-// LogStreamTarget 日志流目标
+// LogStreamTarget 日誌流目標
 type LogStreamTarget struct {
 	Namespace string `json:"namespace"`
 	Pod       string `json:"pod"`
 	Container string `json:"container"`
 }
 
-// LogStreamOptions 日志流选项
+// LogStreamOptions 日誌流選項
 type LogStreamOptions struct {
 	TailLines     int64
 	SinceSeconds  int64
@@ -95,15 +95,15 @@ type LogStreamOptions struct {
 	ShowTimestamp bool
 }
 
-// LogSourceConfig 外部日志源配置
+// LogSourceConfig 外部日誌源配置
 type LogSourceConfig struct {
 	ID        uint           `json:"id" gorm:"primaryKey"`
 	ClusterID uint           `json:"cluster_id" gorm:"not null;index"`
 	Type      string         `json:"type" gorm:"size:20"`  // loki, elasticsearch
-	Name      string         `json:"name" gorm:"size:100"` // 日志源名称
+	Name      string         `json:"name" gorm:"size:100"` // 日誌源名稱
 	URL       string         `json:"url" gorm:"size:255"`
 	Username  string         `json:"username,omitempty" gorm:"size:100"`
-	Password  string         `json:"-" gorm:"size:255"` // 加密存储
+	Password  string         `json:"-" gorm:"size:255"` // 加密儲存
 	APIKey    string         `json:"-" gorm:"size:255"`
 	Enabled   bool           `json:"enabled" gorm:"default:true"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -111,23 +111,23 @@ type LogSourceConfig struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// TableName 指定日志源配置表名
+// TableName 指定日誌源配置表名
 func (LogSourceConfig) TableName() string {
 	return "log_source_configs"
 }
 
-// EventLogEntry K8s事件日志条目
+// EventLogEntry K8s事件日誌條目
 type EventLogEntry struct {
 	ID              string    `json:"id"`
 	Type            string    `json:"type"`             // Normal, Warning
 	Reason          string    `json:"reason"`           // 事件原因
-	Message         string    `json:"message"`          // 事件消息
-	Count           int32     `json:"count"`            // 发生次数
-	FirstTimestamp  time.Time `json:"first_timestamp"`  // 首次发生时间
-	LastTimestamp   time.Time `json:"last_timestamp"`   // 最后发生时间
-	Namespace       string    `json:"namespace"`        // 命名空间
-	InvolvedKind    string    `json:"involved_kind"`    // 关联资源类型
-	InvolvedName    string    `json:"involved_name"`    // 关联资源名称
-	SourceComponent string    `json:"source_component"` // 事件来源组件
-	SourceHost      string    `json:"source_host"`      // 事件来源主机
+	Message         string    `json:"message"`          // 事件訊息
+	Count           int32     `json:"count"`            // 發生次數
+	FirstTimestamp  time.Time `json:"first_timestamp"`  // 首次發生時間
+	LastTimestamp   time.Time `json:"last_timestamp"`   // 最後發生時間
+	Namespace       string    `json:"namespace"`        // 命名空間
+	InvolvedKind    string    `json:"involved_kind"`    // 關聯資源型別
+	InvolvedName    string    `json:"involved_name"`    // 關聯資源名稱
+	SourceComponent string    `json:"source_component"` // 事件來源元件
+	SourceHost      string    `json:"source_host"`      // 事件來源主機
 }

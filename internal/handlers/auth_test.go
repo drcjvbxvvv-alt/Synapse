@@ -19,7 +19,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/services"
 )
 
-// AuthHandlerTestSuite 定义认证处理器测试套件
+// AuthHandlerTestSuite 定義認證處理器測試套件
 type AuthHandlerTestSuite struct {
 	suite.Suite
 	db      *gorm.DB
@@ -28,7 +28,7 @@ type AuthHandlerTestSuite struct {
 	handler *AuthHandler
 }
 
-// SetupTest 每个测试前的设置
+// SetupTest 每個測試前的設定
 func (s *AuthHandlerTestSuite) SetupTest() {
 	gin.SetMode(gin.TestMode)
 
@@ -55,7 +55,7 @@ func (s *AuthHandlerTestSuite) SetupTest() {
 	s.router.GET("/api/auth/profile", s.handler.GetProfile)
 }
 
-// TearDownTest 每个测试后的清理
+// TearDownTest 每個測試後的清理
 func (s *AuthHandlerTestSuite) TearDownTest() {
 	if s.db != nil {
 		sqlDB, _ := s.db.DB()
@@ -65,7 +65,7 @@ func (s *AuthHandlerTestSuite) TearDownTest() {
 	}
 }
 
-// TestLogin_EmptyCredentials 测试空凭据登录
+// TestLogin_EmptyCredentials 測試空憑據登入
 func (s *AuthHandlerTestSuite) TestLogin_EmptyCredentials() {
 	loginReq := map[string]string{
 		"username": "",
@@ -89,7 +89,7 @@ func (s *AuthHandlerTestSuite) TestLogin_EmptyCredentials() {
 	assert.Equal(s.T(), "BAD_REQUEST", errObj["code"])
 }
 
-// TestLogin_UserNotFound 测试用户不存在
+// TestLogin_UserNotFound 測試使用者不存在
 func (s *AuthHandlerTestSuite) TestLogin_UserNotFound() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ?")).
 		WithArgs("nonexistent").
@@ -109,7 +109,7 @@ func (s *AuthHandlerTestSuite) TestLogin_UserNotFound() {
 	assert.Equal(s.T(), http.StatusUnauthorized, w.Code)
 }
 
-// TestLogin_InvalidJSON 测试无效的 JSON 请求
+// TestLogin_InvalidJSON 測試無效的 JSON 請求
 func (s *AuthHandlerTestSuite) TestLogin_InvalidJSON() {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBuffer([]byte("invalid json")))
@@ -119,17 +119,17 @@ func (s *AuthHandlerTestSuite) TestLogin_InvalidJSON() {
 	assert.Equal(s.T(), http.StatusBadRequest, w.Code)
 }
 
-// TestGetProfile_NoToken 测试无 Token 获取当前用户
+// TestGetProfile_NoToken 測試無 Token 獲取當前使用者
 func (s *AuthHandlerTestSuite) TestGetProfile_NoToken() {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/auth/profile", nil)
 	s.router.ServeHTTP(w, req)
 
-	// 没有 user_id 在上下文中时，会返回未授权
+	// 沒有 user_id 在上下文中時，會返回未授權
 	assert.Equal(s.T(), http.StatusUnauthorized, w.Code)
 }
 
-// TestAuthHandlerSuite 运行测试套件
+// TestAuthHandlerSuite 執行測試套件
 func TestAuthHandlerSuite(t *testing.T) {
 	suite.Run(t, new(AuthHandlerTestSuite))
 }

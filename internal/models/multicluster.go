@@ -13,7 +13,7 @@ type SyncPolicy struct {
 	ResourceNames   string    `json:"resource_names" gorm:"type:text"`        // JSON 陣列
 	TargetClusters  string    `json:"target_clusters" gorm:"type:text"`       // JSON 陣列（叢集 ID）
 	ConflictPolicy  string    `json:"conflict_policy" gorm:"size:16;default:skip"` // overwrite / skip
-	Schedule        string    `json:"schedule" gorm:"size:64"`               // Cron 表達式，空表示手動
+	Schedule        string    `json:"schedule" gorm:"size:64"`               // Cron 表示式，空表示手動
 	Enabled         bool      `json:"enabled" gorm:"default:true"`
 	LastSyncAt      *time.Time `json:"last_sync_at"`
 	LastSyncStatus  string    `json:"last_sync_status" gorm:"size:16"` // success / partial / failed

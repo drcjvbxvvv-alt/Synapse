@@ -10,17 +10,17 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/models"
 )
 
-// UserService 用户管理服务
+// UserService 使用者管理服務
 type UserService struct {
 	db *gorm.DB
 }
 
-// NewUserService 创建用户管理服务
+// NewUserService 建立使用者管理服務
 func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
-// CreateUserRequest 创建用户请求
+// CreateUserRequest 建立使用者請求
 type CreateUserRequest struct {
 	Username    string `json:"username" binding:"required"`
 	Password    string `json:"password" binding:"required,min=6"`
@@ -29,14 +29,14 @@ type CreateUserRequest struct {
 	Phone       string `json:"phone"`
 }
 
-// UpdateUserRequest 更新用户请求
+// UpdateUserRequest 更新使用者請求
 type UpdateUserRequest struct {
 	Email       *string `json:"email"`
 	DisplayName *string `json:"display_name"`
 	Phone       *string `json:"phone"`
 }
 
-// ListUsersParams 用户列表查询参数
+// ListUsersParams 使用者列表查詢參數
 type ListUsersParams struct {
 	Page     int
 	PageSize int
@@ -45,7 +45,7 @@ type ListUsersParams struct {
 	AuthType string
 }
 
-// CreateUser 创建本地用户
+// CreateUser 建立本地使用者
 func (s *UserService) CreateUser(req *CreateUserRequest) (*models.User, error) {
 	var count int64
 	s.db.Model(&models.User{}).Where("username = ?", req.Username).Count(&count)
@@ -56,7 +56,7 @@ func (s *UserService) CreateUser(req *CreateUserRequest) (*models.User, error) {
 	salt := fmt.Sprintf("kp_%s_salt", req.Username)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password+salt), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, fmt.Errorf("密码加密失败: %w", err)
+		return nil, fmt.Errorf("密碼加密失敗: %w", err)
 	}
 
 	user := &models.User{
@@ -71,13 +71,13 @@ func (s *UserService) CreateUser(req *CreateUserRequest) (*models.User, error) {
 	}
 
 	if err := s.db.Create(user).Error; err != nil {
-		return nil, fmt.Errorf("创建用户失败: %w", err)
+		return nil, fmt.Errorf("建立使用者失敗: %w", err)
 	}
 
 	return user, nil
 }
 
-// UpdateUser 更新用户信息
+// UpdateUser 更新使用者資訊
 func (s *UserService) UpdateUser(id uint, req *UpdateUserRequest) (*models.User, error) {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
@@ -95,13 +95,13 @@ func (s *UserService) UpdateUser(id uint, req *UpdateUserRequest) (*models.User,
 	}
 
 	if err := s.db.Save(&user).Error; err != nil {
-		return nil, fmt.Errorf("更新用户失败: %w", err)
+		return nil, fmt.Errorf("更新使用者失敗: %w", err)
 	}
 
 	return &user, nil
 }
 
-// DeleteUser 删除用户
+// DeleteUser 刪除使用者
 func (s *UserService) DeleteUser(id uint) error {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
@@ -112,18 +112,18 @@ func (s *UserService) DeleteUser(id uint) error {
 		return apierrors.ErrUserAdminProtected()
 	}
 
-	// 清除用户组关联
+	// 清除使用者組關聯
 	s.db.Where("user_id = ?", id).Delete(&models.UserGroupMember{})
-	// 清除集群权限
+	// 清除叢集權限
 	s.db.Where("user_id = ?", id).Delete(&models.ClusterPermission{})
 
 	if err := s.db.Delete(&user).Error; err != nil {
-		return fmt.Errorf("删除用户失败: %w", err)
+		return fmt.Errorf("刪除使用者失敗: %w", err)
 	}
 	return nil
 }
 
-// GetUser 获取用户详情
+// GetUser 獲取使用者詳情
 func (s *UserService) GetUser(id uint) (*models.User, error) {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
@@ -132,7 +132,7 @@ func (s *UserService) GetUser(id uint) (*models.User, error) {
 	return &user, nil
 }
 
-// ListUsers 获取用户列表（分页、搜索、过滤）
+// ListUsers 獲取使用者列表（分頁、搜尋、過濾）
 func (s *UserService) ListUsers(params *ListUsersParams) ([]models.User, int64, error) {
 	query := s.db.Model(&models.User{})
 
@@ -155,13 +155,13 @@ func (s *UserService) ListUsers(params *ListUsersParams) ([]models.User, int64, 
 	if err := query.Order("id ASC").
 		Offset(offset).Limit(params.PageSize).
 		Find(&users).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询用户列表失败: %w", err)
+		return nil, 0, fmt.Errorf("查詢使用者列表失敗: %w", err)
 	}
 
 	return users, total, nil
 }
 
-// UpdateUserStatus 更新用户状态
+// UpdateUserStatus 更新使用者狀態
 func (s *UserService) UpdateUserStatus(id uint, status string) error {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
@@ -180,7 +180,7 @@ func (s *UserService) UpdateUserStatus(id uint, status string) error {
 	return s.db.Save(&user).Error
 }
 
-// ResetPassword 重置用户密码
+// ResetPassword 重置使用者密碼
 func (s *UserService) ResetPassword(id uint, newPassword string) error {
 	var user models.User
 	if err := s.db.First(&user, id).Error; err != nil {
@@ -193,7 +193,7 @@ func (s *UserService) ResetPassword(id uint, newPassword string) error {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword+user.Salt), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("密码加密失败: %w", err)
+		return fmt.Errorf("密碼加密失敗: %w", err)
 	}
 
 	user.PasswordHash = string(hashedPassword)

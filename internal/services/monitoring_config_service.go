@@ -10,18 +10,18 @@ import (
 	"gorm.io/gorm"
 )
 
-// MonitoringConfigService 监控配置服务
+// MonitoringConfigService 監控配置服務
 type MonitoringConfigService struct {
 	db             *gorm.DB
 	grafanaService *GrafanaService
 }
 
-// NewMonitoringConfigService 创建监控配置服务
+// NewMonitoringConfigService 建立監控配置服務
 func NewMonitoringConfigService(db *gorm.DB) *MonitoringConfigService {
 	return &MonitoringConfigService{db: db}
 }
 
-// NewMonitoringConfigServiceWithGrafana 创建带 Grafana 同步功能的监控配置服务
+// NewMonitoringConfigServiceWithGrafana 建立帶 Grafana 同步功能的監控配置服務
 func NewMonitoringConfigServiceWithGrafana(db *gorm.DB, grafanaService *GrafanaService) *MonitoringConfigService {
 	return &MonitoringConfigService{
 		db:             db,
@@ -29,18 +29,18 @@ func NewMonitoringConfigServiceWithGrafana(db *gorm.DB, grafanaService *GrafanaS
 	}
 }
 
-// GetMonitoringConfig 获取集群监控配置
+// GetMonitoringConfig 獲取叢集監控配置
 func (s *MonitoringConfigService) GetMonitoringConfig(clusterID uint) (*models.MonitoringConfig, error) {
 	var cluster models.Cluster
 	if err := s.db.Select("monitoring_config").First(&cluster, clusterID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("集群不存在: %d", clusterID)
+			return nil, fmt.Errorf("叢集不存在: %d", clusterID)
 		}
-		return nil, fmt.Errorf("获取集群失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集失敗: %w", err)
 	}
 
 	if cluster.MonitoringConfig == "" {
-		// 返回默认配置（禁用监控）
+		// 返回預設配置（禁用監控）
 		return &models.MonitoringConfig{
 			Type: "disabled",
 		}, nil
@@ -48,7 +48,7 @@ func (s *MonitoringConfigService) GetMonitoringConfig(clusterID uint) (*models.M
 
 	var config models.MonitoringConfig
 	if err := json.Unmarshal([]byte(cluster.MonitoringConfig), &config); err != nil {
-		logger.Error("解析监控配置失败", "cluster_id", clusterID, "error", err)
+		logger.Error("解析監控配置失敗", "cluster_id", clusterID, "error", err)
 		return &models.MonitoringConfig{
 			Type: "disabled",
 		}, nil
@@ -57,114 +57,114 @@ func (s *MonitoringConfigService) GetMonitoringConfig(clusterID uint) (*models.M
 	return &config, nil
 }
 
-// UpdateMonitoringConfig 更新集群监控配置
+// UpdateMonitoringConfig 更新叢集監控配置
 func (s *MonitoringConfigService) UpdateMonitoringConfig(clusterID uint, config *models.MonitoringConfig) error {
-	// 验证配置
+	// 驗證配置
 	if err := s.validateConfig(config); err != nil {
-		return fmt.Errorf("配置验证失败: %w", err)
+		return fmt.Errorf("配置驗證失敗: %w", err)
 	}
 
-	// 获取集群名称（用于 Grafana 数据源命名）
+	// 獲取叢集名稱（用於 Grafana 資料來源命名）
 	var cluster models.Cluster
 	if err := s.db.Select("name").First(&cluster, clusterID).Error; err != nil {
-		return fmt.Errorf("获取集群信息失败: %w", err)
+		return fmt.Errorf("獲取叢集資訊失敗: %w", err)
 	}
 
 	// 序列化配置
 	configJSON, err := json.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("序列化配置失败: %w", err)
+		return fmt.Errorf("序列化配置失敗: %w", err)
 	}
 
-	// 更新数据库
+	// 更新資料庫
 	result := s.db.Model(&models.Cluster{}).Where("id = ?", clusterID).Update("monitoring_config", string(configJSON))
 	if result.Error != nil {
-		return fmt.Errorf("更新监控配置失败: %w", result.Error)
+		return fmt.Errorf("更新監控配置失敗: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("集群不存在: %d", clusterID)
+		return fmt.Errorf("叢集不存在: %d", clusterID)
 	}
 
-	// 同步 Grafana 数据源
+	// 同步 Grafana 資料來源
 	if s.grafanaService != nil && s.grafanaService.IsEnabled() {
 		if config.Type == "disabled" {
-			// 监控禁用时删除数据源
+			// 監控禁用時刪除資料來源
 			if err := s.grafanaService.DeleteDataSource(cluster.Name); err != nil {
-				logger.Error("删除 Grafana 数据源失败", "cluster", cluster.Name, "error", err)
-				// 不返回错误，只记录日志
+				logger.Error("刪除 Grafana 資料來源失敗", "cluster", cluster.Name, "error", err)
+				// 不返回錯誤，只記錄日誌
 			}
 		} else {
-			// 同步数据源
+			// 同步資料來源
 			if err := s.grafanaService.SyncDataSource(cluster.Name, config.Endpoint); err != nil {
-				logger.Error("同步 Grafana 数据源失败", "cluster", cluster.Name, "error", err)
-				// 不返回错误，只记录日志
+				logger.Error("同步 Grafana 資料來源失敗", "cluster", cluster.Name, "error", err)
+				// 不返回錯誤，只記錄日誌
 			}
 		}
 	}
 
-	logger.Info("监控配置更新成功", "cluster_id", clusterID, "type", config.Type)
+	logger.Info("監控配置更新成功", "cluster_id", clusterID, "type", config.Type)
 	return nil
 }
 
-// DeleteMonitoringConfig 删除集群监控配置
+// DeleteMonitoringConfig 刪除叢集監控配置
 func (s *MonitoringConfigService) DeleteMonitoringConfig(clusterID uint) error {
 	result := s.db.Model(&models.Cluster{}).Where("id = ?", clusterID).Update("monitoring_config", "")
 	if result.Error != nil {
-		return fmt.Errorf("删除监控配置失败: %w", result.Error)
+		return fmt.Errorf("刪除監控配置失敗: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("集群不存在: %d", clusterID)
+		return fmt.Errorf("叢集不存在: %d", clusterID)
 	}
 
-	logger.Info("监控配置删除成功", "cluster_id", clusterID)
+	logger.Info("監控配置刪除成功", "cluster_id", clusterID)
 	return nil
 }
 
-// validateConfig 验证监控配置
+// validateConfig 驗證監控配置
 func (s *MonitoringConfigService) validateConfig(config *models.MonitoringConfig) error {
 	if config.Type == "disabled" {
-		return nil // 禁用监控不需要验证
+		return nil // 禁用監控不需要驗證
 	}
 
 	if config.Endpoint == "" {
-		return fmt.Errorf("监控端点不能为空")
+		return fmt.Errorf("監控端點不能為空")
 	}
 
-	// 验证认证配置
+	// 驗證認證配置
 	if config.Auth != nil {
 		switch config.Auth.Type {
 		case "none":
-			// 无需认证，不需要验证额外字段
+			// 無需認證，不需要驗證額外欄位
 		case "basic":
 			if config.Auth.Username == "" || config.Auth.Password == "" {
-				return fmt.Errorf("basic 认证需要用户名和密码")
+				return fmt.Errorf("basic 認證需要使用者名稱和密碼")
 			}
 		case "bearer":
 			if config.Auth.Token == "" {
-				return fmt.Errorf("bearer 认证需要 Token")
+				return fmt.Errorf("bearer 認證需要 Token")
 			}
 		case "mtls":
 			if config.Auth.CertFile == "" || config.Auth.KeyFile == "" {
-				return fmt.Errorf("mTLS 认证需要证书文件和密钥文件")
+				return fmt.Errorf("mTLS 認證需要證書檔案和金鑰檔案")
 			}
 		default:
-			return fmt.Errorf("不支持的认证类型: %s", config.Auth.Type)
+			return fmt.Errorf("不支援的認證型別: %s", config.Auth.Type)
 		}
 	}
 
 	return nil
 }
 
-// GetDefaultConfig 获取默认监控配置
+// GetDefaultConfig 獲取預設監控配置
 func (s *MonitoringConfigService) GetDefaultConfig() *models.MonitoringConfig {
 	return &models.MonitoringConfig{
 		Type: "disabled",
 	}
 }
 
-// GetPrometheusConfig 获取 Prometheus 配置模板
+// GetPrometheusConfig 獲取 Prometheus 配置模板
 func (s *MonitoringConfigService) GetPrometheusConfig() *models.MonitoringConfig {
 	return &models.MonitoringConfig{
 		Type:     "prometheus",
@@ -178,7 +178,7 @@ func (s *MonitoringConfigService) GetPrometheusConfig() *models.MonitoringConfig
 	}
 }
 
-// GetVictoriaMetricsConfig 获取 VictoriaMetrics 配置模板
+// GetVictoriaMetricsConfig 獲取 VictoriaMetrics 配置模板
 func (s *MonitoringConfigService) GetVictoriaMetricsConfig() *models.MonitoringConfig {
 	return &models.MonitoringConfig{
 		Type:     "victoriametrics",

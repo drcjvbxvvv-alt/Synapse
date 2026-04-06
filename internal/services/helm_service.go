@@ -109,7 +109,7 @@ type ChartInfo struct {
 // HelmService Helm 操作服務
 type HelmService struct{}
 
-// NewHelmService 建立 HelmService 實例
+// NewHelmService 建立 HelmService 例項
 func NewHelmService() *HelmService {
 	return &HelmService{}
 }

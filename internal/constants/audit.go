@@ -1,27 +1,27 @@
 package constants
 
-// 操作模块定义
+// 操作模組定義
 const (
-	ModuleAuth       = "auth"       // 认证：登录、登出、密码修改
-	ModuleCluster    = "cluster"    // 集群：导入、删除、配置
-	ModuleNode       = "node"       // 节点：cordon、uncordon、drain
-	ModulePod        = "pod"        // Pod：删除
-	ModuleWorkload   = "workload"   // 工作负载：deployment/sts/ds/job/cronjob
+	ModuleAuth       = "auth"       // 認證：登入、登出、密碼修改
+	ModuleCluster    = "cluster"    // 叢集：匯入、刪除、配置
+	ModuleNode       = "node"       // 節點：cordon、uncordon、drain
+	ModulePod        = "pod"        // Pod：刪除
+	ModuleWorkload   = "workload"   // 工作負載：deployment/sts/ds/job/cronjob
 	ModuleConfig     = "config"     // 配置：configmap、secret
-	ModuleNetwork    = "network"    // 网络：service、ingress
-	ModuleStorage    = "storage"    // 存储：pvc、pv、storageclass
-	ModuleNamespace  = "namespace"  // 命名空间
-	ModulePermission = "permission" // 权限：用户组、集群权限
-	ModuleSystem     = "system"     // 系统：LDAP、SSH配置
-	ModuleMonitoring = "monitoring" // 监控：Prometheus、Grafana配置
-	ModuleAlert      = "alert"      // 告警：AlertManager、静默规则
-	ModuleArgoCD     = "argocd"     // GitOps：ArgoCD应用
-	ModuleUnknown    = "unknown"    // 未知模块
+	ModuleNetwork    = "network"    // 網路：service、ingress
+	ModuleStorage    = "storage"    // 儲存：pvc、pv、storageclass
+	ModuleNamespace  = "namespace"  // 命名空間
+	ModulePermission = "permission" // 權限：使用者組、叢集權限
+	ModuleSystem     = "system"     // 系統：LDAP、SSH配置
+	ModuleMonitoring = "monitoring" // 監控：Prometheus、Grafana配置
+	ModuleAlert      = "alert"      // 告警：AlertManager、靜默規則
+	ModuleArgoCD     = "argocd"     // GitOps：ArgoCD應用
+	ModuleUnknown    = "unknown"    // 未知模組
 )
 
-// 操作动作定义
+// 操作動作定義
 const (
-	// 认证相关
+	// 認證相關
 	ActionLogin          = "login"
 	ActionLogout         = "logout"
 	ActionLoginFailed    = "login_failed"
@@ -33,12 +33,12 @@ const (
 	ActionDelete = "delete"
 	ActionApply  = "apply" // YAML apply
 
-	// 工作负载操作
+	// 工作負載操作
 	ActionScale    = "scale"
 	ActionRollback = "rollback"
 	ActionRestart  = "restart"
 
-	// 节点操作
+	// 節點操作
 	ActionCordon   = "cordon"
 	ActionUncordon = "uncordon"
 	ActionDrain    = "drain"
@@ -46,49 +46,49 @@ const (
 	// ArgoCD 操作
 	ActionSync = "sync"
 
-	// 测试操作
+	// 測試操作
 	ActionTest = "test"
 
-	// 导入操作
+	// 匯入操作
 	ActionImport = "import"
 )
 
-// ModuleNames 模块中文名称映射
+// ModuleNames 模組中文名稱對映
 var ModuleNames = map[string]string{
-	ModuleAuth:       "认证管理",
-	ModuleCluster:    "集群管理",
-	ModuleNode:       "节点管理",
+	ModuleAuth:       "認證管理",
+	ModuleCluster:    "叢集管理",
+	ModuleNode:       "節點管理",
 	ModulePod:        "Pod管理",
-	ModuleWorkload:   "工作负载",
+	ModuleWorkload:   "工作負載",
 	ModuleConfig:     "配置管理",
-	ModuleNetwork:    "网络管理",
-	ModuleStorage:    "存储管理",
-	ModuleNamespace:  "命名空间",
-	ModulePermission: "权限管理",
-	ModuleSystem:     "系统设置",
-	ModuleMonitoring: "监控配置",
+	ModuleNetwork:    "網路管理",
+	ModuleStorage:    "儲存管理",
+	ModuleNamespace:  "命名空間",
+	ModulePermission: "權限管理",
+	ModuleSystem:     "系統設定",
+	ModuleMonitoring: "監控配置",
 	ModuleAlert:      "告警管理",
 	ModuleArgoCD:     "GitOps",
 	ModuleUnknown:    "未知",
 }
 
-// ActionNames 操作中文名称映射
-var ActionNames = map[string]string{ // #nosec G101 -- 操作名称映射，非凭据
-	ActionLogin:          "登录",
+// ActionNames 操作中文名稱對映
+var ActionNames = map[string]string{ // #nosec G101 -- 操作名稱對映，非憑據
+	ActionLogin:          "登入",
 	ActionLogout:         "登出",
-	ActionLoginFailed:    "登录失败",
-	ActionChangePassword: "修改密码",
-	ActionCreate:         "创建",
+	ActionLoginFailed:    "登入失敗",
+	ActionChangePassword: "修改密碼",
+	ActionCreate:         "建立",
 	ActionUpdate:         "更新",
-	ActionDelete:         "删除",
-	ActionApply:          "应用YAML",
-	ActionScale:          "扩缩容",
-	ActionRollback:       "回滚",
-	ActionRestart:        "重启",
-	ActionCordon:         "禁止调度",
-	ActionUncordon:       "允许调度",
-	ActionDrain:          "驱逐节点",
+	ActionDelete:         "刪除",
+	ActionApply:          "應用YAML",
+	ActionScale:          "擴縮容",
+	ActionRollback:       "回滾",
+	ActionRestart:        "重啟",
+	ActionCordon:         "禁止排程",
+	ActionUncordon:       "允許排程",
+	ActionDrain:          "驅逐節點",
 	ActionSync:           "同步",
-	ActionTest:           "测试",
-	ActionImport:         "导入",
+	ActionTest:           "測試",
+	ActionImport:         "匯入",
 }

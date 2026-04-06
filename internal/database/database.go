@@ -18,18 +18,18 @@ import (
 	gormLogger "gorm.io/gorm/logger"
 )
 
-// currentDriver 保存当前使用的数据库驱动类型
+// currentDriver 儲存當前使用的資料庫驅動型別
 var currentDriver string
 
-// GetCurrentDriver 返回当前使用的数据库驱动类型
+// GetCurrentDriver 返回當前使用的資料庫驅動型別
 func GetCurrentDriver() string {
 	return currentDriver
 }
 
-// Init 初始化数据库连接
-// 支持 MySQL 和 SQLite 两种数据库驱动
+// Init 初始化資料庫連線
+// 支援 MySQL 和 SQLite 兩種資料庫驅動
 func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
-	// 配置 GORM 日志：只記錄慢查詢與錯誤，避免 AutoMigrate 時大量 I/O
+	// 配置 GORM 日誌：只記錄慢查詢與錯誤，避免 AutoMigrate 時大量 I/O
 	gormConfig := &gorm.Config{
 		Logger: gormLogger.Default.LogMode(gormLogger.Warn),
 	}
@@ -37,10 +37,10 @@ func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	var db *gorm.DB
 	var err error
 
-	// 根据配置的驱动类型选择数据库
+	// 根據配置的驅動型別選擇資料庫
 	driver := cfg.Driver
 	if driver == "" {
-		driver = "sqlite" // 默认使用 SQLite
+		driver = "sqlite" // 預設使用 SQLite
 	}
 	currentDriver = driver
 
@@ -50,71 +50,71 @@ func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	case "mysql":
 		db, err = initMySQL(cfg, gormConfig)
 	default:
-		return nil, fmt.Errorf("不支持的数据库驱动: %s，请使用 'sqlite' 或 'mysql'", driver)
+		return nil, fmt.Errorf("不支援的資料庫驅動: %s，請使用 'sqlite' 或 'mysql'", driver)
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	// 获取底层的 sql.DB 对象来配置连接池
+	// 獲取底層的 sql.DB 物件來配置連線池
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("获取数据库连接失败: %w", err)
+		return nil, fmt.Errorf("獲取資料庫連線失敗: %w", err)
 	}
 
-	// 设置连接池参数
+	// 設定連線池參數
 	if driver == "mysql" {
 		sqlDB.SetMaxIdleConns(10)
 		sqlDB.SetMaxOpenConns(100)
 		sqlDB.SetConnMaxLifetime(time.Hour)
 	} else {
-		// SQLite 使用单连接模式以避免锁冲突
+		// SQLite 使用單連線模式以避免鎖衝突
 		sqlDB.SetMaxIdleConns(1)
 		sqlDB.SetMaxOpenConns(1)
 		sqlDB.SetConnMaxLifetime(time.Hour)
 	}
 
-	// 自动迁移数据库表
+	// 自動遷移資料庫表
 	if err := autoMigrate(db); err != nil {
-		return nil, fmt.Errorf("数据库迁移失败: %w", err)
+		return nil, fmt.Errorf("資料庫遷移失敗: %w", err)
 	}
 
-	logger.Info("数据库连接成功 (驱动: %s)", driver)
+	logger.Info("資料庫連線成功 (驅動: %s)", driver)
 	return db, nil
 }
 
-// initSQLite 初始化 SQLite 数据库连接
+// initSQLite 初始化 SQLite 資料庫連線
 func initSQLite(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
-	// 获取数据库文件路径
+	// 獲取資料庫檔案路徑
 	dbPath := cfg.DSN
 	if dbPath == "" {
 		dbPath = "./data/synapse.db"
 	}
 
-	// 确保目录存在
+	// 確保目錄存在
 	dir := filepath.Dir(dbPath)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0750); err != nil {
-			return nil, fmt.Errorf("创建数据库目录失败: %w", err)
+			return nil, fmt.Errorf("建立資料庫目錄失敗: %w", err)
 		}
 	}
 
-	logger.Info("连接 SQLite 数据库: %s", dbPath)
+	logger.Info("連線 SQLite 資料庫: %s", dbPath)
 
-	// SQLite 连接参数：启用 WAL 模式提升并发性能，启用外键约束
+	// SQLite 連線參數：啟用 WAL 模式提升併發效能，啟用外來鍵約束
 	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_foreign_keys=on", dbPath)
 	db, err := gorm.Open(sqlite.Open(dsn), gormConfig)
 	if err != nil {
-		return nil, fmt.Errorf("连接 SQLite 数据库失败: %w", err)
+		return nil, fmt.Errorf("連線 SQLite 資料庫失敗: %w", err)
 	}
 
 	return db, nil
 }
 
-// initMySQL 初始化 MySQL 数据库连接
+// initMySQL 初始化 MySQL 資料庫連線
 func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
-	// 先连接到MySQL服务器（不指定数据库）来创建数据库
+	// 先連線到MySQL伺服器（不指定資料庫）來建立資料庫
 	dsnWithoutDB := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=%s&parseTime=True&loc=Local",
 		cfg.Username,
 		cfg.Password,
@@ -123,20 +123,20 @@ func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, er
 		cfg.Charset,
 	)
 
-	logger.Info("连接MySQL服务器: %s@%s:%d", cfg.Username, cfg.Host, cfg.Port)
+	logger.Info("連線MySQL伺服器: %s@%s:%d", cfg.Username, cfg.Host, cfg.Port)
 	tempDB, err := gorm.Open(mysql.Open(dsnWithoutDB), gormConfig)
 	if err != nil {
-		return nil, fmt.Errorf("连接MySQL服务器失败: %w", err)
+		return nil, fmt.Errorf("連線MySQL伺服器失敗: %w", err)
 	}
 
-	// 创建数据库（如果不存在）
+	// 建立資料庫（如果不存在）
 	createDBSQL := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", cfg.Database)
 	if err := tempDB.Exec(createDBSQL).Error; err != nil {
-		return nil, fmt.Errorf("创建数据库失败: %w", err)
+		return nil, fmt.Errorf("建立資料庫失敗: %w", err)
 	}
-	logger.Info("数据库 %s 创建成功或已存在", cfg.Database)
+	logger.Info("資料庫 %s 建立成功或已存在", cfg.Database)
 
-	// 现在连接到具体的数据库
+	// 現在連線到具體的資料庫
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
 		cfg.Username,
 		cfg.Password,
@@ -146,25 +146,25 @@ func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, er
 		cfg.Charset,
 	)
 
-	logger.Info("连接MySQL数据库: %s@%s:%d/%s", cfg.Username, cfg.Host, cfg.Port, cfg.Database)
+	logger.Info("連線MySQL資料庫: %s@%s:%d/%s", cfg.Username, cfg.Host, cfg.Port, cfg.Database)
 	db, err := gorm.Open(mysql.Open(dsn), gormConfig)
 	if err != nil {
-		return nil, fmt.Errorf("连接数据库失败: %w", err)
+		return nil, fmt.Errorf("連線資料庫失敗: %w", err)
 	}
 
 	return db, nil
 }
 
-// autoMigrate 自动迁移数据库表
+// autoMigrate 自動遷移資料庫表
 func autoMigrate(db *gorm.DB) error {
-	// 根据数据库驱动类型禁用外键约束检查
+	// 根據資料庫驅動型別禁用外來鍵約束檢查
 	if currentDriver == "mysql" {
 		db.Exec("SET FOREIGN_KEY_CHECKS = 0")
 	} else if currentDriver == "sqlite" {
 		db.Exec("PRAGMA foreign_keys = OFF")
 	}
 
-	// 按依赖顺序迁移表
+	// 按依賴順序遷移表
 	err := db.AutoMigrate(
 		&models.User{},
 		&models.Cluster{},
@@ -172,12 +172,12 @@ func autoMigrate(db *gorm.DB) error {
 		&models.TerminalSession{},
 		&models.TerminalCommand{},
 		&models.AuditLog{},
-		&models.OperationLog{},      // 操作审计日志表（新增）
-		&models.SystemSetting{},     // 系统设置表
+		&models.OperationLog{},      // 操作審計日誌表（新增）
+		&models.SystemSetting{},     // 系統設定表
 		&models.ArgoCDConfig{},      // ArgoCD 配置表
-		&models.UserGroup{},         // 用户组表
-		&models.UserGroupMember{},   // 用户组成员关联表
-		&models.ClusterPermission{}, // 集群权限表
+		&models.UserGroup{},         // 使用者組表
+		&models.UserGroupMember{},   // 使用者組成員關聯表
+		&models.ClusterPermission{}, // 叢集權限表
 		&models.AIConfig{},           // AI 配置表
 		&models.HelmRepository{},     // Helm Chart 倉庫配置表
 		&models.EventAlertRule{},     // K8s Event 告警規則表
@@ -199,14 +199,14 @@ func autoMigrate(db *gorm.DB) error {
 		&models.NotifyChannel{},        // 通知渠道設定表
 	)
 
-	// 根据数据库驱动类型重新启用外键约束检查
+	// 根據資料庫驅動型別重新啟用外來鍵約束檢查
 	if currentDriver == "mysql" {
 		db.Exec("SET FOREIGN_KEY_CHECKS = 1")
 	} else if currentDriver == "sqlite" {
 		db.Exec("PRAGMA foreign_keys = ON")
 	}
 
-	// 创建默认管理员用户和系统设置（如果不存在）
+	// 建立預設管理員使用者和系統設定（如果不存在）
 	if err == nil {
 		createDefaultUser(db)
 		createTestClusters(db)
@@ -217,30 +217,30 @@ func autoMigrate(db *gorm.DB) error {
 	return err
 }
 
-// createDefaultPermissions 创建默认权限配置
+// createDefaultPermissions 建立預設權限配置
 func createDefaultPermissions(db *gorm.DB) {
-	// 检查是否已有权限配置
+	// 檢查是否已有權限配置
 	var count int64
 	db.Model(&models.ClusterPermission{}).Count(&count)
 	if count > 0 {
 		return
 	}
 
-	// 获取管理员用户
+	// 獲取管理員使用者
 	var adminUser models.User
 	if err := db.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
-		logger.Error("未找到管理员用户，跳过权限配置: %v", err)
+		logger.Error("未找到管理員使用者，跳過權限配置: %v", err)
 		return
 	}
 
-	// 获取所有集群
+	// 獲取所有叢集
 	var clusters []models.Cluster
 	if err := db.Find(&clusters).Error; err != nil {
-		logger.Error("获取集群列表失败: %v", err)
+		logger.Error("獲取叢集列表失敗: %v", err)
 		return
 	}
 
-	// 为管理员用户在所有集群创建管理员权限
+	// 為管理員使用者在所有叢集建立管理員權限
 	for _, cluster := range clusters {
 		permission := &models.ClusterPermission{
 			ClusterID:      cluster.ID,
@@ -250,17 +250,17 @@ func createDefaultPermissions(db *gorm.DB) {
 		}
 
 		if err := db.Create(permission).Error; err != nil {
-			logger.Error("创建集群权限失败: cluster=%s, error=%v", cluster.Name, err)
+			logger.Error("建立叢集權限失敗: cluster=%s, error=%v", cluster.Name, err)
 		} else {
-			logger.Info("创建默认管理员权限: user=%s, cluster=%s", adminUser.Username, cluster.Name)
+			logger.Info("建立預設管理員權限: user=%s, cluster=%s", adminUser.Username, cluster.Name)
 		}
 	}
 
-	// 创建默认用户组
+	// 建立預設使用者組
 	defaultGroups := []models.UserGroup{
-		{Name: "运维组", Description: "运维团队成员，拥有运维权限"},
-		{Name: "开发组", Description: "开发团队成员，拥有开发权限"},
-		{Name: "只读组", Description: "只读权限用户组"},
+		{Name: "運維組", Description: "運維團隊成員，擁有運維權限"},
+		{Name: "開發組", Description: "開發團隊成員，擁有開發權限"},
+		{Name: "只讀組", Description: "只讀權限使用者組"},
 	}
 
 	for _, group := range defaultGroups {
@@ -270,31 +270,31 @@ func createDefaultPermissions(db *gorm.DB) {
 			continue // 已存在，跳過
 		}
 		if err := db.Create(&group).Error; err != nil {
-			logger.Error("创建用户组失败: %v", err)
+			logger.Error("建立使用者組失敗: %v", err)
 		} else {
-			logger.Info("创建默认用户组: %s", group.Name)
+			logger.Info("建立預設使用者組: %s", group.Name)
 		}
 	}
 }
 
-// createDefaultUser 创建默认管理员用户
+// createDefaultUser 建立預設管理員使用者
 func createDefaultUser(db *gorm.DB) {
 	// 先查，只有不存在才做 bcrypt（避免每次啟動都跑 ~100ms 的 hash 運算）
 	var user models.User
 	result := db.Where("username = ?", "admin").First(&user)
 	if result.Error == nil {
-		logger.Info("默认管理员用户已存在，跳过创建")
+		logger.Info("預設管理員使用者已存在，跳過建立")
 		return
 	}
 	if result.Error != gorm.ErrRecordNotFound {
-		logger.Error("查询默认用户失败: %v", result.Error)
+		logger.Error("查詢預設使用者失敗: %v", result.Error)
 		return
 	}
 
 	salt := "synapse_salt"
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("Synapse@2026"+salt), bcrypt.DefaultCost)
 	if err != nil {
-		logger.Error("生成密码哈希失败: %v", err)
+		logger.Error("生成密碼雜湊失敗: %v", err)
 		return
 	}
 
@@ -303,23 +303,23 @@ func createDefaultUser(db *gorm.DB) {
 		PasswordHash: string(hashedPassword),
 		Salt:         salt,
 		Email:        "admin@synapse.io",
-		DisplayName:  "管理员",
+		DisplayName:  "管理員",
 		AuthType:     "local",
 		Status:       "active",
 	}
 	if err := db.Create(&user).Error; err != nil {
-		logger.Error("创建默认用户失败: %v", err)
+		logger.Error("建立預設使用者失敗: %v", err)
 	} else {
-		logger.Info("默认管理员用户创建成功: admin/Synapse@2026")
+		logger.Info("預設管理員使用者建立成功: admin/Synapse@2026")
 	}
 }
 
-// createDefaultSystemSettings 创建默认系统设置
+// createDefaultSystemSettings 建立預設系統設定
 func createDefaultSystemSettings(db *gorm.DB) {
 	var count int64
 	db.Model(&models.SystemSetting{}).Where("config_key = ?", "ldap_config").Count(&count)
 	if count == 0 {
-		// 创建默认LDAP配置
+		// 建立預設LDAP配置
 		defaultLDAPConfig := models.GetDefaultLDAPConfig()
 		ldapConfigJSON, _ := json.Marshal(defaultLDAPConfig)
 
@@ -330,19 +330,19 @@ func createDefaultSystemSettings(db *gorm.DB) {
 		}
 
 		if err := db.Create(setting).Error; err != nil {
-			logger.Error("创建默认LDAP配置失败: %v", err)
+			logger.Error("建立預設LDAP配置失敗: %v", err)
 		} else {
-			logger.Info("默认LDAP配置创建成功")
+			logger.Info("預設LDAP配置建立成功")
 		}
 	}
 }
 
-// createTestClusters 创建测试集群数据
+// createTestClusters 建立測試叢集資料
 func createTestClusters(db *gorm.DB) {
 	var count int64
 	db.Model(&models.Cluster{}).Count(&count)
 	if count == 0 {
-		// 创建测试集群
+		// 建立測試叢集
 		testClusters := []*models.Cluster{
 			{
 				Name:      "dev-cluster",
@@ -420,9 +420,9 @@ users:
 
 		for _, cluster := range testClusters {
 			if err := db.Create(cluster).Error; err != nil {
-				logger.Error("创建测试集群失败: %v", err)
+				logger.Error("建立測試叢集失敗: %v", err)
 			} else {
-				logger.Info("测试集群创建成功: %s", cluster.Name)
+				logger.Info("測試叢集建立成功: %s", cluster.Name)
 			}
 		}
 	}

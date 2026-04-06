@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// K8sClientProvider 避免 services ↔ k8s 循環引用的介面
+// K8sClientProvider 避免 services ↔ k8s 迴圈引用的介面
 type K8sClientProvider interface {
 	GetK8sClient(cluster *models.Cluster) (*K8sClient, error)
 }
@@ -96,7 +96,7 @@ func (s *EventAlertService) recordHistory(history *models.EventAlertHistory) {
 
 // ---- Background Worker ----
 
-// EventAlertWorker 後台事件掃描工作器
+// EventAlertWorker 後臺事件掃描工作器
 type EventAlertWorker struct {
 	db         *gorm.DB
 	k8sProvider K8sClientProvider
@@ -118,7 +118,7 @@ func NewEventAlertWorker(db *gorm.DB, k8sProvider K8sClientProvider, clusterSvc 
 	}
 }
 
-// Start 啟動後台工作器（每 60 秒掃描一次）
+// Start 啟動後臺工作器（每 60 秒掃描一次）
 func (w *EventAlertWorker) Start() {
 	w.ticker = time.NewTicker(60 * time.Second)
 	go func() {

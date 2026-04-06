@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CORS 跨域中间件
+// CORS 跨域中介軟體
 func CORS() gin.HandlerFunc {
 	allowedOrigins := parseAllowedOrigins()
 
@@ -33,12 +33,12 @@ func CORS() gin.HandlerFunc {
 	}
 }
 
-// ParseAllowedOrigins 解析 CORS_ALLOWED_ORIGINS 环境变量
+// ParseAllowedOrigins 解析 CORS_ALLOWED_ORIGINS 環境變數
 func ParseAllowedOrigins() []string {
 	return parseAllowedOrigins()
 }
 
-// IsOriginAllowed 检查 origin 是否在允许列表中（导出供 WebSocket CheckOrigin 使用）
+// IsOriginAllowed 檢查 origin 是否在允許列表中（匯出供 WebSocket CheckOrigin 使用）
 func IsOriginAllowed(origin string) bool {
 	return isOriginAllowed(origin, parseAllowedOrigins())
 }
@@ -69,7 +69,7 @@ func isOriginAllowed(origin string, allowedOrigins []string) bool {
 	return false
 }
 
-// isDevOrigin 开发模式下允许 localhost 来源
+// isDevOrigin 開發模式下允許 localhost 來源
 func isDevOrigin(origin string) bool {
 	u, err := url.Parse(origin)
 	if err != nil {

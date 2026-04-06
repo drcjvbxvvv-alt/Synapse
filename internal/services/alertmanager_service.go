@@ -15,53 +15,53 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// AlertManagerService Alertmanager 服务
+// AlertManagerService Alertmanager 服務
 type AlertManagerService struct {
 	httpClient *http.Client
 }
 
-// NewAlertManagerService 创建 Alertmanager 服务
+// NewAlertManagerService 建立 Alertmanager 服務
 func NewAlertManagerService() *AlertManagerService {
 	return &AlertManagerService{
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // #nosec G402 -- 内部集群 AlertManager 通信，用户可自行配置证书
+					InsecureSkipVerify: true, // #nosec G402 -- 內部叢集 AlertManager 通訊，使用者可自行配置證書
 				},
 			},
 		},
 	}
 }
 
-// TestConnection 测试 Alertmanager 连接
+// TestConnection 測試 Alertmanager 連線
 func (s *AlertManagerService) TestConnection(ctx context.Context, config *models.AlertManagerConfig) error {
 	if !config.Enabled {
-		return fmt.Errorf("alertmanager 未启用")
+		return fmt.Errorf("alertmanager 未啟用")
 	}
 
-	// 构建测试 URL
+	// 構建測試 URL
 	testURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return fmt.Errorf("无效的 Alertmanager 端点: %w", err)
+		return fmt.Errorf("無效的 Alertmanager 端點: %w", err)
 	}
 	testURL.Path = "/api/v2/status"
 
-	// 创建测试请求
+	// 建立測試請求
 	req, err := http.NewRequestWithContext(ctx, "GET", testURL.String(), nil)
 	if err != nil {
-		return fmt.Errorf("创建测试请求失败: %w", err)
+		return fmt.Errorf("建立測試請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return fmt.Errorf("设置认证失败: %w", err)
+		return fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行测试请求
+	// 執行測試請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("连接测试失败: %w", err)
+		return fmt.Errorf("連線測試失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -69,26 +69,26 @@ func (s *AlertManagerService) TestConnection(ctx context.Context, config *models
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("alertmanager 响应异常: %s, 状态码: %d", string(body), resp.StatusCode)
+		return fmt.Errorf("alertmanager 響應異常: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
 	return nil
 }
 
-// GetAlerts 获取告警列表
+// GetAlerts 獲取告警列表
 func (s *AlertManagerService) GetAlerts(ctx context.Context, config *models.AlertManagerConfig, filter map[string]string) ([]models.Alert, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未啟用")
 	}
 
-	// 构建 URL
+	// 構建 URL
 	alertsURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("无效的 Alertmanager 端点: %w", err)
+		return nil, fmt.Errorf("無效的 Alertmanager 端點: %w", err)
 	}
 	alertsURL.Path = "/api/v2/alerts"
 
-	// 添加过滤参数
+	// 新增過濾參數
 	params := url.Values{}
 	for key, value := range filter {
 		if value != "" {
@@ -99,210 +99,210 @@ func (s *AlertManagerService) GetAlerts(ctx context.Context, config *models.Aler
 		alertsURL.RawQuery = params.Encode()
 	}
 
-	// 创建请求
+	// 建立請求
 	req, err := http.NewRequestWithContext(ctx, "GET", alertsURL.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return nil, fmt.Errorf("设置认证失败: %w", err)
+		return nil, fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行请求
+	// 執行請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取告警失败: %w", err)
+		return nil, fmt.Errorf("獲取告警失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	// 读取响应
+	// 讀取響應
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %w", err)
+		return nil, fmt.Errorf("讀取響應失敗: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("获取告警失败: %s, 状态码: %d", string(body), resp.StatusCode)
+		return nil, fmt.Errorf("獲取告警失敗: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
-	// 解析响应 - Alertmanager v2 API 直接返回数组
+	// 解析響應 - Alertmanager v2 API 直接返回陣列
 	var alerts []models.Alert
 	if err := json.Unmarshal(body, &alerts); err != nil {
-		return nil, fmt.Errorf("解析告警响应失败: %w", err)
+		return nil, fmt.Errorf("解析告警響應失敗: %w", err)
 	}
 
 	return alerts, nil
 }
 
-// GetAlertGroups 获取告警分组
+// GetAlertGroups 獲取告警分組
 func (s *AlertManagerService) GetAlertGroups(ctx context.Context, config *models.AlertManagerConfig) ([]models.AlertGroup, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未啟用")
 	}
 
-	// 构建 URL
+	// 構建 URL
 	groupsURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("无效的 Alertmanager 端点: %w", err)
+		return nil, fmt.Errorf("無效的 Alertmanager 端點: %w", err)
 	}
 	groupsURL.Path = "/api/v2/alerts/groups"
 
-	// 创建请求
+	// 建立請求
 	req, err := http.NewRequestWithContext(ctx, "GET", groupsURL.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return nil, fmt.Errorf("设置认证失败: %w", err)
+		return nil, fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行请求
+	// 執行請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取告警分组失败: %w", err)
+		return nil, fmt.Errorf("獲取告警分組失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	// 读取响应
+	// 讀取響應
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %w", err)
+		return nil, fmt.Errorf("讀取響應失敗: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("获取告警分组失败: %s, 状态码: %d", string(body), resp.StatusCode)
+		return nil, fmt.Errorf("獲取告警分組失敗: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
-	// 解析响应
+	// 解析響應
 	var groups []models.AlertGroup
 	if err := json.Unmarshal(body, &groups); err != nil {
-		return nil, fmt.Errorf("解析告警分组响应失败: %w", err)
+		return nil, fmt.Errorf("解析告警分組響應失敗: %w", err)
 	}
 
 	return groups, nil
 }
 
-// GetSilences 获取静默规则列表
+// GetSilences 獲取靜默規則列表
 func (s *AlertManagerService) GetSilences(ctx context.Context, config *models.AlertManagerConfig) ([]models.Silence, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未啟用")
 	}
 
-	// 构建 URL
+	// 構建 URL
 	silencesURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("无效的 Alertmanager 端点: %w", err)
+		return nil, fmt.Errorf("無效的 Alertmanager 端點: %w", err)
 	}
 	silencesURL.Path = "/api/v2/silences"
 
-	// 创建请求
+	// 建立請求
 	req, err := http.NewRequestWithContext(ctx, "GET", silencesURL.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return nil, fmt.Errorf("设置认证失败: %w", err)
+		return nil, fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行请求
+	// 執行請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取静默规则失败: %w", err)
+		return nil, fmt.Errorf("獲取靜默規則失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	// 读取响应
+	// 讀取響應
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %w", err)
+		return nil, fmt.Errorf("讀取響應失敗: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("获取静默规则失败: %s, 状态码: %d", string(body), resp.StatusCode)
+		return nil, fmt.Errorf("獲取靜默規則失敗: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
-	// 解析响应
+	// 解析響應
 	var silences []models.Silence
 	if err := json.Unmarshal(body, &silences); err != nil {
-		return nil, fmt.Errorf("解析静默规则响应失败: %w", err)
+		return nil, fmt.Errorf("解析靜默規則響應失敗: %w", err)
 	}
 
 	return silences, nil
 }
 
-// CreateSilence 创建静默规则
+// CreateSilence 建立靜默規則
 func (s *AlertManagerService) CreateSilence(ctx context.Context, config *models.AlertManagerConfig, silence *models.CreateSilenceRequest) (*models.Silence, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未啟用")
 	}
 
-	// 构建 URL
+	// 構建 URL
 	silencesURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("无效的 Alertmanager 端点: %w", err)
+		return nil, fmt.Errorf("無效的 Alertmanager 端點: %w", err)
 	}
 	silencesURL.Path = "/api/v2/silences"
 
-	// 序列化请求体
+	// 序列化請求體
 	reqBody, err := json.Marshal(silence)
 	if err != nil {
-		return nil, fmt.Errorf("序列化请求失败: %w", err)
+		return nil, fmt.Errorf("序列化請求失敗: %w", err)
 	}
 
-	// 创建请求
+	// 建立請求
 	req, err := http.NewRequestWithContext(ctx, "POST", silencesURL.String(), strings.NewReader(string(reqBody)))
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return nil, fmt.Errorf("设置认证失败: %w", err)
+		return nil, fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行请求
+	// 執行請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("创建静默规则失败: %w", err)
+		return nil, fmt.Errorf("建立靜默規則失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	// 读取响应
+	// 讀取響應
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %w", err)
+		return nil, fmt.Errorf("讀取響應失敗: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return nil, fmt.Errorf("创建静默规则失败: %s, 状态码: %d", string(body), resp.StatusCode)
+		return nil, fmt.Errorf("建立靜默規則失敗: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
-	// 解析响应
+	// 解析響應
 	var result struct {
 		SilenceID string `json:"silenceID"`
 	}
 	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %w", err)
+		return nil, fmt.Errorf("解析響應失敗: %w", err)
 	}
 
-	logger.Info("创建静默规则成功", "silenceID", result.SilenceID)
+	logger.Info("建立靜默規則成功", "silenceID", result.SilenceID)
 
-	// 返回创建的静默规则
+	// 返回建立的靜默規則
 	return &models.Silence{
 		ID:        result.SilenceID,
 		Matchers:  silence.Matchers,
@@ -316,34 +316,34 @@ func (s *AlertManagerService) CreateSilence(ctx context.Context, config *models.
 	}, nil
 }
 
-// DeleteSilence 删除静默规则
+// DeleteSilence 刪除靜默規則
 func (s *AlertManagerService) DeleteSilence(ctx context.Context, config *models.AlertManagerConfig, silenceID string) error {
 	if !config.Enabled {
-		return fmt.Errorf("alertmanager 未启用")
+		return fmt.Errorf("alertmanager 未啟用")
 	}
 
-	// 构建 URL
+	// 構建 URL
 	silenceURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return fmt.Errorf("无效的 Alertmanager 端点: %w", err)
+		return fmt.Errorf("無效的 Alertmanager 端點: %w", err)
 	}
 	silenceURL.Path = fmt.Sprintf("/api/v2/silence/%s", silenceID)
 
-	// 创建请求
+	// 建立請求
 	req, err := http.NewRequestWithContext(ctx, "DELETE", silenceURL.String(), nil)
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %w", err)
+		return fmt.Errorf("建立請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return fmt.Errorf("设置认证失败: %w", err)
+		return fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行请求
+	// 執行請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("删除静默规则失败: %w", err)
+		return fmt.Errorf("刪除靜默規則失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -351,118 +351,118 @@ func (s *AlertManagerService) DeleteSilence(ctx context.Context, config *models.
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("删除静默规则失败: %s, 状态码: %d", string(body), resp.StatusCode)
+		return fmt.Errorf("刪除靜默規則失敗: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
-	logger.Info("删除静默规则成功", "silenceID", silenceID)
+	logger.Info("刪除靜默規則成功", "silenceID", silenceID)
 	return nil
 }
 
-// GetStatus 获取 Alertmanager 状态
+// GetStatus 獲取 Alertmanager 狀態
 func (s *AlertManagerService) GetStatus(ctx context.Context, config *models.AlertManagerConfig) (*models.AlertManagerStatus, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未啟用")
 	}
 
-	// 构建 URL
+	// 構建 URL
 	statusURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("无效的 Alertmanager 端点: %w", err)
+		return nil, fmt.Errorf("無效的 Alertmanager 端點: %w", err)
 	}
 	statusURL.Path = "/api/v2/status"
 
-	// 创建请求
+	// 建立請求
 	req, err := http.NewRequestWithContext(ctx, "GET", statusURL.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return nil, fmt.Errorf("设置认证失败: %w", err)
+		return nil, fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行请求
+	// 執行請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取状态失败: %w", err)
+		return nil, fmt.Errorf("獲取狀態失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	// 读取响应
+	// 讀取響應
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %w", err)
+		return nil, fmt.Errorf("讀取響應失敗: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("获取状态失败: %s, 状态码: %d", string(body), resp.StatusCode)
+		return nil, fmt.Errorf("獲取狀態失敗: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
-	// 解析响应
+	// 解析響應
 	var status models.AlertManagerStatus
 	if err := json.Unmarshal(body, &status); err != nil {
-		return nil, fmt.Errorf("解析状态响应失败: %w", err)
+		return nil, fmt.Errorf("解析狀態響應失敗: %w", err)
 	}
 
 	return &status, nil
 }
 
-// GetReceivers 获取接收器列表
+// GetReceivers 獲取接收器列表
 func (s *AlertManagerService) GetReceivers(ctx context.Context, config *models.AlertManagerConfig) ([]models.Receiver, error) {
 	if !config.Enabled {
-		return nil, fmt.Errorf("alertmanager 未启用")
+		return nil, fmt.Errorf("alertmanager 未啟用")
 	}
 
-	// 构建 URL
+	// 構建 URL
 	receiversURL, err := url.Parse(config.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("无效的 Alertmanager 端点: %w", err)
+		return nil, fmt.Errorf("無效的 Alertmanager 端點: %w", err)
 	}
 	receiversURL.Path = "/api/v2/receivers"
 
-	// 创建请求
+	// 建立請求
 	req, err := http.NewRequestWithContext(ctx, "GET", receiversURL.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 
-	// 设置认证
+	// 設定認證
 	if err := s.setAuth(req, config.Auth); err != nil {
-		return nil, fmt.Errorf("设置认证失败: %w", err)
+		return nil, fmt.Errorf("設定認證失敗: %w", err)
 	}
 
-	// 执行请求
+	// 執行請求
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取接收器失败: %w", err)
+		return nil, fmt.Errorf("獲取接收器失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
-	// 读取响应
+	// 讀取響應
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %w", err)
+		return nil, fmt.Errorf("讀取響應失敗: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("获取接收器失败: %s, 状态码: %d", string(body), resp.StatusCode)
+		return nil, fmt.Errorf("獲取接收器失敗: %s, 狀態碼: %d", string(body), resp.StatusCode)
 	}
 
-	// 解析响应
+	// 解析響應
 	var receivers []models.Receiver
 	if err := json.Unmarshal(body, &receivers); err != nil {
-		return nil, fmt.Errorf("解析接收器响应失败: %w", err)
+		return nil, fmt.Errorf("解析接收器響應失敗: %w", err)
 	}
 
 	return receivers, nil
 }
 
-// GetAlertStats 获取告警统计信息
+// GetAlertStats 獲取告警統計資訊
 func (s *AlertManagerService) GetAlertStats(ctx context.Context, config *models.AlertManagerConfig) (*models.AlertStats, error) {
 	alerts, err := s.GetAlerts(ctx, config, nil)
 	if err != nil {
@@ -479,7 +479,7 @@ func (s *AlertManagerService) GetAlertStats(ctx context.Context, config *models.
 	}
 
 	for _, alert := range alerts {
-		// 统计状态
+		// 統計狀態
 		switch alert.Status.State {
 		case "active":
 			stats.Firing++
@@ -489,7 +489,7 @@ func (s *AlertManagerService) GetAlertStats(ctx context.Context, config *models.
 			stats.Resolved++
 		}
 
-		// 统计严重程度
+		// 統計嚴重程度
 		if severity, ok := alert.Labels["severity"]; ok {
 			stats.BySeverity[severity]++
 		}
@@ -498,7 +498,7 @@ func (s *AlertManagerService) GetAlertStats(ctx context.Context, config *models.
 	return stats, nil
 }
 
-// setAuth 设置认证
+// setAuth 設定認證
 func (s *AlertManagerService) setAuth(req *http.Request, auth *models.MonitoringAuth) error {
 	return SetMonitoringAuth(req, auth)
 }

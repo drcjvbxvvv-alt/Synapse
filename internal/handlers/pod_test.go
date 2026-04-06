@@ -20,7 +20,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/services"
 )
 
-// PodHandlerTestSuite 定义 Pod 处理器测试套件
+// PodHandlerTestSuite 定義 Pod 處理器測試套件
 type PodHandlerTestSuite struct {
 	suite.Suite
 	db      *gorm.DB
@@ -29,7 +29,7 @@ type PodHandlerTestSuite struct {
 	handler *PodHandler
 }
 
-// SetupTest 每个测试前的设置
+// SetupTest 每個測試前的設定
 func (s *PodHandlerTestSuite) SetupTest() {
 	gin.SetMode(gin.TestMode)
 
@@ -52,12 +52,12 @@ func (s *PodHandlerTestSuite) SetupTest() {
 	s.handler = NewPodHandler(gormDB, cfg, clusterService, nil)
 
 	s.router = gin.New()
-	// 添加集群 ID 路由参数
+	// 新增叢集 ID 路由參數
 	s.router.GET("/api/clusters/:clusterID/pods", s.handler.GetPods)
 	s.router.GET("/api/clusters/:clusterID/namespaces/:namespace/pods/:name", s.handler.GetPod)
 }
 
-// TearDownTest 每个测试后的清理
+// TearDownTest 每個測試後的清理
 func (s *PodHandlerTestSuite) TearDownTest() {
 	if s.db != nil {
 		sqlDB, _ := s.db.DB()
@@ -67,7 +67,7 @@ func (s *PodHandlerTestSuite) TearDownTest() {
 	}
 }
 
-// TestGetPods_ClusterNotFound 测试获取 Pod 列表时集群不存在
+// TestGetPods_ClusterNotFound 測試獲取 Pod 列表時叢集不存在
 func (s *PodHandlerTestSuite) TestGetPods_ClusterNotFound() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
 		WithArgs(999, 1).
@@ -88,7 +88,7 @@ func (s *PodHandlerTestSuite) TestGetPods_ClusterNotFound() {
 	assert.Equal(s.T(), "NOT_FOUND", errObj["code"])
 }
 
-// TestGetPods_InvalidClusterID 测试无效的集群 ID
+// TestGetPods_InvalidClusterID 測試無效的叢集 ID
 func (s *PodHandlerTestSuite) TestGetPods_InvalidClusterID() {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/clusters/invalid/pods", nil)
@@ -97,7 +97,7 @@ func (s *PodHandlerTestSuite) TestGetPods_InvalidClusterID() {
 	assert.Equal(s.T(), http.StatusBadRequest, w.Code)
 }
 
-// TestGetPod_InvalidParams 测试无效的参数
+// TestGetPod_InvalidParams 測試無效的參數
 func (s *PodHandlerTestSuite) TestGetPod_InvalidParams() {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/clusters/invalid/namespaces/default/pods/test-pod", nil)
@@ -106,7 +106,7 @@ func (s *PodHandlerTestSuite) TestGetPod_InvalidParams() {
 	assert.Equal(s.T(), http.StatusBadRequest, w.Code)
 }
 
-// TestGetPod_ClusterExists 测试获取 Pod 详情时集群存在但 K8s 连接为空
+// TestGetPod_ClusterExists 測試獲取 Pod 詳情時叢集存在但 K8s 連線為空
 func (s *PodHandlerTestSuite) TestGetPod_ClusterExists() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
@@ -127,11 +127,11 @@ func (s *PodHandlerTestSuite) TestGetPod_ClusterExists() {
 	req, _ := http.NewRequest("GET", "/api/clusters/1/namespaces/default/pods/test-pod", nil)
 	s.router.ServeHTTP(w, req)
 
-	// 由于 K8s 客户端为 nil，应该返回错误（503 或 500）
+	// 由於 K8s 客戶端為 nil，應該返回錯誤（503 或 500）
 	assert.True(s.T(), w.Code == http.StatusInternalServerError || w.Code == http.StatusServiceUnavailable || w.Code == http.StatusNotFound)
 }
 
-// TestPodHandlerSuite 运行测试套件
+// TestPodHandlerSuite 執行測試套件
 func TestPodHandlerSuite(t *testing.T) {
 	suite.Run(t, new(PodHandlerTestSuite))
 }

@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// UserServiceTestSuite 用戶管理服務測試套件
+// UserServiceTestSuite 使用者管理服務測試套件
 type UserServiceTestSuite struct {
 	suite.Suite
 	db      *gorm.DB
@@ -80,7 +80,7 @@ func (s *UserServiceTestSuite) TestCreateUser_DuplicateUsername() {
 	})
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), user)
-	assert.Contains(s.T(), err.Error(), "用户名已存在")
+	assert.Contains(s.T(), err.Error(), "使用者名稱已存在")
 }
 
 // ---- GetUser ----

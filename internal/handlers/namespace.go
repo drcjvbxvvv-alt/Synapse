@@ -30,7 +30,7 @@ func NewNamespaceHandler(clusterService *services.ClusterService, k8sMgr *k8s.Cl
 	}
 }
 
-// NamespaceResponse 命名空间响应结构
+// NamespaceResponse 命名空間響應結構
 type NamespaceResponse struct {
 	Name              string             `json:"name"`
 	Status            string             `json:"status"`
@@ -40,25 +40,25 @@ type NamespaceResponse struct {
 	ResourceQuota     *ResourceQuotaInfo `json:"resourceQuota,omitempty"`
 }
 
-// ResourceQuotaInfo 资源配额信息
+// ResourceQuotaInfo 資源配額資訊
 type ResourceQuotaInfo struct {
 	Hard map[string]string `json:"hard"`
 	Used map[string]string `json:"used"`
 }
 
-// GetNamespaces 获取集群命名空间列表
+// GetNamespaces 獲取叢集命名空間列表
 func (h *NamespaceHandler) GetNamespaces(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在: "+err.Error())
+		response.NotFound(c, "叢集不存在: "+err.Error())
 		return
 	}
 
@@ -66,24 +66,24 @@ func (h *NamespaceHandler) GetNamespaces(c *gin.Context) {
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 获取命名空间列表
+	// 獲取命名空間列表
 	namespaces, err := h.k8sMgr.NamespacesLister(clusterID).List(labels.Everything())
 	if err != nil {
-		response.InternalError(c, "读取命名空间缓存失败: "+err.Error())
+		response.InternalError(c, "讀取命名空間快取失敗: "+err.Error())
 		return
 	}
 
-	// 获取用户的命名空间权限
+	// 獲取使用者的命名空間權限
 	allowedNs, hasAllAccess := middleware.GetAllowedNamespaces(c)
 
-	// 构建响应数据
+	// 構建響應資料
 	var namespaceList []NamespaceResponse
 	for _, ns := range namespaces {
-		// 非全部权限用户，只返回有权限的命名空间
+		// 非全部權限使用者，只返回有權限的命名空間
 		if !hasAllAccess && !middleware.HasNamespaceAccess(c, ns.Name) {
 			continue
 		}
@@ -98,7 +98,7 @@ func (h *NamespaceHandler) GetNamespaces(c *gin.Context) {
 		namespaceList = append(namespaceList, namespaceResp)
 	}
 
-	// 返回结果，同时告知前端用户是否有全部权限
+	// 返回結果，同時告知前端使用者是否有全部權限
 	response.OK(c, gin.H{
 		"items": namespaceList,
 		"meta": gin.H{
@@ -108,46 +108,46 @@ func (h *NamespaceHandler) GetNamespaces(c *gin.Context) {
 	})
 }
 
-// GetNamespaceDetail 获取命名空间详情
+// GetNamespaceDetail 獲取命名空間詳情
 func (h *NamespaceHandler) GetNamespaceDetail(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	namespaceName := c.Param("namespace")
 
-	// 检查命名空间访问权限
+	// 檢查命名空間訪問權限
 	if !middleware.HasNamespaceAccess(c, namespaceName) {
-		response.Forbidden(c, "无权访问命名空间: "+namespaceName)
+		response.Forbidden(c, "無權訪問命名空間: "+namespaceName)
 		return
 	}
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在: "+err.Error())
+		response.NotFound(c, "叢集不存在: "+err.Error())
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取命名空间详情
+	// 獲取命名空間詳情
 	namespace, err := clientset.CoreV1().Namespaces().Get(c.Request.Context(), namespaceName, metav1.GetOptions{})
 	if err != nil {
-		response.NotFound(c, "命名空间不存在: "+err.Error())
+		response.NotFound(c, "命名空間不存在: "+err.Error())
 		return
 	}
 
-	// 获取资源配额
+	// 獲取資源配額
 	quotas, err := clientset.CoreV1().ResourceQuotas(namespaceName).List(c.Request.Context(), metav1.ListOptions{})
 	var resourceQuota *ResourceQuotaInfo
 	if err == nil && len(quotas.Items) > 0 {
@@ -187,24 +187,24 @@ func (h *NamespaceHandler) GetNamespaceDetail(c *gin.Context) {
 	response.OK(c, namespaceDetail)
 }
 
-// CreateNamespace 创建命名空间
+// CreateNamespace 建立命名空間
 func (h *NamespaceHandler) CreateNamespace(c *gin.Context) {
-	// 检查是否有管理员权限（只有管理员才能创建命名空间）
+	// 檢查是否有管理員權限（只有管理員才能建立命名空間）
 	permission := middleware.GetClusterPermission(c)
 	if permission == nil || permission.PermissionType != "admin" {
-		response.Forbidden(c, "只有管理员才能创建命名空间")
+		response.Forbidden(c, "只有管理員才能建立命名空間")
 		return
 	}
 
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在: "+err.Error())
+		response.NotFound(c, "叢集不存在: "+err.Error())
 		return
 	}
 
@@ -215,20 +215,20 @@ func (h *NamespaceHandler) CreateNamespace(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误: "+err.Error())
+		response.BadRequest(c, "請求參數錯誤: "+err.Error())
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 构建命名空间对象
+	// 構建命名空間物件
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        req.Name,
@@ -237,10 +237,10 @@ func (h *NamespaceHandler) CreateNamespace(c *gin.Context) {
 		},
 	}
 
-	// 创建命名空间
+	// 建立命名空間
 	createdNs, err := clientset.CoreV1().Namespaces().Create(c.Request.Context(), namespace, metav1.CreateOptions{})
 	if err != nil {
-		response.InternalError(c, "创建命名空间失败: "+err.Error())
+		response.InternalError(c, "建立命名空間失敗: "+err.Error())
 		return
 	}
 
@@ -253,50 +253,50 @@ func (h *NamespaceHandler) CreateNamespace(c *gin.Context) {
 	})
 }
 
-// DeleteNamespace 删除命名空间
+// DeleteNamespace 刪除命名空間
 func (h *NamespaceHandler) DeleteNamespace(c *gin.Context) {
-	// 检查是否有管理员权限（只有管理员才能删除命名空间）
+	// 檢查是否有管理員權限（只有管理員才能刪除命名空間）
 	permission := middleware.GetClusterPermission(c)
 	if permission == nil || permission.PermissionType != "admin" {
-		response.Forbidden(c, "只有管理员才能删除命名空间")
+		response.Forbidden(c, "只有管理員才能刪除命名空間")
 		return
 	}
 
 	clusterIDStr := c.Param("clusterID")
 	namespaceName := c.Param("namespace")
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在: "+err.Error())
+		response.NotFound(c, "叢集不存在: "+err.Error())
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 删除命名空间
+	// 刪除命名空間
 	err = clientset.CoreV1().Namespaces().Delete(c.Request.Context(), namespaceName, metav1.DeleteOptions{})
 	if err != nil {
-		response.InternalError(c, "删除命名空间失败: "+err.Error())
+		response.InternalError(c, "刪除命名空間失敗: "+err.Error())
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// convertResourceList 转换资源列表为字符串map
+// convertResourceList 轉換資源列表為字串map
 func convertResourceList(rl corev1.ResourceList) map[string]string {
 	result := make(map[string]string)
 	for k, v := range rl {

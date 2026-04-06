@@ -9,27 +9,27 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/response"
 )
 
-// AuthRequired JWT认证中间件
+// AuthRequired JWT認證中介軟體
 func AuthRequired(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var tokenString string
 
-		// 优先从请求头获取token
+		// 優先從請求頭獲取token
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
-			// 检查Bearer前缀
+			// 檢查Bearer字首
 			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 			if tokenString == authHeader {
-				response.Unauthorized(c, "认证令牌格式错误")
+				response.Unauthorized(c, "認證令牌格式錯誤")
 				return
 			}
 		} else {
-			// 如果请求头没有token，尝试从URL查询参数获取（用于WebSocket）
+			// 如果請求頭沒有token，嘗試從URL查詢參數獲取（用於WebSocket）
 			tokenString = c.Query("token")
 		}
 
 		if tokenString == "" {
-			response.Unauthorized(c, "缺少认证令牌")
+			response.Unauthorized(c, "缺少認證令牌")
 			return
 		}
 
@@ -39,23 +39,23 @@ func AuthRequired(secret string) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			response.Unauthorized(c, "认证令牌无效")
+			response.Unauthorized(c, "認證令牌無效")
 			return
 		}
 
-		// 提取用户信息
+		// 提取使用者資訊
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			// 处理user_id类型转换（JWT claims中的数字默认是float64）
+			// 處理user_id型別轉換（JWT claims中的數字預設是float64）
 			if userIDFloat, ok := claims["user_id"].(float64); ok {
 				c.Set("user_id", uint(userIDFloat))
 			} else {
-				response.Unauthorized(c, "认证令牌中缺少用户ID")
+				response.Unauthorized(c, "認證令牌中缺少使用者ID")
 				return
 			}
 			c.Set("username", claims["username"])
 			c.Set("auth_type", claims["auth_type"])
 		} else {
-			response.Unauthorized(c, "认证令牌格式无效")
+			response.Unauthorized(c, "認證令牌格式無效")
 			return
 		}
 

@@ -6,12 +6,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// AIConfig AI 服务配置模型
+// AIConfig AI 服務配置模型
 type AIConfig struct {
 	ID         uint           `json:"id" gorm:"primaryKey"`
 	Provider   string         `json:"provider" gorm:"not null;size:50;default:openai"` // openai / azure / anthropic / ollama
 	Endpoint   string         `json:"endpoint" gorm:"size:255"`                        // API endpoint
-	APIKey     string         `json:"-" gorm:"type:text"`                              // 加密存储，不对外暴露
+	APIKey     string         `json:"-" gorm:"type:text"`                              // 加密儲存，不對外暴露
 	Model      string         `json:"model" gorm:"size:100"`                           // gpt-4o / claude-3-5-sonnet-20241022 / llama3 等
 	APIVersion string         `json:"api_version" gorm:"size:50"`                      // Azure OpenAI api-version, e.g. 2024-05-01-preview
 	Enabled    bool           `json:"enabled" gorm:"default:false"`
@@ -25,7 +25,7 @@ func (AIConfig) TableName() string {
 	return "ai_configs"
 }
 
-// GetDefaultAIConfig 获取默认 AI 配置
+// GetDefaultAIConfig 獲取預設 AI 配置
 func GetDefaultAIConfig() AIConfig {
 	return AIConfig{
 		Provider: "openai",
@@ -35,7 +35,7 @@ func GetDefaultAIConfig() AIConfig {
 	}
 }
 
-// ProviderDefaults 各 Provider 的预设端点与模型
+// ProviderDefaults 各 Provider 的預設端點與模型
 var ProviderDefaults = map[string]struct {
 	Endpoint string
 	Model    string

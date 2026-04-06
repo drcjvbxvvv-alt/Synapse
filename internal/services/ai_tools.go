@@ -20,7 +20,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
-// K8sListerProvider 提供 Informer Lister 的接口（避免循环依赖 k8s 包）
+// K8sListerProvider 提供 Informer Lister 的介面（避免迴圈依賴 k8s 包）
 type K8sListerProvider interface {
 	PodsLister(clusterID uint) corev1listers.PodLister
 	NodesLister(clusterID uint) corev1listers.NodeLister
@@ -29,13 +29,13 @@ type K8sListerProvider interface {
 	GetK8sClientByID(clusterID uint) *K8sClient
 }
 
-// ToolExecutor K8s 工具执行器
+// ToolExecutor K8s 工具執行器
 type ToolExecutor struct {
 	listerProvider   K8sListerProvider
 	clusterService   *ClusterService
 }
 
-// NewToolExecutor 创建工具执行器
+// NewToolExecutor 建立工具執行器
 func NewToolExecutor(listerProvider K8sListerProvider, clusterSvc *ClusterService) *ToolExecutor {
 	return &ToolExecutor{
 		listerProvider: listerProvider,
@@ -43,20 +43,20 @@ func NewToolExecutor(listerProvider K8sListerProvider, clusterSvc *ClusterServic
 	}
 }
 
-// GetToolDefinitions 返回所有可用工具定义（用于 OpenAI Function Calling）
+// GetToolDefinitions 返回所有可用工具定義（用於 OpenAI Function Calling）
 func GetToolDefinitions() []ToolDefinition {
 	return []ToolDefinition{
 		{
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "list_pods",
-				Description: "列出指定命名空间（或所有命名空间）的 Pod，包含状态、重启次数等信息",
+				Description: "列出指定命名空間（或所有命名空間）的 Pod，包含狀態、重啟次數等資訊",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "命名空间名称，为空则列出所有命名空间的 Pod",
+							"description": "命名空間名稱，為空則列出所有命名空間的 Pod",
 						},
 					},
 				},
@@ -66,17 +66,17 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "get_pod_detail",
-				Description: "获取指定 Pod 的详细信息，包含容器状态、事件等",
+				Description: "獲取指定 Pod 的詳細資訊，包含容器狀態、事件等",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "Pod 所在命名空间",
+							"description": "Pod 所在命名空間",
 						},
 						"name": map[string]interface{}{
 							"type":        "string",
-							"description": "Pod 名称",
+							"description": "Pod 名稱",
 						},
 					},
 					"required": []string{"namespace", "name"},
@@ -87,21 +87,21 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "get_pod_logs",
-				Description: "获取指定 Pod 的最近日志（最多100行）",
+				Description: "獲取指定 Pod 的最近日誌（最多100行）",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "Pod 所在命名空间",
+							"description": "Pod 所在命名空間",
 						},
 						"name": map[string]interface{}{
 							"type":        "string",
-							"description": "Pod 名称",
+							"description": "Pod 名稱",
 						},
 						"container": map[string]interface{}{
 							"type":        "string",
-							"description": "容器名称（可选，多容器 Pod 时指定）",
+							"description": "容器名稱（可選，多容器 Pod 時指定）",
 						},
 					},
 					"required": []string{"namespace", "name"},
@@ -112,13 +112,13 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "list_deployments",
-				Description: "列出指定命名空间（或所有命名空间）的 Deployment，包含副本数等信息",
+				Description: "列出指定命名空間（或所有命名空間）的 Deployment，包含副本數等資訊",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "命名空间名称，为空则列出所有命名空间",
+							"description": "命名空間名稱，為空則列出所有命名空間",
 						},
 					},
 				},
@@ -128,17 +128,17 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "get_deployment_detail",
-				Description: "获取指定 Deployment 的详细信息",
+				Description: "獲取指定 Deployment 的詳細資訊",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "Deployment 所在命名空间",
+							"description": "Deployment 所在命名空間",
 						},
 						"name": map[string]interface{}{
 							"type":        "string",
-							"description": "Deployment 名称",
+							"description": "Deployment 名稱",
 						},
 					},
 					"required": []string{"namespace", "name"},
@@ -149,7 +149,7 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "list_nodes",
-				Description: "列出集群所有节点，包含状态、角色、资源信息",
+				Description: "列出叢集所有節點，包含狀態、角色、資源資訊",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{},
@@ -160,13 +160,13 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "get_node_detail",
-				Description: "获取指定节点的详细信息，包含资源分配、条件等",
+				Description: "獲取指定節點的詳細資訊，包含資源分配、條件等",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"name": map[string]interface{}{
 							"type":        "string",
-							"description": "节点名称",
+							"description": "節點名稱",
 						},
 					},
 					"required": []string{"name"},
@@ -177,17 +177,17 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "list_events",
-				Description: "列出指定命名空间的 K8s 事件（最近 50 条），可过滤特定资源",
+				Description: "列出指定命名空間的 K8s 事件（最近 50 條），可過濾特定資源",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "命名空间名称，为空则列出所有命名空间",
+							"description": "命名空間名稱，為空則列出所有命名空間",
 						},
 						"resource_name": map[string]interface{}{
 							"type":        "string",
-							"description": "按涉及的资源名称过滤（可选）",
+							"description": "按涉及的資源名稱過濾（可選）",
 						},
 					},
 				},
@@ -197,13 +197,13 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "list_services",
-				Description: "列出指定命名空间（或所有命名空间）的 Service",
+				Description: "列出指定命名空間（或所有命名空間）的 Service",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "命名空间名称，为空则列出所有命名空间",
+							"description": "命名空間名稱，為空則列出所有命名空間",
 						},
 					},
 				},
@@ -213,13 +213,13 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "list_ingresses",
-				Description: "列出指定命名空间（或所有命名空间）的 Ingress",
+				Description: "列出指定命名空間（或所有命名空間）的 Ingress",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "命名空间名称，为空则列出所有命名空间",
+							"description": "命名空間名稱，為空則列出所有命名空間",
 						},
 					},
 				},
@@ -229,25 +229,25 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "scale_deployment",
-				Description: "扩缩容 Deployment（写操作，需要用户确认）",
+				Description: "擴縮容 Deployment（寫操作，需要使用者確認）",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "Deployment 所在命名空间",
+							"description": "Deployment 所在命名空間",
 						},
 						"name": map[string]interface{}{
 							"type":        "string",
-							"description": "Deployment 名称",
+							"description": "Deployment 名稱",
 						},
 						"replicas": map[string]interface{}{
 							"type":        "integer",
-							"description": "目标副本数",
+							"description": "目標副本數",
 						},
 						"confirmed": map[string]interface{}{
 							"type":        "boolean",
-							"description": "用户是否已确认执行（首次调用应为 false，要求用户确认）",
+							"description": "使用者是否已確認執行（首次呼叫應為 false，要求使用者確認）",
 						},
 					},
 					"required": []string{"namespace", "name", "replicas"},
@@ -258,21 +258,21 @@ func GetToolDefinitions() []ToolDefinition {
 			Type: "function",
 			Function: FunctionDefinition{
 				Name:        "restart_deployment",
-				Description: "重启 Deployment（写操作，通过 rollout restart 实现，需要用户确认）",
+				Description: "重啟 Deployment（寫操作，透過 rollout restart 實現，需要使用者確認）",
 				Parameters: map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"namespace": map[string]interface{}{
 							"type":        "string",
-							"description": "Deployment 所在命名空间",
+							"description": "Deployment 所在命名空間",
 						},
 						"name": map[string]interface{}{
 							"type":        "string",
-							"description": "Deployment 名称",
+							"description": "Deployment 名稱",
 						},
 						"confirmed": map[string]interface{}{
 							"type":        "boolean",
-							"description": "用户是否已确认执行",
+							"description": "使用者是否已確認執行",
 						},
 					},
 					"required": []string{"namespace", "name"},
@@ -282,12 +282,12 @@ func GetToolDefinitions() []ToolDefinition {
 	}
 }
 
-// ExecuteTool 执行指定工具
+// ExecuteTool 執行指定工具
 func (e *ToolExecutor) ExecuteTool(ctx context.Context, clusterID uint, toolName string, argsJSON string) (string, error) {
 	var args map[string]interface{}
 	if argsJSON != "" {
 		if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
-			return "", fmt.Errorf("解析工具参数失败: %w", err)
+			return "", fmt.Errorf("解析工具參數失敗: %w", err)
 		}
 	}
 	if args == nil {
@@ -354,7 +354,7 @@ func (e *ToolExecutor) ExecuteTool(ctx context.Context, clusterID uint, toolName
 func (e *ToolExecutor) getClientset(clusterID uint) (*kubernetes.Clientset, error) {
 	kc := e.listerProvider.GetK8sClientByID(clusterID)
 	if kc == nil {
-		return nil, fmt.Errorf("集群 %d 未初始化", clusterID)
+		return nil, fmt.Errorf("叢集 %d 未初始化", clusterID)
 	}
 	return kc.GetClientset(), nil
 }
@@ -362,7 +362,7 @@ func (e *ToolExecutor) getClientset(clusterID uint) (*kubernetes.Clientset, erro
 func (e *ToolExecutor) listPods(_ context.Context, clusterID uint, namespace string) (string, error) {
 	lister := e.listerProvider.PodsLister(clusterID)
 	if lister == nil {
-		return "", fmt.Errorf("集群 Informer 未就绪")
+		return "", fmt.Errorf("叢集 Informer 未就緒")
 	}
 
 	var podList []*corev1.Pod
@@ -373,7 +373,7 @@ func (e *ToolExecutor) listPods(_ context.Context, clusterID uint, namespace str
 		podList, err = lister.List(labels.Everything())
 	}
 	if err != nil {
-		return "", fmt.Errorf("列出 Pod 失败: %w", err)
+		return "", fmt.Errorf("列出 Pod 失敗: %w", err)
 	}
 
 	type podSummary struct {
@@ -424,7 +424,7 @@ func (e *ToolExecutor) getPodDetail(ctx context.Context, clusterID uint, namespa
 
 	pod, err := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("获取 Pod 失败: %w", err)
+		return "", fmt.Errorf("獲取 Pod 失敗: %w", err)
 	}
 
 	containers := make([]map[string]interface{}, 0)
@@ -495,13 +495,13 @@ func (e *ToolExecutor) getPodLogs(ctx context.Context, clusterID uint, namespace
 	req := clientset.CoreV1().Pods(namespace).GetLogs(name, opts)
 	stream, err := req.Stream(ctx)
 	if err != nil {
-		return "", fmt.Errorf("获取日志失败: %w", err)
+		return "", fmt.Errorf("獲取日誌失敗: %w", err)
 	}
 	defer stream.Close()
 
 	logBytes, err := io.ReadAll(io.LimitReader(stream, 64*1024))
 	if err != nil {
-		return "", fmt.Errorf("读取日志失败: %w", err)
+		return "", fmt.Errorf("讀取日誌失敗: %w", err)
 	}
 
 	return string(logBytes), nil
@@ -510,7 +510,7 @@ func (e *ToolExecutor) getPodLogs(ctx context.Context, clusterID uint, namespace
 func (e *ToolExecutor) listDeployments(clusterID uint, namespace string) (string, error) {
 	lister := e.listerProvider.DeploymentsLister(clusterID)
 	if lister == nil {
-		return "", fmt.Errorf("集群 Informer 未就绪")
+		return "", fmt.Errorf("叢集 Informer 未就緒")
 	}
 
 	type deploySummary struct {
@@ -531,7 +531,7 @@ func (e *ToolExecutor) listDeployments(clusterID uint, namespace string) (string
 		deploys, err = lister.List(labels.Everything())
 	}
 	if err != nil {
-		return "", fmt.Errorf("列出 Deployment 失败: %w", err)
+		return "", fmt.Errorf("列出 Deployment 失敗: %w", err)
 	}
 
 	result := make([]deploySummary, 0, len(deploys))
@@ -566,7 +566,7 @@ func (e *ToolExecutor) getDeploymentDetail(ctx context.Context, clusterID uint, 
 
 	deploy, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("获取 Deployment 失败: %w", err)
+		return "", fmt.Errorf("獲取 Deployment 失敗: %w", err)
 	}
 
 	conditions := make([]map[string]string, 0)
@@ -600,12 +600,12 @@ func (e *ToolExecutor) getDeploymentDetail(ctx context.Context, clusterID uint, 
 func (e *ToolExecutor) listNodes(clusterID uint) (string, error) {
 	lister := e.listerProvider.NodesLister(clusterID)
 	if lister == nil {
-		return "", fmt.Errorf("集群 Informer 未就绪")
+		return "", fmt.Errorf("叢集 Informer 未就緒")
 	}
 
 	nodes, err := lister.List(labels.Everything())
 	if err != nil {
-		return "", fmt.Errorf("列出 Node 失败: %w", err)
+		return "", fmt.Errorf("列出 Node 失敗: %w", err)
 	}
 
 	type nodeSummary struct {
@@ -667,7 +667,7 @@ func (e *ToolExecutor) getNodeDetail(ctx context.Context, clusterID uint, name s
 
 	node, err := clientset.CoreV1().Nodes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("获取 Node 失败: %w", err)
+		return "", fmt.Errorf("獲取 Node 失敗: %w", err)
 	}
 
 	conditions := make([]map[string]string, 0)
@@ -723,7 +723,7 @@ func (e *ToolExecutor) listEvents(ctx context.Context, clusterID uint, namespace
 		eventList, err = clientset.CoreV1().Events("").List(ctx, metav1.ListOptions{})
 	}
 	if err != nil {
-		return "", fmt.Errorf("列出事件失败: %w", err)
+		return "", fmt.Errorf("列出事件失敗: %w", err)
 	}
 
 	type eventSummary struct {
@@ -760,7 +760,7 @@ func (e *ToolExecutor) listEvents(ctx context.Context, clusterID uint, namespace
 		})
 	}
 
-	// 只返回最近 50 条
+	// 只返回最近 50 條
 	if len(result) > 50 {
 		result = result[len(result)-50:]
 	}
@@ -775,7 +775,7 @@ func (e *ToolExecutor) listEvents(ctx context.Context, clusterID uint, namespace
 func (e *ToolExecutor) listServices(clusterID uint, namespace string) (string, error) {
 	lister := e.listerProvider.ServicesLister(clusterID)
 	if lister == nil {
-		return "", fmt.Errorf("集群 Informer 未就绪")
+		return "", fmt.Errorf("叢集 Informer 未就緒")
 	}
 
 	type svcSummary struct {
@@ -795,7 +795,7 @@ func (e *ToolExecutor) listServices(clusterID uint, namespace string) (string, e
 		svcs, err = lister.List(labels.Everything())
 	}
 	if err != nil {
-		return "", fmt.Errorf("列出 Service 失败: %w", err)
+		return "", fmt.Errorf("列出 Service 失敗: %w", err)
 	}
 
 	result := make([]svcSummary, 0, len(svcs))
@@ -825,7 +825,7 @@ func (e *ToolExecutor) listIngresses(ctx context.Context, clusterID uint, namesp
 
 	ingressList, err := clientset.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return "", fmt.Errorf("列出 Ingress 失败: %w", err)
+		return "", fmt.Errorf("列出 Ingress 失敗: %w", err)
 	}
 
 	type ingressSummary struct {
@@ -868,7 +868,7 @@ func (e *ToolExecutor) listIngresses(ctx context.Context, clusterID uint, namesp
 
 func (e *ToolExecutor) scaleDeployment(ctx context.Context, clusterID uint, namespace, name string, replicas int, confirmed bool) (string, error) {
 	if !confirmed {
-		return fmt.Sprintf(`{"action":"scale_deployment","namespace":"%s","name":"%s","target_replicas":%d,"status":"awaiting_confirmation","message":"请确认是否将 %s/%s 的副本数调整为 %d？"}`,
+		return fmt.Sprintf(`{"action":"scale_deployment","namespace":"%s","name":"%s","target_replicas":%d,"status":"awaiting_confirmation","message":"請確認是否將 %s/%s 的副本數調整為 %d？"}`,
 			namespace, name, replicas, namespace, name, replicas), nil
 	}
 
@@ -879,25 +879,25 @@ func (e *ToolExecutor) scaleDeployment(ctx context.Context, clusterID uint, name
 
 	scale, err := clientset.AppsV1().Deployments(namespace).GetScale(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("获取 Deployment scale 失败: %w", err)
+		return "", fmt.Errorf("獲取 Deployment scale 失敗: %w", err)
 	}
 
 	if replicas < 0 || replicas > math.MaxInt32 {
-		return "", fmt.Errorf("副本数 %d 超出有效范围", replicas)
+		return "", fmt.Errorf("副本數 %d 超出有效範圍", replicas)
 	}
-	scale.Spec.Replicas = int32(replicas) // #nosec G115 -- 已做边界检查
+	scale.Spec.Replicas = int32(replicas) // #nosec G115 -- 已做邊界檢查
 	_, err = clientset.AppsV1().Deployments(namespace).UpdateScale(ctx, name, scale, metav1.UpdateOptions{})
 	if err != nil {
-		return "", fmt.Errorf("扩缩容失败: %w", err)
+		return "", fmt.Errorf("擴縮容失敗: %w", err)
 	}
 
-	logger.Info("AI 工具执行扩缩容", "deployment", fmt.Sprintf("%s/%s", namespace, name), "replicas", replicas)
-	return fmt.Sprintf(`{"status":"success","message":"已将 %s/%s 的副本数调整为 %d"}`, namespace, name, replicas), nil
+	logger.Info("AI 工具執行擴縮容", "deployment", fmt.Sprintf("%s/%s", namespace, name), "replicas", replicas)
+	return fmt.Sprintf(`{"status":"success","message":"已將 %s/%s 的副本數調整為 %d"}`, namespace, name, replicas), nil
 }
 
 func (e *ToolExecutor) restartDeployment(ctx context.Context, clusterID uint, namespace, name string, confirmed bool) (string, error) {
 	if !confirmed {
-		return fmt.Sprintf(`{"action":"restart_deployment","namespace":"%s","name":"%s","status":"awaiting_confirmation","message":"请确认是否重启 %s/%s？"}`,
+		return fmt.Sprintf(`{"action":"restart_deployment","namespace":"%s","name":"%s","status":"awaiting_confirmation","message":"請確認是否重啟 %s/%s？"}`,
 			namespace, name, namespace, name), nil
 	}
 
@@ -908,7 +908,7 @@ func (e *ToolExecutor) restartDeployment(ctx context.Context, clusterID uint, na
 
 	deploy, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("获取 Deployment 失败: %w", err)
+		return "", fmt.Errorf("獲取 Deployment 失敗: %w", err)
 	}
 
 	if deploy.Spec.Template.Annotations == nil {
@@ -918,11 +918,11 @@ func (e *ToolExecutor) restartDeployment(ctx context.Context, clusterID uint, na
 
 	_, err = clientset.AppsV1().Deployments(namespace).Update(ctx, deploy, metav1.UpdateOptions{})
 	if err != nil {
-		return "", fmt.Errorf("重启 Deployment 失败: %w", err)
+		return "", fmt.Errorf("重啟 Deployment 失敗: %w", err)
 	}
 
-	logger.Info("AI 工具执行重启", "deployment", fmt.Sprintf("%s/%s", namespace, name))
-	return fmt.Sprintf(`{"status":"success","message":"已触发 %s/%s 滚动重启"}`, namespace, name), nil
+	logger.Info("AI 工具執行重啟", "deployment", fmt.Sprintf("%s/%s", namespace, name))
+	return fmt.Sprintf(`{"status":"success","message":"已觸發 %s/%s 滾動重啟"}`, namespace, name), nil
 }
 
 func formatAge(t time.Time) string {

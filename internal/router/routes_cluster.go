@@ -9,23 +9,23 @@ import (
 
 // registerClusterRoutes registers all /clusters routes onto the protected group.
 func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
-	// clusters 根分组
+	// clusters 根分組
 	clusters := protected.Group("/clusters")
 	{
 		clusterHandler := handlers.NewClusterHandler(d.db, d.cfg, d.k8sMgr, d.prometheusSvc, d.monitoringCfgSvc, d.permissionSvc)
 
-		// 集群列表和统计（按用户权限过滤）
+		// 叢集列表和統計（按使用者權限過濾）
 		clusters.GET("", clusterHandler.GetClusters)
 		clusters.GET("/stats", clusterHandler.GetClusterStats)
 
-		// 集群导入和测连（仅平台管理员）
+		// 叢集匯入和測連（僅平臺管理員）
 		clusters.POST("/import", middleware.PlatformAdminRequired(d.db), clusterHandler.ImportCluster)
 		clusters.POST("/test-connection", middleware.PlatformAdminRequired(d.db), clusterHandler.TestConnection)
 
-		// 动态 cluster 子分组（需要集群权限检查）
+		// 動態 cluster 子分組（需要叢集權限檢查）
 		cluster := clusters.Group("/:clusterID")
-		cluster.Use(d.permMiddleware.ClusterAccessRequired()) // 启用集群权限检查
-		cluster.Use(d.permMiddleware.AutoWriteCheck())        // 自动检查写权限（POST/PUT/DELETE需要非只读权限）
+		cluster.Use(d.permMiddleware.ClusterAccessRequired()) // 啟用叢集權限檢查
+		cluster.Use(d.permMiddleware.AutoWriteCheck())        // 自動檢查寫權限（POST/PUT/DELETE需要非只讀權限）
 		{
 			cluster.GET("", clusterHandler.GetCluster)
 			cluster.GET("/status", clusterHandler.GetClusterStatus)
@@ -34,7 +34,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			cluster.GET("/events", clusterHandler.GetClusterEvents)
 			cluster.DELETE("", clusterHandler.DeleteCluster)
 
-			// namespaces 子分组
+			// namespaces 子分組
 			namespaceHandler := handlers.NewNamespaceHandler(d.clusterSvc, d.k8sMgr)
 			namespaces := cluster.Group("/namespaces")
 			{
@@ -54,7 +54,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				namespaces.DELETE("/:namespace/limitranges/:name", namespaceHandler.DeleteLimitRange)
 			}
 
-			// monitoring 子分组
+			// monitoring 子分組
 			monitoringHandler := handlers.NewMonitoringHandler(d.monitoringCfgSvc, d.prometheusSvc)
 			monitoring := cluster.Group("/monitoring")
 			{
@@ -64,7 +64,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				monitoring.GET("/metrics", monitoringHandler.GetClusterMetrics)
 			}
 
-			// alertmanager 子分组
+			// alertmanager 子分組
 			alertManagerConfigSvc := services.NewAlertManagerConfigService(d.db)
 			alertManagerSvc := services.NewAlertManagerService()
 			alertHandler := handlers.NewAlertHandler(alertManagerConfigSvc, alertManagerSvc)
@@ -77,7 +77,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				alertmanager.GET("/template", alertHandler.GetAlertManagerConfigTemplate)
 			}
 
-			// alerts 子分组
+			// alerts 子分組
 			alerts := cluster.Group("/alerts")
 			{
 				alerts.GET("", alertHandler.GetAlerts)
@@ -85,7 +85,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				alerts.GET("/stats", alertHandler.GetAlertStats)
 			}
 
-			// silences 子分组
+			// silences 子分組
 			silences := cluster.Group("/silences")
 			{
 				silences.GET("", alertHandler.GetSilences)
@@ -93,13 +93,13 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				silences.DELETE("/:silenceId", alertHandler.DeleteSilence)
 			}
 
-			// receivers 子分组
+			// receivers 子分組
 			receivers := cluster.Group("/receivers")
 			{
 				receivers.GET("", alertHandler.GetReceivers)
 			}
 
-			// nodes 子分组
+			// nodes 子分組
 			nodeHandler := handlers.NewNodeHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr, d.prometheusSvc, d.monitoringCfgSvc)
 			nodes := cluster.Group("/nodes")
 			{
@@ -112,11 +112,11 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				nodes.GET("/:name/metrics", monitoringHandler.GetNodeMetrics)
 			}
 
-			// pods 子分组
+			// pods 子分組
 			podHandler := handlers.NewPodHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			pods := cluster.Group("/pods")
 			{
-				pods.GET("", podHandler.GetPods) // 可考虑使用 query 过滤 namespace/name
+				pods.GET("", podHandler.GetPods) // 可考慮使用 query 過濾 namespace/name
 				pods.GET("/namespaces", podHandler.GetPodNamespaces)
 				pods.GET("/nodes", podHandler.GetPodNodes)
 				pods.GET("/:namespace/:name", podHandler.GetPod)
@@ -125,7 +125,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				pods.GET("/:namespace/:name/metrics", monitoringHandler.GetPodMetrics)
 			}
 
-			// Deployment 子分组
+			// Deployment 子分組
 			deploymentHandler := handlers.NewDeploymentHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			deployments := cluster.Group("/deployments")
 			{
@@ -136,7 +136,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				deployments.POST("/yaml/apply", deploymentHandler.ApplyYAML)
 				deployments.POST("/:namespace/:name/scale", deploymentHandler.ScaleDeployment)
 				deployments.DELETE("/:namespace/:name", deploymentHandler.DeleteDeployment)
-				// Deployment详情页相关接口
+				// Deployment詳情頁相關介面
 				deployments.GET("/:namespace/:name/pods", deploymentHandler.GetDeploymentPods)
 				deployments.GET("/:namespace/:name/services", deploymentHandler.GetDeploymentServices)
 				deployments.GET("/:namespace/:name/ingresses", deploymentHandler.GetDeploymentIngresses)
@@ -145,7 +145,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				deployments.GET("/:namespace/:name/events", deploymentHandler.GetDeploymentEvents)
 			}
 
-			// Rollout 子分组
+			// Rollout 子分組
 			rolloutHandler := handlers.NewRolloutHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			rollouts := cluster.Group("/rollouts")
 			{
@@ -154,7 +154,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				rollouts.GET("/namespaces", rolloutHandler.GetRolloutNamespaces)
 				rollouts.GET("/:namespace/:name", rolloutHandler.GetRollout)
 				rollouts.GET("/:namespace/:name/metrics", monitoringHandler.GetWorkloadMetrics)
-				// Rollout详情相关路由
+				// Rollout詳情相關路由
 				rollouts.GET("/:namespace/:name/pods", rolloutHandler.GetRolloutPods)
 				rollouts.GET("/:namespace/:name/services", rolloutHandler.GetRolloutServices)
 				rollouts.GET("/:namespace/:name/ingresses", rolloutHandler.GetRolloutIngresses)
@@ -170,7 +170,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				rollouts.GET("/:namespace/:name/analysis-runs", rolloutHandler.GetRolloutAnalysisRuns)
 			}
 
-			// HPA 子分组
+			// HPA 子分組
 			hpaHandler := handlers.NewHPAHandler(d.db, d.clusterSvc, d.k8sMgr)
 			hpa := cluster.Group("/hpa")
 			{
@@ -180,7 +180,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				hpa.DELETE("/:namespace/:name", hpaHandler.DeleteHPA)
 			}
 
-			// StatefulSet 子分组
+			// StatefulSet 子分組
 			statefulSetHandler := handlers.NewStatefulSetHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			statefulSets := cluster.Group("/statefulsets")
 			{
@@ -193,7 +193,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				statefulSets.DELETE("/:namespace/:name", statefulSetHandler.DeleteStatefulSet)
 			}
 
-			// DaemonSet 子分组
+			// DaemonSet 子分組
 			daemonSetHandler := handlers.NewDaemonSetHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			daemonsets := cluster.Group("/daemonsets")
 			{
@@ -205,7 +205,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				daemonsets.DELETE("/:namespace/:name", daemonSetHandler.DeleteDaemonSet)
 			}
 
-			// Job 子分组
+			// Job 子分組
 			jobHandler := handlers.NewJobHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			jobs := cluster.Group("/jobs")
 			{
@@ -217,7 +217,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				jobs.DELETE("/:namespace/:name", jobHandler.DeleteJob)
 			}
 
-			// CronJob 子分组
+			// CronJob 子分組
 			cronJobHandler := handlers.NewCronJobHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			cronjobs := cluster.Group("/cronjobs")
 			{
@@ -229,10 +229,10 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				cronjobs.DELETE("/:namespace/:name", cronJobHandler.DeleteCronJob)
 			}
 
-			// 通用资源 YAML 处理器（用于 dry-run 和 apply）
+			// 通用資源 YAML 處理器（用於 dry-run 和 apply）
 			resourceYAMLHandler := handlers.NewResourceYAMLHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 
-			// configmaps 子分组
+			// configmaps 子分組
 			configMapHandler := handlers.NewConfigMapHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			configmaps := cluster.Group("/configmaps")
 			{
@@ -247,7 +247,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				configmaps.POST("/:namespace/:name/versions/:version/rollback", configMapHandler.RollbackConfigMap)
 			}
 
-			// secrets 子分组
+			// secrets 子分組
 			secretHandler := handlers.NewSecretHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			secrets := cluster.Group("/secrets")
 			{
@@ -261,7 +261,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				secrets.GET("/:namespace/:name/versions", secretHandler.GetSecretVersions)
 			}
 
-			// services 子分组
+			// services 子分組
 			serviceHandler := handlers.NewServiceHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			svcGroup := cluster.Group("/services")
 			{
@@ -276,7 +276,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				svcGroup.POST("/yaml/apply", resourceYAMLHandler.ApplyServiceYAML)
 			}
 
-			// ingresses 子分组
+			// ingresses 子分組
 			ingressHandler := handlers.NewIngressHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 			ingresses := cluster.Group("/ingresses")
 			{
@@ -306,10 +306,10 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				nps.DELETE("/:namespace/:name", npHandler.DeleteNetworkPolicy)
 			}
 
-			// storage 子分组 - PVC, PV, StorageClass
+			// storage 子分組 - PVC, PV, StorageClass
 			storageHandler := handlers.NewStorageHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
 
-			// PVCs 子分组
+			// PVCs 子分組
 			pvcs := cluster.Group("/pvcs")
 			{
 				pvcs.GET("", storageHandler.ListPVCs)
@@ -320,7 +320,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				pvcs.POST("/yaml/apply", resourceYAMLHandler.ApplyPVCYAML)
 			}
 
-			// PVs 子分组
+			// PVs 子分組
 			pvs := cluster.Group("/pvs")
 			{
 				pvs.GET("", storageHandler.ListPVs)
@@ -330,7 +330,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				pvs.POST("/yaml/apply", resourceYAMLHandler.ApplyPVYAML)
 			}
 
-			// StorageClasses 子分组
+			// StorageClasses 子分組
 			storageclasses := cluster.Group("/storageclasses")
 			{
 				storageclasses.GET("", storageHandler.ListStorageClasses)
@@ -340,7 +340,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				storageclasses.POST("/yaml/apply", resourceYAMLHandler.ApplyStorageClassYAML)
 			}
 
-			// ArgoCD / GitOps 插件中心
+			// ArgoCD / GitOps 外掛中心
 			argoCDSvc := services.NewArgoCDService(d.db)
 			argoCDHandler := handlers.NewArgoCDHandler(d.db, argoCDSvc)
 			argocd := cluster.Group("/argocd")
@@ -350,7 +350,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				argocd.PUT("/config", argoCDHandler.SaveConfig)
 				argocd.POST("/test-connection", argoCDHandler.TestConnection)
 
-				// 应用管理（通过 ArgoCD API 代理）
+				// 應用管理（透過 ArgoCD API 代理）
 				argocd.GET("/applications", argoCDHandler.ListApplications)
 				argocd.GET("/applications/:appName", argoCDHandler.GetApplication)
 				argocd.POST("/applications", argoCDHandler.CreateApplication)
@@ -361,7 +361,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				argocd.GET("/applications/:appName/resources", argoCDHandler.GetApplicationResources)
 			}
 
-			// RBAC 子分组 - Synapse 权限管理
+			// RBAC 子分組 - Synapse 權限管理
 			rbacSvc := services.NewRBACService()
 			rbacHandler := handlers.NewRBACHandler(d.clusterSvc, rbacSvc, d.k8sMgr)
 			rbacGroup := cluster.Group("/rbac")
@@ -373,17 +373,17 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				rbacGroup.DELETE("/clusterroles/:name", rbacHandler.DeleteClusterRole)
 			}
 
-			// logs - 日志中心
+			// logs - 日誌中心
 			logCenterHandler := handlers.NewLogCenterHandler(d.clusterSvc, d.k8sMgr)
 			logs := cluster.Group("/logs")
 			{
-				logs.GET("/containers", logCenterHandler.GetContainerLogs)     // 获取容器日志
-				logs.GET("/events", logCenterHandler.GetEventLogs)             // 获取K8s事件日志
-				logs.POST("/search", logCenterHandler.SearchLogs)              // 日志搜索
-				logs.GET("/stats", logCenterHandler.GetLogStats)               // 日志统计
-				logs.GET("/namespaces", logCenterHandler.GetNamespacesForLogs) // 获取命名空间列表
-				logs.GET("/pods", logCenterHandler.GetPodsForLogs)             // 获取Pod列表
-				logs.POST("/export", logCenterHandler.ExportLogs)              // 导出日志
+				logs.GET("/containers", logCenterHandler.GetContainerLogs)     // 獲取容器日誌
+				logs.GET("/events", logCenterHandler.GetEventLogs)             // 獲取K8s事件日誌
+				logs.POST("/search", logCenterHandler.SearchLogs)              // 日誌搜尋
+				logs.GET("/stats", logCenterHandler.GetLogStats)               // 日誌統計
+				logs.GET("/namespaces", logCenterHandler.GetNamespacesForLogs) // 獲取命名空間列表
+				logs.GET("/pods", logCenterHandler.GetPodsForLogs)             // 獲取Pod列表
+				logs.POST("/export", logCenterHandler.ExportLogs)              // 匯出日誌
 			}
 
 			// log-sources - 外部日誌源（Loki / Elasticsearch）
@@ -397,14 +397,14 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				logSrcs.POST("/:sourceId/search", logSrcHandler.SearchExternalLogs)
 			}
 
-			// O&M - 监控中心（运维）
+			// O&M - 監控中心（運維）
 			omSvc := services.NewOMService(d.prometheusSvc, d.monitoringCfgSvc)
 			omHandler := handlers.NewOMHandler(d.clusterSvc, omSvc, d.k8sMgr)
 			om := cluster.Group("/om")
 			{
-				om.GET("/health-diagnosis", omHandler.GetHealthDiagnosis)        // 集群健康诊断
-				om.GET("/resource-top", omHandler.GetResourceTop)                // 资源消耗 Top N
-				om.GET("/control-plane-status", omHandler.GetControlPlaneStatus) // 控制面组件状态
+				om.GET("/health-diagnosis", omHandler.GetHealthDiagnosis)        // 叢集健康診斷
+				om.GET("/resource-top", omHandler.GetResourceTop)                // 資源消耗 Top N
+				om.GET("/control-plane-status", omHandler.GetControlPlaneStatus) // 控制面元件狀態
 			}
 
 			// Helm Release 管理（cluster-scoped）

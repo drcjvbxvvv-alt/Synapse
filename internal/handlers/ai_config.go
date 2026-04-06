@@ -13,24 +13,24 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// AIConfigHandler AI 配置处理器
+// AIConfigHandler AI 配置處理器
 type AIConfigHandler struct {
 	configService *services.AIConfigService
 }
 
-// NewAIConfigHandler 创建 AI 配置处理器
+// NewAIConfigHandler 建立 AI 配置處理器
 func NewAIConfigHandler(db *gorm.DB) *AIConfigHandler {
 	return &AIConfigHandler{
 		configService: services.NewAIConfigService(db),
 	}
 }
 
-// GetConfig 获取 AI 配置
+// GetConfig 獲取 AI 配置
 func (h *AIConfigHandler) GetConfig(c *gin.Context) {
 	config, err := h.configService.GetConfig()
 	if err != nil {
-		logger.Error("获取 AI 配置失败", "error", err)
-		response.InternalError(c, "获取 AI 配置失败: "+err.Error())
+		logger.Error("獲取 AI 配置失敗", "error", err)
+		response.InternalError(c, "獲取 AI 配置失敗: "+err.Error())
 		return
 	}
 
@@ -49,7 +49,7 @@ func (h *AIConfigHandler) GetConfig(c *gin.Context) {
 
 	apiKeyDisplay := ""
 	if config.ID > 0 {
-		// 检查是否有 API Key 已配置（需要查带 key 的记录）
+		// 檢查是否有 API Key 已配置（需要查帶 key 的記錄）
 		fullConfig, _ := h.configService.GetConfigWithAPIKey()
 		if fullConfig != nil && fullConfig.APIKey != "" {
 			apiKeyDisplay = "******"
@@ -78,7 +78,7 @@ func (h *AIConfigHandler) UpdateConfig(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误: "+err.Error())
+		response.BadRequest(c, "請求參數錯誤: "+err.Error())
 		return
 	}
 
@@ -92,15 +92,15 @@ func (h *AIConfigHandler) UpdateConfig(c *gin.Context) {
 	}
 
 	if err := h.configService.SaveConfig(config); err != nil {
-		logger.Error("保存 AI 配置失败", "error", err)
-		response.InternalError(c, "保存 AI 配置失败: "+err.Error())
+		logger.Error("儲存 AI 配置失敗", "error", err)
+		response.InternalError(c, "儲存 AI 配置失敗: "+err.Error())
 		return
 	}
 
-	response.OK(c, gin.H{"message": "保存成功"})
+	response.OK(c, gin.H{"message": "儲存成功"})
 }
 
-// TestConnection 测试 AI 连接
+// TestConnection 測試 AI 連線
 func (h *AIConfigHandler) TestConnection(c *gin.Context) {
 	var req struct {
 		Provider string `json:"provider"`
@@ -110,7 +110,7 @@ func (h *AIConfigHandler) TestConnection(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误: "+err.Error())
+		response.BadRequest(c, "請求參數錯誤: "+err.Error())
 		return
 	}
 
@@ -118,7 +118,7 @@ func (h *AIConfigHandler) TestConnection(c *gin.Context) {
 	if apiKey == "" || apiKey == "******" {
 		fullConfig, err := h.configService.GetConfigWithAPIKey()
 		if err != nil || fullConfig == nil || fullConfig.APIKey == "" {
-			response.BadRequest(c, "请提供 API Key")
+			response.BadRequest(c, "請提供 API Key")
 			return
 		}
 		apiKey = fullConfig.APIKey
@@ -147,16 +147,16 @@ func (h *AIConfigHandler) TestConnection(c *gin.Context) {
 	defer cancel()
 
 	if err := provider.TestConnection(ctx); err != nil {
-		logger.Error("AI 连接测试失败", "error", err)
+		logger.Error("AI 連線測試失敗", "error", err)
 		response.OK(c, gin.H{
-			"message": "连接测试失败: " + err.Error(),
+			"message": "連線測試失敗: " + err.Error(),
 			"success": false,
 		})
 		return
 	}
 
 	response.OK(c, gin.H{
-		"message": "连接测试成功",
+		"message": "連線測試成功",
 		"success": true,
 	})
 }

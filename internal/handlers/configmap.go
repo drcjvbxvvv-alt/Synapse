@@ -40,7 +40,7 @@ func NewConfigMapHandler(db *gorm.DB, cfg *config.Config, clusterSvc *services.C
 	}
 }
 
-// ConfigMapListItem ConfigMap列表项
+// ConfigMapListItem ConfigMap列表項
 type ConfigMapListItem struct {
 	Name              string            `json:"name"`
 	Namespace         string            `json:"namespace"`
@@ -50,7 +50,7 @@ type ConfigMapListItem struct {
 	Age               string            `json:"age"`
 }
 
-// ConfigMapDetail ConfigMap详情
+// ConfigMapDetail ConfigMap詳情
 type ConfigMapDetail struct {
 	Name              string            `json:"name"`
 	Namespace         string            `json:"namespace"`
@@ -63,11 +63,11 @@ type ConfigMapDetail struct {
 	ResourceVersion   string            `json:"resourceVersion"`
 }
 
-// GetConfigMaps 获取ConfigMap列表
+// GetConfigMaps 獲取ConfigMap列表
 func (h *ConfigMapHandler) GetConfigMaps(c *gin.Context) {
 	clusterID := c.Param("clusterID")
-	namespace := c.Query("namespace") // 支持过滤命名空间
-	name := c.Query("name")           // 支持搜索名称
+	namespace := c.Query("namespace") // 支援過濾命名空間
+	name := c.Query("name")           // 支援搜尋名稱
 	pageStr := c.DefaultQuery("page", "1")
 	pageSizeStr := c.DefaultQuery("pageSize", "10")
 
@@ -80,76 +80,76 @@ func (h *ConfigMapHandler) GetConfigMaps(c *gin.Context) {
 		pageSize = 10
 	}
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 确保 informer 已启动并同步
+	// 確保 informer 已啟動並同步
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 检查命名空间权限
+	// 檢查命名空間權限
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
 		middleware.ForbiddenNS(c, nsInfo)
 		return
 	}
 
-	// 从 informer 缓存获取 ConfigMap 列表
+	// 從 informer 快取獲取 ConfigMap 列表
 	var configMaps []corev1.ConfigMap
 	sel := labels.Everything()
 
 	if namespace != "" && namespace != "_all_" {
-		// 获取指定命名空间的 ConfigMaps
+		// 獲取指定命名空間的 ConfigMaps
 		cms, err := h.k8sMgr.ConfigMapsLister(cluster.ID).ConfigMaps(namespace).List(sel)
 		if err != nil {
-			logger.Error("读取ConfigMap缓存失败", "cluster", cluster.Name, "namespace", namespace, "error", err)
-			response.InternalError(c, fmt.Sprintf("获取ConfigMap列表失败: %v", err))
+			logger.Error("讀取ConfigMap快取失敗", "cluster", cluster.Name, "namespace", namespace, "error", err)
+			response.InternalError(c, fmt.Sprintf("獲取ConfigMap列表失敗: %v", err))
 			return
 		}
-		// 转换为 []corev1.ConfigMap
+		// 轉換為 []corev1.ConfigMap
 		for _, cm := range cms {
 			configMaps = append(configMaps, *cm)
 		}
 	} else {
-		// 获取所有命名空间的 ConfigMaps
+		// 獲取所有命名空間的 ConfigMaps
 		cms, err := h.k8sMgr.ConfigMapsLister(cluster.ID).List(sel)
 		if err != nil {
-			logger.Error("读取ConfigMap缓存失败", "cluster", cluster.Name, "error", err)
-			response.InternalError(c, fmt.Sprintf("获取ConfigMap列表失败: %v", err))
+			logger.Error("讀取ConfigMap快取失敗", "cluster", cluster.Name, "error", err)
+			response.InternalError(c, fmt.Sprintf("獲取ConfigMap列表失敗: %v", err))
 			return
 		}
-		// 转换为 []corev1.ConfigMap
+		// 轉換為 []corev1.ConfigMap
 		for _, cm := range cms {
 			configMaps = append(configMaps, *cm)
 		}
 	}
 
-	// 根据命名空间权限过滤
+	// 根據命名空間權限過濾
 	if !nsInfo.HasAllAccess && (namespace == "" || namespace == "_all_") {
 		configMaps = middleware.FilterResourcesByNamespace(c, configMaps, func(cm corev1.ConfigMap) string {
 			return cm.Namespace
 		})
 	}
 
-	// 过滤和转换
+	// 過濾和轉換
 	var items []ConfigMapListItem
 	for _, cm := range configMaps {
-		// 名称过滤
+		// 名稱過濾
 		if name != "" && !strings.Contains(strings.ToLower(cm.Name), strings.ToLower(name)) {
 			continue
 		}
@@ -165,7 +165,7 @@ func (h *ConfigMapHandler) GetConfigMaps(c *gin.Context) {
 		items = append(items, item)
 	}
 
-	// 分页
+	// 分頁
 	total := len(items)
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -181,38 +181,38 @@ func (h *ConfigMapHandler) GetConfigMaps(c *gin.Context) {
 	response.PagedList(c, pagedItems, int64(total), page, pageSize)
 }
 
-// GetConfigMap 获取ConfigMap详情
+// GetConfigMap 獲取ConfigMap詳情
 func (h *ConfigMapHandler) GetConfigMap(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取ConfigMap
+	// 獲取ConfigMap
 	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取ConfigMap失败", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
+		logger.Error("獲取ConfigMap失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.NotFound(c, fmt.Sprintf("ConfigMap不存在: %v", err))
 		return
 	}
@@ -232,41 +232,41 @@ func (h *ConfigMapHandler) GetConfigMap(c *gin.Context) {
 	response.OK(c, detail)
 }
 
-// GetConfigMapNamespaces 获取ConfigMap所在的命名空间列表
+// GetConfigMapNamespaces 獲取ConfigMap所在的命名空間列表
 func (h *ConfigMapHandler) GetConfigMapNamespaces(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取所有ConfigMaps
+	// 獲取所有ConfigMaps
 	configMaps, err := clientset.CoreV1().ConfigMaps("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取ConfigMap列表失败", "cluster", cluster.Name, "error", err)
-		response.InternalError(c, fmt.Sprintf("获取ConfigMap列表失败: %v", err))
+		logger.Error("獲取ConfigMap列表失敗", "cluster", cluster.Name, "error", err)
+		response.InternalError(c, fmt.Sprintf("獲取ConfigMap列表失敗: %v", err))
 		return
 	}
 
-	// 统计每个命名空间的ConfigMap数量
+	// 統計每個命名空間的ConfigMap數量
 	nsMap := make(map[string]int)
 	for _, cm := range configMaps.Items {
 		nsMap[cm.Namespace]++
@@ -288,46 +288,46 @@ func (h *ConfigMapHandler) GetConfigMapNamespaces(c *gin.Context) {
 	response.OK(c, namespaces)
 }
 
-// DeleteConfigMap 删除ConfigMap
+// DeleteConfigMap 刪除ConfigMap
 func (h *ConfigMapHandler) DeleteConfigMap(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 删除ConfigMap
+	// 刪除ConfigMap
 	err = clientset.CoreV1().ConfigMaps(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
-		logger.Error("删除ConfigMap失败", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
-		response.InternalError(c, fmt.Sprintf("删除ConfigMap失败: %v", err))
+		logger.Error("刪除ConfigMap失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
+		response.InternalError(c, fmt.Sprintf("刪除ConfigMap失敗: %v", err))
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// CreateConfigMap 创建ConfigMap
+// CreateConfigMap 建立ConfigMap
 func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 	clusterID := c.Param("clusterID")
 
@@ -340,33 +340,33 @@ func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, fmt.Sprintf("请求参数错误: %v", err))
+		response.BadRequest(c, fmt.Sprintf("請求參數錯誤: %v", err))
 		return
 	}
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 创建ConfigMap
+	// 建立ConfigMap
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        req.Name,
@@ -379,8 +379,8 @@ func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 
 	created, err := clientset.CoreV1().ConfigMaps(req.Namespace).Create(context.Background(), configMap, metav1.CreateOptions{})
 	if err != nil {
-		logger.Error("创建ConfigMap失败", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
-		response.InternalError(c, fmt.Sprintf("创建ConfigMap失败: %v", err))
+		logger.Error("建立ConfigMap失敗", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
+		response.InternalError(c, fmt.Sprintf("建立ConfigMap失敗: %v", err))
 		return
 	}
 
@@ -403,37 +403,37 @@ func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, fmt.Sprintf("请求参数错误: %v", err))
+		response.BadRequest(c, fmt.Sprintf("請求參數錯誤: %v", err))
 		return
 	}
 
-	// 获取集群
+	// 獲取叢集
 	id, err := strconv.ParseUint(clusterID, 10, 32)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterSvc.GetCluster(uint(id))
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 创建K8s客户端
-	// 获取缓存的 K8s 客户端
+	// 建立K8s客戶端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("获取K8s客户端失败: %v", err))
+		response.InternalError(c, fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
 		return
 	}
 
 	clientset := k8sClient.GetClientset()
 
-	// 获取现有ConfigMap
+	// 獲取現有ConfigMap
 	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
-		logger.Error("获取ConfigMap失败", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
+		logger.Error("獲取ConfigMap失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.NotFound(c, fmt.Sprintf("ConfigMap不存在: %v", err))
 		return
 	}
@@ -448,8 +448,8 @@ func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
 
 	updated, err := clientset.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metav1.UpdateOptions{})
 	if err != nil {
-		logger.Error("更新ConfigMap失败", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
-		response.InternalError(c, fmt.Sprintf("更新ConfigMap失败: %v", err))
+		logger.Error("更新ConfigMap失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
+		response.InternalError(c, fmt.Sprintf("更新ConfigMap失敗: %v", err))
 		return
 	}
 
@@ -460,7 +460,7 @@ func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
 	})
 }
 
-// formatAge 格式化时间差
+// formatAge 格式化時間差
 func formatAge(d time.Duration) string {
 	if d < time.Minute {
 		return fmt.Sprintf("%ds", int(d.Seconds()))

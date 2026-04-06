@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// PodHandler Pod处理器
+// PodHandler Pod處理器
 type PodHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
@@ -36,7 +36,7 @@ type PodHandler struct {
 	upgrader       websocket.Upgrader
 }
 
-// NewPodHandler 创建Pod处理器
+// NewPodHandler 建立Pod處理器
 func NewPodHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *PodHandler {
 	return &PodHandler{
 		db:             db,
@@ -57,7 +57,7 @@ func NewPodHandler(db *gorm.DB, cfg *config.Config, clusterService *services.Clu
 	}
 }
 
-// PodInfo Pod信息
+// PodInfo Pod資訊
 type PodInfo struct {
 	Name              string                  `json:"name"`
 	Namespace         string                  `json:"namespace"`
@@ -80,7 +80,7 @@ type PodInfo struct {
 	PriorityClassName string                  `json:"priorityClassName,omitempty"`
 }
 
-// ContainerInfo 容器信息
+// ContainerInfo 容器資訊
 type ContainerInfo struct {
 	Name         string            `json:"name"`
 	Image        string            `json:"image"`
@@ -91,7 +91,7 @@ type ContainerInfo struct {
 	Ports        []ContainerPort   `json:"ports"`
 }
 
-// ContainerState 容器状态
+// ContainerState 容器狀態
 type ContainerState struct {
 	State     string     `json:"state"`
 	Reason    string     `json:"reason,omitempty"`
@@ -99,20 +99,20 @@ type ContainerState struct {
 	StartedAt *time.Time `json:"startedAt,omitempty"`
 }
 
-// ContainerResource 容器资源
+// ContainerResource 容器資源
 type ContainerResource struct {
 	Requests map[string]string `json:"requests"`
 	Limits   map[string]string `json:"limits"`
 }
 
-// ContainerPort 容器端口
+// ContainerPort 容器連接埠
 type ContainerPort struct {
 	Name          string `json:"name,omitempty"`
 	ContainerPort int32  `json:"containerPort"`
 	Protocol      string `json:"protocol"`
 }
 
-// PodCondition Pod条件
+// PodCondition Pod條件
 type PodCondition struct {
 	Type               string    `json:"type"`
 	Status             string    `json:"status"`
@@ -122,55 +122,55 @@ type PodCondition struct {
 	Message            string    `json:"message,omitempty"`
 }
 
-// GetPods 获取Pod列表
+// GetPods 獲取Pod列表
 func (h *PodHandler) GetPods(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Query("namespace")
 	nodeName := c.Query("nodeName")
 	labelSelector := c.Query("labelSelector")
 	fieldSelector := c.Query("fieldSelector")
-	search := c.Query("search") // 新增搜索参数
+	search := c.Query("search") // 新增搜尋參數
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 
-	logger.Info("获取Pod列表: cluster=%s, namespace=%s, node=%s, search=%s", clusterId, namespace, nodeName, search)
+	logger.Info("獲取Pod列表: cluster=%s, namespace=%s, node=%s, search=%s", clusterId, namespace, nodeName, search)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	if clusterID == 0 {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 确保 informer 缓存就绪
+	// 確保 informer 快取就緒
 	if h.k8sMgr == nil {
 		response.ServiceUnavailable(c, "K8s informer 管理器未初始化")
 		return
 	}
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
-	// label 选择器
+	// label 選擇器
 	sel := labels.Everything()
 	if labelSelector != "" {
 		if s, err := labels.Parse(labelSelector); err == nil {
 			sel = s
 		}
 	}
-	// 节点过滤（支持 nodeName 或 fieldSelector=spec.nodeName=xxx）
+	// 節點過濾（支援 nodeName 或 fieldSelector=spec.nodeName=xxx）
 	nodeFilter := ""
 	if nodeName != "" {
 		nodeFilter = nodeName
@@ -178,20 +178,20 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 		nodeFilter = strings.TrimPrefix(fieldSelector, "spec.nodeName=")
 	}
 
-	// 获取用户允许访问的命名空间
+	// 獲取使用者允許訪問的命名空間
 	allowedNamespaces, hasAllAccess := middleware.GetAllowedNamespaces(c)
 
 	var pods []PodInfo
 	if namespace != "" {
-		// 用户指定了命名空间，检查权限
+		// 使用者指定了命名空間，檢查權限
 		if !hasAllAccess && !middleware.HasNamespaceAccess(c, namespace) {
-			response.Forbidden(c, fmt.Sprintf("无权访问命名空间: %s", namespace))
+			response.Forbidden(c, fmt.Sprintf("無權訪問命名空間: %s", namespace))
 			return
 		}
 
 		podObjs, err := h.k8sMgr.PodsLister(cluster.ID).Pods(namespace).List(sel)
 		if err != nil {
-			response.InternalError(c, "读取Pod缓存失败: "+err.Error())
+			response.InternalError(c, "讀取Pod快取失敗: "+err.Error())
 			return
 		}
 		filtered := make([]corev1.Pod, 0, len(podObjs))
@@ -202,10 +202,10 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 		}
 		pods = h.convertPodsToInfo(filtered)
 	} else if hasAllAccess {
-		// 有全部命名空间权限，返回所有Pod
+		// 有全部命名空間權限，返回所有Pod
 		podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(sel)
 		if err != nil {
-			response.InternalError(c, "读取Pod缓存失败: "+err.Error())
+			response.InternalError(c, "讀取Pod快取失敗: "+err.Error())
 			return
 		}
 		filtered := make([]corev1.Pod, 0, len(podObjs))
@@ -216,16 +216,16 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 		}
 		pods = h.convertPodsToInfo(filtered)
 	} else {
-		// 只有部分命名空间权限，遍历有权限的命名空间
+		// 只有部分命名空間權限，遍歷有權限的命名空間
 		allPods := make([]corev1.Pod, 0)
 		for _, ns := range allowedNamespaces {
-			// 跳过通配符命名空间，后面单独处理
+			// 跳過萬用字元命名空間，後面單獨處理
 			if strings.HasSuffix(ns, "*") {
 				continue
 			}
 			podObjs, err := h.k8sMgr.PodsLister(cluster.ID).Pods(ns).List(sel)
 			if err != nil {
-				continue // 跳过出错的命名空间
+				continue // 跳過出錯的命名空間
 			}
 			for _, p := range podObjs {
 				if nodeFilter == "" || p.Spec.NodeName == nodeFilter {
@@ -234,11 +234,11 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 			}
 		}
 
-		// 处理通配符命名空间匹配（如 "app-*"）
+		// 處理萬用字元命名空間匹配（如 "app-*"）
 		for _, ns := range allowedNamespaces {
 			if strings.HasSuffix(ns, "*") {
 				prefix := strings.TrimSuffix(ns, "*")
-				// 获取所有 Pod，然后过滤匹配的命名空间
+				// 獲取所有 Pod，然後過濾匹配的命名空間
 				podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(sel)
 				if err != nil {
 					continue
@@ -253,7 +253,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 			}
 		}
 
-		// 去重（如果有多个规则匹配到同一个 Pod）
+		// 去重（如果有多個規則匹配到同一個 Pod）
 		seen := make(map[string]bool)
 		uniquePods := make([]corev1.Pod, 0)
 		for _, p := range allPods {
@@ -267,7 +267,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 		pods = h.convertPodsToInfo(uniquePods)
 	}
 
-	// 搜索过滤
+	// 搜尋過濾
 	if search != "" {
 		filteredPods := make([]PodInfo, 0)
 		searchLower := strings.ToLower(search)
@@ -281,12 +281,12 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 		pods = filteredPods
 	}
 
-	// 按创建时间排序（最新的在前）
+	// 按建立時間排序（最新的在前）
 	sort.Slice(pods, func(i, j int) bool {
 		return pods[i].CreatedAt.After(pods[j].CreatedAt)
 	})
 
-	// 分页处理
+	// 分頁處理
 	total := len(pods)
 	start := (page - 1) * pageSize
 	end := start + pageSize
@@ -302,40 +302,40 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 	response.PagedList(c, pagedPods, int64(total), page, pageSize)
 }
 
-// GetPod 获取Pod详情
+// GetPod 獲取Pod詳情
 func (h *PodHandler) GetPod(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Pod详情: %s/%s/%s", clusterId, namespace, name)
+	logger.Info("獲取Pod詳情: %s/%s/%s", clusterId, namespace, name)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	if clusterID == 0 {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 使用 informer+lister 获取Pod详情
+	// 使用 informer+lister 獲取Pod詳情
 	if h.k8sMgr == nil {
 		response.ServiceUnavailable(c, "K8s informer 管理器未初始化")
 		return
 	}
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 	pod, err := h.k8sMgr.PodsLister(cluster.ID).Pods(namespace).Get(name)
@@ -352,37 +352,37 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 	})
 }
 
-// DeletePod 删除Pod
+// DeletePod 刪除Pod
 func (h *PodHandler) DeletePod(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("删除Pod: %s/%s/%s", clusterId, namespace, name)
+	logger.Info("刪除Pod: %s/%s/%s", clusterId, namespace, name)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 删除Pod
+	// 刪除Pod
 	deletePolicy := metav1.DeletePropagationForeground
 	deleteOptions := metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
@@ -390,14 +390,14 @@ func (h *PodHandler) DeletePod(c *gin.Context) {
 
 	err = k8sClient.GetClientset().CoreV1().Pods(namespace).Delete(ctx, name, deleteOptions)
 	if err != nil {
-		response.InternalError(c, "删除失败: "+err.Error())
+		response.InternalError(c, "刪除失敗: "+err.Error())
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// GetPodLogs 获取Pod日志
+// GetPodLogs 獲取Pod日誌
 func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
@@ -408,31 +408,31 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	tailLines := c.Query("tailLines")
 	sinceSeconds := c.Query("sinceSeconds")
 
-	logger.Info("获取Pod日志: %s/%s/%s, container=%s", clusterId, namespace, name, container)
+	logger.Info("獲取Pod日誌: %s/%s/%s, container=%s", clusterId, namespace, name, container)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 构建日志选项
+	// 構建日誌選項
 	logOptions := &corev1.PodLogOptions{
 		Follow:   follow,
 		Previous: previous,
@@ -454,24 +454,24 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 		}
 	}
 
-	// 获取日志
+	// 獲取日誌
 	req := k8sClient.GetClientset().CoreV1().Pods(namespace).GetLogs(name, logOptions)
 	logs, err := req.Stream(ctx)
 	if err != nil {
-		response.InternalError(c, "获取日志失败: "+err.Error())
+		response.InternalError(c, "獲取日誌失敗: "+err.Error())
 		return
 	}
 	defer func() {
 		_ = logs.Close()
 	}()
 
-	// 如果是follow模式，返回错误提示使用WebSocket
+	// 如果是follow模式，返回錯誤提示使用WebSocket
 	if follow {
-		response.BadRequest(c, "流式日志请使用WebSocket连接: /ws/clusters/:clusterID/pods/:namespace/:name/logs")
+		response.BadRequest(c, "流式日誌請使用WebSocket連線: /ws/clusters/:clusterID/pods/:namespace/:name/logs")
 		return
 	}
 
-	// 读取日志内容
+	// 讀取日誌內容
 	buf := make([]byte, 4096)
 	var logContent string
 	for {
@@ -489,7 +489,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	})
 }
 
-// convertPodsToInfo 转换Pod列表为PodInfo
+// convertPodsToInfo 轉換Pod列表為PodInfo
 func (h *PodHandler) convertPodsToInfo(pods []corev1.Pod) []PodInfo {
 	var podInfos []PodInfo
 	for _, pod := range pods {
@@ -498,15 +498,15 @@ func (h *PodHandler) convertPodsToInfo(pods []corev1.Pod) []PodInfo {
 	return podInfos
 }
 
-// convertPodToInfo 转换Pod为PodInfo
+// convertPodToInfo 轉換Pod為PodInfo
 func (h *PodHandler) convertPodToInfo(pod corev1.Pod) PodInfo {
-	// 计算重启次数
+	// 計算重啟次數
 	var restartCount int32
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		restartCount += containerStatus.RestartCount
 	}
 
-	// 转换容器信息
+	// 轉換容器資訊
 	containers := make([]ContainerInfo, 0, len(pod.Spec.Containers))
 	for i, container := range pod.Spec.Containers {
 		containerInfo := ContainerInfo{
@@ -518,7 +518,7 @@ func (h *PodHandler) convertPodToInfo(pod corev1.Pod) PodInfo {
 			},
 		}
 
-		// 资源信息
+		// 資源資訊
 		if container.Resources.Requests != nil {
 			for k, v := range container.Resources.Requests {
 				containerInfo.Resources.Requests[string(k)] = v.String()
@@ -530,7 +530,7 @@ func (h *PodHandler) convertPodToInfo(pod corev1.Pod) PodInfo {
 			}
 		}
 
-		// 端口信息
+		// 連接埠資訊
 		for _, port := range container.Ports {
 			containerInfo.Ports = append(containerInfo.Ports, ContainerPort{
 				Name:          port.Name,
@@ -539,7 +539,7 @@ func (h *PodHandler) convertPodToInfo(pod corev1.Pod) PodInfo {
 			})
 		}
 
-		// 状态信息
+		// 狀態資訊
 		if i < len(pod.Status.ContainerStatuses) {
 			status := pod.Status.ContainerStatuses[i]
 			containerInfo.Ready = status.Ready
@@ -569,7 +569,7 @@ func (h *PodHandler) convertPodToInfo(pod corev1.Pod) PodInfo {
 		containers = append(containers, containerInfo)
 	}
 
-	// 转换Init容器信息
+	// 轉換Init容器資訊
 	initContainers := make([]ContainerInfo, 0, len(pod.Spec.InitContainers))
 	for i, container := range pod.Spec.InitContainers {
 		containerInfo := ContainerInfo{
@@ -581,7 +581,7 @@ func (h *PodHandler) convertPodToInfo(pod corev1.Pod) PodInfo {
 			},
 		}
 
-		// 状态信息
+		// 狀態資訊
 		if i < len(pod.Status.InitContainerStatuses) {
 			status := pod.Status.InitContainerStatuses[i]
 			containerInfo.Ready = status.Ready
@@ -591,7 +591,7 @@ func (h *PodHandler) convertPodToInfo(pod corev1.Pod) PodInfo {
 		initContainers = append(initContainers, containerInfo)
 	}
 
-	// 转换条件信息
+	// 轉換條件資訊
 	conditions := make([]PodCondition, 0, len(pod.Status.Conditions))
 	for _, condition := range pod.Status.Conditions {
 		conditions = append(conditions, PodCondition{
@@ -627,7 +627,7 @@ func (h *PodHandler) convertPodToInfo(pod corev1.Pod) PodInfo {
 	}
 }
 
-// getPodStatus 获取Pod状态
+// getPodStatus 獲取Pod狀態
 func (h *PodHandler) getPodStatus(pod corev1.Pod) string {
 	if pod.DeletionTimestamp != nil {
 		return "Terminating"
@@ -635,7 +635,7 @@ func (h *PodHandler) getPodStatus(pod corev1.Pod) string {
 
 	switch pod.Status.Phase {
 	case corev1.PodPending:
-		// 检查是否有容器在等待
+		// 檢查是否有容器在等待
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			if containerStatus.State.Waiting != nil {
 				if containerStatus.State.Waiting.Reason == "ImagePullBackOff" ||
@@ -646,7 +646,7 @@ func (h *PodHandler) getPodStatus(pod corev1.Pod) string {
 		}
 		return "Pending"
 	case corev1.PodRunning:
-		// 检查是否所有容器都就绪
+		// 檢查是否所有容器都就緒
 		ready := 0
 		total := len(pod.Status.ContainerStatuses)
 		for _, containerStatus := range pod.Status.ContainerStatuses {
@@ -671,60 +671,60 @@ func (h *PodHandler) getPodStatus(pod corev1.Pod) string {
 	}
 }
 
-// GetPodNamespaces 获取Pod的命名空间列表
+// GetPodNamespaces 獲取Pod的命名空間列表
 func (h *PodHandler) GetPodNamespaces(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 
-	logger.Info("获取Pod命名空间列表: cluster=%s", clusterId)
+	logger.Info("獲取Pod命名空間列表: cluster=%s", clusterId)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 确保 informer 缓存就绪
+	// 確保 informer 快取就緒
 	if h.k8sMgr == nil {
 		response.ServiceUnavailable(c, "K8s informer 管理器未初始化")
 		return
 	}
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 获取所有Pod的命名空间
+	// 獲取所有Pod的命名空間
 	sel := labels.Everything()
 	pods, err := h.k8sMgr.PodsLister(cluster.ID).List(sel)
 	if err != nil {
-		logger.Error("读取Pod缓存失败", "error", err)
-		response.InternalError(c, "获取命名空间列表失败: "+err.Error())
+		logger.Error("讀取Pod快取失敗", "error", err)
+		response.InternalError(c, "獲取命名空間列表失敗: "+err.Error())
 		return
 	}
 
-	// 收集唯一的命名空间
+	// 收集唯一的命名空間
 	namespaceSet := make(map[string]bool)
 	for _, pod := range pods {
 		namespaceSet[pod.Namespace] = true
 	}
 
-	// 转换为切片并排序
+	// 轉換為切片並排序
 	var namespaces []string
 	for ns := range namespaceSet {
 		namespaces = append(namespaces, ns)
 	}
 	sort.Strings(namespaces)
 
-	// 如果没有找到命名空间，返回默认的
+	// 如果沒有找到命名空間，返回預設的
 	if len(namespaces) == 0 {
 		namespaces = []string{"default", "kube-system", "kube-public", "kube-node-lease"}
 	}
@@ -732,47 +732,47 @@ func (h *PodHandler) GetPodNamespaces(c *gin.Context) {
 	response.OK(c, namespaces)
 }
 
-// GetPodNodes 获取Pod的节点列表
+// GetPodNodes 獲取Pod的節點列表
 func (h *PodHandler) GetPodNodes(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 
-	logger.Info("获取Pod节点列表: cluster=%s", clusterId)
+	logger.Info("獲取Pod節點列表: cluster=%s", clusterId)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 确保 informer 缓存就绪
+	// 確保 informer 快取就緒
 	if h.k8sMgr == nil {
 		response.ServiceUnavailable(c, "K8s informer 管理器未初始化")
 		return
 	}
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 获取所有Pod的节点
+	// 獲取所有Pod的節點
 	sel := labels.Everything()
 	pods, err := h.k8sMgr.PodsLister(cluster.ID).List(sel)
 	if err != nil {
-		logger.Error("读取Pod缓存失败", "error", err)
-		response.InternalError(c, "获取节点列表失败: "+err.Error())
+		logger.Error("讀取Pod快取失敗", "error", err)
+		response.InternalError(c, "獲取節點列表失敗: "+err.Error())
 		return
 	}
 
-	// 收集唯一的节点名称
+	// 收集唯一的節點名稱
 	nodeSet := make(map[string]bool)
 	for _, pod := range pods {
 		if pod.Spec.NodeName != "" {
@@ -780,7 +780,7 @@ func (h *PodHandler) GetPodNodes(c *gin.Context) {
 		}
 	}
 
-	// 转换为切片并排序
+	// 轉換為切片並排序
 	var nodes []string
 	for node := range nodeSet {
 		nodes = append(nodes, node)
@@ -790,7 +790,7 @@ func (h *PodHandler) GetPodNodes(c *gin.Context) {
 	response.OK(c, nodes)
 }
 
-// StreamPodLogs WebSocket流式传输Pod日志
+// StreamPodLogs WebSocket流式傳輸Pod日誌
 func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
@@ -800,55 +800,55 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 	tailLines := c.Query("tailLines")
 	sinceSeconds := c.Query("sinceSeconds")
 
-	logger.Info("WebSocket流式获取Pod日志: %s/%s/%s, container=%s", clusterId, namespace, name, container)
+	logger.Info("WebSocket流式獲取Pod日誌: %s/%s/%s, container=%s", clusterId, namespace, name, container)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 升级到WebSocket连接
+	// 升級到WebSocket連線
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		logger.Error("升级WebSocket连接失败", "error", err)
+		logger.Error("升級WebSocket連線失敗", "error", err)
 		return
 	}
 	defer func() {
 		_ = conn.Close()
 	}()
 
-	// 发送连接成功消息
+	// 傳送連線成功訊息
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":    "connected",
-		"message": "WebSocket连接已建立",
+		"message": "WebSocket連線已建立",
 	})
 	if err != nil {
-		logger.Error("发送连接消息失败", "error", err)
+		logger.Error("傳送連線訊息失敗", "error", err)
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		_ = conn.WriteJSON(map[string]interface{}{
 			"type":    "error",
-			"message": "获取K8s客户端失败: " + err.Error(),
+			"message": "獲取K8s客戶端失敗: " + err.Error(),
 		})
 		return
 	}
 
-	// 创建上下文 - 使用WithCancel而不是WithTimeout，因为WebSocket需要长时间运行
+	// 建立上下文 - 使用WithCancel而不是WithTimeout，因為WebSocket需要長時間執行
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 构建日志选项
+	// 構建日誌選項
 	logOptions := &corev1.PodLogOptions{
 		Follow:   true, // 流式模式
 		Previous: previous,
@@ -870,13 +870,13 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 		}
 	}
 
-	// 获取日志流（使用缓存的clientset）
+	// 獲取日誌流（使用快取的clientset）
 	req := k8sClient.GetClientset().CoreV1().Pods(namespace).GetLogs(name, logOptions)
 	logStream, err := req.Stream(context.Background())
 	if err != nil {
 		_ = conn.WriteJSON(map[string]interface{}{
 			"type":    "error",
-			"message": "获取日志流失败: " + err.Error(),
+			"message": "獲取日誌流失敗: " + err.Error(),
 		})
 		return
 	}
@@ -884,88 +884,88 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 		_ = logStream.Close()
 	}()
 
-	// 创建读取器
+	// 建立讀取器
 	reader := bufio.NewReader(logStream)
 
-	// 启动goroutine读取客户端消息（用于处理关闭连接）
+	// 啟動goroutine讀取客戶端訊息（用於處理關閉連線）
 	go func() {
 		for {
 			_, _, err := conn.ReadMessage()
 			if err != nil {
-				logger.Info("WebSocket连接关闭", "error", err)
+				logger.Info("WebSocket連線關閉", "error", err)
 				cancel()
-				_ = logStream.Close() // 主动关闭日志流
+				_ = logStream.Close() // 主動關閉日誌流
 				return
 			}
 		}
 	}()
 
-	// 发送日志开始消息
+	// 傳送日誌開始訊息
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":    "start",
-		"message": "开始接收日志流",
+		"message": "開始接收日誌流",
 	})
 	if err != nil {
-		logger.Error("发送开始消息失败", "error", err)
+		logger.Error("傳送開始訊息失敗", "error", err)
 		return
 	}
 
-	// 流式读取并发送日志
+	// 流式讀取併傳送日誌
 	for {
 		select {
 		case <-ctx.Done():
-			// 连接被关闭
+			// 連線被關閉
 			_ = conn.WriteJSON(map[string]interface{}{
 				"type":    "closed",
-				"message": "日志流已关闭",
+				"message": "日誌流已關閉",
 			})
 			return
 		default:
-			// 读取一行日志
+			// 讀取一行日誌
 			line, err := reader.ReadString('\n')
 			if err != nil {
 				if err == io.EOF {
-					// 日志流正常结束
+					// 日誌流正常結束
 					_ = conn.WriteJSON(map[string]interface{}{
 						"type":    "end",
-						"message": "日志流已结束",
+						"message": "日誌流已結束",
 					})
 					return
 				}
 
-				// 检查是否是因为stream被关闭（客户端断开连接）
-				// 包含 "closed"、"canceled" 或 "cancel" 的错误都是正常的断开
+				// 檢查是否是因為stream被關閉（客戶端斷開連線）
+				// 包含 "closed"、"canceled" 或 "cancel" 的錯誤都是正常的斷開
 				errStr := err.Error()
 				if strings.Contains(errStr, "closed") ||
 					strings.Contains(errStr, "canceled") ||
 					strings.Contains(errStr, "cancel") {
-					logger.Info("日志流停止: 连接已关闭或取消")
+					logger.Info("日誌流停止: 連線已關閉或取消")
 					return
 				}
 
-				// 检查是否是context取消
+				// 檢查是否是context取消
 				if ctx.Err() != nil {
-					logger.Info("日志流停止: context取消")
+					logger.Info("日誌流停止: context取消")
 					return
 				}
 
-				// 其他错误才记录ERROR
-				logger.Error("读取日志失败", "error", err)
+				// 其他錯誤才記錄ERROR
+				logger.Error("讀取日誌失敗", "error", err)
 				_ = conn.WriteJSON(map[string]interface{}{
 					"type":    "error",
-					"message": "读取日志失败: " + err.Error(),
+					"message": "讀取日誌失敗: " + err.Error(),
 				})
 				return
 			}
 
-			// 发送日志内容
+			// 傳送日誌內容
 			err = conn.WriteJSON(map[string]interface{}{
 				"type": "log",
 				"data": line,
 			})
 			if err != nil {
-				// WebSocket发送失败，客户端可能已断开
-				logger.Info("发送日志失败，客户端可能已断开", "error", err)
+				// WebSocket傳送失敗，客戶端可能已斷開
+				logger.Info("傳送日誌失敗，客戶端可能已斷開", "error", err)
 				return
 			}
 		}

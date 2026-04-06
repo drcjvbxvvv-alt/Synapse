@@ -20,7 +20,7 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
-// InformerListerProvider 定义获取各类 Lister 的接口（用于解耦 k8s 包）
+// InformerListerProvider 定義獲取各類 Lister 的介面（用於解耦 k8s 包）
 type InformerListerProvider interface {
 	PodsLister(clusterID uint) corev1listers.PodLister
 	NodesLister(clusterID uint) corev1listers.NodeLister
@@ -29,15 +29,15 @@ type InformerListerProvider interface {
 	RolloutsLister(clusterID uint) rolloutslisters.RolloutLister
 }
 
-// clusterFilterCtxKey 用于在 context 中传递集群过滤条件
+// clusterFilterCtxKey 用於在 context 中傳遞叢集過濾條件
 type clusterFilterCtxKey struct{}
 
-// ContextWithClusterFilter 将集群过滤条件注入 context
+// ContextWithClusterFilter 將叢集過濾條件注入 context
 func ContextWithClusterFilter(ctx context.Context, clusterIDs []uint) context.Context {
 	return context.WithValue(ctx, clusterFilterCtxKey{}, clusterIDs)
 }
 
-// OverviewService 总览服务
+// OverviewService 總覽服務
 type OverviewService struct {
 	db                 *gorm.DB
 	clusterService     *ClusterService
@@ -48,7 +48,7 @@ type OverviewService struct {
 	alertManagerSvc    *AlertManagerService
 }
 
-// NewOverviewService 创建总览服务
+// NewOverviewService 建立總覽服務
 func NewOverviewService(
 	db *gorm.DB,
 	clusterService *ClusterService,
@@ -69,7 +69,7 @@ func NewOverviewService(
 	}
 }
 
-// getClusters 获取集群列表，如果 context 中有过滤条件则按条件过滤
+// getClusters 獲取叢集列表，如果 context 中有過濾條件則按條件過濾
 func (s *OverviewService) getClusters(ctx context.Context) ([]*models.Cluster, error) {
 	if filterIDs, ok := ctx.Value(clusterFilterCtxKey{}).([]uint); ok {
 		if len(filterIDs) == 0 {
@@ -77,16 +77,16 @@ func (s *OverviewService) getClusters(ctx context.Context) ([]*models.Cluster, e
 		}
 		var clusters []*models.Cluster
 		if err := s.db.Where("id IN ?", filterIDs).Find(&clusters).Error; err != nil {
-			return nil, fmt.Errorf("获取集群列表失败: %w", err)
+			return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 		}
 		return clusters, nil
 	}
 	return s.clusterService.GetAllClusters()
 }
 
-// ========== 响应结构体 ==========
+// ========== 響應結構體 ==========
 
-// OverviewStatsResponse 总览统计响应
+// OverviewStatsResponse 總覽統計響應
 type OverviewStatsResponse struct {
 	ClusterStats        ClusterStatsData      `json:"clusterStats"`
 	NodeStats           NodeStatsData         `json:"nodeStats"`
@@ -94,7 +94,7 @@ type OverviewStatsResponse struct {
 	VersionDistribution []VersionDistribution `json:"versionDistribution"`
 }
 
-// ClusterStatsData 集群统计
+// ClusterStatsData 叢集統計
 type ClusterStatsData struct {
 	Total     int `json:"total"`
 	Healthy   int `json:"healthy"`
@@ -102,14 +102,14 @@ type ClusterStatsData struct {
 	Unknown   int `json:"unknown"`
 }
 
-// NodeStatsData 节点统计
+// NodeStatsData 節點統計
 type NodeStatsData struct {
 	Total    int `json:"total"`
 	Ready    int `json:"ready"`
 	NotReady int `json:"notReady"`
 }
 
-// PodStatsData Pod 统计
+// PodStatsData Pod 統計
 type PodStatsData struct {
 	Total     int `json:"total"`
 	Running   int `json:"running"`
@@ -118,21 +118,21 @@ type PodStatsData struct {
 	Succeeded int `json:"succeeded"`
 }
 
-// VersionDistribution 版本分布
+// VersionDistribution 版本分佈
 type VersionDistribution struct {
 	Version  string   `json:"version"`
 	Count    int      `json:"count"`
 	Clusters []string `json:"clusters"`
 }
 
-// ResourceUsageResponse 资源使用率响应
+// ResourceUsageResponse 資源使用率響應
 type ResourceUsageResponse struct {
 	CPU     ResourceUsageData `json:"cpu"`
 	Memory  ResourceUsageData `json:"memory"`
 	Storage ResourceUsageData `json:"storage"`
 }
 
-// ResourceUsageData 资源使用数据
+// ResourceUsageData 資源使用資料
 type ResourceUsageData struct {
 	UsagePercent float64 `json:"usagePercent"`
 	Used         float64 `json:"used"`
@@ -140,7 +140,7 @@ type ResourceUsageData struct {
 	Unit         string  `json:"unit"`
 }
 
-// ResourceDistributionResponse 资源分布响应
+// ResourceDistributionResponse 資源分佈響應
 type ResourceDistributionResponse struct {
 	PodDistribution    []ClusterResourceCount `json:"podDistribution"`
 	NodeDistribution   []ClusterResourceCount `json:"nodeDistribution"`
@@ -148,33 +148,33 @@ type ResourceDistributionResponse struct {
 	MemoryDistribution []ClusterResourceCount `json:"memoryDistribution"`
 }
 
-// ClusterResourceCount 集群资源计数
+// ClusterResourceCount 叢集資源計數
 type ClusterResourceCount struct {
 	ClusterID   uint    `json:"clusterId"`
 	ClusterName string  `json:"clusterName"`
 	Value       float64 `json:"value"`
 }
 
-// TrendResponse 趋势数据响应
+// TrendResponse 趨勢資料響應
 type TrendResponse struct {
 	PodTrends  []ClusterTrendSeries `json:"podTrends"`
 	NodeTrends []ClusterTrendSeries `json:"nodeTrends"`
 }
 
-// ClusterTrendSeries 集群趋势序列
+// ClusterTrendSeries 叢集趨勢序列
 type ClusterTrendSeries struct {
 	ClusterID   uint             `json:"clusterId"`
 	ClusterName string           `json:"clusterName"`
 	DataPoints  []TrendDataPoint `json:"dataPoints"`
 }
 
-// TrendDataPoint 趋势数据点
+// TrendDataPoint 趨勢資料點
 type TrendDataPoint struct {
 	Timestamp int64   `json:"timestamp"`
 	Value     float64 `json:"value"`
 }
 
-// AbnormalWorkload 异常工作负载
+// AbnormalWorkload 異常工作負載
 type AbnormalWorkload struct {
 	Name        string `json:"name"`
 	Namespace   string `json:"namespace"`
@@ -187,19 +187,19 @@ type AbnormalWorkload struct {
 	Severity    string `json:"severity"`
 }
 
-// GlobalAlertStats 全局告警统计
+// GlobalAlertStats 全域性告警統計
 type GlobalAlertStats struct {
-	Total        int                 `json:"total"`        // 告警总数
-	Firing       int                 `json:"firing"`       // 触发中
+	Total        int                 `json:"total"`        // 告警總數
+	Firing       int                 `json:"firing"`       // 觸發中
 	Pending      int                 `json:"pending"`      // 等待中
-	Resolved     int                 `json:"resolved"`     // 已解决
+	Resolved     int                 `json:"resolved"`     // 已解決
 	Suppressed   int                 `json:"suppressed"`   // 已抑制
-	BySeverity   map[string]int      `json:"bySeverity"`   // 按严重程度统计
-	ByCluster    []ClusterAlertCount `json:"byCluster"`    // 按集群统计
-	EnabledCount int                 `json:"enabledCount"` // 已启用告警的集群数
+	BySeverity   map[string]int      `json:"bySeverity"`   // 按嚴重程度統計
+	ByCluster    []ClusterAlertCount `json:"byCluster"`    // 按叢集統計
+	EnabledCount int                 `json:"enabledCount"` // 已啟用告警的叢集數
 }
 
-// ClusterAlertCount 集群告警计数
+// ClusterAlertCount 叢集告警計數
 type ClusterAlertCount struct {
 	ClusterID   uint   `json:"clusterId"`
 	ClusterName string `json:"clusterName"`
@@ -207,20 +207,20 @@ type ClusterAlertCount struct {
 	Firing      int    `json:"firing"`
 }
 
-// ========== 服务方法 ==========
+// ========== 服務方法 ==========
 
-// GetOverviewStats 获取总览统计数据
+// GetOverviewStats 獲取總覽統計資料
 func (s *OverviewService) GetOverviewStats(ctx context.Context) (*OverviewStatsResponse, error) {
 	clusters, err := s.getClusters(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取集群列表失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 
 	stats := &OverviewStatsResponse{}
 	versionMap := make(map[string][]string)
 
 	for _, cluster := range clusters {
-		// 集群健康统计
+		// 叢集健康統計
 		switch cluster.Status {
 		case "healthy":
 			stats.ClusterStats.Healthy++
@@ -230,20 +230,20 @@ func (s *OverviewService) GetOverviewStats(ctx context.Context) (*OverviewStatsR
 			stats.ClusterStats.Unknown++
 		}
 
-		// 版本分布
+		// 版本分佈
 		version := cluster.Version
 		if version == "" {
 			version = "unknown"
 		}
 		versionMap[version] = append(versionMap[version], cluster.Name)
 
-		// 从 Informer 获取 Pod 统计
+		// 從 Informer 獲取 Pod 統計
 		if s.listerProvider != nil {
 			podLister := s.listerProvider.PodsLister(cluster.ID)
 			if podLister != nil {
 				pods, err := podLister.List(labels.Everything())
 				if err != nil {
-					logger.Error("获取集群 Pod 列表失败", "cluster", cluster.Name, "error", err)
+					logger.Error("獲取叢集 Pod 列表失敗", "cluster", cluster.Name, "error", err)
 				} else {
 					for _, pod := range pods {
 						stats.PodStats.Total++
@@ -261,12 +261,12 @@ func (s *OverviewService) GetOverviewStats(ctx context.Context) (*OverviewStatsR
 				}
 			}
 
-			// 从 Informer 获取 Node 统计
+			// 從 Informer 獲取 Node 統計
 			nodeLister := s.listerProvider.NodesLister(cluster.ID)
 			if nodeLister != nil {
 				nodes, err := nodeLister.List(labels.Everything())
 				if err != nil {
-					logger.Error("获取集群节点列表失败", "cluster", cluster.Name, "error", err)
+					logger.Error("獲取叢集節點列表失敗", "cluster", cluster.Name, "error", err)
 				} else {
 					for _, node := range nodes {
 						stats.NodeStats.Total++
@@ -285,7 +285,7 @@ func (s *OverviewService) GetOverviewStats(ctx context.Context) (*OverviewStatsR
 	stats.NodeStats.NotReady = stats.NodeStats.Total - stats.NodeStats.Ready
 	stats.ClusterStats.Total = len(clusters)
 
-	// 转换版本分布
+	// 轉換版本分佈
 	for version, clusterNames := range versionMap {
 		stats.VersionDistribution = append(stats.VersionDistribution, VersionDistribution{
 			Version:  version,
@@ -293,7 +293,7 @@ func (s *OverviewService) GetOverviewStats(ctx context.Context) (*OverviewStatsR
 			Clusters: clusterNames,
 		})
 	}
-	// 按数量降序排序
+	// 按數量降序排序
 	sort.Slice(stats.VersionDistribution, func(i, j int) bool {
 		return stats.VersionDistribution[i].Count > stats.VersionDistribution[j].Count
 	})
@@ -301,11 +301,11 @@ func (s *OverviewService) GetOverviewStats(ctx context.Context) (*OverviewStatsR
 	return stats, nil
 }
 
-// GetResourceDistribution 获取资源分布
+// GetResourceDistribution 獲取資源分佈
 func (s *OverviewService) GetResourceDistribution(ctx context.Context) (*ResourceDistributionResponse, error) {
 	clusters, err := s.getClusters(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取集群列表失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 
 	resp := &ResourceDistributionResponse{
@@ -323,7 +323,7 @@ func (s *OverviewService) GetResourceDistribution(ctx context.Context) (*Resourc
 		clusterID := cluster.ID
 		clusterName := cluster.Name
 
-		// Pod 分布
+		// Pod 分佈
 		if podLister := s.listerProvider.PodsLister(clusterID); podLister != nil {
 			pods, err := podLister.List(labels.Everything())
 			if err == nil {
@@ -333,7 +333,7 @@ func (s *OverviewService) GetResourceDistribution(ctx context.Context) (*Resourc
 			}
 		}
 
-		// Node 分布 + CPU/Memory 容量
+		// Node 分佈 + CPU/Memory 容量
 		if nodeLister := s.listerProvider.NodesLister(clusterID); nodeLister != nil {
 			nodes, err := nodeLister.List(labels.Everything())
 			if err == nil {
@@ -373,11 +373,11 @@ func (s *OverviewService) GetResourceDistribution(ctx context.Context) (*Resourc
 	return resp, nil
 }
 
-// GetResourceUsage 获取资源使用率
+// GetResourceUsage 獲取資源使用率
 func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageResponse, error) {
 	clusters, err := s.getClusters(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取集群列表失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 
 	var totalCPUUsage, totalMemUsage, totalStorageUsage float64
@@ -386,19 +386,19 @@ func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageR
 	var clusterCount, storageClusterCount int
 
 	for _, cluster := range clusters {
-		// 获取集群的 MonitoringConfig
+		// 獲取叢集的 MonitoringConfig
 		config, err := s.monitoringCfgSvc.GetMonitoringConfig(cluster.ID)
 		if err != nil || config.Type == "disabled" {
-			logger.Debug("集群监控未配置或已禁用", "cluster", cluster.Name)
+			logger.Debug("叢集監控未配置或已禁用", "cluster", cluster.Name)
 			continue
 		}
 
-		// 设置时间范围（最近 5 分钟，用于 range query）
+		// 設定時間範圍（最近 5 分鐘，用於 range query）
 		now := time.Now().Unix()
-		start := now - 300 // 5 分钟前
+		start := now - 300 // 5 分鐘前
 		step := "1m"
 
-		// 查询 CPU 使用率
+		// 查詢 CPU 使用率
 		cpuQuery := &models.MetricsQuery{
 			Query: "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100",
 			Start: start,
@@ -411,7 +411,7 @@ func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageR
 			}
 		}
 
-		// 查询内存使用率
+		// 查詢記憶體使用率
 		memQuery := &models.MetricsQuery{
 			Query: "(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100",
 			Start: start,
@@ -424,7 +424,7 @@ func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageR
 			}
 		}
 
-		// 查询存储使用率（根目录 /）
+		// 查詢儲存使用率（根目錄 /）
 		storageUsageQuery := &models.MetricsQuery{
 			Query: "avg((1 - node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100)",
 			Start: start,
@@ -438,7 +438,7 @@ func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageR
 			}
 		}
 
-		// 查询存储总量（根目录 /）
+		// 查詢儲存總量（根目錄 /）
 		storageTotalQuery := &models.MetricsQuery{
 			Query: "sum(node_filesystem_size_bytes{mountpoint=\"/\"})",
 			Start: start,
@@ -451,7 +451,7 @@ func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageR
 			}
 		}
 
-		// 查询存储已用量（根目录 /）
+		// 查詢儲存已用量（根目錄 /）
 		storageUsedQuery := &models.MetricsQuery{
 			Query: "sum(node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_avail_bytes{mountpoint=\"/\"})",
 			Start: start,
@@ -464,7 +464,7 @@ func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageR
 			}
 		}
 
-		// 从 Informer 获取总资源容量
+		// 從 Informer 獲取總資源容量
 		if s.listerProvider != nil {
 			if nodeLister := s.listerProvider.NodesLister(cluster.ID); nodeLister != nil {
 				nodes, _ := nodeLister.List(labels.Everything())
@@ -498,7 +498,7 @@ func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageR
 		}
 	}
 
-	// 存储使用率
+	// 儲存使用率
 	if storageClusterCount > 0 {
 		avgStorage := totalStorageUsage / float64(storageClusterCount)
 		totalStorageTB := totalStorageBytes / (1024 * 1024 * 1024 * 1024)
@@ -522,16 +522,16 @@ func (s *OverviewService) GetResourceUsage(ctx context.Context) (*ResourceUsageR
 	return resp, nil
 }
 
-// GetTrends 获取趋势数据（并发查询优化性能）
+// GetTrends 獲取趨勢資料（併發查詢最佳化效能）
 func (s *OverviewService) GetTrends(ctx context.Context, timeRange string, step string) (*TrendResponse, error) {
 	clusters, err := s.getClusters(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取集群列表失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 
-	// 解析时间范围
+	// 解析時間範圍
 	start, end := parseTimeRange(timeRange)
-	// 每天一个数据点，使用 1d 步长
+	// 每天一個資料點，使用 1d 步長
 	if step == "" {
 		step = "1d"
 	}
@@ -541,7 +541,7 @@ func (s *OverviewService) GetTrends(ctx context.Context, timeRange string, step 
 		NodeTrends: make([]ClusterTrendSeries, 0),
 	}
 
-	// 使用并发查询所有集群
+	// 使用併發查詢所有叢集
 	type trendResult struct {
 		ClusterID   uint
 		ClusterName string
@@ -558,7 +558,7 @@ func (s *OverviewService) GetTrends(ctx context.Context, timeRange string, step 
 			defer wg.Done()
 			clusterStart := time.Now()
 
-			// 在 goroutine 内部获取监控配置
+			// 在 goroutine 內部獲取監控配置
 			config, err := s.monitoringCfgSvc.GetMonitoringConfig(c.ID)
 			if err != nil || config.Type == "disabled" {
 				return
@@ -569,7 +569,7 @@ func (s *OverviewService) GetTrends(ctx context.Context, timeRange string, step 
 				ClusterName: c.Name,
 			}
 
-			// Pod 趋势 - 直接查询 count，step=1d 已保证每天一个点
+			// Pod 趨勢 - 直接查詢 count，step=1d 已保證每天一個點
 			podQuery := &models.MetricsQuery{
 				Query: "count(kube_pod_info)",
 				Start: start,
@@ -580,7 +580,7 @@ func (s *OverviewService) GetTrends(ctx context.Context, timeRange string, step 
 				result.PodPoints = extractRangeSeriesWithDefault(promResp)
 			}
 
-			// Node 趋势 - 直接查询 count
+			// Node 趨勢 - 直接查詢 count
 			nodeQuery := &models.MetricsQuery{
 				Query: "count(kube_node_info)",
 				Start: start,
@@ -591,19 +591,19 @@ func (s *OverviewService) GetTrends(ctx context.Context, timeRange string, step 
 				result.NodePoints = extractRangeSeriesWithDefault(promResp)
 			}
 
-			logger.Info("集群趋势查询完成", "cluster", c.Name, "耗时", time.Since(clusterStart).String())
+			logger.Info("叢集趨勢查詢完成", "cluster", c.Name, "耗時", time.Since(clusterStart).String())
 
 			resultCh <- result
 		}(cluster)
 	}
 
-	// 等待所有 goroutine 完成后关闭 channel
+	// 等待所有 goroutine 完成後關閉 channel
 	go func() {
 		wg.Wait()
 		close(resultCh)
 	}()
 
-	// 收集结果
+	// 收集結果
 	for result := range resultCh {
 		if len(result.PodPoints) > 0 {
 			resp.PodTrends = append(resp.PodTrends, ClusterTrendSeries{
@@ -624,11 +624,11 @@ func (s *OverviewService) GetTrends(ctx context.Context, timeRange string, step 
 	return resp, nil
 }
 
-// GetAbnormalWorkloads 获取异常工作负载
+// GetAbnormalWorkloads 獲取異常工作負載
 func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) ([]AbnormalWorkload, error) {
 	clusters, err := s.getClusters(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取集群列表失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 
 	if limit <= 0 {
@@ -642,7 +642,7 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 	}
 
 	for _, cluster := range clusters {
-		// 检查 Deployment 副本不一致
+		// 檢查 Deployment 副本不一致
 		if depLister := s.listerProvider.DeploymentsLister(cluster.ID); depLister != nil {
 			deps, err := depLister.List(labels.Everything())
 			if err == nil {
@@ -656,7 +656,7 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 							ClusterName: cluster.Name,
 							Type:        "Deployment",
 							Reason:      "Pod副本不足",
-							Message:     fmt.Sprintf("期望 %d 个副本，就绪 %d 个", *dep.Spec.Replicas, dep.Status.ReadyReplicas),
+							Message:     fmt.Sprintf("期望 %d 個副本，就緒 %d 個", *dep.Spec.Replicas, dep.Status.ReadyReplicas),
 							Duration:    duration,
 							Severity:    "warning",
 						})
@@ -665,7 +665,7 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 			}
 		}
 
-		// 检查 StatefulSet 副本不一致
+		// 檢查 StatefulSet 副本不一致
 		if stsLister := s.listerProvider.StatefulSetsLister(cluster.ID); stsLister != nil {
 			stss, err := stsLister.List(labels.Everything())
 			if err == nil {
@@ -679,7 +679,7 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 							ClusterName: cluster.Name,
 							Type:        "StatefulSet",
 							Reason:      "Pod副本不足",
-							Message:     fmt.Sprintf("期望 %d 个副本，就绪 %d 个", *sts.Spec.Replicas, sts.Status.ReadyReplicas),
+							Message:     fmt.Sprintf("期望 %d 個副本，就緒 %d 個", *sts.Spec.Replicas, sts.Status.ReadyReplicas),
 							Duration:    duration,
 							Severity:    "warning",
 						})
@@ -688,7 +688,7 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 			}
 		}
 
-		// 检查 Argo Rollout 副本不一致或发布异常
+		// 檢查 Argo Rollout 副本不一致或釋出異常
 		if rolloutLister := s.listerProvider.RolloutsLister(cluster.ID); rolloutLister != nil {
 			rollouts, err := rolloutLister.List(labels.Everything())
 			if err == nil {
@@ -712,7 +712,7 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 			}
 		}
 
-		// 检查异常 Pod
+		// 檢查異常 Pod
 		if podLister := s.listerProvider.PodsLister(cluster.ID); podLister != nil {
 			pods, err := podLister.List(labels.Everything())
 			if err == nil {
@@ -734,13 +734,13 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 			}
 		}
 
-		// 限制数量
+		// 限制數量
 		if len(workloads) >= limit {
 			break
 		}
 	}
 
-	// 截断到限制数量
+	// 截斷到限制數量
 	if len(workloads) > limit {
 		workloads = workloads[:limit]
 	}
@@ -748,11 +748,11 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 	return workloads, nil
 }
 
-// GetGlobalAlertStats 获取全局告警统计（聚合所有集群的告警数据）
+// GetGlobalAlertStats 獲取全域性告警統計（聚合所有叢集的告警資料）
 func (s *OverviewService) GetGlobalAlertStats(ctx context.Context) (*GlobalAlertStats, error) {
 	clusters, err := s.getClusters(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取集群列表失败: %w", err)
+		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 
 	stats := &GlobalAlertStats{
@@ -761,11 +761,11 @@ func (s *OverviewService) GetGlobalAlertStats(ctx context.Context) (*GlobalAlert
 	}
 
 	if s.alertManagerCfgSvc == nil || s.alertManagerSvc == nil {
-		logger.Warn("AlertManager 服务未配置，返回空统计")
+		logger.Warn("AlertManager 服務未配置，返回空統計")
 		return stats, nil
 	}
 
-	// 并发获取各集群告警
+	// 併發獲取各叢集告警
 	type clusterResult struct {
 		ClusterID   uint
 		ClusterName string
@@ -787,7 +787,7 @@ func (s *OverviewService) GetGlobalAlertStats(ctx context.Context) (*GlobalAlert
 				ClusterName: c.Name,
 			}
 
-			// 获取集群的 AlertManager 配置
+			// 獲取叢集的 AlertManager 配置
 			config, err := s.alertManagerCfgSvc.GetAlertManagerConfig(c.ID)
 			if err != nil {
 				result.Err = err
@@ -803,10 +803,10 @@ func (s *OverviewService) GetGlobalAlertStats(ctx context.Context) (*GlobalAlert
 
 			result.Enabled = true
 
-			// 获取告警统计
+			// 獲取告警統計
 			alertStats, err := s.alertManagerSvc.GetAlertStats(ctx, config)
 			if err != nil {
-				logger.Warn("获取集群告警统计失败", "cluster", c.Name, "error", err)
+				logger.Warn("獲取叢集告警統計失敗", "cluster", c.Name, "error", err)
 				result.Err = err
 				resultCh <- result
 				return
@@ -817,13 +817,13 @@ func (s *OverviewService) GetGlobalAlertStats(ctx context.Context) (*GlobalAlert
 		}(cluster)
 	}
 
-	// 等待完成后关闭 channel
+	// 等待完成後關閉 channel
 	go func() {
 		wg.Wait()
 		close(resultCh)
 	}()
 
-	// 汇总结果
+	// 彙總結果
 	for result := range resultCh {
 		if !result.Enabled {
 			continue
@@ -835,19 +835,19 @@ func (s *OverviewService) GetGlobalAlertStats(ctx context.Context) (*GlobalAlert
 			continue
 		}
 
-		// 汇总总数
+		// 彙總總數
 		stats.Total += result.Stats.Total
 		stats.Firing += result.Stats.Firing
 		stats.Pending += result.Stats.Pending
 		stats.Resolved += result.Stats.Resolved
 		stats.Suppressed += result.Stats.Suppressed
 
-		// 汇总按严重程度
+		// 彙總按嚴重程度
 		for severity, count := range result.Stats.BySeverity {
 			stats.BySeverity[severity] += count
 		}
 
-		// 记录每个集群的告警数
+		// 記錄每個叢集的告警數
 		stats.ByCluster = append(stats.ByCluster, ClusterAlertCount{
 			ClusterID:   result.ClusterID,
 			ClusterName: result.ClusterName,
@@ -856,7 +856,7 @@ func (s *OverviewService) GetGlobalAlertStats(ctx context.Context) (*GlobalAlert
 		})
 	}
 
-	// 按告警数排序
+	// 按告警數排序
 	sort.Slice(stats.ByCluster, func(i, j int) bool {
 		return stats.ByCluster[i].Firing > stats.ByCluster[j].Firing
 	})
@@ -864,90 +864,90 @@ func (s *OverviewService) GetGlobalAlertStats(ctx context.Context) (*GlobalAlert
 	return stats, nil
 }
 
-// ========== 辅助函数 ==========
+// ========== 輔助函式 ==========
 
-// detectPodIssue 检测 Pod 异常
+// detectPodIssue 檢測 Pod 異常
 func detectPodIssue(pod *corev1.Pod) (string, string) {
 	for _, cs := range pod.Status.ContainerStatuses {
 		if cs.State.Waiting != nil {
 			switch cs.State.Waiting.Reason {
 			case "ImagePullBackOff", "ErrImagePull":
-				return "镜像拉取失败", "critical"
+				return "映像拉取失敗", "critical"
 			case "CrashLoopBackOff":
-				return "容器崩溃重启", "critical"
+				return "容器崩潰重啟", "critical"
 			case "CreateContainerConfigError":
-				return "容器配置错误", "warning"
+				return "容器配置錯誤", "warning"
 			}
 		}
 		if cs.LastTerminationState.Terminated != nil {
 			if cs.LastTerminationState.Terminated.Reason == "OOMKilled" {
-				return "OOM 内存溢出", "critical"
+				return "OOM 記憶體溢位", "critical"
 			}
 		}
 	}
 	if pod.Status.Phase == corev1.PodPending {
-		// 检查是否 Pending 超过 5 分钟
+		// 檢查是否 Pending 超過 5 分鐘
 		if time.Since(pod.CreationTimestamp.Time) > 5*time.Minute {
-			return "调度超时", "warning"
+			return "排程超時", "warning"
 		}
 	}
 	return "", ""
 }
 
-// detectRolloutIssue 检测 Argo Rollout 异常
+// detectRolloutIssue 檢測 Argo Rollout 異常
 func detectRolloutIssue(rollout *rolloutsv1alpha1.Rollout) (string, string, string) {
-	// 检查副本不一致
+	// 檢查副本不一致
 	if rollout.Spec.Replicas != nil {
 		desired := *rollout.Spec.Replicas
 		ready := rollout.Status.ReadyReplicas
 		if ready < desired {
-			return "Pod副本不足", fmt.Sprintf("期望 %d 个副本，就绪 %d 个", desired, ready), "warning"
+			return "Pod副本不足", fmt.Sprintf("期望 %d 個副本，就緒 %d 個", desired, ready), "warning"
 		}
 	}
 
-	// 检查发布状态
+	// 檢查釋出狀態
 	phase := rollout.Status.Phase
 	switch phase {
 	case rolloutsv1alpha1.RolloutPhaseDegraded:
-		return "发布降级", "Rollout 处于降级状态", "critical"
+		return "釋出降級", "Rollout 處於降級狀態", "critical"
 	case rolloutsv1alpha1.RolloutPhasePaused:
-		// 暂停状态可能是正常的（金丝雀发布暂停），检查是否有异常条件
+		// 暫停狀態可能是正常的（金絲雀釋出暫停），檢查是否有異常條件
 		for _, cond := range rollout.Status.Conditions {
 			if cond.Type == rolloutsv1alpha1.RolloutProgressing && cond.Reason == "ProgressDeadlineExceeded" {
-				return "发布超时", cond.Message, "critical"
+				return "釋出超時", cond.Message, "critical"
 			}
 		}
 	}
 
-	// 检查 Condition 中的异常
+	// 檢查 Condition 中的異常
 	for _, cond := range rollout.Status.Conditions {
 		if cond.Type == rolloutsv1alpha1.RolloutProgressing && cond.Reason == "ProgressDeadlineExceeded" {
-			return "发布超时", cond.Message, "critical"
+			return "釋出超時", cond.Message, "critical"
 		}
 		if cond.Type == rolloutsv1alpha1.RolloutReplicaFailure {
-			return "副本失败", cond.Message, "critical"
+			return "副本失敗", cond.Message, "critical"
 		}
 	}
 
 	return "", "", ""
 }
 
-// formatDuration 格式化持续时间
+// formatDuration 格式化持續時間
 func formatDuration(t time.Time) string {
 	d := time.Since(t)
 	if d < time.Minute {
 		return fmt.Sprintf("%d秒", int(d.Seconds()))
 	}
 	if d < time.Hour {
-		return fmt.Sprintf("%d分钟", int(d.Minutes()))
+		return fmt.Sprintf("%d分鐘", int(d.Minutes()))
 	}
 	if d < 24*time.Hour {
-		return fmt.Sprintf("%d小时", int(d.Hours()))
+		return fmt.Sprintf("%d小時", int(d.Hours()))
 	}
 	return fmt.Sprintf("%d天", int(d.Hours()/24))
 }
 
-// parseTimeRange 解析时间范围
+// parseTimeRange 解析時間範圍
 func parseTimeRange(timeRange string) (int64, int64) {
 	end := time.Now().Unix()
 	var start int64
@@ -968,8 +968,8 @@ func parseTimeRange(timeRange string) (int64, int64) {
 	return start, end
 }
 
-// extractInstantValue 从 Prometheus 响应中提取即时值（用于 instant query）
-//nolint:unused // 保留用于未来使用
+// extractInstantValue 從 Prometheus 響應中提取即時值（用於 instant query）
+//nolint:unused // 保留用於未來使用
 func extractInstantValue(resp *models.MetricsResponse) float64 {
 	if resp == nil || len(resp.Data.Result) == 0 {
 		return -1
@@ -986,13 +986,13 @@ func extractInstantValue(resp *models.MetricsResponse) float64 {
 	return -1
 }
 
-// extractLatestValue 从 Prometheus range query 响应中提取最新值
+// extractLatestValue 從 Prometheus range query 響應中提取最新值
 func extractLatestValue(resp *models.MetricsResponse) float64 {
 	if resp == nil || len(resp.Data.Result) == 0 {
 		return -1
 	}
 	result := resp.Data.Result[0]
-	// 优先从 Values (range query) 中获取最后一个值
+	// 優先從 Values (range query) 中獲取最後一個值
 	if len(result.Values) > 0 {
 		lastValue := result.Values[len(result.Values)-1]
 		if len(lastValue) >= 2 {
@@ -1004,7 +1004,7 @@ func extractLatestValue(resp *models.MetricsResponse) float64 {
 			}
 		}
 	}
-	// 兼容 instant query 的 Value 格式
+	// 相容 instant query 的 Value 格式
 	if len(result.Value) >= 2 {
 		if val, ok := result.Value[1].(string); ok {
 			var f float64
@@ -1016,8 +1016,8 @@ func extractLatestValue(resp *models.MetricsResponse) float64 {
 	return -1
 }
 
-// extractRangeSeries 从 Prometheus 响应中提取范围序列
-//nolint:unused // 保留用于未来使用
+// extractRangeSeries 從 Prometheus 響應中提取範圍序列
+//nolint:unused // 保留用於未來使用
 func extractRangeSeries(resp *models.MetricsResponse) []TrendDataPoint {
 	if resp == nil || len(resp.Data.Result) == 0 {
 		return nil
@@ -1040,8 +1040,8 @@ func extractRangeSeries(resp *models.MetricsResponse) []TrendDataPoint {
 	return points
 }
 
-// extractRangeSeriesWithDefault 从 Prometheus 响应中提取范围序列，处理 null 值
-// 如果某个时间点的值为 null 或无效，使用前一个有效值填充
+// extractRangeSeriesWithDefault 從 Prometheus 響應中提取範圍序列，處理 null 值
+// 如果某個時間點的值為 null 或無效，使用前一個有效值填充
 func extractRangeSeriesWithDefault(resp *models.MetricsResponse) []TrendDataPoint {
 	if resp == nil || len(resp.Data.Result) == 0 {
 		return nil
@@ -1064,7 +1064,7 @@ func extractRangeSeriesWithDefault(resp *models.MetricsResponse) []TrendDataPoin
 			if valid {
 				lastValidValue = val
 			} else {
-				// 使用前一个有效值
+				// 使用前一個有效值
 				val = lastValidValue
 			}
 
@@ -1077,5 +1077,5 @@ func extractRangeSeriesWithDefault(resp *models.MetricsResponse) []TrendDataPoin
 	return points
 }
 
-// 确保 appsv1 包被使用（避免 unused import 错误）
+// 確保 appsv1 包被使用（避免 unused import 錯誤）
 var _ *appsv1.Deployment = nil

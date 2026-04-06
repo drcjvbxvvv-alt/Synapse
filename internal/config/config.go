@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config 应用配置结构
+// Config 應用配置結構
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
@@ -16,13 +16,13 @@ type Config struct {
 	Security SecurityConfig `mapstructure:"security"`
 }
 
-// ServerConfig 服务器配置
+// ServerConfig 伺服器配置
 type ServerConfig struct {
 	Port int    `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
 }
 
-// DatabaseConfig 数据库配置
+// DatabaseConfig 資料庫配置
 type DatabaseConfig struct {
 	Driver   string `mapstructure:"driver"`
 	DSN      string `mapstructure:"dsn"`
@@ -40,7 +40,7 @@ type JWTConfig struct {
 	ExpireTime int    `mapstructure:"expire_time"`
 }
 
-// LogConfig 日志配置
+// LogConfig 日誌配置
 type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"` // text | json（預設 text，由 LOG_FORMAT env 控制）
@@ -52,29 +52,29 @@ type K8sConfig struct {
 	InformerSyncTimeout int   `mapstructure:"informer_sync_timeout"` // seconds
 }
 
-// SecurityConfig 安全相关配置
+// SecurityConfig 安全相關配置
 type SecurityConfig struct {
 	EncryptionKey string `mapstructure:"encryption_key"`
 }
 
-// Load 加载配置（纯环境变量模式）
+// Load 載入配置（純環境變數模式）
 func Load() *Config {
-	// 设置默认值
+	// 設定預設值
 	setDefaults()
 
-	// 先加载 .env 到系统环境变量
+	// 先載入 .env 到系統環境變數
 	if err := godotenv.Load(); err != nil {
-		logger.Info("未找到 .env 文件，使用系统环境变量: %v", err)
+		logger.Info("未找到 .env 檔案，使用系統環境變數: %v", err)
 	}
 
-	// 读取环境变量
+	// 讀取環境變數
 	viper.AutomaticEnv()
 
-	// 绑定服务器环境变量
+	// 繫結伺服器環境變數
 	_ = viper.BindEnv("server.port", "SERVER_PORT")
 	_ = viper.BindEnv("server.mode", "SERVER_MODE")
 
-	// 绑定数据库环境变量
+	// 繫結資料庫環境變數
 	_ = viper.BindEnv("database.driver", "DB_DRIVER")
 	_ = viper.BindEnv("database.dsn", "DB_DSN")
 	_ = viper.BindEnv("database.host", "DB_HOST")
@@ -84,48 +84,48 @@ func Load() *Config {
 	_ = viper.BindEnv("database.database", "DB_DATABASE")
 	_ = viper.BindEnv("database.charset", "DB_CHARSET")
 
-	// 绑定 JWT 环境变量
+	// 繫結 JWT 環境變數
 	_ = viper.BindEnv("jwt.secret", "JWT_SECRET")
 	_ = viper.BindEnv("jwt.expire_time", "JWT_EXPIRE_TIME")
 
-	// 绑定日志环境变量
+	// 繫結日誌環境變數
 	_ = viper.BindEnv("log.level", "LOG_LEVEL")
 	_ = viper.BindEnv("log.format", "LOG_FORMAT")
 
-	// 绑定 K8s 环境变量
+	// 繫結 K8s 環境變數
 	_ = viper.BindEnv("k8s.default_namespace", "K8S_DEFAULT_NAMESPACE")
 	_ = viper.BindEnv("k8s.informer_sync_timeout", "INFORMER_SYNC_TIMEOUT")
 
-	// 绑定安全环境变量
+	// 繫結安全環境變數
 	_ = viper.BindEnv("security.encryption_key", "ENCRYPTION_KEY")
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
-		logger.Fatal("配置解析失败: %v", err)
+		logger.Fatal("配置解析失敗: %v", err)
 	}
 
-	// 安全检查：JWT Secret 默认值警告
+	// 安全檢查：JWT Secret 預設值警告
 	if config.JWT.Secret == "synapse-secret" {
 		if config.Server.Mode == "release" {
-			logger.Fatal("安全风险: 生产环境必须设置 JWT_SECRET 环境变量，不能使用默认值")
+			logger.Fatal("安全風險: 生產環境必須設定 JWT_SECRET 環境變數，不能使用預設值")
 		} else {
-			logger.Warn("安全警告: JWT_SECRET 使用默认值，请在生产环境中设置自定义密钥")
+			logger.Warn("安全警告: JWT_SECRET 使用預設值，請在生產環境中設定自定義金鑰")
 		}
 	}
 
-	logger.Info("配置加载完成: server.port=%d, server.mode=%s, db.driver=%s, log.level=%s",
+	logger.Info("配置載入完成: server.port=%d, server.mode=%s, db.driver=%s, log.level=%s",
 		config.Server.Port, config.Server.Mode, config.Database.Driver, config.Log.Level)
 
 	return &config
 }
 
-// setDefaults 设置默认配置值
+// setDefaults 設定預設配置值
 func setDefaults() {
-	// 服务器默认配置
+	// 伺服器預設配置
 	viper.SetDefault("server.port", 8080)
 	viper.SetDefault("server.mode", "debug")
 
-	// 数据库默认配置
+	// 資料庫預設配置
 	viper.SetDefault("database.driver", "sqlite")
 	viper.SetDefault("database.dsn", "./data/synapse.db")
 	viper.SetDefault("database.host", "localhost")
@@ -135,17 +135,17 @@ func setDefaults() {
 	viper.SetDefault("database.database", "synapse")
 	viper.SetDefault("database.charset", "utf8mb4")
 
-	// JWT默认配置
+	// JWT預設配置
 	viper.SetDefault("jwt.secret", "synapse-secret")
-	viper.SetDefault("jwt.expire_time", 24) // 24小时
+	viper.SetDefault("jwt.expire_time", 24) // 24小時
 
-	// 日志默认配置
+	// 日誌預設配置
 	viper.SetDefault("log.level", "info")
 
-	// K8s默认配置
+	// K8s預設配置
 	viper.SetDefault("k8s.default_namespace", "default")
 	viper.SetDefault("k8s.informer_sync_timeout", 30) // 30 seconds
 
-	// 安全默认配置（空字符串表示禁用加密）
+	// 安全預設配置（空字串表示禁用加密）
 	viper.SetDefault("security.encryption_key", "")
 }

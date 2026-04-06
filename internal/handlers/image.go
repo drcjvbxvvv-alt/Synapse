@@ -41,7 +41,7 @@ func parseImageParts(image string) (name, tag string) {
 	if lastColon == -1 {
 		return image, "latest"
 	}
-	// 若 : 後面包含 / 則屬於 registry:port，沒有 tag
+	// 若 : 後麵包含 / 則屬於 registry:port，沒有 tag
 	afterColon := image[lastColon+1:]
 	if strings.Contains(afterColon, "/") {
 		return image, "latest"

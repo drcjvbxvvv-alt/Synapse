@@ -26,7 +26,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
-// DeploymentHandler Deployment处理器
+// DeploymentHandler Deployment處理器
 type DeploymentHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
@@ -34,7 +34,7 @@ type DeploymentHandler struct {
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-// NewDeploymentHandler 创建Deployment处理器
+// NewDeploymentHandler 建立Deployment處理器
 func NewDeploymentHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *DeploymentHandler {
 	return &DeploymentHandler{
 		db:             db,
@@ -44,7 +44,7 @@ func NewDeploymentHandler(db *gorm.DB, cfg *config.Config, clusterService *servi
 	}
 }
 
-// DeploymentInfo Deployment信息
+// DeploymentInfo Deployment資訊
 type DeploymentInfo struct {
 	ID                string            `json:"id"`
 	Name              string            `json:"name"`
@@ -67,14 +67,14 @@ type DeploymentInfo struct {
 	MemoryRequest     string            `json:"memoryRequest"`
 }
 
-// fetchDeploymentsFromCache 從 Informer 緩存讀取 Deployment 列表
+// fetchDeploymentsFromCache 從 Informer 快取讀取 Deployment 列表
 func (h *DeploymentHandler) fetchDeploymentsFromCache(clusterID uint, namespace string) []DeploymentInfo {
 	sel := labels.Everything()
 	var deployments []DeploymentInfo
 	if namespace != "" {
 		deps, err := h.k8sMgr.DeploymentsLister(clusterID).Deployments(namespace).List(sel)
 		if err != nil {
-			logger.Error("读取Deployment缓存失败", "error", err)
+			logger.Error("讀取Deployment快取失敗", "error", err)
 			return deployments
 		}
 		for _, d := range deps {
@@ -83,7 +83,7 @@ func (h *DeploymentHandler) fetchDeploymentsFromCache(clusterID uint, namespace 
 	} else {
 		deps, err := h.k8sMgr.DeploymentsLister(clusterID).List(sel)
 		if err != nil {
-			logger.Error("读取Deployment缓存失败", "error", err)
+			logger.Error("讀取Deployment快取失敗", "error", err)
 			return deployments
 		}
 		for _, d := range deps {
@@ -108,7 +108,7 @@ func filterDeploymentsByName(deployments []DeploymentInfo, search string) []Depl
 	return filtered
 }
 
-// ListDeployments 获取Deployment列表
+// ListDeployments 獲取Deployment列表
 func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Query("namespace")
@@ -116,16 +116,16 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 
-	logger.Info("获取Deployment列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
+	logger.Info("獲取Deployment列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -133,7 +133,7 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
@@ -170,29 +170,29 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	response.PagedList(c, deployments[start:end], int64(total), page, pageSize)
 }
 
-// GetDeployment 获取Deployment详情
+// GetDeployment 獲取Deployment詳情
 func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Deployment详情: %s/%s/%s", clusterId, namespace, name)
+	logger.Info("獲取Deployment詳情: %s/%s/%s", clusterId, namespace, name)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -206,27 +206,27 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 		return
 	}
 
-	// 获取关联的Pods
+	// 獲取關聯的Pods
 	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(deployment.Spec.Selector),
 	})
 	if err != nil {
-		logger.Error("获取Deployment关联Pods失败", "error", err)
+		logger.Error("獲取Deployment關聯Pods失敗", "error", err)
 	}
 
-	// 清理 managed fields 以生成更干净的 YAML
+	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanDeployment := deployment.DeepCopy()
 	cleanDeployment.ManagedFields = nil
-	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanDeployment.APIVersion = "apps/v1"
 	cleanDeployment.Kind = "Deployment"
-	// 将 Deployment 对象转换为 YAML 字符串
+	// 將 Deployment 物件轉換為 YAML 字串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanDeployment)
 	var yamlString string
 	if yamlErr == nil {
 		yamlString = string(yamlBytes)
 	} else {
-		logger.Error("转换Deployment为YAML失败", "error", yamlErr)
+		logger.Error("轉換Deployment為YAML失敗", "error", yamlErr)
 		yamlString = ""
 	}
 
@@ -238,45 +238,45 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 	})
 }
 
-// GetDeploymentNamespaces 获取包含Deployment的命名空间列表
+// GetDeploymentNamespaces 獲取包含Deployment的命名空間列表
 func (h *DeploymentHandler) GetDeploymentNamespaces(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 确保 informer 缓存就绪
+	// 確保 informer 快取就緒
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 从Informer读取所有Deployments并统计命名空间
+	// 從Informer讀取所有Deployments並統計命名空間
 	sel := labels.Everything()
 	deps, err := h.k8sMgr.DeploymentsLister(cluster.ID).List(sel)
 	if err != nil {
-		response.InternalError(c, "读取Deployment缓存失败: "+err.Error())
+		response.InternalError(c, "讀取Deployment快取失敗: "+err.Error())
 		return
 	}
 
-	// 统计每个命名空间的Deployment数量
+	// 統計每個命名空間的Deployment數量
 	nsCount := make(map[string]int)
 	for _, dep := range deps {
 		nsCount[dep.Namespace]++
 	}
 
-	// 转换为列表格式
+	// 轉換為列表格式
 	type NamespaceInfo struct {
 		Name  string `json:"name"`
 		Count int    `json:"count"`
@@ -290,7 +290,7 @@ func (h *DeploymentHandler) GetDeploymentNamespaces(c *gin.Context) {
 		})
 	}
 
-	// 按名称排序
+	// 按名稱排序
 	sort.Slice(namespaces, func(i, j int) bool {
 		return namespaces[i].Name < namespaces[j].Name
 	})
@@ -298,7 +298,7 @@ func (h *DeploymentHandler) GetDeploymentNamespaces(c *gin.Context) {
 	response.OK(c, namespaces)
 }
 
-// ScaleDeployment 扩缩容Deployment
+// ScaleDeployment 擴縮容Deployment
 func (h *DeploymentHandler) ScaleDeployment(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
@@ -306,27 +306,27 @@ func (h *DeploymentHandler) ScaleDeployment(c *gin.Context) {
 
 	var req ScaleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
-	logger.Info("扩缩容Deployment: %s/%s/%s to %d", clusterId, namespace, name, req.Replicas)
+	logger.Info("擴縮容Deployment: %s/%s/%s to %d", clusterId, namespace, name, req.Replicas)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -336,47 +336,47 @@ func (h *DeploymentHandler) ScaleDeployment(c *gin.Context) {
 	clientset := k8sClient.GetClientset()
 	scale, err := clientset.AppsV1().Deployments(namespace).GetScale(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		response.InternalError(c, "获取Deployment Scale失败: "+err.Error())
+		response.InternalError(c, "獲取Deployment Scale失敗: "+err.Error())
 		return
 	}
 
 	scale.Spec.Replicas = req.Replicas
 	_, err = clientset.AppsV1().Deployments(namespace).UpdateScale(ctx, name, scale, metav1.UpdateOptions{})
 	if err != nil {
-		response.InternalError(c, "扩缩容失败: "+err.Error())
+		response.InternalError(c, "擴縮容失敗: "+err.Error())
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// ApplyYAML 应用Deployment YAML
+// ApplyYAML 應用Deployment YAML
 func (h *DeploymentHandler) ApplyYAML(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 
 	var req YAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
-	logger.Info("应用Deployment YAML: cluster=%s, dryRun=%v", clusterId, req.DryRun)
+	logger.Info("應用Deployment YAML: cluster=%s, dryRun=%v", clusterId, req.DryRun)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -386,26 +386,26 @@ func (h *DeploymentHandler) ApplyYAML(c *gin.Context) {
 	// 解析YAML
 	var objMap map[string]interface{}
 	if err := yaml.Unmarshal([]byte(req.YAML), &objMap); err != nil {
-		response.BadRequest(c, "YAML格式错误: "+err.Error())
+		response.BadRequest(c, "YAML格式錯誤: "+err.Error())
 		return
 	}
 
-	// 验证必要字段
+	// 驗證必要欄位
 	if objMap["apiVersion"] == nil || objMap["kind"] == nil {
-		response.BadRequest(c, "YAML缺少必要字段: apiVersion 或 kind")
+		response.BadRequest(c, "YAML缺少必要欄位: apiVersion 或 kind")
 		return
 	}
 
 	kind := objMap["kind"].(string)
 	if kind != "Deployment" {
-		response.BadRequest(c, "YAML类型错误，期望Deployment，实际为: "+kind)
+		response.BadRequest(c, "YAML型別錯誤，期望Deployment，實際為: "+kind)
 		return
 	}
 
-	// 获取metadata
+	// 獲取metadata
 	metadata, ok := objMap["metadata"].(map[string]interface{})
 	if !ok {
-		response.BadRequest(c, "YAML缺少 metadata 字段")
+		response.BadRequest(c, "YAML缺少 metadata 欄位")
 		return
 	}
 
@@ -414,39 +414,39 @@ func (h *DeploymentHandler) ApplyYAML(c *gin.Context) {
 		namespace = "default"
 	}
 
-	// 应用YAML
+	// 應用YAML
 	result, err := h.applyYAML(ctx, k8sClient, req.YAML, namespace, req.DryRun)
 	if err != nil {
-		response.InternalError(c, "YAML应用失败: "+err.Error())
+		response.InternalError(c, "YAML應用失敗: "+err.Error())
 		return
 	}
 
 	response.OK(c, result)
 }
 
-// DeleteDeployment 删除Deployment
+// DeleteDeployment 刪除Deployment
 func (h *DeploymentHandler) DeleteDeployment(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("删除Deployment: %s/%s/%s", clusterId, namespace, name)
+	logger.Info("刪除Deployment: %s/%s/%s", clusterId, namespace, name)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -456,14 +456,14 @@ func (h *DeploymentHandler) DeleteDeployment(c *gin.Context) {
 	clientset := k8sClient.GetClientset()
 	err = clientset.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		response.InternalError(c, "删除失败: "+err.Error())
+		response.InternalError(c, "刪除失敗: "+err.Error())
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// 辅助方法：转换Deployment到DeploymentInfo
+// 輔助方法：轉換Deployment到DeploymentInfo
 func (h *DeploymentHandler) convertToDeploymentInfo(d *appsv1.Deployment) DeploymentInfo {
 	status := "Running"
 	if d.Status.Replicas == 0 {
@@ -472,7 +472,7 @@ func (h *DeploymentHandler) convertToDeploymentInfo(d *appsv1.Deployment) Deploy
 		status = "Degraded"
 	}
 
-	// 提取镜像列表和资源信息
+	// 提取映像列表和資源資訊
 	var images []string
 	var cpuLimits, cpuRequests []string
 	var memoryLimits, memoryRequests []string
@@ -485,17 +485,17 @@ func (h *DeploymentHandler) convertToDeploymentInfo(d *appsv1.Deployment) Deploy
 			cpuLimits = append(cpuLimits, cpu.String())
 		}
 
-		// CPU 申请
+		// CPU 申請
 		if cpu := container.Resources.Requests.Cpu(); cpu != nil && !cpu.IsZero() {
 			cpuRequests = append(cpuRequests, cpu.String())
 		}
 
-		// 内存 限制
+		// 記憶體 限制
 		if memory := container.Resources.Limits.Memory(); memory != nil && !memory.IsZero() {
 			memoryLimits = append(memoryLimits, memory.String())
 		}
 
-		// 内存 申请
+		// 記憶體 申請
 		if memory := container.Resources.Requests.Memory(); memory != nil && !memory.IsZero() {
 			memoryRequests = append(memoryRequests, memory.String())
 		}
@@ -504,7 +504,7 @@ func (h *DeploymentHandler) convertToDeploymentInfo(d *appsv1.Deployment) Deploy
 	// 策略
 	strategy := string(d.Spec.Strategy.Type)
 
-	// 格式化资源值
+	// 格式化資源值
 	cpuLimit := "-"
 	if len(cpuLimits) > 0 {
 		cpuLimit = strings.Join(cpuLimits, " + ")
@@ -548,18 +548,18 @@ func (h *DeploymentHandler) convertToDeploymentInfo(d *appsv1.Deployment) Deploy
 	}
 }
 
-// 辅助方法：应用YAML
+// 輔助方法：應用YAML
 func (h *DeploymentHandler) applyYAML(ctx context.Context, k8sClient *services.K8sClient, yamlContent string, namespace string, dryRun bool) (interface{}, error) {
-	// 创建解码器
+	// 建立解碼器
 	decode := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(yamlContent), nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("解析YAML失败: %w", err)
+		return nil, fmt.Errorf("解析YAML失敗: %w", err)
 	}
 
 	deployment, ok := obj.(*appsv1.Deployment)
 	if !ok {
-		return nil, fmt.Errorf("无法转换为Deployment类型")
+		return nil, fmt.Errorf("無法轉換為Deployment型別")
 	}
 
 	clientset := k8sClient.GetClientset()
@@ -568,10 +568,10 @@ func (h *DeploymentHandler) applyYAML(ctx context.Context, k8sClient *services.K
 		dryRunOpt = []string{metav1.DryRunAll}
 	}
 
-	// 尝试获取现有资源
+	// 嘗試獲取現有資源
 	existing, err := clientset.AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
 	if err == nil {
-		// 资源存在，执行更新
+		// 資源存在，執行更新
 		deployment.ResourceVersion = existing.ResourceVersion
 		result, err := clientset.AppsV1().Deployments(deployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{DryRun: dryRunOpt})
 		if err != nil {
@@ -580,7 +580,7 @@ func (h *DeploymentHandler) applyYAML(ctx context.Context, k8sClient *services.K
 		return result, nil
 	}
 
-	// 资源不存在，执行创建
+	// 資源不存在，執行建立
 	result, err := clientset.AppsV1().Deployments(deployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{DryRun: dryRunOpt})
 	if err != nil {
 		return nil, err
@@ -588,30 +588,30 @@ func (h *DeploymentHandler) applyYAML(ctx context.Context, k8sClient *services.K
 	return result, nil
 }
 
-// GetDeploymentPods 获取Deployment关联的Pods
+// GetDeploymentPods 獲取Deployment關聯的Pods
 func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Deployment Pods: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
+	logger.Info("獲取Deployment Pods: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -619,24 +619,24 @@ func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取Deployment
+	// 獲取Deployment
 	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		response.NotFound(c, "Deployment不存在")
 		return
 	}
 
-	// 使用selector查询Pods
+	// 使用selector查詢Pods
 	selector := labels.SelectorFromSet(deployment.Spec.Selector.MatchLabels)
 	podList, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: selector.String(),
 	})
 	if err != nil {
-		response.InternalError(c, "获取Pod列表失败: "+err.Error())
+		response.InternalError(c, "獲取Pod列表失敗: "+err.Error())
 		return
 	}
 
-	// 转换Pod信息
+	// 轉換Pod資訊
 	pods := make([]map[string]interface{}, 0, len(podList.Items))
 	for _, pod := range podList.Items {
 		podInfo := map[string]interface{}{
@@ -650,11 +650,11 @@ func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
 			"createdAt":    pod.CreationTimestamp.Time,
 		}
 
-		// 计算重启次数和提取资源限制
+		// 計算重啟次數和提取資源限制
 		var totalRestarts int32
 		var cpuRequest, cpuLimit, memoryRequest, memoryLimit string
 		for _, container := range pod.Spec.Containers {
-			// 资源限制
+			// 資源限制
 			if container.Resources.Requests != nil {
 				if cpu, ok := container.Resources.Requests["cpu"]; ok {
 					cpuRequest = cpu.String()
@@ -673,7 +673,7 @@ func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
 			}
 		}
 
-		// 统计重启次数
+		// 統計重啟次數
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			totalRestarts += containerStatus.RestartCount
 		}
@@ -690,30 +690,30 @@ func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
 	response.List(c, pods, int64(len(pods)))
 }
 
-// GetDeploymentServices 获取Deployment关联的Services
+// GetDeploymentServices 獲取Deployment關聯的Services
 func (h *DeploymentHandler) GetDeploymentServices(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Deployment Services: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
+	logger.Info("獲取Deployment Services: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -721,25 +721,25 @@ func (h *DeploymentHandler) GetDeploymentServices(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取Deployment
+	// 獲取Deployment
 	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		response.NotFound(c, "Deployment不存在")
 		return
 	}
 
-	// 获取Services
+	// 獲取Services
 	serviceList, err := clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		response.InternalError(c, "获取Service列表失败: "+err.Error())
+		response.InternalError(c, "獲取Service列表失敗: "+err.Error())
 		return
 	}
 
-	// 筛选匹配的Services
+	// 篩選匹配的Services
 	deploymentLabels := deployment.Spec.Selector.MatchLabels
 	matchedServices := make([]map[string]interface{}, 0)
 	for _, svc := range serviceList.Items {
-		// 检查Service的selector是否匹配Deployment的labels
+		// 檢查Service的selector是否匹配Deployment的labels
 		matches := true
 		for key, value := range svc.Spec.Selector {
 			if deploymentLabels[key] != value {
@@ -777,30 +777,30 @@ func (h *DeploymentHandler) GetDeploymentServices(c *gin.Context) {
 	response.List(c, matchedServices, int64(len(matchedServices)))
 }
 
-// GetDeploymentIngresses 获取Deployment关联的Ingresses
+// GetDeploymentIngresses 獲取Deployment關聯的Ingresses
 func (h *DeploymentHandler) GetDeploymentIngresses(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Deployment Ingresses: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
+	logger.Info("獲取Deployment Ingresses: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -808,14 +808,14 @@ func (h *DeploymentHandler) GetDeploymentIngresses(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取Ingresses
+	// 獲取Ingresses
 	ingressList, err := clientset.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		response.InternalError(c, "获取Ingress列表失败: "+err.Error())
+		response.InternalError(c, "獲取Ingress列表失敗: "+err.Error())
 		return
 	}
 
-	// 转换Ingress信息
+	// 轉換Ingress資訊
 	ingresses := make([]map[string]interface{}, 0, len(ingressList.Items))
 	for _, ingress := range ingressList.Items {
 		rules := make([]map[string]interface{}, 0, len(ingress.Spec.Rules))
@@ -852,30 +852,30 @@ func (h *DeploymentHandler) GetDeploymentIngresses(c *gin.Context) {
 	response.List(c, ingresses, int64(len(ingresses)))
 }
 
-// GetDeploymentHPA 获取Deployment的HPA
+// GetDeploymentHPA 獲取Deployment的HPA
 func (h *DeploymentHandler) GetDeploymentHPA(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Deployment HPA: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
+	logger.Info("獲取Deployment HPA: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -883,14 +883,14 @@ func (h *DeploymentHandler) GetDeploymentHPA(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取HPA列表
+	// 獲取HPA列表
 	hpaList, err := clientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		response.InternalError(c, "获取HPA列表失败: "+err.Error())
+		response.InternalError(c, "獲取HPA列表失敗: "+err.Error())
 		return
 	}
 
-	// 查找匹配的HPA
+	// 查詢匹配的HPA
 	for _, hpa := range hpaList.Items {
 		if hpa.Spec.ScaleTargetRef.Kind == "Deployment" && hpa.Spec.ScaleTargetRef.Name == name {
 			metrics := make([]map[string]interface{}, 0, len(hpa.Spec.Metrics))
@@ -937,30 +937,30 @@ func (h *DeploymentHandler) GetDeploymentHPA(c *gin.Context) {
 	response.NotFound(c, "未找到HPA")
 }
 
-// GetDeploymentReplicaSets 获取Deployment的ReplicaSets
+// GetDeploymentReplicaSets 獲取Deployment的ReplicaSets
 func (h *DeploymentHandler) GetDeploymentReplicaSets(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Deployment ReplicaSets: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
+	logger.Info("獲取Deployment ReplicaSets: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -968,24 +968,24 @@ func (h *DeploymentHandler) GetDeploymentReplicaSets(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 检查Deployment是否存在
+	// 檢查Deployment是否存在
 	_, err = clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		response.NotFound(c, "Deployment不存在")
 		return
 	}
 
-	// 获取ReplicaSets
+	// 獲取ReplicaSets
 	rsList, err := clientset.AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		response.InternalError(c, "获取ReplicaSet列表失败: "+err.Error())
+		response.InternalError(c, "獲取ReplicaSet列表失敗: "+err.Error())
 		return
 	}
 
-	// 筛选匹配的ReplicaSets
+	// 篩選匹配的ReplicaSets
 	matchedReplicaSets := make([]map[string]interface{}, 0)
 	for _, rs := range rsList.Items {
-		// 检查owner reference
+		// 檢查owner reference
 		isOwned := false
 		for _, owner := range rs.OwnerReferences {
 			if owner.Kind == "Deployment" && owner.Name == name {
@@ -995,13 +995,13 @@ func (h *DeploymentHandler) GetDeploymentReplicaSets(c *gin.Context) {
 		}
 
 		if isOwned {
-			// 提取镜像列表
+			// 提取映像列表
 			images := make([]string, 0)
 			for _, container := range rs.Spec.Template.Spec.Containers {
 				images = append(images, container.Image)
 			}
 
-			// 获取revision号
+			// 獲取revision號
 			revision := rs.Annotations["deployment.kubernetes.io/revision"]
 
 			rsInfo := map[string]interface{}{
@@ -1021,30 +1021,30 @@ func (h *DeploymentHandler) GetDeploymentReplicaSets(c *gin.Context) {
 	response.List(c, matchedReplicaSets, int64(len(matchedReplicaSets)))
 }
 
-// GetDeploymentEvents 获取Deployment的Events
+// GetDeploymentEvents 獲取Deployment的Events
 func (h *DeploymentHandler) GetDeploymentEvents(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取Deployment Events: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
+	logger.Info("獲取Deployment Events: cluster=%s, namespace=%s, name=%s", clusterId, namespace, name)
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -1052,16 +1052,16 @@ func (h *DeploymentHandler) GetDeploymentEvents(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// 获取Events
+	// 獲取Events
 	eventList, err := clientset.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("involvedObject.name=%s,involvedObject.kind=Deployment", name),
 	})
 	if err != nil {
-		response.InternalError(c, "获取Events失败: "+err.Error())
+		response.InternalError(c, "獲取Events失敗: "+err.Error())
 		return
 	}
 
-	// 转换Event信息
+	// 轉換Event資訊
 	events := make([]map[string]interface{}, 0, len(eventList.Items))
 	for _, event := range eventList.Items {
 		eventInfo := map[string]interface{}{

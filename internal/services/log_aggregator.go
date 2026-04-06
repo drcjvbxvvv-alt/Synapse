@@ -16,19 +16,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// LogAggregator 日志聚合器
+// LogAggregator 日誌聚合器
 type LogAggregator struct {
 	clusterSvc *ClusterService
 }
 
-// NewLogAggregator 创建日志聚合器
+// NewLogAggregator 建立日誌聚合器
 func NewLogAggregator(clusterSvc *ClusterService) *LogAggregator {
 	return &LogAggregator{
 		clusterSvc: clusterSvc,
 	}
 }
 
-// AggregateStream 聚合多个Pod的日志流
+// AggregateStream 聚合多個Pod的日誌流
 func (a *LogAggregator) AggregateStream(
 	ctx context.Context,
 	cluster *models.Cluster,
@@ -38,7 +38,7 @@ func (a *LogAggregator) AggregateStream(
 	outputCh := make(chan *models.LogEntry, 1000)
 	var wg sync.WaitGroup
 
-	// 为每个目标启动日志流
+	// 為每個目標啟動日誌流
 	for _, target := range targets {
 		wg.Add(1)
 		go func(t models.LogStreamTarget) {
@@ -47,7 +47,7 @@ func (a *LogAggregator) AggregateStream(
 		}(target)
 	}
 
-	// 等待所有流结束后关闭输出通道
+	// 等待所有流結束後關閉輸出通道
 	go func() {
 		wg.Wait()
 		close(outputCh)
@@ -56,7 +56,7 @@ func (a *LogAggregator) AggregateStream(
 	return outputCh, nil
 }
 
-// streamPodLogs 单个Pod日志流
+// streamPodLogs 單個Pod日誌流
 func (a *LogAggregator) streamPodLogs(
 	ctx context.Context,
 	cluster *models.Cluster,
@@ -64,14 +64,14 @@ func (a *LogAggregator) streamPodLogs(
 	opts *models.LogStreamOptions,
 	outputCh chan<- *models.LogEntry,
 ) {
-	// 创建K8s客户端
+	// 建立K8s客戶端
 	k8sClient, err := NewK8sClientForCluster(cluster)
 	if err != nil {
-		logger.Error("创建K8s客户端失败", "error", err)
+		logger.Error("建立K8s客戶端失敗", "error", err)
 		return
 	}
 
-	// 构建日志选项
+	// 構建日誌選項
 	logOpts := &corev1.PodLogOptions{
 		Follow:     true,
 		Timestamps: true,
@@ -91,14 +91,14 @@ func (a *LogAggregator) streamPodLogs(
 		logOpts.Previous = opts.Previous
 	}
 
-	// 获取日志流
+	// 獲取日誌流
 	stream, err := k8sClient.GetClientset().
 		CoreV1().
 		Pods(target.Namespace).
 		GetLogs(target.Pod, logOpts).
 		Stream(ctx)
 	if err != nil {
-		logger.Error("获取日志流失败", "pod", target.Pod, "error", err)
+		logger.Error("獲取日誌流失敗", "pod", target.Pod, "error", err)
 		return
 	}
 	defer func() {
@@ -113,7 +113,7 @@ func (a *LogAggregator) streamPodLogs(
 		default:
 			line, err := reader.ReadString('\n')
 			if err != nil {
-				// 检查是否是正常关闭
+				// 檢查是否是正常關閉
 				if ctx.Err() != nil {
 					return
 				}
@@ -121,7 +121,7 @@ func (a *LogAggregator) streamPodLogs(
 					strings.Contains(err.Error(), "canceled") {
 					return
 				}
-				logger.Error("读取日志失败", "pod", target.Pod, "error", err)
+				logger.Error("讀取日誌失敗", "pod", target.Pod, "error", err)
 				return
 			}
 
@@ -135,7 +135,7 @@ func (a *LogAggregator) streamPodLogs(
 	}
 }
 
-// parseLogLine 解析日志行
+// parseLogLine 解析日誌行
 func (a *LogAggregator) parseLogLine(line string, target models.LogStreamTarget, cluster *models.Cluster) *models.LogEntry {
 	entry := &models.LogEntry{
 		ID:          uuid.New().String(),
@@ -149,13 +149,13 @@ func (a *LogAggregator) parseLogLine(line string, target models.LogStreamTarget,
 		Timestamp:   time.Now(),
 	}
 
-	// 解析时间戳 (K8s日志格式: 2024-01-01T00:00:00.000000000Z message)
+	// 解析時間戳 (K8s日誌格式: 2024-01-01T00:00:00.000000000Z message)
 	if len(line) > 30 && line[10] == 'T' {
 		if t, err := time.Parse(time.RFC3339Nano, line[:30]); err == nil {
 			entry.Timestamp = t
 			entry.Message = strings.TrimSpace(line[31:])
 		} else if len(line) > 20 {
-			// 尝试其他时间格式
+			// 嘗試其他時間格式
 			if t, err := time.Parse(time.RFC3339, line[:20]); err == nil {
 				entry.Timestamp = t
 				entry.Message = strings.TrimSpace(line[21:])
@@ -163,17 +163,17 @@ func (a *LogAggregator) parseLogLine(line string, target models.LogStreamTarget,
 		}
 	}
 
-	// 智能识别日志级别
+	// 智慧識別日誌級別
 	entry.Level = a.detectLogLevel(entry.Message)
 
 	return entry
 }
 
-// detectLogLevel 智能识别日志级别
+// detectLogLevel 智慧識別日誌級別
 func (a *LogAggregator) detectLogLevel(message string) string {
 	lowerMsg := strings.ToLower(message)
 
-	// 错误级别关键词
+	// 錯誤級別關鍵詞
 	errorPatterns := []string{"error", "err", "fail", "fatal", "exception", "panic", "critical"}
 	for _, pattern := range errorPatterns {
 		if strings.Contains(lowerMsg, pattern) {
@@ -181,7 +181,7 @@ func (a *LogAggregator) detectLogLevel(message string) string {
 		}
 	}
 
-	// 警告级别关键词
+	// 警告級別關鍵詞
 	warnPatterns := []string{"warn", "warning", "caution"}
 	for _, pattern := range warnPatterns {
 		if strings.Contains(lowerMsg, pattern) {
@@ -189,7 +189,7 @@ func (a *LogAggregator) detectLogLevel(message string) string {
 		}
 	}
 
-	// 调试级别关键词
+	// 除錯級別關鍵詞
 	debugPatterns := []string{"debug", "trace", "verbose"}
 	for _, pattern := range debugPatterns {
 		if strings.Contains(lowerMsg, pattern) {
@@ -200,7 +200,7 @@ func (a *LogAggregator) detectLogLevel(message string) string {
 	return "info"
 }
 
-// GetContainerLogs 获取容器日志（非流式）
+// GetContainerLogs 獲取容器日誌（非流式）
 func (a *LogAggregator) GetContainerLogs(
 	ctx context.Context,
 	cluster *models.Cluster,
@@ -209,13 +209,13 @@ func (a *LogAggregator) GetContainerLogs(
 	sinceSeconds int64,
 	previous bool,
 ) (string, error) {
-	// 创建K8s客户端
+	// 建立K8s客戶端
 	k8sClient, err := NewK8sClientForCluster(cluster)
 	if err != nil {
 		return "", err
 	}
 
-	// 构建日志选项
+	// 構建日誌選項
 	logOpts := &corev1.PodLogOptions{
 		Timestamps: true,
 		Previous:   previous,
@@ -233,7 +233,7 @@ func (a *LogAggregator) GetContainerLogs(
 		logOpts.SinceSeconds = &sinceSeconds
 	}
 
-	// 获取日志
+	// 獲取日誌
 	logs, err := k8sClient.GetClientset().
 		CoreV1().
 		Pods(namespace).
@@ -247,13 +247,13 @@ func (a *LogAggregator) GetContainerLogs(
 	return string(logs), nil
 }
 
-// SearchLogs 搜索日志
+// SearchLogs 搜尋日誌
 func (a *LogAggregator) SearchLogs(
 	ctx context.Context,
 	cluster *models.Cluster,
 	query *models.LogQuery,
 ) ([]models.LogEntry, int, error) {
-	// 创建K8s客户端
+	// 建立K8s客戶端
 	k8sClient, err := NewK8sClientForCluster(cluster)
 	if err != nil {
 		return nil, 0, err
@@ -262,7 +262,7 @@ func (a *LogAggregator) SearchLogs(
 	var results []models.LogEntry
 	var regexPattern *regexp.Regexp
 
-	// 编译正则表达式
+	// 編譯正規表示式
 	if query.Regex != "" {
 		regexPattern, err = regexp.Compile(query.Regex)
 		if err != nil {
@@ -270,10 +270,10 @@ func (a *LogAggregator) SearchLogs(
 		}
 	}
 
-	// 确定要搜索的命名空间
+	// 確定要搜尋的命名空間
 	namespaces := query.Namespaces
 	if len(namespaces) == 0 {
-		namespaces = []string{""} // 搜索所有命名空间
+		namespaces = []string{""} // 搜尋所有命名空間
 	}
 
 	limit := query.Limit
@@ -281,7 +281,7 @@ func (a *LogAggregator) SearchLogs(
 		limit = 100
 	}
 
-	// 遍历命名空间获取日志并搜索
+	// 遍歷命名空間獲取日誌並搜尋
 	for _, ns := range namespaces {
 		pods, err := k8sClient.GetClientset().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -289,24 +289,24 @@ func (a *LogAggregator) SearchLogs(
 		}
 
 		for _, pod := range pods.Items {
-			// 检查Pod名称过滤
+			// 檢查Pod名稱過濾
 			if len(query.Pods) > 0 && !contains(query.Pods, pod.Name) {
 				continue
 			}
 
 			for _, container := range pod.Spec.Containers {
-				// 检查容器过滤
+				// 檢查容器過濾
 				if len(query.Containers) > 0 && !contains(query.Containers, container.Name) {
 					continue
 				}
 
-				// 获取日志
+				// 獲取日誌
 				logOpts := &corev1.PodLogOptions{
 					Container:  container.Name,
 					Timestamps: true,
 				}
 
-				tailLines := int64(limit * 10) // 获取更多行以便过滤
+				tailLines := int64(limit * 10) // 獲取更多行以便過濾
 				logOpts.TailLines = &tailLines
 
 				logs, err := k8sClient.GetClientset().
@@ -319,19 +319,19 @@ func (a *LogAggregator) SearchLogs(
 					continue
 				}
 
-				// 按行搜索
+				// 按行搜尋
 				lines := strings.Split(string(logs), "\n")
 				for _, line := range lines {
 					if line == "" {
 						continue
 					}
 
-					// 关键词匹配
+					// 關鍵詞匹配
 					if query.Keyword != "" && !strings.Contains(strings.ToLower(line), strings.ToLower(query.Keyword)) {
 						continue
 					}
 
-					// 正则匹配
+					// 正則匹配
 					if regexPattern != nil && !regexPattern.MatchString(line) {
 						continue
 					}
@@ -342,7 +342,7 @@ func (a *LogAggregator) SearchLogs(
 						Container: container.Name,
 					}, cluster)
 
-					// 日志级别过滤
+					// 日誌級別過濾
 					if len(query.Levels) > 0 && !contains(query.Levels, entry.Level) {
 						continue
 					}
@@ -360,7 +360,7 @@ func (a *LogAggregator) SearchLogs(
 	return results, len(results), nil
 }
 
-// contains 检查切片是否包含某个元素
+// contains 檢查切片是否包含某個元素
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {

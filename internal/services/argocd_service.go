@@ -16,13 +16,13 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// ArgoCDService ArgoCD 服务
+// ArgoCDService ArgoCD 服務
 type ArgoCDService struct {
 	db         *gorm.DB
 	httpClient *http.Client
 }
 
-// NewArgoCDService 创建 ArgoCD 服务
+// NewArgoCDService 建立 ArgoCD 服務
 func NewArgoCDService(db *gorm.DB) *ArgoCDService {
 	return &ArgoCDService{
 		db: db,
@@ -32,12 +32,12 @@ func NewArgoCDService(db *gorm.DB) *ArgoCDService {
 	}
 }
 
-// GetConfig 获取 ArgoCD 配置
+// GetConfig 獲取 ArgoCD 配置
 func (s *ArgoCDService) GetConfig(ctx context.Context, clusterID uint) (*models.ArgoCDConfig, error) {
 	var config models.ArgoCDConfig
 	if err := s.db.Where("cluster_id = ?", clusterID).First(&config).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// 返回默认空配置
+			// 返回預設空配置
 			return &models.ArgoCDConfig{
 				ClusterID:     clusterID,
 				Enabled:       false,
@@ -50,7 +50,7 @@ func (s *ArgoCDService) GetConfig(ctx context.Context, clusterID uint) (*models.
 	return &config, nil
 }
 
-// SaveConfig 保存 ArgoCD 配置
+// SaveConfig 儲存 ArgoCD 配置
 func (s *ArgoCDService) SaveConfig(ctx context.Context, config *models.ArgoCDConfig) error {
 	var existing models.ArgoCDConfig
 	if err := s.db.Where("cluster_id = ?", config.ClusterID).First(&existing).Error; err == nil {
@@ -63,50 +63,50 @@ func (s *ArgoCDService) SaveConfig(ctx context.Context, config *models.ArgoCDCon
 	return s.db.Create(config).Error
 }
 
-// TestConnection 测试 ArgoCD 连接
+// TestConnection 測試 ArgoCD 連線
 func (s *ArgoCDService) TestConnection(ctx context.Context, config *models.ArgoCDConfig) error {
 	client := s.createHTTPClient(config.Insecure)
 
-	// 如果使用用户名密码认证，先尝试登录获取 token
+	// 如果使用使用者名稱密碼認證，先嚐試登入獲取 token
 	var authToken string
 	if config.Token != "" {
 		authToken = config.Token
 	} else if config.Username != "" && config.Password != "" {
-		// 使用用户名密码登录
+		// 使用使用者名稱密碼登入
 		token, err := s.getSessionToken(config)
 		if err != nil {
-			return fmt.Errorf("用户名密码认证失败: %w", err)
+			return fmt.Errorf("使用者名稱密碼認證失敗: %w", err)
 		}
 		authToken = token
 	} else {
-		return fmt.Errorf("请提供 API Token 或用户名密码")
+		return fmt.Errorf("請提供 API Token 或使用者名稱密碼")
 	}
 
-	// 使用获取到的 token 验证连接
+	// 使用獲取到的 token 驗證連線
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/api/v1/session/userinfo", config.ServerURL), nil)
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %w", err)
+		return fmt.Errorf("建立請求失敗: %w", err)
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("连接 ArgoCD 失败: %w", err)
+		return fmt.Errorf("連線 ArgoCD 失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("认证失败: Token 无效或已过期")
+		return fmt.Errorf("認證失敗: Token 無效或已過期")
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("ArgoCD 响应错误 (状态码 %d): %s", resp.StatusCode, string(body))
+		return fmt.Errorf("ArgoCD 響應錯誤 (狀態碼 %d): %s", resp.StatusCode, string(body))
 	}
 
-	// 更新连接状态
+	// 更新連線狀態
 	now := time.Now()
 	config.ConnectionStatus = "connected"
 	config.LastTestAt = &now
@@ -115,19 +115,19 @@ func (s *ArgoCDService) TestConnection(ctx context.Context, config *models.ArgoC
 	return nil
 }
 
-// ListApplications 获取应用列表
+// ListApplications 獲取應用列表
 func (s *ArgoCDService) ListApplications(ctx context.Context, clusterID uint) ([]models.ArgoCDApplication, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
 	if !config.Enabled {
-		return nil, fmt.Errorf("ArgoCD 集成未启用，请先在插件中心配置")
+		return nil, fmt.Errorf("ArgoCD 整合未啟用，請先在外掛中心配置")
 	}
 
 	client := s.createHTTPClient(config.Insecure)
 
-	// 构建查询参数，按项目过滤
+	// 構建查詢參數，按專案過濾
 	url := fmt.Sprintf("%s/api/v1/applications", config.ServerURL)
 	if config.ArgoCDProject != "" && config.ArgoCDProject != "default" {
 		url = fmt.Sprintf("%s?projects=%s", url, config.ArgoCDProject)
@@ -141,7 +141,7 @@ func (s *ArgoCDService) ListApplications(ctx context.Context, clusterID uint) ([
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取应用列表失败: %w", err)
+		return nil, fmt.Errorf("獲取應用列表失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -149,20 +149,20 @@ func (s *ArgoCDService) ListApplications(ctx context.Context, clusterID uint) ([
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("ArgoCD API 错误 (状态码 %d): %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("ArgoCD API 錯誤 (狀態碼 %d): %s", resp.StatusCode, string(body))
 	}
 
 	var result struct {
 		Items []argoCDAppResponse `json:"items"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %w", err)
+		return nil, fmt.Errorf("解析響應失敗: %w", err)
 	}
 
-	// 转换为我们的模型，并过滤只属于当前集群的应用
+	// 轉換為我們的模型，並過濾只屬於當前叢集的應用
 	apps := make([]models.ArgoCDApplication, 0)
 	for _, item := range result.Items {
-		// 只返回目标集群匹配的应用
+		// 只返回目標叢集匹配的應用
 		if config.ArgoCDClusterName == "" ||
 			item.Spec.Destination.Name == config.ArgoCDClusterName ||
 			item.Spec.Destination.Server == config.ArgoCDClusterName {
@@ -170,18 +170,18 @@ func (s *ArgoCDService) ListApplications(ctx context.Context, clusterID uint) ([
 		}
 	}
 
-	logger.Info("获取 ArgoCD 应用列表成功", "cluster_id", clusterID, "count", len(apps))
+	logger.Info("獲取 ArgoCD 應用列表成功", "cluster_id", clusterID, "count", len(apps))
 	return apps, nil
 }
 
-// GetApplication 获取单个应用详情
+// GetApplication 獲取單個應用詳情
 func (s *ArgoCDService) GetApplication(ctx context.Context, clusterID uint, appName string) (*models.ArgoCDApplication, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
 	if !config.Enabled {
-		return nil, fmt.Errorf("ArgoCD 集成未启用")
+		return nil, fmt.Errorf("ArgoCD 整合未啟用")
 	}
 
 	client := s.createHTTPClient(config.Insecure)
@@ -195,19 +195,19 @@ func (s *ArgoCDService) GetApplication(ctx context.Context, clusterID uint, appN
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取应用详情失败: %w", err)
+		return nil, fmt.Errorf("獲取應用詳情失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("应用 %s 不存在", appName)
+		return nil, fmt.Errorf("應用 %s 不存在", appName)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("获取应用详情失败: %s", string(body))
+		return nil, fmt.Errorf("獲取應用詳情失敗: %s", string(body))
 	}
 
 	var item argoCDAppResponse
@@ -219,17 +219,17 @@ func (s *ArgoCDService) GetApplication(ctx context.Context, clusterID uint, appN
 	return &app, nil
 }
 
-// CreateApplication 创建应用
+// CreateApplication 建立應用
 func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, req *models.CreateApplicationRequest) (*models.ArgoCDApplication, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
 	if !config.Enabled {
-		return nil, fmt.Errorf("ArgoCD 集成未启用")
+		return nil, fmt.Errorf("ArgoCD 整合未啟用")
 	}
 
-	// 设置默认值
+	// 設定預設值
 	namespace := req.Namespace
 	if namespace == "" {
 		namespace = "argocd"
@@ -251,7 +251,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 		targetRevision = "HEAD"
 	}
 
-	// 构建 ArgoCD Application 请求体
+	// 構建 ArgoCD Application 請求體
 	appSpec := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"name":      req.Name,
@@ -271,7 +271,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 		},
 	}
 
-	// 添加 Helm 配置
+	// 新增 Helm 配置
 	if req.HelmValues != "" || len(req.HelmParameters) > 0 {
 		source := appSpec["spec"].(map[string]interface{})["source"].(map[string]interface{})
 		helm := map[string]interface{}{}
@@ -288,7 +288,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 		source["helm"] = helm
 	}
 
-	// 添加同步策略
+	// 新增同步策略
 	if req.AutoSync {
 		spec := appSpec["spec"].(map[string]interface{})
 		syncPolicy := map[string]interface{}{
@@ -317,7 +317,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("创建应用失败: %w", err)
+		return nil, fmt.Errorf("建立應用失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -325,7 +325,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("ArgoCD 创建应用失败 (状态码 %d): %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("ArgoCD 建立應用失敗 (狀態碼 %d): %s", resp.StatusCode, string(respBody))
 	}
 
 	var item argoCDAppResponse
@@ -333,28 +333,28 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 		return nil, err
 	}
 
-	logger.Info("创建 ArgoCD 应用成功", "cluster_id", clusterID, "app_name", req.Name)
+	logger.Info("建立 ArgoCD 應用成功", "cluster_id", clusterID, "app_name", req.Name)
 	app := s.convertApplication(item)
 	return &app, nil
 }
 
-// UpdateApplication 更新应用
+// UpdateApplication 更新應用
 func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, appName string, req *models.CreateApplicationRequest) (*models.ArgoCDApplication, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
 	if !config.Enabled {
-		return nil, fmt.Errorf("ArgoCD 集成未启用")
+		return nil, fmt.Errorf("ArgoCD 整合未啟用")
 	}
 
-	// 先获取现有应用
+	// 先獲取現有應用
 	existingApp, err := s.GetApplication(ctx, clusterID, appName)
 	if err != nil {
-		return nil, fmt.Errorf("获取应用失败: %w", err)
+		return nil, fmt.Errorf("獲取應用失敗: %w", err)
 	}
 
-	// 构建更新请求
+	// 構建更新請求
 	targetRevision := req.TargetRevision
 	if targetRevision == "" {
 		targetRevision = existingApp.Source.TargetRevision
@@ -379,7 +379,7 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 		},
 	}
 
-	// 添加 Helm 配置
+	// 新增 Helm 配置
 	if req.HelmValues != "" || len(req.HelmParameters) > 0 {
 		source := appSpec["spec"].(map[string]interface{})["source"].(map[string]interface{})
 		helm := map[string]interface{}{}
@@ -396,7 +396,7 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 		source["helm"] = helm
 	}
 
-	// 添加同步策略
+	// 新增同步策略
 	spec := appSpec["spec"].(map[string]interface{})
 	if req.AutoSync {
 		syncPolicy := map[string]interface{}{
@@ -427,7 +427,7 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("更新应用失败: %w", err)
+		return nil, fmt.Errorf("更新應用失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -435,7 +435,7 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("ArgoCD 更新应用失败: %s", string(respBody))
+		return nil, fmt.Errorf("ArgoCD 更新應用失敗: %s", string(respBody))
 	}
 
 	var item argoCDAppResponse
@@ -443,19 +443,19 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 		return nil, err
 	}
 
-	logger.Info("更新 ArgoCD 应用成功", "cluster_id", clusterID, "app_name", appName)
+	logger.Info("更新 ArgoCD 應用成功", "cluster_id", clusterID, "app_name", appName)
 	app := s.convertApplication(item)
 	return &app, nil
 }
 
-// SyncApplication 同步应用
+// SyncApplication 同步應用
 func (s *ArgoCDService) SyncApplication(ctx context.Context, clusterID uint, appName string, revision string) error {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
 		return err
 	}
 	if !config.Enabled {
-		return fmt.Errorf("ArgoCD 集成未启用")
+		return fmt.Errorf("ArgoCD 整合未啟用")
 	}
 
 	syncReq := map[string]interface{}{
@@ -479,7 +479,7 @@ func (s *ArgoCDService) SyncApplication(ctx context.Context, clusterID uint, app
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("同步应用失败: %w", err)
+		return fmt.Errorf("同步應用失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -487,21 +487,21 @@ func (s *ArgoCDService) SyncApplication(ctx context.Context, clusterID uint, app
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("同步失败 (状态码 %d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("同步失敗 (狀態碼 %d): %s", resp.StatusCode, string(respBody))
 	}
 
-	logger.Info("触发 ArgoCD 应用同步成功", "cluster_id", clusterID, "app_name", appName)
+	logger.Info("觸發 ArgoCD 應用同步成功", "cluster_id", clusterID, "app_name", appName)
 	return nil
 }
 
-// DeleteApplication 删除应用
+// DeleteApplication 刪除應用
 func (s *ArgoCDService) DeleteApplication(ctx context.Context, clusterID uint, appName string, cascade bool) error {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
 		return err
 	}
 	if !config.Enabled {
-		return fmt.Errorf("ArgoCD 集成未启用")
+		return fmt.Errorf("ArgoCD 整合未啟用")
 	}
 
 	client := s.createHTTPClient(config.Insecure)
@@ -516,7 +516,7 @@ func (s *ArgoCDService) DeleteApplication(ctx context.Context, clusterID uint, a
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("删除应用失败: %w", err)
+		return fmt.Errorf("刪除應用失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -524,21 +524,21 @@ func (s *ArgoCDService) DeleteApplication(ctx context.Context, clusterID uint, a
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("删除失败 (状态码 %d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("刪除失敗 (狀態碼 %d): %s", resp.StatusCode, string(respBody))
 	}
 
-	logger.Info("删除 ArgoCD 应用成功", "cluster_id", clusterID, "app_name", appName, "cascade", cascade)
+	logger.Info("刪除 ArgoCD 應用成功", "cluster_id", clusterID, "app_name", appName, "cascade", cascade)
 	return nil
 }
 
-// RollbackApplication 回滚应用
+// RollbackApplication 回滾應用
 func (s *ArgoCDService) RollbackApplication(ctx context.Context, clusterID uint, appName string, revisionID int64) error {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
 		return err
 	}
 	if !config.Enabled {
-		return fmt.Errorf("ArgoCD 集成未启用")
+		return fmt.Errorf("ArgoCD 整合未啟用")
 	}
 
 	rollbackReq := map[string]interface{}{
@@ -558,7 +558,7 @@ func (s *ArgoCDService) RollbackApplication(ctx context.Context, clusterID uint,
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("回滚失败: %w", err)
+		return fmt.Errorf("回滾失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -566,21 +566,21 @@ func (s *ArgoCDService) RollbackApplication(ctx context.Context, clusterID uint,
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("回滚失败 (状态码 %d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("回滾失敗 (狀態碼 %d): %s", resp.StatusCode, string(respBody))
 	}
 
-	logger.Info("回滚 ArgoCD 应用成功", "cluster_id", clusterID, "app_name", appName, "revision_id", revisionID)
+	logger.Info("回滾 ArgoCD 應用成功", "cluster_id", clusterID, "app_name", appName, "revision_id", revisionID)
 	return nil
 }
 
-// GetApplicationResources 获取应用资源树
+// GetApplicationResources 獲取應用資源樹
 func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID uint, appName string) ([]models.ArgoCDResource, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
 	if !config.Enabled {
-		return nil, fmt.Errorf("ArgoCD 集成未启用")
+		return nil, fmt.Errorf("ArgoCD 整合未啟用")
 	}
 
 	client := s.createHTTPClient(config.Insecure)
@@ -594,7 +594,7 @@ func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID u
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取资源树失败: %w", err)
+		return nil, fmt.Errorf("獲取資源樹失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -602,7 +602,7 @@ func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID u
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("获取资源树失败: %s", string(body))
+		return nil, fmt.Errorf("獲取資源樹失敗: %s", string(body))
 	}
 
 	var result struct {
@@ -637,14 +637,14 @@ func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID u
 	return resources, nil
 }
 
-// 辅助方法
+// 輔助方法
 
 func (s *ArgoCDService) createHTTPClient(insecure bool) *http.Client {
 	if insecure {
 		return &http.Client{
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- ArgoCD 常使用自签名证书，insecure 由用户配置控制
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- ArgoCD 常使用自簽名證書，insecure 由使用者配置控制
 			},
 		}
 	}
@@ -652,28 +652,28 @@ func (s *ArgoCDService) createHTTPClient(insecure bool) *http.Client {
 }
 
 func (s *ArgoCDService) setAuthHeader(req *http.Request, config *models.ArgoCDConfig) {
-	// 优先使用 Token 认证
+	// 優先使用 Token 認證
 	if config.Token != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.Token))
 		return
 	}
 
-	// 如果没有 Token 但有用户名密码，尝试获取 session token
+	// 如果沒有 Token 但有使用者名稱密碼，嘗試獲取 session token
 	if config.Username != "" && config.Password != "" {
 		token, err := s.getSessionToken(config)
 		if err != nil {
-			logger.Error("获取 ArgoCD session token 失败", "error", err)
+			logger.Error("獲取 ArgoCD session token 失敗", "error", err)
 			return
 		}
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
 }
 
-// getSessionToken 使用用户名密码获取 ArgoCD session token
+// getSessionToken 使用使用者名稱密碼獲取 ArgoCD session token
 func (s *ArgoCDService) getSessionToken(config *models.ArgoCDConfig) (string, error) {
 	client := s.createHTTPClient(config.Insecure)
 
-	// 构建登录请求
+	// 構建登入請求
 	loginReq := map[string]string{
 		"username": config.Username,
 		"password": config.Password,
@@ -685,13 +685,13 @@ func (s *ArgoCDService) getSessionToken(config *models.ArgoCDConfig) (string, er
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/v1/session", config.ServerURL), bytes.NewReader(body))
 	if err != nil {
-		return "", fmt.Errorf("创建登录请求失败: %w", err)
+		return "", fmt.Errorf("建立登入請求失敗: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("登录请求失败: %w", err)
+		return "", fmt.Errorf("登入請求失敗: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -699,26 +699,26 @@ func (s *ArgoCDService) getSessionToken(config *models.ArgoCDConfig) (string, er
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("登录失败 (状态码 %d): %s", resp.StatusCode, string(respBody))
+		return "", fmt.Errorf("登入失敗 (狀態碼 %d): %s", resp.StatusCode, string(respBody))
 	}
 
-	// 解析响应获取 token
+	// 解析響應獲取 token
 	var result struct {
 		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("解析登录响应失败: %w", err)
+		return "", fmt.Errorf("解析登入響應失敗: %w", err)
 	}
 
 	if result.Token == "" {
-		return "", fmt.Errorf("登录成功但未返回 token")
+		return "", fmt.Errorf("登入成功但未返回 token")
 	}
 
-	logger.Info("ArgoCD 登录成功，获取到 session token")
+	logger.Info("ArgoCD 登入成功，獲取到 session token")
 	return result.Token, nil
 }
 
-// ArgoCD API 响应结构
+// ArgoCD API 響應結構
 type argoCDAppResponse struct {
 	Metadata struct {
 		Name              string `json:"name"`
@@ -808,7 +808,7 @@ func (s *ArgoCDService) convertApplication(item argoCDAppResponse) models.ArgoCD
 		},
 	}
 
-	// 转换 Helm 配置
+	// 轉換 Helm 配置
 	if item.Spec.Source.Helm != nil {
 		app.Source.Helm = &models.ArgoCDHelmSource{
 			ValueFiles: item.Spec.Source.Helm.ValueFiles,
@@ -822,7 +822,7 @@ func (s *ArgoCDService) convertApplication(item argoCDAppResponse) models.ArgoCD
 		}
 	}
 
-	// 转换资源列表
+	// 轉換資源列表
 	for _, res := range item.Status.Resources {
 		app.Resources = append(app.Resources, models.ArgoCDResource{
 			Group:     res.Group,
@@ -835,7 +835,7 @@ func (s *ArgoCDService) convertApplication(item argoCDAppResponse) models.ArgoCD
 		})
 	}
 
-	// 转换同步历史
+	// 轉換同步歷史
 	for _, h := range item.Status.History {
 		app.History = append(app.History, models.ArgoCDSyncHistory{
 			ID:         h.ID,

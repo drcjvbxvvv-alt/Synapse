@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// NodeHandler 节点处理器
+// NodeHandler 節點處理器
 type NodeHandler struct {
 	db               *gorm.DB
 	cfg              *config.Config
@@ -27,7 +27,7 @@ type NodeHandler struct {
 	monitoringCfgSvc *services.MonitoringConfigService
 }
 
-// NewNodeHandler 创建节点处理器
+// NewNodeHandler 建立節點處理器
 func NewNodeHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, promService *services.PrometheusService, monitoringCfgSvc *services.MonitoringConfigService) *NodeHandler {
 	return &NodeHandler{
 		db:               db,
@@ -39,69 +39,69 @@ func NewNodeHandler(db *gorm.DB, cfg *config.Config, clusterService *services.Cl
 	}
 }
 
-// GetNodes 获取节点列表
+// GetNodes 獲取節點列表
 func (h *NodeHandler) GetNodes(c *gin.Context) {
 	clusterId := c.Param("clusterID")
-	logger.Info("获取节点列表: %s", clusterId)
+	logger.Info("獲取節點列表: %s", clusterId)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	if clusterID == 0 {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 使用 informer+lister 获取节点列表
+	// 使用 informer+lister 獲取節點列表
 	if h.k8sMgr == nil {
 		response.ServiceUnavailable(c, "K8s informer 管理器未初始化")
 		return
 	}
 	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 	nodeObjs, err := h.k8sMgr.NodesLister(cluster.ID).List(labels.Everything())
 	if err != nil {
-		response.InternalError(c, "读取节点缓存失败: "+err.Error())
+		response.InternalError(c, "讀取節點快取失敗: "+err.Error())
 		return
 	}
-	// 转为值类型以复用原有处理逻辑
+	// 轉為值型別以複用原有處理邏輯
 	items := make([]corev1.Node, 0, len(nodeObjs))
 	for _, n := range nodeObjs {
 		items = append(items, *n)
 	}
 
-	// 获取所有 Pod，统计每个节点上的 Pod 数量
+	// 獲取所有 Pod，統計每個節點上的 Pod 數量
 	nodePodCounts := make(map[string]int)
 	podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(labels.Everything())
 	if err != nil {
-		logger.Error("读取 Pod 缓存失败: %v", err)
-		// 继续执行，podCount 将为 0
+		logger.Error("讀取 Pod 快取失敗: %v", err)
+		// 繼續執行，podCount 將為 0
 	} else {
 		for _, pod := range podObjs {
-			// 只统计非 Succeeded/Failed 状态的 Pod
+			// 只統計非 Succeeded/Failed 狀態的 Pod
 			if pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed {
 				nodePodCounts[pod.Spec.NodeName]++
 			}
 		}
 	}
 
-	// 获取所有节点的资源使用率
+	// 獲取所有節點的資源使用率
 	nodeResourceUsage := h.getNodesResourceUsage(c.Request.Context(), cluster.ID)
 
-	// 转换为API响应格式
+	// 轉換為API響應格式
 	result := make([]map[string]interface{}, 0, len(items))
 	for _, node := range items {
-		// 获取节点状态
+		// 獲取節點狀態
 		status := "NotReady"
 		for _, condition := range node.Status.Conditions {
 			if condition.Type == "Ready" {
@@ -112,7 +112,7 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 			}
 		}
 
-		// 获取节点角色
+		// 獲取節點角色
 		roles := []string{}
 		for label := range node.Labels {
 			if label == "node-role.kubernetes.io/control-plane" || label == "node-role.kubernetes.io/master" {
@@ -126,7 +126,7 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 			roles = append(roles, "worker")
 		}
 
-		// 获取节点污点
+		// 獲取節點汙點
 		taints := []map[string]string{}
 		for _, taint := range node.Spec.Taints {
 			taints = append(taints, map[string]string{
@@ -136,20 +136,20 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 			})
 		}
 
-		// 获取节点资源信息
+		// 獲取節點資源資訊
 		cpuCapacity := node.Status.Capacity.Cpu().MilliValue()
-		memoryCapacity := node.Status.Capacity.Memory().Value() / (1024 * 1024) // 转换为MB
+		memoryCapacity := node.Status.Capacity.Memory().Value() / (1024 * 1024) // 轉換為MB
 		podCapacity := node.Status.Capacity.Pods().Value()
 
-		// 获取节点的 CPU 和内存使用率
+		// 獲取節點的 CPU 和記憶體使用率
 		cpuUsage := 0.0
 		memoryUsage := 0.0
-		// 尝试通过节点名称匹配
+		// 嘗試透過節點名稱匹配
 		if usage, exists := nodeResourceUsage[node.Name]; exists {
 			cpuUsage = usage["cpuUsage"]
 			memoryUsage = usage["memoryUsage"]
 		} else {
-			// 尝试通过内部 IP 匹配（Prometheus 的 instance 标签可能是 IP 地址）
+			// 嘗試透過內部 IP 匹配（Prometheus 的 instance 標籤可能是 IP 地址）
 			internalIP := getNodeInternalIP(node)
 			if internalIP != "" {
 				if usage, exists := nodeResourceUsage[internalIP]; exists {
@@ -160,7 +160,7 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 		}
 
 		result = append(result, map[string]interface{}{
-			"id":               node.Name, // 使用节点名作为ID
+			"id":               node.Name, // 使用節點名作為ID
 			"name":             node.Name,
 			"status":           status,
 			"roles":            roles,
@@ -188,33 +188,33 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 	response.PagedList(c, result, int64(len(result)), 1, 50)
 }
 
-// GetNodeOverview 获取节点概览信息
+// GetNodeOverview 獲取節點概覽資訊
 func (h *NodeHandler) GetNodeOverview(c *gin.Context) {
 	clusterId := c.Param("clusterID")
-	logger.Info("获取节点概览: %s", clusterId)
+	logger.Info("獲取節點概覽: %s", clusterId)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 使用 informer+lister 读取节点并统计
+	// 使用 informer+lister 讀取節點並統計
 	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
-		logger.Error("informer 未就绪", "error", err)
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		logger.Error("informer 未就緒", "error", err)
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 	nodeObjs, err := h.k8sMgr.NodesLister(cluster.ID).List(labels.Everything())
 	if err != nil {
-		logger.Error("读取节点缓存失败", "error", err)
-		response.InternalError(c, "读取节点缓存失败: "+err.Error())
+		logger.Error("讀取節點快取失敗", "error", err)
+		response.InternalError(c, "讀取節點快取失敗: "+err.Error())
 		return
 	}
 	totalNodes := len(nodeObjs)
@@ -234,7 +234,7 @@ func (h *NodeHandler) GetNodeOverview(c *gin.Context) {
 			}
 		}
 
-		// 检查是否处于维护状态（有NoSchedule污点）
+		// 檢查是否處於維護狀態（有NoSchedule汙點）
 		if node.Spec.Unschedulable {
 			maintenanceNodes++
 		}
@@ -268,40 +268,40 @@ func (h *NodeHandler) GetNodeOverview(c *gin.Context) {
 	response.OK(c, overview)
 }
 
-// GetNode 获取节点详情
+// GetNode 獲取節點詳情
 func (h *NodeHandler) GetNode(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	name := c.Param("name")
-	logger.Info("获取节点详情: %s/%s", clusterId, name)
+	logger.Info("獲取節點詳情: %s/%s", clusterId, name)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 使用 informer+lister 获取节点详情
+	// 使用 informer+lister 獲取節點詳情
 	if h.k8sMgr == nil {
 		response.ServiceUnavailable(c, "K8s informer 管理器未初始化")
 		return
 	}
 	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 	node, err := h.k8sMgr.NodesLister(cluster.ID).Get(name)
 	if err != nil {
-		response.InternalError(c, "读取节点缓存失败: "+err.Error())
+		response.InternalError(c, "讀取節點快取失敗: "+err.Error())
 		return
 	}
 
-	// 获取节点状态
+	// 獲取節點狀態
 	status := "NotReady"
 	conditions := []map[string]interface{}{}
 	for _, condition := range node.Status.Conditions {
@@ -319,7 +319,7 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 		}
 	}
 
-	// 获取节点角色
+	// 獲取節點角色
 	roles := []string{}
 	for label := range node.Labels {
 		if label == "node-role.kubernetes.io/control-plane" || label == "node-role.kubernetes.io/master" {
@@ -333,7 +333,7 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 		roles = append(roles, "worker")
 	}
 
-	// 获取节点污点
+	// 獲取節點汙點
 	taints := []map[string]string{}
 	for _, taint := range node.Spec.Taints {
 		taints = append(taints, map[string]string{
@@ -343,7 +343,7 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 		})
 	}
 
-	// 获取节点标签
+	// 獲取節點標籤
 	nodeLabels := []map[string]string{}
 	for key, value := range node.Labels {
 		nodeLabels = append(nodeLabels, map[string]string{
@@ -352,12 +352,12 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 		})
 	}
 
-	// 获取节点资源信息
+	// 獲取節點資源資訊
 	cpuCapacity := node.Status.Capacity.Cpu().MilliValue()
-	memoryCapacity := node.Status.Capacity.Memory().Value() / (1024 * 1024) // 转换为MB
+	memoryCapacity := node.Status.Capacity.Memory().Value() / (1024 * 1024) // 轉換為MB
 	podCapacity := node.Status.Capacity.Pods().Value()
 
-	// 获取节点地址
+	// 獲取節點地址
 	addresses := []map[string]string{}
 	for _, address := range node.Status.Addresses {
 		addresses = append(addresses, map[string]string{
@@ -366,18 +366,18 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 		})
 	}
 
-	// 获取节点的实际资源使用情况（通过缓存读取路径暂不直连 API，保留默认值）
+	// 獲取節點的實際資源使用情況（透過快取讀取路徑暫不直連 API，保留預設值）
 	cpuUsage := 0.0
 	memoryUsage := 0.0
 	podCount := 0
 
-	// 统计该节点上的 Pod 数量
+	// 統計該節點上的 Pod 數量
 	podObjs, err := h.k8sMgr.PodsLister(cluster.ID).List(labels.Everything())
 	if err != nil {
-		logger.Error("读取 Pod 缓存失败: %v", err)
+		logger.Error("讀取 Pod 快取失敗: %v", err)
 	} else {
 		for _, pod := range podObjs {
-			// 只统计运行在该节点上且非 Succeeded/Failed 状态的 Pod
+			// 只統計執行在該節點上且非 Succeeded/Failed 狀態的 Pod
 			if pod.Spec.NodeName == name && pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed {
 				podCount++
 			}
@@ -412,119 +412,119 @@ func (h *NodeHandler) GetNode(c *gin.Context) {
 	response.OK(c, result)
 }
 
-// CordonNode 封锁节点
+// CordonNode 封鎖節點
 func (h *NodeHandler) CordonNode(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	name := c.Param("name")
-	logger.Info("封锁节点: %s/%s", clusterId, name)
+	logger.Info("封鎖節點: %s/%s", clusterId, name)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
-	// 封锁节点
+	// 封鎖節點
 	err = k8sClient.CordonNode(name)
 	if err != nil {
-		response.InternalError(c, "封锁节点失败: "+err.Error())
+		response.InternalError(c, "封鎖節點失敗: "+err.Error())
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// UncordonNode 解封节点
+// UncordonNode 解封節點
 func (h *NodeHandler) UncordonNode(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	name := c.Param("name")
-	logger.Info("解封节点: %s/%s", clusterId, name)
+	logger.Info("解封節點: %s/%s", clusterId, name)
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
-	// 解封节点
+	// 解封節點
 	err = k8sClient.UncordonNode(name)
 	if err != nil {
-		response.InternalError(c, "解封节点失败: "+err.Error())
+		response.InternalError(c, "解封節點失敗: "+err.Error())
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// DrainNode 驱逐节点
+// DrainNode 驅逐節點
 func (h *NodeHandler) DrainNode(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	name := c.Param("name")
-	logger.Info("驱逐节点: %s/%s", clusterId, name)
+	logger.Info("驅逐節點: %s/%s", clusterId, name)
 
-	// 解析请求参数
+	// 解析請求參數
 	var options map[string]interface{}
 	if err := c.ShouldBindJSON(&options); err != nil {
-		response.BadRequest(c, "参数解析失败: "+err.Error())
+		response.BadRequest(c, "參數解析失敗: "+err.Error())
 		return
 	}
 
-	// 从集群服务获取集群信息
+	// 從叢集服務獲取叢集資訊
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
-	// 获取缓存的 K8s 客户端
+	// 獲取快取的 K8s 客戶端
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
-	// 驱逐节点
+	// 驅逐節點
 	err = k8sClient.DrainNode(name, options)
 	if err != nil {
-		response.InternalError(c, "驱逐节点失败: "+err.Error())
+		response.InternalError(c, "驅逐節點失敗: "+err.Error())
 		return
 	}
 
 	response.NoContent(c)
 }
 
-// 获取节点内部IP
+// 獲取節點內部IP
 func getNodeInternalIP(node corev1.Node) string {
 	for _, address := range node.Status.Addresses {
 		if address.Type == corev1.NodeInternalIP {
@@ -534,7 +534,7 @@ func getNodeInternalIP(node corev1.Node) string {
 	return ""
 }
 
-// 获取节点外部IP
+// 獲取節點外部IP
 func getNodeExternalIP(node corev1.Node) string {
 	for _, address := range node.Status.Addresses {
 		if address.Type == corev1.NodeExternalIP {
@@ -544,8 +544,8 @@ func getNodeExternalIP(node corev1.Node) string {
 	return ""
 }
 
-// getNodesResourceUsage 获取所有节点的 CPU 和内存使用率
-// 返回一个 map，key 是节点名称，value 包含 cpuUsage 和 memoryUsage
+// getNodesResourceUsage 獲取所有節點的 CPU 和記憶體使用率
+// 返回一個 map，key 是節點名稱，value 包含 cpuUsage 和 memoryUsage
 func (h *NodeHandler) getNodesResourceUsage(ctx context.Context, clusterID uint) map[string]map[string]float64 {
 	result := make(map[string]map[string]float64)
 
@@ -553,20 +553,20 @@ func (h *NodeHandler) getNodesResourceUsage(ctx context.Context, clusterID uint)
 		return result
 	}
 
-	// 获取集群的监控配置
+	// 獲取叢集的監控配置
 	config, err := h.monitoringCfgSvc.GetMonitoringConfig(clusterID)
 	if err != nil || config.Type == "disabled" {
 		return result
 	}
 
-	// 调用 PrometheusService 的 queryNodeListMetrics 获取节点指标
+	// 呼叫 PrometheusService 的 queryNodeListMetrics 獲取節點指標
 	nodeList, err := h.promService.QueryNodeListMetrics(ctx, config, "")
 	if err != nil {
-		logger.Error("获取节点资源使用率失败", "error", err)
+		logger.Error("獲取節點資源使用率失敗", "error", err)
 		return result
 	}
 
-	// 将结果转换为 map
+	// 將結果轉換為 map
 	for _, node := range nodeList {
 		result[node.NodeName] = map[string]float64{
 			"cpuUsage":    node.CPUUsageRate,

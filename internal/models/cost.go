@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// CostConfig 叢集成本定價設定
+// CostConfig 叢整合本定價設定
 type CostConfig struct {
 	ID              uint      `json:"id" gorm:"primaryKey"`
 	ClusterID       uint      `json:"cluster_id" gorm:"uniqueIndex;not null"`

@@ -107,7 +107,7 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 		flusher.Flush()
 	}
 
-	// Function Calling 循環：最多 10 輪工具呼叫
+	// Function Calling 迴圈：最多 10 輪工具呼叫
 	for round := 0; round < 10; round++ {
 		chatReq := services.ChatRequest{
 			Messages: messages,

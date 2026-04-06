@@ -13,14 +13,14 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// PermissionHandler 权限管理处理器
+// PermissionHandler 權限管理處理器
 type PermissionHandler struct {
 	permissionService *services.PermissionService
 	clusterService    *services.ClusterService
 	rbacService       *services.RBACService
 }
 
-// NewPermissionHandler 创建权限管理处理器
+// NewPermissionHandler 建立權限管理處理器
 func NewPermissionHandler(permissionService *services.PermissionService, clusterService *services.ClusterService, rbacService *services.RBACService) *PermissionHandler {
 	return &PermissionHandler{
 		permissionService: permissionService,
@@ -29,27 +29,27 @@ func NewPermissionHandler(permissionService *services.PermissionService, cluster
 	}
 }
 
-// ========== 权限类型 ==========
+// ========== 權限型別 ==========
 
-// GetPermissionTypes 获取权限类型列表
+// GetPermissionTypes 獲取權限型別列表
 func (h *PermissionHandler) GetPermissionTypes(c *gin.Context) {
 	types := models.GetPermissionTypes()
 	response.OK(c, types)
 }
 
-// ========== 用户组管理 ==========
+// ========== 使用者組管理 ==========
 
-// CreateUserGroupRequest 创建用户组请求
+// CreateUserGroupRequest 建立使用者組請求
 type CreateUserGroupRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
 }
 
-// CreateUserGroup 创建用户组
+// CreateUserGroup 建立使用者組
 func (h *PermissionHandler) CreateUserGroup(c *gin.Context) {
 	var req CreateUserGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
@@ -66,23 +66,23 @@ func (h *PermissionHandler) CreateUserGroup(c *gin.Context) {
 	response.OK(c, group)
 }
 
-// UpdateUserGroupRequest 更新用户组请求
+// UpdateUserGroupRequest 更新使用者組請求
 type UpdateUserGroupRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
 }
 
-// UpdateUserGroup 更新用户组
+// UpdateUserGroup 更新使用者組
 func (h *PermissionHandler) UpdateUserGroup(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户组ID")
+		response.BadRequest(c, "無效的使用者組ID")
 		return
 	}
 
 	var req UpdateUserGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
@@ -95,11 +95,11 @@ func (h *PermissionHandler) UpdateUserGroup(c *gin.Context) {
 	response.OK(c, group)
 }
 
-// DeleteUserGroup 删除用户组
+// DeleteUserGroup 刪除使用者組
 func (h *PermissionHandler) DeleteUserGroup(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户组ID")
+		response.BadRequest(c, "無效的使用者組ID")
 		return
 	}
 
@@ -111,11 +111,11 @@ func (h *PermissionHandler) DeleteUserGroup(c *gin.Context) {
 	response.OK(c, nil)
 }
 
-// GetUserGroup 获取用户组详情
+// GetUserGroup 獲取使用者組詳情
 func (h *PermissionHandler) GetUserGroup(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户组ID")
+		response.BadRequest(c, "無效的使用者組ID")
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *PermissionHandler) GetUserGroup(c *gin.Context) {
 	response.OK(c, group)
 }
 
-// ListUserGroups 获取用户组列表
+// ListUserGroups 獲取使用者組列表
 func (h *PermissionHandler) ListUserGroups(c *gin.Context) {
 	groups, err := h.permissionService.ListUserGroups()
 	if err != nil {
@@ -139,22 +139,22 @@ func (h *PermissionHandler) ListUserGroups(c *gin.Context) {
 	response.List(c, groups, int64(len(groups)))
 }
 
-// AddUserToGroupRequest 添加用户到用户组请求
+// AddUserToGroupRequest 新增使用者到使用者組請求
 type AddUserToGroupRequest struct {
 	UserID uint `json:"user_id" binding:"required"`
 }
 
-// AddUserToGroup 添加用户到用户组
+// AddUserToGroup 新增使用者到使用者組
 func (h *PermissionHandler) AddUserToGroup(c *gin.Context) {
 	groupID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户组ID")
+		response.BadRequest(c, "無效的使用者組ID")
 		return
 	}
 
 	var req AddUserToGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
@@ -166,17 +166,17 @@ func (h *PermissionHandler) AddUserToGroup(c *gin.Context) {
 	response.OK(c, nil)
 }
 
-// RemoveUserFromGroup 从用户组移除用户
+// RemoveUserFromGroup 從使用者組移除使用者
 func (h *PermissionHandler) RemoveUserFromGroup(c *gin.Context) {
 	groupID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户组ID")
+		response.BadRequest(c, "無效的使用者組ID")
 		return
 	}
 
 	userID, err := strconv.ParseUint(c.Param("userId"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的用户ID")
+		response.BadRequest(c, "無效的使用者ID")
 		return
 	}
 
@@ -188,9 +188,9 @@ func (h *PermissionHandler) RemoveUserFromGroup(c *gin.Context) {
 	response.OK(c, nil)
 }
 
-// ========== 集群权限管理 ==========
+// ========== 叢集權限管理 ==========
 
-// CreateClusterPermissionRequest 创建集群权限请求
+// CreateClusterPermissionRequest 建立叢集權限請求
 type CreateClusterPermissionRequest struct {
 	ClusterID      uint     `json:"cluster_id" binding:"required"`
 	UserID         *uint    `json:"user_id"`
@@ -198,20 +198,20 @@ type CreateClusterPermissionRequest struct {
 	PermissionType string   `json:"permission_type" binding:"required"`
 	Namespaces     []string `json:"namespaces"`
 	CustomRoleRef  string   `json:"custom_role_ref"`
-	// 批量字段：与 UserID/UserGroupID 互斥，支持同时为多个用户和用户组创建权限
+	// 批次欄位：與 UserID/UserGroupID 互斥，支援同時為多個使用者和使用者組建立權限
 	UserIDs      []uint `json:"user_ids"`
 	UserGroupIDs []uint `json:"user_group_ids"`
 }
 
-// CreateClusterPermission 创建集群权限（支持批量）
+// CreateClusterPermission 建立叢集權限（支援批次）
 func (h *PermissionHandler) CreateClusterPermission(c *gin.Context) {
 	var req CreateClusterPermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
-	// 兼容旧的单个用户/用户组字段
+	// 相容舊的單個使用者/使用者組欄位
 	if req.UserID != nil && len(req.UserIDs) == 0 {
 		req.UserIDs = []uint{*req.UserID}
 	}
@@ -220,14 +220,14 @@ func (h *PermissionHandler) CreateClusterPermission(c *gin.Context) {
 	}
 
 	if len(req.UserIDs) == 0 && len(req.UserGroupIDs) == 0 {
-		response.BadRequest(c, "至少需要指定一个用户或用户组")
+		response.BadRequest(c, "至少需要指定一個使用者或使用者組")
 		return
 	}
 
 	var created []models.ClusterPermissionResponse
 	var errs []string
 
-	// 为每个用户创建权限
+	// 為每個使用者建立權限
 	for _, uid := range req.UserIDs {
 		uidCopy := uid
 		serviceReq := &services.CreateClusterPermissionRequest{
@@ -239,14 +239,14 @@ func (h *PermissionHandler) CreateClusterPermission(c *gin.Context) {
 		}
 		permission, err := h.permissionService.CreateClusterPermission(serviceReq)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("用户ID=%d: %s", uid, err.Error()))
+			errs = append(errs, fmt.Sprintf("使用者ID=%d: %s", uid, err.Error()))
 			continue
 		}
 		go h.ensureUserRBACInCluster(permission)
 		created = append(created, permission.ToResponse())
 	}
 
-	// 为每个用户组创建权限
+	// 為每個使用者組建立權限
 	for _, gid := range req.UserGroupIDs {
 		gidCopy := gid
 		serviceReq := &services.CreateClusterPermissionRequest{
@@ -258,7 +258,7 @@ func (h *PermissionHandler) CreateClusterPermission(c *gin.Context) {
 		}
 		permission, err := h.permissionService.CreateClusterPermission(serviceReq)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("用户组ID=%d: %s", gid, err.Error()))
+			errs = append(errs, fmt.Sprintf("使用者組ID=%d: %s", gid, err.Error()))
 			continue
 		}
 		go h.ensureUserRBACInCluster(permission)
@@ -266,7 +266,7 @@ func (h *PermissionHandler) CreateClusterPermission(c *gin.Context) {
 	}
 
 	if len(created) == 0 && len(errs) > 0 {
-		response.BadRequest(c, "创建失败")
+		response.BadRequest(c, "建立失敗")
 		return
 	}
 
@@ -277,32 +277,32 @@ func (h *PermissionHandler) CreateClusterPermission(c *gin.Context) {
 	response.OK(c, data)
 }
 
-// ensureUserRBACInCluster 确保用户在集群中有对应的 RBAC 资源
+// ensureUserRBACInCluster 確保使用者在叢集中有對應的 RBAC 資源
 func (h *PermissionHandler) ensureUserRBACInCluster(permission *models.ClusterPermission) {
-	// 只有用户级别的权限才需要创建 RBAC（用户组的权限需要特殊处理）
+	// 只有使用者級別的權限才需要建立 RBAC（使用者組的權限需要特殊處理）
 	if permission.UserID == nil {
-		logger.Info("用户组权限暂不自动创建 RBAC", "userGroupID", permission.UserGroupID)
+		logger.Info("使用者組權限暫不自動建立 RBAC", "userGroupID", permission.UserGroupID)
 		return
 	}
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(permission.ClusterID)
 	if err != nil {
-		logger.Error("获取集群信息失败，无法创建 RBAC", "clusterID", permission.ClusterID, "error", err)
+		logger.Error("獲取叢集資訊失敗，無法建立 RBAC", "clusterID", permission.ClusterID, "error", err)
 		return
 	}
 
-	// 创建 K8s 客户端
+	// 建立 K8s 客戶端
 	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
-		logger.Error("创建 K8s 客户端失败", "clusterID", permission.ClusterID, "error", err)
+		logger.Error("建立 K8s 客戶端失敗", "clusterID", permission.ClusterID, "error", err)
 		return
 	}
 
-	// 解析命名空间
+	// 解析命名空間
 	namespaces := permission.GetNamespaceList()
 
-	// 创建 RBAC 配置
+	// 建立 RBAC 配置
 	config := &services.UserRBACConfig{
 		UserID:         *permission.UserID,
 		PermissionType: permission.PermissionType,
@@ -310,32 +310,32 @@ func (h *PermissionHandler) ensureUserRBACInCluster(permission *models.ClusterPe
 		ClusterRoleRef: permission.CustomRoleRef,
 	}
 
-	// 确保 RBAC 资源存在
+	// 確保 RBAC 資源存在
 	if err := h.rbacService.EnsureUserRBAC(k8sClient.GetClientset(), config); err != nil {
-		logger.Error("创建用户 RBAC 失败", "userID", *permission.UserID, "clusterID", permission.ClusterID, "error", err)
+		logger.Error("建立使用者 RBAC 失敗", "userID", *permission.UserID, "clusterID", permission.ClusterID, "error", err)
 	} else {
-		logger.Info("用户 RBAC 创建成功", "userID", *permission.UserID, "clusterID", permission.ClusterID, "permissionType", permission.PermissionType)
+		logger.Info("使用者 RBAC 建立成功", "userID", *permission.UserID, "clusterID", permission.ClusterID, "permissionType", permission.PermissionType)
 	}
 }
 
-// UpdateClusterPermissionRequest 更新集群权限请求
+// UpdateClusterPermissionRequest 更新叢集權限請求
 type UpdateClusterPermissionRequest struct {
 	PermissionType string   `json:"permission_type"`
 	Namespaces     []string `json:"namespaces"`
 	CustomRoleRef  string   `json:"custom_role_ref"`
 }
 
-// UpdateClusterPermission 更新集群权限
+// UpdateClusterPermission 更新叢集權限
 func (h *PermissionHandler) UpdateClusterPermission(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的权限ID")
+		response.BadRequest(c, "無效的權限ID")
 		return
 	}
 
 	var req UpdateClusterPermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
@@ -345,7 +345,7 @@ func (h *PermissionHandler) UpdateClusterPermission(c *gin.Context) {
 		CustomRoleRef:  req.CustomRoleRef,
 	}
 
-	// 获取旧权限配置用于清理
+	// 獲取舊權限配置用於清理
 	oldPermission, _ := h.permissionService.GetClusterPermission(uint(id))
 
 	permission, err := h.permissionService.UpdateClusterPermission(uint(id), serviceReq)
@@ -354,41 +354,41 @@ func (h *PermissionHandler) UpdateClusterPermission(c *gin.Context) {
 		return
 	}
 
-	// 异步更新 RBAC 资源
+	// 非同步更新 RBAC 資源
 	go h.updateUserRBACInCluster(oldPermission, permission)
 
 	response.OK(c, permission.ToResponse())
 }
 
-// updateUserRBACInCluster 更新用户在集群中的 RBAC 资源
+// updateUserRBACInCluster 更新使用者在叢集中的 RBAC 資源
 func (h *PermissionHandler) updateUserRBACInCluster(oldPermission, newPermission *models.ClusterPermission) {
 	if newPermission.UserID == nil {
 		return
 	}
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(newPermission.ClusterID)
 	if err != nil {
-		logger.Error("获取集群信息失败", "clusterID", newPermission.ClusterID, "error", err)
+		logger.Error("獲取叢集資訊失敗", "clusterID", newPermission.ClusterID, "error", err)
 		return
 	}
 
-	// 创建 K8s 客户端
+	// 建立 K8s 客戶端
 	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
-		logger.Error("创建 K8s 客户端失败", "error", err)
+		logger.Error("建立 K8s 客戶端失敗", "error", err)
 		return
 	}
 
-	// 如果旧权限存在，先清理
+	// 如果舊權限存在，先清理
 	if oldPermission != nil && oldPermission.UserID != nil {
 		oldNamespaces := oldPermission.GetNamespaceList()
 		if err := h.rbacService.CleanupUserRBAC(k8sClient.GetClientset(), *oldPermission.UserID, oldPermission.PermissionType, oldNamespaces); err != nil {
-			logger.Warn("清理旧 RBAC 失败", "error", err)
+			logger.Warn("清理舊 RBAC 失敗", "error", err)
 		}
 	}
 
-	// 创建新 RBAC
+	// 建立新 RBAC
 	newNamespaces := newPermission.GetNamespaceList()
 	config := &services.UserRBACConfig{
 		UserID:         *newPermission.UserID,
@@ -398,21 +398,21 @@ func (h *PermissionHandler) updateUserRBACInCluster(oldPermission, newPermission
 	}
 
 	if err := h.rbacService.EnsureUserRBAC(k8sClient.GetClientset(), config); err != nil {
-		logger.Error("更新用户 RBAC 失败", "error", err)
+		logger.Error("更新使用者 RBAC 失敗", "error", err)
 	} else {
-		logger.Info("用户 RBAC 更新成功", "userID", *newPermission.UserID, "clusterID", newPermission.ClusterID)
+		logger.Info("使用者 RBAC 更新成功", "userID", *newPermission.UserID, "clusterID", newPermission.ClusterID)
 	}
 }
 
-// DeleteClusterPermission 删除集群权限
+// DeleteClusterPermission 刪除叢集權限
 func (h *PermissionHandler) DeleteClusterPermission(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的权限ID")
+		response.BadRequest(c, "無效的權限ID")
 		return
 	}
 
-	// 先获取权限信息用于清理 RBAC
+	// 先獲取權限資訊用於清理 RBAC
 	permission, _ := h.permissionService.GetClusterPermission(uint(id))
 
 	if err := h.permissionService.DeleteClusterPermission(uint(id)); err != nil {
@@ -420,7 +420,7 @@ func (h *PermissionHandler) DeleteClusterPermission(c *gin.Context) {
 		return
 	}
 
-	// 异步清理 RBAC 资源
+	// 非同步清理 RBAC 資源
 	if permission != nil {
 		go h.cleanupUserRBACInCluster(permission)
 	}
@@ -428,44 +428,44 @@ func (h *PermissionHandler) DeleteClusterPermission(c *gin.Context) {
 	response.OK(c, nil)
 }
 
-// cleanupUserRBACInCluster 清理用户在集群中的 RBAC 资源
+// cleanupUserRBACInCluster 清理使用者在叢集中的 RBAC 資源
 func (h *PermissionHandler) cleanupUserRBACInCluster(permission *models.ClusterPermission) {
 	if permission.UserID == nil {
 		return
 	}
 
-	// 获取集群信息
+	// 獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(permission.ClusterID)
 	if err != nil {
-		logger.Error("获取集群信息失败，无法清理 RBAC", "clusterID", permission.ClusterID, "error", err)
+		logger.Error("獲取叢集資訊失敗，無法清理 RBAC", "clusterID", permission.ClusterID, "error", err)
 		return
 	}
 
-	// 创建 K8s 客户端
+	// 建立 K8s 客戶端
 	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
-		logger.Error("创建 K8s 客户端失败", "error", err)
+		logger.Error("建立 K8s 客戶端失敗", "error", err)
 		return
 	}
 
 	namespaces := permission.GetNamespaceList()
 	if err := h.rbacService.CleanupUserRBAC(k8sClient.GetClientset(), *permission.UserID, permission.PermissionType, namespaces); err != nil {
-		logger.Error("清理用户 RBAC 失败", "error", err)
+		logger.Error("清理使用者 RBAC 失敗", "error", err)
 	} else {
-		logger.Info("用户 RBAC 清理成功", "userID", *permission.UserID, "clusterID", permission.ClusterID)
+		logger.Info("使用者 RBAC 清理成功", "userID", *permission.UserID, "clusterID", permission.ClusterID)
 	}
 }
 
-// BatchDeleteClusterPermissionsRequest 批量删除请求
+// BatchDeleteClusterPermissionsRequest 批次刪除請求
 type BatchDeleteClusterPermissionsRequest struct {
 	IDs []uint `json:"ids" binding:"required"`
 }
 
-// BatchDeleteClusterPermissions 批量删除集群权限
+// BatchDeleteClusterPermissions 批次刪除叢集權限
 func (h *PermissionHandler) BatchDeleteClusterPermissions(c *gin.Context) {
 	var req BatchDeleteClusterPermissionsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误")
+		response.BadRequest(c, "請求參數錯誤")
 		return
 	}
 
@@ -477,11 +477,11 @@ func (h *PermissionHandler) BatchDeleteClusterPermissions(c *gin.Context) {
 	response.OK(c, nil)
 }
 
-// GetClusterPermission 获取集群权限详情
+// GetClusterPermission 獲取叢集權限詳情
 func (h *PermissionHandler) GetClusterPermission(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的权限ID")
+		response.BadRequest(c, "無效的權限ID")
 		return
 	}
 
@@ -494,14 +494,14 @@ func (h *PermissionHandler) GetClusterPermission(c *gin.Context) {
 	response.OK(c, permission.ToResponse())
 }
 
-// ListClusterPermissions 获取集群权限列表
+// ListClusterPermissions 獲取叢集權限列表
 func (h *PermissionHandler) ListClusterPermissions(c *gin.Context) {
 	clusterIDStr := c.Query("cluster_id")
 	var clusterID uint
 	if clusterIDStr != "" {
 		id, err := strconv.ParseUint(clusterIDStr, 10, 64)
 		if err != nil {
-			response.BadRequest(c, "无效的集群ID")
+			response.BadRequest(c, "無效的叢集ID")
 			return
 		}
 		clusterID = uint(id)
@@ -513,7 +513,7 @@ func (h *PermissionHandler) ListClusterPermissions(c *gin.Context) {
 		return
 	}
 
-	// 转换为响应格式
+	// 轉換為響應格式
 	responses := make([]models.ClusterPermissionResponse, len(permissions))
 	for i, p := range permissions {
 		responses[i] = p.ToResponse()
@@ -522,7 +522,7 @@ func (h *PermissionHandler) ListClusterPermissions(c *gin.Context) {
 	response.List(c, responses, int64(len(responses)))
 }
 
-// ListAllClusterPermissions 获取所有集群权限列表
+// ListAllClusterPermissions 獲取所有叢集權限列表
 func (h *PermissionHandler) ListAllClusterPermissions(c *gin.Context) {
 	permissions, err := h.permissionService.ListAllClusterPermissions()
 	if err != nil {
@@ -530,7 +530,7 @@ func (h *PermissionHandler) ListAllClusterPermissions(c *gin.Context) {
 		return
 	}
 
-	// 转换为响应格式
+	// 轉換為響應格式
 	responses := make([]models.ClusterPermissionResponse, len(permissions))
 	for i, p := range permissions {
 		responses[i] = p.ToResponse()
@@ -539,13 +539,13 @@ func (h *PermissionHandler) ListAllClusterPermissions(c *gin.Context) {
 	response.List(c, responses, int64(len(responses)))
 }
 
-// ========== 用户权限查询 ==========
+// ========== 使用者權限查詢 ==========
 
-// GetMyPermissions 获取当前用户的权限
+// GetMyPermissions 獲取當前使用者的權限
 func (h *PermissionHandler) GetMyPermissions(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	if userID == 0 {
-		response.Unauthorized(c, "未登录")
+		response.Unauthorized(c, "未登入")
 		return
 	}
 
@@ -555,7 +555,7 @@ func (h *PermissionHandler) GetMyPermissions(c *gin.Context) {
 		return
 	}
 
-	// 转换为响应格式
+	// 轉換為響應格式
 	responses := make([]models.MyPermissionsResponse, len(permissions))
 	for i, p := range permissions {
 		permissionName := ""
@@ -584,27 +584,27 @@ func (h *PermissionHandler) GetMyPermissions(c *gin.Context) {
 	response.OK(c, responses)
 }
 
-// GetMyClusterPermission 获取当前用户在指定集群的权限
+// GetMyClusterPermission 獲取當前使用者在指定叢集的權限
 func (h *PermissionHandler) GetMyClusterPermission(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	if userID == 0 {
-		response.Unauthorized(c, "未登录")
+		response.Unauthorized(c, "未登入")
 		return
 	}
 
 	clusterID, err := strconv.ParseUint(c.Param("clusterID"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	permission, err := h.permissionService.GetUserClusterPermission(userID, uint(clusterID))
 	if err != nil {
-		response.Forbidden(c, "无权限访问该集群")
+		response.Forbidden(c, "無權限訪問該叢集")
 		return
 	}
 
-	// 获取权限类型信息
+	// 獲取權限型別資訊
 	permissionName := ""
 	var allowedActions []string
 	for _, pt := range models.GetPermissionTypes() {
@@ -625,9 +625,9 @@ func (h *PermissionHandler) GetMyClusterPermission(c *gin.Context) {
 	})
 }
 
-// ========== 用户列表 ==========
+// ========== 使用者列表 ==========
 
-// ListUsers 获取用户列表（用於权限管理的用户选择）
+// ListUsers 獲取使用者列表（用於權限管理的使用者選擇）
 func (h *PermissionHandler) ListUsers(c *gin.Context) {
 	users, err := h.permissionService.ListUsers()
 	if err != nil {

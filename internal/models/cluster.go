@@ -7,17 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// Cluster 集群模型
+// Cluster 叢集模型
 type Cluster struct {
 	ID            uint           `json:"id" gorm:"primaryKey"`
 	Name          string         `json:"name" gorm:"uniqueIndex;not null;size:100"`
 	APIServer     string         `json:"api_server" gorm:"not null;size:255"`
-	KubeconfigEnc string         `json:"-" gorm:"type:text"` // 加密存储的 kubeconfig
-	CAEnc         string         `json:"-" gorm:"type:text"` // 加密存储的 CA 证书
-	SATokenEnc    string         `json:"-" gorm:"type:text"` // 加密存储的 SA Token
+	KubeconfigEnc string         `json:"-" gorm:"type:text"` // 加密儲存的 kubeconfig
+	CAEnc         string         `json:"-" gorm:"type:text"` // 加密儲存的 CA 證書
+	SATokenEnc    string         `json:"-" gorm:"type:text"` // 加密儲存的 SA Token
 	Version       string         `json:"version" gorm:"size:50"`
 	Status        string         `json:"status" gorm:"default:unknown;size:20"` // healthy, unhealthy, unknown
-	Labels        string         `json:"labels" gorm:"type:json"`               // JSON 格式存储标签
+	Labels        string         `json:"labels" gorm:"type:json"`               // JSON 格式儲存標籤
 	CertExpireAt  *time.Time     `json:"cert_expire_at"`
 	LastHeartbeat *time.Time     `json:"last_heartbeat"`
 	CreatedBy     uint           `json:"created_by"`
@@ -25,13 +25,13 @@ type Cluster struct {
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
 
-	// 监控配置
-	MonitoringConfig string `json:"monitoring_config" gorm:"type:json"` // JSON 格式存储监控配置
+	// 監控配置
+	MonitoringConfig string `json:"monitoring_config" gorm:"type:json"` // JSON 格式儲存監控配置
 
 	// Alertmanager 配置
-	AlertManagerConfig string `json:"alertmanager_config" gorm:"type:json"` // JSON 格式存储 Alertmanager 配置
+	AlertManagerConfig string `json:"alertmanager_config" gorm:"type:json"` // JSON 格式儲存 Alertmanager 配置
 
-	// 关联关系
+	// 關聯關係
 	Creator         User              `json:"creator" gorm:"foreignKey:CreatedBy"`
 	TerminalSession []TerminalSession `json:"terminal_sessions" gorm:"foreignKey:ClusterID"`
 }
@@ -101,7 +101,7 @@ func (c *Cluster) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-// ClusterStats 集群统计信息
+// ClusterStats 叢集統計資訊
 type ClusterStats struct {
 	TotalClusters     int `json:"total_clusters"`
 	HealthyClusters   int `json:"healthy_clusters"`
@@ -112,7 +112,7 @@ type ClusterStats struct {
 	RunningPods       int `json:"running_pods"`
 }
 
-// ClusterMetrics 集群实时指标
+// ClusterMetrics 叢集實時指標
 type ClusterMetrics struct {
 	ClusterID    uint      `json:"cluster_id" gorm:"primaryKey"`
 	NodeCount    int       `json:"node_count"`
@@ -124,20 +124,20 @@ type ClusterMetrics struct {
 	StorageUsage float64   `json:"storage_usage"`
 	UpdatedAt    time.Time `json:"updated_at"`
 
-	// 关联关系
+	// 關聯關係
 	Cluster Cluster `json:"cluster" gorm:"foreignKey:ClusterID"`
 }
 
-// MonitoringConfig 监控配置
+// MonitoringConfig 監控配置
 type MonitoringConfig struct {
 	Type     string                 `json:"type"`     // prometheus, victoriametrics, disabled
-	Endpoint string                 `json:"endpoint"` // 监控数据源地址
+	Endpoint string                 `json:"endpoint"` // 監控資料來源地址
 	Auth     *MonitoringAuth        `json:"auth,omitempty"`
-	Labels   map[string]string      `json:"labels,omitempty"` // 用于统一数据源的集群标签
+	Labels   map[string]string      `json:"labels,omitempty"` // 用於統一資料來源的叢集標籤
 	Options  map[string]interface{} `json:"options,omitempty"`
 }
 
-// MonitoringAuth 监控认证配置
+// MonitoringAuth 監控認證配置
 type MonitoringAuth struct {
 	Type     string `json:"type"` // none, basic, bearer, mtls
 	Username string `json:"username,omitempty"`
@@ -148,7 +148,7 @@ type MonitoringAuth struct {
 	CAFile   string `json:"ca_file,omitempty"`
 }
 
-// MetricsQuery 监控查询参数
+// MetricsQuery 監控查詢參數
 type MetricsQuery struct {
 	Query   string            `json:"query"`
 	Start   int64             `json:"start"`
@@ -158,88 +158,88 @@ type MetricsQuery struct {
 	Labels  map[string]string `json:"labels,omitempty"`
 }
 
-// MetricsResponse 监控查询响应
+// MetricsResponse 監控查詢響應
 type MetricsResponse struct {
 	Status string      `json:"status"`
 	Data   MetricsData `json:"data"`
 }
 
-// MetricsData 监控数据
+// MetricsData 監控資料
 type MetricsData struct {
 	ResultType string          `json:"resultType"`
 	Result     []MetricsResult `json:"result"`
 }
 
-// MetricsResult 监控结果
+// MetricsResult 監控結果
 type MetricsResult struct {
 	Metric map[string]string `json:"metric"`
 	Values [][]interface{}   `json:"values,omitempty"`
 	Value  []interface{}     `json:"value,omitempty"`
 }
 
-// ClusterMetricsData 集群监控数据
+// ClusterMetricsData 叢集監控資料
 type ClusterMetricsData struct {
 	CPU     *MetricSeries   `json:"cpu,omitempty"`
 	Memory  *MetricSeries   `json:"memory,omitempty"`
 	Network *NetworkMetrics `json:"network,omitempty"`
 	Storage *MetricSeries   `json:"storage,omitempty"`
 	Pods    *PodMetrics     `json:"pods,omitempty"`
-	// Pod 级别的扩展监控指标
-	CPURequest        *MetricSeries   `json:"cpu_request,omitempty"`         // CPU 请求值（固定）
+	// Pod 級別的擴充套件監控指標
+	CPURequest        *MetricSeries   `json:"cpu_request,omitempty"`         // CPU 請求值（固定）
 	CPULimit          *MetricSeries   `json:"cpu_limit,omitempty"`           // CPU 限制值（固定）
-	MemoryRequest     *MetricSeries   `json:"memory_request,omitempty"`      // 内存请求值（固定）
-	MemoryLimit       *MetricSeries   `json:"memory_limit,omitempty"`        // 内存限制值（固定）
-	ProbeFailures     *MetricSeries   `json:"probe_failures,omitempty"`      // 健康检查失败次数
-	ContainerRestarts *MetricSeries   `json:"container_restarts,omitempty"`  // 容器重启次数
-	NetworkPPS        *NetworkPPS     `json:"network_pps,omitempty"`         // 网络PPS（包/秒）
-	Threads           *MetricSeries   `json:"threads,omitempty"`             // 线程数
-	NetworkDrops      *NetworkDrops   `json:"network_drops,omitempty"`       // 网卡丢包情况
+	MemoryRequest     *MetricSeries   `json:"memory_request,omitempty"`      // 記憶體請求值（固定）
+	MemoryLimit       *MetricSeries   `json:"memory_limit,omitempty"`        // 記憶體限制值（固定）
+	ProbeFailures     *MetricSeries   `json:"probe_failures,omitempty"`      // 健康檢查失敗次數
+	ContainerRestarts *MetricSeries   `json:"container_restarts,omitempty"`  // 容器重啟次數
+	NetworkPPS        *NetworkPPS     `json:"network_pps,omitempty"`         // 網路PPS（包/秒）
+	Threads           *MetricSeries   `json:"threads,omitempty"`             // 執行緒數
+	NetworkDrops      *NetworkDrops   `json:"network_drops,omitempty"`       // 網絡卡丟包情況
 	CPUThrottling     *MetricSeries   `json:"cpu_throttling,omitempty"`      // CPU 限流比例
-	CPUThrottlingTime *MetricSeries   `json:"cpu_throttling_time,omitempty"` // CPU 限流时间
-	DiskIOPS          *DiskIOPS       `json:"disk_iops,omitempty"`           // 磁盘 IOPS
-	DiskThroughput    *DiskThroughput `json:"disk_throughput,omitempty"`     // 磁盘吞吐量
-	CPUUsageAbsolute  *MetricSeries   `json:"cpu_usage_absolute,omitempty"`  // CPU 实际使用量（cores）
-	MemoryUsageBytes  *MetricSeries   `json:"memory_usage_bytes,omitempty"`  // 内存实际使用量（bytes）
-	OOMKills          *MetricSeries   `json:"oom_kills,omitempty"`           // OOM Kill 次数
+	CPUThrottlingTime *MetricSeries   `json:"cpu_throttling_time,omitempty"` // CPU 限流時間
+	DiskIOPS          *DiskIOPS       `json:"disk_iops,omitempty"`           // 磁碟 IOPS
+	DiskThroughput    *DiskThroughput `json:"disk_throughput,omitempty"`     // 磁碟吞吐量
+	CPUUsageAbsolute  *MetricSeries   `json:"cpu_usage_absolute,omitempty"`  // CPU 實際使用量（cores）
+	MemoryUsageBytes  *MetricSeries   `json:"memory_usage_bytes,omitempty"`  // 記憶體實際使用量（bytes）
+	OOMKills          *MetricSeries   `json:"oom_kills,omitempty"`           // OOM Kill 次數
 
-	// 集群级别监控指标
-	ClusterOverview *ClusterOverview `json:"cluster_overview,omitempty"` // 集群概览
-	NodeList        []NodeMetricItem `json:"node_list,omitempty"`        // Node列表指标
+	// 叢集級別監控指標
+	ClusterOverview *ClusterOverview `json:"cluster_overview,omitempty"` // 叢集概覽
+	NodeList        []NodeMetricItem `json:"node_list,omitempty"`        // Node列表指標
 
-	// 工作负载多Pod监控指标（显示多条曲线）
+	// 工作負載多Pod監控指標（顯示多條曲線）
 	CPUMulti               *MultiSeriesMetric `json:"cpu_multi,omitempty"`                 // CPU使用率（多Pod）
-	MemoryMulti            *MultiSeriesMetric `json:"memory_multi,omitempty"`              // 内存使用率（多Pod）
-	ContainerRestartsMulti *MultiSeriesMetric `json:"container_restarts_multi,omitempty"`  // 容器重启次数（多Pod）
-	OOMKillsMulti          *MultiSeriesMetric `json:"oom_kills_multi,omitempty"`           // OOM Kill 次数（多Pod）
-	ProbeFailuresMulti     *MultiSeriesMetric `json:"probe_failures_multi,omitempty"`      // 健康检查失败次数（多Pod）
-	NetworkPPSMulti        *MultiSeriesMetric `json:"network_pps_multi,omitempty"`         // 网络PPS（多Pod）
-	ThreadsMulti           *MultiSeriesMetric `json:"threads_multi,omitempty"`             // 线程数（多Pod）
-	NetworkDropsMulti      *MultiSeriesMetric `json:"network_drops_multi,omitempty"`       // 网卡丢包情况（多Pod）
+	MemoryMulti            *MultiSeriesMetric `json:"memory_multi,omitempty"`              // 記憶體使用率（多Pod）
+	ContainerRestartsMulti *MultiSeriesMetric `json:"container_restarts_multi,omitempty"`  // 容器重啟次數（多Pod）
+	OOMKillsMulti          *MultiSeriesMetric `json:"oom_kills_multi,omitempty"`           // OOM Kill 次數（多Pod）
+	ProbeFailuresMulti     *MultiSeriesMetric `json:"probe_failures_multi,omitempty"`      // 健康檢查失敗次數（多Pod）
+	NetworkPPSMulti        *MultiSeriesMetric `json:"network_pps_multi,omitempty"`         // 網路PPS（多Pod）
+	ThreadsMulti           *MultiSeriesMetric `json:"threads_multi,omitempty"`             // 執行緒數（多Pod）
+	NetworkDropsMulti      *MultiSeriesMetric `json:"network_drops_multi,omitempty"`       // 網絡卡丟包情況（多Pod）
 	CPUThrottlingMulti     *MultiSeriesMetric `json:"cpu_throttling_multi,omitempty"`      // CPU 限流比例（多Pod）
-	CPUThrottlingTimeMulti *MultiSeriesMetric `json:"cpu_throttling_time_multi,omitempty"` // CPU 限流时间（多Pod）
-	DiskIOPSMulti          *MultiSeriesMetric `json:"disk_iops_multi,omitempty"`           // 磁盘 IOPS（多Pod）
-	DiskThroughputMulti    *MultiSeriesMetric `json:"disk_throughput_multi,omitempty"`     // 磁盘吞吐量（多Pod）
+	CPUThrottlingTimeMulti *MultiSeriesMetric `json:"cpu_throttling_time_multi,omitempty"` // CPU 限流時間（多Pod）
+	DiskIOPSMulti          *MultiSeriesMetric `json:"disk_iops_multi,omitempty"`           // 磁碟 IOPS（多Pod）
+	DiskThroughputMulti    *MultiSeriesMetric `json:"disk_throughput_multi,omitempty"`     // 磁碟吞吐量（多Pod）
 }
 
-// MetricSeries 指标时间序列
+// MetricSeries 指標時間序列
 type MetricSeries struct {
 	Current float64     `json:"current"`
 	Series  []DataPoint `json:"series"`
 }
 
-// DataPoint 数据点
+// DataPoint 資料點
 type DataPoint struct {
 	Timestamp int64   `json:"timestamp"`
 	Value     float64 `json:"value"`
 }
 
-// NetworkMetrics 网络指标
+// NetworkMetrics 網路指標
 type NetworkMetrics struct {
 	In  *MetricSeries `json:"in"`
 	Out *MetricSeries `json:"out"`
 }
 
-// PodMetrics Pod指标
+// PodMetrics Pod指標
 type PodMetrics struct {
 	Total   int `json:"total"`
 	Running int `json:"running"`
@@ -247,84 +247,84 @@ type PodMetrics struct {
 	Failed  int `json:"failed"`
 }
 
-// ContainerSubnetIPs 容器子网IP信息
+// ContainerSubnetIPs 容器子網IP資訊
 type ContainerSubnetIPs struct {
 	TotalIPs     int `json:"total_ips"`
 	UsedIPs      int `json:"used_ips"`
 	AvailableIPs int `json:"available_ips"`
 }
 
-// NetworkPPS 网络PPS指标
+// NetworkPPS 網路PPS指標
 type NetworkPPS struct {
 	In  *MetricSeries `json:"in"`  // 入站PPS
 	Out *MetricSeries `json:"out"` // 出站PPS
 }
 
-// NetworkDrops 网卡丢包指标
+// NetworkDrops 網絡卡丟包指標
 type NetworkDrops struct {
-	Receive  *MetricSeries `json:"receive"`  // 接收丢包
-	Transmit *MetricSeries `json:"transmit"` // 发送丢包
+	Receive  *MetricSeries `json:"receive"`  // 接收丟包
+	Transmit *MetricSeries `json:"transmit"` // 傳送丟包
 }
 
-// DiskIOPS 磁盘IOPS指标
+// DiskIOPS 磁碟IOPS指標
 type DiskIOPS struct {
-	Read  *MetricSeries `json:"read"`  // 读IOPS
-	Write *MetricSeries `json:"write"` // 写IOPS
+	Read  *MetricSeries `json:"read"`  // 讀IOPS
+	Write *MetricSeries `json:"write"` // 寫IOPS
 }
 
-// DiskThroughput 磁盘吞吐量指标
+// DiskThroughput 磁碟吞吐量指標
 type DiskThroughput struct {
-	Read  *MetricSeries `json:"read"`  // 读吞吐量（bytes/s）
-	Write *MetricSeries `json:"write"` // 写吞吐量（bytes/s）
+	Read  *MetricSeries `json:"read"`  // 讀吞吐量（bytes/s）
+	Write *MetricSeries `json:"write"` // 寫吞吐量（bytes/s）
 }
 
-// MultiSeriesDataPoint 多时间序列数据点（支持多个Pod/实例）
+// MultiSeriesDataPoint 多時間序列資料點（支援多個Pod/例項）
 type MultiSeriesDataPoint struct {
 	Timestamp int64              `json:"timestamp"`
-	Values    map[string]float64 `json:"values"` // key为pod名称，value为对应值
+	Values    map[string]float64 `json:"values"` // key為pod名稱，value為對應值
 }
 
-// MultiSeriesMetric 多时间序列指标（用于展示多个Pod的数据）
+// MultiSeriesMetric 多時間序列指標（用於展示多個Pod的資料）
 type MultiSeriesMetric struct {
-	Series []MultiSeriesDataPoint `json:"series"` // 时间序列数据
+	Series []MultiSeriesDataPoint `json:"series"` // 時間序列資料
 }
 
-// ClusterOverview 集群概览监控指标
+// ClusterOverview 叢集概覽監控指標
 type ClusterOverview struct {
-	// 资源总量
-	TotalCPUCores float64 `json:"total_cpu_cores"` // CPU 总核数
-	TotalMemory   float64 `json:"total_memory"`    // 内存总数（bytes）
+	// 資源總量
+	TotalCPUCores float64 `json:"total_cpu_cores"` // CPU 總核數
+	TotalMemory   float64 `json:"total_memory"`    // 記憶體總數（bytes）
 
-	// 资源使用
+	// 資源使用
 	CPUUsageRate    *MetricSeries `json:"cpu_usage_rate,omitempty"`    // CPU 使用率
-	MemoryUsageRate *MetricSeries `json:"memory_usage_rate,omitempty"` // 内存使用率
+	MemoryUsageRate *MetricSeries `json:"memory_usage_rate,omitempty"` // 記憶體使用率
 
-	// Pod 相关
-	MaxPods       int     `json:"max_pods"`       // Pod 最大可创建数
-	CreatedPods   int     `json:"created_pods"`   // Pod 已创建数
-	AvailablePods int     `json:"available_pods"` // Pod 可创建数
+	// Pod 相關
+	MaxPods       int     `json:"max_pods"`       // Pod 最大可建立數
+	CreatedPods   int     `json:"created_pods"`   // Pod 已建立數
+	AvailablePods int     `json:"available_pods"` // Pod 可建立數
 	PodUsageRate  float64 `json:"pod_usage_rate"` // Pod 使用率
 
-	// 集群状态
+	// 叢集狀態
 	EtcdHasLeader         bool    `json:"etcd_has_leader"`        // Etcd 是否有 leader
 	ApiServerAvailability float64 `json:"apiserver_availability"` // ApiServer 近30天可用率
 
-	// 资源配额
+	// 資源配額
 	CPURequestRatio *MetricSeries `json:"cpu_request_ratio,omitempty"` // CPU Request 比值
 	CPULimitRatio   *MetricSeries `json:"cpu_limit_ratio,omitempty"`   // CPU Limit 比值
-	MemRequestRatio *MetricSeries `json:"mem_request_ratio,omitempty"` // 内存 Request 比值
-	MemLimitRatio   *MetricSeries `json:"mem_limit_ratio,omitempty"`   // 内存 Limit 比值
+	MemRequestRatio *MetricSeries `json:"mem_request_ratio,omitempty"` // 記憶體 Request 比值
+	MemLimitRatio   *MetricSeries `json:"mem_limit_ratio,omitempty"`   // 記憶體 Limit 比值
 
-	// ApiServer 请求量
-	ApiServerRequestRate *MetricSeries `json:"apiserver_request_rate,omitempty"` // ApiServer 总请求量
+	// ApiServer 請求量
+	ApiServerRequestRate *MetricSeries `json:"apiserver_request_rate,omitempty"` // ApiServer 總請求量
 }
 
-// NodeMetricItem Node 监控指标项
+// NodeMetricItem Node 監控指標項
 type NodeMetricItem struct {
-	NodeName        string  `json:"node_name"`         // 节点名称
+	NodeName        string  `json:"node_name"`         // 節點名稱
 	CPUUsageRate    float64 `json:"cpu_usage_rate"`    // CPU 使用率
-	MemoryUsageRate float64 `json:"memory_usage_rate"` // 内存使用率
-	CPUCores        float64 `json:"cpu_cores"`         // CPU 核数
-	TotalMemory     float64 `json:"total_memory"`      // 总内存（bytes）
-	Status          string  `json:"status"`            // 节点状态
+	MemoryUsageRate float64 `json:"memory_usage_rate"` // 記憶體使用率
+	CPUCores        float64 `json:"cpu_cores"`         // CPU 核數
+	TotalMemory     float64 `json:"total_memory"`      // 總記憶體（bytes）
+	Status          string  `json:"status"`            // 節點狀態
 }

@@ -17,13 +17,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// OMService 运维服务
+// OMService 運維服務
 type OMService struct {
 	prometheusSvc       *PrometheusService
 	monitoringConfigSvc *MonitoringConfigService
 }
 
-// NewOMService 创建运维服务
+// NewOMService 建立運維服務
 func NewOMService(prometheusSvc *PrometheusService, monitoringConfigSvc *MonitoringConfigService) *OMService {
 	return &OMService{
 		prometheusSvc:       prometheusSvc,
@@ -31,7 +31,7 @@ func NewOMService(prometheusSvc *PrometheusService, monitoringConfigSvc *Monitor
 	}
 }
 
-// GetHealthDiagnosis 获取集群健康诊断
+// GetHealthDiagnosis 獲取叢集健康診斷
 func (s *OMService) GetHealthDiagnosis(ctx context.Context, clientset *kubernetes.Clientset, clusterID uint) (*models.HealthDiagnosisResponse, error) {
 	response := &models.HealthDiagnosisResponse{
 		DiagnosisTime:  time.Now().Unix(),
@@ -43,8 +43,8 @@ func (s *OMService) GetHealthDiagnosis(ctx context.Context, clientset *kubernete
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
-	// 并发执行各项诊断
-	// 1. 节点健康诊断
+	// 併發執行各項診斷
+	// 1. 節點健康診斷
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -55,7 +55,7 @@ func (s *OMService) GetHealthDiagnosis(ctx context.Context, clientset *kubernete
 		mu.Unlock()
 	}()
 
-	// 2. 工作负载诊断
+	// 2. 工作負載診斷
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -66,7 +66,7 @@ func (s *OMService) GetHealthDiagnosis(ctx context.Context, clientset *kubernete
 		mu.Unlock()
 	}()
 
-	// 3. 资源诊断
+	// 3. 資源診斷
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -77,7 +77,7 @@ func (s *OMService) GetHealthDiagnosis(ctx context.Context, clientset *kubernete
 		mu.Unlock()
 	}()
 
-	// 4. 存储诊断
+	// 4. 儲存診斷
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -88,7 +88,7 @@ func (s *OMService) GetHealthDiagnosis(ctx context.Context, clientset *kubernete
 		mu.Unlock()
 	}()
 
-	// 5. 控制面诊断
+	// 5. 控制面診斷
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -101,31 +101,31 @@ func (s *OMService) GetHealthDiagnosis(ctx context.Context, clientset *kubernete
 
 	wg.Wait()
 
-	// 计算综合健康评分
+	// 計算綜合健康評分
 	response.HealthScore = s.calculateOverallScore(response.CategoryScores)
 
-	// 确定健康状态
+	// 確定健康狀態
 	response.Status = s.determineHealthStatus(response.HealthScore, response.RiskItems)
 
-	// 生成诊断建议
+	// 生成診斷建議
 	response.Suggestions = s.generateSuggestions(response.RiskItems)
 
 	return response, nil
 }
 
-// diagnoseNodes 诊断节点健康状况
+// diagnoseNodes 診斷節點健康狀況
 func (s *OMService) diagnoseNodes(ctx context.Context, clientset *kubernetes.Clientset) ([]models.RiskItem, int) {
 	risks := []models.RiskItem{}
 	score := 100
 
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取节点列表失败", "error", err)
+		logger.Error("獲取節點列表失敗", "error", err)
 		return risks, 50
 	}
 
 	for _, node := range nodes.Items {
-		// 检查节点状态
+		// 檢查節點狀態
 		for _, condition := range node.Status.Conditions {
 			if condition.Type == corev1.NodeReady {
 				if condition.Status != corev1.ConditionTrue {
@@ -133,10 +133,10 @@ func (s *OMService) diagnoseNodes(ctx context.Context, clientset *kubernetes.Cli
 						ID:          fmt.Sprintf("node-not-ready-%s", node.Name),
 						Category:    "node",
 						Severity:    "critical",
-						Title:       "节点未就绪",
-						Description: fmt.Sprintf("节点 %s 处于未就绪状态", node.Name),
+						Title:       "節點未就緒",
+						Description: fmt.Sprintf("節點 %s 處於未就緒狀態", node.Name),
 						Resource:    node.Name,
-						Solution:    "检查节点 kubelet 服务状态，查看节点系统资源使用情况",
+						Solution:    "檢查節點 kubelet 服務狀態，檢視節點系統資源使用情況",
 					})
 					score -= 20
 				}
@@ -146,10 +146,10 @@ func (s *OMService) diagnoseNodes(ctx context.Context, clientset *kubernetes.Cli
 					ID:          fmt.Sprintf("node-memory-pressure-%s", node.Name),
 					Category:    "node",
 					Severity:    "warning",
-					Title:       "节点内存压力",
-					Description: fmt.Sprintf("节点 %s 存在内存压力", node.Name),
+					Title:       "節點記憶體壓力",
+					Description: fmt.Sprintf("節點 %s 存在記憶體壓力", node.Name),
 					Resource:    node.Name,
-					Solution:    "考虑扩容节点内存或迁移部分工作负载",
+					Solution:    "考慮擴容節點記憶體或遷移部分工作負載",
 				})
 				score -= 10
 			}
@@ -158,10 +158,10 @@ func (s *OMService) diagnoseNodes(ctx context.Context, clientset *kubernetes.Cli
 					ID:          fmt.Sprintf("node-disk-pressure-%s", node.Name),
 					Category:    "node",
 					Severity:    "warning",
-					Title:       "节点磁盘压力",
-					Description: fmt.Sprintf("节点 %s 存在磁盘压力", node.Name),
+					Title:       "節點磁碟壓力",
+					Description: fmt.Sprintf("節點 %s 存在磁碟壓力", node.Name),
 					Resource:    node.Name,
-					Solution:    "清理不需要的镜像和日志，或扩展磁盘容量",
+					Solution:    "清理不需要的映像和日誌，或擴充套件磁碟容量",
 				})
 				score -= 10
 			}
@@ -170,25 +170,25 @@ func (s *OMService) diagnoseNodes(ctx context.Context, clientset *kubernetes.Cli
 					ID:          fmt.Sprintf("node-pid-pressure-%s", node.Name),
 					Category:    "node",
 					Severity:    "warning",
-					Title:       "节点PID压力",
-					Description: fmt.Sprintf("节点 %s 存在PID压力", node.Name),
+					Title:       "節點PID壓力",
+					Description: fmt.Sprintf("節點 %s 存在PID壓力", node.Name),
 					Resource:    node.Name,
-					Solution:    "检查是否有异常进程，考虑调整 max-pods 参数",
+					Solution:    "檢查是否有異常程序，考慮調整 max-pods 參數",
 				})
 				score -= 10
 			}
 		}
 
-		// 检查节点是否被标记为不可调度
+		// 檢查節點是否被標記為不可排程
 		if node.Spec.Unschedulable {
 			risks = append(risks, models.RiskItem{
 				ID:          fmt.Sprintf("node-unschedulable-%s", node.Name),
 				Category:    "node",
 				Severity:    "info",
-				Title:       "节点不可调度",
-				Description: fmt.Sprintf("节点 %s 已被标记为不可调度", node.Name),
+				Title:       "節點不可排程",
+				Description: fmt.Sprintf("節點 %s 已被標記為不可排程", node.Name),
 				Resource:    node.Name,
-				Solution:    "如果节点维护已完成，请执行 uncordon 操作",
+				Solution:    "如果節點維護已完成，請執行 uncordon 操作",
 			})
 			score -= 5
 		}
@@ -200,15 +200,15 @@ func (s *OMService) diagnoseNodes(ctx context.Context, clientset *kubernetes.Cli
 	return risks, score
 }
 
-// diagnoseWorkloads 诊断工作负载状态
+// diagnoseWorkloads 診斷工作負載狀態
 func (s *OMService) diagnoseWorkloads(ctx context.Context, clientset *kubernetes.Clientset) ([]models.RiskItem, int) {
 	risks := []models.RiskItem{}
 	score := 100
 
-	// 检查 Deployment
+	// 檢查 Deployment
 	deployments, err := clientset.AppsV1().Deployments("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取 Deployment 列表失败", "error", err)
+		logger.Error("獲取 Deployment 列表失敗", "error", err)
 	} else {
 		for _, dep := range deployments.Items {
 			if dep.Status.Replicas != dep.Status.ReadyReplicas {
@@ -223,20 +223,20 @@ func (s *OMService) diagnoseWorkloads(ctx context.Context, clientset *kubernetes
 					ID:          fmt.Sprintf("deployment-not-ready-%s-%s", dep.Namespace, dep.Name),
 					Category:    "workload",
 					Severity:    severity,
-					Title:       "Deployment 副本未就绪",
-					Description: fmt.Sprintf("Deployment %s/%s: %d/%d 副本就绪", dep.Namespace, dep.Name, dep.Status.ReadyReplicas, dep.Status.Replicas),
+					Title:       "Deployment 副本未就緒",
+					Description: fmt.Sprintf("Deployment %s/%s: %d/%d 副本就緒", dep.Namespace, dep.Name, dep.Status.ReadyReplicas, dep.Status.Replicas),
 					Resource:    dep.Name,
 					Namespace:   dep.Namespace,
-					Solution:    "检查 Pod 事件和日志，确认容器启动失败原因",
+					Solution:    "檢查 Pod 事件和日誌，確認容器啟動失敗原因",
 				})
 			}
 		}
 	}
 
-	// 检查 StatefulSet
+	// 檢查 StatefulSet
 	statefulSets, err := clientset.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取 StatefulSet 列表失败", "error", err)
+		logger.Error("獲取 StatefulSet 列表失敗", "error", err)
 	} else {
 		for _, sts := range statefulSets.Items {
 			if sts.Status.Replicas != sts.Status.ReadyReplicas {
@@ -251,20 +251,20 @@ func (s *OMService) diagnoseWorkloads(ctx context.Context, clientset *kubernetes
 					ID:          fmt.Sprintf("statefulset-not-ready-%s-%s", sts.Namespace, sts.Name),
 					Category:    "workload",
 					Severity:    severity,
-					Title:       "StatefulSet 副本未就绪",
-					Description: fmt.Sprintf("StatefulSet %s/%s: %d/%d 副本就绪", sts.Namespace, sts.Name, sts.Status.ReadyReplicas, sts.Status.Replicas),
+					Title:       "StatefulSet 副本未就緒",
+					Description: fmt.Sprintf("StatefulSet %s/%s: %d/%d 副本就緒", sts.Namespace, sts.Name, sts.Status.ReadyReplicas, sts.Status.Replicas),
 					Resource:    sts.Name,
 					Namespace:   sts.Namespace,
-					Solution:    "检查 Pod 事件和日志，确认容器启动失败原因",
+					Solution:    "檢查 Pod 事件和日誌，確認容器啟動失敗原因",
 				})
 			}
 		}
 	}
 
-	// 检查 DaemonSet
+	// 檢查 DaemonSet
 	daemonSets, err := clientset.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取 DaemonSet 列表失败", "error", err)
+		logger.Error("獲取 DaemonSet 列表失敗", "error", err)
 	} else {
 		for _, ds := range daemonSets.Items {
 			if ds.Status.NumberUnavailable > 0 {
@@ -273,60 +273,60 @@ func (s *OMService) diagnoseWorkloads(ctx context.Context, clientset *kubernetes
 					Category:    "workload",
 					Severity:    "warning",
 					Title:       "DaemonSet 存在不可用副本",
-					Description: fmt.Sprintf("DaemonSet %s/%s: %d 个节点上的副本不可用", ds.Namespace, ds.Name, ds.Status.NumberUnavailable),
+					Description: fmt.Sprintf("DaemonSet %s/%s: %d 個節點上的副本不可用", ds.Namespace, ds.Name, ds.Status.NumberUnavailable),
 					Resource:    ds.Name,
 					Namespace:   ds.Namespace,
-					Solution:    "检查相关节点和 Pod 状态",
+					Solution:    "檢查相關節點和 Pod 狀態",
 				})
 				score -= 5
 			}
 		}
 	}
 
-	// 检查异常 Pod
+	// 檢查異常 Pod
 	pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取 Pod 列表失败", "error", err)
+		logger.Error("獲取 Pod 列表失敗", "error", err)
 	} else {
 		crashLoopCount := 0
 		pendingCount := 0
 		for _, pod := range pods.Items {
-			// 检查 CrashLoopBackOff
+			// 檢查 CrashLoopBackOff
 			for _, containerStatus := range pod.Status.ContainerStatuses {
 				if containerStatus.RestartCount > 5 {
 					if containerStatus.State.Waiting != nil && containerStatus.State.Waiting.Reason == "CrashLoopBackOff" {
 						crashLoopCount++
-						if crashLoopCount <= 5 { // 只报告前5个
+						if crashLoopCount <= 5 { // 只報告前5個
 							risks = append(risks, models.RiskItem{
 								ID:          fmt.Sprintf("pod-crashloop-%s-%s", pod.Namespace, pod.Name),
 								Category:    "workload",
 								Severity:    "critical",
-								Title:       "Pod 持续崩溃重启",
-								Description: fmt.Sprintf("Pod %s/%s 容器 %s 已重启 %d 次", pod.Namespace, pod.Name, containerStatus.Name, containerStatus.RestartCount),
+								Title:       "Pod 持續崩潰重啟",
+								Description: fmt.Sprintf("Pod %s/%s 容器 %s 已重啟 %d 次", pod.Namespace, pod.Name, containerStatus.Name, containerStatus.RestartCount),
 								Resource:    pod.Name,
 								Namespace:   pod.Namespace,
-								Solution:    "检查容器日志，排查应用启动失败原因",
+								Solution:    "檢查容器日誌，排查應用啟動失敗原因",
 							})
 						}
 					}
 				}
 			}
 
-			// 检查长时间 Pending
+			// 檢查長時間 Pending
 			if pod.Status.Phase == corev1.PodPending {
 				pendingDuration := time.Since(pod.CreationTimestamp.Time)
 				if pendingDuration > 5*time.Minute {
 					pendingCount++
-					if pendingCount <= 5 { // 只报告前5个
+					if pendingCount <= 5 { // 只報告前5個
 						risks = append(risks, models.RiskItem{
 							ID:          fmt.Sprintf("pod-pending-%s-%s", pod.Namespace, pod.Name),
 							Category:    "workload",
 							Severity:    "warning",
-							Title:       "Pod 长时间处于 Pending 状态",
-							Description: fmt.Sprintf("Pod %s/%s 已 Pending %.0f 分钟", pod.Namespace, pod.Name, pendingDuration.Minutes()),
+							Title:       "Pod 長時間處於 Pending 狀態",
+							Description: fmt.Sprintf("Pod %s/%s 已 Pending %.0f 分鐘", pod.Namespace, pod.Name, pendingDuration.Minutes()),
 							Resource:    pod.Name,
 							Namespace:   pod.Namespace,
-							Solution:    "检查是否资源不足或调度约束过严",
+							Solution:    "檢查是否資源不足或排程約束過嚴",
 						})
 					}
 				}
@@ -346,21 +346,21 @@ func (s *OMService) diagnoseWorkloads(ctx context.Context, clientset *kubernetes
 	return risks, score
 }
 
-// diagnoseResources 诊断资源使用情况
+// diagnoseResources 診斷資源使用情況
 func (s *OMService) diagnoseResources(ctx context.Context, clientset *kubernetes.Clientset, clusterID uint) ([]models.RiskItem, int) {
 	risks := []models.RiskItem{}
 	score := 100
 
-	// 获取监控配置
+	// 獲取監控配置
 	config, err := s.monitoringConfigSvc.GetMonitoringConfig(clusterID)
 	if err != nil || config.Type == "disabled" {
-		// 如果没有配置监控，通过 K8s API 获取基本信息
+		// 如果沒有配置監控，透過 K8s API 獲取基本資訊
 		return s.diagnoseResourcesFromK8s(ctx, clientset)
 	}
 
 	now := time.Now().Unix()
 
-	// 查询集群 CPU 使用率
+	// 查詢叢集 CPU 使用率
 	cpuQuery := "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100"
 	if cpuResp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 		Query: cpuQuery,
@@ -374,9 +374,9 @@ func (s *OMService) diagnoseResources(ctx context.Context, clientset *kubernetes
 					ID:          "cluster-cpu-critical",
 					Category:    "resource",
 					Severity:    "critical",
-					Title:       "集群 CPU 使用率过高",
-					Description: fmt.Sprintf("集群 CPU 使用率达到 %.1f%%", val),
-					Solution:    "考虑扩展节点或优化工作负载",
+					Title:       "叢集 CPU 使用率過高",
+					Description: fmt.Sprintf("叢集 CPU 使用率達到 %.1f%%", val),
+					Solution:    "考慮擴充套件節點或最佳化工作負載",
 				})
 				score -= 25
 			} else if val > 80 {
@@ -384,16 +384,16 @@ func (s *OMService) diagnoseResources(ctx context.Context, clientset *kubernetes
 					ID:          "cluster-cpu-warning",
 					Category:    "resource",
 					Severity:    "warning",
-					Title:       "集群 CPU 使用率较高",
-					Description: fmt.Sprintf("集群 CPU 使用率达到 %.1f%%", val),
-					Solution:    "关注 CPU 使用趋势，准备扩容计划",
+					Title:       "叢集 CPU 使用率較高",
+					Description: fmt.Sprintf("叢集 CPU 使用率達到 %.1f%%", val),
+					Solution:    "關注 CPU 使用趨勢，準備擴容計劃",
 				})
 				score -= 10
 			}
 		}
 	}
 
-	// 查询集群内存使用率
+	// 查詢叢集記憶體使用率
 	memQuery := "(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100"
 	if memResp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 		Query: memQuery,
@@ -407,9 +407,9 @@ func (s *OMService) diagnoseResources(ctx context.Context, clientset *kubernetes
 					ID:          "cluster-memory-critical",
 					Category:    "resource",
 					Severity:    "critical",
-					Title:       "集群内存使用率过高",
-					Description: fmt.Sprintf("集群内存使用率达到 %.1f%%", val),
-					Solution:    "考虑扩展节点内存或优化内存使用",
+					Title:       "叢集記憶體使用率過高",
+					Description: fmt.Sprintf("叢集記憶體使用率達到 %.1f%%", val),
+					Solution:    "考慮擴充套件節點記憶體或最佳化記憶體使用",
 				})
 				score -= 25
 			} else if val > 80 {
@@ -417,9 +417,9 @@ func (s *OMService) diagnoseResources(ctx context.Context, clientset *kubernetes
 					ID:          "cluster-memory-warning",
 					Category:    "resource",
 					Severity:    "warning",
-					Title:       "集群内存使用率较高",
-					Description: fmt.Sprintf("集群内存使用率达到 %.1f%%", val),
-					Solution:    "关注内存使用趋势，准备扩容计划",
+					Title:       "叢集記憶體使用率較高",
+					Description: fmt.Sprintf("叢集記憶體使用率達到 %.1f%%", val),
+					Solution:    "關注記憶體使用趨勢，準備擴容計劃",
 				})
 				score -= 10
 			}
@@ -432,12 +432,12 @@ func (s *OMService) diagnoseResources(ctx context.Context, clientset *kubernetes
 	return risks, score
 }
 
-// diagnoseResourcesFromK8s 从 K8s API 诊断资源（无监控数据时）
+// diagnoseResourcesFromK8s 從 K8s API 診斷資源（無監控資料時）
 func (s *OMService) diagnoseResourcesFromK8s(ctx context.Context, clientset *kubernetes.Clientset) ([]models.RiskItem, int) {
 	risks := []models.RiskItem{}
 	score := 100
 
-	// 检查资源配额
+	// 檢查資源配額
 	quotas, err := clientset.CoreV1().ResourceQuotas("").List(ctx, metav1.ListOptions{})
 	if err == nil {
 		for _, quota := range quotas.Items {
@@ -452,11 +452,11 @@ func (s *OMService) diagnoseResourcesFromK8s(ctx context.Context, clientset *kub
 								ID:          fmt.Sprintf("quota-exceeded-%s-%s-%s", quota.Namespace, quota.Name, resource),
 								Category:    "resource",
 								Severity:    "warning",
-								Title:       "资源配额使用率过高",
-								Description: fmt.Sprintf("命名空间 %s 资源 %s 使用率达到 %.1f%%", quota.Namespace, resource, usageRate),
+								Title:       "資源配額使用率過高",
+								Description: fmt.Sprintf("命名空間 %s 資源 %s 使用率達到 %.1f%%", quota.Namespace, resource, usageRate),
 								Namespace:   quota.Namespace,
 								Resource:    quota.Name,
-								Solution:    "考虑提高资源配额或优化资源使用",
+								Solution:    "考慮提高資源配額或最佳化資源使用",
 							})
 							score -= 10
 						}
@@ -472,15 +472,15 @@ func (s *OMService) diagnoseResourcesFromK8s(ctx context.Context, clientset *kub
 	return risks, score
 }
 
-// diagnoseStorage 诊断存储状态
+// diagnoseStorage 診斷儲存狀態
 func (s *OMService) diagnoseStorage(ctx context.Context, clientset *kubernetes.Clientset) ([]models.RiskItem, int) {
 	risks := []models.RiskItem{}
 	score := 100
 
-	// 检查 PVC 状态
+	// 檢查 PVC 狀態
 	pvcs, err := clientset.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取 PVC 列表失败", "error", err)
+		logger.Error("獲取 PVC 列表失敗", "error", err)
 		return risks, score
 	}
 
@@ -493,11 +493,11 @@ func (s *OMService) diagnoseStorage(ctx context.Context, clientset *kubernetes.C
 					ID:          fmt.Sprintf("pvc-pending-%s-%s", pvc.Namespace, pvc.Name),
 					Category:    "storage",
 					Severity:    "warning",
-					Title:       "PVC 处于 Pending 状态",
-					Description: fmt.Sprintf("PVC %s/%s 无法绑定到 PV", pvc.Namespace, pvc.Name),
+					Title:       "PVC 處於 Pending 狀態",
+					Description: fmt.Sprintf("PVC %s/%s 無法繫結到 PV", pvc.Namespace, pvc.Name),
 					Resource:    pvc.Name,
 					Namespace:   pvc.Namespace,
-					Solution:    "检查是否有可用的 StorageClass 和足够的存储资源",
+					Solution:    "檢查是否有可用的 StorageClass 和足夠的儲存資源",
 				})
 			}
 		}
@@ -506,11 +506,11 @@ func (s *OMService) diagnoseStorage(ctx context.Context, clientset *kubernetes.C
 				ID:          fmt.Sprintf("pvc-lost-%s-%s", pvc.Namespace, pvc.Name),
 				Category:    "storage",
 				Severity:    "critical",
-				Title:       "PVC 丢失绑定",
-				Description: fmt.Sprintf("PVC %s/%s 已丢失与 PV 的绑定", pvc.Namespace, pvc.Name),
+				Title:       "PVC 丟失繫結",
+				Description: fmt.Sprintf("PVC %s/%s 已丟失與 PV 的繫結", pvc.Namespace, pvc.Name),
 				Resource:    pvc.Name,
 				Namespace:   pvc.Namespace,
-				Solution:    "检查关联的 PV 状态，可能需要恢复数据",
+				Solution:    "檢查關聯的 PV 狀態，可能需要恢復資料",
 			})
 			score -= 15
 		}
@@ -520,10 +520,10 @@ func (s *OMService) diagnoseStorage(ctx context.Context, clientset *kubernetes.C
 		score -= min(pendingPVCCount*5, 20)
 	}
 
-	// 检查 PV 状态
+	// 檢查 PV 狀態
 	pvs, err := clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取 PV 列表失败", "error", err)
+		logger.Error("獲取 PV 列表失敗", "error", err)
 		return risks, score
 	}
 
@@ -533,10 +533,10 @@ func (s *OMService) diagnoseStorage(ctx context.Context, clientset *kubernetes.C
 				ID:          fmt.Sprintf("pv-failed-%s", pv.Name),
 				Category:    "storage",
 				Severity:    "critical",
-				Title:       "PV 状态异常",
-				Description: fmt.Sprintf("PV %s 处于 Failed 状态", pv.Name),
+				Title:       "PV 狀態異常",
+				Description: fmt.Sprintf("PV %s 處於 Failed 狀態", pv.Name),
 				Resource:    pv.Name,
-				Solution:    "检查存储后端状态和网络连接",
+				Solution:    "檢查儲存後端狀態和網路連線",
 			})
 			score -= 15
 		}
@@ -548,15 +548,15 @@ func (s *OMService) diagnoseStorage(ctx context.Context, clientset *kubernetes.C
 	return risks, score
 }
 
-// diagnoseControlPlane 诊断控制面组件
+// diagnoseControlPlane 診斷控制面元件
 func (s *OMService) diagnoseControlPlane(ctx context.Context, clientset *kubernetes.Clientset, clusterID uint) ([]models.RiskItem, int) {
 	risks := []models.RiskItem{}
 	score := 100
 
-	// 检查 kube-system 命名空间下的核心组件
+	// 檢查 kube-system 命名空間下的核心元件
 	pods, err := clientset.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取 kube-system Pod 列表失败", "error", err)
+		logger.Error("獲取 kube-system Pod 列表失敗", "error", err)
 		return risks, 50
 	}
 
@@ -577,11 +577,11 @@ func (s *OMService) diagnoseControlPlane(ctx context.Context, clientset *kuberne
 						ID:          fmt.Sprintf("control-plane-%s-unhealthy", component),
 						Category:    "control_plane",
 						Severity:    "critical",
-						Title:       fmt.Sprintf("控制面组件 %s 不健康", component),
-						Description: fmt.Sprintf("组件 %s (Pod: %s) 状态: %s", component, pod.Name, pod.Status.Phase),
+						Title:       fmt.Sprintf("控制面元件 %s 不健康", component),
+						Description: fmt.Sprintf("元件 %s (Pod: %s) 狀態: %s", component, pod.Name, pod.Status.Phase),
 						Resource:    pod.Name,
 						Namespace:   "kube-system",
-						Solution:    "检查组件日志和配置",
+						Solution:    "檢查元件日誌和配置",
 					})
 					score -= 20
 				}
@@ -590,20 +590,20 @@ func (s *OMService) diagnoseControlPlane(ctx context.Context, clientset *kuberne
 		}
 	}
 
-	// 检查是否缺少核心组件
+	// 檢查是否缺少核心元件
 	for component, found := range components {
 		if !found {
-			// 可能是托管集群，控制面不可见，不算风险
-			logger.Info("未找到控制面组件", "component", component)
+			// 可能是託管叢集，控制面不可見，不算風險
+			logger.Info("未找到控制面元件", "component", component)
 		}
 	}
 
-	// 通过 Prometheus 检查 etcd 和 apiserver 指标
+	// 透過 Prometheus 檢查 etcd 和 apiserver 指標
 	config, err := s.monitoringConfigSvc.GetMonitoringConfig(clusterID)
 	if err == nil && config.Type != "disabled" {
 		now := time.Now().Unix()
 
-		// 检查 etcd leader 状态
+		// 檢查 etcd leader 狀態
 		etcdQuery := "etcd_server_has_leader"
 		if etcdResp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: etcdQuery,
@@ -625,15 +625,15 @@ func (s *OMService) diagnoseControlPlane(ctx context.Context, clientset *kuberne
 					ID:          "etcd-no-leader",
 					Category:    "control_plane",
 					Severity:    "critical",
-					Title:       "Etcd 无 Leader",
-					Description: "Etcd 集群当前没有 Leader，集群可能无法正常工作",
-					Solution:    "检查 etcd 集群健康状态和网络连接",
+					Title:       "Etcd 無 Leader",
+					Description: "Etcd 叢集當前沒有 Leader，叢集可能無法正常工作",
+					Solution:    "檢查 etcd 叢集健康狀態和網路連線",
 				})
 				score -= 30
 			}
 		}
 
-		// 检查 apiserver 错误率
+		// 檢查 apiserver 錯誤率
 		apiErrorQuery := "sum(rate(apiserver_request_total{code=~\"5..\"}[5m])) / sum(rate(apiserver_request_total[5m])) * 100"
 		if apiResp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: apiErrorQuery,
@@ -647,9 +647,9 @@ func (s *OMService) diagnoseControlPlane(ctx context.Context, clientset *kuberne
 						ID:          "apiserver-high-error-rate",
 						Category:    "control_plane",
 						Severity:    "warning",
-						Title:       "API Server 错误率较高",
-						Description: fmt.Sprintf("API Server 5xx 错误率达到 %.1f%%", val),
-						Solution:    "检查 apiserver 日志和后端 etcd 状态",
+						Title:       "API Server 錯誤率較高",
+						Description: fmt.Sprintf("API Server 5xx 錯誤率達到 %.1f%%", val),
+						Solution:    "檢查 apiserver 日誌和後端 etcd 狀態",
 					})
 					score -= 15
 				}
@@ -663,13 +663,13 @@ func (s *OMService) diagnoseControlPlane(ctx context.Context, clientset *kuberne
 	return risks, score
 }
 
-// calculateOverallScore 计算综合健康评分
+// calculateOverallScore 計算綜合健康評分
 func (s *OMService) calculateOverallScore(categoryScores map[string]int) int {
 	if len(categoryScores) == 0 {
 		return 100
 	}
 
-	// 加权平均，控制面和节点权重更高
+	// 加權平均，控制面和節點權重更高
 	weights := map[string]float64{
 		"node":          0.25,
 		"workload":      0.20,
@@ -697,9 +697,9 @@ func (s *OMService) calculateOverallScore(categoryScores map[string]int) int {
 	return int(weightedSum / totalWeight)
 }
 
-// determineHealthStatus 确定健康状态
+// determineHealthStatus 確定健康狀態
 func (s *OMService) determineHealthStatus(score int, risks []models.RiskItem) string {
-	// 统计严重问题数量
+	// 統計嚴重問題數量
 	criticalCount := 0
 	for _, risk := range risks {
 		if risk.Severity == "critical" {
@@ -715,7 +715,7 @@ func (s *OMService) determineHealthStatus(score int, risks []models.RiskItem) st
 	return "healthy"
 }
 
-// generateSuggestions 生成诊断建议
+// generateSuggestions 生成診斷建議
 func (s *OMService) generateSuggestions(risks []models.RiskItem) []string {
 	suggestions := []string{}
 	categoryCount := make(map[string]int)
@@ -725,29 +725,29 @@ func (s *OMService) generateSuggestions(risks []models.RiskItem) []string {
 	}
 
 	if categoryCount["node"] > 0 {
-		suggestions = append(suggestions, "建议检查节点健康状态，确保所有节点资源充足且服务正常")
+		suggestions = append(suggestions, "建議檢查節點健康狀態，確保所有節點資源充足且服務正常")
 	}
 	if categoryCount["workload"] > 0 {
-		suggestions = append(suggestions, "建议检查工作负载状态，排查 Pod 启动失败或持续重启的原因")
+		suggestions = append(suggestions, "建議檢查工作負載狀態，排查 Pod 啟動失敗或持續重啟的原因")
 	}
 	if categoryCount["resource"] > 0 {
-		suggestions = append(suggestions, "建议关注资源使用趋势，考虑扩容或优化资源配置")
+		suggestions = append(suggestions, "建議關注資源使用趨勢，考慮擴容或最佳化資源配置")
 	}
 	if categoryCount["storage"] > 0 {
-		suggestions = append(suggestions, "建议检查存储系统状态，确保 PV/PVC 正常绑定")
+		suggestions = append(suggestions, "建議檢查儲存系統狀態，確保 PV/PVC 正常繫結")
 	}
 	if categoryCount["control_plane"] > 0 {
-		suggestions = append(suggestions, "建议检查控制面组件健康状态，确保集群核心功能正常")
+		suggestions = append(suggestions, "建議檢查控制面元件健康狀態，確保叢集核心功能正常")
 	}
 
 	if len(suggestions) == 0 {
-		suggestions = append(suggestions, "集群整体运行健康，建议定期进行健康检查以预防问题")
+		suggestions = append(suggestions, "叢集整體執行健康，建議定期進行健康檢查以預防問題")
 	}
 
 	return suggestions
 }
 
-// GetResourceTop 获取资源消耗 Top N
+// GetResourceTop 獲取資源消耗 Top N
 func (s *OMService) GetResourceTop(ctx context.Context, clientset *kubernetes.Clientset, clusterID uint, req *models.ResourceTopRequest) (*models.ResourceTopResponse, error) {
 	response := &models.ResourceTopResponse{
 		Type:      req.Type,
@@ -761,16 +761,16 @@ func (s *OMService) GetResourceTop(ctx context.Context, clientset *kubernetes.Cl
 		limit = 10
 	}
 
-	// 获取监控配置
+	// 獲取監控配置
 	config, err := s.monitoringConfigSvc.GetMonitoringConfig(clusterID)
 	if err != nil || config.Type == "disabled" {
-		// 没有监控数据，从 K8s 获取基本信息
+		// 沒有監控資料，從 K8s 獲取基本資訊
 		return s.getResourceTopFromK8s(ctx, clientset, req, limit)
 	}
 
 	now := time.Now().Unix()
 
-	// 根据资源类型和级别构建查询
+	// 根據資源型別和級別構建查詢
 	var query string
 	var unit string
 
@@ -824,11 +824,11 @@ func (s *OMService) GetResourceTop(ctx context.Context, clientset *kubernetes.Cl
 		Step:  "1m",
 	})
 	if err != nil {
-		logger.Error("查询资源 Top N 失败", "error", err)
+		logger.Error("查詢資源 Top N 失敗", "error", err)
 		return response, nil
 	}
 
-	// 解析结果
+	// 解析結果
 	type resultItem struct {
 		name      string
 		namespace string
@@ -885,15 +885,15 @@ func (s *OMService) GetResourceTop(ctx context.Context, clientset *kubernetes.Cl
 			Unit:      unit,
 		}
 
-		// 计算使用率（如果有 limit 数据）
-		// 这里简化处理，可以后续扩展查询 limit 数据
+		// 計算使用率（如果有 limit 資料）
+		// 這裡簡化處理，可以後續擴充套件查詢 limit 資料
 		response.Items = append(response.Items, topItem)
 	}
 
 	return response, nil
 }
 
-// getResourceTopFromK8s 从 K8s 获取资源 Top N（无监控数据时）
+// getResourceTopFromK8s 從 K8s 獲取資源 Top N（無監控資料時）
 func (s *OMService) getResourceTopFromK8s(ctx context.Context, clientset *kubernetes.Clientset, req *models.ResourceTopRequest, limit int) (*models.ResourceTopResponse, error) {
 	response := &models.ResourceTopResponse{
 		Type:      req.Type,
@@ -902,7 +902,7 @@ func (s *OMService) getResourceTopFromK8s(ctx context.Context, clientset *kubern
 		QueryTime: time.Now().Unix(),
 	}
 
-	// 获取 Pod 列表
+	// 獲取 Pod 列表
 	pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return response, err
@@ -987,7 +987,7 @@ func (s *OMService) getResourceTopFromK8s(ctx context.Context, clientset *kubern
 			Namespace: item.namespace,
 			Request:   float64(item.request),
 			Limit:     float64(item.limit),
-			Usage:     float64(item.request), // 无监控数据时用 request 代替
+			Usage:     float64(item.request), // 無監控資料時用 request 代替
 			Unit:      unit,
 		}
 		response.Items = append(response.Items, topItem)
@@ -996,7 +996,7 @@ func (s *OMService) getResourceTopFromK8s(ctx context.Context, clientset *kubern
 	return response, nil
 }
 
-// GetControlPlaneStatus 获取控制面组件状态
+// GetControlPlaneStatus 獲取控制面元件狀態
 func (s *OMService) GetControlPlaneStatus(ctx context.Context, clientset *kubernetes.Clientset, clusterID uint) (*models.ControlPlaneStatusResponse, error) {
 	response := &models.ControlPlaneStatusResponse{
 		Overall:    "healthy",
@@ -1004,14 +1004,14 @@ func (s *OMService) GetControlPlaneStatus(ctx context.Context, clientset *kubern
 		CheckTime:  time.Now().Unix(),
 	}
 
-	// 获取 kube-system 命名空间下的 Pod
+	// 獲取 kube-system 命名空間下的 Pod
 	pods, err := clientset.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		logger.Error("获取 kube-system Pod 列表失败", "error", err)
+		logger.Error("獲取 kube-system Pod 列表失敗", "error", err)
 		return response, nil
 	}
 
-	// 定义要检查的控制面组件
+	// 定義要檢查的控制面元件
 	componentTypes := []string{"kube-apiserver", "kube-scheduler", "kube-controller-manager", "etcd"}
 
 	componentsMap := make(map[string]*models.ControlPlaneComponent)
@@ -1021,13 +1021,13 @@ func (s *OMService) GetControlPlaneStatus(ctx context.Context, clientset *kubern
 			Name:          componentType,
 			Type:          strings.TrimPrefix(componentType, "kube-"),
 			Status:        "unknown",
-			Message:       "未检测到该组件",
+			Message:       "未檢測到該元件",
 			LastCheckTime: time.Now().Unix(),
 			Instances:     []models.ComponentInstance{},
 		}
 	}
 
-	// 遍历 Pod，匹配控制面组件
+	// 遍歷 Pod，匹配控制面元件
 	for _, pod := range pods.Items {
 		for _, componentType := range componentTypes {
 			if strings.Contains(pod.Name, componentType) {
@@ -1044,7 +1044,7 @@ func (s *OMService) GetControlPlaneStatus(ctx context.Context, clientset *kubern
 				}
 				component.Instances = append(component.Instances, instance)
 
-				// 更新组件整体状态
+				// 更新元件整體狀態
 				if pod.Status.Phase == corev1.PodRunning {
 					allReady := true
 					for _, cond := range pod.Status.Conditions {
@@ -1055,27 +1055,27 @@ func (s *OMService) GetControlPlaneStatus(ctx context.Context, clientset *kubern
 					}
 					if allReady {
 						component.Status = "healthy"
-						component.Message = "组件运行正常"
+						component.Message = "元件執行正常"
 					} else {
 						component.Status = "unhealthy"
-						component.Message = "组件 Pod 未就绪"
+						component.Message = "元件 Pod 未就緒"
 					}
 				} else {
 					component.Status = "unhealthy"
-					component.Message = fmt.Sprintf("组件 Pod 状态: %s", pod.Status.Phase)
+					component.Message = fmt.Sprintf("元件 Pod 狀態: %s", pod.Status.Phase)
 				}
 				break
 			}
 		}
 	}
 
-	// 获取监控配置，查询组件指标
+	// 獲取監控配置，查詢元件指標
 	config, err := s.monitoringConfigSvc.GetMonitoringConfig(clusterID)
 	if err == nil && config.Type != "disabled" {
 		s.enrichComponentMetrics(ctx, config, componentsMap)
 	}
 
-	// 组装响应
+	// 組裝響應
 	unhealthyCount := 0
 	for _, component := range componentsMap {
 		if component.Status == "unhealthy" {
@@ -1084,7 +1084,7 @@ func (s *OMService) GetControlPlaneStatus(ctx context.Context, clientset *kubern
 		response.Components = append(response.Components, *component)
 	}
 
-	// 确定整体状态
+	// 確定整體狀態
 	if unhealthyCount > 0 {
 		if unhealthyCount >= len(componentTypes)/2 {
 			response.Overall = "unhealthy"
@@ -1096,15 +1096,15 @@ func (s *OMService) GetControlPlaneStatus(ctx context.Context, clientset *kubern
 	return response, nil
 }
 
-// enrichComponentMetrics 从 Prometheus 获取组件指标
+// enrichComponentMetrics 從 Prometheus 獲取元件指標
 func (s *OMService) enrichComponentMetrics(ctx context.Context, config *models.MonitoringConfig, componentsMap map[string]*models.ControlPlaneComponent) {
 	now := time.Now().Unix()
 
-	// API Server 指标
+	// API Server 指標
 	if apiserver, ok := componentsMap["kube-apiserver"]; ok {
 		apiserver.Metrics = &models.ComponentMetrics{}
 
-		// 请求速率
+		// 請求速率
 		if resp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: "sum(rate(apiserver_request_total[5m]))",
 			Start: now, End: now, Step: "1m",
@@ -1114,7 +1114,7 @@ func (s *OMService) enrichComponentMetrics(ctx context.Context, config *models.M
 			}
 		}
 
-		// 错误率
+		// 錯誤率
 		if resp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: "sum(rate(apiserver_request_total{code=~\"5..\"}[5m])) / sum(rate(apiserver_request_total[5m])) * 100",
 			Start: now, End: now, Step: "1m",
@@ -1124,7 +1124,7 @@ func (s *OMService) enrichComponentMetrics(ctx context.Context, config *models.M
 			}
 		}
 
-		// 延迟
+		// 延遲
 		if resp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: "histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket[5m])) by (le)) * 1000",
 			Start: now, End: now, Step: "1m",
@@ -1135,11 +1135,11 @@ func (s *OMService) enrichComponentMetrics(ctx context.Context, config *models.M
 		}
 	}
 
-	// Etcd 指标
+	// Etcd 指標
 	if etcd, ok := componentsMap["etcd"]; ok {
 		etcd.Metrics = &models.ComponentMetrics{}
 
-		// Leader 状态
+		// Leader 狀態
 		if resp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: "max(etcd_server_has_leader)",
 			Start: now, End: now, Step: "1m",
@@ -1149,7 +1149,7 @@ func (s *OMService) enrichComponentMetrics(ctx context.Context, config *models.M
 			}
 		}
 
-		// 数据库大小
+		// 資料庫大小
 		if resp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: "sum(etcd_mvcc_db_total_size_in_bytes)",
 			Start: now, End: now, Step: "1m",
@@ -1159,7 +1159,7 @@ func (s *OMService) enrichComponentMetrics(ctx context.Context, config *models.M
 			}
 		}
 
-		// 成员数量
+		// 成員數量
 		if resp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: "count(etcd_server_has_leader)",
 			Start: now, End: now, Step: "1m",
@@ -1170,11 +1170,11 @@ func (s *OMService) enrichComponentMetrics(ctx context.Context, config *models.M
 		}
 	}
 
-	// Scheduler 指标
+	// Scheduler 指標
 	if scheduler, ok := componentsMap["kube-scheduler"]; ok {
 		scheduler.Metrics = &models.ComponentMetrics{}
 
-		// 队列长度
+		// 佇列長度
 		if resp, err := s.prometheusSvc.QueryPrometheus(ctx, config, &models.MetricsQuery{
 			Query: "sum(scheduler_pending_pods)",
 			Start: now, End: now, Step: "1m",
@@ -1186,7 +1186,7 @@ func (s *OMService) enrichComponentMetrics(ctx context.Context, config *models.M
 	}
 }
 
-// min 返回两个整数中的较小值
+// min 返回兩個整數中的較小值
 func min(a, b int) int {
 	if a < b {
 		return a

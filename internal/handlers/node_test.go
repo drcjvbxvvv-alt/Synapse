@@ -20,7 +20,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/internal/services"
 )
 
-// NodeHandlerTestSuite 定义节点处理器测试套件
+// NodeHandlerTestSuite 定義節點處理器測試套件
 type NodeHandlerTestSuite struct {
 	suite.Suite
 	db      *gorm.DB
@@ -29,7 +29,7 @@ type NodeHandlerTestSuite struct {
 	handler *NodeHandler
 }
 
-// SetupTest 每个测试前的设置
+// SetupTest 每個測試前的設定
 func (s *NodeHandlerTestSuite) SetupTest() {
 	gin.SetMode(gin.TestMode)
 
@@ -56,7 +56,7 @@ func (s *NodeHandlerTestSuite) SetupTest() {
 	s.router.GET("/api/clusters/:clusterID/nodes/:name", s.handler.GetNode)
 }
 
-// TearDownTest 每个测试后的清理
+// TearDownTest 每個測試後的清理
 func (s *NodeHandlerTestSuite) TearDownTest() {
 	if s.db != nil {
 		sqlDB, _ := s.db.DB()
@@ -66,7 +66,7 @@ func (s *NodeHandlerTestSuite) TearDownTest() {
 	}
 }
 
-// TestGetNodes_ClusterNotFound 测试获取节点列表时集群不存在
+// TestGetNodes_ClusterNotFound 測試獲取節點列表時叢集不存在
 func (s *NodeHandlerTestSuite) TestGetNodes_ClusterNotFound() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
 		WithArgs(999, 1).
@@ -87,7 +87,7 @@ func (s *NodeHandlerTestSuite) TestGetNodes_ClusterNotFound() {
 	assert.Equal(s.T(), "NOT_FOUND", errObj["code"])
 }
 
-// TestGetNodes_InvalidClusterID 测试无效的集群 ID
+// TestGetNodes_InvalidClusterID 測試無效的叢集 ID
 func (s *NodeHandlerTestSuite) TestGetNodes_InvalidClusterID() {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/clusters/invalid/nodes", nil)
@@ -96,7 +96,7 @@ func (s *NodeHandlerTestSuite) TestGetNodes_InvalidClusterID() {
 	assert.Equal(s.T(), http.StatusBadRequest, w.Code)
 }
 
-// TestGetNode_ClusterExists 测试获取节点详情时集群存在
+// TestGetNode_ClusterExists 測試獲取節點詳情時叢集存在
 func (s *NodeHandlerTestSuite) TestGetNode_ClusterExists() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
@@ -117,11 +117,11 @@ func (s *NodeHandlerTestSuite) TestGetNode_ClusterExists() {
 	req, _ := http.NewRequest("GET", "/api/clusters/1/nodes/test-node", nil)
 	s.router.ServeHTTP(w, req)
 
-	// 由于 K8s 客户端为 nil，应该返回错误（503 Service Unavailable）
+	// 由於 K8s 客戶端為 nil，應該返回錯誤（503 Service Unavailable）
 	assert.True(s.T(), w.Code == http.StatusServiceUnavailable || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
 }
 
-// TestNodeHandlerSuite 运行测试套件
+// TestNodeHandlerSuite 執行測試套件
 func TestNodeHandlerSuite(t *testing.T) {
 	suite.Run(t, new(NodeHandlerTestSuite))
 }

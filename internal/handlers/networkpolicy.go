@@ -69,7 +69,7 @@ type NetworkPolicyEgressRule struct {
 	To    []NetworkPolicyPeer `json:"to,omitempty"`
 }
 
-// NetworkPolicyPort 連接埠規則
+// NetworkPolicyPort 連線連接埠規則
 type NetworkPolicyPort struct {
 	Protocol string `json:"protocol,omitempty"`
 	Port     string `json:"port,omitempty"`
@@ -557,7 +557,7 @@ func (h *NetworkPolicyHandler) GetTopology(c *gin.Context) {
 
 // ---- Conflicts ----
 
-// ConflictItem 衝突項目
+// ConflictItem 衝突專案
 type ConflictItem struct {
 	PolicyA   string            `json:"policyA"`
 	PolicyB   string            `json:"policyB"`
@@ -659,7 +659,7 @@ type WizardEgressRule struct {
 	CIDR     string       `json:"cidr,omitempty"`
 }
 
-// WizardPort 精靈連接埠
+// WizardPort 精靈連線連接埠
 type WizardPort struct {
 	Protocol string `json:"protocol"`
 	Port     string `json:"port"`
@@ -705,7 +705,7 @@ func (h *NetworkPolicyHandler) WizardValidate(c *gin.Context) {
 
 	case 2:
 		if len(req.PolicyTypes) == 0 {
-			response.OK(c, WizardValidateResponse{Valid: false, Message: "至少選擇一個 Policy 類型（Ingress 或 Egress）"})
+			response.OK(c, WizardValidateResponse{Valid: false, Message: "至少選擇一個 Policy 型別（Ingress 或 Egress）"})
 			return
 		}
 		for _, pt := range req.PolicyTypes {

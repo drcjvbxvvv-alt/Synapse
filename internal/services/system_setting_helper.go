@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// GetSystemSetting 从 system_settings 表读取 JSON 配置并反序列化到 dest
+// GetSystemSetting 從 system_settings 表讀取 JSON 配置並反序列化到 dest
 func GetSystemSetting(db *gorm.DB, key string, dest interface{}) (bool, error) {
 	var setting models.SystemSetting
 	if err := db.Where("config_key = ?", key).First(&setting).Error; err != nil {
@@ -21,16 +21,16 @@ func GetSystemSetting(db *gorm.DB, key string, dest interface{}) (bool, error) {
 	}
 
 	if err := json.Unmarshal([]byte(setting.Value), dest); err != nil {
-		return false, fmt.Errorf("解析配置 %s 失败: %w", key, err)
+		return false, fmt.Errorf("解析配置 %s 失敗: %w", key, err)
 	}
 	return true, nil
 }
 
-// SaveSystemSetting 将配置序列化为 JSON 并保存到 system_settings 表
+// SaveSystemSetting 將配置序列化為 JSON 並儲存到 system_settings 表
 func SaveSystemSetting(db *gorm.DB, key, settingType string, value interface{}) error {
 	data, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("序列化配置 %s 失败: %w", key, err)
+		return fmt.Errorf("序列化配置 %s 失敗: %w", key, err)
 	}
 
 	var setting models.SystemSetting

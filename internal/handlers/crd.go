@@ -71,7 +71,7 @@ type CRDHandler struct {
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-// NewCRDHandler 創建 CRD 處理器
+// NewCRDHandler 建立 CRD 處理器
 func NewCRDHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *CRDHandler {
 	return &CRDHandler{
 		clusterService: clusterService,
@@ -84,19 +84,19 @@ func (h *CRDHandler) ListCRDs(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
-		response.ServiceUnavailable(c, "无法连接到集群: "+err.Error())
+		response.ServiceUnavailable(c, "無法連線到叢集: "+err.Error())
 		return
 	}
 
@@ -105,7 +105,7 @@ func (h *CRDHandler) ListCRDs(c *gin.Context) {
 
 	_, resourceLists, err := k8sClient.GetClientset().Discovery().ServerGroupsAndResources()
 	if err != nil && len(resourceLists) == 0 {
-		response.InternalError(c, "获取集群资源列表失败")
+		response.InternalError(c, "獲取叢集資源列表失敗")
 		return
 	}
 
@@ -152,12 +152,12 @@ func (h *CRDHandler) ListCRDs(c *gin.Context) {
 	response.List(c, crds, int64(len(crds)))
 }
 
-// ListCRDResources 列出特定 CRD 的所有資源實例
+// ListCRDResources 列出特定 CRD 的所有資源例項
 func (h *CRDHandler) ListCRDResources(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
@@ -167,25 +167,25 @@ func (h *CRDHandler) ListCRDResources(c *gin.Context) {
 	namespace := c.Query("namespace")
 
 	if group == "" || version == "" || plural == "" {
-		response.BadRequest(c, "缺少必要参数: group, version, plural")
+		response.BadRequest(c, "缺少必要參數: group, version, plural")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
-		response.ServiceUnavailable(c, "无法连接到集群: "+err.Error())
+		response.ServiceUnavailable(c, "無法連線到叢集: "+err.Error())
 		return
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(k8sClient.GetRestConfig())
 	if err != nil {
-		response.InternalError(c, "创建动态客户端失败")
+		response.InternalError(c, "建立動態客戶端失敗")
 		return
 	}
 
@@ -205,7 +205,7 @@ func (h *CRDHandler) ListCRDResources(c *gin.Context) {
 		list, err = dynamicClient.Resource(gvr).List(ctx, metav1.ListOptions{})
 	}
 	if err != nil {
-		response.InternalError(c, "获取资源列表失败: "+err.Error())
+		response.InternalError(c, "獲取資源列表失敗: "+err.Error())
 		return
 	}
 
@@ -232,12 +232,12 @@ func (h *CRDHandler) ListCRDResources(c *gin.Context) {
 	response.List(c, items, int64(len(items)))
 }
 
-// GetCRDResource 取得單個 CRD 資源實例的完整 YAML/JSON
+// GetCRDResource 取得單個 CRD 資源例項的完整 YAML/JSON
 func (h *CRDHandler) GetCRDResource(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
@@ -248,25 +248,25 @@ func (h *CRDHandler) GetCRDResource(c *gin.Context) {
 	name := c.Param("name")
 
 	if group == "" || version == "" || plural == "" {
-		response.BadRequest(c, "缺少必要参数: group, version, plural")
+		response.BadRequest(c, "缺少必要參數: group, version, plural")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
-		response.ServiceUnavailable(c, "无法连接到集群: "+err.Error())
+		response.ServiceUnavailable(c, "無法連線到叢集: "+err.Error())
 		return
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(k8sClient.GetRestConfig())
 	if err != nil {
-		response.InternalError(c, "创建动态客户端失败")
+		response.InternalError(c, "建立動態客戶端失敗")
 		return
 	}
 
@@ -286,19 +286,19 @@ func (h *CRDHandler) GetCRDResource(c *gin.Context) {
 		obj, err = dynamicClient.Resource(gvr).Get(ctx, name, metav1.GetOptions{})
 	}
 	if err != nil {
-		response.NotFound(c, "资源不存在: "+err.Error())
+		response.NotFound(c, "資源不存在: "+err.Error())
 		return
 	}
 
 	response.OK(c, obj.Object)
 }
 
-// DeleteCRDResource 刪除單個 CRD 資源實例
+// DeleteCRDResource 刪除單個 CRD 資源例項
 func (h *CRDHandler) DeleteCRDResource(c *gin.Context) {
 	clusterIDStr := c.Param("clusterID")
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 
@@ -309,25 +309,25 @@ func (h *CRDHandler) DeleteCRDResource(c *gin.Context) {
 	name := c.Param("name")
 
 	if group == "" || version == "" || plural == "" {
-		response.BadRequest(c, "缺少必要参数: group, version, plural")
+		response.BadRequest(c, "缺少必要參數: group, version, plural")
 		return
 	}
 
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := services.NewK8sClientForCluster(cluster)
 	if err != nil {
-		response.ServiceUnavailable(c, "无法连接到集群: "+err.Error())
+		response.ServiceUnavailable(c, "無法連線到叢集: "+err.Error())
 		return
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(k8sClient.GetRestConfig())
 	if err != nil {
-		response.InternalError(c, "创建动态客户端失败")
+		response.InternalError(c, "建立動態客戶端失敗")
 		return
 	}
 
@@ -349,7 +349,7 @@ func (h *CRDHandler) DeleteCRDResource(c *gin.Context) {
 		err = dynamicClient.Resource(gvr).Delete(ctx, name, opts)
 	}
 	if err != nil {
-		response.InternalError(c, "删除资源失败: "+err.Error())
+		response.InternalError(c, "刪除資源失敗: "+err.Error())
 		return
 	}
 

@@ -15,7 +15,7 @@ import (
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
 )
 
-// ChatMessage OpenAI Chat 消息格式
+// ChatMessage OpenAI Chat 訊息格式
 type ChatMessage struct {
 	Role       string     `json:"role"`
 	Content    string     `json:"content,omitempty"`
@@ -23,7 +23,7 @@ type ChatMessage struct {
 	ToolCallID string     `json:"tool_call_id,omitempty"`
 }
 
-// ToolCall 工具调用
+// ToolCall 工具呼叫
 type ToolCall struct {
 	Index    int          `json:"index"`
 	ID       string       `json:"id"`
@@ -31,39 +31,39 @@ type ToolCall struct {
 	Function FunctionCall `json:"function"`
 }
 
-// FunctionCall 函数调用
+// FunctionCall 函式呼叫
 type FunctionCall struct {
 	Name      string `json:"name"`
 	Arguments string `json:"arguments"`
 }
 
-// ToolDefinition OpenAI Function Calling 的工具定义
+// ToolDefinition OpenAI Function Calling 的工具定義
 type ToolDefinition struct {
 	Type     string             `json:"type"`
 	Function FunctionDefinition `json:"function"`
 }
 
-// FunctionDefinition 函数定义
+// FunctionDefinition 函式定義
 type FunctionDefinition struct {
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
 	Parameters  interface{} `json:"parameters"`
 }
 
-// ChatRequest 聊天请求
+// ChatRequest 聊天請求
 type ChatRequest struct {
 	Messages []ChatMessage  `json:"messages"`
 	Tools    []ToolDefinition `json:"tools,omitempty"`
 }
 
-// ChatResponse 普通聊天响应
+// ChatResponse 普通聊天響應
 type ChatResponse struct {
 	ID      string         `json:"id"`
 	Choices []ChatChoice   `json:"choices"`
 	Usage   *ChatUsage     `json:"usage,omitempty"`
 }
 
-// ChatChoice 响应选项
+// ChatChoice 響應選項
 type ChatChoice struct {
 	Index        int          `json:"index"`
 	Message      ChatMessage  `json:"message"`
@@ -77,33 +77,33 @@ type ChatUsage struct {
 	TotalTokens      int `json:"total_tokens"`
 }
 
-// StreamChunk SSE 流式响应 chunk
+// StreamChunk SSE 流式響應 chunk
 type StreamChunk struct {
 	ID      string              `json:"id"`
 	Choices []StreamChunkChoice `json:"choices"`
 }
 
-// StreamChunkChoice 流式响应选项
+// StreamChunkChoice 流式響應選項
 type StreamChunkChoice struct {
 	Index        int              `json:"index"`
 	Delta        StreamChunkDelta `json:"delta"`
 	FinishReason *string          `json:"finish_reason"`
 }
 
-// StreamChunkDelta 流式增量内容
+// StreamChunkDelta 流式增量內容
 type StreamChunkDelta struct {
 	Role      string     `json:"role,omitempty"`
 	Content   string     `json:"content,omitempty"`
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
 }
 
-// AIProvider OpenAI 兼容 API 调用封装
+// AIProvider OpenAI 相容 API 呼叫封裝
 type AIProvider struct {
 	config *models.AIConfig
 	client *http.Client
 }
 
-// NewAIProvider 创建 AI Provider
+// NewAIProvider 建立 AI Provider
 func NewAIProvider(config *models.AIConfig) *AIProvider {
 	return &AIProvider{
 		config: config,
@@ -113,17 +113,17 @@ func NewAIProvider(config *models.AIConfig) *AIProvider {
 	}
 }
 
-// isAnthropic 判断是否为 Anthropic 提供者
+// isAnthropic 判斷是否為 Anthropic 提供者
 func (p *AIProvider) isAnthropic() bool {
 	return p.config.Provider == "anthropic"
 }
 
-// isAzure 判断是否为 Azure OpenAI 提供者
+// isAzure 判斷是否為 Azure OpenAI 提供者
 func (p *AIProvider) isAzure() bool {
 	return p.config.Provider == "azure"
 }
 
-// chatURL 返回聊天请求 URL
+// chatURL 返回聊天請求 URL
 func (p *AIProvider) chatURL(stream bool) string {
 	base := strings.TrimRight(p.config.Endpoint, "/")
 	switch {
@@ -141,7 +141,7 @@ func (p *AIProvider) chatURL(stream bool) string {
 	}
 }
 
-// setAuthHeaders 设置鉴权请求头
+// setAuthHeaders 設定鑑權請求頭
 func (p *AIProvider) setAuthHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	switch {
@@ -155,13 +155,13 @@ func (p *AIProvider) setAuthHeaders(req *http.Request) {
 	}
 }
 
-// buildOpenAIBody 构造 OpenAI/Azure 请求体
+// buildOpenAIBody 構造 OpenAI/Azure 請求體
 func (p *AIProvider) buildOpenAIBody(req ChatRequest, stream bool) map[string]interface{} {
 	body := map[string]interface{}{
 		"messages": req.Messages,
 		"stream":   stream,
 	}
-	// Azure 的 model 已经在 URL 中，但传 model 字段不影响
+	// Azure 的 model 已經在 URL 中，但傳 model 欄位不影響
 	if !p.isAzure() {
 		body["model"] = p.config.Model
 	}
@@ -171,15 +171,15 @@ func (p *AIProvider) buildOpenAIBody(req ChatRequest, stream bool) map[string]in
 	return body
 }
 
-// anthropicMessage Anthropic Messages API 请求/响应结构
+// anthropicMessage Anthropic Messages API 請求/響應結構
 type anthropicMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-// buildAnthropicBody 构造 Anthropic Messages API 请求体
+// buildAnthropicBody 構造 Anthropic Messages API 請求體
 func (p *AIProvider) buildAnthropicBody(req ChatRequest, stream bool) map[string]interface{} {
-	// 将 OpenAI messages 格式转换为 Anthropic 格式
+	// 將 OpenAI messages 格式轉換為 Anthropic 格式
 	msgs := make([]anthropicMessage, 0, len(req.Messages))
 	system := ""
 	for _, m := range req.Messages {
@@ -202,7 +202,7 @@ func (p *AIProvider) buildAnthropicBody(req ChatRequest, stream bool) map[string
 	return body
 }
 
-// parseAnthropicResponse 将 Anthropic 响应转换为 OpenAI 格式
+// parseAnthropicResponse 將 Anthropic 響應轉換為 OpenAI 格式
 func parseAnthropicResponse(data []byte) (*ChatResponse, error) {
 	var result struct {
 		ID      string `json:"id"`
@@ -216,7 +216,7 @@ func parseAnthropicResponse(data []byte) (*ChatResponse, error) {
 		} `json:"usage"`
 	}
 	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("解析 Anthropic 响应失败: %w", err)
+		return nil, fmt.Errorf("解析 Anthropic 響應失敗: %w", err)
 	}
 
 	text := ""
@@ -254,24 +254,24 @@ func (p *AIProvider) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, 
 
 	data, err := json.Marshal(body)
 	if err != nil {
-		return nil, fmt.Errorf("序列化请求失败: %w", err)
+		return nil, fmt.Errorf("序列化請求失敗: %w", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.chatURL(false), bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 	p.setAuthHeaders(httpReq)
 
 	resp, err := p.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("请求 LLM API 失败: %w", err)
+		return nil, fmt.Errorf("請求 LLM API 失敗: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("LLM API 返回错误 (status=%d): %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("LLM API 返回錯誤 (status=%d): %s", resp.StatusCode, string(respBody))
 	}
 
 	if p.isAnthropic() {
@@ -280,7 +280,7 @@ func (p *AIProvider) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, 
 
 	var chatResp ChatResponse
 	if err := json.NewDecoder(bytes.NewReader(respBody)).Decode(&chatResp); err != nil {
-		return nil, fmt.Errorf("解析 LLM 响应失败: %w", err)
+		return nil, fmt.Errorf("解析 LLM 響應失敗: %w", err)
 	}
 
 	return &chatResp, nil
@@ -288,11 +288,11 @@ func (p *AIProvider) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, 
 
 // ChatStreamEvent SSE 事件
 type ChatStreamEvent struct {
-	Content      string     // 文本增量
-	ToolCalls    []ToolCall // 工具调用增量
-	FinishReason string     // 结束原因
-	Done         bool       // 流结束
-	Error        error      // 错误
+	Content      string     // 文字增量
+	ToolCalls    []ToolCall // 工具呼叫增量
+	FinishReason string     // 結束原因
+	Done         bool       // 流結束
+	Error        error      // 錯誤
 }
 
 // ChatStream 流式聊天，返回事件 channel
@@ -306,25 +306,25 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 
 	data, err := json.Marshal(body)
 	if err != nil {
-		return nil, fmt.Errorf("序列化请求失败: %w", err)
+		return nil, fmt.Errorf("序列化請求失敗: %w", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.chatURL(true), bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("建立請求失敗: %w", err)
 	}
 	p.setAuthHeaders(httpReq)
 	httpReq.Header.Set("Accept", "text/event-stream")
 
 	resp, err := p.client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("请求 LLM API 失败: %w", err)
+		return nil, fmt.Errorf("請求 LLM API 失敗: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("LLM API 返回错误 (status=%d): %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("LLM API 返回錯誤 (status=%d): %s", resp.StatusCode, string(respBody))
 	}
 
 	ch := make(chan ChatStreamEvent, 64)
@@ -336,7 +336,7 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 		defer close(ch)
 
 		scanner := bufio.NewScanner(resp.Body)
-		// SSE 行可能很长，增大缓冲
+		// SSE 行可能很長，增大緩衝
 		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 		currentEvent := ""
@@ -349,7 +349,7 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 				continue
 			}
 
-			// 记录 Anthropic event: 行
+			// 記錄 Anthropic event: 行
 			if strings.HasPrefix(line, "event: ") {
 				currentEvent = strings.TrimPrefix(line, "event: ")
 				continue
@@ -395,7 +395,7 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 			// OpenAI / Azure / Ollama stream 解析
 			var chunk StreamChunk
 			if err := json.Unmarshal([]byte(payload), &chunk); err != nil {
-				logger.Error("解析 SSE chunk 失败", "error", err, "payload", payload)
+				logger.Error("解析 SSE chunk 失敗", "error", err, "payload", payload)
 				continue
 			}
 
@@ -421,7 +421,7 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 
 		if err := scanner.Err(); err != nil {
 			select {
-			case ch <- ChatStreamEvent{Error: fmt.Errorf("读取 SSE 流失败: %w", err)}:
+			case ch <- ChatStreamEvent{Error: fmt.Errorf("讀取 SSE 流失敗: %w", err)}:
 			case <-ctx.Done():
 			}
 		}
@@ -430,7 +430,7 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 	return ch, nil
 }
 
-// TestConnection 测试 AI 配置连接
+// TestConnection 測試 AI 配置連線
 func (p *AIProvider) TestConnection(ctx context.Context) error {
 	req := ChatRequest{
 		Messages: []ChatMessage{
@@ -444,7 +444,7 @@ func (p *AIProvider) TestConnection(ctx context.Context) error {
 	}
 
 	if len(resp.Choices) == 0 {
-		return fmt.Errorf("LLM 返回空响应")
+		return fmt.Errorf("LLM 返回空響應")
 	}
 
 	return nil

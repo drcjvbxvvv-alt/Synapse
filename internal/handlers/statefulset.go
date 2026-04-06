@@ -26,7 +26,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 )
 
-// StatefulSetHandler StatefulSet处理器
+// StatefulSetHandler StatefulSet處理器
 type StatefulSetHandler struct {
 	db             *gorm.DB
 	cfg            *config.Config
@@ -34,7 +34,7 @@ type StatefulSetHandler struct {
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-// NewStatefulSetHandler 创建StatefulSet处理器
+// NewStatefulSetHandler 建立StatefulSet處理器
 func NewStatefulSetHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *StatefulSetHandler {
 	return &StatefulSetHandler{
 		db:             db,
@@ -44,7 +44,7 @@ func NewStatefulSetHandler(db *gorm.DB, cfg *config.Config, clusterService *serv
 	}
 }
 
-// StatefulSetInfo StatefulSet信息
+// StatefulSetInfo StatefulSet資訊
 type StatefulSetInfo struct {
 	ID              string            `json:"id"`
 	Name            string            `json:"name"`
@@ -63,7 +63,7 @@ type StatefulSetInfo struct {
 	ServiceName     string            `json:"serviceName"`
 }
 
-// ListStatefulSets 获取StatefulSet列表
+// ListStatefulSets 獲取StatefulSet列表
 func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Query("namespace")
@@ -71,16 +71,16 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
 
-	logger.Info("获取StatefulSet列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
+	logger.Info("獲取StatefulSet列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -88,11 +88,11 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
-	// 检查命名空间权限
+	// 檢查命名空間權限
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
 	if !hasAccess {
 		middleware.ForbiddenNS(c, nsInfo)
@@ -105,7 +105,7 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 	if namespace != "" {
 		sss, err := h.k8sMgr.StatefulSetsLister(cluster.ID).StatefulSets(namespace).List(sel)
 		if err != nil {
-			logger.Error("读取StatefulSet缓存失败", "error", err)
+			logger.Error("讀取StatefulSet快取失敗", "error", err)
 		} else {
 			for _, ss := range sss {
 				statefulSets = append(statefulSets, h.convertToStatefulSetInfo(ss))
@@ -114,7 +114,7 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 	} else {
 		sss, err := h.k8sMgr.StatefulSetsLister(cluster.ID).List(sel)
 		if err != nil {
-			logger.Error("读取StatefulSet缓存失败", "error", err)
+			logger.Error("讀取StatefulSet快取失敗", "error", err)
 		} else {
 			for _, ss := range sss {
 				statefulSets = append(statefulSets, h.convertToStatefulSetInfo(ss))
@@ -122,7 +122,7 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 		}
 	}
 
-	// 根据命名空间权限过滤
+	// 根據命名空間權限過濾
 	if !nsInfo.HasAllAccess && namespace == "" {
 		statefulSets = middleware.FilterResourcesByNamespace(c, statefulSets, func(ss StatefulSetInfo) string {
 			return ss.Namespace
@@ -158,28 +158,28 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 	response.PagedList(c, pagedStatefulSets, int64(total), page, pageSize)
 }
 
-// GetStatefulSet 获取StatefulSet详情
+// GetStatefulSet 獲取StatefulSet詳情
 func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("获取StatefulSet详情: %s/%s/%s", clusterId, namespace, name)
+	logger.Info("獲取StatefulSet詳情: %s/%s/%s", clusterId, namespace, name)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -197,22 +197,22 @@ func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 		LabelSelector: metav1.FormatLabelSelector(statefulSet.Spec.Selector),
 	})
 	if err != nil {
-		logger.Error("获取StatefulSet关联Pods失败", "error", err)
+		logger.Error("獲取StatefulSet關聯Pods失敗", "error", err)
 	}
 
-	// 清理 managed fields 以生成更干净的 YAML
+	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanStatefulSet := statefulSet.DeepCopy()
 	cleanStatefulSet.ManagedFields = nil
-	// 设置 TypeMeta（client-go 返回的对象默认不包含 apiVersion 和 kind）
+	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanStatefulSet.APIVersion = "apps/v1"
 	cleanStatefulSet.Kind = "StatefulSet"
-	// 将 StatefulSet 对象转换为 YAML 字符串
+	// 將 StatefulSet 物件轉換為 YAML 字串
 	yamlBytes, yamlErr := sigsyaml.Marshal(cleanStatefulSet)
 	var yamlString string
 	if yamlErr == nil {
 		yamlString = string(yamlBytes)
 	} else {
-		logger.Error("转换StatefulSet为YAML失败", "error", yamlErr)
+		logger.Error("轉換StatefulSet為YAML失敗", "error", yamlErr)
 		yamlString = ""
 	}
 
@@ -224,18 +224,18 @@ func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 	})
 }
 
-// GetStatefulSetNamespaces 获取包含StatefulSet的命名空间列表
+// GetStatefulSetNamespaces 獲取包含StatefulSet的命名空間列表
 func (h *StatefulSetHandler) GetStatefulSetNamespaces(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
@@ -243,14 +243,14 @@ func (h *StatefulSetHandler) GetStatefulSetNamespaces(c *gin.Context) {
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就绪: "+err.Error())
+		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
 
 	sel := labels.Everything()
 	sss, err := h.k8sMgr.StatefulSetsLister(cluster.ID).List(sel)
 	if err != nil {
-		response.InternalError(c, "读取StatefulSet缓存失败: "+err.Error())
+		response.InternalError(c, "讀取StatefulSet快取失敗: "+err.Error())
 		return
 	}
 
@@ -279,7 +279,7 @@ func (h *StatefulSetHandler) GetStatefulSetNamespaces(c *gin.Context) {
 	response.OK(c, namespaces)
 }
 
-// ScaleStatefulSet 扩缩容StatefulSet
+// ScaleStatefulSet 擴縮容StatefulSet
 func (h *StatefulSetHandler) ScaleStatefulSet(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
@@ -287,26 +287,26 @@ func (h *StatefulSetHandler) ScaleStatefulSet(c *gin.Context) {
 
 	var req ScaleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
-	logger.Info("扩缩容StatefulSet: %s/%s/%s to %d", clusterId, namespace, name, req.Replicas)
+	logger.Info("擴縮容StatefulSet: %s/%s/%s to %d", clusterId, namespace, name, req.Replicas)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -316,46 +316,46 @@ func (h *StatefulSetHandler) ScaleStatefulSet(c *gin.Context) {
 	clientset := k8sClient.GetClientset()
 	scale, err := clientset.AppsV1().StatefulSets(namespace).GetScale(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		response.InternalError(c, "获取StatefulSet Scale失败: "+err.Error())
+		response.InternalError(c, "獲取StatefulSet Scale失敗: "+err.Error())
 		return
 	}
 
 	scale.Spec.Replicas = req.Replicas
 	_, err = clientset.AppsV1().StatefulSets(namespace).UpdateScale(ctx, name, scale, metav1.UpdateOptions{})
 	if err != nil {
-		response.InternalError(c, "扩缩容失败: "+err.Error())
+		response.InternalError(c, "擴縮容失敗: "+err.Error())
 		return
 	}
 
-	response.OK(c, gin.H{"message": "扩缩容成功"})
+	response.OK(c, gin.H{"message": "擴縮容成功"})
 }
 
-// ApplyYAML 应用StatefulSet YAML
+// ApplyYAML 應用StatefulSet YAML
 func (h *StatefulSetHandler) ApplyYAML(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 
 	var req YAMLApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+		response.BadRequest(c, "參數錯誤: "+err.Error())
 		return
 	}
 
-	logger.Info("应用StatefulSet YAML: cluster=%s, dryRun=%v", clusterId, req.DryRun)
+	logger.Info("應用StatefulSet YAML: cluster=%s, dryRun=%v", clusterId, req.DryRun)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -364,24 +364,24 @@ func (h *StatefulSetHandler) ApplyYAML(c *gin.Context) {
 
 	var objMap map[string]interface{}
 	if err := yaml.Unmarshal([]byte(req.YAML), &objMap); err != nil {
-		response.BadRequest(c, "YAML格式错误: "+err.Error())
+		response.BadRequest(c, "YAML格式錯誤: "+err.Error())
 		return
 	}
 
 	if objMap["apiVersion"] == nil || objMap["kind"] == nil {
-		response.BadRequest(c, "YAML缺少必要字段: apiVersion 或 kind")
+		response.BadRequest(c, "YAML缺少必要欄位: apiVersion 或 kind")
 		return
 	}
 
 	kind := objMap["kind"].(string)
 	if kind != "StatefulSet" {
-		response.BadRequest(c, "YAML类型错误，期望StatefulSet，实际为: "+kind)
+		response.BadRequest(c, "YAML型別錯誤，期望StatefulSet，實際為: "+kind)
 		return
 	}
 
 	metadata, ok := objMap["metadata"].(map[string]interface{})
 	if !ok {
-		response.BadRequest(c, "YAML缺少 metadata 字段")
+		response.BadRequest(c, "YAML缺少 metadata 欄位")
 		return
 	}
 
@@ -392,35 +392,35 @@ func (h *StatefulSetHandler) ApplyYAML(c *gin.Context) {
 
 	result, err := h.applyYAML(ctx, k8sClient, req.YAML, namespace, req.DryRun)
 	if err != nil {
-		response.InternalError(c, "YAML应用失败: "+err.Error())
+		response.InternalError(c, "YAML應用失敗: "+err.Error())
 		return
 	}
 
 	response.OK(c, result)
 }
 
-// DeleteStatefulSet 删除StatefulSet
+// DeleteStatefulSet 刪除StatefulSet
 func (h *StatefulSetHandler) DeleteStatefulSet(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	logger.Info("删除StatefulSet: %s/%s/%s", clusterId, namespace, name)
+	logger.Info("刪除StatefulSet: %s/%s/%s", clusterId, namespace, name)
 
 	clusterID, err := parseClusterID(clusterId)
 	if err != nil {
-		response.BadRequest(c, "无效的集群ID")
+		response.BadRequest(c, "無效的叢集ID")
 		return
 	}
 	cluster, err := h.clusterService.GetCluster(clusterID)
 	if err != nil {
-		response.NotFound(c, "集群不存在")
+		response.NotFound(c, "叢集不存在")
 		return
 	}
 
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
-		response.InternalError(c, "获取K8s客户端失败: "+err.Error())
+		response.InternalError(c, "獲取K8s客戶端失敗: "+err.Error())
 		return
 	}
 
@@ -430,14 +430,14 @@ func (h *StatefulSetHandler) DeleteStatefulSet(c *gin.Context) {
 	clientset := k8sClient.GetClientset()
 	err = clientset.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		response.InternalError(c, "删除失败: "+err.Error())
+		response.InternalError(c, "刪除失敗: "+err.Error())
 		return
 	}
 
-	response.OK(c, gin.H{"message": "删除成功"})
+	response.OK(c, gin.H{"message": "刪除成功"})
 }
 
-// 辅助方法
+// 輔助方法
 func (h *StatefulSetHandler) convertToStatefulSetInfo(ss *appsv1.StatefulSet) StatefulSetInfo {
 	status := "Running"
 	if ss.Status.Replicas == 0 {
@@ -474,12 +474,12 @@ func (h *StatefulSetHandler) applyYAML(ctx context.Context, k8sClient *services.
 	decode := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(yamlContent), nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("解析YAML失败: %w", err)
+		return nil, fmt.Errorf("解析YAML失敗: %w", err)
 	}
 
 	statefulSet, ok := obj.(*appsv1.StatefulSet)
 	if !ok {
-		return nil, fmt.Errorf("无法转换为StatefulSet类型")
+		return nil, fmt.Errorf("無法轉換為StatefulSet型別")
 	}
 
 	clientset := k8sClient.GetClientset()

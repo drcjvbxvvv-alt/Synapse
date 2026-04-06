@@ -155,7 +155,7 @@ func (h *ApprovalHandler) ApproveRequest(c *gin.Context) {
 		return
 	}
 
-	logger.Info("審批通過", "id", id, "approver", approverName)
+	logger.Info("審批透過", "id", id, "approver", approverName)
 	response.OK(c, gin.H{"message": "已核准", "id": id})
 }
 
