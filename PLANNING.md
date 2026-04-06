@@ -438,7 +438,7 @@ export const synapseTheme: ThemeConfig = {
 
 ---
 
-#### Phase 2：MainLayout 重構（W2）
+#### Phase 2：MainLayout 重構（W2）✅ 已完成（2026-04-06）
 
 **目標：** 拆分 25KB 的 MainLayout.tsx，移除動態 CSS 注入，Header 瘦身。
 

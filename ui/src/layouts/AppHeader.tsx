@@ -1,0 +1,144 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Layout, Button, Badge, Dropdown, Avatar, Space } from 'antd';
+import {
+  BellOutlined,
+  UserOutlined,
+  GlobalOutlined,
+  SettingOutlined,
+  LogoutOutlined,
+} from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
+import type { MenuProps } from 'antd';
+import synapseIcon from '../assets/synapse-icon.svg';
+import SearchDropdown from '../components/SearchDropdown';
+import { tokenManager } from '../services/authService';
+import { supportedLanguages } from '../i18n';
+
+const { Header } = Layout;
+
+interface AppHeaderProps {
+  onSearch: (value: string) => void;
+}
+
+const AppHeader: React.FC<AppHeaderProps> = ({ onSearch }) => {
+  const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const currentUser = tokenManager.getUser();
+
+  const getDisplayName = () => {
+    const name = currentUser?.display_name || currentUser?.username || 'User';
+    return name.replace(/\d+$/, '');
+  };
+
+  const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'logout') {
+      tokenManager.clear();
+      navigate('/login');
+    } else if (key === 'profile') {
+      navigate('/profile');
+    } else if (key === 'settings') {
+      navigate('/settings');
+    } else if (supportedLanguages.some(l => l.code === key)) {
+      i18n.changeLanguage(key);
+    }
+  };
+
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: t('menu.profile'),
+    },
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: t('menu.settings'),
+    },
+    { type: 'divider' },
+    {
+      key: 'language',
+      icon: <GlobalOutlined />,
+      label: t('menu.language', '語言'),
+      children: supportedLanguages.map(lang => ({
+        key: lang.code,
+        label: lang.name,
+      })),
+    },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: t('auth.logout'),
+      danger: true,
+    },
+  ];
+
+  return (
+    <Header
+      style={{
+        position: 'fixed',
+        top: 0,
+        zIndex: 1000,
+        width: '100%',
+        height: 48,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 16px',
+        background: '#1f2937',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+      }}
+    >
+      {/* Logo */}
+      <div
+        style={{ display: 'flex', alignItems: 'center', marginLeft: 16, cursor: 'pointer' }}
+        onClick={() => navigate('/')}
+      >
+        <img src={synapseIcon} alt="Synapse" style={{ width: 32, height: 32, marginRight: 8 }} />
+        <span style={{ fontSize: 18, fontWeight: 'bold', color: '#ffffff' }}>Synapse</span>
+      </div>
+
+      {/* 全域搜尋 */}
+      <div
+        style={{
+          flex: 1,
+          maxWidth: 600,
+          margin: '0 24px',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <SearchDropdown onSearch={onSearch} />
+      </div>
+
+      {/* 右側工具區 */}
+      <Space size="middle">
+        <Badge count={3} size="small" offset={[-8, 10]}>
+          <Button
+            type="text"
+            icon={<BellOutlined />}
+            size="large"
+            style={{ color: '#ffffff' }}
+          />
+        </Badge>
+
+        <Dropdown
+          menu={{
+            items: userMenuItems,
+            onClick: handleUserMenuClick,
+            selectedKeys: [i18n.language],
+          }}
+          placement="bottomRight"
+        >
+          <Space style={{ cursor: 'pointer' }}>
+            <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#667eea' }} />
+            <span style={{ color: '#ffffff' }}>{getDisplayName()}</span>
+          </Space>
+        </Dropdown>
+      </Space>
+    </Header>
+  );
+};
+
+export default React.memo(AppHeader);

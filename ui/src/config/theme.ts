@@ -65,6 +65,8 @@ export const synapseTheme: ThemeConfig = {
       subMenuItemBg: '#ffffff',
       groupTitleColor: '#999999',
       groupTitleFontSize: 12,
+      // 緊湊高度（取代 .compact-menu CSS 注入）
+      itemHeight: 36,
     },
     Button: {
       borderRadius: 8,
