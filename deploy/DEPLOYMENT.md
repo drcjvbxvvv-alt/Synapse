@@ -1,264 +1,233 @@
-# Synapse 部署指南
+# Synapse 部署操作手冊
 
 ## 📦 部署方式
 
-Synapse 支持多种部署方式：
+Synapse 支援三種部署方式：
 
-1. **Docker Compose 部署**（推荐用于开发/测试）
-2. **Kubernetes Helm 部署**（推荐用于生产环境）
-3. **二进制部署**（适用于特殊场景）
+| 方式 | 適用場景 | 複雜度 |
+|------|----------|--------|
+| **Docker（單容器）** | 快速體驗、CI 環境 | ⭐ |
+| **Docker Compose** | 開發 / 測試 / 小型正式環境 | ⭐⭐ |
+| **Kubernetes Helm** | 正式環境、高可用 | ⭐⭐⭐ |
 
 ---
 
-## ☸️ Kubernetes Helm 部署（推荐生产环境）
+## ☸️ Kubernetes Helm 部署（推薦正式環境）
 
-### 方式一：通过 Helm 仓库安装（推荐）
+### 方式一：透過 Helm 倉庫安裝（推薦）
 
 ```bash
-# 1. 添加 Helm 仓库
+# 1. 新增 Helm 倉庫
 helm repo add synapse https://clay-wangzhi.github.io/Synapse
 helm repo update
 
-# 2. 搜索可用版本
+# 2. 查看可用版本
 helm search repo synapse
 
-# 3. 安装（使用默认配置）
+# 3. 安裝（使用預設設定）
 helm install synapse synapse/synapse \
   -n synapse --create-namespace
 
-# 4. 或者自定义配置安装
+# 4. 或自訂設定安裝
 helm install synapse synapse/synapse \
   -n synapse --create-namespace \
   --set mysql.auth.rootPassword=your-root-password \
   --set mysql.auth.password=your-password \
   --set backend.config.jwt.secret=your-jwt-secret
 
-# 5. 查看安装状态
+# 5. 查看安裝狀態
 helm status synapse -n synapse
 kubectl get pods -n synapse
 ```
 
-### 方式二：从源码安装
+### 方式二：從原始碼安裝
 
 ```bash
-# 1. 克隆项目
+# 1. 複製專案
 git clone https://github.com/clay-wangzhi/Synapse.git
 cd Synapse
 
-# 2. 安装
-helm install synapse ./deploy/helm/synapse \
+# 2. 安裝
+helm install synapse ./deploy/helm/kubepolaris \
   -n synapse --create-namespace \
-  -f ./deploy/helm/synapse/values.yaml
+  -f ./deploy/helm/kubepolaris/values.yaml
 ```
 
-### Helm 配置说明
+### Helm 常用設定參數
 
-详细配置请参考 [Helm Chart README](./helm/synapse/README.md)
+詳細設定請參考 [Helm Chart README](./helm/kubepolaris/README.md)
 
-常用配置项：
-
-| 参数 | 说明 | 默认值 |
+| 參數 | 說明 | 預設值 |
 |------|------|--------|
-| `mysql.auth.rootPassword` | MySQL root 密码 | `synapse-root` |
-| `mysql.auth.password` | 应用数据库密码 | `synapse123` |
-| `backend.config.jwt.secret` | JWT 密钥 | 随机生成 |
-| `ingress.enabled` | 是否启用 Ingress | `true` |
-| `ingress.hosts[0].host` | 域名 | `synapse.local` |
-| `grafana.enabled` | 是否启用内置 Grafana | `true` |
+| `mysql.auth.rootPassword` | MySQL root 密碼 | `synapse-root` |
+| `mysql.auth.password` | 應用資料庫密碼 | `synapse123` |
+| `backend.config.jwt.secret` | JWT 密鑰 | 隨機產生 |
+| `ingress.enabled` | 是否啟用 Ingress | `true` |
+| `ingress.hosts[0].host` | 網域名稱 | `synapse.local` |
+| `grafana.enabled` | 是否啟用內建 Grafana | `true` |
 
-### 升级和卸载
+### 升級與卸載
 
 ```bash
-# 升级
+# 升級
 helm repo update
 helm upgrade synapse synapse/synapse -n synapse
 
-# 卸载
+# 回滾
+helm rollback synapse 1 -n synapse
+
+# 卸載
 helm uninstall synapse -n synapse
 ```
 
 ---
 
-## 🐳 Docker 部署（开发/测试）
+## 🐳 Docker Compose 部署（開發 / 測試）
 
-### 一条命令快速体验
-
-```bash
-docker run --rm -p 8080:8080 registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse:latest
-```
-
-访问 `http://localhost:8080`，默认账号 `admin / Synapse@2026`。
-
-> 使用内置 SQLite，无需外部依赖。生产环境建议使用下方 Docker Compose + MySQL 部署。
-
-### Docker Compose 部署
-
-#### 前置要求
+### 前置需求
 
 - Docker 20.10+
-- Docker Compose V2 (docker compose plugin)
-- 至少 4GB 可用内存
-- 至少 10GB 可用磁盘空间
+- Docker Compose V2（docker compose plugin）
+- 至少 4 GB 可用記憶體
+- 至少 10 GB 可用磁碟空間
 
-### 快速开始
+### 快速開始
 
 ```bash
-# 1. 克隆项目
+# 1. 複製專案
 git clone https://github.com/clay-wangzhi/Synapse.git
 cd Synapse
 
-# 2. 配置环境变量
+# 2. 設定環境變數
 cp .env.example .env
-vim .env  # 修改密码等配置
+vim .env   # 修改密碼等設定
 
-# 3. 创建 Grafana secrets 目录
-mkdir -p deploy/docker/grafana/secrets
-
-# 4. 启动所有服务
+# 3. 啟動所有服務
 docker compose up -d
 
-# 5. 查看状态
+# 4. 查看狀態
 docker compose ps
 ```
 
-### 访问应用
+### 服務存取
 
-启动完成后，访问：
+啟動完成後：
 
-- **Synapse**: http://localhost
-  - 默认账号: `admin`
-  - 默认密码: `Synapse@2026`
-
-- **Grafana**: http://localhost:3000
-  - 默认账号: `admin`
-  - 默认密码: 查看 `.env` 文件中的 `GRAFANA_ADMIN_PASSWORD`
+- **Synapse**：http://localhost
+  - 預設帳號：`admin` / `Synapse@2026`
+- **Grafana**：http://localhost:3000
+  - 預設帳號：`admin` / 查看 `.env` 中的 `GRAFANA_ADMIN_PASSWORD`
 
 ---
 
-## 📋 配置说明
+## 📋 環境變數說明（.env）
 
-### 环境变量配置 (.env)
-
-| 变量名 | 说明 | 默认值 | 必填 |
-|--------|------|--------|------|
-| `MYSQL_ROOT_PASSWORD` | MySQL root 密码 | - | ✅ |
-| `MYSQL_PASSWORD` | 应用数据库密码 | - | ✅ |
-| `JWT_SECRET` | JWT 签名密钥 | - | ✅ |
-| `GRAFANA_ADMIN_PASSWORD` | Grafana 管理员密码 | - | ✅ |
-| `MYSQL_PORT` | MySQL 端口 | `3306` | ❌ |
-| `APP_PORT` | 应用对外端口 | `80` | ❌ |
-| `GRAFANA_PORT` | Grafana 端口 | `3000` | ❌ |
-| `SERVER_MODE` | 运行模式 (debug/release) | `release` | ❌ |
-| `LOG_LEVEL` | 日志级别 | `info` | ❌ |
-| `VERSION` | 镜像版本 | `latest` | ❌ |
+| 變數名稱 | 說明 | 預設值 | 必填 |
+|----------|------|--------|------|
+| `MYSQL_ROOT_PASSWORD` | MySQL root 密碼 | — | ✅ |
+| `MYSQL_PASSWORD` | 應用資料庫密碼 | — | ✅ |
+| `JWT_SECRET` | JWT 簽名密鑰 | — | ✅ |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana 管理員密碼 | — | ✅ |
+| `MYSQL_PORT` | MySQL 連接埠 | `3306` | ❌ |
+| `APP_PORT` | 應用對外連接埠 | `80` | ❌ |
+| `GRAFANA_PORT` | Grafana 連接埠 | `3000` | ❌ |
+| `SERVER_MODE` | 執行模式（debug/release） | `release` | ❌ |
+| `LOG_LEVEL` | 日誌層級 | `info` | ❌ |
+| `VERSION` | 映像版本 | `latest` | ❌ |
 
 ---
 
-## 🔒 安全最佳实践
+## 🔒 安全最佳實踐
 
-### 1. 密码安全
+### 產生強隨機密碼
 
-**生成强随机密码**:
 ```bash
-# MySQL 密码（16 字符）
+# MySQL 密碼（16 字元）
 openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16
 
-# JWT Secret（32 字符）
+# JWT Secret（32 字元）
 openssl rand -base64 32
 
-# Grafana 密码（12 字符）
+# Grafana 密碼（12 字元）
 openssl rand -base64 12 | tr -dc 'a-zA-Z0-9' | head -c 12
 ```
 
-### 2. 文件权限
+### 檔案權限
 
 ```bash
-# .env 文件只允许所有者读写
+# .env 僅允許擁有者讀寫
 chmod 600 .env
 
-# secrets 目录权限
+# secrets 目錄權限
 chmod 700 deploy/docker/grafana/secrets
 ```
 
-### 3. 生产环境建议
+### 正式環境檢查清單
 
-- ✅ 使用强随机密码（16+ 字符）
-- ✅ 定期轮换密码和密钥
-- ✅ 启用 HTTPS/TLS
-- ✅ 配置防火墙规则
-- ✅ 启用审计日志
-- ✅ 定期备份数据
-- ✅ 使用 Secrets 管理工具（如 Vault）
+- ✅ 使用強隨機密碼（16 字元以上）
+- ✅ 定期輪換密碼與密鑰
+- ✅ 啟用 HTTPS / TLS
+- ✅ 設定防火牆規則
+- ✅ 啟用稽核日誌（Synapse 系統設定 → 安全設定）
+- ✅ 定期備份資料
+- ✅ 使用 Secrets 管理工具（如 Vault / Sealed Secrets）
 
 ---
 
 ## 🛠️ 常用操作
 
-### 查看日志
+### 查看日誌
 
 ```bash
-# 查看所有服务日志
+# 所有服務
 docker compose logs -f
 
-# 查看特定服务日志
+# 指定服務
 docker compose logs -f synapse
 docker compose logs -f mysql
 docker compose logs -f grafana
 ```
 
-### 重启服务
+### 重啟服務
 
 ```bash
-# 重启所有服务
-docker compose restart
-
-# 重启特定服务
-docker compose restart synapse
+docker compose restart          # 所有服務
+docker compose restart synapse  # 指定服務
 ```
 
-### 停止服务
+### 停止服務
 
 ```bash
-# 停止服务（保留数据）
-docker compose stop
-
-# 停止并删除容器（保留数据卷）
-docker compose down
-
-# 停止并删除所有内容（包括数据）
-docker compose down -v
+docker compose stop             # 停止（保留資料）
+docker compose down             # 停止並刪除容器（保留資料卷）
+docker compose down -v          # 停止並刪除所有內容（含資料）
 ```
 
-### 更新服务
+### 更新服務
 
 ```bash
-# 拉取最新代码
 git pull origin main
-
-# 重新构建并启动
 docker compose up -d --build
-
-# 查看更新状态
 docker compose ps
 ```
 
-### 数据备份
+### 資料備份
 
 ```bash
-# 备份 MySQL 数据
-docker compose exec mysql mysqldump -u root -p synapse > backup.sql
+# 備份 MySQL
+docker compose exec mysql mysqldump -u root -p synapse > backup_$(date +%Y%m%d).sql
 
-# 备份 Grafana 数据
+# 備份 Grafana
 docker compose exec grafana tar czf - /var/lib/grafana > grafana-backup.tar.gz
 ```
 
-### 数据恢复
+### 資料還原
 
 ```bash
-# 恢复 MySQL 数据
+# 還原 MySQL
 docker compose exec -T mysql mysql -u root -p synapse < backup.sql
 
-# 恢复 Grafana 数据
+# 還原 Grafana
 docker compose exec -T grafana tar xzf - -C / < grafana-backup.tar.gz
 docker compose restart grafana
 ```
@@ -267,100 +236,92 @@ docker compose restart grafana
 
 ## 🐛 故障排查
 
-### 服务无法启动
+### 服務無法啟動
 
-**检查 Docker 状态**:
 ```bash
+# 查看 Docker 狀態
 docker info
 docker compose ps
-```
 
-**查看错误日志**:
-```bash
+# 查看錯誤日誌
 docker compose logs synapse
 docker compose logs mysql
 ```
 
-**常见问题**:
-1. **端口冲突**: 修改 `.env` 中的端口配置
-2. **内存不足**: 确保至少 4GB 可用内存
-3. **磁盘空间不足**: 清理 Docker 缓存 `docker system prune -a`
+**常見原因**：
+1. **連接埠衝突**：修改 `.env` 中的連接埠設定
+2. **記憶體不足**：確保至少 4 GB 可用記憶體
+3. **磁碟空間不足**：清理 Docker 快取 `docker system prune -a`
 
-### MySQL 连接失败
+### MySQL 連線失敗
 
 ```bash
-# 检查 MySQL 状态
+# 確認 MySQL 狀態
 docker compose exec mysql mysqladmin ping -h localhost
 
-# 重置 MySQL
+# 重置 MySQL（⚠️ 會清除所有資料）
 docker compose down
 docker volume rm synapse-mysql-data
 docker compose up -d mysql
 ```
 
-### Grafana API Key 问题
+### Grafana API Key 問題
 
 ```bash
-# 检查 API Key 文件
+# 確認 API Key 檔案
 ls -la deploy/docker/grafana/secrets/grafana_api_key
 
-# 重新生成 API Key
+# 重新初始化
 docker compose up -d grafana-init
 docker compose logs grafana-init
 ```
 
 ---
 
-## 📊 监控和维护
+## 📊 監控與維運
 
-### 健康检查
+### 健康檢查
 
 ```bash
-# 检查所有服务健康状态
 docker compose ps
-
-# 手动测试健康检查
 curl http://localhost/healthz          # Synapse
 curl http://localhost:3000/api/health  # Grafana
 ```
 
-### 资源监控
+### 資源監控
 
 ```bash
-# 查看容器资源使用
-docker stats
-
-# 查看磁盘使用
-docker system df
+docker stats       # 容器資源使用
+docker system df   # 磁碟使用
 ```
 
 ---
 
-## 🔄 升级指南
+## 🔄 版本升級
 
 ```bash
-# 1. 备份数据
+# 1. 備份資料
 docker compose exec mysql mysqldump -u root -p synapse > backup_$(date +%Y%m%d).sql
 
-# 2. 拉取最新代码
+# 2. 拉取最新程式碼
 git pull origin main
 
-# 3. 重新构建并启动
+# 3. 重新建置並啟動
 docker compose up -d --build
 
-# 4. 验证服务
+# 4. 驗證服務
 docker compose ps
 curl http://localhost/healthz
 ```
 
 ---
 
-## 📚 相关文档
+## 📚 相關文件
 
-- [环境变量配置模板](../.env.example)
-- [Helm Chart 文档](./helm/synapse/README.md)
+- [環境變數設定範本](../.env.example)
+- [Helm Chart 文件](./helm/kubepolaris/README.md)
 
 ---
 
-**最后更新**: 2026-02-12
-**文档版本**: v2.0.0
+**最後更新**：2026-04-06
+**文件版本**：v2.1.0

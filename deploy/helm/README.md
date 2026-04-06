@@ -1,69 +1,66 @@
 # Synapse Helm Chart 部署指南
 
-## 📚 文档目录
-
-本目录包含 Synapse 的 Kubernetes Helm Chart 部署资源。
-
-### 📁 目录结构
+## 📁 目錄結構
 
 ```
-deploy/helm/synapse/
-├── Chart.yaml                    # Chart 元数据
-├── values.yaml                   # 默认配置值
-├── values-ha.yaml                # 高可用配置示例
-├── values-production.yaml        # 生产环境配置示例
-├── README.md                     # Chart 使用说明
-├── quick-deploy.sh               # 快速部署脚本
-├── .helmignore                   # Helm 忽略文件
-└── templates/                    # Kubernetes 模板文件
-    ├── NOTES.txt                 # 安装后显示的信息
-    ├── _helpers.tpl              # 模板辅助函数
-    ├── configmap.yaml            # 配置文件
-    ├── secret.yaml               # 密钥
-    ├── serviceaccount.yaml       # 服务账号
-    ├── rbac.yaml                 # RBAC 权限
-    ├── mysql-statefulset.yaml    # MySQL StatefulSet
-    ├── mysql-service.yaml        # MySQL Service
-    ├── mysql-pvc.yaml            # MySQL PVC
-    ├── backend-deployment.yaml   # 后端 Deployment
-    ├── backend-service.yaml      # 后端 Service
-    ├── frontend-deployment.yaml  # 前端 Deployment
-    ├── frontend-service.yaml     # 前端 Service
-    ├── ingress.yaml              # Ingress
-    ├── hpa.yaml                  # 水平扩展
-    ├── pdb.yaml                  # Pod 中断预算
-    └── tests/                    # 测试
-        └── test-connection.yaml
+deploy/helm/
+└── kubepolaris/               # Chart 主目錄（chart name: synapse）
+    ├── Chart.yaml             # Chart 元資料
+    ├── values.yaml            # 預設設定值
+    ├── values-ha.yaml         # 高可用設定範例
+    ├── values-production.yaml # 正式環境設定範例
+    ├── README.md              # Chart 使用說明
+    ├── quick-deploy.sh        # 快速部署腳本
+    ├── .helmignore            # Helm 忽略清單
+    └── templates/             # Kubernetes 模板檔案
+        ├── NOTES.txt          # 安裝後提示訊息
+        ├── _helpers.tpl       # 模板輔助函式
+        ├── configmap.yaml     # 設定檔
+        ├── secret.yaml        # 密鑰
+        ├── serviceaccount.yaml
+        ├── rbac.yaml          # RBAC 權限
+        ├── mysql-statefulset.yaml
+        ├── mysql-service.yaml
+        ├── mysql-pvc.yaml
+        ├── backend-deployment.yaml
+        ├── backend-service.yaml
+        ├── frontend-deployment.yaml
+        ├── frontend-service.yaml
+        ├── ingress.yaml
+        ├── hpa.yaml           # 水平自動擴展
+        ├── pdb.yaml           # Pod 中斷預算
+        └── tests/
+            └── test-connection.yaml
 ```
 
-## 🚀 快速开始
+## 🚀 快速開始
 
-### 方式一：使用快速部署脚本（推荐）
+### 方式一：使用快速部署腳本（推薦）
 
 ```bash
-cd deploy/helm/synapse
+cd deploy/helm/kubepolaris
 ./quick-deploy.sh
 ```
 
-脚本会自动：
-- ✅ 检查环境依赖（kubectl、helm）
-- ✅ 生成安全密钥
-- ✅ 创建命名空间
-- ✅ 部署所有组件
-- ✅ 等待服务就绪
+腳本會自動：
+- ✅ 檢查環境依賴（kubectl、helm）
+- ✅ 產生安全密鑰
+- ✅ 建立命名空間
+- ✅ 部署所有元件
+- ✅ 等待服務就緒
 
-### 方式二：使用 Helm 手动部署
+### 方式二：手動 Helm 部署
 
 ```bash
-# 1. 创建命名空间
+# 1. 建立命名空間
 kubectl create namespace synapse
 
-# 2. 安装 Chart
-helm install synapse deploy/helm/synapse \
+# 2. 安裝 Chart
+helm install synapse ./deploy/helm/kubepolaris \
   --namespace synapse \
   --set security.jwtSecret="$(openssl rand -base64 32)"
 
-# 3. 查看状态
+# 3. 查看狀態
 helm status synapse -n synapse
 kubectl get pods -n synapse
 ```
@@ -71,38 +68,29 @@ kubectl get pods -n synapse
 ### 方式三：使用 Makefile
 
 ```bash
-# 验证 Chart
-make helm-lint
-
-# 安装
-make helm-install
-
-# 打包
-make helm-package
-
-# 卸载
-make helm-uninstall
+make helm-lint       # 驗證 Chart
+make helm-install    # 安裝
+make helm-package    # 打包
+make helm-uninstall  # 卸載
 ```
 
-## 🎯 部署场景
+## 🎯 部署場景
 
-### 场景 1: 基础部署（开发/测试）
+### 場景 1：基礎部署（開發 / 測試）
 
-使用内置 MySQL，最小资源配置：
+使用內建 MySQL，最小資源設定：
 
 ```bash
-helm install synapse deploy/helm/synapse \
+helm install synapse ./deploy/helm/kubepolaris \
   -n synapse \
   --create-namespace \
   --set security.jwtSecret="your-secure-jwt-secret"
 ```
 
-### 场景 2: 生产环境部署
-
-使用外部数据库和 Ingress：
+### 場景 2：正式環境部署（外部資料庫）
 
 ```bash
-# 创建 Secret
+# 建立 Secret
 kubectl create secret generic synapse-mysql \
   --from-literal=password=your_mysql_password \
   -n synapse
@@ -111,135 +99,87 @@ kubectl create secret generic synapse-secrets \
   --from-literal=jwt-secret="$(openssl rand -base64 32)" \
   -n synapse
 
-# 安装
-helm install synapse deploy/helm/synapse \
+# 安裝
+helm install synapse ./deploy/helm/kubepolaris \
   -n synapse \
-  -f deploy/helm/synapse/values-production.yaml \
+  -f ./deploy/helm/kubepolaris/values-production.yaml \
   --set mysql.external.host=your-mysql-host.example.com
 ```
 
-### 场景 3: 高可用部署
+### 場景 3：高可用部署
 
-3 副本 + 反亲和 + 自动扩缩容：
+3 副本 + 反親和 + 自動擴縮容：
 
 ```bash
-helm install synapse deploy/helm/synapse \
+helm install synapse ./deploy/helm/kubepolaris \
   -n synapse \
-  -f deploy/helm/synapse/values-ha.yaml
+  -f ./deploy/helm/kubepolaris/values-ha.yaml
 ```
 
-## 📊 配置说明
+## 📊 設定說明
 
-### 核心配置参数
+### 核心設定參數
 
-| 参数 | 描述 | 默认值 |
+| 參數 | 描述 | 預設值 |
 |------|------|--------|
-| `backend.replicaCount` | 后端副本数 | `2` |
-| `frontend.replicaCount` | 前端副本数 | `2` |
-| `mysql.internal.enabled` | 启用内置 MySQL | `true` |
+| `backend.replicaCount` | 後端副本數 | `2` |
+| `frontend.replicaCount` | 前端副本數 | `2` |
+| `mysql.internal.enabled` | 啟用內建 MySQL | `true` |
 | `mysql.external.enabled` | 使用外部 MySQL | `false` |
-| `grafana.enabled` | 启用内置 Grafana | `true` |
-| `grafana.dashboards.enabled` | 启用 Dashboard 自动导入 | `true` |
-| `grafana.datasource.prometheusUrl` | Prometheus 数据源地址 | `http://your-prometheus:9090` |
-| `ingress.enabled` | 启用 Ingress | `false` |
-| `security.jwtSecret` | JWT 密钥（必填） | `""` |
-| `rbac.create` | 创建 RBAC 资源 | `true` |
-| `autoscaling.backend.enabled` | 启用后端 HPA | `false` |
-| `podDisruptionBudget.enabled` | 启用 PDB | `false` |
+| `grafana.enabled` | 啟用內建 Grafana | `true` |
+| `grafana.dashboards.enabled` | 啟用 Dashboard 自動匯入 | `true` |
+| `grafana.datasource.prometheusUrl` | Prometheus 資料來源位址 | `http://your-prometheus:9090` |
+| `ingress.enabled` | 啟用 Ingress | `false` |
+| `security.jwtSecret` | JWT 密鑰（必填） | `""` |
+| `rbac.create` | 建立 RBAC 資源 | `true` |
+| `autoscaling.backend.enabled` | 啟用後端 HPA | `false` |
+| `podDisruptionBudget.enabled` | 啟用 PDB | `false` |
 
-### Grafana 配置
+### Grafana 設定
 
-Synapse 内置了 Grafana 用于监控可视化。Grafana 的配置包括：
-
-#### 1. 启用/禁用 Grafana
+#### 停用內建 Grafana（使用外部 Grafana）
 
 ```bash
-# 禁用内置 Grafana（使用外部 Grafana）
-helm install synapse deploy/helm/synapse \
+helm install synapse ./deploy/helm/kubepolaris \
   -n synapse \
   --set grafana.enabled=false \
   --set grafana.external.enabled=true \
   --set grafana.external.url="http://your-grafana:3000"
 ```
 
-#### 2. 配置 Prometheus 数据源
-
-Grafana 需要连接到 Prometheus 来获取监控数据：
+#### 設定 Prometheus 資料來源
 
 ```bash
-# 设置 Prometheus 地址
-helm install synapse deploy/helm/synapse \
+helm install synapse ./deploy/helm/kubepolaris \
   -n synapse \
   --set grafana.datasource.prometheusUrl="http://prometheus-server:9090"
 ```
 
-#### 3. Dashboard 自动导入
-
-Chart 包含了 3 个预定义的 Dashboard：
-- **K8s 集群总览**: 集群整体资源使用情况
-- **Pod 详情监控**: Pod 级别的详细监控
-- **工作负载详情**: Deployment/StatefulSet 等工作负载监控
-
-这些 Dashboard 会在部署时自动导入到 Grafana 的 `Synapse` 文件夹中。
-
-如果不需要自动导入 Dashboard：
+#### 啟用 Grafana 持久化儲存
 
 ```bash
-helm install synapse deploy/helm/synapse \
-  -n synapse \
-  --set grafana.dashboards.enabled=false
-```
-
-#### 4. 持久化存储
-
-默认情况下，Grafana 使用 emptyDir，重启后数据会丢失。生产环境建议启用持久化：
-
-```bash
-helm install synapse deploy/helm/synapse \
+helm install synapse ./deploy/helm/kubepolaris \
   -n synapse \
   --set grafana.persistence.enabled=true \
   --set grafana.persistence.size=5Gi \
   --set grafana.persistence.storageClass=your-storage-class
 ```
 
-#### 5. 访问 Grafana
-
-Grafana 默认通过子路径 `/grafana/` 访问：
-
-```bash
-# Port Forward 方式
-kubectl port-forward -n synapse svc/synapse-grafana 3000:3000
-
-# 访问地址: http://localhost:3000/grafana/
-# 默认用户名: admin
-# 默认密码: 在安装时通过 --set grafana.adminPassword 设置
-```
-
-#### 6. Grafana 配置示例
+#### 完整 Grafana 設定範例
 
 ```yaml
 # values-custom.yaml
 grafana:
   enabled: true
-  
-  # 管理员密码
   adminPassword: "your-secure-password"
-  
-  # 持久化存储
   persistence:
     enabled: true
     size: 5Gi
     storageClass: "standard"
-  
-  # Dashboard 配置
   dashboards:
     enabled: true
-  
-  # Prometheus 数据源
   datasource:
     prometheusUrl: "http://prometheus-kube-prometheus-prometheus:9090"
-  
-  # 资源限制
   resources:
     limits:
       cpu: 1000m
@@ -249,98 +189,81 @@ grafana:
       memory: 256Mi
 ```
 
-然后使用自定义配置安装：
-
 ```bash
-helm install synapse deploy/helm/synapse \
+helm install synapse ./deploy/helm/kubepolaris \
   -n synapse \
   -f values-custom.yaml
 ```
 
-### 配置文件说明
+### 設定檔說明
 
-- **values.yaml**: 默认配置，适合开发测试
-- **values-ha.yaml**: 高可用配置，适合生产环境
-- **values-production.yaml**: 生产配置示例，需自定义
+| 檔案 | 用途 |
+|------|------|
+| `values.yaml` | 預設設定，適合開發測試 |
+| `values-ha.yaml` | 高可用設定，適合正式環境 |
+| `values-production.yaml` | 正式環境範本，需依需求調整 |
 
 ## 🔧 常用操作
 
-### 查看状态
+### 查看狀態
 
 ```bash
-# Helm release 状态
 helm status synapse -n synapse
-
-# Pod 状态
 kubectl get pods -n synapse
-
-# 服务状态
 kubectl get svc -n synapse
-
-# 所有资源
 kubectl get all -n synapse
 ```
 
-### 查看日志
+### 查看日誌
 
 ```bash
-# 后端日志
+# 後端日誌
 kubectl logs -f -l app.kubernetes.io/component=backend -n synapse
 
-# 前端日志
+# 前端日誌
 kubectl logs -f -l app.kubernetes.io/component=frontend -n synapse
 
-# MySQL 日志
+# MySQL 日誌
 kubectl logs -f -l app.kubernetes.io/component=mysql -n synapse
 ```
 
-### 访问应用
+### 存取應用
 
 ```bash
-# Port Forward
 kubectl port-forward -n synapse svc/synapse-frontend 8080:80
-
-# 浏览器访问
-# http://localhost:8080
-# 用户名: admin
-# 密码: Synapse@2026
+# 開啟 http://localhost:8080
+# 帳號：admin / Synapse@2026
 ```
 
-### 升级
+### 升級
 
 ```bash
-# 升级到新版本
-helm upgrade synapse deploy/helm/synapse \
+helm upgrade synapse ./deploy/helm/kubepolaris \
   -n synapse \
   -f values.yaml
 
-# 查看升级历史
-helm history synapse -n synapse
-
-# 回滚
-helm rollback synapse 1 -n synapse
+helm history synapse -n synapse    # 查看升級歷史
+helm rollback synapse 1 -n synapse # 回滾
 ```
 
-### 卸载
+### 卸載
 
 ```bash
-# 卸载 Chart
 helm uninstall synapse -n synapse
 
-# 删除 PVC（注意：会删除所有数据）
+# 刪除 PVC（⚠️ 會刪除所有資料）
 kubectl delete pvc -l app.kubernetes.io/instance=synapse -n synapse
 
-# 删除命名空间
 kubectl delete namespace synapse
 ```
 
-## 🧪 测试
+## 🧪 測試
 
 ```bash
-# 运行 Helm 测试
+# 執行 Helm 測試
 helm test synapse -n synapse
 
-# 手动测试连接
+# 手動測試連線
 kubectl run test-connection --rm -i --tty \
   --image=busybox:1.36 \
   --restart=Never \
@@ -348,56 +271,42 @@ kubectl run test-connection --rm -i --tty \
   -- wget -qO- synapse-backend:8080/healthz
 ```
 
-## 📦 打包和发布
-
-### 本地打包
+## 📦 打包與發佈
 
 ```bash
-# 验证 Chart
-helm lint deploy/helm/synapse
+# 驗證 Chart
+helm lint ./deploy/helm/kubepolaris
 
 # 打包
-helm package deploy/helm/synapse -d dist/
+helm package ./deploy/helm/kubepolaris -d dist/
 
-# 生成索引
-helm repo index dist/ --url https://your-repo-url
-```
+# 產生倉庫索引
+helm repo index dist/ --url https://clay-wangzhi.github.io/Synapse
 
-### 模板渲染测试
-
-```bash
-# 渲染模板
-helm template synapse deploy/helm/synapse \
+# 渲染模板（驗證用）
+helm template synapse ./deploy/helm/kubepolaris \
   --namespace synapse \
   --set security.jwtSecret="test-secret" \
   > rendered.yaml
 
-# 验证渲染结果
 kubectl apply --dry-run=client -f rendered.yaml
 ```
 
 ## 🔍 故障排查
 
-### Pod 无法启动
+### Pod 無法啟動
 
 ```bash
-# 查看 Pod 事件
 kubectl describe pod -l app.kubernetes.io/instance=synapse -n synapse
-
-# 查看 Pod 日志
 kubectl logs -l app.kubernetes.io/instance=synapse -n synapse --all-containers=true
 ```
 
-### 数据库连接失败
+### 資料庫連線失敗
 
 ```bash
-# 检查 MySQL Pod
 kubectl get pod -l app.kubernetes.io/component=mysql -n synapse
-
-# 检查 Secret
 kubectl get secret synapse-mysql -n synapse -o yaml
 
-# 测试数据库连接
 kubectl run mysql-client --rm -i --tty \
   --image=mysql:8.0 \
   --restart=Never \
@@ -405,32 +314,20 @@ kubectl run mysql-client --rm -i --tty \
   -- mysql -h synapse-mysql -u synapse -p
 ```
 
-### Ingress 无法访问
+### Ingress 無法存取
 
 ```bash
-# 检查 Ingress
 kubectl describe ingress synapse -n synapse
-
-# 检查 Ingress Controller
 kubectl get pods -n ingress-nginx
 ```
 
-## 📚 参考文档
+## 📚 參考文件
 
-- [Helm 官方文档](https://helm.sh/docs/)
-- [Kubernetes 官方文档](https://kubernetes.io/docs/)
-- [Synapse 文档](https://synapse.clay-wangzhi.com/docs)
-- [Chart README](./synapse/README.md)
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-Apache License 2.0
+- [Helm 官方文件](https://helm.sh/docs/)
+- [Kubernetes 官方文件](https://kubernetes.io/docs/)
+- [Chart README](./kubepolaris/README.md)
 
 ---
 
-**维护者:** Synapse Team  
-**更新时间:** 2026-01-23
+**維護者**：Synapse Team
+**更新時間**：2026-04-06
