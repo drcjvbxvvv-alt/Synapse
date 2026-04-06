@@ -5,17 +5,18 @@
 
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Result, Button, Spin } from 'antd';
+import { Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { tokenManager } from '../services/authService';
 import { usePermission } from '../hooks/usePermission';
-import { 
-  isPlatformAdmin, 
-  hasPermission, 
-  ROUTE_PERMISSIONS, 
-  CLUSTER_ROUTE_PERMISSIONS 
+import {
+  isPlatformAdmin,
+  hasPermission,
+  ROUTE_PERMISSIONS,
+  CLUSTER_ROUTE_PERMISSIONS
 } from '../config/menuPermissions';
 import type { PermissionType } from '../types';
+import ErrorPage from './ErrorPage';
 
 interface PermissionGuardProps {
   children: React.ReactNode;
@@ -52,15 +53,12 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     if (!isPlatformAdmin(currentUser?.username, allPerms)) {
       if (fallback) return <>{fallback}</>;
       return (
-        <Result
-          status="403"
+        <ErrorPage
+          status={403}
           title={t('permissionGuard.noAccess')}
           subTitle={t('permissionGuard.platformAdminOnly')}
-          extra={
-            <Button type="primary" onClick={() => window.history.back()}>
-              {t('permissionGuard.goBack')}
-            </Button>
-          }
+          showBack
+          showHome
         />
       );
     }
@@ -72,15 +70,12 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     if (!hasPermission(userPermission, requiredPermission)) {
       if (fallback) return <>{fallback}</>;
       return (
-        <Result
-          status="403"
+        <ErrorPage
+          status={403}
           title={t('permissionGuard.insufficientPermission')}
           subTitle={t('permissionGuard.requirePermission', { permission: getPermissionLabel(requiredPermission, t) })}
-          extra={
-            <Button type="primary" onClick={() => window.history.back()}>
-              {t('permissionGuard.goBack')}
-            </Button>
-          }
+          showBack
+          showHome
         />
       );
     }
@@ -131,15 +126,12 @@ export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = (
       const userPermission = currentClusterPermission?.permission_type as PermissionType | undefined;
       if (!hasPermission(userPermission, requiredPermission)) {
         return (
-          <Result
-            status="403"
+          <ErrorPage
+            status={403}
             title={t('permissionGuard.insufficientPermission')}
             subTitle={t('permissionGuard.requirePermission', { permission: getPermissionLabel(requiredPermission, t) })}
-            extra={
-              <Button type="primary" onClick={() => window.history.back()}>
-                {t('permissionGuard.goBack')}
-              </Button>
-            }
+            showBack
+            showHome
           />
         );
       }

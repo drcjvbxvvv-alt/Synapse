@@ -59,6 +59,7 @@ import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
 import { PermissionGuard } from './components/PermissionGuard';
 import ErrorBoundary from './components/ErrorBoundary';
+import ErrorPage from './components/ErrorPage';
 import './App.css';
 
 // 認證保護元件
@@ -256,6 +257,8 @@ const AppContent: React.FC = () => {
               {/* 個人資料路由 */}
               <Route path="profile" element={<UserProfile />} />
             </Route>
+            {/* 404 — 未匹配路由 */}
+            <Route path="*" element={<ErrorPage status={404} showHome showBack={false} />} />
           </Routes>
           </ErrorBoundary>
         </Router>
