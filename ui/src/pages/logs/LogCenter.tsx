@@ -305,6 +305,9 @@ const [activeTab, setActiveTab] = useState('stream');
         return;
       }
 
+      // 開始新串流前清空舊日誌，避免殘留上一次的結果
+      setLogs([]);
+
       const streamConfig = {
         targets,
         tail_lines: 100,
