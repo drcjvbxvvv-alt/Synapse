@@ -412,17 +412,17 @@ const { id: clusterId } = useParams<{ id: string }>();
   return (
     <div style={{ padding: '24px', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 頁面頭部 */}
-      <div style={{ marginBottom: 16, flexShrink: 0 }}>
-        <Space>
-          <Title level={3} style={{ margin: 0 }}>
+      <div style={{ marginBottom: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <Space size={8}>
+          <Title level={4} style={{ margin: 0 }}>
             {t('kubectl.title')}
           </Title>
-          <Text type="secondary">
+          <Text type="secondary" style={{ fontSize: 13 }}>
             {t('kubectl.cluster')}: {clusterId}
           </Text>
         </Space>
-        
-        <Space style={{ marginTop: 16 }} wrap>
+
+        <Space wrap>
           {!connected ? (
             <Button
               type="primary"
@@ -441,38 +441,23 @@ const { id: clusterId } = useParams<{ id: string }>();
               {t('kubectl.disconnect')}
             </Button>
           )}
-          
-          <Button
-            icon={<ClearOutlined />}
-            onClick={clearTerminal}
-          >
+          <Button icon={<ClearOutlined />} onClick={clearTerminal}>
             {t('kubectl.clear')}
           </Button>
-          
-          <Button
-            icon={<FullscreenOutlined />}
-            onClick={toggleFullscreen}
-          >
+          <Button icon={<FullscreenOutlined />} onClick={toggleFullscreen}>
             {t('kubectl.fullscreen')}
           </Button>
         </Space>
       </div>
 
-      {/* 連線狀態提示 */}
-      {connecting && !connected && (
+      {/* 連線狀態提示（緊湊 banner，不佔整行高度） */}
+      {(connecting || connected) && (
         <Alert
-          message={t('kubectl.prepHint')}
-          type="info"
+          message={connecting ? t('kubectl.prepHint') : t('kubectl.connectedTo', { clusterId })}
+          type={connecting ? 'info' : 'success'}
           showIcon
-          style={{ marginBottom: 16, flexShrink: 0 }}
-        />
-      )}
-      {connected && (
-        <Alert
-          message={t('kubectl.connectedTo', { clusterId })}
-          type="success"
-          showIcon
-          style={{ marginBottom: 16, flexShrink: 0 }}
+          banner
+          style={{ marginBottom: 8, flexShrink: 0 }}
         />
       )}
 

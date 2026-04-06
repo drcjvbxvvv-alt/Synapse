@@ -11,7 +11,6 @@ import {
   Tag,
   Input,
   Select,
-  Modal,
   Tooltip,
   Badge,
   App,
@@ -125,7 +124,7 @@ const getPodResources = (pod: PodInfo) => {
 const PodList: React.FC = () => {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { t } = useTranslation('pod');
   const { t: tc } = useTranslation('common');
   
@@ -298,7 +297,7 @@ const PodList: React.FC = () => {
       return;
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: t('actions.confirmBatchDelete'),
       content: t('actions.batchDeleteContent', { count: selectedRowKeys.length }),
       okText: tc('actions.confirm'),
@@ -513,7 +512,7 @@ const PodList: React.FC = () => {
       label: tc('actions.delete'),
       danger: true,
       onClick: () => {
-        Modal.confirm({
+        modal.confirm({
           title: tc('messages.confirmDelete'),
           content: t('actions.confirmDeleteContent', { name: record.name }),
           okText: tc('actions.confirm'),
