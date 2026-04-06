@@ -239,11 +239,20 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 }
 
 // findAvailableShell 查詢可用的shell
+// 策略：直接以絕對路徑執行各 shell，不依賴 sh 包裝（極簡容器可能連 sh 都沒有）
 func (h *PodTerminalHandler) findAvailableShell(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession) (string, error) {
-	shells := []string{"bash", "sh", "ash", "dash", "zsh", "ksh"}
+	// 按常見程度排序，優先嘗試完整路徑，再嘗試裸名（PATH 查找）
+	candidates := []string{
+		"/bin/bash", "/usr/bin/bash",
+		"/bin/sh", "/usr/bin/sh",
+		"/bin/ash", "/usr/bin/ash",
+		"/bin/dash", "/usr/bin/dash",
+		"/bin/zsh", "/usr/bin/zsh",
+		"/bin/ksh", "/usr/bin/ksh",
+	}
 
-	for _, shell := range shells {
-		if h.hasShellInContainer(client, k8sConfig, session, shell) {
+	for _, shell := range candidates {
+		if h.tryExecShell(client, k8sConfig, session, shell) {
 			return shell, nil
 		}
 	}
@@ -251,11 +260,9 @@ func (h *PodTerminalHandler) findAvailableShell(client *kubernetes.Clientset, k8
 	return "", fmt.Errorf("未找到任何可用的shell")
 }
 
-// hasShellInContainer 檢查容器中是否有指定的shell
-func (h *PodTerminalHandler) hasShellInContainer(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession, shell string) bool {
-	testScript := fmt.Sprintf("command -v %s", shell)
-	command := []string{"sh", "-c", testScript}
-
+// tryExecShell 直接執行指定 shell 路徑，成功回傳 true
+// 不使用 sh -c 包裝，避免容器內無 sh 時全部誤判為不存在
+func (h *PodTerminalHandler) tryExecShell(client *kubernetes.Clientset, k8sConfig *rest.Config, session *PodTerminalSession, shell string) bool {
 	req := client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(session.PodName).
@@ -263,8 +270,9 @@ func (h *PodTerminalHandler) hasShellInContainer(client *kubernetes.Clientset, k
 
 	req.VersionedParams(&v1.PodExecOptions{
 		Container: session.Container,
-		Command:   command,
+		Command:   []string{shell, "-c", "echo ok"},
 		Stdout:    true,
+		Stderr:    false,
 	}, scheme.ParameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(k8sConfig, "POST", req.URL())
@@ -272,20 +280,12 @@ func (h *PodTerminalHandler) hasShellInContainer(client *kubernetes.Clientset, k
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	var buf bytes.Buffer
-	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdout: &buf,
-		Tty:    false,
-	})
-	if err != nil {
-		return false
-	}
-
-	result := strings.TrimSpace(buf.String())
-	return strings.HasSuffix(result, shell)
+	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{Stdout: &buf, Tty: false})
+	return err == nil && strings.TrimSpace(buf.String()) == "ok"
 }
 
 // startPodTerminal 啟動Pod終端連線
