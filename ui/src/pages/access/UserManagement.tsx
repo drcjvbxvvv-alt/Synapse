@@ -86,7 +86,6 @@ const UserManagement: React.FC = () => {
       username: record.username,
       display_name: record.display_name,
       email: record.email,
-      phone: record.phone,
     });
     setModalVisible(true);
   };
@@ -100,7 +99,6 @@ const UserManagement: React.FC = () => {
         const data: UpdateUserRequest = {
           display_name: values.display_name,
           email: values.email,
-          phone: values.phone,
         };
         await userService.updateUser(editingUser.id, data);
         message.success(t('user.messages.updateSuccess'));
@@ -112,7 +110,6 @@ const UserManagement: React.FC = () => {
           password: values.password,
           display_name: values.display_name,
           email: values.email,
-          phone: values.phone,
         };
         await userService.createUser(data);
         message.success(t('user.messages.createSuccess'));
@@ -218,13 +215,6 @@ const UserManagement: React.FC = () => {
       dataIndex: 'email',
       key: 'email',
       width: 180,
-      render: (text) => text || '-',
-    },
-    {
-      title: t('user.columns.phone'),
-      dataIndex: 'phone',
-      key: 'phone',
-      width: 130,
       render: (text) => text || '-',
     },
     {
@@ -421,9 +411,6 @@ const UserManagement: React.FC = () => {
           </Form.Item>
           <Form.Item name="email" label={t('user.form.email')}>
             <Input placeholder={t('user.form.emailPlaceholder')} />
-          </Form.Item>
-          <Form.Item name="phone" label={t('user.form.phone')}>
-            <Input placeholder={t('user.form.phonePlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>

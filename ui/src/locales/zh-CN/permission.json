@@ -105,7 +105,6 @@
       "username": "用户名",
       "displayName": "显示名称",
       "email": "邮箱",
-      "phone": "电话",
       "status": "状态",
       "authType": "认证方式",
       "lastLogin": "最后登录",
@@ -160,9 +159,7 @@
       "displayName": "显示名称",
       "displayNamePlaceholder": "请输入显示名称",
       "email": "邮箱",
-      "emailPlaceholder": "请输入邮箱",
-      "phone": "电话",
-      "phonePlaceholder": "请输入电话"
+      "emailPlaceholder": "请输入邮箱"
     },
     "resetPassword": {
       "title": "重置密码",

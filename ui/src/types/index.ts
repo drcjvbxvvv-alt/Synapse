@@ -383,7 +383,6 @@ export interface User {
   username: string;
   email: string;
   display_name: string;
-  phone?: string;
   auth_type: 'local' | 'ldap';
   status: 'active' | 'inactive' | 'locked';
   last_login_at?: string;
@@ -398,13 +397,11 @@ export interface CreateUserRequest {
   password: string;
   email?: string;
   display_name?: string;
-  phone?: string;
 }
 
 export interface UpdateUserRequest {
   email?: string;
   display_name?: string;
-  phone?: string;
 }
 
 // LDAP配置型別

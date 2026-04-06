@@ -105,7 +105,6 @@
       "username": "Username",
       "displayName": "Display Name",
       "email": "Email",
-      "phone": "Phone",
       "status": "Status",
       "authType": "Auth Type",
       "lastLogin": "Last Login",
@@ -160,9 +159,7 @@
       "displayName": "Display Name",
       "displayNamePlaceholder": "Please enter display name",
       "email": "Email",
-      "emailPlaceholder": "Please enter email",
-      "phone": "Phone",
-      "phonePlaceholder": "Please enter phone"
+      "emailPlaceholder": "Please enter email"
     },
     "resetPassword": {
       "title": "Reset Password",
