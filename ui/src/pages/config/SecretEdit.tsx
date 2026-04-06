@@ -25,6 +25,7 @@ import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
 import { parseApiError } from '../../utils/api';
+import PageSkeleton from '../../components/PageSkeleton';
 
 const { Text, Title } = Typography;
 
@@ -184,13 +185,7 @@ const [loading, setLoading] = useState(true);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '100px' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton variant="detail" />;
 
   if (!secret) {
     return null;

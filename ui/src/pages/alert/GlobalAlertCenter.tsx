@@ -13,10 +13,10 @@ import {
   Tooltip,
   Badge,
   Typography,
-  Empty,
-  Spin,
   Progress,
 } from 'antd';
+import PageSkeleton from '../../components/PageSkeleton';
+import EmptyState from '../../components/EmptyState';
 import {
   AlertOutlined,
   ReloadOutlined,
@@ -211,35 +211,24 @@ const [loading, setLoading] = useState(true);
   };
 
   if (loading && !alertStats) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: 'calc(100vh - 200px)' 
-      }}>
-        <Spin size="large" tip={t('common:messages.loading')} />
-      </div>
-    );
+    return <PageSkeleton variant="table" />;
   }
 
   if (!alertStats || alertStats.enabledCount === 0) {
     return (
       <div style={{ padding: 24 }}>
         <Card style={cardStyle}>
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <Space direction="vertical" align="center">
-                <Text>{t('alert:global.noClustersConfigured')}</Text>
-                <Text type="secondary">{t('alert:global.noClustersConfiguredDesc')}</Text>
-              </Space>
-            }
-          >
-            <Button type="primary" onClick={() => navigate('/clusters')}>
-              {t('alert:global.goToClusterManagement')}
-            </Button>
-          </Empty>
+          <EmptyState
+            type="not-configured"
+            title={t('alert:global.noClustersConfigured')}
+            description={t('alert:global.noClustersConfiguredDesc')}
+            actions={[
+              {
+                label: t('alert:global.goToClusterManagement'),
+                onClick: () => navigate('/clusters'),
+              },
+            ]}
+          />
         </Card>
       </div>
     );

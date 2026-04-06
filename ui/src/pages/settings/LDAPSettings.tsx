@@ -29,6 +29,7 @@ import { systemSettingService } from '../../services/authService';
 import type { LDAPConfig } from '../../types';
 import { useTranslation } from 'react-i18next';
 import { parseApiError } from '../../utils/api';
+import PageSkeleton from '../../components/PageSkeleton';
 
 const { Title, Text } = Typography;
 
@@ -147,13 +148,7 @@ const [form] = Form.useForm();
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: 48 }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton variant="detail" />;
 
   return (
     <div>

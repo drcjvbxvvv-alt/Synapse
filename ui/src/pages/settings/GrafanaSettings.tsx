@@ -27,6 +27,7 @@ import { systemSettingService } from '../../services/authService';
 import type { GrafanaConfig, GrafanaDashboardSyncStatus, GrafanaDataSourceSyncStatus } from '../../types';
 import { useTranslation } from 'react-i18next';
 import { invalidateGrafanaUrlCache } from '../../hooks/useGrafanaUrl';
+import PageSkeleton from '../../components/PageSkeleton';
 
 const { Title, Text } = Typography;
 
@@ -188,13 +189,7 @@ const GrafanaSettings: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: 48 }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton variant="detail" />;
 
   return (
     <div>

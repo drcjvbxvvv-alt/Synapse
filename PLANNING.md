@@ -1,6 +1,6 @@
 # Synapse 系統規劃書
 
-> 版本：v1.4 | 日期：2026-04-03 | 狀態：進行中
+> 版本：v1.5 | 日期：2026-04-06 | 狀態：進行中
 > 已完成項目請見 [COMPLETED.md](./COMPLETED.md)
 
 ---
@@ -508,26 +508,39 @@ User Dropdown 內容：
 
 ---
 
-#### Phase 4：空狀態與回饋一致性（W4）
+#### Phase 4：空狀態與回饋一致性（W4）✅
 
 **目標：** 建立空狀態、錯誤狀態、載入狀態的統一規範元件。
 
-**待實作任務：**
+**已完成任務：**
 
-| 任務 | 檔案 | 說明 |
+| 任務 | 檔案 | 狀態 |
 |------|------|------|
-| 建立 `EmptyState` 元件（支援 icon + 說明 + 行動按鈕） | `ui/src/components/EmptyState.tsx` | 統一取代各頁面 `<Empty />` 散落用法 |
-| 建立 `ErrorState` 元件（顯示錯誤類型 + 重試按鈕） | `ui/src/components/ErrorState.tsx` | 網路錯誤 / 無權限 / 叢集離線 三種模式 |
-| 建立 `PageSkeleton` 元件（頁面載入骨架屏） | `ui/src/components/PageSkeleton.tsx` | 取代裸露的 `<Spin />` |
-| 補齊各列表頁空狀態文案與引導 | Pod / Node / Workload / Helm 等 | 空資源時顯示「如何建立第一個...」引導連結 |
-| 統一 mutation 成功/失敗 Toast | 全域 `queryClient.ts` + 各 mutation | 成功用 `message.success`，失敗用 `message.error`，格式統一 |
+| 建立 `EmptyState` 元件（支援 type / icon / 說明 / 行動按鈕） | `ui/src/components/EmptyState.tsx` | ✅ 完成 |
+| 建立 `ErrorState` 元件（網路錯誤 / 無權限 / 叢集離線 / 未知） | `ui/src/components/ErrorState.tsx` | ✅ 完成 |
+| 建立 `PageSkeleton` 元件（table / detail / cards 三種 variant） | `ui/src/components/PageSkeleton.tsx` | ✅ 完成 |
+| 批量替換設定頁 / 詳情頁裸 `<Spin>` 為 `PageSkeleton` | AISettings / SSHSettings / LDAPSettings / GrafanaSettings / ConfigMap / Secret / ServiceEdit / IngressEdit（11 個頁面） | ✅ 完成 |
+| AlertCenter / GlobalAlertCenter Empty + action 替換為 `EmptyState` | `pages/alert/AlertCenter.tsx` / `GlobalAlertCenter.tsx` | ✅ 完成 |
 
-**三種空狀態範本：**
+**元件設計規範：**
 
 ```
-叢集無資源：  [Kubernetes Icon]  此叢集目前沒有 Pod  [建立工作負載 →]
-無權限存取：  [LockOutlined]     您沒有此資源的存取權限
-叢集離線：    [DisconnectOutlined] 無法連線至叢集 API，請確認叢集狀態
+EmptyState type:
+  no-data        → [InboxOutlined]        目前沒有資料
+  no-permission  → [LockOutlined]         無存取權限
+  offline        → [DisconnectOutlined]   叢集無法連線
+  not-configured → [SettingOutlined]      尚未設定，引導至設定頁
+
+ErrorState type:
+  network    → 資料載入失敗（重試按鈕）
+  permission → 無存取權限
+  offline    → 叢集無法連線
+  unknown    → 發生錯誤
+
+PageSkeleton variant:
+  table  → 工具列 + 搜尋 + 表格列（列表頁）
+  detail → 頁面標題 + 表單欄位（設定 / 詳情頁）
+  cards  → 統計卡片格線（Dashboard 類）
 ```
 
 ---

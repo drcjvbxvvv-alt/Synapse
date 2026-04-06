@@ -54,6 +54,8 @@ import type {
   CreateSilenceRequest,
   Matcher,
 } from '../../services/alertService';
+import PageSkeleton from '../../components/PageSkeleton';
+import EmptyState from '../../components/EmptyState';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -656,40 +658,30 @@ const [loading, setLoading] = useState(false);
   ];
 
   // 未配置 Alertmanager
-  if (configLoading) {
-    return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  if (configLoading) return <PageSkeleton variant="table" />;
 
   if (!configEnabled) {
     return (
       <div style={{ padding: 24 }}>
         <Card>
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <Space direction="vertical">
-                <Text>{t('alert:center.notConfigured')}</Text>
-                <Text type="secondary">{t('alert:center.notConfiguredDesc')}</Text>
-              </Space>
-            }
-          >
-            <Space>
-              <Button
-                type="primary"
-                icon={<SettingOutlined />}
-                onClick={() => navigate(`/clusters/${clusterId}/config-center?tab=alertmanager`)}
-              >
-                {t('alert:center.goToConfig')}
-              </Button>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-                {t('common:actions.back')}
-              </Button>
-            </Space>
-          </Empty>
+          <EmptyState
+            type="not-configured"
+            title={t('alert:center.notConfigured')}
+            description={t('alert:center.notConfiguredDesc')}
+            actions={[
+              {
+                label: t('alert:center.goToConfig'),
+                icon: <SettingOutlined />,
+                onClick: () => navigate(`/clusters/${clusterId}/config-center?tab=alertmanager`),
+              },
+              {
+                label: t('common:actions.back'),
+                icon: <ArrowLeftOutlined />,
+                type: 'default',
+                onClick: () => navigate(-1),
+              },
+            ]}
+          />
         </Card>
       </div>
     );
