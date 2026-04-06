@@ -59,7 +59,8 @@ import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
 import { PermissionGuard } from './components/PermissionGuard';
 import ErrorBoundary from './components/ErrorBoundary';
-import ErrorPage from './components/ErrorPage';
+import ErrorPage from './components/ErrorPage'
+import PipelineRunDemo from './pages/pipeline/PipelineRunDemo';
 import './App.css';
 
 // 認證保護元件
@@ -257,6 +258,8 @@ const AppContent: React.FC = () => {
               {/* 個人資料路由 */}
               <Route path="profile" element={<UserProfile />} />
             </Route>
+            {/* Pipeline 動畫展示（設計參照） */}
+            <Route path="pipeline-demo" element={<PipelineRunDemo />} />
             {/* 404 — 未匹配路由 */}
             <Route path="*" element={<ErrorPage status={404} showHome showBack={false} />} />
           </Routes>
