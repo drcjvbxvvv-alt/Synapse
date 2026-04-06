@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import zhTW from 'antd/locale/zh_TW';
 import enUS from 'antd/locale/en_US';
 import MainLayout from './layouts/MainLayout';
+import { synapseTheme } from './config/theme';
 import ClusterList from './pages/cluster/ClusterList';
 import ClusterDetail from './pages/cluster/ClusterDetail';
 import ClusterImport from './pages/cluster/ClusterImport';
@@ -89,7 +90,7 @@ const AppContent: React.FC = () => {
   const currentLocale = antdLocaleMap[i18n.language] || zhTW;
 
   return (
-    <ConfigProvider locale={currentLocale}>
+    <ConfigProvider locale={currentLocale} theme={synapseTheme}>
       <AntdApp>
         <Router>
           <ErrorBoundary>
