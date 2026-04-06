@@ -20,6 +20,7 @@ import {
   Dropdown,
   Tabs,
   Spin,
+  Typography,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import {
@@ -534,19 +535,22 @@ const PodList: React.FC = () => {
       sorter: true,
       sortOrder: sortField === 'name' ? sortOrder : null,
       render: (text: string, record: PodInfo) => (
-        <Button
-          type="link"
-          onClick={() => handleViewDetail(record)}
-          style={{ 
-            padding: 0, 
-            height: 'auto',
-            whiteSpace: 'normal',
-            wordBreak: 'break-all',
-            textAlign: 'left'
-          }}
-        >
-          {text}
-        </Button>
+        <Space size={4}>
+          <Button
+            type="link"
+            onClick={() => handleViewDetail(record)}
+            style={{
+              padding: 0,
+              height: 'auto',
+              whiteSpace: 'normal',
+              wordBreak: 'break-all',
+              textAlign: 'left'
+            }}
+          >
+            {text}
+          </Button>
+          <Typography.Text copyable={{ text }} style={{ fontSize: 12 }} />
+        </Space>
       ),
     },
     {

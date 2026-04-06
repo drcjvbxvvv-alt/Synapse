@@ -224,6 +224,18 @@ message.error(t('messages.deleteError'));
 }
   };
 
+  // 行內重啟單一 Deployment
+  const handleRestart = async (workload: WorkloadInfo) => {
+    if (!clusterId) return;
+    try {
+      await WorkloadService.restartWorkload(clusterId, workload.namespace, workload.name, workload.type);
+      message.success(t('actions.restartSuccess', { name: workload.name }));
+      loadWorkloads();
+    } catch {
+      message.error(t('actions.restartError'));
+    }
+  };
+
   // 批次重新部署
   const handleBatchRedeploy = async () => {
     if (selectedRowKeys.length === 0) {
@@ -555,7 +567,7 @@ message.success(t('messages.columnSettingsSaved'));
     {
       title: t('columns.actions'),
       key: 'actions',
-      width: 220,
+      width: 270,
       fixed: 'right' as const,
       render: (record: WorkloadInfo) => (
         <Space size="small">
@@ -584,6 +596,17 @@ message.success(t('messages.columnSettingsSaved'));
           >
             {t('actions.scale')}
           </Button>
+          <Popconfirm
+            title={t('actions.confirmRestart')}
+            description={t('actions.confirmRestartDesc', { name: record.name })}
+            onConfirm={() => handleRestart(record)}
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
+          >
+            <Button type="link" size="small">
+              {t('actions.restart')}
+            </Button>
+          </Popconfirm>
           <Popconfirm
             title={t('actions.confirmDelete', { type: 'Deployment' })}
             description={t('actions.confirmDeleteDesc', { name: record.name })}

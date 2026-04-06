@@ -545,23 +545,23 @@ PageSkeleton variant:
 
 ---
 
-#### Phase 5：Cost 頁面與高頻操作優化（W5）
+#### Phase 5：Cost 頁面與高頻操作優化（W5）✅ 已完成
 
 **Cost 頁面：** 目前有前端模組但資料來源不完整，誤導使用者預期。
 
-| 任務 | 說明 |
-|------|------|
-| 在 Cost 頁面加入資料來源說明 Banner | 明確標示「成本數據來源：Prometheus resource request，不含實際帳單費用」，避免誤解 |
-| 無 Prometheus 時顯示設定引導 | 偵測 Prometheus 未設定時，顯示「設定 Prometheus 以啟用成本分析」的引導頁，而非空白或錯誤 |
+| 任務 | 說明 | 狀態 |
+|------|------|------|
+| 在 Cost 頁面加入資料來源說明 Banner | 明確標示「成本數據來源：Prometheus resource request，不含實際帳單費用」，避免誤解 | ✅ |
+| 無 Prometheus 時顯示設定引導 | 偵測 Prometheus 未設定時，顯示 EmptyState 引導頁 | ✅ |
 
 **高頻操作路徑優化（依使用者行為頻率排序）：**
 
-| 操作 | 現況問題 | 優化方向 |
-|------|---------|---------|
-| 查看 Pod 日誌 | 從工作負載頁須點 3 層才到日誌 | 工作負載列表每行加「日誌」快捷 icon |
-| 重啟 Deployment | 需進入詳情頁才能操作 | 列表頁加入行內「重啟」按鈕（加二次確認 Popconfirm） |
-| 複製 Pod 名稱 / Service ClusterIP | 直接點擊無法複製 | 加入 `<Typography.Text copyable>` |
-| 切換叢集後回到同功能頁 | 切換叢集後跳回首頁 | 叢集切換後保留當前路由 path（僅替換 clusterID） |
+| 操作 | 現況問題 | 優化方向 | 狀態 |
+|------|---------|---------|------|
+| 查看 Pod 日誌 | 從工作負載頁須點 3 層才到日誌 | 工作負載列表每行加「日誌」快捷 icon | 🔲 待實作 |
+| 重啟 Deployment | 需進入詳情頁才能操作 | 列表頁加入行內「重啟」按鈕（Popconfirm 二次確認） | ✅ |
+| 複製 Pod 名稱 / Service ClusterIP | 直接點擊無法複製 | Pod 名稱加入 `<Typography.Text copyable>` | ✅ |
+| 切換叢集後回到同功能頁 | 切換叢集後跳回首頁 | ClusterSelector 已保留當前路由 path（僅替換 clusterID） | ✅ 已有 |
 
 ---
 
