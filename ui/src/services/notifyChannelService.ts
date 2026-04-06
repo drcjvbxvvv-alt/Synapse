@@ -1,4 +1,4 @@
-import request from '../utils/request';
+import { request } from '../utils/api';
 
 export interface NotifyChannel {
   id: number;
@@ -23,23 +23,23 @@ export interface CreateNotifyChannelRequest {
 
 const notifyChannelService = {
   list(): Promise<NotifyChannel[]> {
-    return request.get('/system/notify-channels').then(res => res.data);
+    return request.get<NotifyChannel[]>('/system/notify-channels');
   },
 
   create(data: CreateNotifyChannelRequest): Promise<NotifyChannel> {
-    return request.post('/system/notify-channels', data).then(res => res.data);
+    return request.post<NotifyChannel>('/system/notify-channels', data);
   },
 
   update(id: number, data: Partial<CreateNotifyChannelRequest>): Promise<NotifyChannel> {
-    return request.put(`/system/notify-channels/${id}`, data).then(res => res.data);
+    return request.put<NotifyChannel>(`/system/notify-channels/${id}`, data);
   },
 
   delete(id: number): Promise<void> {
-    return request.delete(`/system/notify-channels/${id}`).then(() => undefined);
+    return request.delete<void>(`/system/notify-channels/${id}`);
   },
 
   test(id: number): Promise<{ message: string }> {
-    return request.post(`/system/notify-channels/${id}/test`).then(res => res.data);
+    return request.post<{ message: string }>(`/system/notify-channels/${id}/test`);
   },
 };
 

@@ -16,7 +16,8 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { ColumnsType } from 'antd/es/table';
-import notifyChannelService, { NotifyChannel } from '../../services/notifyChannelService';
+import notifyChannelService from '../../services/notifyChannelService';
+import type { NotifyChannel } from '../../services/notifyChannelService';
 
 const { Title, Paragraph } = Typography;
 
