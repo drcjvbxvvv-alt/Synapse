@@ -655,90 +655,39 @@ M17 環境流水線（5 週，企業多環境 Promotion Gate）
 
 ## 7. 平台演進方向：全能 CI/CD DevOps 平台
 
-> **戰略目標：** 從「K8s 多叢集管理工具」演進為「端到端 CI/CD DevOps 平台」，具備與 GitLab CI + ArgoCD + Rancher 組合相競爭的完整能力，以單一二進位、零外部依賴為核心競爭優勢。
+> **詳細架構設計請見 [CICD_ARCHITECTURE.md](./CICD_ARCHITECTURE.md)**
 
-### 7.1 現況差距分析
+### 戰略目標
 
-| 能力維度 | 現況 | 差距 |
-|---------|------|------|
-| GitOps / CD | 代理外部 ArgoCD（需額外安裝） | 無原生 CD |
-| CI Pipeline | **完全沒有** | 最大缺口 |
-| Git 整合 | 無 | 無 Webhook、無 Repo 連結 |
-| 映像建置 / Registry | 無 | 無 Build 能力、無 Registry 管理 |
-| 環境流水線 | 僅 Namespace 粒度 | 無 dev → staging → prod 概念 |
+從「K8s 多叢集管理工具」演進為「端到端 DevSecOps 平台」。GitLab 僅作為程式碼倉庫，Pipeline 定義、執行、Trivy 安全掃描、Harbor 推送、K8s 部署、通知告警，全部由 Synapse 集中管控。
 
-### 7.2 架構路線
+### 整體流程摘要
 
-**採用混合路線（C）：** 原生輕量 Pipeline 覆蓋 80% 使用場景（Build → Push → Deploy），進階場景透過插件接入 Tekton/Jenkins。
-
-### 7.3 M13 — 原生 CI Pipeline 引擎（8 週）
-
-> 以 K8s Job / Pod 作為 Pipeline 執行單元，定義儲存在 Synapse DB，執行時動態建立 K8s Job。
-
-**資料模型：** `Pipeline`（定義，DAG steps）→ `PipelineRun`（執行記錄）→ `StepRun`（步驟狀態 + K8s Job 對應）
-
-**執行引擎：**
 ```
-1. 建立 PipelineRun 記錄
-2. 解析步驟 DAG（依賴關係）
-3. 按拓撲序依次提交 K8s Job（image/command/env/resource limits/workspace PVC）
-4. Watch Job 狀態，即時更新 StepRun
-5. Job 完成後串流 Pod 日誌
-6. 所有步驟成功 → success；任一失敗 → 取消後續，failed
+git push → GitLab（純 Repo）
+    → Synapse Webhook（M14）
+    → Pipeline 引擎（M13）：Build → Trivy 掃描 → Push Harbor → Deploy K8s
+    → Synapse 集中戰情室：Pipeline 狀態 / CVE 結果 / 部署狀態 / 通知
 ```
 
-**API：**
-```
-GET/POST /pipelines                           Pipeline CRUD
-GET      /pipelines/:id/runs                  執行歷史
-POST     /pipelines/:id/run                   手動觸發
-GET      /pipelines/:id/runs/:runId/steps/:step/logs  步驟日誌（SSE 串流）
-POST     /pipelines/:id/runs/:runId/cancel    取消執行
-```
+### 里程碑對應
 
-**前端：**
-```
-ui/src/pages/pipeline/
-  ├── PipelineList.tsx         列表（狀態燈、最後執行時間）
-  ├── PipelineEditor.tsx       步驟卡片 + YAML 雙模式編輯器
-  ├── PipelineRunDetail.tsx    DAG 進度圖 + 步驟狀態
-  └── StepLogViewer.tsx        步驟日誌串流（SSE，複用 Terminal 樣式）
-```
+| 里程碑 | 內容 | 工作量 |
+|--------|------|--------|
+| M13 | 原生 CI Pipeline 引擎（K8s Job 驅動） | 8 週 |
+| M14 | Git 整合 + Webhook 觸發（GitLab / GitHub / Gitea）| 4 週 |
+| M15 | 映像 Registry 整合（Harbor 為主）| 3 週 |
+| M16 | 原生輕量 GitOps（CD）| 6 週 |
+| M17 | 環境管理 + Promotion 流水線（dev → staging → prod）| 5 週 |
 
-### 7.4 M14 — Git 整合 + Webhook 觸發（4 週）
+### 近期過渡方案（不需等 M13）
 
-**支援 Provider：** GitHub（App/PAT）、GitLab（Webhook Token）、Gitea（自架優先）
+在 M13 完成前，可透過以下方式讓 Synapse 先具備戰情室效果：
 
-**Webhook 流程：**
-```
-Git Push → POST /webhooks/:provider/:token
-  → 驗證 HMAC signature
-  → 比對 Pipeline 的 GitRepo + GitBranch（glob）
-  → 建立 PipelineRun（TriggerBy="webhook:sha"）
-  → 回傳 202 Accepted
-```
+1. **GitLab CI 推送掃描結果**：GitLab CI 跑 Trivy 後呼叫 `POST /security/scans`，結果集中到 Synapse
+2. **Informer 自動掃描**：Pod 上線時自動觸發 Trivy，不需手動操作
 
-### 7.5 M15 — 映像 Registry 整合（3 週）
-
-**支援：** Harbor（首選）、Docker Hub、阿里雲 / AWS ECR / GCR（標準 Docker Registry API v2）
-
-**功能：** Registry 連線設定、Repository + Tag 瀏覽、Tag 保留策略、漏洞掃描觸發、Pipeline 步驟自動注入 `imagePullSecret`
-
-### 7.6 M16 — 原生輕量 GitOps（6 週）
-
-**Layer 1（內建）：** 定義 GitOpsApp（Git Repo + 路徑 + 目標叢集）→ 定期 Diff → Auto Sync 或 Drift 通知，支援 Kustomize overlay 和 Helm Chart。
-
-**Layer 2（升級）：** 現有 ArgoCD 代理保留；新增 ArgoCD App Health 聚合到主儀表板；Pipeline 部署步驟可選「觸發 ArgoCD Sync」。
-
-### 7.7 M17 — 環境管理 + Promotion 流水線（5 週）
-
-**環境概念：** `dev → staging → production`，每個環境對應叢集 + 命名空間 + 自動/人工 Promote 策略。
-
-**Promotion 流程：**
-```
-Pipeline 執行成功 → 部署到 dev → 自動（或等待審核）Promote to staging
-  → smoke test（可選）→ 人工審核（Production Gate）→ 部署到 production
-```
+詳見 [CICD_ARCHITECTURE.md §4](./CICD_ARCHITECTURE.md#4-近期過渡方案不需等-m13)
 
 ---
 
@@ -754,10 +703,6 @@ Pipeline 執行成功 → 部署到 dev → 自動（或等待審核）Promote t
 | 追蹤 | OpenTelemetry | Jaeger SDK | OTel 為業界標準 |
 | NP 策略模擬 | 自實作 Go selector matching | kube-networkpolicies | K8s NP 語義不複雜，自實作可控無外部依賴 |
 | Istio 流量資料 | Prometheus `istio_requests_total` | Kiali API | Prometheus 已為現有依賴；Kiali 需額外部署 |
-| CI Pipeline 執行引擎 | K8s Job（原生，零額外元件） | Tekton Pipelines | K8s Job 已是現有依賴 |
-| Pipeline 步驟間產物共享 | `emptyDir` / PVC（K8s 原生） | MinIO | 簡單場景用 emptyDir；需持久化時用 PVC |
-| Git Provider 整合 | 自實作 Webhook handler | go-github SDK | 各 Provider Webhook 格式差異不大，自實作可控 |
-| GitOps Diff 引擎 | `k8s.io/apimachinery` strategic merge | controller-runtime | 輕量場景無需完整 controller 框架 |
-| Kustomize 支援 | `sigs.k8s.io/kustomize/api` | shell exec | Go SDK 無需主機安裝 kustomize 二進位 |
-| Container Registry | 標準 Docker Registry HTTP API v2 | go-containerregistry | Harbor 額外 API 單獨呼叫 |
 | CLI 框架 | cobra + viper | urfave/cli | cobra 生態最大，kubectl/helm 皆採用 |
+
+> CI/CD 相關技術選型（Pipeline 引擎、Registry、Git Provider、GitOps Diff）請見 [CICD_ARCHITECTURE.md §13](./CICD_ARCHITECTURE.md#13-技術選型)
