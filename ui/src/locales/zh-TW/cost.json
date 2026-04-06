@@ -8,12 +8,19 @@
     "trend": "月度趨勢",
     "waste": "浪費識別"
   },
+  "banner": {
+    "title": "成本數據說明",
+    "description": "本頁費用為預估值，來源為 Kubernetes resource requests（CPU / 記憶體申請量），並非雲端實際帳單。如需精確費用，請整合雲端帳單 API。"
+  },
   "overview": {
     "totalCost": "本月預估費用",
     "topNamespace": "費用最高命名空間",
     "wastePercent": "資源浪費比例",
     "snapshotDays": "已採集天數",
-    "noData": "本月尚無快照資料，請確認 Prometheus 已設定"
+    "noData": "本月尚無快照資料，請確認 Prometheus 已設定",
+    "noDataTitle": "尚無成本資料",
+    "noDataDesc": "需要設定定價並確認 Prometheus 已正常運作，才能開始採集成本快照。",
+    "configurePrometheus": "前往定價設定"
   },
   "config": {
     "title": "定價設定",

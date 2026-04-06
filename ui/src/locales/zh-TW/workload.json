@@ -33,6 +33,11 @@
     "confirmDelete": "確定要刪除這個 {{type}} 嗎？",
     "confirmDeleteDesc": "確定要刪除 {{name}} 嗎？",
     "confirmDeleteWorkload": "確定要刪除工作負載 {{name}} 嗎？",
+    "restart": "重啟",
+    "confirmRestart": "確認重啟",
+    "confirmRestartDesc": "重啟 {{name}} 後，Pod 會依序重建，服務將短暫中斷。確定繼續？",
+    "restartSuccess": "{{name}} 重啟成功",
+    "restartError": "重啟失敗",
     "confirmRedeploy": "確認重新部署",
     "confirmRedeployDesc": "確定要重新部署選取的 {{count}} 個 {{type}} 嗎？",
     "selectRedeploy": "請先選擇要重新部署的 {{type}}"

@@ -44,6 +44,7 @@ import {
   Line,
   ResponsiveContainer,
 } from 'recharts';
+import EmptyState from '../../components/EmptyState';
 import {
   CostService,
   type CostConfig,
@@ -262,65 +263,82 @@ const CostDashboard: React.FC = () => {
       label: t('cost:tabs.overview'),
       children: (
         <div>
+          {/* 資料來源說明 Banner（固定顯示，不可關閉） */}
           <Alert
             type="info"
             showIcon
-            message={t('cost:prometheusRequired')}
+            message={t('cost:banner.title')}
+            description={t('cost:banner.description')}
             style={{ marginBottom: 16 }}
-            closable
           />
           <Space style={{ marginBottom: 16 }}>
             {monthPicker}
             <Button icon={<ReloadOutlined />} onClick={loadOverview}>{t('common:actions.refresh', '重新整理')}</Button>
+            <Button icon={<SettingOutlined />} onClick={handleOpenConfig}>{t('cost:config.title')}</Button>
           </Space>
-          <Row gutter={16} style={{ marginBottom: 24 }}>
-            <Col xs={24} sm={12} lg={6}>
-              <Card>
-                <Statistic
-                  title={t('cost:overview.totalCost')}
-                  value={overview?.total_cost ?? 0}
-                  precision={4}
-                  prefix={<DollarOutlined />}
-                  suffix={currency}
-                  loading={overviewLoading}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card>
-                <Statistic
-                  title={t('cost:overview.topNamespace')}
-                  value={overview?.top_namespace || '—'}
-                  prefix={<CloudOutlined />}
-                  loading={overviewLoading}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card>
-                <Statistic
-                  title={t('cost:overview.wastePercent')}
-                  value={overview?.waste_percent ?? 0}
-                  precision={1}
-                  suffix="%"
-                  prefix={<WarningOutlined style={{ color: '#faad14' }} />}
-                  loading={overviewLoading}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card>
-                <Statistic
-                  title={t('cost:overview.snapshotDays')}
-                  value={overview?.snapshot_count ?? 0}
-                  suffix={t('common:table.days', '天')}
-                  loading={overviewLoading}
-                />
-              </Card>
-            </Col>
-          </Row>
-          {!overview?.snapshot_count && !overviewLoading && (
-            <Empty description={t('cost:overview.noData')} />
+          {/* 無快照資料時顯示設定引導 */}
+          {!overview?.snapshot_count && !overviewLoading ? (
+            <Card>
+              <EmptyState
+                type="not-configured"
+                title={t('cost:overview.noDataTitle')}
+                description={t('cost:overview.noDataDesc')}
+                actions={[
+                  {
+                    label: t('cost:overview.configurePrometheus'),
+                    icon: <SettingOutlined />,
+                    onClick: handleOpenConfig,
+                  },
+                ]}
+              />
+            </Card>
+          ) : (
+            <Row gutter={16} style={{ marginBottom: 24 }}>
+              <Col xs={24} sm={12} lg={6}>
+                <Card>
+                  <Statistic
+                    title={t('cost:overview.totalCost')}
+                    value={overview?.total_cost ?? 0}
+                    precision={4}
+                    prefix={<DollarOutlined />}
+                    suffix={currency}
+                    loading={overviewLoading}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card>
+                  <Statistic
+                    title={t('cost:overview.topNamespace')}
+                    value={overview?.top_namespace || '—'}
+                    prefix={<CloudOutlined />}
+                    loading={overviewLoading}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card>
+                  <Statistic
+                    title={t('cost:overview.wastePercent')}
+                    value={overview?.waste_percent ?? 0}
+                    precision={1}
+                    suffix="%"
+                    prefix={<WarningOutlined style={{ color: '#faad14' }} />}
+                    loading={overviewLoading}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card>
+                  <Statistic
+                    title={t('cost:overview.snapshotDays')}
+                    value={overview?.snapshot_count ?? 0}
+                    suffix={t('common:table.days', '天')}
+                    loading={overviewLoading}
+                  />
+                </Card>
+              </Col>
+            </Row>
           )}
         </div>
       ),

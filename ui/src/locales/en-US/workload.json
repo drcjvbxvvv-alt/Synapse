@@ -33,6 +33,11 @@
     "confirmDelete": "Delete this {{type}}?",
     "confirmDeleteDesc": "Are you sure you want to delete {{name}}?",
     "confirmDeleteWorkload": "Are you sure you want to delete workload {{name}}?",
+    "restart": "Restart",
+    "confirmRestart": "Confirm Restart",
+    "confirmRestartDesc": "Restarting {{name}} will recreate its Pods and may cause a brief service interruption. Continue?",
+    "restartSuccess": "{{name}} restarted successfully",
+    "restartError": "Restart failed",
     "confirmRedeploy": "Confirm Redeploy",
     "confirmRedeployDesc": "Are you sure you want to redeploy {{count}} selected {{type}}(s)?",
     "selectRedeploy": "Please select {{type}}(s) to redeploy"

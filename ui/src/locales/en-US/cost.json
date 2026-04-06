@@ -8,12 +8,19 @@
     "trend": "Monthly Trend",
     "waste": "Waste Detection"
   },
+  "banner": {
+    "title": "About Cost Data",
+    "description": "Costs shown here are estimates based on Kubernetes resource requests (CPU / memory), not actual cloud billing. For accurate billing data, integrate your cloud provider's billing API."
+  },
   "overview": {
     "totalCost": "Estimated Cost This Month",
     "topNamespace": "Top Namespace by Cost",
     "wastePercent": "Waste Percentage",
     "snapshotDays": "Days Collected",
-    "noData": "No snapshot data for this month. Please configure Prometheus."
+    "noData": "No snapshot data for this month. Please configure Prometheus.",
+    "noDataTitle": "No Cost Data Yet",
+    "noDataDesc": "Configure pricing and ensure Prometheus is running to start collecting cost snapshots.",
+    "configurePrometheus": "Go to Pricing Settings"
   },
   "config": {
     "title": "Pricing Configuration",
