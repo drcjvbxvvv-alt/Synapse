@@ -125,6 +125,10 @@ func ErrGroupNotFound() *AppError {
 	return &AppError{Code: CodeGroupNotFound, HTTPStatus: http.StatusNotFound, Message: "用户组不存在"}
 }
 
+func ErrGroupDuplicateName() *AppError {
+	return &AppError{Code: "GROUP_DUPLICATE_NAME", HTTPStatus: http.StatusConflict, Message: "用户组名称已存在"}
+}
+
 func ErrGroupHasPermissions() *AppError {
 	return &AppError{Code: CodeGroupHasPermissions, HTTPStatus: http.StatusConflict, Message: "该用户组还有关联的权限配置，请先删除相关权限"}
 }

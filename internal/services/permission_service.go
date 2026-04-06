@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -30,6 +31,9 @@ func (s *PermissionService) CreateUserGroup(name, description string) (*models.U
 		Description: description,
 	}
 	if err := s.db.Create(group).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, apierrors.ErrGroupDuplicateName()
+		}
 		return nil, fmt.Errorf("创建用户组失败: %w", err)
 	}
 	return group, nil

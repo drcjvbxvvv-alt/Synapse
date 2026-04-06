@@ -264,6 +264,11 @@ func createDefaultPermissions(db *gorm.DB) {
 	}
 
 	for _, group := range defaultGroups {
+		var existing models.UserGroup
+		result := db.Where("name = ?", group.Name).First(&existing)
+		if result.Error == nil {
+			continue // 已存在，跳過
+		}
 		if err := db.Create(&group).Error; err != nil {
 			logger.Error("创建用户组失败: %v", err)
 		} else {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/clay-wangzhi/Synapse/internal/apierrors"
 	"github.com/clay-wangzhi/Synapse/internal/models"
 	"github.com/clay-wangzhi/Synapse/internal/response"
 	"github.com/clay-wangzhi/Synapse/internal/services"
@@ -54,7 +55,11 @@ func (h *PermissionHandler) CreateUserGroup(c *gin.Context) {
 
 	group, err := h.permissionService.CreateUserGroup(req.Name, req.Description)
 	if err != nil {
-		response.InternalError(c, err.Error())
+		if ae, ok := apierrors.As(err); ok {
+			response.Error(c, ae.HTTPStatus, ae.Code, ae.Message)
+		} else {
+			response.InternalError(c, err.Error())
+		}
 		return
 	}
 
