@@ -39,6 +39,7 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { Node, NodeTaint } from '../../types';
 import { nodeService, type NodeListParams, type NodeOverview } from '../../services/nodeService';
+import { POLL_INTERVALS } from '../../config/queryConfig';
 
 const { Option } = Select;
 
@@ -677,6 +678,16 @@ const NodeList: React.FC = () => {
       fetchNodes({ clusterId: selectedClusterId });
       fetchNodeOverview();
     }
+  }, [selectedClusterId, fetchNodes, fetchNodeOverview]);
+
+  // Node 狀態輪詢（每 10 秒）
+  useEffect(() => {
+    if (!selectedClusterId) return;
+    const timer = setInterval(() => {
+      fetchNodes({ clusterId: selectedClusterId });
+      fetchNodeOverview();
+    }, POLL_INTERVALS.node);
+    return () => clearInterval(timer);
   }, [selectedClusterId, fetchNodes, fetchNodeOverview]);
 
   // 統計資料

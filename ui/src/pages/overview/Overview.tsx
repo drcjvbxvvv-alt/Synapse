@@ -19,6 +19,7 @@ import {
 import { Pie, Line } from '@ant-design/charts';
 import { useTranslation } from 'react-i18next';
 import { overviewService } from '../../services/overviewService';
+import { POLL_INTERVALS } from '../../config/queryConfig';
 import type { 
   OverviewStatsResponse, 
   ResourceUsageResponse, 
@@ -59,7 +60,7 @@ const navigate = useNavigate();
   const [podTimeRange, setPodTimeRange] = useState<'7d' | '30d'>('7d');
   const [nodeTimeRange, setNodeTimeRange] = useState<'7d' | '30d'>('7d');
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState<number>(30);
+  const [refreshInterval, setRefreshInterval] = useState<number>(POLL_INTERVALS.overview / 1000);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
 
   // 資料狀態

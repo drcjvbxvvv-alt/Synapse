@@ -27,6 +27,7 @@ import type { WorkloadInfo } from '../../services/workloadService';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
+import { POLL_INTERVALS } from '../../config/queryConfig';
 const { Option } = Select;
 
 interface DeploymentTabProps {
@@ -387,6 +388,15 @@ message.success(t('messages.columnSettingsSaved'));
   useEffect(() => {
     loadWorkloads();
   }, [loadWorkloads]);
+
+  // 工作負載狀態輪詢（每 15 秒）
+  useEffect(() => {
+    if (!clusterId) return;
+    const timer = setInterval(() => {
+      loadWorkloads();
+    }, POLL_INTERVALS.workload);
+    return () => clearInterval(timer);
+  }, [clusterId, loadWorkloads]);
 
   // 行選擇配置
   const rowSelection = {

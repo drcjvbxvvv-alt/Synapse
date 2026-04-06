@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { STALE_TIMES, POLL_INTERVALS } from '../../config/queryConfig';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -260,7 +261,9 @@ const PodList: React.FC = () => {
     queryKey: ['pods', clusterId],
     queryFn: () => PodService.getPods(clusterId, undefined, undefined, undefined, undefined, undefined, 1, 10000),
     enabled: !!clusterId,
-    staleTime: 30_000,
+    staleTime: STALE_TIMES.realtime,
+    refetchInterval: POLL_INTERVALS.pod,
+    refetchOnWindowFocus: true,
   });
 
   if (podError) {
