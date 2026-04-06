@@ -271,6 +271,7 @@ const [loading, setLoading] = useState(false);
           </div>
           {services.length > 0 ? (
             <Table
+              scroll={{ x: 'max-content' }}
               columns={serviceColumns}
               dataSource={services}
               rowKey="name"
@@ -299,6 +300,7 @@ const [loading, setLoading] = useState(false);
           </div>
           {ingresses.length > 0 ? (
             <Table
+              scroll={{ x: 'max-content' }}
               columns={ingressColumns}
               dataSource={ingresses}
               rowKey="name"

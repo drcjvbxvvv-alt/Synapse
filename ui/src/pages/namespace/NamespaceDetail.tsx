@@ -303,6 +303,7 @@ const NamespaceDetail: React.FC = () => {
           extra={<Button size="small" type="primary" icon={<PlusOutlined />} onClick={openCreateQuota}>建立</Button>}
         >
           <Table
+            scroll={{ x: 'max-content' }}
             size="small"
             dataSource={quotas}
             rowKey="name"
@@ -333,6 +334,7 @@ const NamespaceDetail: React.FC = () => {
           extra={<Button size="small" type="primary" icon={<PlusOutlined />} onClick={openCreateLR}>建立</Button>}
         >
           <Table
+            scroll={{ x: 'max-content' }}
             size="small"
             dataSource={limitRanges}
             rowKey="name"

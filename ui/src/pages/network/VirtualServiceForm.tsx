@@ -190,6 +190,7 @@ const VirtualServiceForm: React.FC<Props> = ({ clusterId, namespaces, open, onCl
       <div style={{ marginTop: 16 }}>
         <div style={{ fontWeight: 500, marginBottom: 8 }}>流量分割設定</div>
         <Table
+          scroll={{ x: 'max-content' }}
           dataSource={splits}
           columns={splitColumns}
           rowKey="key"

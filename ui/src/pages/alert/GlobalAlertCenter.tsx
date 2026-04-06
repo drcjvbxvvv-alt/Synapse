@@ -365,6 +365,7 @@ const [loading, setLoading] = useState(true);
         styles={{ body: { padding: '0 16px 16px' } }}
       >
         <Table
+          scroll={{ x: 'max-content' }}
           columns={clusterColumns}
           dataSource={clustersWithAlerts}
           rowKey="clusterId"

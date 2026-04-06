@@ -506,6 +506,7 @@ const [loading, setLoading] = useState(false);
       {/* 權限列表表格 */}
       <Card styles={{ body: { padding: 0 } }}>
         <Table
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           columns={columns}
           dataSource={filteredPermissions}
@@ -752,6 +753,7 @@ const [loading, setLoading] = useState(false);
           </Paragraph>
         </div>
         <Table
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           dataSource={clusters}
           pagination={false}

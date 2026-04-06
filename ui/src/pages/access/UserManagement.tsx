@@ -365,6 +365,7 @@ const UserManagement: React.FC = () => {
 
       <Card styles={{ body: { padding: 0 } }}>
         <Table
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           columns={columns}
           dataSource={users}

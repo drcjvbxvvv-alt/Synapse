@@ -386,6 +386,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
         <TabPane tab={t('detail.containers')} key="containers">
           <Card title={t('detail.containers')} style={{ marginBottom: 16 }}>
             <Table
+              scroll={{ x: 'max-content' }}
               columns={containerColumns}
               dataSource={pod.containers}
               rowKey="name"
@@ -397,6 +398,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
           {pod.initContainers && pod.initContainers.length > 0 && (
             <Card title={t('detail.initContainers')}>
               <Table
+                scroll={{ x: 'max-content' }}
                 columns={containerColumns}
                 dataSource={pod.initContainers}
                 rowKey="name"
@@ -409,6 +411,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
 
         <TabPane tab={t('detail.conditions')} key="conditions">
           <Table
+            scroll={{ x: 'max-content' }}
             columns={conditionColumns}
             dataSource={pod.conditions || []}
             rowKey="type"

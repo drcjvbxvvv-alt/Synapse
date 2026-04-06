@@ -368,6 +368,7 @@ onConfirm={handleDelete}
 
         <TabPane tab={t("detail.pods")} key="pods">
           <Table
+            scroll={{ x: 'max-content' }}
             columns={[
               {
                 title: t('pod.name'),
@@ -419,6 +420,7 @@ onConfirm={handleDelete}
 
         <TabPane tab={t("detail.conditions")} key="conditions">
           <Table
+            scroll={{ x: 'max-content' }}
             columns={conditionColumns}
             dataSource={workloadInfo.conditions || []}
             rowKey="type"

@@ -400,6 +400,7 @@ const SyncPolicyList: React.FC = () => {
         width={700}
       >
         <Table
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           columns={historyColumns}
           dataSource={history}

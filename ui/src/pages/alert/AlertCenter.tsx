@@ -542,6 +542,7 @@ const [loading, setLoading] = useState(false);
       </Row>
 
       <Table
+        scroll={{ x: 'max-content' }}
         columns={alertColumns}
         dataSource={filteredAlerts}
         rowKey="fingerprint"
@@ -607,6 +608,7 @@ const [loading, setLoading] = useState(false);
       </Row>
 
       <Table
+        scroll={{ x: 'max-content' }}
         columns={silenceColumns}
         dataSource={silences.filter((s) => s.status.state !== 'expired')}
         rowKey="id"

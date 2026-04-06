@@ -157,6 +157,7 @@ const PDBPanel: React.FC<PDBPanelProps> = ({ clusterId, namespace, workloadLabel
       }
     >
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="name"
         columns={columns}
         dataSource={items}

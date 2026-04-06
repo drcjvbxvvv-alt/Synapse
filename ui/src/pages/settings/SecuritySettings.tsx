@@ -293,6 +293,7 @@ const SecuritySettings: React.FC = () => {
           {t('settings:security.apiTokenDesc')}
         </Text>
         <Table
+          scroll={{ x: 'max-content' }}
           columns={tokenColumns}
           dataSource={tokens}
           rowKey="id"

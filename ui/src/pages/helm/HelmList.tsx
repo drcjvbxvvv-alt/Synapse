@@ -527,6 +527,7 @@ const HelmList: React.FC = () => {
         width={800}
       >
         <Table<HelmHistory>
+          scroll={{ x: 'max-content' }}
           rowKey="revision"
           columns={historyColumns}
           dataSource={historyItems}

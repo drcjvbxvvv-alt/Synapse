@@ -161,6 +161,7 @@ const [loading, setLoading] = useState(false);
         </Space>
       </div>
       <Table
+        scroll={{ x: 'max-content' }}
         columns={columns}
         dataSource={replicaSets}
         rowKey="name"

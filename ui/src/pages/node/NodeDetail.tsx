@@ -645,6 +645,7 @@ const NodeDetail: React.FC = () => {
                     </Button>
                   </div>
                   <Table
+                    scroll={{ x: 'max-content' }}
                     columns={podColumns}
                     dataSource={pods}
                     rowKey="id"

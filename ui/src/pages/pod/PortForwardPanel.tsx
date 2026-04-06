@@ -154,6 +154,7 @@ const PortForwardPanel: React.FC<PortForwardPanelProps> = ({
       )}
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         columns={columns}
         dataSource={sessions}

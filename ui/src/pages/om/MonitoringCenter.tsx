@@ -494,6 +494,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
         }
       >
         <Table
+          scroll={{ x: 'max-content' }}
           columns={columns}
           dataSource={resourceTop?.items || []}
           loading={resourceLoading}

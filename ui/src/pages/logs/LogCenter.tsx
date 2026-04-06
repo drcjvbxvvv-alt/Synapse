@@ -1022,6 +1022,7 @@ const [activeTab, setActiveTab] = useState('stream');
               }
             >
               <Table<LogSource>
+                scroll={{ x: 'max-content' }}
                 loading={logSourcesLoading}
                 dataSource={logSources}
                 rowKey="id"

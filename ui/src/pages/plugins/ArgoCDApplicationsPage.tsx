@@ -603,6 +603,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
                 label: t('plugins:argocd.resourceList'),
                 children: (
                   <Table
+                    scroll={{ x: 'max-content' }}
                     size="small"
                     dataSource={selectedApp.resources || []}
                     rowKey={(record: ArgoCDResource) => `${record.kind}-${record.namespace}-${record.name}`}

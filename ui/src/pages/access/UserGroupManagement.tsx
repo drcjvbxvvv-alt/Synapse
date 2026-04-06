@@ -261,6 +261,7 @@ const UserGroupManagement: React.FC = () => {
           columns={columns}
           dataSource={groups}
           loading={loading}
+          scroll={{ x: 'max-content' }}
           pagination={{
             showSizeChanger: true,
             showQuickJumper: true,
@@ -325,6 +326,7 @@ const UserGroupManagement: React.FC = () => {
         </div>
 
         <Table
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           loading={drawerLoading}
           dataSource={drawerGroup?.users || []}

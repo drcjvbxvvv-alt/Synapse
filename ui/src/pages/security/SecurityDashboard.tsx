@@ -224,6 +224,7 @@ function ImageScanTab({ clusterId }: { clusterId: number }) {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         dataSource={results}
         columns={columns}
         rowKey="id"
@@ -415,6 +416,7 @@ function BenchTab({ clusterId }: { clusterId: number }) {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         dataSource={results}
         columns={columns}
         rowKey="id"
@@ -549,6 +551,7 @@ function GatekeeperTab({ clusterId }: { clusterId: number }) {
         <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
       ) : (
         <Table
+          scroll={{ x: 'max-content' }}
           dataSource={data?.constraints ?? []}
           columns={columns}
           rowKey={(r) => r.kind + r.name}
@@ -558,6 +561,7 @@ function GatekeeperTab({ clusterId }: { clusterId: number }) {
           expandable={{
             expandedRowRender: (record) => (
               <Table
+                scroll={{ x: 'max-content' }}
                 dataSource={record.violations}
                 columns={[
                   { title: t('gatekeeper.namespace'), dataIndex: 'namespace', key: 'ns', width: 140, render: (v) => v || '-' },

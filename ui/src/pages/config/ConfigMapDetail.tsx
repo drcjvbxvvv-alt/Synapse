@@ -249,6 +249,7 @@ const ConfigMapDetail: React.FC = () => {
           extra={<Button size="small" icon={<ReloadOutlined />} onClick={loadVersions}>重新整理</Button>}
         >
           <Table<ConfigVersion>
+            scroll={{ x: 'max-content' }}
             loading={versionsLoading}
             dataSource={versions}
             rowKey="id"

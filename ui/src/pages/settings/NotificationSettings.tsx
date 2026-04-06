@@ -205,6 +205,7 @@ const NotificationSettings: React.FC = () => {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         dataSource={channels}
         columns={columns}

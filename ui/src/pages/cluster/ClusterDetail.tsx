@@ -242,6 +242,7 @@ loading={loadingEvents}
             <Button onClick={exportEventsCSV} disabled={!events.length}>{t('common:actions.export')}</Button>
           </Space>
           <Table
+            scroll={{ x: 'max-content' }}
             rowKey={(e) => (e as K8sEvent).metadata?.uid || `${(e as K8sEvent).involvedObject.kind}/${(e as K8sEvent).involvedObject.namespace || 'default'}/${(e as K8sEvent).involvedObject.name}/${(e as K8sEvent).reason}/${(e as K8sEvent).lastTimestamp || (e as K8sEvent).eventTime || (e as K8sEvent).metadata?.creationTimestamp || ''}`}
             columns={eventColumns}
             dataSource={events}
