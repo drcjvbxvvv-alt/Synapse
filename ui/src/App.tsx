@@ -53,6 +53,7 @@ import CRDList from './pages/crd/CRDList';
 import CRDResources from './pages/crd/CRDResources';
 import EventAlertRules from './pages/alert/EventAlertRules';
 import CostDashboard from './pages/cost/CostDashboard';
+import GlobalCostInsights from './pages/cost/GlobalCostInsights';
 import SecurityDashboard from './pages/security/SecurityDashboard';
 import MultiClusterPage from './pages/multicluster';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
@@ -214,6 +215,8 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/cost-insights" element={<CostDashboard />} />
               {/* 安全掃描 */}
               <Route path="clusters/:id/security" element={<SecurityDashboard />} />
+              {/* 成本洞察 - 跨叢集全局視角 */}
+              <Route path="cost-insights" element={<GlobalCostInsights />} />
               {/* 多叢集工作流程 */}
               <Route path="multicluster" element={<MultiClusterPage />} />
               {/* 審計管理路由 - 僅平臺管理員 */}

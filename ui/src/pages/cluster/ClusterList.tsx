@@ -11,6 +11,7 @@ import {
   Dropdown,
   App,
   Progress,
+  Statistic,
 } from 'antd';
 import {
   PlusOutlined,
@@ -23,6 +24,7 @@ import {
   ClusterOutlined,
   CodeOutlined,
   DeleteOutlined,
+  QuestionCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Cluster } from '../../types';
@@ -274,7 +276,10 @@ const ClusterList: React.FC = () => {
   });
 
   // 統計資料
+  const totalClusters = clusters.length;
+  const healthyClusters = clusters.filter(c => c.status === 'healthy').length;
   const unhealthyClusters = clusters.filter(c => c.status === 'unhealthy').length;
+  const unknownClusters = clusters.filter(c => c.status === 'unknown').length;
 
   return (
     <div>
@@ -283,9 +288,51 @@ const ClusterList: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1>{t('title')}</h1>
-            {/* // Todo 改為異常節點 */}
-            <div style={{ display: 'flex', gap: '36px' }}>
-              <span>{t('status.unhealthy')}/{tc('table.status')}: <b>{unhealthyClusters}</b>/<b>{clusters.length}</b></span>
+            <div style={{ display: 'flex', gap: 0, marginTop: 12 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 20px 6px 0', borderRight: '1px solid #f0f0f0',
+              }}>
+                <ClusterOutlined style={{ color: '#1677ff', fontSize: 16 }} />
+                <Statistic
+                  value={totalClusters}
+                  valueStyle={{ fontSize: 20, fontWeight: 600, color: '#1677ff', lineHeight: 1 }}
+                />
+                <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 2 }}>{t('title')}</span>
+              </div>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 20px', borderRight: '1px solid #f0f0f0',
+              }}>
+                <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 16 }} />
+                <Statistic
+                  value={healthyClusters}
+                  valueStyle={{ fontSize: 20, fontWeight: 600, color: '#52c41a', lineHeight: 1 }}
+                />
+                <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 2 }}>{t('status.healthy')}</span>
+              </div>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 20px', borderRight: '1px solid #f0f0f0',
+              }}>
+                <ExclamationCircleOutlined style={{ color: unhealthyClusters > 0 ? '#ff4d4f' : '#bfbfbf', fontSize: 16 }} />
+                <Statistic
+                  value={unhealthyClusters}
+                  valueStyle={{ fontSize: 20, fontWeight: 600, color: unhealthyClusters > 0 ? '#ff4d4f' : '#bfbfbf', lineHeight: 1 }}
+                />
+                <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 2 }}>{t('status.unhealthy')}</span>
+              </div>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 0 6px 20px',
+              }}>
+                <QuestionCircleOutlined style={{ color: '#d9d9d9', fontSize: 16 }} />
+                <Statistic
+                  value={unknownClusters}
+                  valueStyle={{ fontSize: 20, fontWeight: 600, color: '#bfbfbf', lineHeight: 1 }}
+                />
+                <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 2 }}>{t('status.unknown')}</span>
+              </div>
             </div>
           </div>
           <Space>

@@ -6,6 +6,7 @@ import {
   CloudUploadOutlined, DownloadOutlined, SaveOutlined, SendOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 import { siemService, type SIEMConfig } from '../../services/siemService';
 
 const { Text } = Typography;
@@ -13,6 +14,7 @@ const { RangePicker } = DatePicker;
 
 const SIEMConfigPage: React.FC = () => {
   const { message } = App.useApp();
+  const { t } = useTranslation('settings');
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -31,9 +33,9 @@ const SIEMConfigPage: React.FC = () => {
     setLoading(true);
     try {
       await siemService.updateConfig(values as SIEMConfig);
-      message.success('SIEM 設定已儲存');
+      message.success(t('security.siemSaved'));
     } catch {
-      message.error('儲存失敗');
+      message.error(t('security.saveConfigFailed'));
     } finally {
       setLoading(false);
     }
@@ -45,7 +47,7 @@ const SIEMConfigPage: React.FC = () => {
       const res = await siemService.testWebhook();
       message.success(`${res.data.message}（HTTP ${res.data.statusCode}）`);
     } catch {
-      message.error('Webhook 測試失敗，請確認 URL 和設定是否正確');
+      message.error(t('security.webhookTestFailed'));
     } finally {
       setTesting(false);
     }
@@ -66,29 +68,32 @@ const SIEMConfigPage: React.FC = () => {
     <Space direction="vertical" style={{ width: '100%' }} size="large">
       {/* Webhook 設定 */}
       <Card
-        title={<Space><CloudUploadOutlined /> SIEM Webhook 即時推送</Space>}
+        title={<Space><CloudUploadOutlined /> {t('security.siemWebhookTitle')}</Space>}
         extra={
           <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={loading}>
-            儲存設定
+            {t('security.saveSettings')}
           </Button>
         }
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="enabled" label="啟用 SIEM 即時推送" valuePropName="checked">
-            <Switch checkedChildren="啟用" unCheckedChildren="停用" />
+          <Form.Item name="enabled" label={t('security.enableSiem')} valuePropName="checked">
+            <Switch
+              checkedChildren={t('ai.enabled')}
+              unCheckedChildren={t('ai.disabled')}
+            />
           </Form.Item>
           <Form.Item
             name="webhookURL"
             label="Webhook URL"
-            rules={[{ type: 'url', message: '請輸入有效的 URL' }]}
+            rules={[{ type: 'url', message: t('security.invalidUrl') }]}
           >
             <Input placeholder="https://siem.example.com/api/events" />
           </Form.Item>
-          <Form.Item name="secretHeader" label="認證 Header 名稱">
-            <Input placeholder="例如 X-Auth-Token（可留空）" />
+          <Form.Item name="secretHeader" label={t('security.secretHeader')}>
+            <Input placeholder={t('security.secretHeaderPlaceholder')} />
           </Form.Item>
-          <Form.Item name="secretValue" label="認證 Header 值">
-            <Input.Password placeholder="Header 值" />
+          <Form.Item name="secretValue" label={t('security.secretValue')}>
+            <Input.Password placeholder={t('security.secretValuePlaceholder')} />
           </Form.Item>
         </Form>
 
@@ -98,33 +103,31 @@ const SIEMConfigPage: React.FC = () => {
           loading={testing}
           style={{ marginTop: 8 }}
         >
-          測試 Webhook 連線
+          {t('security.testWebhook')}
         </Button>
 
         <Divider />
         <Text type="secondary" style={{ fontSize: 12 }}>
-          啟用後，每筆寫入操作（POST/PUT/DELETE）的稽核記錄將即時推送到指定的 Webhook URL。
-          推送失敗不影響正常操作，僅記錄警告日誌。
+          {t('security.siemDesc')}
         </Text>
       </Card>
 
       {/* 批次匯出 */}
       <Card
-        title={<Space><DownloadOutlined /> 稽核日誌批次匯出（JSON）</Space>}
+        title={<Space><DownloadOutlined /> {t('security.auditExportTitle')}</Space>}
       >
         <Space wrap>
           <RangePicker
             onChange={(dates) => setExportRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
-            placeholder={['開始日期', '結束日期']}
+            placeholder={[t('security.startDate'), t('security.endDate')]}
           />
           <Button icon={<DownloadOutlined />} type="primary" onClick={handleExport}>
-            匯出 JSON
+            {t('security.exportJson')}
           </Button>
         </Space>
         <br />
         <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
-          不選日期範圍則匯出最近 10,000 筆記錄。檔案格式：JSON（每筆為一個 OperationLog 物件）。
-          可直接匯入 Splunk、Elasticsearch 或 Datadog。
+          {t('security.auditExportDesc')}
         </Text>
       </Card>
     </Space>

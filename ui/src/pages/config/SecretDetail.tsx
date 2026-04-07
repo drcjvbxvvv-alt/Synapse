@@ -12,6 +12,7 @@ import {
   Modal,
   Switch,
   Table,
+  App,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -40,6 +41,7 @@ const SecretDetail: React.FC = () => {
     name: string;
   }>();
   const { t } = useTranslation(['config', 'common']);
+  const { modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [secret, setSecret] = useState<SecretDetailType | null>(null);
   const [showValues, setShowValues] = useState(false);
@@ -80,7 +82,7 @@ const SecretDetail: React.FC = () => {
 
   // 刪除Secret
   const handleDelete = () => {
-    Modal.confirm({
+    modal.confirm({
       title: t('common:messages.confirmDelete'),
       content: t('config:detail.confirmDeleteSecret', { name }),
       onOk: async () => {

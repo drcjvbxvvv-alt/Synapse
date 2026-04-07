@@ -22,6 +22,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { WorkloadService } from '../../services/workloadService';
+import { parseApiError } from '../../utils/api';
 import { useTranslation } from 'react-i18next';
 import { getNamespaces } from '../../services/namespaceService';
 import { secretService } from '../../services/configService';
@@ -75,6 +76,9 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
   
   // 映像拉取憑證列表
   const [imagePullSecretsList, setImagePullSecretsList] = useState<string[]>([]);
+
+  // Rollout CRD 安裝狀態
+  const [rolloutCRDEnabled, setRolloutCRDEnabled] = useState<boolean | null>(null);
   
   // 當前選擇的命名空間
   const currentNamespace = Form.useWatch('namespace', form) || 'default';
@@ -141,6 +145,14 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     };
     loadImagePullSecrets();
   }, [clusterId, currentNamespace]);
+
+  // Rollout 類型：檢查 CRD 是否已安裝
+  useEffect(() => {
+    if (workloadType !== 'Rollout' || !clusterId) return;
+    WorkloadService.checkRolloutCRD(clusterId)
+      .then((res: { enabled: boolean }) => setRolloutCRDEnabled(res.enabled))
+      .catch(() => setRolloutCRDEnabled(false));
+  }, [workloadType, clusterId]);
 
   // 如果是編輯模式，載入現有資料
   useEffect(() => {
@@ -307,7 +319,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     } catch (error: unknown) {
       setDryRunResult({
         success: false,
-        message: error instanceof Error ? error.message : t('create.dryRunRequestFailed'),
+        message: parseApiError(error),
       });
     } finally {
       setDryRunning(false);
@@ -440,6 +452,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
             <Button
               onClick={handleDryRun}
               loading={dryRunning}
+              disabled={workloadType === 'Rollout' && rolloutCRDEnabled === false}
               icon={dryRunResult?.success ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
             >
               {t('create.preCheck')}
@@ -453,12 +466,24 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
             icon={<SaveOutlined />}
             onClick={handleSubmit}
             loading={submitting}
+            disabled={workloadType === 'Rollout' && rolloutCRDEnabled === false}
           >
             {isEdit ? t('create.update') : t('create.create')}
           </Button>
         </Space>
       </div>
       
+      {/* Rollout CRD 未安裝警告 */}
+      {workloadType === 'Rollout' && rolloutCRDEnabled === false && (
+        <Alert
+          message="Argo Rollouts 未安裝"
+          description="此叢集尚未安裝 Argo Rollouts，無法建立 Rollout 資源。請先在叢集中安裝 Argo Rollouts。"
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {/* 預檢結果 */}
       {dryRunResult && (
         <Alert

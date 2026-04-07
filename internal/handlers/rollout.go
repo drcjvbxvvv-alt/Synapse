@@ -20,7 +20,6 @@ import (
 	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -479,6 +478,12 @@ func (h *RolloutHandler) ApplyYAML(c *gin.Context) {
 		namespace = "default"
 	}
 
+	// 檢查 Argo Rollouts CRD 是否已安裝
+	if h.k8sMgr.RolloutsLister(cluster.ID) == nil {
+		response.BadRequest(c, "叢集未安裝 Argo Rollouts，請先安裝後再建立 Rollout 資源")
+		return
+	}
+
 	// 應用YAML
 	result, err := h.applyYAML(ctx, k8sClient, req.YAML, namespace, req.DryRun)
 	if err != nil {
@@ -580,16 +585,13 @@ func (h *RolloutHandler) convertToRolloutInfo(r *rollouts.Rollout) RolloutInfo {
 
 // 輔助方法：應用YAML
 func (h *RolloutHandler) applyYAML(ctx context.Context, k8sClient *services.K8sClient, yamlContent string, namespace string, dryRun bool) (interface{}, error) {
-	// 建立解碼器
-	decode := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer().Decode
-	obj, _, err := decode([]byte(yamlContent), nil, nil)
-	if err != nil {
+	// 使用 sigsyaml 直接解析為 Rollout 結構（比 runtime serializer 更適合 CRD 類型）
+	rollout := &rollouts.Rollout{}
+	if err := sigsyaml.Unmarshal([]byte(yamlContent), rollout); err != nil {
 		return nil, fmt.Errorf("解析YAML失敗: %w", err)
 	}
-
-	rollout, ok := obj.(*rollouts.Rollout)
-	if !ok {
-		return nil, fmt.Errorf("無法轉換為Rollout型別")
+	if rollout.Name == "" || rollout.Kind == "" {
+		return nil, fmt.Errorf("YAML缺少必要欄位 (name 或 kind)")
 	}
 
 	rolloutClient, err := k8sClient.GetRolloutClient()

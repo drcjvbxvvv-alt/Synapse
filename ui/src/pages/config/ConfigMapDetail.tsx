@@ -12,6 +12,7 @@ import {
   Modal,
   Table,
   Popconfirm,
+  App,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -39,6 +40,7 @@ const ConfigMapDetail: React.FC = () => {
     name: string;
   }>();
   const { t } = useTranslation(['config', 'common']);
+  const { modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [configMap, setConfigMap] = useState<ConfigMapDetailType | null>(null);
   const [versions, setVersions] = useState<ConfigVersion[]>([]);
@@ -94,7 +96,7 @@ const ConfigMapDetail: React.FC = () => {
 
   // 刪除ConfigMap
   const handleDelete = () => {
-    Modal.confirm({
+    modal.confirm({
       title: t('common:messages.confirmDelete'),
       content: t('config:detail.confirmDeleteConfigMap', { name }),
       onOk: async () => {

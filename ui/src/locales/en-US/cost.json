@@ -61,5 +61,25 @@
   },
   "monthPicker": "Select Month",
   "prometheusRequired": "Prometheus is required for actual usage data. Without it, only resource requests are estimated.",
-  "loading": "Loading cost data..."
+  "loading": "Loading cost data...",
+  "insights": {
+    "title": "Cost Insights",
+    "subtitle": "Cross-Cluster Cost Summary",
+    "totalSpend": "Platform Total This Month",
+    "clusterCount": "Managed Clusters",
+    "topCluster": "Highest-Cost Cluster",
+    "configuredCount": "Billing Configured",
+    "comparison": "Cluster Cost Comparison (This Month)",
+    "trend": "Cross-Cluster Cost Trend (Last 6 Months)",
+    "table": {
+      "cluster": "Cluster",
+      "totalCost": "Monthly Cost",
+      "topNamespace": "Top Namespace",
+      "wastePercent": "Waste %",
+      "snapshotDays": "Days Collected",
+      "currency": "Currency",
+      "notConfigured": "Not configured"
+    },
+    "noData": "No cross-cluster cost data yet. Configure pricing in each cluster's Cost Analysis page."
+  }
 }

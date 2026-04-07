@@ -23,7 +23,6 @@ import {
   FileTextOutlined,
   DollarOutlined,
   SafetyOutlined,
-  EyeOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { MenuProps as AntMenuProps } from 'antd';
@@ -53,7 +52,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
   // ─── 選單展開 / 選取狀態 ────────────────────────────────────────────
   const getDefaultOpenKeys = useCallback(() => {
     if (isClusterDetail) {
-      return ['kubernetes-resources', 'cluster', 'cloud-native-observability', 'cloud-native-cost'];
+      return ['kubernetes-resources', 'cluster', 'cloud-native-observability'];
     }
     if (location.pathname.startsWith('/access')) return ['access-control'];
     if (location.pathname.startsWith('/audit')) return ['audit-management'];
@@ -83,8 +82,8 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     if (path.match(/\/clusters\/[^/]+\/helm/)) return ['cluster-helm'];
     if (path.match(/\/clusters\/[^/]+\/crds/)) return ['cluster-crds'];
     if (path.match(/\/clusters\/[^/]+\/event-alerts/)) return ['cluster-event-alerts'];
-    if (path.match(/\/clusters\/[^/]+\/cost-insights/)) return ['cost-insights'];
-    if (path.match(/\/clusters\/[^/]+\/cost/)) return ['cluster-cost'];
+    if (path === '/cost-insights') return ['cost-insights'];
+    if (path.match(/\/clusters\/[^/]+\/cost-insights/)) return ['cluster-cost'];
     if (path.match(/\/clusters\/[^/]+\/security/)) return ['cluster-security'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
@@ -129,6 +128,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
         { key: 'audit-commands', icon: <HistoryOutlined />, label: t('menu.commandHistory'), onClick: () => navigate('/audit/commands') },
       ],
     },
+    { key: 'cost-insights', icon: <DollarOutlined />, label: t('menu.costInsights'), onClick: () => navigate('/cost-insights') },
     { key: 'multicluster', icon: <BranchesOutlined />, label: t('menu.multiCluster', '多叢集工作流程'), onClick: () => navigate('/multicluster') },
     { key: 'alert-center', icon: <AlertOutlined />, label: t('menu.alerts'), onClick: () => navigate('/alerts') },
     { key: 'system-settings', icon: <SettingOutlined />, label: t('menu.settings'), onClick: () => navigate('/settings') },
@@ -167,12 +167,6 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
         { key: 'cluster-event-alerts', icon: <AlertOutlined />, label: t('menu.eventAlerts', 'Event 告警'), onClick: () => clusterNav('event-alerts') },
         { key: 'cluster-cost', icon: <DollarOutlined />, label: t('menu.costAnalysis', '成本分析'), onClick: () => clusterNav('cost-insights') },
         { key: 'cluster-security', icon: <SafetyOutlined />, label: t('menu.securityScan', '安全掃描'), onClick: () => clusterNav('security') },
-      ],
-    },
-    {
-      key: 'cloud-native-cost', label: t('menu.costGovernance'),
-      children: [
-        { key: 'cost-insights', icon: <EyeOutlined />, label: t('menu.costInsights'), onClick: () => clusterNav('cost-insights') },
       ],
     },
   ], [t, clusterNav]);

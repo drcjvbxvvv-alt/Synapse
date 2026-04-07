@@ -36,7 +36,7 @@ interface SecretListProps {
 
 const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   
   // 資料狀態
 const { t } = useTranslation(['config', 'common']);
@@ -201,7 +201,7 @@ const [allSecrets, setAllSecrets] = useState<SecretListItem[]>([]);
       return;
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: t('common:messages.confirmDelete'),
       content: t('config:list.messages.confirmBatchDeleteSecret', { count: selectedRowKeys.length }),
       okText: t('common:actions.confirm'),

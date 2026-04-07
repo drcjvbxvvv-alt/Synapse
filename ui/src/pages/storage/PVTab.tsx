@@ -33,7 +33,7 @@ interface PVTabProps {
 }
 
 const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   
   // 資料狀態
 const { t } = useTranslation(['storage', 'common']);
@@ -246,7 +246,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
       return;
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: t('common:messages.confirmDelete'),
       content: t('storage:messages.confirmDeletePV', { count: selectedRowKeys.length }),
       okText: t('common:actions.confirm'),

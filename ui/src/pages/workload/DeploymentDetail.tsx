@@ -307,7 +307,7 @@ const [loading, setLoading] = useState(false);
           >
             {t('detailPage.monitoring')}
           </Button>
-          <Button icon={<FileTextOutlined />}>{t('detailPage.logs')}</Button>
+          <Button icon={<FileTextOutlined />} onClick={() => navigate(`/clusters/${clusterId}/logs`)}>{t('detailPage.logs')}</Button>
           <Button icon={<SyncOutlined />} onClick={handleRefresh}>
             {t('detailPage.refresh')}
           </Button>

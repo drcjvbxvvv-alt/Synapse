@@ -34,7 +34,7 @@ interface StorageClassTabProps {
 }
 
 const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountChange }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   
   // 資料狀態
 const { t } = useTranslation(['storage', 'common']);
@@ -245,7 +245,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
       return;
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: t('common:messages.confirmDelete'),
       content: t('storage:messages.confirmDeleteStorageClass', { count: selectedRowKeys.length }),
       okText: t('common:actions.confirm'),

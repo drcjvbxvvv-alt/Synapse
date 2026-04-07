@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Typography, Tabs, Breadcrumb } from 'antd';
+import { Typography, Tabs, Breadcrumb, Space } from 'antd';
 import {
   SettingOutlined,
   CloudServerOutlined,
@@ -24,65 +24,42 @@ const SystemSettings: React.FC = () => {
 const { t } = useTranslation(['settings', 'common']);
 const [activeTab, setActiveTab] = useState('ssh');
 
+  const tabLabel = (icon: React.ReactNode, text: string) => (
+    <Space size={8}>
+      {icon}
+      <span>{text}</span>
+    </Space>
+  );
+
   const tabItems = [
     {
       key: 'ssh',
-      label: (
-        <span>
-          <KeyOutlined />
-          {t('settings:tabs.ssh')}
-        </span>
-      ),
+      label: tabLabel(<KeyOutlined />, t('settings:tabs.ssh')),
       children: <SSHSettings />,
     },
     {
       key: 'ldap',
-      label: (
-        <span>
-          <CloudServerOutlined />
-          {t('settings:tabs.ldap')}
-        </span>
-      ),
+      label: tabLabel(<CloudServerOutlined />, t('settings:tabs.ldap')),
       children: <LDAPSettings />,
     },
     {
       key: 'grafana',
-      label: (
-        <span>
-          <DashboardOutlined />
-          {t('settings:tabs.grafana')}
-        </span>
-      ),
+      label: tabLabel(<DashboardOutlined />, t('settings:tabs.grafana')),
       children: <GrafanaSettings />,
     },
     {
       key: 'ai',
-      label: (
-        <span>
-          <RobotOutlined />
-          {t('settings:tabs.ai')}
-        </span>
-      ),
+      label: tabLabel(<RobotOutlined />, t('settings:tabs.ai')),
       children: <AISettings />,
     },
     {
       key: 'security',
-      label: (
-        <span>
-          <SafetyCertificateOutlined />
-          {t('settings:tabs.security')}
-        </span>
-      ),
+      label: tabLabel(<SafetyCertificateOutlined />, t('settings:tabs.security')),
       children: <SecuritySettings />,
     },
     {
       key: 'notification',
-      label: (
-        <span>
-          <BellOutlined />
-          {t('settings:tabs.notification')}
-        </span>
-      ),
+      label: tabLabel(<BellOutlined />, t('settings:tabs.notification')),
       children: <NotificationSettings />,
     },
   ];

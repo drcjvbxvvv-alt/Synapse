@@ -52,7 +52,7 @@ interface SearchCondition {
 const NodeList: React.FC = () => {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
-  const { message: appMessage } = App.useApp();
+  const { message: appMessage, modal } = App.useApp();
   const { t } = useTranslation('node');
   const { t: tc } = useTranslation('common');
   
@@ -187,7 +187,7 @@ const NodeList: React.FC = () => {
   };
 
   const handleDrain = async (name: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: t('actions.drain'),
       content: t('actions.confirmDrain', { name }),
       okText: tc('actions.confirm'),

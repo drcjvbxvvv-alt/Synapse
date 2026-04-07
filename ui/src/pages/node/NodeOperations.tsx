@@ -20,6 +20,7 @@ import {
   Tag,
   Badge,
   Statistic,
+  App,
 } from 'antd';
 import type { RadioChangeEvent } from 'antd/es/radio';
 import {
@@ -67,6 +68,7 @@ const NodeOperations: React.FC<NodeOperationProps> = ({
   onSuccess,
 }) => {
 const { t } = useTranslation(['nodeOps', 'common']);
+const { modal } = App.useApp();
 const [currentStep, setCurrentStep] = useState(0);
   const [operationType, setOperationType] = useState<'cordon' | 'uncordon' | 'drain'>('cordon');
   const [operationReason, setOperationReason] = useState('');
@@ -155,7 +157,7 @@ const [currentStep, setCurrentStep] = useState(0);
 
   // 處理取消
   const handleCancel = () => {
-    Modal.confirm({
+    modal.confirm({
       title: t('nodeOps:cancel.title'),
       content: t('nodeOps:cancel.content'),
       onOk: () => {

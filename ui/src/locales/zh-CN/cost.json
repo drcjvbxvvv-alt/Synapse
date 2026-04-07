@@ -61,5 +61,25 @@
   },
   "monthPicker": "选择月份",
   "prometheusRequired": "需要配置 Prometheus 才能显示实际用量；若无 Prometheus，仅显示 Request 估算",
-  "loading": "加载成本数据中..."
+  "loading": "加载成本数据中...",
+  "insights": {
+    "title": "成本洞察",
+    "subtitle": "跨集群费用汇总",
+    "totalSpend": "全平台本月费用",
+    "clusterCount": "纳管集群",
+    "topCluster": "费用最高集群",
+    "configuredCount": "已配置计费",
+    "comparison": "各集群费用对比（本月）",
+    "trend": "跨集群费用趋势（近 6 个月）",
+    "table": {
+      "cluster": "集群",
+      "totalCost": "本月费用",
+      "topNamespace": "最高命名空间",
+      "wastePercent": "浪费比例",
+      "snapshotDays": "采集天数",
+      "currency": "币种",
+      "notConfigured": "未配置"
+    },
+    "noData": "暂无跨集群成本数据，请至各集群「成本分析」配置定价"
+  }
 }

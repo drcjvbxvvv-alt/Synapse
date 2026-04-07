@@ -43,7 +43,7 @@ interface DeploymentTabProps {
 
 const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 const { t } = useTranslation(['workload', 'common']);
 // 資料狀態
   const [allWorkloads, setAllWorkloads] = useState<WorkloadInfo[]>([]); // 所有原始資料
@@ -249,7 +249,7 @@ message.warning(t('actions.selectRedeploy', { type: 'Deployment' }));
 return;
     }
 
-    Modal.confirm({
+    modal.confirm({
 title: t('actions.confirmRedeploy'),
       content: t('actions.confirmRedeployDesc', { count: selectedRowKeys.length, type: 'Deployment' }),
       okText: t('common:actions.confirm'),

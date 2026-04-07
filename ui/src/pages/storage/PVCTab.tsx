@@ -33,7 +33,7 @@ interface PVCTabProps {
 }
 
 const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   
   // 資料狀態
 const { t } = useTranslation(['storage', 'common']);
@@ -267,7 +267,7 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
       return;
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: t('common:messages.confirmDelete'),
       content: t('storage:messages.confirmDeletePVC', { count: selectedRowKeys.length }),
       okText: t('common:actions.confirm'),

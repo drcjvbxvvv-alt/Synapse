@@ -10,6 +10,7 @@ import {
   App,
   Switch,
   Select,
+  AutoComplete,
   Spin,
   Tag,
   Alert,
@@ -289,11 +290,12 @@ const AISettings: React.FC = () => {
             rules={[{ required: true, message: t('settings:ai.modelRequired') }]}
             tooltip={t('settings:ai.modelTooltip')}
           >
-            <Select
-              showSearch
-              allowClear={false}
+            <AutoComplete
               placeholder={providerCfg.defaultModel}
               options={providerCfg.modelOptions.map(m => ({ label: m, value: m }))}
+              filterOption={(input, option) =>
+                (option?.value as string)?.toLowerCase().includes(input.toLowerCase())
+              }
               dropdownRender={(menu) => (
                 <>
                   {menu}

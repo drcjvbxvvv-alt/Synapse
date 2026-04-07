@@ -61,5 +61,25 @@
   },
   "monthPicker": "選擇月份",
   "prometheusRequired": "需要設定 Prometheus 才能顯示實際用量；若無 Prometheus，僅顯示 Request 估算",
-  "loading": "載入成本資料中..."
+  "loading": "載入成本資料中...",
+  "insights": {
+    "title": "成本洞察",
+    "subtitle": "跨叢集費用彙總",
+    "totalSpend": "全平台本月費用",
+    "clusterCount": "納管叢集",
+    "topCluster": "費用最高叢集",
+    "configuredCount": "已設定計費",
+    "comparison": "各叢集費用對比（本月）",
+    "trend": "跨叢集費用趨勢（近 6 個月）",
+    "table": {
+      "cluster": "叢集",
+      "totalCost": "本月費用",
+      "topNamespace": "最高命名空間",
+      "wastePercent": "浪費比例",
+      "snapshotDays": "採集天數",
+      "currency": "幣別",
+      "notConfigured": "未設定"
+    },
+    "noData": "尚無跨叢集成本資料，請至各叢集「成本分析」設定定價"
+  }
 }

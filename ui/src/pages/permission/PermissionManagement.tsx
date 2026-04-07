@@ -77,15 +77,14 @@ const PermissionTypeCard: React.FC<{
         backgroundColor: selected ? '#e6f7ff' : undefined,
         height: '100%',
       }}
-      styles={{ body: { padding: '16px' } }}
+      styles={{ body: { padding: '12px' } }}
     >
-      <Title level={5} style={{ marginBottom: 8 }}>
+      <Title level={5} style={{ marginBottom: 6, fontSize: 13 }}>
         {type.name}
       </Title>
       <Paragraph
         type="secondary"
-        style={{ marginBottom: 0, fontSize: 12, minHeight: 40 }}
-        ellipsis={{ rows: 2, tooltip: type.description }}
+        style={{ marginBottom: 0, fontSize: 12 }}
       >
         {type.description}
       </Paragraph>
@@ -580,9 +579,9 @@ const [loading, setLoading] = useState(false);
 
             {/* 權限型別選擇 */}
             <Form.Item label={t('permission:form.permissionType')} required>
-              <Row gutter={12}>
+              <Row gutter={[12, 12]}>
                 {permissionTypes.map((type) => (
-                  <Col span={Math.floor(24 / Math.max(permissionTypes.length, 1))} key={type.type}>
+                  <Col xs={12} sm={8} md={Math.ceil(24 / Math.min(permissionTypes.length, 4))} key={type.type}>
                     <PermissionTypeCard
                       type={type}
                       selected={selectedPermissionType === type.type}

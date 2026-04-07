@@ -41,7 +41,7 @@ const { Option } = Select;
 const NamespaceList: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 const { t } = useTranslation(["namespace", "common"]);
 const [form] = Form.useForm();
 
@@ -206,7 +206,7 @@ const [form] = Form.useForm();
       return;
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: t('actions.confirmBatchDelete'),
       content: t('actions.confirmBatchDeleteDesc', { count: toDelete.length }),
       okText: t('common:actions.confirm'),
