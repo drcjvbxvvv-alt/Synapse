@@ -11,8 +11,6 @@ import {
   Typography,
   Alert,
   Spin,
-  Row,
-  Col,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -296,96 +294,86 @@ const [pod, setPod] = useState<PodInfo | null>(null);
           </Text>
         </Space>
         
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col span={4}>
-            <Select
-              placeholder={t('pod:logs.selectContainer')}
-              value={selectedContainer}
-              onChange={setSelectedContainer}
-              style={{ width: '100%' }}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 16 }}>
+          <Select
+            placeholder={t('pod:logs.selectContainer')}
+            value={selectedContainer}
+            onChange={setSelectedContainer}
+            style={{ width: 160 }}
+          >
+            {pod.containers.map(container => (
+              <Option key={container.name} value={container.name}>
+                {container.name}
+              </Option>
+            ))}
+          </Select>
+
+          <Space size={4}>
+            <Text>{t('pod:logs.tailLines')}:</Text>
+            <InputNumber
+              min={10}
+              max={10000}
+              value={tailLines}
+              onChange={(value) => setTailLines(value || 100)}
+              style={{ width: 80 }}
+            />
+          </Space>
+
+          <Space size={4}>
+            <Text>{t('pod:logs.sinceSeconds')}:</Text>
+            <InputNumber
+              min={1}
+              placeholder={t('pod:logs.allTime')}
+              value={sinceSeconds}
+              onChange={(value) => setSinceSeconds(value ?? undefined)}
+              style={{ width: 100 }}
+            />
+          </Space>
+
+          <Space size={4}>
+            <Text>{t('pod:logs.previousContainer')}:</Text>
+            <Switch
+              checked={previous}
+              onChange={setPrevious}
+              size="small"
+            />
+          </Space>
+
+          <Space size={4}>
+            <Button
+              type="primary"
+              icon={<ReloadOutlined />}
+              onClick={refreshLogs}
+              loading={loading}
             >
-              {pod.containers.map(container => (
-                <Option key={container.name} value={container.name}>
-                  {container.name}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          
-          <Col span={3}>
-            <Space>
-              <Text>{t('pod:logs.tailLines')}:</Text>
-              <InputNumber
-                min={10}
-                max={10000}
-                value={tailLines}
-                onChange={(value) => setTailLines(value || 100)}
-                style={{ width: 80 }}
-              />
-            </Space>
-          </Col>
-          
-          <Col span={3}>
-            <Space>
-              <Text>{t('pod:logs.sinceSeconds')}:</Text>
-              <InputNumber
-                min={1}
-                placeholder={t('pod:logs.allTime')}
-                value={sinceSeconds}
-                onChange={(value) => setSinceSeconds(value ?? undefined)}
-                style={{ width: 100 }}
-              />
-            </Space>
-          </Col>
-          
-          <Col span={3}>
-            <Space>
-              <Text>{t('pod:logs.previousContainer')}:</Text>
-              <Switch
-                checked={previous}
-                onChange={setPrevious}
-                size="small"
-              />
-            </Space>
-          </Col>
-          
-          <Col span={11}>
-            <Space>
-              <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                onClick={refreshLogs}
-                loading={loading}
-              >
-                {t('pod:logs.refresh')}
-              </Button>
-              
-              <Button
-                icon={following ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-                onClick={toggleFollow}
-                type={following ? 'default' : 'primary'}
-              >
-                {following ? t('pod:logs.stopFollow') : t('pod:logs.startFollow')}
-              </Button>
-              
-              <Button
-                icon={<DownloadOutlined />}
-                onClick={downloadLogs}
-                disabled={!logs}
-              >
-                {t('pod:logs.downloadBtn')}
-              </Button>
-              
-              <Button
-                icon={<ClearOutlined />}
-                onClick={clearLogs}
-                disabled={!logs}
-              >
-                {t('pod:logs.clearBtn')}
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+              {t('pod:logs.refresh')}
+            </Button>
+
+            <Button
+              icon={following ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+              onClick={toggleFollow}
+              type={following ? 'default' : 'primary'}
+            >
+              {following ? t('pod:logs.stopFollow') : t('pod:logs.startFollow')}
+            </Button>
+
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={downloadLogs}
+              disabled={!logs}
+            >
+              {t('pod:logs.downloadBtn')}
+            </Button>
+
+            <Button
+              icon={<ClearOutlined />}
+              onClick={clearLogs}
+              disabled={!logs}
+            >
+              {t('pod:logs.clearBtn')}
+            </Button>
+          </Space>
+        </div>
       </div>
 
       {/* 狀態提示 */}
