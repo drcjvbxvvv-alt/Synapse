@@ -77,30 +77,24 @@ const GlobalCostInsights: React.FC = () => {
       title: t('cost:occupancy.cpuOccupancy', 'CPU 佔用率'),
       key: 'cpu_occupancy_percent',
       render: (_: unknown, row: ClusterResourceSummary) => row.informer_ready ? (
-        <Space>
-          <Progress
-            percent={+row.cpu_occupancy_percent.toFixed(1)}
-            size="small"
-            style={{ width: 100 }}
-            status={row.cpu_occupancy_percent > 80 ? 'exception' : 'normal'}
-          />
-          <span>{row.cpu_occupancy_percent.toFixed(1)}%</span>
-        </Space>
+        <Progress
+          percent={+row.cpu_occupancy_percent.toFixed(1)}
+          size="small"
+          style={{ width: 140 }}
+          status={row.cpu_occupancy_percent > 80 ? 'exception' : 'normal'}
+        />
       ) : <Tag color="default">N/A</Tag>,
     },
     {
       title: t('cost:occupancy.memOccupancy', '記憶體佔用率'),
       key: 'memory_occupancy_percent',
       render: (_: unknown, row: ClusterResourceSummary) => row.informer_ready ? (
-        <Space>
-          <Progress
-            percent={+row.memory_occupancy_percent.toFixed(1)}
-            size="small"
-            style={{ width: 100 }}
-            status={row.memory_occupancy_percent > 80 ? 'exception' : 'normal'}
-          />
-          <span>{row.memory_occupancy_percent.toFixed(1)}%</span>
-        </Space>
+        <Progress
+          percent={+row.memory_occupancy_percent.toFixed(1)}
+          size="small"
+          style={{ width: 140 }}
+          status={row.memory_occupancy_percent > 80 ? 'exception' : 'normal'}
+        />
       ) : <Tag color="default">N/A</Tag>,
     },
     {
@@ -206,8 +200,8 @@ const GlobalCostInsights: React.FC = () => {
                 <XAxis dataKey="name" angle={-20} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
                 <YAxis unit="%" />
                 <RechartTooltip formatter={(v) => [`${v}%`]} />
-                <Bar dataKey="cpu" name="CPU 佔用率" fill="#4e79a7" />
-                <Bar dataKey="memory" name="記憶體佔用率" fill="#f28e2b" />
+                <Bar dataKey="cpu" name="CPU 佔用率" fill="#7eb8d4" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="memory" name="記憶體佔用率" fill="#a8c9a5" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
