@@ -10,6 +10,7 @@ import IngressTab from './IngressTab';
 import NetworkPolicyTab from './NetworkPolicyTab';
 import ServiceMeshTab from './ServiceMeshTab';
 import GatewayAPITab from './GatewayAPITab';
+import ClusterTopologyTab from './ClusterTopologyTab';
 import { useTranslation } from 'react-i18next';
 import { namespaceService } from '../../services/namespaceService';
 
@@ -91,6 +92,15 @@ const [searchParams, setSearchParams] = useSearchParams();
       label: t('network:tabs.gatewayapi'),
       children: (
         <GatewayAPITab
+          clusterId={clusterId || ''}
+        />
+      ),
+    },
+    {
+      key: 'topology',
+      label: t('network:tabs.topology'),
+      children: (
+        <ClusterTopologyTab
           clusterId={clusterId || ''}
         />
       ),

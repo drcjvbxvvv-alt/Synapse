@@ -3,7 +3,21 @@
     "service": "服务（Service）",
     "ingress": "路由（Ingress）",
     "networkpolicy": "网络策略（NetworkPolicy）",
-    "gatewayapi": "Gateway API"
+    "gatewayapi": "Gateway API",
+    "topology": "集群拓扑"
+  },
+  "clusterTopology": {
+    "fetchError": "拓扑数据获取失败",
+    "loading": "加载拓扑中...",
+    "empty": "未找到网络资源（无 Service 或 Workload）",
+    "refresh": "刷新",
+    "namespaceFilter": "命名空间筛选",
+    "health": {
+      "healthy": "健康",
+      "degraded": "降级",
+      "down": "中断",
+      "unknown": "未知"
+    }
   },
   "gatewayapi": {
     "notInstalled": "此集群尚未安装 Gateway API",

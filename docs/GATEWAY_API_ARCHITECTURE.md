@@ -1,6 +1,6 @@
 # Synapse Gateway API 架構設計文件
 
-> 版本：v1.3 | 日期：2026-04-07 | 狀態：Phase 1、Phase 2 & Phase 3 已實作
+> 版本：v1.4 | 日期：2026-04-08 | 狀態：Phase 1、Phase 2 & Phase 3 已實作；Phase 4 規劃中
 > 對應里程碑：M-GW（Gateway API 整合）
 
 ---
@@ -19,6 +19,7 @@
 10. [RBAC 權限設計](#10-rbac-權限設計)
 11. [實作路線圖](#11-實作路線圖)
 12. [技術選型決策](#12-技術選型決策)
+13. [Phase 4：叢集網路拓撲圖（規劃中）](#13-phase-4叢集網路拓撲圖規劃中)
 
 ---
 
@@ -820,6 +821,413 @@ rules:
 - `synapse-ops`：Gateway API 全資源 CRUD
 - `synapse-dev`：Gateway/Route CRUD，GatewayClass 唯讀
 - `synapse-readonly`：Gateway API 全資源唯讀
+
+---
+
+---
+
+## 13. Phase 4：叢集網路拓撲圖（規劃中）
+
+> 狀態：📋 規劃中 | 預計版本：v1.5
+
+### 13.1 背景與目標
+
+Gateway API 拓撲圖（Phase 3）僅呈現 **入口流量鏈路**（GatewayClass → Gateway → Route → Service）。
+Phase 4 目標是擴展為 **全叢集網路視圖**，讓操作者能在單一畫面觀察：
+
+- Pod 之間的通信關係與連線健康狀態
+- Service 與其背後 Pod（Endpoint）的就緒情況
+- NetworkPolicy 對流量的允許 / 封鎖效果
+- 外部流量（Ingress / Gateway）的完整入口鏈路
+
+---
+
+### 13.2 資料來源與限制分析
+
+Kubernetes 原生 **不追蹤即時 Pod-to-Pod 連線**，需按可用資料分層：
+
+| 層次 | K8s 資源 | 能提供的資訊 | 永遠可用 |
+|------|---------|------------|---------|
+| 靜態拓撲 | Pods + Services + EndpointSlices | Service ↔ Pod 對應、Pod 健康 | ✅ |
+| 策略層 | NetworkPolicy | 靜態推論允許 / 封鎖路徑 | ✅（需裝 NetworkPolicy） |
+| 即時流量 | Istio Envoy sidecar | 真實連線數、延遲、錯誤率 | ⚠️（需 Istio） |
+| 即時流量 | Cilium Hubble API | 核心層連線追蹤 | ⚠️（需 Cilium CNI） |
+
+Phase 4 主線（Phase A）僅依賴 **Kubernetes 原生 API**，不要求任何 CNI/mesh。
+進階功能（Phase C/D）在偵測到 Istio/Cilium 後自動啟用。
+
+---
+
+### 13.3 視覺設計
+
+#### 節點類型
+
+```
+┌──────────────────────────────────────────────────────┐
+│  namespace: frontend  （群組框）                      │
+│                                                       │
+│   ╭──────────╮   ╭──────────╮                       │
+│   │  Pod     │   │  Pod     │  ● Running（綠）       │
+│   │ web-1 ●  │   │ web-2 ●  │  ◑ Pending（橙）      │
+│   ╰────┬─────╯   ╰────┬─────╯  ✕ Failed（紅）       │
+│        └──────┬────────┘                              │
+│         ╔═════╧══════╗                               │
+│         ║ Service    ║  ← 雙線框                     │
+│         ║  web-svc   ║                               │
+│         ╚═════╤══════╝                               │
+│               │                                       │
+│    [Ingress / Gateway]  ← 菱形入口節點               │
+└───────────────┼──────────────────────────────────────┘
+                │  NetworkPolicy: DENY（紅色✕線）
+┌───────────────┼──────────────────────────────────────┐
+│  namespace: backend                                   │
+│         ╔═════╧══════╗                               │
+│         ║ Service    ║                               │
+│         ║  api-svc   ║                               │
+│         ╚═════╤══════╝                               │
+│   ╭──────────╮│                                      │
+│   │  Pod     ├╯                                      │
+│   │ api-1 ●  │                                       │
+│   ╰──────────╯                                       │
+└──────────────────────────────────────────────────────┘
+```
+
+#### 節點樣式規格
+
+| 節點類型 | 形狀 | 色彩 | 說明 |
+|---------|------|------|------|
+| Namespace | 群組背景框 | 淡灰邊框 | 內含所屬資源 |
+| Pod（Running） | 圓形 | 綠色 `#52c41a` | 外圈脈衝動畫 |
+| Pod（Pending） | 圓形 | 橙色 `#fa8c16` | 外圈緩慢閃爍 |
+| Pod（Failed） | 圓形 | 紅色 `#ff4d4f` | 靜止無動畫 |
+| Service | 圓角矩形 | 藍色 `#1677ff` | 顯示 ClusterIP |
+| Ingress/Gateway | 菱形 / 六角形 | 紫色 `#722ed1` | 入口節點 |
+
+---
+
+### 13.4 邊（Edge）動態動畫設計
+
+#### 邊類型與動畫規則
+
+| 邊類型 | 觸發條件 | 視覺效果 |
+|--------|---------|---------|
+| **就緒連線** | Service → Ready Pod | 綠色粒子流動（速度正常） |
+| **降級連線** | Service → NotReady Pod | 橙色虛線慢速流動 |
+| **無端點** | Service 無任何 Endpoint | 灰色靜止虛線 |
+| **Policy Allow** | NetworkPolicy 顯式允許 | 藍色實線（可切換顯示） |
+| **Policy Deny** | NetworkPolicy 封鎖 | 紅色靜止線 + ✕ 中間標記 |
+| **入口流量** | Ingress/Gateway → Service | 紫色粒子流動（由外向內） |
+| **即時高流量** | Istio metrics > 閾值 | 粒子加速 + 線條加粗 |
+| **即時錯誤** | Istio error rate > 5% | 紅色粒子 + 邊標籤顯示錯誤率 |
+
+#### 粒子流動實作（自訂 Edge 元件）
+
+使用 SVG `animateMotion` 沿 React Flow 的邊路徑運動，避免引入額外動畫庫：
+
+```tsx
+// CustomParticleEdge.tsx（概念）
+const CustomParticleEdge = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
+  const [edgePath] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY });
+  const particleCount = data.traffic === 'high' ? 3 : 1;
+  const duration = data.status === 'degraded' ? '3s' : '1.5s';
+  const color = { ready: '#52c41a', degraded: '#fa8c16', denied: '#ff4d4f' }[data.status];
+
+  return (
+    <g>
+      <path id={id} d={edgePath} stroke={color} strokeWidth={1.5} fill="none" />
+      {Array.from({ length: particleCount }).map((_, i) => (
+        <circle key={i} r={3} fill={color} opacity={0.8}>
+          <animateMotion
+            dur={duration}
+            repeatCount="indefinite"
+            begin={`${(i / particleCount) * parseFloat(duration)}s`}
+          >
+            <mpath href={`#${id}`} />
+          </animateMotion>
+        </circle>
+      ))}
+    </g>
+  );
+};
+```
+
+#### 脈衝節點動畫（Pod Running）
+
+```css
+/* Pod Running 外圈脈衝 */
+@keyframes pod-pulse {
+  0%   { r: 18px; opacity: 0.6; }
+  100% { r: 28px; opacity: 0; }
+}
+.pod-running-ring {
+  animation: pod-pulse 2s ease-out infinite;
+}
+```
+
+---
+
+### 13.5 規模問題與解決方案
+
+大叢集可能有數百到數千個 Pod，不加限制會導致畫面無法使用。
+
+#### 強制過濾策略
+
+1. **Namespace 多選**（最多 5 個）：避免全叢集一次載入
+2. **Pod 摺疊（Rollup）模式**：同一 `ownerReference`（ReplicaSet/StatefulSet）的 Pod 預設折疊為一個「工作負載節點」，顯示健康比例；展開才顯示個別 Pod
+3. **節點數量限制**：超過 200 個節點時顯示警告，建議縮小 namespace 範圍
+
+#### 摺疊節點設計
+
+```
+┌────────────────────────────┐
+│ Deployment: web            │  ← 摺疊視圖
+│ ● 3/3 Running              │
+│ [展開查看 Pod]              │
+└────────────────────────────┘
+
+展開後：
+┌───────────────────────────────────────┐
+│ ●web-abc12  ●web-def34  ●web-ghi56   │
+└───────────────────────────────────────┘
+```
+
+---
+
+### 13.6 後端 API 設計
+
+#### 新增 endpoint
+
+```
+GET /api/v1/clusters/:clusterID/network/topology
+    ?namespaces=frontend,backend   // 必填，逗號分隔，最多 5 個
+    &rollup=true                   // 是否摺疊同 owner 的 Pod（預設 true）
+    &includeGateway=true           // 是否包含 Gateway API 節點
+    &includeIngress=true           // 是否包含 Ingress 節點
+    &includePolicy=true            // 是否包含 NetworkPolicy 邊
+```
+
+#### Response DTO
+
+```go
+type ClusterNetworkTopology struct {
+    Namespaces []string             `json:"namespaces"`
+    Nodes      []NetworkNode        `json:"nodes"`
+    Edges      []NetworkEdge        `json:"edges"`
+    Stats      NetworkTopologyStats `json:"stats"`
+}
+
+type NetworkNode struct {
+    ID        string            `json:"id"`
+    Kind      string            `json:"kind"`      // Pod | Workload | Service | Namespace | Ingress | Gateway
+    Name      string            `json:"name"`
+    Namespace string            `json:"namespace"`
+    Status    string            `json:"status"`    // Running | Pending | Failed | Ready | NotReady
+    // Pod-specific
+    PodIP     string            `json:"podIP,omitempty"`
+    OwnerKind string            `json:"ownerKind,omitempty"` // Deployment | StatefulSet | DaemonSet
+    OwnerName string            `json:"ownerName,omitempty"`
+    // Workload rollup
+    ReadyCount int              `json:"readyCount,omitempty"`
+    TotalCount int              `json:"totalCount,omitempty"`
+    // Service-specific
+    ClusterIP string            `json:"clusterIP,omitempty"`
+    Labels    map[string]string `json:"labels,omitempty"`
+}
+
+type NetworkEdge struct {
+    Source   string `json:"source"`
+    Target   string `json:"target"`
+    Kind     string `json:"kind"`   // endpoint | policy-allow | policy-deny | ingress | gateway
+    Status   string `json:"status"` // ready | degraded | blocked
+    // Policy-specific
+    PolicyName      string `json:"policyName,omitempty"`
+    PolicyNamespace string `json:"policyNamespace,omitempty"`
+}
+
+type NetworkTopologyStats struct {
+    TotalPods       int `json:"totalPods"`
+    RunningPods     int `json:"runningPods"`
+    TotalServices   int `json:"totalServices"`
+    TotalPolicies   int `json:"totalPolicies"`
+}
+```
+
+#### 後端組裝邏輯
+
+```
+1. 並行拉取（goroutine）：
+   - k8s.ListPods(namespaces)
+   - k8s.ListServices(namespaces)
+   - k8s.ListEndpointSlices(namespaces)
+   - k8s.ListNetworkPolicies(namespaces)
+   - [可選] ListIngresses / ListGateways
+
+2. 建立 Service → Pod 對應：
+   - EndpointSlice.endpoints[].targetRef.name → Pod
+   - 標記 conditions[].ready = true/false
+
+3. NetworkPolicy 靜態推論：
+   - 針對每對 (source Pod, target Service)，
+     遍歷 NetworkPolicy 的 ingress/egress selectors，
+     判斷是否有明確 allow 或 deny（無 NetworkPolicy = allow all）
+
+4. rollup=true 時：
+   - 按 ownerReference 分組 Pod
+   - 輸出 kind=Workload 節點，附 readyCount/totalCount
+   - 邊改為 Service → Workload
+
+5. 回傳 ClusterNetworkTopology
+```
+
+---
+
+### 13.7 前端元件設計
+
+#### 元件樹
+
+```
+NetworkTopologyPage.tsx          ← 獨立頁面（Network tab 新增入口）
+  ├── TopologyFilterBar.tsx      ← Namespace 多選、圖層切換、Rollup 開關
+  ├── NetworkTopologyGraph.tsx   ← React Flow 畫布主體
+  │     ├── NamespaceGroupNode   ← 自訂 Node：namespace 群組背景
+  │     ├── WorkloadNode         ← 自訂 Node：Deployment/StatefulSet 摺疊
+  │     ├── PodNode              ← 自訂 Node：單一 Pod（含脈衝動畫）
+  │     ├── ServiceNode          ← 自訂 Node：Service
+  │     ├── IngressGatewayNode   ← 自訂 Node：入口節點
+  │     └── ParticleEdge         ← 自訂 Edge：粒子流動動畫
+  └── NodeDetailPanel.tsx        ← 點擊節點後顯示詳情 Drawer
+```
+
+#### 圖層切換（Filter Bar）
+
+```
+[Namespace: frontend ✕] [backend ✕]  [+ 新增]
+────────────────────────────────────────────
+圖層：[✓ Services] [✓ Pods] [✓ Policies] [✓ Ingress/GW]
+模式：[● 摺疊工作負載]  [○ 展開所有 Pod]
+[⟳ 自動刷新：15s ▾]
+```
+
+#### 自動刷新策略
+
+- 預設每 **15 秒**輪詢一次 `/network/topology`
+- 比對前後 diff（新增/移除/狀態變更節點/邊）
+- 狀態變更的節點閃爍 highlight 0.5 秒
+- 使用者拖動節點後暫停自動刷新，顯示「已暫停，點此恢復」
+
+---
+
+### 13.8 NetworkPolicy 靜態推論演算法
+
+NetworkPolicy 沒有「Deny」資源，邏輯為：
+- **有 NetworkPolicy 選中的 Pod** → 預設拒絕所有，只允許規則中明確放行的流量
+- **無 NetworkPolicy 選中的 Pod** → 允許所有流量
+
+推論步驟（後端）：
+
+```
+for each (sourcePod, targetService):
+  targetPods = endpointSlice[targetService].pods
+  for each targetPod in targetPods:
+    ingressPolicies = NetworkPolicies where podSelector matches targetPod
+    if len(ingressPolicies) == 0:
+      edge.status = "allow-all"  // 無 policy，全通
+    else:
+      allowed = false
+      for policy in ingressPolicies:
+        if policy.ingress rules match sourcePod:
+          allowed = true; break
+      edge.status = allowed ? "policy-allow" : "policy-deny"
+```
+
+---
+
+### 13.9 進階整合（Phase C/D，條件式啟用）
+
+#### Istio 整合（若已安裝）
+
+偵測方式：呼叫 Istio 的 `/api/v1/namespaces/istio-system/pods`，存在即啟用。
+
+新增資料來源：Prometheus（Istio 預設 metrics）
+```
+istio_request_total{...}          → 連線數
+istio_request_duration_milliseconds_p99{...} → 延遲 P99
+istio_request_total{response_code=~"5.."}    → 錯誤率
+```
+
+EdgeData 擴展：
+```go
+type NetworkEdge struct {
+    // ...（原有欄位）
+    RequestRate  float64 `json:"requestRate,omitempty"`   // req/s
+    LatencyP99   float64 `json:"latencyP99Ms,omitempty"`  // ms
+    ErrorRate    float64 `json:"errorRate,omitempty"`     // 0.0-1.0
+}
+```
+
+粒子動畫對應：
+- `requestRate` → 粒子數量（1-5 顆）
+- `latencyP99` > 500ms → 粒子顏色轉橙色
+- `errorRate` > 5% → 粒子顏色轉紅色，邊標籤顯示錯誤率
+
+#### Cilium Hubble 整合（若已安裝）
+
+偵測方式：`hubble-relay` service 是否存在於 `kube-system`。
+
+Hubble 提供真實連線追蹤，無需推論：
+- 直接回傳已觀察到的流量對（source, destination, verdict: forwarded/dropped）
+- 可顯示每條邊的「封包數 / 丟包率」
+
+---
+
+### 13.10 實作分階段計畫
+
+| Phase | 功能 | 後端工作 | 前端工作 | 依賴 |
+|-------|------|---------|---------|------|
+| **A**（主線） | Service + Endpoints + Pod 靜態拓撲 + 粒子動畫 | `network_topology_service.go`、`/network/topology` endpoint | `NetworkTopologyGraph.tsx`、`ParticleEdge`、`PodNode`、`ServiceNode` | 無（K8s 原生） |
+| **A+** | Namespace 群組框 + Pod 摺疊（Workload rollup）| 後端 rollup 邏輯 | `NamespaceGroupNode`、`WorkloadNode`、展開互動 | Phase A |
+| **B** | NetworkPolicy 靜態推論覆蓋層 | NetworkPolicy 推論演算法（後端） | Policy 邊顯示、圖層開關 | Phase A（已有 NetworkPolicy API） |
+| **C** | Istio 真實流量指標 | Prometheus 查詢封裝 | 粒子速度/顏色動態對應 | Istio 已安裝 |
+| **D** | Cilium Hubble 連線追蹤 | Hubble relay API 呼叫 | 封包數/丟包率顯示 | Cilium 已安裝 |
+
+#### Phase A 具體檔案清單
+
+**後端**
+```
+internal/services/network_topology_service.go    ← 新增
+internal/handlers/network_topology.go            ← 新增
+internal/router/routes_cluster.go                ← 新增 1 條路由
+```
+
+**前端**
+```
+ui/src/pages/network/NetworkTopologyPage.tsx     ← 新增
+ui/src/pages/network/NetworkTopologyGraph.tsx    ← 新增（React Flow 畫布）
+ui/src/pages/network/nodes/PodNode.tsx           ← 新增
+ui/src/pages/network/nodes/ServiceNode.tsx       ← 新增
+ui/src/pages/network/nodes/WorkloadNode.tsx      ← 新增
+ui/src/pages/network/nodes/NamespaceGroupNode.tsx ← 新增
+ui/src/pages/network/edges/ParticleEdge.tsx      ← 新增（SVG animateMotion）
+ui/src/pages/network/TopologyFilterBar.tsx       ← 新增
+ui/src/pages/network/NodeDetailPanel.tsx         ← 新增
+ui/src/services/networkTopologyService.ts        ← 新增
+ui/src/pages/network/NetworkList.tsx             ← 修改（新增入口 tab）
+ui/src/locales/*/network.json                    ← 新增 i18n 鍵值
+```
+
+---
+
+### 13.11 技術選型決策（Phase 4）
+
+| 決策 | 選擇 | 理由 |
+|------|------|------|
+| 節點/邊渲染 | `@xyflow/react`（已安裝 v12） | Phase 3 已驗證，自訂 Node/Edge 彈性高 |
+| 佈局演算法 | `@dagrejs/dagre`（已安裝） | 有向圖層次佈局，適合 namespace → service → pod |
+| 粒子動畫 | 純 SVG `animateMotion` | 無額外依賴，CPU 消耗低於 JS 動畫 |
+| 輪詢 vs WebSocket | 輪詢（15s interval） | 避免 long-lived 連線複雜度；K8s watch API 可在後續版本替換 |
+| NetworkPolicy 推論 | 後端靜態分析 | 前端不做 Pod selector 比對邏輯，保持輕量 |
+| Istio/Cilium 偵測 | 偵測特定 Service/Pod 存在 | 與 Phase 3 Gateway API 偵測模式一致 |
+| 大叢集規模限制 | namespace 過濾 + rollup 模式 | 避免單次回傳數千節點造成瀏覽器卡頓 |
 
 ---
 

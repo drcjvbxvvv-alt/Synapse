@@ -3,7 +3,21 @@
     "service": "Service",
     "ingress": "Ingress",
     "networkpolicy": "NetworkPolicy",
-    "gatewayapi": "Gateway API"
+    "gatewayapi": "Gateway API",
+    "topology": "Cluster Topology"
+  },
+  "clusterTopology": {
+    "fetchError": "Failed to fetch topology",
+    "loading": "Loading topology...",
+    "empty": "No network resources found (no Services or Workloads)",
+    "refresh": "Refresh",
+    "namespaceFilter": "Filter by Namespace",
+    "health": {
+      "healthy": "Healthy",
+      "degraded": "Degraded",
+      "down": "Down",
+      "unknown": "Unknown"
+    }
   },
   "gatewayapi": {
     "notInstalled": "Gateway API is Not Installed",
