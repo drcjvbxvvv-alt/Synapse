@@ -18,6 +18,10 @@ export interface NetworkEdge {
   target: string;
   health: 'healthy' | 'degraded' | 'down' | 'unknown';
   ports?: string;
+  // Phase B: Istio enrichment
+  requestRate?: number;  // req/s
+  errorRate?: number;    // 0.0–1.0
+  latencyP99ms?: number; // ms
 }
 
 export interface ClusterNetworkTopology {
@@ -25,12 +29,26 @@ export interface ClusterNetworkTopology {
   edges: NetworkEdge[];
 }
 
+export interface TopologyIntegrationStatus {
+  cilium: boolean;
+  ciliumVersion?: string;
+  istio: boolean;
+  istioVersion?: string;
+}
+
 export const networkTopologyService = {
   getTopology: (
     clusterId: string,
     namespaces?: string[],
+    enrich?: boolean,
   ): Promise<ClusterNetworkTopology> =>
     request.get(`/clusters/${clusterId}/network/topology`, {
-      params: namespaces?.length ? { namespaces: namespaces.join(',') } : undefined,
+      params: {
+        ...(namespaces?.length ? { namespaces: namespaces.join(',') } : {}),
+        ...(enrich ? { enrich: 'true' } : {}),
+      },
     }),
+
+  getIntegrations: (clusterId: string): Promise<TopologyIntegrationStatus> =>
+    request.get(`/clusters/${clusterId}/network/integrations`),
 };

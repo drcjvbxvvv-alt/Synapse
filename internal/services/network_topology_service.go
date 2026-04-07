@@ -26,10 +26,66 @@ type NetworkNode struct {
 }
 
 type NetworkEdge struct {
-	Source string `json:"source"`
-	Target string `json:"target"`
-	Health string `json:"health"` // "healthy"|"degraded"|"down"|"unknown"
-	Ports  string `json:"ports,omitempty"`
+	Source       string  `json:"source"`
+	Target       string  `json:"target"`
+	Health       string  `json:"health"` // "healthy"|"degraded"|"down"|"unknown"
+	Ports        string  `json:"ports,omitempty"`
+	// Phase B: Istio enrichment (omitted when not available)
+	RequestRate  float64 `json:"requestRate,omitempty"`  // req/s
+	ErrorRate    float64 `json:"errorRate,omitempty"`    // 0.0-1.0
+	LatencyP99ms float64 `json:"latencyP99ms,omitempty"` // ms
+}
+
+// EnrichWithIstioMetrics enriches edges in-place using Istio flow metrics.
+// Matching is done by destination workload name + namespace.
+func (t *ClusterNetworkTopology) EnrichWithIstioMetrics(metrics map[string]*IstioEdgeMetrics) {
+	if len(metrics) == 0 {
+		return
+	}
+	// Build workload name map: "ns/name" → node ID
+	wlByName := map[string]string{}
+	for _, n := range t.Nodes {
+		if n.Kind == "Workload" {
+			wlByName[n.Namespace+"/"+n.Name] = n.ID
+		}
+	}
+
+	for i, edge := range t.Edges {
+		// edge.Target is "workload/ns/kind/name"
+		parts := splitWorkloadID(edge.Target)
+		if parts == nil {
+			continue
+		}
+		destKey := parts[0] + "/" + parts[1] // "ns/name"
+		for _, m := range metrics {
+			if m.DestNamespace+"/"+m.DestWorkload == destKey {
+				t.Edges[i].RequestRate = m.RequestRate
+				t.Edges[i].ErrorRate = m.ErrorRate
+				t.Edges[i].LatencyP99ms = m.LatencyP99ms
+				// Override health with Istio error rate if more precise
+				if m.RequestRate > 0 {
+					if m.ErrorRate > 0.2 {
+						t.Edges[i].Health = "down"
+					} else if m.ErrorRate > 0.05 {
+						t.Edges[i].Health = "degraded"
+					} else {
+						t.Edges[i].Health = "healthy"
+					}
+				}
+				break
+			}
+		}
+	}
+}
+
+// splitWorkloadID extracts [namespace, name] from "workload/ns/kind/name"
+func splitWorkloadID(id string) []string {
+	// format: workload/{ns}/{kind}/{name}
+	parts := strings.SplitN(id, "/", 4)
+	if len(parts) != 4 || parts[0] != "workload" {
+		return nil
+	}
+	return []string{parts[1], parts[3]} // [ns, name]
 }
 
 type ClusterNetworkTopology struct {

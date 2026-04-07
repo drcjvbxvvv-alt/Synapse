@@ -17,7 +17,10 @@
       "degraded": "Degraded",
       "down": "Down",
       "unknown": "Unknown"
-    }
+    },
+    "detected": "detected",
+    "enrichLabel": "Istio Metrics",
+    "enrichTooltip": "Enrich edges with real-time Istio traffic metrics (request rate, error rate, P99 latency)"
   },
   "gatewayapi": {
     "notInstalled": "Gateway API is Not Installed",

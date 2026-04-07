@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { Tag, Badge } from 'antd';
+import { Tag, Badge, Tooltip } from 'antd';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  EdgeLabelRenderer,
   type Node,
   type Edge,
   type NodeProps,
@@ -148,45 +149,89 @@ const ServiceNode: React.FC<NodeProps> = ({ data }) => {
 
 const PARTICLE_COUNT = 3;
 
+interface ParticleEdgeData extends Record<string, unknown> {
+  health?: string;
+  ports?: string;
+  requestRate?: number;
+  errorRate?: number;
+  latencyP99ms?: number;
+}
+
+function resolveEdgeStyle(d: ParticleEdgeData): { stroke: string; particle: string; dur: string } {
+  // Istio metrics override static health colour when available
+  if (d.requestRate !== undefined) {
+    if ((d.errorRate ?? 0) > 0.2)   return { stroke: '#ff4d4f', particle: '#ff4d4f', dur: '1.5s' };
+    if ((d.errorRate ?? 0) > 0.05)  return { stroke: '#fa8c16', particle: '#fa8c16', dur: '2.5s' };
+    if ((d.latencyP99ms ?? 0) > 500) return { stroke: '#faad14', particle: '#faad14', dur: '2.5s' };
+    if (d.requestRate > 0)           return { stroke: '#52c41a', particle: '#52c41a', dur: '1.8s' };
+  }
+  return HEALTH_EDGE[d.health ?? 'unknown'] ?? HEALTH_EDGE.unknown;
+}
+
 const ParticleEdge: React.FC<EdgeProps> = ({
   id, sourceX, sourceY, targetX, targetY,
   sourcePosition, targetPosition, data,
 }) => {
-  const health = (data as { health?: string })?.health ?? 'unknown';
-  const style = HEALTH_EDGE[health] ?? HEALTH_EDGE.unknown;
+  const d = (data ?? {}) as ParticleEdgeData;
+  const style = resolveEdgeStyle(d);
   const pathId = `pe-${id}`;
+  const hasIstio = d.requestRate !== undefined;
 
-  const [edgePath] = getBezierPath({
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX, sourceY, sourcePosition,
     targetX, targetY, targetPosition,
   });
 
+  // Build tooltip: show Istio metrics if available
+  const label = hasIstio && (d.errorRate ?? 0) > 0.01
+    ? `${((d.errorRate ?? 0) * 100).toFixed(1)}% err`
+    : null;
+
   return (
-    <g>
-      {/* Edge path */}
-      <path
-        id={pathId}
-        d={edgePath}
-        stroke={style.stroke}
-        strokeWidth={1.5}
-        fill="none"
-        strokeOpacity={0.6}
-      />
-      {/* Invisible wider hit area */}
-      <path d={edgePath} fill="none" stroke="transparent" strokeWidth={12} />
-      {/* Animated particles */}
-      {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
-        <circle key={i} r={3} fill={style.particle} fillOpacity={0.85}>
-          <animateMotion
-            dur={style.dur}
-            begin={`${(i / PARTICLE_COUNT) * parseFloat(style.dur)}s`}
-            repeatCount="indefinite"
+    <>
+      <g>
+        <path
+          id={pathId}
+          d={edgePath}
+          stroke={style.stroke}
+          strokeWidth={1.5}
+          fill="none"
+          strokeOpacity={0.6}
+        />
+        <path d={edgePath} fill="none" stroke="transparent" strokeWidth={12} />
+        {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
+          <circle key={i} r={3} fill={style.particle} fillOpacity={0.85}>
+            <animateMotion
+              dur={style.dur}
+              begin={`${(i / PARTICLE_COUNT) * parseFloat(style.dur)}s`}
+              repeatCount="indefinite"
+            >
+              <mpath href={`#${pathId}`} />
+            </animateMotion>
+          </circle>
+        ))}
+      </g>
+      {label && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              pointerEvents: 'all',
+              fontSize: 10,
+              background: style.stroke,
+              color: '#fff',
+              borderRadius: 3,
+              padding: '1px 4px',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            }}
           >
-            <mpath href={`#${pathId}`} />
-          </animateMotion>
-        </circle>
-      ))}
-    </g>
+            {label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
   );
 };
 

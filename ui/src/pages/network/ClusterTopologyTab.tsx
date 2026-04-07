@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Select, Spin, Empty, Tag, App, Space } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { Button, Select, Spin, Empty, Tag, App, Space, Tooltip, Switch } from 'antd';
+import { ReloadOutlined, ApiOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { networkTopologyService } from '../../services/networkTopologyService';
-import type { NetworkNode, NetworkEdge } from '../../services/networkTopologyService';
+import type { NetworkNode, NetworkEdge, TopologyIntegrationStatus } from '../../services/networkTopologyService';
 import ClusterTopologyGraph, { HEALTH_LEGEND, WORKLOAD_KIND_COLOR } from './ClusterTopologyGraph';
 import { namespaceService } from '../../services/namespaceService';
 
@@ -20,8 +20,10 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [edges, setEdges] = useState<NetworkEdge[]>([]);
   const [allNamespaces, setAllNamespaces] = useState<string[]>([]);
   const [selectedNs, setSelectedNs] = useState<string[]>([]);
+  const [integrations, setIntegrations] = useState<TopologyIntegrationStatus | null>(null);
+  const [enrich, setEnrich] = useState(false);
 
-  // Load namespace list for filter
+  // Load namespace list + integration status
   useEffect(() => {
     namespaceService.getNamespaces(clusterId)
       .then((res) => {
@@ -29,6 +31,10 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
         setAllNamespaces(list);
       })
       .catch(() => {});
+
+    networkTopologyService.getIntegrations(clusterId)
+      .then(setIntegrations)
+      .catch(() => setIntegrations({ cilium: false, istio: false }));
   }, [clusterId]);
 
   const loadTopology = useCallback(async () => {
@@ -37,6 +43,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
       const data = await networkTopologyService.getTopology(
         clusterId,
         selectedNs.length > 0 ? selectedNs : undefined,
+        enrich,
       );
       setNodes(data.nodes ?? []);
       setEdges(data.edges ?? []);
@@ -45,7 +52,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     } finally {
       setLoading(false);
     }
-  }, [clusterId, selectedNs, message, t]);
+  }, [clusterId, selectedNs, enrich, message, t]);
 
   useEffect(() => {
     loadTopology();
@@ -68,6 +75,37 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
         <Button icon={<ReloadOutlined />} loading={loading} onClick={loadTopology}>
           {t('clusterTopology.refresh')}
         </Button>
+
+        {/* Integration badges */}
+        {integrations?.istio && (
+          <Tooltip title={`Istio ${integrations.istioVersion ?? ''} ${t('clusterTopology.detected')}`}>
+            <Tag icon={<ApiOutlined />} color="geekblue" style={{ cursor: 'default' }}>
+              Istio {integrations.istioVersion}
+            </Tag>
+          </Tooltip>
+        )}
+        {integrations?.cilium && (
+          <Tooltip title={`Cilium ${integrations.ciliumVersion ?? ''} ${t('clusterTopology.detected')}`}>
+            <Tag icon={<ApiOutlined />} color="cyan" style={{ cursor: 'default' }}>
+              Cilium {integrations.ciliumVersion}
+            </Tag>
+          </Tooltip>
+        )}
+
+        {/* Istio metrics enrich toggle */}
+        {integrations?.istio && (
+          <Tooltip title={t('clusterTopology.enrichTooltip')}>
+            <Space size={4}>
+              <Switch
+                size="small"
+                checked={enrich}
+                onChange={setEnrich}
+              />
+              <span style={{ fontSize: 12 }}>{t('clusterTopology.enrichLabel')}</span>
+            </Space>
+          </Tooltip>
+        )}
+
         <div style={{ flex: 1 }} />
 
         {/* Legend */}

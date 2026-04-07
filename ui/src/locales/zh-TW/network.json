@@ -17,7 +17,10 @@
       "degraded": "降級",
       "down": "中斷",
       "unknown": "未知"
-    }
+    },
+    "detected": "已偵測",
+    "enrichLabel": "Istio 指標",
+    "enrichTooltip": "以 Istio 即時流量指標強化邊資訊（請求率、錯誤率、P99 延遲）"
   },
   "gatewayapi": {
     "notInstalled": "此叢集尚未安裝 Gateway API",

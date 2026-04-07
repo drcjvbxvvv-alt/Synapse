@@ -341,9 +341,10 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				cluster.GET("/gateway/topology", gatewayHandler.GetTopology)
 			}
 
-			// 叢集網路拓樸（Phase 4 Phase A：靜態）
+			// 叢集網路拓樸（Phase 4）
 			netTopoHandler := handlers.NewNetworkTopologyHandler(d.clusterSvc, d.k8sMgr)
 			cluster.GET("/network/topology", netTopoHandler.GetClusterTopology)
+			cluster.GET("/network/integrations", netTopoHandler.GetIntegrations)
 
 			// networkpolicies 子分組
 			npHandler := handlers.NewNetworkPolicyHandler(d.clusterSvc, d.k8sMgr)
