@@ -199,9 +199,29 @@ interface ParticleEdgeData extends Record<string, unknown> {
   requestRate?: number;
   errorRate?: number;
   latencyP99ms?: number;
+  policyStatus?: string;
+  policyName?: string;
 }
 
-function resolveEdgeStyle(d: ParticleEdgeData): { stroke: string; particle: string; dur: string } {
+interface EdgeStyle {
+  stroke: string;
+  particle: string;
+  dur: string;
+  dashed?: boolean;
+  noParticles?: boolean;
+}
+
+function resolveEdgeStyle(d: ParticleEdgeData): EdgeStyle {
+  // NetworkPolicy overlay (Phase E) — checked first, overrides all other styles
+  if (d.policyStatus === 'policy-deny') {
+    return { stroke: '#ff4d4f', particle: '#ff4d4f', dur: '4s', dashed: true, noParticles: true };
+  }
+  if (d.policyStatus === 'policy-restricted') {
+    return { stroke: '#fa8c16', particle: '#fa8c16', dur: '3s', dashed: true, noParticles: true };
+  }
+  if (d.policyStatus === 'policy-allow') {
+    return { stroke: '#1677ff', particle: '#1677ff', dur: '2s' };
+  }
   // Ingress edges: purple
   if (d.kind === 'ingress') {
     return { stroke: '#722ed1', particle: '#722ed1', dur: '2s' };
@@ -236,11 +256,13 @@ const ParticleEdge: React.FC<EdgeProps> = ({
     targetX, targetY, targetPosition,
   });
 
-  // Label: show rps for istio-flow edges; error rate for any edge with high error
-  const label = d.kind === 'istio-flow' && d.requestRate !== undefined
-    ? (d.requestRate > 0
-        ? `${d.requestRate.toFixed(1)} rps${(d.errorRate ?? 0) > 0.01 ? ` · ${((d.errorRate ?? 0) * 100).toFixed(0)}% err` : ''}`
-        : null)
+  // Label logic
+  const label = d.policyStatus === 'policy-deny'
+    ? `🔒 ${d.policyName ?? 'blocked'}`
+    : d.policyStatus === 'policy-restricted'
+    ? `⚠ ${d.policyName ?? 'restricted'}`
+    : d.kind === 'istio-flow' && d.requestRate !== undefined && d.requestRate > 0
+    ? `${d.requestRate.toFixed(1)} rps${(d.errorRate ?? 0) > 0.01 ? ` · ${((d.errorRate ?? 0) * 100).toFixed(0)}% err` : ''}`
     : hasIstio && (d.errorRate ?? 0) > 0.01
     ? `${((d.errorRate ?? 0) * 100).toFixed(1)}% err`
     : null;
@@ -254,10 +276,11 @@ const ParticleEdge: React.FC<EdgeProps> = ({
           stroke={style.stroke}
           strokeWidth={1.5}
           fill="none"
-          strokeOpacity={0.6}
+          strokeOpacity={0.7}
+          strokeDasharray={style.dashed ? '7 4' : undefined}
         />
         <path d={edgePath} fill="none" stroke="transparent" strokeWidth={12} />
-        {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
+        {!style.noParticles && Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
           <circle key={i} r={3} fill={style.particle} fillOpacity={0.85}>
             <animateMotion
               dur={style.dur}
@@ -398,6 +421,8 @@ const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, 
         requestRate: e.requestRate,
         errorRate: e.errorRate,
         latencyP99ms: e.latencyP99ms,
+        policyStatus: e.policyStatus,
+        policyName: e.policyName,
       } as ParticleEdgeData,
     }));
 

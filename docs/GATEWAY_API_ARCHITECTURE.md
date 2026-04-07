@@ -829,7 +829,7 @@ rules:
 
 ## 13. Phase 4：叢集網路拓撲圖
 
-> 狀態：✅ Phase A（靜態拓樸）已實作 | ✅ Phase B（Cilium/Istio 偵測 + Istio Metrics）已實作 | ✅ Phase C（Ingress 節點）已實作 | ✅ Phase D（Istio 呼叫方向邊）已實作 | 📋 Phase E 規劃中
+> 狀態：✅ Phase A–E 全部已實作 | 📋 Phase F（Cilium Hubble）Backlog
 
 ### 13.1 背景與目標
 
@@ -1275,13 +1275,16 @@ ui/src/locales/*/network.json                    ← 新增 i18n 鍵值
 #### 目前圖的節點/邊模型
 
 ```
-節點類型：Workload（Deployment/StatefulSet/DaemonSet/Job/Pod rollup）、Service、Ingress（✅ Phase C）
+節點類型：Workload（Deployment/StatefulSet/DaemonSet/Job/Pod rollup）、Service、Ingress
 邊類型：
   - Service → Workload（label selector 靜態推算）
-  - Ingress → Service（✅ Phase C，紫色粒子）
-  - Workload → Service（✅ Phase D，istio-flow，青色粒子，需啟用 Istio Metrics）
-邊健康：Endpoint readiness（Phase A）/ Istio error rate（Phase B enrich）
-缺失：NetworkPolicy 封鎖邊（Phase E）
+  - Ingress → Service（紫色粒子）
+  - Workload → Service（istio-flow，青色粒子，需啟用 Istio Metrics）
+邊覆層（Phase E，NetworkPolicy toggle）：
+  - policy-deny：紅色虛線，無粒子，🔒 label
+  - policy-restricted：橙色虛線，無粒子，⚠ label
+  - policy-allow：藍色實線粒子
+邊健康：Endpoint readiness / Istio error rate（enrich 模式）
 ```
 
 ---
@@ -1600,7 +1603,7 @@ frontend-deploy  ──────▶ api-svc ──────▶ api-deploy
 
 ---
 
-### 14.4 Phase E — NetworkPolicy 覆層
+### 14.4 Phase E — NetworkPolicy 覆層 ✅ 已實作
 
 #### 問題
 
@@ -1721,7 +1724,7 @@ if (data?.policyStatus === 'policy-allow') {
 |-------|------|---------|---------|---------|------|
 | **C** | Ingress 節點 | ~80 行（新增 Ingress 列取 + 節點/邊建構） | ~100 行（IngressNode + 邊樣式） | 0.5 天 | ✅ 已完成 |
 | **D** | Istio 呼叫方向邊 | ~60 行（PromQL 調整 + EnrichWithIstioMetrics 擴充） | ~50 行（圖層開關 + ParticleEdge 樣式） | 0.5 天 | ✅ 已完成 |
-| **E** | NetworkPolicy 覆層 | ~150 行（推論演算法 + TopologyOptions） | ~80 行（邊樣式 + 圖層開關） | 1 天 | ⭐⭐ |
+| **E** | NetworkPolicy 覆層 | ~150 行（推論演算法 + TopologyOptions） | ~80 行（邊樣式 + 圖層開關） | 1 天 | ✅ 已完成 |
 | **F** | Cilium Hubble 流量 | ~200 行（Hubble REST API client） | ~100 行 | 2 天 | ⭐（Backlog） |
 
 **建議實作順序**：C → D → E，C + D 可以同一個 commit 交付。

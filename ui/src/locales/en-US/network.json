@@ -34,7 +34,11 @@
     "autoRefreshStart": "Enable auto-refresh (15s)",
     "autoRefreshStop": "Stop auto-refresh",
     "istioFlowLabel": "Call Direction",
-    "istioFlowTooltip": "Show actual Workload→Service call edges observed by Istio (cyan)"
+    "istioFlowTooltip": "Show actual Workload→Service call edges observed by Istio (cyan)",
+    "policyLabel": "NetworkPolicy",
+    "policyTooltip": "Overlay NetworkPolicy allow/deny status on edges",
+    "policyAllow": "Allowed",
+    "policyDeny": "Blocked"
   },
   "gatewayapi": {
     "notInstalled": "Gateway API is Not Installed",

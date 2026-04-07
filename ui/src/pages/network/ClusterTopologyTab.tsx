@@ -26,6 +26,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showIstioFlows, setShowIstioFlows] = useState(true);
+  const [showPolicy, setShowPolicy] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load namespace list + integration status
@@ -49,6 +50,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
         clusterId,
         selectedNs.length > 0 ? selectedNs : undefined,
         enrich,
+        showPolicy,
       );
       setNodes(data.nodes ?? []);
       setEdges(data.edges ?? []);
@@ -57,7 +59,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     } finally {
       setLoading(false);
     }
-  }, [clusterId, selectedNs, enrich, message, t]);
+  }, [clusterId, selectedNs, enrich, showPolicy, message, t]);
 
   useEffect(() => {
     loadTopology();
@@ -129,6 +131,18 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
           </Tooltip>
         )}
 
+        {/* NetworkPolicy overlay toggle */}
+        <Tooltip title={t('clusterTopology.policyTooltip')}>
+          <Space size={4}>
+            <Switch
+              size="small"
+              checked={showPolicy}
+              onChange={setShowPolicy}
+            />
+            <span style={{ fontSize: 12 }}>{t('clusterTopology.policyLabel')}</span>
+          </Space>
+        </Tooltip>
+
         {/* Istio call-direction flow toggle (only useful when enrich is on) */}
         {integrations?.istio && enrich && (
           <Tooltip title={t('clusterTopology.istioFlowTooltip')}>
@@ -157,6 +171,18 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
               <span style={{ display: 'inline-block', width: 20, height: 2, background: '#13c2c2', borderRadius: 1 }} />
               {t('clusterTopology.istioFlowLabel')}
             </span>
+          )}
+          {showPolicy && (
+            <>
+              <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ display: 'inline-block', width: 20, height: 2, background: '#ff4d4f', borderRadius: 1, borderTop: '2px dashed #ff4d4f' }} />
+                {t('clusterTopology.policyDeny')}
+              </span>
+              <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ display: 'inline-block', width: 20, height: 2, background: '#1677ff', borderRadius: 1 }} />
+                {t('clusterTopology.policyAllow')}
+              </span>
+            </>
           )}
         </Space>
         <Space wrap size={4}>

@@ -196,6 +196,21 @@ const ConnectionRow: React.FC<ConnectionRowProps> = ({ edge, targetId, direction
           Istio 實際流量
         </div>
       )}
+      {edge.policyStatus === 'policy-deny' && (
+        <div style={{ fontSize: 10, color: '#ff4d4f', marginTop: 3, fontWeight: 500 }}>
+          🔒 NetworkPolicy 封鎖：{edge.policyName}
+        </div>
+      )}
+      {edge.policyStatus === 'policy-restricted' && (
+        <div style={{ fontSize: 10, color: '#fa8c16', marginTop: 3, fontWeight: 500 }}>
+          ⚠ NetworkPolicy 限制來源：{edge.policyName}
+        </div>
+      )}
+      {edge.policyStatus === 'policy-allow' && (
+        <div style={{ fontSize: 10, color: '#1677ff', marginTop: 3, fontWeight: 500 }}>
+          ✓ NetworkPolicy 明確允許：{edge.policyName}
+        </div>
+      )}
       {edge.ports && (
         <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 4 }}>
           Ports: <Text code style={{ fontSize: 11 }}>{edge.ports}</Text>

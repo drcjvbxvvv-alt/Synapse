@@ -34,7 +34,11 @@
     "autoRefreshStart": "开启每 15 秒自动刷新",
     "autoRefreshStop": "停止自动刷新",
     "istioFlowLabel": "调用方向",
-    "istioFlowTooltip": "显示 Istio 检测到的实际 Workload→Service 调用方向边（青色）"
+    "istioFlowTooltip": "显示 Istio 检测到的实际 Workload→Service 调用方向边（青色）",
+    "policyLabel": "NetworkPolicy",
+    "policyTooltip": "叠加显示 NetworkPolicy 对连接的允许/封锁状态",
+    "policyAllow": "明确允许",
+    "policyDeny": "封锁"
   },
   "gatewayapi": {
     "notInstalled": "此集群尚未安装 Gateway API",

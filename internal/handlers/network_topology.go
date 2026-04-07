@@ -89,6 +89,7 @@ func (h *NetworkTopologyHandler) GetClusterTopology(c *gin.Context) {
 	}
 
 	enrich := c.Query("enrich") == "true"
+	policy := c.Query("policy") == "true"
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
@@ -117,6 +118,15 @@ func (h *NetworkTopologyHandler) GetClusterTopology(c *gin.Context) {
 				topo.EnrichWithIstioMetrics(metrics)
 			}
 		}
+	}
+
+	// Phase E: Optionally overlay NetworkPolicy status
+	if policy {
+		policyCtx, policyCancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		if err := topo.InferNetworkPolicies(policyCtx, clientset, namespaces); err != nil {
+			logger.Warn("NetworkPolicy 推論失敗（繼續返回拓樸）", "error", err)
+		}
+		policyCancel()
 	}
 
 	response.OK(c, topo)
