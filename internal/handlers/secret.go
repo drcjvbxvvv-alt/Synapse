@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -409,7 +410,11 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 	created, err := clientset.CoreV1().Secrets(req.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
 	if err != nil {
 		logger.Error("建立Secret失敗", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
-		response.InternalError(c, fmt.Sprintf("建立Secret失敗: %v", err))
+		if k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
+			response.BadRequest(c, fmt.Sprintf("建立Secret失敗: %v", err))
+		} else {
+			response.InternalError(c, fmt.Sprintf("建立Secret失敗: %v", err))
+		}
 		return
 	}
 

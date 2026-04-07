@@ -44,6 +44,7 @@ const [form] = Form.useForm();
   const [name, setName] = useState('');
   const [namespace, setNamespace] = useState('default');
   const [secretType, setSecretType] = useState('Opaque');
+  const [serviceAccountName, setServiceAccountName] = useState('');
   const [labels, setLabels] = useState<Array<{ key: string; value: string }>>([]);
   const [annotations, setAnnotations] = useState<Array<{ key: string; value: string }>>([]);
   const [dataItems, setDataItems] = useState<Array<{ key: string; value: string; visible: boolean }>>([]);
@@ -305,6 +306,15 @@ data: {}`);
         }
       }
 
+      // service-account-token 必須帶 annotation
+      if (secretTypeValue === 'kubernetes.io/service-account-token') {
+        if (!serviceAccountName) {
+          message.error('請輸入 ServiceAccount 名稱');
+          return;
+        }
+        annotationsObj['kubernetes.io/service-account.name'] = serviceAccountName;
+      }
+
       // 驗證資料項
       for (const item of dataItems) {
         if (!item.key) {
@@ -457,7 +467,7 @@ data: {}`);
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item 
+                    <Form.Item
                       label={t('config:create.type')}
                       help={t('config:create.secretTypeHelp')}
                     >
@@ -486,6 +496,23 @@ data: {}`);
                     </Form.Item>
                   </Col>
                 </Row>
+                {secretType === 'kubernetes.io/service-account-token' && (
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Form.Item
+                        label="ServiceAccount 名稱"
+                        required
+                        help="將自動加入 annotation: kubernetes.io/service-account.name"
+                      >
+                        <Input
+                          placeholder="請輸入 ServiceAccount 名稱"
+                          value={serviceAccountName}
+                          onChange={(e) => setServiceAccountName(e.target.value)}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                )}
               </Form>
             </Card>
 
