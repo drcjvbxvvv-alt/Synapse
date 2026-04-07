@@ -28,7 +28,8 @@
       "parentRefs": "Parent Gateway",
       "rules": "Rules",
       "status": "Status",
-      "createdAt": "Created"
+      "createdAt": "Created",
+      "actions": "Actions"
     },
     "status": {
       "accepted": "Accepted",

@@ -28,7 +28,8 @@
       "parentRefs": "父 Gateway",
       "rules": "规则数",
       "status": "状态",
-      "createdAt": "创建时间"
+      "createdAt": "创建时间",
+      "actions": "操作"
     },
     "status": {
       "accepted": "已接受",

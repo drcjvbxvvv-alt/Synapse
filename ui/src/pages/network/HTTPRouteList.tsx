@@ -131,9 +131,9 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
     {
-      title: t('common:actions', 'Actions'),
+      title: t('network:gatewayapi.columns.actions', '操作'),
       key: 'actions',
-      width: 100,
+      width: 80,
       render: (_: unknown, record: HTTPRouteItem) => (
         <Space size={4}>
           <Button
@@ -166,6 +166,7 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
           options={namespaces.map((ns) => ({ label: ns, value: ns }))}
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
+        <div style={{ flex: 1 }} />
         <Button
           type="primary"
           icon={<PlusOutlined />}
