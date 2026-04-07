@@ -75,6 +75,9 @@ const Login: React.FC = () => {
         auth_type: activeTab,
       });
 
+      if (!response?.token || !response?.user) {
+        throw new Error('登入回應格式錯誤，請重試');
+      }
       tokenManager.setToken(response.token);
       tokenManager.setUser(response.user);
       tokenManager.setExpiresAt(response.expires_at);

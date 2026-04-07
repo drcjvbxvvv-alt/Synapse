@@ -241,8 +241,9 @@ export const tokenManager = {
   },
 
   // 設定過期時間
-  setExpiresAt: (expiresAt: number): void => {
-    localStorage.setItem('token_expires_at', expiresAt.toString());
+  setExpiresAt: (expiresAt: number | undefined | null): void => {
+    const val = expiresAt ?? Math.floor(Date.now() / 1000) + 86400;
+    localStorage.setItem('token_expires_at', String(val));
   },
 
   // 清除所有認證資訊

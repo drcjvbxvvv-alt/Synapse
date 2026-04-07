@@ -213,6 +213,11 @@ maxLength={200}
                 name="kubeconfig"
                 label={t('import.kubeconfigContent')}
                 rules={[{ required: true, message: t('import.kubeconfigContentRequired') }]}
+                extra={
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    <span dangerouslySetInnerHTML={{ __html: t('import.kubeconfigHint') }} />
+                  </Typography.Text>
+                }
               >
                 <TextArea
                   rows={12}

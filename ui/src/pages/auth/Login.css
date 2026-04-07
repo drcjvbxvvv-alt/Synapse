@@ -37,7 +37,7 @@
 .login-brand-content {
   position: relative;
   z-index: 2;
-  max-width: 440px;
+  max-width: 540px;
   animation: fadeSlideRight 0.8s ease-out;
 }
 

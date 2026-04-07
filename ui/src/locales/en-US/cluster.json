@@ -111,6 +111,7 @@
     "kubeconfigContent": "Kubeconfig Content",
     "kubeconfigContentPlaceholder": "Paste the complete kubeconfig file content...",
     "kubeconfigContentRequired": "Please enter kubeconfig content",
+    "kubeconfigHint": "Paste the full kubeconfig exported via <code>kubectl config view --raw --minify --flatten --context=&lt;context-name&gt;</code>. Certificate data must be embedded (not file paths).",
     "apiServerAddress": "API Server Address",
     "apiServerRequired": "Please enter API Server address",
     "apiServerValid": "Please enter a valid URL",

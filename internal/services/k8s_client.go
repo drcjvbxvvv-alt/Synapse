@@ -74,6 +74,13 @@ func connPoolTransport(rt http.RoundTripper) http.RoundTripper {
 func NewK8sClientFromKubeconfig(kubeconfig string) (*K8sClient, error) {
 	config, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
 	if err != nil {
+		errStr := err.Error()
+		if strings.Contains(errStr, "client-key-data or client-key must be specified") {
+			return nil, fmt.Errorf("解析kubeconfig失敗: 缺少客戶端私鑰資料（client-key-data）。請使用以下指令匯出完整的 kubeconfig：\nkubectl config view --raw --minify --flatten --context=<context-name>")
+		}
+		if strings.Contains(errStr, "REDACTED") {
+			return nil, fmt.Errorf("解析kubeconfig失敗: 憑證資料被遮蔽（REDACTED）。請改用 `kubectl config view --raw` 匯出含原始憑證的 kubeconfig")
+		}
 		return nil, fmt.Errorf("解析kubeconfig失敗: %v", err)
 	}
 

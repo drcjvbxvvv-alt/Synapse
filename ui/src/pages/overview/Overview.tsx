@@ -86,7 +86,7 @@ const navigate = useNavigate();
       setStats(statsRes);
       setResourceUsage(usageRes);
       setDistribution(distRes);
-      setAbnormalWorkloads(workloadsRes || []);
+      setAbnormalWorkloads(Array.isArray(workloadsRes) ? workloadsRes : []);
       setAlertStats(alertStatsRes);
       setLastRefreshTime(new Date());
     } catch (error) {
@@ -390,7 +390,7 @@ tooltip: {
   const clusterStats = stats?.clusterStats || { total: 0, healthy: 0, unhealthy: 0, unknown: 0 };
   const nodeStats = stats?.nodeStats || { total: 0, ready: 0, notReady: 0 };
   const podStats = stats?.podStats || { total: 0, running: 0, pending: 0, failed: 0, succeeded: 0 };
-  const versionDistribution = stats?.versionDistribution || [];
+  const versionDistribution = Array.isArray(stats?.versionDistribution) ? (stats?.versionDistribution ?? []) : [];
   
   // 資源使用率
   const cpuUsage = resourceUsage?.cpu?.usagePercent || 0;

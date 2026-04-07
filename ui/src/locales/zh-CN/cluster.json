@@ -111,6 +111,7 @@
     "kubeconfigContent": "Kubeconfig内容",
     "kubeconfigContentPlaceholder": "请粘贴完整的kubeconfig文件内容...",
     "kubeconfigContentRequired": "请输入kubeconfig内容",
+    "kubeconfigHint": "请粘贴使用 <code>kubectl config view --raw --minify --flatten --context=&lt;context-name&gt;</code> 导出的完整 kubeconfig，确保证书数据已内嵌（非文件路径）。",
     "apiServerAddress": "API Server地址",
     "apiServerRequired": "请输入API Server地址",
     "apiServerValid": "请输入有效的URL地址",

@@ -216,7 +216,9 @@ func (s *OverviewService) GetOverviewStats(ctx context.Context) (*OverviewStatsR
 		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 
-	stats := &OverviewStatsResponse{}
+	stats := &OverviewStatsResponse{
+		VersionDistribution: make([]VersionDistribution, 0),
+	}
 	versionMap := make(map[string][]string)
 
 	for _, cluster := range clusters {
@@ -635,7 +637,7 @@ func (s *OverviewService) GetAbnormalWorkloads(ctx context.Context, limit int) (
 		limit = 20
 	}
 
-	var workloads []AbnormalWorkload
+	workloads := make([]AbnormalWorkload, 0)
 
 	if s.listerProvider == nil {
 		return workloads, nil
