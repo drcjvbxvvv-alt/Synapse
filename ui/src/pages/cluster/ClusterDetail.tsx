@@ -312,7 +312,7 @@ type="error"
           </Card>
 
           {/* 統計卡片 */}
-            <Row gutter={[16, 16]}>
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
               {[
                 { label: t('detail.totalNodes'),      value: clusterOverview?.nodes || 0,      icon: <DesktopOutlined />,   iconBg: '#eff6ff', iconColor: '#3b82f6', to: `/clusters/${id}/nodes` },
                 { label: t('detail.totalNamespaces'), value: clusterOverview?.namespace || 0,  icon: <FolderFilled />,      iconBg: '#f0fdf4', iconColor: '#22c55e', to: `/clusters/${id}/namespaces` },

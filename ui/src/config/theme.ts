@@ -100,7 +100,6 @@ export const synapseTheme: ThemeConfig = {
     },
     Pagination: {
       borderRadius: 8,
-      itemActiveBg: '#006eff',
     },
     Statistic: {
       titleFontSize: 14,

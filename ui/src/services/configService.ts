@@ -180,9 +180,10 @@ export const configMapService = {
 
   // 獲取版本歷史
   async getVersions(clusterId: number, namespace: string, name: string): Promise<ConfigVersion[]> {
-    return request.get<ConfigVersion[]>(
+    const res = await request.get<{ items: ConfigVersion[]; total: number }>(
       `/clusters/${clusterId}/configmaps/${namespace}/${name}/versions`
     );
+    return res.items || [];
   },
 
   // 回滾到指定版本
@@ -285,9 +286,10 @@ export const secretService = {
 
   // 獲取版本歷史（僅記錄key列表，不含value）
   async getVersions(clusterId: number, namespace: string, name: string): Promise<ConfigVersion[]> {
-    return request.get<ConfigVersion[]>(
+    const res = await request.get<{ items: ConfigVersion[]; total: number }>(
       `/clusters/${clusterId}/secrets/${namespace}/${name}/versions`
     );
+    return res.items || [];
   },
 };
 
