@@ -73,3 +73,74 @@ func (h *ResourceHandler) GetGlobalOverview(c *gin.Context) {
 	}
 	response.OK(c, overview)
 }
+
+// GetNamespaceEfficiency 取得命名空間效率分析（佔用率 + Prometheus 使用量）
+// GET /api/v1/clusters/:clusterID/resources/efficiency
+func (h *ResourceHandler) GetNamespaceEfficiency(c *gin.Context) {
+	clusterID, err := parseClusterID(c.Param("clusterID"))
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	cluster, err := h.clusterSvc.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "叢集不存在")
+		return
+	}
+	items, err := h.svc.GetNamespaceEfficiency(cluster)
+	if err != nil {
+		logger.Warn("命名空間效率查詢失敗", "cluster_id", clusterID, "error", err)
+		response.ServiceUnavailable(c, "叢集連線中，請稍後再試")
+		return
+	}
+	response.OK(c, items)
+}
+
+// GetWorkloadEfficiency 取得工作負載效率列表（分頁）
+// GET /api/v1/clusters/:clusterID/resources/workloads?namespace=&page=&pageSize=
+func (h *ResourceHandler) GetWorkloadEfficiency(c *gin.Context) {
+	clusterID, err := parseClusterID(c.Param("clusterID"))
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	cluster, err := h.clusterSvc.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "叢集不存在")
+		return
+	}
+	namespace := c.Query("namespace")
+	page := parseIntQuery(c, "page", 1)
+	pageSize := parseIntQuery(c, "pageSize", 20)
+
+	result, err := h.svc.GetWorkloadEfficiency(cluster, namespace, page, pageSize)
+	if err != nil {
+		logger.Warn("工作負載效率查詢失敗", "cluster_id", clusterID, "error", err)
+		response.ServiceUnavailable(c, "叢集連線中，請稍後再試")
+		return
+	}
+	response.OK(c, result)
+}
+
+// GetWasteWorkloads 取得低效工作負載列表
+// GET /api/v1/clusters/:clusterID/resources/waste?cpu_threshold=0.2
+func (h *ResourceHandler) GetWasteWorkloads(c *gin.Context) {
+	clusterID, err := parseClusterID(c.Param("clusterID"))
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	cluster, err := h.clusterSvc.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "叢集不存在")
+		return
+	}
+	threshold := parseFloatQuery(c, "cpu_threshold", 0.2)
+	items, err := h.svc.GetWasteWorkloads(cluster, threshold)
+	if err != nil {
+		logger.Warn("低效工作負載查詢失敗", "cluster_id", clusterID, "error", err)
+		response.ServiceUnavailable(c, "叢集連線中，請稍後再試")
+		return
+	}
+	response.OK(c, items)
+}

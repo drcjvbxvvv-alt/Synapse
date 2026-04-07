@@ -1,6 +1,6 @@
 # Helm Charts 实现 - 变更日志
 
-## [Unreleased] - 資源治理 Phase 1
+## [Unreleased] - 資源治理 Phase 1 + Phase 2
 
 ### 新增 ✨
 
@@ -13,9 +13,21 @@
 - 前端「成本分析」頁面新增「資源佔用」Tab，顯示佔用率儀表板、Headroom 剩餘空間及命名空間 BarChart
 - 前端「成本洞察」頁面重構：改用跨叢集資源 API，顯示各叢集 CPU/記憶體佔用率對比圖
 
-#### 架構改善
+#### 架構改善（Phase 1）
 - 引入 `K8sInformerManager` 介面（定義於 `services` 包），解除 `services ↔ k8s` 套件循環依賴
 - `k8s.ClusterInformerManager` 新增 `EnsureSync()` 方法（`EnsureAndWait` 的 error-only 包裝）
+
+#### 資源治理（Resource Governance）Phase 2 - 效率分析
+- 新增 `GET /api/v1/clusters/:clusterID/resources/efficiency` — 命名空間效率（K8s 佔用 + Prometheus 使用量）
+- 新增 `GET /api/v1/clusters/:clusterID/resources/workloads` — 工作負載效率列表（Deployment/StatefulSet/DaemonSet，分頁）
+- 新增 `GET /api/v1/clusters/:clusterID/resources/waste?cpu_threshold=0.2` — 低效工作負載篩選
+- `ResourceService` 注入 `PrometheusService` + `MonitoringConfigService`，實作 PromQL 效率採集
+- `K8sInformerManager` 介面新增 Deployments/StatefulSets/DaemonSets lister
+- 廢棄分數公式：`WasteScore = (1-CPU效率)×0.6 + (1-記憶體效率)×0.4`
+- 無 Prometheus 時自動降級：效率欄位顯示「需要 Prometheus」提示
+- 前端新增「效率分析」Tab：CPU×記憶體效率散點圖（泡泡=CPU佔用）+ 命名空間效率表格
+- 前端新增「工作負載效率」Tab：分頁表格，廢棄分數高→低排序
+- 前端新增「低效識別」Tab：CPU 效率 < 20% 的工作負載，帶廢棄分數警示色
 
 ---
 

@@ -108,6 +108,42 @@ export interface GlobalResourceOverview {
   clusters: ClusterResourceSummary[];
 }
 
+// ---- Phase 2 效率分析型別 ----
+
+export interface NamespaceEfficiency {
+  namespace: string;
+  cpu_request_millicores: number;
+  memory_request_mib: number;
+  cpu_usage_millicores: number;
+  memory_usage_mib: number;
+  cpu_occupancy_percent: number;
+  memory_occupancy_percent: number;
+  cpu_efficiency: number;    // 0-1
+  memory_efficiency: number; // 0-1
+  pod_count: number;
+  has_metrics: boolean;
+}
+
+export interface WorkloadEfficiency {
+  namespace: string;
+  name: string;
+  kind: string;
+  replicas: number;
+  cpu_request_millicores: number;
+  cpu_usage_millicores: number;
+  cpu_efficiency: number;
+  memory_request_mib: number;
+  memory_usage_mib: number;
+  memory_efficiency: number;
+  waste_score: number; // 0-1
+  has_metrics: boolean;
+}
+
+export interface WorkloadEfficiencyPage {
+  items: WorkloadEfficiency[];
+  total: number;
+}
+
 export const ResourceService = {
   getSnapshot: (clusterId: string): Promise<ClusterResourceSnapshot> =>
     request.get(`/clusters/${clusterId}/resources/snapshot`),
@@ -117,6 +153,24 @@ export const ResourceService = {
 
   getGlobalOverview: (): Promise<GlobalResourceOverview> =>
     request.get('/resources/global/overview'),
+
+  // Phase 2
+  getNamespaceEfficiency: (clusterId: string): Promise<NamespaceEfficiency[]> =>
+    request.get(`/clusters/${clusterId}/resources/efficiency`),
+
+  getWorkloadEfficiency: (
+    clusterId: string,
+    namespace?: string,
+    page = 1,
+    pageSize = 20,
+  ): Promise<WorkloadEfficiencyPage> => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (namespace) params.set('namespace', namespace);
+    return request.get(`/clusters/${clusterId}/resources/workloads?${params}`);
+  },
+
+  getWasteWorkloads: (clusterId: string, cpuThreshold = 0.2): Promise<WorkloadEfficiency[]> =>
+    request.get(`/clusters/${clusterId}/resources/waste?cpu_threshold=${cpuThreshold}`),
 };
 
 export const CostService = {

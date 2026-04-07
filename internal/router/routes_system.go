@@ -11,7 +11,7 @@ import (
 // overview, cross-cluster workload, image, multicluster, and WebSocket-adjacent routes.
 func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup, d *routeDeps) {
 	// 資源治理全局視角（跨叢集彙總）
-	globalResourceSvc := services.NewResourceService(d.db, d.k8sMgr, d.clusterSvc)
+	globalResourceSvc := services.NewResourceService(d.db, d.k8sMgr, d.clusterSvc, d.prometheusSvc, d.monitoringCfgSvc)
 	globalResourceHandler := handlers.NewResourceHandler(globalResourceSvc, d.clusterSvc)
 	protected.GET("/resources/global/overview", globalResourceHandler.GetGlobalOverview)
 

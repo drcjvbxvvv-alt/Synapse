@@ -35,6 +35,10 @@ import {
   Legend,
   LineChart,
   Line,
+  ScatterChart,
+  Scatter,
+  ZAxis,
+  Cell,
   ResponsiveContainer,
 } from 'recharts';
 import EmptyState from '../../components/EmptyState';
@@ -48,6 +52,8 @@ import {
   type WasteItem,
   type ClusterResourceSnapshot,
   type NamespaceOccupancy,
+  type NamespaceEfficiency,
+  type WorkloadEfficiency,
 } from '../../services/costService';
 
 const { Text } = Typography;
@@ -92,6 +98,17 @@ const CostDashboard: React.FC = () => {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [nsOccupancy, setNsOccupancy] = useState<NamespaceOccupancy[]>([]);
   const [nsOccLoading, setNsOccLoading] = useState(false);
+
+  // Phase 2: efficiency analysis
+  const [nsEfficiency, setNsEfficiency] = useState<NamespaceEfficiency[]>([]);
+  const [nsEffLoading, setNsEffLoading] = useState(false);
+  const [wlEfficiency, setWlEfficiency] = useState<WorkloadEfficiency[]>([]);
+  const [wlEffTotal, setWlEffTotal] = useState(0);
+  const [wlEffPage, setWlEffPage] = useState(1);
+  const [wlEffLoading, setWlEffLoading] = useState(false);
+  const [wlEffNs, setWlEffNs] = useState('');
+  const [wasteItems, setWasteItems] = useState<WorkloadEfficiency[]>([]);
+  const [wasteItemsLoading, setWasteItemsLoading] = useState(false);
 
 
   const loadOverview = useCallback(async () => {
@@ -165,9 +182,43 @@ const CostDashboard: React.FC = () => {
     finally { setNsOccLoading(false); }
   }, [clusterId]);
 
+  const loadNsEfficiency = useCallback(async () => {
+    if (!clusterId) return;
+    setNsEffLoading(true);
+    try {
+      const data = await ResourceService.getNamespaceEfficiency(clusterId);
+      setNsEfficiency(data ?? []);
+    } catch { /* ignore */ }
+    finally { setNsEffLoading(false); }
+  }, [clusterId]);
+
+  const loadWlEfficiency = useCallback(async (page = 1, ns = wlEffNs) => {
+    if (!clusterId) return;
+    setWlEffLoading(true);
+    try {
+      const res = await ResourceService.getWorkloadEfficiency(clusterId, ns, page, 20);
+      setWlEfficiency(res.items ?? []);
+      setWlEffTotal(res.total ?? 0);
+    } catch { /* ignore */ }
+    finally { setWlEffLoading(false); }
+  }, [clusterId, wlEffNs]);
+
+  const loadWasteItems = useCallback(async () => {
+    if (!clusterId) return;
+    setWasteItemsLoading(true);
+    try {
+      const data = await ResourceService.getWasteWorkloads(clusterId, 0.2);
+      setWasteItems(data ?? []);
+    } catch { /* ignore */ }
+    finally { setWasteItemsLoading(false); }
+  }, [clusterId]);
+
   useEffect(() => { loadOverview(); }, [loadOverview]);
   useEffect(() => { loadSnapshot(); }, [loadSnapshot]);
   useEffect(() => { if (activeTab === 'occupancy') { loadNsOccupancy(); } }, [activeTab, loadNsOccupancy]);
+  useEffect(() => { if (activeTab === 'efficiency') { loadNsEfficiency(); } }, [activeTab, loadNsEfficiency]);
+  useEffect(() => { if (activeTab === 'wl-efficiency') { loadWlEfficiency(1); } }, [activeTab, loadWlEfficiency]);
+  useEffect(() => { if (activeTab === 'waste-resources') { loadWasteItems(); } }, [activeTab, loadWasteItems]);
   useEffect(() => { if (activeTab === 'namespaces') loadNsCosts(); }, [activeTab, loadNsCosts]);
   useEffect(() => { if (activeTab === 'workloads') loadWorkloads(1); }, [activeTab, loadWorkloads]);
   useEffect(() => { if (activeTab === 'trend') loadTrend(); }, [activeTab, loadTrend]);
@@ -361,6 +412,271 @@ const CostDashboard: React.FC = () => {
             scroll={{ x: 700 }}
             pagination={{ pageSize: 20 }}
           />
+        </div>
+      ),
+    },
+    {
+      key: 'efficiency',
+      label: t('cost:tabs.efficiency', '效率分析'),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            <Button icon={<ReloadOutlined />} onClick={loadNsEfficiency} loading={nsEffLoading}>
+              {t('common:actions.refresh', '重新整理')}
+            </Button>
+          </Space>
+          {nsEfficiency.length > 0 && !nsEfficiency[0].has_metrics && (
+            <Alert
+              type="info"
+              showIcon
+              message="效率分析需要 Prometheus 監控資料，目前顯示佔用率資訊。請在叢集監控設定中配置 Prometheus。"
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col xs={24} lg={14}>
+              <Card title="命名空間效率分佈（CPU 效率 vs 記憶體效率）" size="small">
+                <ResponsiveContainer width="100%" height={320}>
+                  <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="cpu_efficiency_pct"
+                      name="CPU 效率"
+                      type="number"
+                      domain={[0, 100]}
+                      unit="%"
+                      label={{ value: 'CPU 效率 %', position: 'insideBottom', offset: -10 }}
+                    />
+                    <YAxis
+                      dataKey="mem_efficiency_pct"
+                      name="記憶體效率"
+                      type="number"
+                      domain={[0, 100]}
+                      unit="%"
+                      label={{ value: '記憶體效率 %', angle: -90, position: 'insideLeft' }}
+                    />
+                    <ZAxis dataKey="cpu_occupancy_percent" range={[40, 400]} name="CPU 佔用" unit="%" />
+                    <RechartTooltip
+                      cursor={{ strokeDasharray: '3 3' }}
+                      formatter={(value, name) => [`${Number(value).toFixed(1)}%`, name]}
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div style={{ background: '#fff', border: '1px solid #d9d9d9', padding: '8px 12px', borderRadius: 4 }}>
+                            <p style={{ margin: 0, fontWeight: 600 }}>{d.namespace}</p>
+                            <p style={{ margin: 0 }}>CPU 效率：{(d.cpu_efficiency_pct ?? 0).toFixed(1)}%</p>
+                            <p style={{ margin: 0 }}>記憶體效率：{(d.mem_efficiency_pct ?? 0).toFixed(1)}%</p>
+                            <p style={{ margin: 0 }}>CPU 佔用：{(d.cpu_occupancy_percent ?? 0).toFixed(1)}%</p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Scatter
+                      name="Namespace"
+                      data={nsEfficiency.map(n => ({
+                        ...n,
+                        cpu_efficiency_pct: +(n.cpu_efficiency * 100).toFixed(1),
+                        mem_efficiency_pct: +(n.memory_efficiency * 100).toFixed(1),
+                      }))}
+                    >
+                      {nsEfficiency.map((_, idx) => (
+                        <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                      ))}
+                    </Scatter>
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </Card>
+            </Col>
+            <Col xs={24} lg={10}>
+              <Card title="象限說明" size="small" style={{ height: '100%' }}>
+                <div style={{ padding: 8, fontSize: 13, lineHeight: 2 }}>
+                  <div><Tag color="red">❌ 高佔用 低效率</Tag> 過度申請，優先降低 requests</div>
+                  <div><Tag color="green">✅ 高佔用 高效率</Tag> 健康，可考慮擴充容量</div>
+                  <div><Tag color="orange">⚠️ 低佔用 低效率</Tag> 閒置資源，考慮縮減或清理</div>
+                  <div><Tag color="blue">💡 低佔用 高效率</Tag> 效能良好，資源充裕</div>
+                  <div style={{ marginTop: 12, color: '#888' }}>
+                    泡泡大小 = CPU 佔用率（越大表示佔用越多叢集容量）
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          </Row>
+          <Table
+            rowKey="namespace"
+            loading={nsEffLoading}
+            dataSource={nsEfficiency}
+            size="small"
+            scroll={{ x: 900 }}
+            pagination={{ pageSize: 20 }}
+            columns={[
+              { title: '命名空間', dataIndex: 'namespace', key: 'namespace', fixed: 'left' },
+              {
+                title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_request',
+                render: (v: number) => v.toFixed(0), sorter: (a, b) => a.cpu_request_millicores - b.cpu_request_millicores,
+              },
+              {
+                title: 'CPU 使用 (m)', dataIndex: 'cpu_usage_millicores', key: 'cpu_usage',
+                render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? v.toFixed(0) : <Tag>N/A</Tag>,
+              },
+              {
+                title: 'CPU 效率', dataIndex: 'cpu_efficiency', key: 'cpu_eff',
+                render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? (
+                  <Progress percent={+(v * 100).toFixed(1)} size="small"
+                    status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
+                    format={p => `${p}%`} style={{ width: 120 }} />
+                ) : <Tag>需要 Prometheus</Tag>,
+                sorter: (a, b) => a.cpu_efficiency - b.cpu_efficiency,
+              },
+              {
+                title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'mem_request',
+                render: (v: number) => v.toFixed(0),
+              },
+              {
+                title: '記憶體使用 (MiB)', dataIndex: 'memory_usage_mib', key: 'mem_usage',
+                render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? v.toFixed(0) : <Tag>N/A</Tag>,
+              },
+              {
+                title: '記憶體效率', dataIndex: 'memory_efficiency', key: 'mem_eff',
+                render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? (
+                  <Progress percent={+(v * 100).toFixed(1)} size="small"
+                    status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
+                    format={p => `${p}%`} style={{ width: 120 }} />
+                ) : <Tag>需要 Prometheus</Tag>,
+              },
+              { title: 'Pod 數', dataIndex: 'pod_count', key: 'pod_count' },
+            ]}
+          />
+        </div>
+      ),
+    },
+    {
+      key: 'wl-efficiency',
+      label: t('cost:tabs.wlEfficiency', '工作負載效率'),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            <Button icon={<ReloadOutlined />} onClick={() => loadWlEfficiency(1, wlEffNs)} loading={wlEffLoading}>
+              {t('common:actions.refresh', '重新整理')}
+            </Button>
+          </Space>
+          <Table
+            rowKey={(r: WorkloadEfficiency) => `${r.namespace}/${r.kind}/${r.name}`}
+            loading={wlEffLoading}
+            dataSource={wlEfficiency}
+            size="small"
+            scroll={{ x: 1000 }}
+            pagination={{
+              current: wlEffPage,
+              total: wlEffTotal,
+              pageSize: 20,
+              onChange: (p) => { setWlEffPage(p); loadWlEfficiency(p); },
+            }}
+            columns={[
+              { title: '命名空間', dataIndex: 'namespace', key: 'namespace', width: 140 },
+              { title: '工作負載', dataIndex: 'name', key: 'name', ellipsis: true },
+              { title: '類型', dataIndex: 'kind', key: 'kind', width: 110,
+                render: (k: string) => <Tag color={{ Deployment: 'blue', StatefulSet: 'purple', DaemonSet: 'cyan' }[k] ?? 'default'}>{k}</Tag> },
+              { title: '副本', dataIndex: 'replicas', key: 'replicas', width: 70 },
+              { title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_req', render: (v: number) => v.toFixed(0) },
+              {
+                title: 'CPU 效率', dataIndex: 'cpu_efficiency', key: 'cpu_eff',
+                render: (v: number, r: WorkloadEfficiency) => r.has_metrics ? (
+                  <Progress percent={+(v * 100).toFixed(1)} size="small"
+                    status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
+                    format={p => `${p}%`} style={{ width: 110 }} />
+                ) : <Tag>需要 Prometheus</Tag>,
+                sorter: (a: WorkloadEfficiency, b: WorkloadEfficiency) => a.cpu_efficiency - b.cpu_efficiency,
+              },
+              { title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'mem_req', render: (v: number) => v.toFixed(0) },
+              {
+                title: '記憶體效率', dataIndex: 'memory_efficiency', key: 'mem_eff',
+                render: (v: number, r: WorkloadEfficiency) => r.has_metrics ? (
+                  <Progress percent={+(v * 100).toFixed(1)} size="small"
+                    status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
+                    format={p => `${p}%`} style={{ width: 110 }} />
+                ) : <Tag>需要 Prometheus</Tag>,
+              },
+              {
+                title: '廢棄分數',
+                dataIndex: 'waste_score',
+                key: 'waste',
+                render: (v: number, r: WorkloadEfficiency) => r.has_metrics ? (
+                  <Tag color={v > 0.7 ? 'red' : v > 0.4 ? 'orange' : 'green'}>
+                    {(v * 100).toFixed(0)}
+                  </Tag>
+                ) : '—',
+                sorter: (a: WorkloadEfficiency, b: WorkloadEfficiency) => b.waste_score - a.waste_score,
+                defaultSortOrder: 'ascend' as const,
+              },
+            ]}
+          />
+        </div>
+      ),
+    },
+    {
+      key: 'waste-resources',
+      label: (
+        <span>
+          <WarningOutlined style={{ color: wasteItems.length > 0 ? '#faad14' : undefined }} />
+          {t('cost:tabs.wasteResources', '低效識別')}
+          {wasteItems.length > 0 && <Tag color="orange" style={{ marginLeft: 4 }}>{wasteItems.length}</Tag>}
+        </span>
+      ),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            <Button icon={<ReloadOutlined />} onClick={loadWasteItems} loading={wasteItemsLoading}>
+              {t('common:actions.refresh', '重新整理')}
+            </Button>
+          </Space>
+          <Alert
+            type="warning"
+            showIcon
+            message="以下工作負載的 CPU 效率低於 20%，代表申請的資源遠超實際使用量，建議降低 CPU requests。"
+            style={{ marginBottom: 16 }}
+          />
+          {wasteItems.length === 0 && !wasteItemsLoading ? (
+            <Empty description={nsEfficiency.length > 0 && !nsEfficiency[0].has_metrics ? '需要 Prometheus 監控資料才能識別低效工作負載' : '目前無低效工作負載'} />
+          ) : (
+            <Table
+              rowKey={(r: WorkloadEfficiency) => `${r.namespace}/${r.kind}/${r.name}`}
+              loading={wasteItemsLoading}
+              dataSource={wasteItems}
+              size="small"
+              scroll={{ x: 900 }}
+              pagination={{ pageSize: 20 }}
+              columns={[
+                { title: '命名空間', dataIndex: 'namespace', key: 'namespace', width: 140 },
+                { title: '工作負載', dataIndex: 'name', key: 'name', ellipsis: true },
+                { title: '類型', dataIndex: 'kind', key: 'kind', width: 110,
+                  render: (k: string) => <Tag color={{ Deployment: 'blue', StatefulSet: 'purple', DaemonSet: 'cyan' }[k] ?? 'default'}>{k}</Tag> },
+                { title: '副本', dataIndex: 'replicas', key: 'replicas', width: 70 },
+                {
+                  title: 'CPU 效率',
+                  render: (_: unknown, r: WorkloadEfficiency) => (
+                    <Progress percent={+(r.cpu_efficiency * 100).toFixed(1)} size="small"
+                      status="exception" format={p => `${p}%`} style={{ width: 110 }} />
+                  ),
+                  sorter: (a: WorkloadEfficiency, b: WorkloadEfficiency) => a.cpu_efficiency - b.cpu_efficiency,
+                },
+                { title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_req', render: (v: number) => v.toFixed(0) },
+                { title: 'CPU 使用 (m)', dataIndex: 'cpu_usage_millicores', key: 'cpu_usage', render: (v: number) => v.toFixed(1) },
+                { title: '記憶體效率', render: (_: unknown, r: WorkloadEfficiency) => (
+                  <Progress percent={+(r.memory_efficiency * 100).toFixed(1)} size="small"
+                    status={r.memory_efficiency < 0.2 ? 'exception' : 'active'} format={p => `${p}%`} style={{ width: 110 }} />
+                )},
+                {
+                  title: '廢棄分數',
+                  render: (_: unknown, r: WorkloadEfficiency) => (
+                    <Tag color={r.waste_score > 0.7 ? 'red' : 'orange'}>{(r.waste_score * 100).toFixed(0)}</Tag>
+                  ),
+                  sorter: (a: WorkloadEfficiency, b: WorkloadEfficiency) => b.waste_score - a.waste_score,
+                  defaultSortOrder: 'ascend' as const,
+                },
+              ]}
+            />
+          )}
         </div>
       ),
     },
