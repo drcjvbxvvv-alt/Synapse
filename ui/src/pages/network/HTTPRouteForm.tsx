@@ -174,7 +174,7 @@ const HTTPRouteForm: React.FC<HTTPRouteFormProps> = ({
       }
       const ns = activeTab === 'form'
         ? form.getFieldValue('namespace') as string
-        : ((YAML.parse(yaml) as Record<string, unknown>)?.metadata?.['namespace'] as string) ?? 'default';
+        : ((YAML.parse(yaml) as Record<string, unknown>)?.metadata as Record<string, string> | undefined)?.['namespace'] ?? 'default';
 
       if (isEdit && editing) {
         await gatewayService.updateHTTPRoute(clusterId, editing.namespace, editing.name, yaml);

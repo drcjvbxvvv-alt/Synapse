@@ -187,6 +187,7 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
 
 // ---- Main ServiceMeshTab ----
 const ServiceMeshTab: React.FC<ServiceMeshTabProps> = ({ clusterId, namespaces }) => {
+  const { message } = App.useApp();
   const [status, setStatus] = useState<MeshStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState<string | null>(null);
