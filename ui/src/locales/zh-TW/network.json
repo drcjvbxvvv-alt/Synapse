@@ -166,7 +166,7 @@
       "refresh": "重新整理",
       "loading": "載入拓撲圖...",
       "empty": "無拓撲資料（尚無 Gateway 或路由資源）"
-    },
+    }
   },
   "networkpolicy": {
     "create": "建立 NetworkPolicy",
