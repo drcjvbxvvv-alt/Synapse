@@ -34,6 +34,16 @@ export const gatewayService = {
   getGatewayYAML: (clusterId: string, namespace: string, name: string): Promise<{ yaml: string }> =>
     request.get(`/clusters/${clusterId}/gateways/${namespace}/${name}/yaml`),
 
+  // Gateway CRUD
+  createGateway: (clusterId: string, namespace: string, yaml: string) =>
+    request.post(`/clusters/${clusterId}/gateways`, { namespace, yaml }),
+
+  updateGateway: (clusterId: string, namespace: string, name: string, yaml: string) =>
+    request.put(`/clusters/${clusterId}/gateways/${namespace}/${name}`, { yaml }),
+
+  deleteGateway: (clusterId: string, namespace: string, name: string) =>
+    request.delete(`/clusters/${clusterId}/gateways/${namespace}/${name}`),
+
   // HTTPRoute
   listHTTPRoutes: (clusterId: string, namespace?: string): Promise<ListResponse<HTTPRouteItem>> =>
     request.get(`/clusters/${clusterId}/httproutes`, {
@@ -45,4 +55,14 @@ export const gatewayService = {
 
   getHTTPRouteYAML: (clusterId: string, namespace: string, name: string): Promise<{ yaml: string }> =>
     request.get(`/clusters/${clusterId}/httproutes/${namespace}/${name}/yaml`),
+
+  // HTTPRoute CRUD
+  createHTTPRoute: (clusterId: string, namespace: string, yaml: string) =>
+    request.post(`/clusters/${clusterId}/httproutes`, { namespace, yaml }),
+
+  updateHTTPRoute: (clusterId: string, namespace: string, name: string, yaml: string) =>
+    request.put(`/clusters/${clusterId}/httproutes/${namespace}/${name}`, { yaml }),
+
+  deleteHTTPRoute: (clusterId: string, namespace: string, name: string) =>
+    request.delete(`/clusters/${clusterId}/httproutes/${namespace}/${name}`),
 };

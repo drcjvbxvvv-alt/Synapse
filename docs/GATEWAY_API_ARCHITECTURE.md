@@ -1,6 +1,6 @@
 # Synapse Gateway API 架構設計文件
 
-> 版本：v1.1 | 日期：2026-04-07 | 狀態：Phase 1 已實作
+> 版本：v1.2 | 日期：2026-04-07 | 狀態：Phase 1 & Phase 2 已實作
 > 對應里程碑：M-GW（Gateway API 整合）
 
 ---
@@ -785,14 +785,15 @@ rules:
 - [x] `NetworkList.tsx`：加入 Gateway API Tab
 - [x] i18n：zh-TW / zh-CN / en-US 三語系
 
-### Phase 2：基本 CRUD
+### Phase 2：基本 CRUD ✅ 已完成（2026-04-07）
 
-- [ ] `gateway_service.go` 補充 Create/Update/Delete 方法
-- [ ] Handler 補充 POST / PUT / DELETE
-- [ ] `GatewayForm.tsx`：Gateway 建立/編輯表單
-- [ ] `HTTPRouteForm.tsx`：HTTPRoute 建立/編輯表單（含動態 rules builder）
-- [ ] YAML 直編（複用現有 Monaco editor 機制）
-- [ ] 刪除確認 dialog（含關聯 Route 警告）
+- [x] `gateway_service.go` 補充 Create/Update/Delete 方法
+- [x] Handler 補充 POST / PUT / DELETE
+- [x] `GatewayForm.tsx`：Gateway 建立/編輯表單（Form + YAML 雙模式，Monaco editor）
+- [x] `HTTPRouteForm.tsx`：HTTPRoute 建立/編輯表單（含動態 rules builder）
+- [x] YAML 直編（複用現有 Monaco editor 機制）
+- [x] 刪除確認 dialog（modal.confirm）
+- [x] `GatewayList.tsx` / `HTTPRouteList.tsx`：整合建立/編輯/刪除按鈕
 
 ### Phase 3：進階功能
 

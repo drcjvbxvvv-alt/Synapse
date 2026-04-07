@@ -18,6 +18,8 @@ import {
   DeleteOutlined,
   EyeOutlined,
   ReloadOutlined,
+  CopyOutlined,
+  LinkOutlined,
 } from '@ant-design/icons';
 import MonacoEditor from '@monaco-editor/react';
 import { Modal } from 'antd';
@@ -224,25 +226,56 @@ const ServiceMeshTab: React.FC<ServiceMeshTabProps> = ({ clusterId, namespaces }
   }
 
   if (!status?.installed) {
+    const installCmd = 'istioctl install --set profile=default';
+    const handleCopyCmd = () => {
+      navigator.clipboard.writeText(installCmd).then(() => {
+        message.success('已複製');
+      });
+    };
     return (
-      <Card>
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
+      <div style={{ maxWidth: 640, margin: '48px auto', padding: '0 24px' }}>
+        <Alert
+          type="warning"
+          showIcon
+          message="此叢集尚未安裝 Service Mesh（Istio）"
           description={
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-                Istio 未安裝
-              </div>
-              <div style={{ color: '#666', marginBottom: 12 }}>
-                {status?.reason ?? '叢集中未偵測到 Istio Service Mesh'}
-              </div>
-              <div style={{ color: '#999', fontSize: 12 }}>
-                安裝提示：<code>istioctl install --set profile=default</code>
-              </div>
-            </div>
+            <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
+              <Text>{status?.reason ?? 'Istio Service Mesh 提供流量管理、可觀測性與安全策略（mTLS），是雲原生微服務架構的核心基礎設施。'}</Text>
+              <Text strong style={{ display: 'block', marginTop: 8 }}>安裝指令：</Text>
+              <pre
+                style={{
+                  background: '#1e1e1e',
+                  color: '#d4d4d4',
+                  padding: '12px 16px',
+                  borderRadius: 6,
+                  fontSize: 13,
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {installCmd}
+              </pre>
+              <Space style={{ marginTop: 8 }}>
+                <Button icon={<CopyOutlined />} onClick={handleCopyCmd}>
+                  複製安裝指令
+                </Button>
+                <Button
+                  icon={<LinkOutlined />}
+                  href="https://istio.io/latest/docs/setup/getting-started/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  查看官方文件
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={loadStatus}>
+                  重新偵測
+                </Button>
+              </Space>
+            </Space>
           }
         />
-      </Card>
+      </div>
     );
   }
 

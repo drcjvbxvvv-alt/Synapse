@@ -256,6 +256,174 @@ func (h *GatewayHandler) GetHTTPRoute(c *gin.Context) {
 	response.OK(c, item)
 }
 
+// --- Gateway CRUD（Phase 2）---
+
+// CreateGateway 建立 Gateway
+// POST /api/v1/clusters/:clusterID/gateways
+func (h *GatewayHandler) CreateGateway(c *gin.Context) {
+	var req struct {
+		Namespace string `json:"namespace" binding:"required"`
+		YAML      string `json:"yaml" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "請求格式錯誤: "+err.Error())
+		return
+	}
+
+	svc, ok := h.getGatewaySvc(c, true)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+
+	item, err := svc.CreateGateway(ctx, req.Namespace, req.YAML)
+	if err != nil {
+		logger.Error("建立 Gateway 失敗", "error", err)
+		response.BadRequest(c, fmt.Sprintf("建立 Gateway 失敗: %v", err))
+		return
+	}
+	response.OK(c, item)
+}
+
+// UpdateGateway 更新 Gateway
+// PUT /api/v1/clusters/:clusterID/gateways/:namespace/:name
+func (h *GatewayHandler) UpdateGateway(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	var req struct {
+		YAML string `json:"yaml" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "請求格式錯誤: "+err.Error())
+		return
+	}
+
+	svc, ok := h.getGatewaySvc(c, true)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+
+	item, err := svc.UpdateGateway(ctx, namespace, name, req.YAML)
+	if err != nil {
+		logger.Error("更新 Gateway 失敗", "error", err, "namespace", namespace, "name", name)
+		response.BadRequest(c, fmt.Sprintf("更新 Gateway 失敗: %v", err))
+		return
+	}
+	response.OK(c, item)
+}
+
+// DeleteGateway 刪除 Gateway
+// DELETE /api/v1/clusters/:clusterID/gateways/:namespace/:name
+func (h *GatewayHandler) DeleteGateway(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	svc, ok := h.getGatewaySvc(c, true)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+
+	if err := svc.DeleteGateway(ctx, namespace, name); err != nil {
+		logger.Error("刪除 Gateway 失敗", "error", err, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("刪除 Gateway 失敗: %v", err))
+		return
+	}
+	response.NoContent(c)
+}
+
+// --- HTTPRoute CRUD（Phase 2）---
+
+// CreateHTTPRoute 建立 HTTPRoute
+// POST /api/v1/clusters/:clusterID/httproutes
+func (h *GatewayHandler) CreateHTTPRoute(c *gin.Context) {
+	var req struct {
+		Namespace string `json:"namespace" binding:"required"`
+		YAML      string `json:"yaml" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "請求格式錯誤: "+err.Error())
+		return
+	}
+
+	svc, ok := h.getGatewaySvc(c, true)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+
+	item, err := svc.CreateHTTPRoute(ctx, req.Namespace, req.YAML)
+	if err != nil {
+		logger.Error("建立 HTTPRoute 失敗", "error", err)
+		response.BadRequest(c, fmt.Sprintf("建立 HTTPRoute 失敗: %v", err))
+		return
+	}
+	response.OK(c, item)
+}
+
+// UpdateHTTPRoute 更新 HTTPRoute
+// PUT /api/v1/clusters/:clusterID/httproutes/:namespace/:name
+func (h *GatewayHandler) UpdateHTTPRoute(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	var req struct {
+		YAML string `json:"yaml" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "請求格式錯誤: "+err.Error())
+		return
+	}
+
+	svc, ok := h.getGatewaySvc(c, true)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+
+	item, err := svc.UpdateHTTPRoute(ctx, namespace, name, req.YAML)
+	if err != nil {
+		logger.Error("更新 HTTPRoute 失敗", "error", err, "namespace", namespace, "name", name)
+		response.BadRequest(c, fmt.Sprintf("更新 HTTPRoute 失敗: %v", err))
+		return
+	}
+	response.OK(c, item)
+}
+
+// DeleteHTTPRoute 刪除 HTTPRoute
+// DELETE /api/v1/clusters/:clusterID/httproutes/:namespace/:name
+func (h *GatewayHandler) DeleteHTTPRoute(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	svc, ok := h.getGatewaySvc(c, true)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+
+	if err := svc.DeleteHTTPRoute(ctx, namespace, name); err != nil {
+		logger.Error("刪除 HTTPRoute 失敗", "error", err, "namespace", namespace, "name", name)
+		response.InternalError(c, fmt.Sprintf("刪除 HTTPRoute 失敗: %v", err))
+		return
+	}
+	response.NoContent(c)
+}
+
 // GetHTTPRouteYAML 取得 HTTPRoute YAML
 // GET /api/v1/clusters/:clusterID/httproutes/:namespace/:name/yaml
 func (h *GatewayHandler) GetHTTPRouteYAML(c *gin.Context) {

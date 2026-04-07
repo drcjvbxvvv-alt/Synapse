@@ -454,6 +454,107 @@ func toHTTPRouteItem(obj unstructured.Unstructured) HTTPRouteItem {
 	}
 }
 
+// --- CRUD（Phase 2）---
+
+// CreateGateway 從 YAML 建立 Gateway
+func (s *GatewayService) CreateGateway(ctx context.Context, namespace, yamlStr string) (*GatewayItem, error) {
+	obj, err := gwParseYAML(yamlStr)
+	if err != nil {
+		return nil, err
+	}
+	if namespace != "" {
+		obj.SetNamespace(namespace)
+	}
+	result, err := s.dynClient.Resource(GatewayGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	item := toGatewayItem(*result)
+	return &item, nil
+}
+
+// UpdateGateway 從 YAML 更新 Gateway
+func (s *GatewayService) UpdateGateway(ctx context.Context, namespace, name, yamlStr string) (*GatewayItem, error) {
+	// 先取得現有物件以保留 resourceVersion
+	existing, err := s.dynClient.Resource(GatewayGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	obj, err := gwParseYAML(yamlStr)
+	if err != nil {
+		return nil, err
+	}
+	obj.SetNamespace(namespace)
+	obj.SetName(name)
+	obj.SetResourceVersion(existing.GetResourceVersion())
+	result, err := s.dynClient.Resource(GatewayGVR).Namespace(namespace).Update(ctx, obj, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	item := toGatewayItem(*result)
+	return &item, nil
+}
+
+// DeleteGateway 刪除 Gateway
+func (s *GatewayService) DeleteGateway(ctx context.Context, namespace, name string) error {
+	return s.dynClient.Resource(GatewayGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+// CreateHTTPRoute 從 YAML 建立 HTTPRoute
+func (s *GatewayService) CreateHTTPRoute(ctx context.Context, namespace, yamlStr string) (*HTTPRouteItem, error) {
+	obj, err := gwParseYAML(yamlStr)
+	if err != nil {
+		return nil, err
+	}
+	if namespace != "" {
+		obj.SetNamespace(namespace)
+	}
+	result, err := s.dynClient.Resource(HTTPRouteGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	item := toHTTPRouteItem(*result)
+	return &item, nil
+}
+
+// UpdateHTTPRoute 從 YAML 更新 HTTPRoute
+func (s *GatewayService) UpdateHTTPRoute(ctx context.Context, namespace, name, yamlStr string) (*HTTPRouteItem, error) {
+	existing, err := s.dynClient.Resource(HTTPRouteGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	obj, err := gwParseYAML(yamlStr)
+	if err != nil {
+		return nil, err
+	}
+	obj.SetNamespace(namespace)
+	obj.SetName(name)
+	obj.SetResourceVersion(existing.GetResourceVersion())
+	result, err := s.dynClient.Resource(HTTPRouteGVR).Namespace(namespace).Update(ctx, obj, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	item := toHTTPRouteItem(*result)
+	return &item, nil
+}
+
+// DeleteHTTPRoute 刪除 HTTPRoute
+func (s *GatewayService) DeleteHTTPRoute(ctx context.Context, namespace, name string) error {
+	return s.dynClient.Resource(HTTPRouteGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+// gwParseYAML 將 YAML 字串解析為 Unstructured 物件
+func gwParseYAML(yamlStr string) (*unstructured.Unstructured, error) {
+	var data map[string]interface{}
+	if err := yaml.Unmarshal([]byte(yamlStr), &data); err != nil {
+		return nil, fmt.Errorf("YAML 格式錯誤: %v", err)
+	}
+	if data == nil {
+		return nil, fmt.Errorf("YAML 內容為空")
+	}
+	return &unstructured.Unstructured{Object: data}, nil
+}
+
 // --- 工具函式（gw 前綴避免與其他 service 衝突）---
 
 func gwGetConditions(obj interface{}, path ...string) []GatewayK8sCondition {

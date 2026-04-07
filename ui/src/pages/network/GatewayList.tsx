@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Space, Button, Select, App } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
+import { parseApiError } from '@/utils/api';
 import type { GatewayItem, GatewayListener, GatewayTabProps } from './gatewayTypes';
 import GatewayDrawer from './GatewayDrawer';
+import GatewayForm from './GatewayForm';
 
 const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
   const [items, setItems] = useState<GatewayItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
   const [drawerItem, setDrawerItem] = useState<GatewayItem | null>(null);
+  const [formVisible, setFormVisible] = useState(false);
+  const [editingGateway, setEditingGateway] = useState<GatewayItem | null>(null);
 
   const namespaces = [...new Set(items.map((i) => i.namespace))].sort();
 
@@ -32,6 +36,23 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleDelete = (item: GatewayItem) => {
+    modal.confirm({
+      title: t('network:gatewayapi.messages.confirmDeleteTitle'),
+      content: t('network:gatewayapi.messages.confirmDeleteGateway', { name: item.name }),
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await gatewayService.deleteGateway(clusterId, item.namespace, item.name);
+          message.success(t('network:gatewayapi.messages.deleteGatewaySuccess'));
+          loadData();
+        } catch (err) {
+          message.error(parseApiError(err) || t('network:gatewayapi.messages.deleteGatewayError'));
+        }
+      },
+    });
+  };
 
   const filtered = namespaceFilter
     ? items.filter((i) => i.namespace === namespaceFilter)
@@ -109,6 +130,28 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
+    {
+      title: t('common:actions', 'Actions'),
+      key: 'actions',
+      width: 100,
+      render: (_: unknown, record: GatewayItem) => (
+        <Space size={4}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => { setEditingGateway(record); setFormVisible(true); }}
+          />
+          <Button
+            type="link"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record)}
+          />
+        </Space>
+      ),
+    },
   ];
 
   return (
@@ -123,6 +166,13 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
           options={namespaces.map((ns) => ({ label: ns, value: ns }))}
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => { setEditingGateway(null); setFormVisible(true); }}
+        >
+          {t('network:gatewayapi.form.createGateway')}
+        </Button>
       </div>
 
       <Table
@@ -142,6 +192,14 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
         clusterId={clusterId}
         item={drawerItem}
         onClose={() => setDrawerItem(null)}
+      />
+
+      <GatewayForm
+        open={formVisible}
+        clusterId={clusterId}
+        editing={editingGateway}
+        onClose={() => setFormVisible(false)}
+        onSuccess={loadData}
       />
     </>
   );

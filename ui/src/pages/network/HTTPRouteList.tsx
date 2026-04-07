@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Space, Button, Select, App } from 'antd';
-import { ReloadOutlined, CheckCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { ReloadOutlined, CheckCircleOutlined, QuestionCircleOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
+import { parseApiError } from '@/utils/api';
 import type { HTTPRouteItem, GatewayK8sCondition, GatewayTabProps } from './gatewayTypes';
 import HTTPRouteDrawer from './HTTPRouteDrawer';
+import HTTPRouteForm from './HTTPRouteForm';
 
 const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
   const [items, setItems] = useState<HTTPRouteItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
   const [drawerItem, setDrawerItem] = useState<HTTPRouteItem | null>(null);
+  const [formVisible, setFormVisible] = useState(false);
+  const [editingRoute, setEditingRoute] = useState<HTTPRouteItem | null>(null);
 
   const namespaces = [...new Set(items.map((i) => i.namespace))].sort();
 
@@ -32,6 +36,23 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleDelete = (item: HTTPRouteItem) => {
+    modal.confirm({
+      title: t('network:gatewayapi.messages.confirmDeleteTitle'),
+      content: t('network:gatewayapi.messages.confirmDeleteHTTPRoute', { name: item.name }),
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await gatewayService.deleteHTTPRoute(clusterId, item.namespace, item.name);
+          message.success(t('network:gatewayapi.messages.deleteHTTPRouteSuccess'));
+          loadData();
+        } catch (err) {
+          message.error(parseApiError(err) || t('network:gatewayapi.messages.deleteHTTPRouteError'));
+        }
+      },
+    });
+  };
 
   const filtered = namespaceFilter
     ? items.filter((i) => i.namespace === namespaceFilter)
@@ -109,6 +130,28 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
+    {
+      title: t('common:actions', 'Actions'),
+      key: 'actions',
+      width: 100,
+      render: (_: unknown, record: HTTPRouteItem) => (
+        <Space size={4}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => { setEditingRoute(record); setFormVisible(true); }}
+          />
+          <Button
+            type="link"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record)}
+          />
+        </Space>
+      ),
+    },
   ];
 
   return (
@@ -123,6 +166,13 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
           options={namespaces.map((ns) => ({ label: ns, value: ns }))}
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => { setEditingRoute(null); setFormVisible(true); }}
+        >
+          {t('network:gatewayapi.form.createHTTPRoute')}
+        </Button>
       </div>
 
       <Table
@@ -142,6 +192,14 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
         clusterId={clusterId}
         item={drawerItem}
         onClose={() => setDrawerItem(null)}
+      />
+
+      <HTTPRouteForm
+        open={formVisible}
+        clusterId={clusterId}
+        editing={editingRoute}
+        onClose={() => setFormVisible(false)}
+        onSuccess={loadData}
       />
     </>
   );

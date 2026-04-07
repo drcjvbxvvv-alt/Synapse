@@ -307,13 +307,19 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				gateways := cluster.Group("/gateways")
 				{
 					gateways.GET("", gatewayHandler.ListGateways)
+					gateways.POST("", gatewayHandler.CreateGateway)
 					gateways.GET("/:namespace/:name", gatewayHandler.GetGateway)
+					gateways.PUT("/:namespace/:name", gatewayHandler.UpdateGateway)
+					gateways.DELETE("/:namespace/:name", gatewayHandler.DeleteGateway)
 					gateways.GET("/:namespace/:name/yaml", gatewayHandler.GetGatewayYAML)
 				}
 				httproutes := cluster.Group("/httproutes")
 				{
 					httproutes.GET("", gatewayHandler.ListHTTPRoutes)
+					httproutes.POST("", gatewayHandler.CreateHTTPRoute)
 					httproutes.GET("/:namespace/:name", gatewayHandler.GetHTTPRoute)
+					httproutes.PUT("/:namespace/:name", gatewayHandler.UpdateHTTPRoute)
+					httproutes.DELETE("/:namespace/:name", gatewayHandler.DeleteHTTPRoute)
 					httproutes.GET("/:namespace/:name/yaml", gatewayHandler.GetHTTPRouteYAML)
 				}
 			}

@@ -62,6 +62,55 @@ export interface HTTPRouteParentRef {
   conditions: GatewayK8sCondition[];
 }
 
+// --- Form value types（Phase 2）---
+
+export interface GatewayListenerFormValue {
+  name: string;
+  port: number;
+  protocol: string;
+  hostname?: string;
+  tlsMode?: string;
+  tlsSecretName?: string;
+  tlsSecretNamespace?: string;
+}
+
+export interface GatewayFormValues {
+  name: string;
+  namespace: string;
+  gatewayClass: string;
+  listeners: GatewayListenerFormValue[];
+}
+
+export interface HTTPRouteMatchFormValue {
+  pathType: 'Exact' | 'PathPrefix' | 'RegularExpression';
+  pathValue: string;
+}
+
+export interface HTTPRouteBackendFormValue {
+  name: string;
+  port: number;
+  weight: number;
+}
+
+export interface HTTPRouteRuleFormValue {
+  matches: HTTPRouteMatchFormValue[];
+  backends: HTTPRouteBackendFormValue[];
+}
+
+export interface HTTPRouteParentRefFormValue {
+  gatewayName: string;
+  gatewayNamespace: string;
+  sectionName?: string;
+}
+
+export interface HTTPRouteFormValues {
+  name: string;
+  namespace: string;
+  hostnames: string[];
+  parentRefs: HTTPRouteParentRefFormValue[];
+  rules: HTTPRouteRuleFormValue[];
+}
+
 export interface HTTPRouteItem {
   name: string;
   namespace: string;
