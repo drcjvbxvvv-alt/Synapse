@@ -1,6 +1,8 @@
 package database
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,7 +13,7 @@ import (
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/pkg/logger"
 
-	"github.com/glebarez/sqlite"
+	gomysql "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -92,10 +94,10 @@ func initSQLite(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, e
 		dbPath = "./data/synapse.db"
 	}
 
-	// 確保目錄存在
+	// 確保目錄存在，限制為 owner-only 存取
 	dir := filepath.Dir(dbPath)
 	if dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0750); err != nil {
+		if err := os.MkdirAll(dir, 0700); err != nil {
 			return nil, fmt.Errorf("建立資料庫目錄失敗: %w", err)
 		}
 	}
@@ -104,24 +106,53 @@ func initSQLite(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, e
 
 	// SQLite 連線參數：啟用 WAL 模式提升併發效能，啟用外來鍵約束
 	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_foreign_keys=on", dbPath)
-	db, err := gorm.Open(sqlite.Open(dsn), gormConfig)
+
+	// DB_PASSPHRASE 供 sqlcipher build tag 使用（plain build 忽略此值）
+	passphrase := os.Getenv("DB_PASSPHRASE")
+	db, err := openSQLiteDB(dsn, passphrase, gormConfig)
 	if err != nil {
 		return nil, fmt.Errorf("連線 SQLite 資料庫失敗: %w", err)
+	}
+
+	// 限制 DB 檔案為 owner-only 可讀寫（600），防止同主機其他程序直接讀取
+	if err := os.Chmod(dbPath, 0600); err != nil {
+		logger.Warn("無法設定資料庫檔案權限，請手動執行 chmod 600 %s：%v", dbPath, err)
 	}
 
 	return db, nil
 }
 
-// initMySQL 初始化 MySQL 資料庫連線
+// initMySQL 初始化 MySQL 資料庫連線（支援 TLS）
 func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
-	// 先連線到MySQL伺服器（不指定資料庫）來建立資料庫
-	dsnWithoutDB := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=%s&parseTime=True&loc=Local",
-		cfg.Username,
-		cfg.Password,
-		cfg.Host,
-		cfg.Port,
-		cfg.Charset,
-	)
+	// 若啟用 TLS，向 go-sql-driver 註冊自訂 TLS 設定
+	tlsParam := ""
+	if cfg.TLSEnabled {
+		tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
+		if cfg.TLSCACert != "" {
+			caCert, err := os.ReadFile(cfg.TLSCACert)
+			if err != nil {
+				return nil, fmt.Errorf("讀取 MySQL TLS CA 憑證失敗 (%s): %w", cfg.TLSCACert, err)
+			}
+			pool := x509.NewCertPool()
+			if !pool.AppendCertsFromPEM(caCert) {
+				return nil, fmt.Errorf("MySQL TLS CA 憑證格式無效: %s", cfg.TLSCACert)
+			}
+			tlsCfg.RootCAs = pool
+		} else {
+			// 無 CA 時仍啟用 TLS，但不驗證伺服器憑證（加密但無驗證）
+			logger.Warn("MySQL TLS 已啟用但未提供 CA 憑證，伺服器身分不受驗證", "host", cfg.Host)
+			tlsCfg.InsecureSkipVerify = true //nolint:gosec
+		}
+		if err := gomysql.RegisterTLSConfig("synapse", tlsCfg); err != nil {
+			return nil, fmt.Errorf("註冊 MySQL TLS 設定失敗: %w", err)
+		}
+		tlsParam = "&tls=synapse"
+		logger.Info("MySQL TLS 已啟用", "host", cfg.Host)
+	}
+
+	// 先連線到 MySQL 伺服器（不指定資料庫）以建立資料庫
+	dsnWithoutDB := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=%s&parseTime=True&loc=Local%s",
+		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Charset, tlsParam)
 
 	logger.Info("連線MySQL伺服器: %s@%s:%d", cfg.Username, cfg.Host, cfg.Port)
 	tempDB, err := gorm.Open(mysql.Open(dsnWithoutDB), gormConfig)
@@ -136,15 +167,9 @@ func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, er
 	}
 	logger.Info("資料庫 %s 建立成功或已存在", cfg.Database)
 
-	// 現在連線到具體的資料庫
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
-		cfg.Username,
-		cfg.Password,
-		cfg.Host,
-		cfg.Port,
-		cfg.Database,
-		cfg.Charset,
-	)
+	// 連線到具體的資料庫
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local%s",
+		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Database, cfg.Charset, tlsParam)
 
 	logger.Info("連線MySQL資料庫: %s@%s:%d/%s", cfg.Username, cfg.Host, cfg.Port, cfg.Database)
 	db, err := gorm.Open(mysql.Open(dsn), gormConfig)

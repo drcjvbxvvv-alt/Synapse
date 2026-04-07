@@ -16,8 +16,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"sync"
+
+	"golang.org/x/crypto/hkdf"
 )
 
 var (
@@ -26,9 +29,12 @@ var (
 	initOnce  sync.Once
 )
 
-// Init derives a 32-byte AES-256 key from rawKey via SHA-256 and stores it
-// globally.  Must be called once at startup before any Encrypt/Decrypt calls.
+// Init derives a 32-byte AES-256 key from rawKey using HKDF-SHA256 and stores
+// it globally.  Must be called once at startup before any Encrypt/Decrypt calls.
 // If rawKey is empty, encryption is silently disabled (plaintext passthrough).
+//
+// KDF: HKDF-SHA256 with info="synapse-db-field-encryption-v1" (RFC 5869).
+// This is resistant to brute-force compared to the previous raw SHA-256 approach.
 func Init(rawKey string) {
 	initOnce.Do(func() {
 		if rawKey == "" {
@@ -36,9 +42,55 @@ func Init(rawKey string) {
 		}
 		mu.Lock()
 		defer mu.Unlock()
-		h := sha256.Sum256([]byte(rawKey))
-		globalKey = h[:]
+		r := hkdf.New(sha256.New, []byte(rawKey), nil,
+			[]byte("synapse-db-field-encryption-v1"))
+		key := make([]byte, 32)
+		if _, err := io.ReadFull(r, key); err != nil {
+			panic(fmt.Sprintf("crypto: HKDF key derivation failed: %v", err))
+		}
+		globalKey = key
 	})
+}
+
+// Instance 是獨立的加密器實例，用於金鑰輪換等需要同時操作兩組金鑰的場景。
+// 與全域單例無關，可安全地並行建立多個 Instance。
+type Instance struct {
+	key []byte
+}
+
+// NewInstance 以 rawKey 建立獨立加密器實例（HKDF-SHA256 KDF，與全域 Init 相同演算法）。
+func NewInstance(rawKey string) *Instance {
+	if rawKey == "" {
+		return &Instance{}
+	}
+	r := hkdf.New(sha256.New, []byte(rawKey), nil,
+		[]byte("synapse-db-field-encryption-v1"))
+	key := make([]byte, 32)
+	if _, err := io.ReadFull(r, key); err != nil {
+		panic(fmt.Sprintf("crypto: HKDF key derivation failed: %v", err))
+	}
+	return &Instance{key: key}
+}
+
+// Encrypt 加密明文，行為與全域 Encrypt 相同。
+func (inst *Instance) Encrypt(plaintext string) (string, error) {
+	if len(inst.key) != 32 || plaintext == "" {
+		return plaintext, nil
+	}
+	block, err := aes.NewCipher(inst.key)
+	if err != nil {
+		return "", err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+	sealed := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+	return base64.StdEncoding.EncodeToString(sealed), nil
 }
 
 // IsEnabled reports whether field encryption is active.

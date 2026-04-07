@@ -986,12 +986,126 @@ VM Host
 
 ---
 
+### 5.16 Kubeconfig 安全強化（Sprint，2 週）✅ 全部完成（P0/P1/P2/P3）
+
+> **背景：** 雖已實作 AES-256-GCM 欄位加密，但現況有多個關鍵缺陷：
+> ENCRYPTION_KEY 未強制、KDF 過弱、SQLite 無存取控制、TLS 預設跳過。
+> 規劃細節見 [`docs/security/kubeconfig-security-plan.md`](./docs/security/kubeconfig-security-plan.md)
+
+---
+
+#### 現況風險評估
+
+| 嚴重度 | 問題 | 位置 |
+|--------|------|------|
+| 🔴 C-1 | `ENCRYPTION_KEY` 未設定只有 Warn，不阻止啟動，導致 production 明文儲存 | `main.go:37` |
+| 🔴 C-2 | `./data/synapse.db` 無 chmod 限制，同主機任何程序可直接讀取 | `database.go` |
+| 🔴 C-3 | KDF 使用 `SHA-256` 單次雜湊，可被快速暴力破解（< 1ns/hash） | `pkg/crypto/crypto.go` |
+| 🟠 H-1 | K8s TLS 驗證預設 `Insecure: true`，暴露 MITM 攻擊面 | `k8s_client.go:85` |
+| 🟠 H-2 | 解密後 kubeconfig 字串長期留在 heap，無主動清零 | `k8s_client.go` |
+| 🟠 H-4 | 金鑰輪換機制不存在，金鑰洩漏無法緊急應對 | — |
+| 🟡 M-1 | 日誌可能意外記錄敏感 URL 片段 | `handlers/cluster.go:133` |
+| 🟡 M-2 | 匯入 Token 未驗證 RBAC 最小化，允許 cluster-admin Token 靜默匯入 | `handlers/cluster.go` |
+
+---
+
+#### P0：立即修復（Week 1）✅ 已完成（2026-04-07）
+
+**P0-1：啟動時強制 ENCRYPTION_KEY**
+
+新增 `app.env` 設定（`production` / `development`），生產環境若未設定 `ENCRYPTION_KEY` 則 `Fatal` 拒絕啟動。
+
+```go
+// main.go
+if !crypto.IsEnabled() {
+    if cfg.App.Env == "development" {
+        logger.Warn("【開發模式】ENCRYPTION_KEY 未設定，憑證以明文儲存（禁止用於正式環境）")
+    } else {
+        logger.Fatal("ENCRYPTION_KEY 未設定。正式環境必須提供加密金鑰，拒絕啟動")
+    }
+}
+```
+
+**P0-2：升級 KDF — SHA-256 → HKDF-SHA256**
+
+```go
+// pkg/crypto/crypto.go
+import "golang.org/x/crypto/hkdf"
+
+r := hkdf.New(sha256.New, []byte(rawKey), nil, []byte("synapse-db-field-encryption-v1"))
+key := make([]byte, 32)
+io.ReadFull(r, key)
+globalKey = key
+```
+
+> ⚠️ KDF 升級後必須執行 `synapse admin re-encrypt` 遷移舊資料（見 P1-2）
+
+**P0-3：SQLite 檔案 chmod 600**
+
+```go
+// database.go — initSQLite 成功後
+os.MkdirAll(dir, 0700)
+os.Chmod(dsn, 0600)
+```
+
+**P0-4：TLS 策略設定（`strict` / `warn` / `skip`）**
+
+新增 `security.k8s_tls_policy` config，`production` 建議 `warn`，最終目標 `strict`。
+
+---
+
+#### P1：本週內完成（Week 1–2）✅ 已完成（2026-04-07）
+
+| 項目 | 狀態 | 內容 |
+|------|------|------|
+| P1-1 | ✅ | `ENCRYPTION_KEY_FILE` 支援（比 env var 安全，避免 `/proc/PID/environ` 洩漏） |
+| P1-2 | ⏭️ 跳過 | DB 將重建，不需要 re-encrypt migration |
+| P1-3 | ✅ | `synapse admin rotate-key --new-key-file` CLI（`cmd/admin/rotate_key.go`） |
+| P1-4 | ✅ | `zeroString()` + defer 清零 kubeconfig / token（`k8s_client.go`） |
+| P1-5 | ✅ | `maskURL()` 過濾日誌中的 API Server URL（`handlers/cluster.go`） |
+
+---
+
+#### P2：下個迭代 ✅ 已完成（2026-04-07）
+
+| 項目 | 狀態 | 內容 |
+|------|------|------|
+| P2-1 | ✅ | `CertExpiryWorker`（`internal/services/cert_expiry_worker.go`）：每日 09:00 掃描，30/7/1 天前通知所有已啟用渠道；匯入時自動 TLS dial 取得到期日存入 `CertExpireAt` |
+| P2-2 | ✅ | `CheckRBACSummary()`（k8s_client.go）：SelfSubjectAccessReview 評估 6 種高危權限，ImportCluster response 新增 `rbacWarnings` 欄位 |
+| P2-3 | ✅ | MySQL TLS：`DB_TLS_ENABLED` / `DB_TLS_CA_CERT` 設定，`gomysql.RegisterTLSConfig("synapse", ...)` MinVersion TLS 1.2 |
+| P2-4 | ✅ | `docs/deploy/vm-observability.md` 新增 systemd `LoadCredential` 完整說明（金鑰生成、Unit 範例、驗證指令、舊版 fallback） |
+
+---
+
+#### P3：長期規劃 ✅ 已完成（2026-04-07）
+
+| 項目 | 內容 | 狀態 |
+|------|------|------|
+| P3-1 | 可插拔 KMS 介面（`KeyProvider` interface，支援 Vault / AWS KMS） | ✅ `pkg/crypto/provider.go`：EnvKeyProvider、FileKeyProvider、VaultKeyProvider（direct HTTP）、AWS stub |
+| P3-2 | 加密 SQLite（SQLCipher，需 CGO，高安全場景） | ✅ `sqlite_plain.go` / `sqlite_cipher.go` build tag 抽象，`docs/security/sqlcipher-build.md` |
+
+---
+
+#### 測試計畫
+
+| 測試 | 驗證方式 |
+|------|---------|
+| 未設定 ENCRYPTION_KEY + env=production | Fatal 被呼叫（unit test） |
+| SQLite 建立後 mode 0600 | `os.Stat().Mode()` assert |
+| HKDF 與 SHA-256 產生不同 key | `TestKDFUpgrade` |
+| Re-encrypt 後新 key 可解密 | `TestReEncryptMigration` |
+| TLS strict 拒絕無 CA cert | `TestTLSPolicyStrict` |
+| API response 不含 kubeconfig 欄位 | `TestClusterAPIResponseNoSecrets` |
+
+---
+
 ## 6. 里程碑規劃
 
 ### 功能完成狀態總覽
 
 | 里程碑 | 功能 | 狀態 | 優先級 | 估計工作量 |
 |--------|------|------|--------|-----------|
+| — | **Kubeconfig 安全強化**（P0～P3 全部完成：HKDF KDF + 強制加密 + TLS 策略 + rotate-key CLI + CertExpiry Worker + RBAC Summary + MySQL TLS + systemd LoadCredential + 可插拔 KMS + SQLCipher build tag） | ✅ 已完成（2026-04-07） | 🔴 CRITICAL | 2 週 |
 | M1 | 安全強化 | ✅ 已完成 | — | — |
 | M2 | 穩定性與效能 | ✅ 已完成 | — | — |
 | M3 | 可觀測性 | ✅ 已完成 | — | — |

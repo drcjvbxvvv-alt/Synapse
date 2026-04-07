@@ -193,16 +193,19 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	eventAlertWorker := services.NewEventAlertWorker(db, k8sMgr, clusterSvc)
 	costWorker := services.NewCostWorker(db, clusterSvc, k8sMgr)
 	logRetentionWorker := services.NewLogRetentionWorker(db, 0)
+	certExpiryWorker := services.NewCertExpiryWorker(db)
 
 	if reg != nil {
 		eventAlertWorker.SetMetrics(reg.Worker)
 		costWorker.SetMetrics(reg.Worker)
 		logRetentionWorker.SetMetrics(reg.Worker)
+		certExpiryWorker.SetMetrics(reg.Worker)
 	}
 
 	eventAlertWorker.Start()
 	costWorker.Start()
 	logRetentionWorker.Start()
+	certExpiryWorker.Start()
 
 	k8sMgr.StartGC(30*time.Minute, 2*time.Hour)
 

@@ -16,6 +16,9 @@ database:
   # 或使用完整 DSN（優先於以上各欄位）：
   # dsn: "synapse:password@tcp(127.0.0.1:3306)/synapse?charset=utf8mb4&parseTime=True&loc=Local"
   # env: DB_DSN
+  # MySQL TLS（生產環境強烈建議啟用）：
+  tls_enabled: false          # env: DB_TLS_ENABLED
+  tls_ca_cert: ""             # env: DB_TLS_CA_CERT  — CA 憑證路徑，留空 = 加密但不驗證伺服器身分
 
 jwt:
   secret: "change-me-in-production"  # env: JWT_SECRET
@@ -29,8 +32,21 @@ k8s:
   default_namespace: default  # env: K8S_DEFAULT_NAMESPACE
   informer_sync_timeout: 30   # env: INFORMER_SYNC_TIMEOUT  (seconds)
 
+app:
+  env: production  # env: APP_ENV  (production | development)
+                   #   production  = ENCRYPTION_KEY 未設定時拒絕啟動
+                   #   development = ENCRYPTION_KEY 未設定時僅警告（不建議用於正式環境）
+
 security:
-  encryption_key: ""  # env: ENCRYPTION_KEY  (AES-256-GCM key, 32 bytes hex)
+  # 選擇一種方式提供加密金鑰（production 環境必填其一）：
+  encryption_key: ""       # env: ENCRYPTION_KEY  — 直接提供金鑰（不建議明文寫入設定檔）
+  encryption_key_file: ""  # env: ENCRYPTION_KEY_FILE  — 從檔案讀取金鑰（建議用法）
+                           #   範例：/etc/synapse/secrets/encryption.key（chmod 400）
+                           #   生成：openssl rand -hex 32 > /etc/synapse/secrets/encryption.key
+  k8s_tls_policy: warn     # env: K8S_TLS_POLICY  (strict | warn | skip)
+                           #   strict = 無 CA 憑證時拒絕連線（最安全）
+                           #   warn   = 無 CA 憑證時警告並繼續（預設，相容性優先）
+                           #   skip   = 靜默跳過 TLS 驗證（僅限實驗室環境）
 
 # ── 可觀測性 ─────────────────────────────────────────────────────────────────
 # 控制 Synapse 自身的 Prometheus metrics 端點、健康探針。

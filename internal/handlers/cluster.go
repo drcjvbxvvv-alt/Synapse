@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -42,6 +43,19 @@ func NewClusterHandler(db *gorm.DB, cfg *config.Config, mgr *k8s.ClusterInformer
 		monitoringCfgSvc: monitoringCfgSvc,
 		permissionSvc:    permSvc,
 	}
+}
+
+// maskURL 只保留 scheme + host，截斷路徑與 query string，防止含 token 的 URL 洩入日誌。
+// 若解析失敗則返回原字串（截斷至 64 字元）。
+func maskURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		if len(raw) > 64 {
+			return raw[:64] + "…"
+		}
+		return raw
+	}
+	return u.Scheme + "://" + u.Host
 }
 
 // GetClusters 獲取叢集列表（按使用者權限過濾，支援分頁 page/pageSize）
@@ -130,7 +144,7 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 		return
 	}
 
-	logger.Info("匯入叢集: %s, API Server: %s", req.Name, req.ApiServer)
+	logger.Info("叢集匯入請求", "name", req.Name, "apiServer", maskURL(req.ApiServer))
 
 	// 驗證參數
 	if req.Kubeconfig == "" && (req.ApiServer == "" || req.Token == "") {
@@ -173,23 +187,37 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 		restConfig := k8sClient.GetRestConfig()
 		if restConfig != nil && restConfig.Host != "" {
 			apiServer = restConfig.Host
-			logger.Info("從 kubeconfig 中解析出 API Server: %s", apiServer)
+			logger.Info("從 kubeconfig 中解析出 API Server", "apiServer", maskURL(apiServer))
 		}
+	}
+
+	// P2-2：RBAC 危險程度評估（非阻塞，失敗不影響匯入）
+	rbacCtx, rbacCancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer rbacCancel()
+	rbacSummary := k8sClient.CheckRBACSummary(rbacCtx)
+
+	// P2-1：取得 API Server 憑證到期日（非阻塞，失敗不影響匯入）
+	var certExpireAt *time.Time
+	if expiry, err := k8sClient.GetAPIServerCertExpiry(); err == nil {
+		certExpireAt = expiry
+	} else {
+		logger.Warn("無法取得 API Server 憑證到期日", "error", err)
 	}
 
 	// 建立叢集模型
 	cluster := &models.Cluster{
 		Name:               req.Name,
 		APIServer:          apiServer,
-		KubeconfigEnc:      req.Kubeconfig, // TODO: 需要加密儲存
-		SATokenEnc:         req.Token,      // TODO: 需要加密儲存
-		CAEnc:              req.CaCert,     // TODO: 需要加密儲存
+		KubeconfigEnc:      req.Kubeconfig,
+		SATokenEnc:         req.Token,
+		CAEnc:              req.CaCert,
 		Version:            clusterInfo.Version,
 		Status:             clusterInfo.Status,
 		Labels:             "{}",
-		MonitoringConfig:   "{}", // 初始化為空 JSON 物件，避免 MySQL JSON 欄位報錯
-		AlertManagerConfig: "{}", // 初始化為空 JSON 物件，避免 MySQL JSON 欄位報錯
-		CreatedBy:          1,    // 臨時設定為1，後續需要從JWT中獲取使用者ID
+		MonitoringConfig:   "{}",
+		AlertManagerConfig: "{}",
+		CertExpireAt:       certExpireAt,
+		CreatedBy:          1, // 臨時設定為1，後續需要從JWT中獲取使用者ID
 	}
 
 	// 儲存到資料庫
@@ -200,14 +228,18 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 		return
 	}
 
-	// 返回新建立的叢集資訊
+	// 返回新建立的叢集資訊（含 RBAC 警告供前端提示）
 	newCluster := gin.H{
-		"id":        cluster.ID,
-		"name":      cluster.Name,
-		"apiServer": cluster.APIServer,
-		"version":   cluster.Version,
-		"status":    cluster.Status,
-		"createdAt": cluster.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		"id":           cluster.ID,
+		"name":         cluster.Name,
+		"apiServer":    cluster.APIServer,
+		"version":      cluster.Version,
+		"status":       cluster.Status,
+		"createdAt":    cluster.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		"rbacWarnings": rbacSummary,
+	}
+	if certExpireAt != nil {
+		newCluster["certExpireAt"] = certExpireAt.Format("2006-01-02T15:04:05Z")
 	}
 
 	response.OK(c, newCluster)

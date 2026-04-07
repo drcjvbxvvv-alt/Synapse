@@ -88,6 +88,119 @@ ExecStartPost=/bin/bash -c 'for i in $(seq 1 10); do curl -sf http://localhost:8
 
 ---
 
+## 1a. 進階：systemd LoadCredential 安全金鑰管理
+
+> 適用 systemd ≥ 247（RHEL 9 / Ubuntu 22.04 / Debian 12+）。
+> 比 `Environment=ENCRYPTION_KEY=...` 更安全：金鑰儲存在獨立的 tmpfs 掛載點，
+> 服務停止後自動消失；其他程序無法讀取 `/proc/<pid>/environ`。
+
+### 建立金鑰檔案
+
+```bash
+# 以 root 身份執行
+mkdir -p /etc/synapse/secrets
+chmod 700 /etc/synapse/secrets
+
+# 生成 256-bit 加密金鑰
+openssl rand -hex 32 > /etc/synapse/secrets/encryption.key
+chmod 400 /etc/synapse/secrets/encryption.key
+chown root:root /etc/synapse/secrets/encryption.key
+
+# JWT Secret（建議 64 bytes）
+openssl rand -hex 64 > /etc/synapse/secrets/jwt.secret
+chmod 400 /etc/synapse/secrets/jwt.secret
+chown root:root /etc/synapse/secrets/jwt.secret
+```
+
+### 修改 systemd Unit 使用 LoadCredential
+
+```ini
+[Unit]
+Description=Synapse Kubernetes Management Platform
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=synapse
+Group=synapse
+WorkingDirectory=/opt/synapse
+ExecStart=/opt/synapse/synapse
+
+# ── LoadCredential：以 root 擁有的金鑰檔安全注入 ─────────────────────────────
+# systemd 將檔案複製到專屬 tmpfs 目錄 $CREDENTIALS_DIRECTORY
+# 服務停止後該目錄自動卸載，其他程序無法存取
+LoadCredential=encryption-key:/etc/synapse/secrets/encryption.key
+LoadCredential=jwt-secret:/etc/synapse/secrets/jwt.secret
+
+# 改用 ENCRYPTION_KEY_FILE 指向 $CREDENTIALS_DIRECTORY（由 systemd 注入）
+Environment=APP_ENV=production
+Environment=ENCRYPTION_KEY_FILE=%d/encryption-key
+Environment=JWT_SECRET_FILE=%d/jwt-secret      # 若 Synapse 支援 JWT_SECRET_FILE 則使用
+
+# 其他非敏感設定（保留在 Environment= 或 EnvironmentFile= 均可）
+Environment=SERVER_PORT=8080
+Environment=SERVER_MODE=release
+Environment=LOG_FORMAT=json
+Environment=LOG_LEVEL=info
+Environment=DB_DRIVER=mysql
+Environment=DB_HOST=127.0.0.1
+Environment=DB_PORT=3306
+Environment=DB_USERNAME=synapse
+Environment=DB_DATABASE=synapse
+Environment=DB_PASSWORD=your-db-password      # 資料庫密碼亦可用相同方式 LoadCredential
+
+# 可觀測性
+Environment=OBSERVABILITY_ENABLED=true
+Environment=METRICS_TOKEN=your-scrape-token
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=synapse
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> **`%d` 是 systemd specifier**，展開為 `$CREDENTIALS_DIRECTORY`（例如
+> `/run/credentials/synapse.service`），由 systemd 自動填入，不需要手動設定。
+
+### 驗證金鑰是否正確載入
+
+```bash
+# 確認金鑰檔案已掛載
+sudo systemctl show synapse | grep CredentialsDirectory
+
+# 觀察啟動日誌是否看到 "欄位加密已啟用"
+sudo journalctl -u synapse -n 50 | grep -E "加密|ENCRYPTION"
+```
+
+### 舊版 systemd（< 247）替代方案：EnvironmentFile
+
+```bash
+# 建立只有 root 可讀的環境變數檔
+cat > /etc/synapse/secrets.env << 'EOF'
+ENCRYPTION_KEY=<your-32-byte-hex>
+JWT_SECRET=<your-jwt-secret>
+EOF
+chmod 400 /etc/synapse/secrets.env
+chown root:root /etc/synapse/secrets.env
+```
+
+在 Unit 中使用：
+
+```ini
+[Service]
+EnvironmentFile=/etc/synapse/secrets.env
+```
+
+> ⚠️ EnvironmentFile 的值仍可被 `sudo cat /proc/<pid>/environ` 讀到，
+> 安全性低於 LoadCredential，但優於直接寫入 `Environment=`。
+
+---
+
 ## 2. 將 stdout JSON 日誌重定向至檔案（可選）
 
 若不使用 journald，可重定向至檔案：

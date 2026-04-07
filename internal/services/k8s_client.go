@@ -2,16 +2,19 @@ package services
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	rolloutsclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/pkg/logger"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -23,6 +26,29 @@ import (
 type K8sClient struct {
 	clientset *kubernetes.Clientset
 	config    *rest.Config
+}
+
+// tlsPolicy 控制無 CA 憑證時的行為：strict | warn | skip
+// 由 InitTLSPolicy() 在 main.go 啟動時設定，預設 warn。
+var tlsPolicy = "warn"
+
+// InitTLSPolicy 設定全域 K8s TLS 策略，應在 main.go 呼叫一次。
+func InitTLSPolicy(policy string) {
+	switch policy {
+	case "strict", "warn", "skip":
+		tlsPolicy = policy
+	default:
+		tlsPolicy = "warn"
+	}
+}
+
+// zeroString 清零字串底層記憶體（best-effort，縮短敏感資料在 heap 的暴露時間）
+func zeroString(s *string) {
+	b := []byte(*s)
+	for i := range b {
+		b[i] = 0
+	}
+	*s = ""
 }
 
 type ClusterInfo struct {
@@ -68,7 +94,8 @@ func NewK8sClientFromKubeconfig(kubeconfig string) (*K8sClient, error) {
 	}, nil
 }
 
-// NewK8sClientFromToken 從API Server和Token建立客戶端
+// NewK8sClientFromToken 從API Server和Token建立客戶端。
+// TLS 行為由全域 tlsPolicy 控制（strict / warn / skip）。
 func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) {
 	// 確保API Server地址格式正確
 	if !strings.HasPrefix(apiServer, "http://") && !strings.HasPrefix(apiServer, "https://") {
@@ -76,34 +103,36 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 	}
 
 	config := &rest.Config{
-		Host:        apiServer,
-		BearerToken: token,
-		Timeout:     30 * time.Second,
-		QPS:         100,
-		Burst:       200,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true, // 預設跳過TLS驗證，避免證書問題
-		},
+		Host:          apiServer,
+		BearerToken:   token,
+		Timeout:       30 * time.Second,
+		QPS:           100,
+		Burst:         200,
 		WrapTransport: connPoolTransport,
 	}
 
-	// 如果提供了CA證書，嘗試使用它
 	if caCert != "" {
-		// 嘗試base64解碼
+		// 提供了 CA 憑證，啟用 TLS 驗證
 		caCertData, err := base64.StdEncoding.DecodeString(caCert)
 		if err != nil {
-			// 如果base64解碼失敗，嘗試直接使用原始資料
-			caCertData = []byte(caCert)
+			caCertData = []byte(caCert) // fallback：嘗試原始 PEM 格式
 		}
-		config.CAData = caCertData
-		config.Insecure = false
+		config.TLSClientConfig = rest.TLSClientConfig{CAData: caCertData}
 	} else {
-		// 未提供 CA 憑證：TLS 驗證已停用，API Server 憑證不受驗證
-		// 此設定僅適用於開發 / 測試環境，生產環境請提供 CA 憑證
-		logger.Warn("K8s TLS 驗證已停用（未提供 CA 憑證）",
-			"apiServer", apiServer,
-			"hint", "生產環境請在匯入叢集時填入 CA 憑證以防止中間人攻擊",
-		)
+		// 未提供 CA 憑證，依策略決定行為
+		switch tlsPolicy {
+		case "strict":
+			return nil, fmt.Errorf("TLS 驗證失敗：未提供 CA 憑證，且 K8S_TLS_POLICY=strict。" +
+				"請在匯入叢集時填入 CA 憑證，或設定 K8S_TLS_POLICY=warn 以允許繼續")
+		case "skip":
+			config.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
+		default: // warn
+			logger.Warn("⚠️  K8s TLS 驗證已停用（未提供 CA 憑證），存在 MITM 風險",
+				"apiServer", apiServer,
+				"hint", "匯入叢集時填入 CA 憑證，或設定 K8S_TLS_POLICY=strict 強制驗證",
+			)
+			config.TLSClientConfig = rest.TLSClientConfig{Insecure: true}
+		}
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
@@ -117,12 +146,19 @@ func NewK8sClientFromToken(apiServer, token, caCert string) (*K8sClient, error) 
 	}, nil
 }
 
-// NewK8sClientForCluster 根據叢集模型建立 K8s 客戶端（統一入口，消除重複的 if/else 建立邏輯）
+// NewK8sClientForCluster 根據叢集模型建立 K8s 客戶端（統一入口）。
+// 敏感字串在使用後立即清零，縮短明文在 heap 的暴露時間。
 func NewK8sClientForCluster(cluster *models.Cluster) (*K8sClient, error) {
 	if cluster.KubeconfigEnc != "" {
-		return NewK8sClientFromKubeconfig(cluster.KubeconfigEnc)
+		kubeconfig := cluster.KubeconfigEnc
+		defer zeroString(&kubeconfig)
+		return NewK8sClientFromKubeconfig(kubeconfig)
 	}
-	return NewK8sClientFromToken(cluster.APIServer, cluster.SATokenEnc, cluster.CAEnc)
+	token := cluster.SATokenEnc
+	caCert := cluster.CAEnc
+	defer zeroString(&token)
+	defer zeroString(&caCert)
+	return NewK8sClientFromToken(cluster.APIServer, token, caCert)
 }
 
 // TestConnection 測試連線並獲取叢集資訊
@@ -356,6 +392,83 @@ func (c *K8sClient) GetClientset() *kubernetes.Clientset {
 // GetRestConfig 返回底層 REST 配置（供動態客戶端/Informer 使用）
 func (c *K8sClient) GetRestConfig() *rest.Config {
 	return c.config
+}
+
+// RBACSummary 彙整匯入 Token 的 RBAC 危險程度
+type RBACSummary struct {
+	IsClusterAdmin bool     `json:"isClusterAdmin"`
+	WarningLevel   string   `json:"warningLevel"` // "critical" | "high" | "normal"
+	Warnings       []string `json:"warnings"`     // 具體的高危權限描述
+}
+
+// CheckRBACSummary 用 SelfSubjectAccessReview 評估當前憑證的 RBAC 危險程度。
+// 只做讀取檢查，不修改叢集任何資源。
+func (c *K8sClient) CheckRBACSummary(ctx context.Context) *RBACSummary {
+	summary := &RBACSummary{WarningLevel: "normal"}
+
+	checks := []struct {
+		verb, resource, group, description string
+		isCritical                          bool
+	}{
+		{"*", "*", "*", "cluster-admin（所有資源完整存取）", true},
+		{"delete", "nodes", "", "刪除 Node", false},
+		{"delete", "namespaces", "", "刪除 Namespace", false},
+		{"create", "clusterrolebindings", "rbac.authorization.k8s.io", "建立 ClusterRoleBinding", false},
+		{"list", "secrets", "", "列出全叢集 Secret", false},
+		{"create", "pods/exec", "", "對任意 Pod 執行命令", false},
+	}
+
+	for _, chk := range checks {
+		sar := &authorizationv1.SelfSubjectAccessReview{
+			Spec: authorizationv1.SelfSubjectAccessReviewSpec{
+				ResourceAttributes: &authorizationv1.ResourceAttributes{
+					Verb:     chk.verb,
+					Resource: chk.resource,
+					Group:    chk.group,
+				},
+			},
+		}
+		result, err := c.clientset.AuthorizationV1().SelfSubjectAccessReviews().Create(
+			ctx, sar, metav1.CreateOptions{})
+		if err != nil || !result.Status.Allowed {
+			continue
+		}
+		summary.Warnings = append(summary.Warnings, chk.description)
+		if chk.isCritical {
+			summary.IsClusterAdmin = true
+			summary.WarningLevel = "critical"
+		} else if summary.WarningLevel != "critical" {
+			summary.WarningLevel = "high"
+		}
+	}
+	return summary
+}
+
+// GetAPIServerCertExpiry 透過 TLS dial 取得 API Server 憑證到期時間。
+// 此方法繞過憑證驗證（用於取得到期日），不代表連線受信任。
+func (c *K8sClient) GetAPIServerCertExpiry() (*time.Time, error) {
+	u, err := url.Parse(c.config.Host)
+	if err != nil {
+		return nil, fmt.Errorf("解析 API Server 地址失敗: %w", err)
+	}
+	addr := u.Host
+	if !strings.Contains(addr, ":") {
+		addr += ":443"
+	}
+
+	//nolint:gosec // 僅用於取得憑證到期日，非信任連線
+	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
+	if err != nil {
+		return nil, fmt.Errorf("TLS 連線 API Server 失敗: %w", err)
+	}
+	defer conn.Close()
+
+	certs := conn.ConnectionState().PeerCertificates
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("API Server 未回傳 TLS 憑證")
+	}
+	expiry := certs[0].NotAfter
+	return &expiry, nil
 }
 
 // GetRolloutClient 獲取Argo Rollouts客戶端

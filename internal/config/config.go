@@ -8,6 +8,7 @@ import (
 
 // Config 應用配置結構
 type Config struct {
+	App             AppConfig             `mapstructure:"app"`
 	Server          ServerConfig          `mapstructure:"server"`
 	Database        DatabaseConfig        `mapstructure:"database"`
 	JWT             JWTConfig             `mapstructure:"jwt"`
@@ -15,6 +16,11 @@ type Config struct {
 	K8s             K8sConfig             `mapstructure:"k8s"`
 	Security        SecurityConfig        `mapstructure:"security"`
 	Observability   ObservabilityConfig   `mapstructure:"observability"`
+}
+
+// AppConfig 應用執行環境配置
+type AppConfig struct {
+	Env string `mapstructure:"env"` // production | development（預設 production）
 }
 
 // ObservabilityConfig 可觀測性配置
@@ -34,14 +40,16 @@ type ServerConfig struct {
 
 // DatabaseConfig 資料庫配置
 type DatabaseConfig struct {
-	Driver   string `mapstructure:"driver"`
-	DSN      string `mapstructure:"dsn"`
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
-	Database string `mapstructure:"database"`
-	Charset  string `mapstructure:"charset"`
+	Driver     string `mapstructure:"driver"`
+	DSN        string `mapstructure:"dsn"`
+	Host       string `mapstructure:"host"`
+	Port       int    `mapstructure:"port"`
+	Username   string `mapstructure:"username"`
+	Password   string `mapstructure:"password"`
+	Database   string `mapstructure:"database"`
+	Charset    string `mapstructure:"charset"`
+	TLSEnabled bool   `mapstructure:"tls_enabled"` // MySQL TLS（env: DB_TLS_ENABLED）
+	TLSCACert  string `mapstructure:"tls_ca_cert"` // CA 憑證路徑（env: DB_TLS_CA_CERT）
 }
 
 // JWTConfig JWT配置
@@ -64,7 +72,30 @@ type K8sConfig struct {
 
 // SecurityConfig 安全相關配置
 type SecurityConfig struct {
-	EncryptionKey string `mapstructure:"encryption_key"`
+	EncryptionKey     string            `mapstructure:"encryption_key"`      // 直接提供金鑰（env: ENCRYPTION_KEY）
+	EncryptionKeyFile string            `mapstructure:"encryption_key_file"` // 從檔案讀取金鑰（env: ENCRYPTION_KEY_FILE）
+	K8sTLSPolicy      string            `mapstructure:"k8s_tls_policy"`      // strict | warn | skip（預設 warn）
+	KeyProvider       KeyProviderConfig `mapstructure:"key_provider"`        // P3-1 可插拔 KMS 介面
+}
+
+// KeyProviderConfig 決定加密金鑰的來源
+type KeyProviderConfig struct {
+	// Type 選擇 provider：env | file | vault | aws_secretsmanager
+	// 當 Type 為空時，自動依 EncryptionKey / EncryptionKeyFile 退回 env/file 模式
+	Type string `mapstructure:"type"` // env: KEY_PROVIDER_TYPE
+
+	// Vault KV v2（type=vault）
+	VaultAddr        string `mapstructure:"vault_addr"`         // env: VAULT_ADDR
+	VaultToken       string `mapstructure:"vault_token"`        // env: VAULT_TOKEN
+	VaultSecretPath  string `mapstructure:"vault_secret_path"`  // e.g., secret/data/synapse/keys
+	VaultSecretField string `mapstructure:"vault_secret_field"` // e.g., encryption_key
+	VaultTLSSkip     bool   `mapstructure:"vault_tls_skip"`     // env: VAULT_TLS_SKIP
+
+	// AWS Secrets Manager（type=aws_secretsmanager）
+	// 需要啟用 pkg/crypto/provider_aws.go，詳見 docs/security/kms-providers.md
+	AWSRegion      string `mapstructure:"aws_region"`       // env: AWS_REGION
+	AWSSecretName  string `mapstructure:"aws_secret_name"`  // e.g., synapse/encryption-key
+	AWSSecretField string `mapstructure:"aws_secret_field"` // e.g., value
 }
 
 // Load 載入配置（純環境變數模式）
@@ -93,6 +124,8 @@ func Load() *Config {
 	_ = viper.BindEnv("database.password", "DB_PASSWORD")
 	_ = viper.BindEnv("database.database", "DB_DATABASE")
 	_ = viper.BindEnv("database.charset", "DB_CHARSET")
+	_ = viper.BindEnv("database.tls_enabled", "DB_TLS_ENABLED")
+	_ = viper.BindEnv("database.tls_ca_cert", "DB_TLS_CA_CERT")
 
 	// 繫結 JWT 環境變數
 	_ = viper.BindEnv("jwt.secret", "JWT_SECRET")
@@ -106,8 +139,24 @@ func Load() *Config {
 	_ = viper.BindEnv("k8s.default_namespace", "K8S_DEFAULT_NAMESPACE")
 	_ = viper.BindEnv("k8s.informer_sync_timeout", "INFORMER_SYNC_TIMEOUT")
 
+	// 繫結應用環境變數
+	_ = viper.BindEnv("app.env", "APP_ENV")
+
 	// 繫結安全環境變數
 	_ = viper.BindEnv("security.encryption_key", "ENCRYPTION_KEY")
+	_ = viper.BindEnv("security.encryption_key_file", "ENCRYPTION_KEY_FILE")
+	_ = viper.BindEnv("security.k8s_tls_policy", "K8S_TLS_POLICY")
+
+	// 繫結 KeyProvider 環境變數
+	_ = viper.BindEnv("security.key_provider.type", "KEY_PROVIDER_TYPE")
+	_ = viper.BindEnv("security.key_provider.vault_addr", "VAULT_ADDR")
+	_ = viper.BindEnv("security.key_provider.vault_token", "VAULT_TOKEN")
+	_ = viper.BindEnv("security.key_provider.vault_secret_path", "VAULT_SECRET_PATH")
+	_ = viper.BindEnv("security.key_provider.vault_secret_field", "VAULT_SECRET_FIELD")
+	_ = viper.BindEnv("security.key_provider.vault_tls_skip", "VAULT_TLS_SKIP")
+	_ = viper.BindEnv("security.key_provider.aws_region", "AWS_REGION")
+	_ = viper.BindEnv("security.key_provider.aws_secret_name", "AWS_SECRET_NAME")
+	_ = viper.BindEnv("security.key_provider.aws_secret_field", "AWS_SECRET_FIELD")
 
 	// 繫結可觀測性環境變數
 	_ = viper.BindEnv("observability.enabled", "OBSERVABILITY_ENABLED")
@@ -151,6 +200,8 @@ func setDefaults() {
 	viper.SetDefault("database.password", "")
 	viper.SetDefault("database.database", "synapse")
 	viper.SetDefault("database.charset", "utf8mb4")
+	viper.SetDefault("database.tls_enabled", false)
+	viper.SetDefault("database.tls_ca_cert", "")
 
 	// JWT預設配置
 	viper.SetDefault("jwt.secret", "synapse-secret")
@@ -163,8 +214,16 @@ func setDefaults() {
 	viper.SetDefault("k8s.default_namespace", "default")
 	viper.SetDefault("k8s.informer_sync_timeout", 30) // 30 seconds
 
-	// 安全預設配置（空字串表示禁用加密）
+	// 應用環境預設配置
+	viper.SetDefault("app.env", "production")
+
+	// 安全預設配置
 	viper.SetDefault("security.encryption_key", "")
+	viper.SetDefault("security.encryption_key_file", "")
+	viper.SetDefault("security.k8s_tls_policy", "warn")
+	viper.SetDefault("security.key_provider.type", "")
+	viper.SetDefault("security.key_provider.vault_secret_field", "encryption_key")
+	viper.SetDefault("security.key_provider.aws_secret_field", "value")
 
 	// 可觀測性預設配置
 	viper.SetDefault("observability.enabled", true)
