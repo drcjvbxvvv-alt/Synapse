@@ -590,6 +590,204 @@ PageSkeleton variant:
 
 ---
 
+### 5.10 OIDC / SSO 整合（Sprint，3–4 週）🔴 高優先級
+
+> **現況：** `auth_service.go` 只支援 `local` / `ldap` 兩種 auth_type，企業常用的 Google / Azure AD / Okta 無法接入。
+
+#### 現況診斷
+
+| 問題 | 位置 | 影響 |
+|------|------|------|
+| auth_type switch 只有 local / ldap | `internal/services/auth_service.go:53` | 企業用戶必須手動建帳號 |
+| 無 Authorization Code Flow | — | 無法接入 SSO |
+| 無 PKCE 支援 | — | 公開客戶端不安全 |
+| 無 callback 路由 | `internal/router/` | OIDC 登入無法完成 |
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| `OIDCConfig` 資料模型（provider / client_id / client_secret / issuer_url / scopes） | `internal/models/system_config.go` | W1 |
+| OIDC 設定 API（CRUD + 連線測試） | `internal/handlers/oidc.go` | W1 |
+| Authorization Code Flow 後端（`/auth/oidc/login` → redirect → `/auth/oidc/callback`） | `internal/handlers/oidc.go` | W1–W2 |
+| PKCE（code_challenge / code_verifier）支援 | `internal/handlers/oidc.go` | W2 |
+| JWT claims 映射（sub / email / groups → Synapse User） | `internal/services/auth_service.go` | W2 |
+| 自動佈建帳號（首次 OIDC 登入自動建立 User，status=active） | `internal/services/auth_service.go` | W2–W3 |
+| 群組映射（OIDC groups claim → Synapse UserGroup） | `internal/services/auth_service.go` | W3 |
+| 系統設定前端（OIDC 設定 Tab：Provider / Issuer URL / Client ID / Secret / Scopes） | `ui/src/pages/settings/OIDCSettings.tsx` | W3–W4 |
+| 登入頁新增「SSO 登入」按鈕 | `ui/src/pages/auth/Login.tsx` | W4 |
+| 三語 i18n | — | W4 |
+
+#### 支援的 Provider
+
+| Provider | Issuer URL 範例 |
+|----------|----------------|
+| Google | `https://accounts.google.com` |
+| Azure AD | `https://login.microsoftonline.com/{tenant}/v2.0` |
+| Okta | `https://{domain}.okta.com/oauth2/default` |
+| GitHub (OAuth2) | `https://github.com` |
+| Keycloak | `https://{host}/realms/{realm}` |
+| 自定義 OIDC | 任意符合 OIDC Discovery 規範的 issuer |
+
+#### 資料模型
+
+```go
+// internal/models/system_config.go（擴充）
+type OIDCConfig struct {
+    Enabled      bool     `json:"enabled"`
+    ProviderName string   `json:"provider_name"`   // 顯示名稱，如 "Google"
+    IssuerURL    string   `json:"issuer_url"`
+    ClientID     string   `json:"client_id"`
+    ClientSecret string   `json:"client_secret"`   // AES-256-GCM 加密儲存
+    Scopes       []string `json:"scopes"`           // ["openid","email","profile","groups"]
+    // 自動佈建
+    AutoProvision    bool   `json:"auto_provision"`    // 首次登入自動建帳號
+    GroupsClaim      string `json:"groups_claim"`      // groups claim 欄位名稱
+    EmailDomainAllow string `json:"email_domain_allow"` // 限制 email domain，空=不限
+}
+```
+
+#### API 端點
+
+```
+GET  /auth/oidc/login              發起 OIDC 登入（redirect to provider）
+GET  /auth/oidc/callback           接收 provider callback，換 token，建立 session
+GET  /system/oidc/config           取得 OIDC 設定（PlatformAdmin）
+PUT  /system/oidc/config           更新 OIDC 設定（PlatformAdmin）
+POST /system/oidc/test             測試連線（驗證 issuer discovery）
+```
+
+#### 完成指標
+- 使用者可點「SSO 登入」按鈕，透過 Google/Azure AD 完成登入
+- 首次登入自動建立 Synapse 帳號，groups claim 自動映射至 UserGroup
+- Client Secret 以 AES-256-GCM 加密儲存，`GET /config` 不回傳明文
+
+---
+
+### 5.11 全局 API Rate Limiting（Sprint，1 週）🔴 高優先級
+
+> **現況：** `internal/middleware/rate_limit.go` 只保護登入端點（5次/分鐘），所有其他 API 無流量保護。
+
+#### 現況診斷
+
+| 問題 | 影響 |
+|------|------|
+| 叢集刪除、批量刪除 API 無限速 | 任意已登入用戶可高頻呼叫破壞性操作 |
+| PromQL 查詢、日誌串流 API 無限速 | 可對 Prometheus/ES 發起壓力攻擊 |
+| WebSocket 連線無數量上限 | 惡意用戶可建立大量 Terminal 佔用資源 |
+
+#### 待實作任務
+
+| 任務 | 檔案 | 說明 |
+|------|------|------|
+| 引入 per-user 滑動視窗限流（`golang.org/x/time/rate`） | `internal/middleware/rate_limit.go` | 每用戶每分鐘 API 呼叫上限（預設 300） |
+| 引入 per-IP 全局限流 | `internal/middleware/rate_limit.go` | 每 IP 每分鐘 600 次（防爬蟲） |
+| 高危 API 專屬限速（破壞性操作） | `internal/middleware/rate_limit.go` | DELETE / batch-delete 每用戶每分鐘 20 次 |
+| WebSocket 並行連線數上限 | `internal/handlers/common.go` | 每用戶最多 10 個並行 WebSocket（含 terminal + log） |
+| 限流後回傳標準 HTTP 429 + Retry-After header | `internal/middleware/rate_limit.go` | 前端可顯示「請求過於頻繁」提示 |
+| 前端 429 攔截 | `ui/src/utils/api.ts` | HTTP 429 時顯示 Toast 提示並延遲重試 |
+
+#### 限流分層策略
+
+```
+全局（per-IP）：  600 req/min  → 超出 → 429（防爬蟲 / DDoS）
+認證用戶（per-user）：
+  一般 API：      300 req/min
+  PromQL 查詢：   60  req/min  （避免壓垮 Prometheus）
+  破壞性操作：    20  req/min  （DELETE / PATCH scale / batch）
+  WebSocket：     10  並行連線
+未認證：
+  登入：          5 次/min（已有）
+  其他：          30 req/min
+```
+
+---
+
+### 5.12 AlertManager Receiver 完整管理（Sprint，2 週）✅ 已完成（2026-04-07）
+
+> **現況：** `alertmanager_service.go` 只實作 `GetReceivers()`（讀取），無法新增/修改/刪除 receiver，使用者仍需 SSH 手動改 YAML。
+
+#### 現況診斷
+
+| 問題 | 位置 | 影響 |
+|------|------|------|
+| Receiver CRUD 缺失 | `alertmanager_service.go` | 告警渠道變更需 SSH 進伺服器 |
+| 無 Receiver 前端 UI | — | 使用者無法自助設定告警目標 |
+| Alertmanager config 修改需 reload | — | 需呼叫 `POST /-/reload` 套用 |
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| `GetAlertmanagerConfig()`：取得完整 config YAML | `internal/services/alertmanager_service.go` | W1 |
+| `UpdateAlertmanagerConfig()`：PUT config + reload | `internal/services/alertmanager_service.go` | W1 |
+| `CreateReceiver()` / `UpdateReceiver()` / `DeleteReceiver()` | `internal/services/alertmanager_service.go` | W1–W2 |
+| `TestReceiver()`：發送測試告警至指定 receiver | `internal/services/alertmanager_service.go` | W2 |
+| Handler 層 CRUD + Test 端點 | `internal/handlers/alert.go` | W2 |
+| 前端 Receiver 管理頁（叢集維度，Tab 整合至監控頁） | `ui/src/pages/monitor/ReceiverManagement.tsx` | W2 |
+| 支援 receiver 類型：email / slack / webhook / pagerduty / dingtalk | — | W2 |
+
+#### API 端點
+
+```
+GET    /clusters/:id/alertmanager/receivers          列出 receiver
+POST   /clusters/:id/alertmanager/receivers          新增 receiver
+PUT    /clusters/:id/alertmanager/receivers/:name    更新 receiver
+DELETE /clusters/:id/alertmanager/receivers/:name    刪除 receiver
+POST   /clusters/:id/alertmanager/receivers/:name/test  測試推送
+```
+
+#### 完成指標
+- 使用者可在 UI 新增 Slack / Email receiver，不需 SSH
+- 測試按鈕可即時確認告警推送是否成功
+- Config 變更後自動 reload Alertmanager
+
+---
+
+### 5.13 映像索引自動同步 Worker（小型 Sprint，3 天）🟡 中優先級
+
+> **現況：** `SyncImages` API 存在，但需手動呼叫觸發，無 cron 自動更新，索引會隨叢集部署而過期。
+
+#### 待實作任務
+
+| 任務 | 檔案 | 說明 |
+|------|------|------|
+| `ImageIndexWorker` — 每小時增量掃描 | `internal/services/image_index_worker.go` | 複用 `CostWorker` 框架；只更新有變動的工作負載 |
+| 增量更新邏輯（比對 ResourceVersion 避免全量重建） | `internal/services/image_index_worker.go` | 降低 K8s API 壓力 |
+| `Router.Setup()` 啟動 Worker | `internal/router/router.go` | 統一生命週期管理 |
+| 前端「映像索引」頁新增「上次同步時間」+ 手動觸發按鈕 | `ui/src/pages/workload/ImageSearch.tsx` | 補齊狀態可見性 |
+
+---
+
+### 5.14 工作負載列表日誌快捷入口（小型 Sprint，2 天）🟢 低優先級
+
+> **現況：** 從工作負載列表查看 Pod 日誌需進入詳情頁再選 Pod，路徑過長（3 層點擊）。
+
+#### 待實作任務
+
+| 任務 | 檔案 | 說明 |
+|------|------|------|
+| Deployment 列表行尾加「日誌」icon 按鈕 | `ui/src/pages/workload/DeploymentTab.tsx` | 點擊開 Drawer，內嵌 Pod 選擇器 + 日誌串流 |
+| StatefulSet / DaemonSet 同步補齊 | 對應 Tab 檔案 | 統一體驗 |
+| `LogDrawer` 元件（Pod 下拉選擇 + 即時日誌串流） | `ui/src/components/LogDrawer.tsx` | 複用現有 WebSocket 日誌邏輯 |
+
+---
+
+### 5.15 Synapse 自身可觀測性（小型 Sprint，1 週）🟢 低優先級
+
+> **現況：** 平台監控所有 K8s 叢集，但 Synapse 本身無 Prometheus metrics endpoint，無法自監控。
+
+#### 待實作任務
+
+| 任務 | 檔案 | 說明 |
+|------|------|------|
+| 引入 `github.com/prometheus/client_golang` | `go.mod` | — |
+| 暴露 `GET /metrics` endpoint | `internal/router/router.go` | 標準 Prometheus 格式 |
+| 自訂 metrics：活躍 WebSocket 連線數、K8s 請求 QPS、Informer 快取大小、DB 查詢延遲 | `internal/middleware/metrics.go` | — |
+| Grafana Dashboard JSON（Synapse 自監控） | `deploy/grafana/synapse-dashboard.json` | — |
+
+---
+
 ## 6. 里程碑規劃
 
 ### 功能完成狀態總覽

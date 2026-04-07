@@ -56,6 +56,7 @@ import type {
 } from '../../services/alertService';
 import PageSkeleton from '../../components/PageSkeleton';
 import EmptyState from '../../components/EmptyState';
+import ReceiverManagement from './ReceiverManagement';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -654,6 +655,16 @@ const [loading, setLoading] = useState(false);
         </span>
       ),
       children: <SilencesTab />,
+    },
+    {
+      key: 'receivers',
+      label: (
+        <span>
+          <SettingOutlined />
+          告警渠道
+        </span>
+      ),
+      children: clusterId ? <ReceiverManagement clusterId={clusterId} /> : null,
     },
   ];
 

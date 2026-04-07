@@ -95,6 +95,35 @@
 
 ---
 
+## [Unreleased] - §5.12 AlertManager Receiver CRUD（2026-04-07）
+
+### 新增 ✨
+
+**後端**
+- `internal/models/alertmanager.go` 新增完整 Receiver 型別：`ReceiverConfig`、`EmailConfig`、`SlackConfig`、`WebhookConfig`、`PagerdutyConfig`、`DingtalkConfig`、`AlertmanagerFullConfig`、`TestReceiverRequest`
+- `AlertManagerConfig` 新增 `configMapNamespace` / `configMapName` 欄位（用於 K8s ConfigMap 回寫）
+- `internal/services/alertmanager_service.go` 新增 Receiver CRUD 方法：
+  - `GetFullReceivers()` — 從 `/api/v2/status` 取得 config YAML → 解析回傳完整 Receiver 列表
+  - `CreateReceiver()` — 修改 config YAML → 更新 K8s ConfigMap → 觸發 `POST /-/reload`
+  - `UpdateReceiver()` — 同上（按名稱比對替換）
+  - `DeleteReceiver()` — 同上（按名稱比對過濾）
+  - `TestReceiver()` — `POST /api/v2/alerts` 傳送測試告警至指定 Receiver
+- `internal/handlers/alert.go` 新增 Handler：`GetFullReceivers`、`CreateReceiver`、`UpdateReceiver`、`DeleteReceiver`、`TestReceiver`；重構 `getAlertConfig` 共用輔助方法；`NewAlertHandler` 新增 `k8sMgr`、`clusterSvc` 參數
+
+**API**
+- `GET    /api/v1/clusters/:clusterID/receivers/full` — 取得完整 Receiver 設定（含各渠道詳細參數）
+- `POST   /api/v1/clusters/:clusterID/receivers` — 新增 Receiver
+- `PUT    /api/v1/clusters/:clusterID/receivers/:name` — 更新 Receiver
+- `DELETE /api/v1/clusters/:clusterID/receivers/:name` — 刪除 Receiver
+- `POST   /api/v1/clusters/:clusterID/receivers/:name/test` — 傳送測試告警
+
+**前端**
+- `ui/src/services/alertService.ts` 新增完整 Receiver 型別及 `getFullReceivers`、`createReceiver`、`updateReceiver`、`deleteReceiver`、`testReceiver` API 方法
+- 新增 `ui/src/pages/alert/ReceiverManagement.tsx` — 完整 Receiver CRUD 管理頁，支援 Email / Slack / Webhook / PagerDuty / 釘釘五種渠道
+- `AlertCenter.tsx` 新增「告警渠道」Tab，整合 `ReceiverManagement`
+
+---
+
 ## [1.0.1] - 2026-01-27
 
 ### 修复 🐛

@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"fmt"
 	"strconv"
 
+	"github.com/clay-wangzhi/Synapse/internal/k8s"
 	"github.com/clay-wangzhi/Synapse/internal/models"
 	"github.com/clay-wangzhi/Synapse/internal/response"
 	"github.com/clay-wangzhi/Synapse/internal/services"
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,13 +18,22 @@ import (
 type AlertHandler struct {
 	alertManagerConfigService *services.AlertManagerConfigService
 	alertManagerService       *services.AlertManagerService
+	k8sMgr                    *k8s.ClusterInformerManager
+	clusterSvc                *services.ClusterService
 }
 
 // NewAlertHandler 建立告警處理器
-func NewAlertHandler(alertManagerConfigService *services.AlertManagerConfigService, alertManagerService *services.AlertManagerService) *AlertHandler {
+func NewAlertHandler(
+	alertManagerConfigService *services.AlertManagerConfigService,
+	alertManagerService *services.AlertManagerService,
+	k8sMgr *k8s.ClusterInformerManager,
+	clusterSvc *services.ClusterService,
+) *AlertHandler {
 	return &AlertHandler{
 		alertManagerConfigService: alertManagerConfigService,
 		alertManagerService:       alertManagerService,
+		k8sMgr:                    k8sMgr,
+		clusterSvc:                clusterSvc,
 	}
 }
 
@@ -389,4 +401,173 @@ func (h *AlertHandler) GetReceivers(c *gin.Context) {
 func (h *AlertHandler) GetAlertManagerConfigTemplate(c *gin.Context) {
 	template := h.alertManagerConfigService.GetAlertManagerConfigTemplate()
 	response.OK(c, template)
+}
+
+// GetFullReceivers 取得完整 Receiver 設定（含各渠道詳細參數）
+func (h *AlertHandler) GetFullReceivers(c *gin.Context) {
+	_, config, ok := h.getAlertConfig(c)
+	if !ok {
+		return
+	}
+	if !config.Enabled {
+		response.OK(c, []models.ReceiverConfig{})
+		return
+	}
+	receivers, err := h.alertManagerService.GetFullReceivers(c.Request.Context(), config)
+	if err != nil {
+		logger.Error("取得完整 Receiver 列表失敗", "error", err)
+		response.InternalError(c, "取得 Receiver 列表失敗: "+err.Error())
+		return
+	}
+	response.OK(c, receivers)
+}
+
+// CreateReceiver 新增 Receiver
+func (h *AlertHandler) CreateReceiver(c *gin.Context) {
+	clusterID, config, ok := h.getAlertConfig(c)
+	if !ok {
+		return
+	}
+	if !config.Enabled {
+		response.BadRequest(c, "Alertmanager 未啟用")
+		return
+	}
+	var req models.CreateReceiverRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "請求參數錯誤: "+err.Error())
+		return
+	}
+	clientset, err := h.getClientset(clusterID)
+	if err != nil {
+		response.InternalError(c, "取得叢集客戶端失敗: "+err.Error())
+		return
+	}
+	if err := h.alertManagerService.CreateReceiver(c.Request.Context(), config, clientset, &req); err != nil {
+		logger.Error("新增 Receiver 失敗", "error", err)
+		response.InternalError(c, "新增 Receiver 失敗: "+err.Error())
+		return
+	}
+	response.OK(c, gin.H{"message": "新增成功"})
+}
+
+// UpdateReceiver 更新 Receiver
+func (h *AlertHandler) UpdateReceiver(c *gin.Context) {
+	clusterID, config, ok := h.getAlertConfig(c)
+	if !ok {
+		return
+	}
+	if !config.Enabled {
+		response.BadRequest(c, "Alertmanager 未啟用")
+		return
+	}
+	name := c.Param("name")
+	if name == "" {
+		response.BadRequest(c, "Receiver 名稱不能為空")
+		return
+	}
+	var req models.UpdateReceiverRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "請求參數錯誤: "+err.Error())
+		return
+	}
+	clientset, err := h.getClientset(clusterID)
+	if err != nil {
+		response.InternalError(c, "取得叢集客戶端失敗: "+err.Error())
+		return
+	}
+	if err := h.alertManagerService.UpdateReceiver(c.Request.Context(), config, clientset, name, &req); err != nil {
+		logger.Error("更新 Receiver 失敗", "error", err)
+		response.InternalError(c, "更新 Receiver 失敗: "+err.Error())
+		return
+	}
+	response.OK(c, gin.H{"message": "更新成功"})
+}
+
+// DeleteReceiver 刪除 Receiver
+func (h *AlertHandler) DeleteReceiver(c *gin.Context) {
+	clusterID, config, ok := h.getAlertConfig(c)
+	if !ok {
+		return
+	}
+	if !config.Enabled {
+		response.BadRequest(c, "Alertmanager 未啟用")
+		return
+	}
+	name := c.Param("name")
+	if name == "" {
+		response.BadRequest(c, "Receiver 名稱不能為空")
+		return
+	}
+	clientset, err := h.getClientset(clusterID)
+	if err != nil {
+		response.InternalError(c, "取得叢集客戶端失敗: "+err.Error())
+		return
+	}
+	if err := h.alertManagerService.DeleteReceiver(c.Request.Context(), config, clientset, name); err != nil {
+		logger.Error("刪除 Receiver 失敗", "error", err)
+		response.InternalError(c, "刪除 Receiver 失敗: "+err.Error())
+		return
+	}
+	response.OK(c, gin.H{"message": "刪除成功"})
+}
+
+// TestReceiver 傳送測試告警至指定 Receiver
+func (h *AlertHandler) TestReceiver(c *gin.Context) {
+	_, config, ok := h.getAlertConfig(c)
+	if !ok {
+		return
+	}
+	if !config.Enabled {
+		response.BadRequest(c, "Alertmanager 未啟用")
+		return
+	}
+	name := c.Param("name")
+	if name == "" {
+		response.BadRequest(c, "Receiver 名稱不能為空")
+		return
+	}
+	var req models.TestReceiverRequest
+	_ = c.ShouldBindJSON(&req) // 可選 body
+	if err := h.alertManagerService.TestReceiver(c.Request.Context(), config, name, &req); err != nil {
+		logger.Error("測試 Receiver 失敗", "error", err)
+		response.InternalError(c, "測試告警傳送失敗: "+err.Error())
+		return
+	}
+	response.OK(c, gin.H{"message": "測試告警已傳送"})
+}
+
+// -------- 共用輔助方法 --------
+
+// getAlertConfig 解析 clusterID 並取得 AlertManagerConfig（失敗時自動回傳錯誤）
+func (h *AlertHandler) getAlertConfig(c *gin.Context) (uint, *models.AlertManagerConfig, bool) {
+	clusterIDStr := c.Param("clusterID")
+	clusterID64, err := strconv.ParseUint(clusterIDStr, 10, 32)
+	if err != nil {
+		response.BadRequest(c, "無效的叢集ID")
+		return 0, nil, false
+	}
+	clusterID := uint(clusterID64)
+	config, err := h.alertManagerConfigService.GetAlertManagerConfig(clusterID)
+	if err != nil {
+		logger.Error("取得 Alertmanager 配置失敗", "error", err)
+		response.InternalError(c, "取得 Alertmanager 配置失敗: "+err.Error())
+		return 0, nil, false
+	}
+	return clusterID, config, true
+}
+
+// getClientset 取得叢集的 kubernetes.Clientset
+func (h *AlertHandler) getClientset(clusterID uint) (*kubernetes.Clientset, error) {
+	if h.clusterSvc == nil || h.k8sMgr == nil {
+		return nil, fmt.Errorf("K8s 管理器未初始化")
+	}
+	cluster, err := h.clusterSvc.GetCluster(clusterID)
+	if err != nil {
+		return nil, fmt.Errorf("取得叢集失敗: %w", err)
+	}
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
+	if err != nil {
+		return nil, fmt.Errorf("取得 K8s 客戶端失敗: %w", err)
+	}
+	return k8sClient.GetClientset(), nil
 }

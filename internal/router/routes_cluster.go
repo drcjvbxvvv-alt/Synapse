@@ -67,7 +67,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			// alertmanager 子分組
 			alertManagerConfigSvc := services.NewAlertManagerConfigService(d.db)
 			alertManagerSvc := services.NewAlertManagerService()
-			alertHandler := handlers.NewAlertHandler(alertManagerConfigSvc, alertManagerSvc)
+			alertHandler := handlers.NewAlertHandler(alertManagerConfigSvc, alertManagerSvc, d.k8sMgr, d.clusterSvc)
 			alertmanager := cluster.Group("/alertmanager")
 			{
 				alertmanager.GET("/config", alertHandler.GetAlertManagerConfig)
@@ -97,6 +97,11 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			receivers := cluster.Group("/receivers")
 			{
 				receivers.GET("", alertHandler.GetReceivers)
+				receivers.GET("/full", alertHandler.GetFullReceivers)
+				receivers.POST("", alertHandler.CreateReceiver)
+				receivers.PUT("/:name", alertHandler.UpdateReceiver)
+				receivers.DELETE("/:name", alertHandler.DeleteReceiver)
+				receivers.POST("/:name/test", alertHandler.TestReceiver)
 			}
 
 			// nodes 子分組

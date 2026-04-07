@@ -87,9 +87,68 @@ export interface AlertStats {
   bySeverity: Record<string, number>;
 }
 
-// 接收器
+// 接收器（簡易，來自 /receivers）
 export interface Receiver {
   name: string;
+}
+
+// Email 告警配置
+export interface EmailConfig {
+  to: string;
+  from?: string;
+  smarthost?: string;
+  authUsername?: string;
+  authPassword?: string;
+  requireTls?: boolean;
+  headers?: Record<string, string>;
+}
+
+// Slack 告警配置
+export interface SlackConfig {
+  apiUrl: string;
+  channel: string;
+  username?: string;
+  iconEmoji?: string;
+  text?: string;
+  title?: string;
+}
+
+// Webhook 告警配置
+export interface WebhookConfig {
+  url: string;
+  sendResolved?: boolean;
+  maxAlerts?: number;
+}
+
+// PagerDuty 告警配置
+export interface PagerdutyConfig {
+  routingKey: string;
+  serviceKey?: string;
+  url?: string;
+  description?: string;
+}
+
+// 釘釘告警配置
+export interface DingtalkConfig {
+  apiUrl: string;
+  secret?: string;
+  message?: string;
+}
+
+// 完整 Receiver 配置
+export interface ReceiverConfig {
+  name: string;
+  emailConfigs?: EmailConfig[];
+  slackConfigs?: SlackConfig[];
+  webhookConfigs?: WebhookConfig[];
+  pagerdutyConfigs?: PagerdutyConfig[];
+  dingtalkConfigs?: DingtalkConfig[];
+}
+
+// 測試 Receiver 請求
+export interface TestReceiverRequest {
+  labels?: Record<string, string>;
+  annotations?: Record<string, string>;
 }
 
 // Alertmanager 狀態
@@ -186,9 +245,34 @@ export const alertService = {
 
   // ========== 接收器相關 ==========
 
-  // 獲取接收器列表
+  // 獲取接收器列表（簡易）
   getReceivers: (clusterId: string | number) => {
     return request.get<Receiver[]>(`/clusters/${clusterId}/receivers`);
+  },
+
+  // 獲取完整 Receiver 設定（含各渠道詳細參數）
+  getFullReceivers: (clusterId: string | number) => {
+    return request.get<ReceiverConfig[]>(`/clusters/${clusterId}/receivers/full`);
+  },
+
+  // 新增 Receiver
+  createReceiver: (clusterId: string | number, receiver: ReceiverConfig) => {
+    return request.post<void>(`/clusters/${clusterId}/receivers`, receiver);
+  },
+
+  // 更新 Receiver
+  updateReceiver: (clusterId: string | number, name: string, receiver: ReceiverConfig) => {
+    return request.put<void>(`/clusters/${clusterId}/receivers/${encodeURIComponent(name)}`, receiver);
+  },
+
+  // 刪除 Receiver
+  deleteReceiver: (clusterId: string | number, name: string) => {
+    return request.delete<void>(`/clusters/${clusterId}/receivers/${encodeURIComponent(name)}`);
+  },
+
+  // 測試 Receiver
+  testReceiver: (clusterId: string | number, name: string, req?: TestReceiverRequest) => {
+    return request.post<void>(`/clusters/${clusterId}/receivers/${encodeURIComponent(name)}/test`, req ?? {});
   },
 };
 
