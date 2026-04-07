@@ -202,6 +202,12 @@ func GetOpsClusterRole() *rbacv1.ClusterRole {
 				Resources: []string{"localsubjectaccessreviews"},
 				Verbs:     []string{"create"},
 			},
+			// Gateway API - write
+			{
+				APIGroups: []string{"gateway.networking.k8s.io"},
+				Resources: []string{"gatewayclasses", "gateways", "httproutes", "grpcroutes", "referencegrants"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+			},
 			// Nodes - read only
 			{
 				APIGroups: []string{""},
@@ -355,6 +361,17 @@ func GetDevClusterRole() *rbacv1.ClusterRole {
 				Resources: []string{"ingresses", "ingresses/status", "networkpolicies"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
+			// Gateway API - write
+			{
+				APIGroups: []string{"gateway.networking.k8s.io"},
+				Resources: []string{"gateways", "httproutes", "grpcroutes", "referencegrants"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"gateway.networking.k8s.io"},
+				Resources: []string{"gatewayclasses"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
 		},
 	}
 }
@@ -442,6 +459,12 @@ func GetReadonlyClusterRole() *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{""},
 				Resources: []string{"nodes", "persistentvolumes"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			// Gateway API - read
+			{
+				APIGroups: []string{"gateway.networking.k8s.io"},
+				Resources: []string{"gatewayclasses", "gateways", "httproutes", "grpcroutes", "referencegrants"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
 		},

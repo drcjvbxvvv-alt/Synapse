@@ -3,6 +3,9 @@ import type {
   GatewayClassItem,
   GatewayItem,
   HTTPRouteItem,
+  GRPCRouteItem,
+  ReferenceGrantItem,
+  TopologyData,
 } from '../pages/network/gatewayTypes';
 
 interface ListResponse<T> {
@@ -65,4 +68,44 @@ export const gatewayService = {
 
   deleteHTTPRoute: (clusterId: string, namespace: string, name: string) =>
     request.delete(`/clusters/${clusterId}/httproutes/${namespace}/${name}`),
+
+  // GRPCRoute
+  listGRPCRoutes: (clusterId: string, namespace?: string): Promise<ListResponse<GRPCRouteItem>> =>
+    request.get(`/clusters/${clusterId}/grpcroutes`, {
+      params: namespace ? { namespace } : undefined,
+    }),
+
+  getGRPCRoute: (clusterId: string, namespace: string, name: string): Promise<GRPCRouteItem> =>
+    request.get(`/clusters/${clusterId}/grpcroutes/${namespace}/${name}`),
+
+  getGRPCRouteYAML: (clusterId: string, namespace: string, name: string): Promise<{ yaml: string }> =>
+    request.get(`/clusters/${clusterId}/grpcroutes/${namespace}/${name}/yaml`),
+
+  createGRPCRoute: (clusterId: string, namespace: string, yaml: string) =>
+    request.post(`/clusters/${clusterId}/grpcroutes`, { namespace, yaml }),
+
+  updateGRPCRoute: (clusterId: string, namespace: string, name: string, yaml: string) =>
+    request.put(`/clusters/${clusterId}/grpcroutes/${namespace}/${name}`, { yaml }),
+
+  deleteGRPCRoute: (clusterId: string, namespace: string, name: string) =>
+    request.delete(`/clusters/${clusterId}/grpcroutes/${namespace}/${name}`),
+
+  // ReferenceGrant
+  listReferenceGrants: (clusterId: string, namespace?: string): Promise<ListResponse<ReferenceGrantItem>> =>
+    request.get(`/clusters/${clusterId}/referencegrants`, {
+      params: namespace ? { namespace } : undefined,
+    }),
+
+  getReferenceGrantYAML: (clusterId: string, namespace: string, name: string): Promise<{ yaml: string }> =>
+    request.get(`/clusters/${clusterId}/referencegrants/${namespace}/${name}/yaml`),
+
+  createReferenceGrant: (clusterId: string, namespace: string, yaml: string) =>
+    request.post(`/clusters/${clusterId}/referencegrants`, { namespace, yaml }),
+
+  deleteReferenceGrant: (clusterId: string, namespace: string, name: string) =>
+    request.delete(`/clusters/${clusterId}/referencegrants/${namespace}/${name}`),
+
+  // Topology
+  getTopology: (clusterId: string): Promise<TopologyData> =>
+    request.get(`/clusters/${clusterId}/gateway/topology`),
 };

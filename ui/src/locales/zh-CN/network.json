@@ -15,7 +15,10 @@
     "tabs": {
       "gatewayclass": "GatewayClass",
       "gateways": "Gateways",
-      "httproutes": "HTTPRoutes"
+      "httproutes": "HTTPRoutes",
+      "grpcroutes": "GRPCRoutes",
+      "referencegrants": "ReferenceGrants",
+      "topology": "拓扑图"
     },
     "columns": {
       "name": "名称",
@@ -108,7 +111,9 @@
       "backendWeight": "权重",
       "createBtn": "创建",
       "saveBtn": "保存",
-      "cancel": "取消"
+      "cancel": "取消",
+      "createGRPCRoute": "创建 GRPCRoute",
+      "editGRPCRoute": "编辑 GRPCRoute：{{name}}"
     },
     "messages": {
       "fetchError": "获取数据失败",
@@ -129,13 +134,38 @@
       "deleteHTTPRouteSuccess": "HTTPRoute 删除成功",
       "deleteHTTPRouteError": "HTTPRoute 删除失败",
       "confirmDeleteHTTPRoute": "确定要删除 HTTPRoute「{{name}}」吗？",
+      "confirmDeleteGRPCRoute": "确定要删除 GRPCRoute「{{name}}」吗？",
+      "confirmDeleteReferenceGrant": "确定要删除 ReferenceGrant「{{name}}」吗？",
       "confirmDeleteTitle": "确认删除",
-      "yamlParseError": "YAML 格式错误，无法解析"
+      "yamlParseError": "YAML 格式错误，无法解析",
+      "createGRPCRouteSuccess": "GRPCRoute 创建成功",
+      "createGRPCRouteError": "GRPCRoute 创建失败",
+      "updateGRPCRouteSuccess": "GRPCRoute 更新成功",
+      "updateGRPCRouteError": "GRPCRoute 更新失败",
+      "deleteGRPCRouteSuccess": "GRPCRoute 删除成功",
+      "deleteGRPCRouteError": "GRPCRoute 删除失败",
+      "createReferenceGrantSuccess": "ReferenceGrant 创建成功",
+      "createReferenceGrantError": "ReferenceGrant 创建失败",
+      "deleteReferenceGrantSuccess": "ReferenceGrant 删除成功",
+      "deleteReferenceGrantError": "ReferenceGrant 删除失败"
     },
     "pagination": {
       "gatewayClassTotal": "共 {{total}} 个 GatewayClass",
       "gatewayTotal": "共 {{total}} 个 Gateway",
-      "httprouteTotal": "共 {{total}} 个 HTTPRoute"
+      "httprouteTotal": "共 {{total}} 个 HTTPRoute",
+      "grpcrouteTotal": "共 {{total}} 个 GRPCRoute",
+      "referencegrantTotal": "共 {{total}} 个 ReferenceGrant"
+    },
+    "refgrant": {
+      "create": "创建 ReferenceGrant",
+      "from": "来源（From）",
+      "to": "目标（To）"
+    },
+    "topology": {
+      "fetchError": "获取拓扑数据失败",
+      "refresh": "刷新",
+      "loading": "加载拓扑图...",
+      "empty": "暂无拓扑数据（尚无 Gateway 或路由资源）"
     }
   },
   "networkpolicy": {

@@ -62,6 +62,41 @@ const HTTPRouteDrawer: React.FC<HTTPRouteDrawerProps> = ({ open, clusterId, item
 
   if (!item) return null;
 
+  const renderWeightBars = (backends: HTTPRouteBackend[]) => {
+    const total = backends.reduce((s, b) => s + (b.weight || 1), 0);
+    const colors = ['#1677ff', '#52c41a', '#fa8c16', '#722ed1', '#13c2c2'];
+    return (
+      <div style={{ marginBottom: 8 }}>
+        {/* stacked bar */}
+        <div style={{ display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', marginBottom: 6 }}>
+          {backends.map((b, i) => (
+            <div
+              key={i}
+              title={`${b.name}: ${b.weight}`}
+              style={{
+                flex: b.weight || 1,
+                background: colors[i % colors.length],
+                transition: 'flex 0.3s',
+              }}
+            />
+          ))}
+        </div>
+        {/* legend */}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {backends.map((b, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: colors[i % colors.length] }} />
+              <span>{b.name}:{b.port}</span>
+              <Tag style={{ margin: 0, fontSize: 10 }}>
+                {Math.round(((b.weight || 1) / total) * 100)}%
+              </Tag>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const backendColumns = [
     { title: t('network:gatewayapi.columns.name'), dataIndex: 'name', key: 'name' },
     {
@@ -176,6 +211,7 @@ const HTTPRouteDrawer: React.FC<HTTPRouteDrawerProps> = ({ open, clusterId, item
                   <Typography.Text strong style={{ display: 'block', marginBottom: 4, marginTop: 8 }}>
                     {t('network:gatewayapi.drawer.backends')}
                   </Typography.Text>
+                  {rule.backends.length > 1 && renderWeightBars(rule.backends)}
                   {rule.backends.length > 0 ? (
                     <Table
                       rowKey={(r: HTTPRouteBackend) => `${r.namespace}/${r.name}:${r.port}`}

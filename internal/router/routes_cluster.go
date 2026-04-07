@@ -322,6 +322,23 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 					httproutes.DELETE("/:namespace/:name", gatewayHandler.DeleteHTTPRoute)
 					httproutes.GET("/:namespace/:name/yaml", gatewayHandler.GetHTTPRouteYAML)
 				}
+				grpcroutes := cluster.Group("/grpcroutes")
+				{
+					grpcroutes.GET("", gatewayHandler.ListGRPCRoutes)
+					grpcroutes.POST("", gatewayHandler.CreateGRPCRoute)
+					grpcroutes.GET("/:namespace/:name", gatewayHandler.GetGRPCRoute)
+					grpcroutes.PUT("/:namespace/:name", gatewayHandler.UpdateGRPCRoute)
+					grpcroutes.DELETE("/:namespace/:name", gatewayHandler.DeleteGRPCRoute)
+					grpcroutes.GET("/:namespace/:name/yaml", gatewayHandler.GetGRPCRouteYAML)
+				}
+				referencegrants := cluster.Group("/referencegrants")
+				{
+					referencegrants.GET("", gatewayHandler.ListReferenceGrants)
+					referencegrants.POST("", gatewayHandler.CreateReferenceGrant)
+					referencegrants.DELETE("/:namespace/:name", gatewayHandler.DeleteReferenceGrant)
+					referencegrants.GET("/:namespace/:name/yaml", gatewayHandler.GetReferenceGrantYAML)
+				}
+				cluster.GET("/gateway/topology", gatewayHandler.GetTopology)
 			}
 
 			// networkpolicies 子分組

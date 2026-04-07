@@ -28,6 +28,16 @@ var (
 		Version:  "v1",
 		Resource: "httproutes",
 	}
+	GRPCRouteGVR = schema.GroupVersionResource{
+		Group:    "gateway.networking.k8s.io",
+		Version:  "v1",
+		Resource: "grpcroutes",
+	}
+	ReferenceGrantGVR = schema.GroupVersionResource{
+		Group:    "gateway.networking.k8s.io",
+		Version:  "v1beta1",
+		Resource: "referencegrants",
+	}
 )
 
 // --- DTO 定義 ---
@@ -99,6 +109,76 @@ type HTTPRouteItem struct {
 	Rules      []HTTPRouteRule       `json:"rules"`
 	Conditions []GatewayK8sCondition `json:"conditions"`
 	CreatedAt  string                `json:"createdAt"`
+}
+
+// --- GRPCRoute DTO ---
+
+type GRPCRouteMethod struct {
+	Service string `json:"service"`
+	Method  string `json:"method,omitempty"`
+}
+
+type GRPCRouteMatch struct {
+	Method *GRPCRouteMethod `json:"method,omitempty"`
+}
+
+type GRPCRouteBackend struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Port      int64  `json:"port"`
+	Weight    int64  `json:"weight"`
+}
+
+type GRPCRouteRule struct {
+	Matches  []GRPCRouteMatch  `json:"matches"`
+	Backends []GRPCRouteBackend `json:"backends"`
+}
+
+type GRPCRouteItem struct {
+	Name       string                `json:"name"`
+	Namespace  string                `json:"namespace"`
+	Hostnames  []string              `json:"hostnames"`
+	ParentRefs []HTTPRouteParentRef  `json:"parentRefs"`
+	Rules      []GRPCRouteRule       `json:"rules"`
+	Conditions []GatewayK8sCondition `json:"conditions"`
+	CreatedAt  string                `json:"createdAt"`
+}
+
+// --- ReferenceGrant DTO ---
+
+type ReferenceGrantPeer struct {
+	Group     string `json:"group"`
+	Kind      string `json:"kind"`
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name,omitempty"`
+}
+
+type ReferenceGrantItem struct {
+	Name      string               `json:"name"`
+	Namespace string               `json:"namespace"`
+	From      []ReferenceGrantPeer `json:"from"`
+	To        []ReferenceGrantPeer `json:"to"`
+	CreatedAt string               `json:"createdAt"`
+}
+
+// --- Topology DTO ---
+
+type TopologyNode struct {
+	ID        string `json:"id"`
+	Kind      string `json:"kind"`      // GatewayClass | Gateway | HTTPRoute | GRPCRoute | Service
+	Name      string `json:"name"`
+	Namespace string `json:"namespace,omitempty"`
+	Status    string `json:"status,omitempty"`
+}
+
+type TopologyEdge struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
+}
+
+type TopologyData struct {
+	Nodes []TopologyNode `json:"nodes"`
+	Edges []TopologyEdge `json:"edges"`
 }
 
 // --- Service ---
@@ -541,6 +621,369 @@ func (s *GatewayService) UpdateHTTPRoute(ctx context.Context, namespace, name, y
 // DeleteHTTPRoute 刪除 HTTPRoute
 func (s *GatewayService) DeleteHTTPRoute(ctx context.Context, namespace, name string) error {
 	return s.dynClient.Resource(HTTPRouteGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+// --- GRPCRoute ---
+
+func (s *GatewayService) ListGRPCRoutes(ctx context.Context, namespace string) ([]GRPCRouteItem, error) {
+	var list *unstructured.UnstructuredList
+	var err error
+	if namespace == "" {
+		list, err = s.dynClient.Resource(GRPCRouteGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	} else {
+		list, err = s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	}
+	if err != nil {
+		return nil, err
+	}
+	result := make([]GRPCRouteItem, 0, len(list.Items))
+	for _, item := range list.Items {
+		result = append(result, toGRPCRouteItem(item))
+	}
+	return result, nil
+}
+
+func (s *GatewayService) GetGRPCRoute(ctx context.Context, namespace, name string) (*GRPCRouteItem, error) {
+	obj, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	item := toGRPCRouteItem(*obj)
+	return &item, nil
+}
+
+func (s *GatewayService) GetGRPCRouteYAML(ctx context.Context, namespace, name string) (string, error) {
+	obj, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	gwCleanMeta(obj)
+	data, err := yaml.Marshal(obj.Object)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (s *GatewayService) CreateGRPCRoute(ctx context.Context, namespace, yamlStr string) (*GRPCRouteItem, error) {
+	obj, err := gwParseYAML(yamlStr)
+	if err != nil {
+		return nil, err
+	}
+	if namespace != "" {
+		obj.SetNamespace(namespace)
+	}
+	result, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	item := toGRPCRouteItem(*result)
+	return &item, nil
+}
+
+func (s *GatewayService) UpdateGRPCRoute(ctx context.Context, namespace, name, yamlStr string) (*GRPCRouteItem, error) {
+	existing, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	obj, err := gwParseYAML(yamlStr)
+	if err != nil {
+		return nil, err
+	}
+	obj.SetNamespace(namespace)
+	obj.SetName(name)
+	obj.SetResourceVersion(existing.GetResourceVersion())
+	result, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).Update(ctx, obj, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	item := toGRPCRouteItem(*result)
+	return &item, nil
+}
+
+func (s *GatewayService) DeleteGRPCRoute(ctx context.Context, namespace, name string) error {
+	return s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+// --- ReferenceGrant ---
+
+func (s *GatewayService) ListReferenceGrants(ctx context.Context, namespace string) ([]ReferenceGrantItem, error) {
+	var list *unstructured.UnstructuredList
+	var err error
+	if namespace == "" {
+		list, err = s.dynClient.Resource(ReferenceGrantGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	} else {
+		list, err = s.dynClient.Resource(ReferenceGrantGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	}
+	if err != nil {
+		return nil, err
+	}
+	result := make([]ReferenceGrantItem, 0, len(list.Items))
+	for _, item := range list.Items {
+		result = append(result, toReferenceGrantItem(item))
+	}
+	return result, nil
+}
+
+func (s *GatewayService) GetReferenceGrantYAML(ctx context.Context, namespace, name string) (string, error) {
+	obj, err := s.dynClient.Resource(ReferenceGrantGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	gwCleanMeta(obj)
+	data, err := yaml.Marshal(obj.Object)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (s *GatewayService) CreateReferenceGrant(ctx context.Context, namespace, yamlStr string) (*ReferenceGrantItem, error) {
+	obj, err := gwParseYAML(yamlStr)
+	if err != nil {
+		return nil, err
+	}
+	if namespace != "" {
+		obj.SetNamespace(namespace)
+	}
+	result, err := s.dynClient.Resource(ReferenceGrantGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	item := toReferenceGrantItem(*result)
+	return &item, nil
+}
+
+func (s *GatewayService) DeleteReferenceGrant(ctx context.Context, namespace, name string) error {
+	return s.dynClient.Resource(ReferenceGrantGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+// --- Topology ---
+
+func (s *GatewayService) GetTopology(ctx context.Context) (*TopologyData, error) {
+	nodes := make([]TopologyNode, 0)
+	edges := make([]TopologyEdge, 0)
+	nodeSet := map[string]bool{}
+
+	addNode := func(n TopologyNode) {
+		if !nodeSet[n.ID] {
+			nodeSet[n.ID] = true
+			nodes = append(nodes, n)
+		}
+	}
+
+	// GatewayClasses
+	gcList, _ := s.ListGatewayClasses(ctx)
+	for _, gc := range gcList {
+		addNode(TopologyNode{ID: "gc:" + gc.Name, Kind: "GatewayClass", Name: gc.Name, Status: gc.AcceptedStatus})
+	}
+
+	// Gateways
+	gwList, _ := s.ListGateways(ctx, "")
+	for _, gw := range gwList {
+		gwID := "gw:" + gw.Namespace + "/" + gw.Name
+		status := "Unknown"
+		for _, c := range gw.Conditions {
+			if c.Type == "Programmed" {
+				if c.Status == "True" {
+					status = "Ready"
+				} else {
+					status = c.Reason
+				}
+				break
+			}
+		}
+		addNode(TopologyNode{ID: gwID, Kind: "Gateway", Name: gw.Name, Namespace: gw.Namespace, Status: status})
+		gcID := "gc:" + gw.GatewayClass
+		if nodeSet[gcID] {
+			edges = append(edges, TopologyEdge{Source: gcID, Target: gwID})
+		}
+	}
+
+	// HTTPRoutes
+	hrList, _ := s.ListHTTPRoutes(ctx, "")
+	for _, hr := range hrList {
+		hrID := "hr:" + hr.Namespace + "/" + hr.Name
+		addNode(TopologyNode{ID: hrID, Kind: "HTTPRoute", Name: hr.Name, Namespace: hr.Namespace})
+		for _, pr := range hr.ParentRefs {
+			parentID := "gw:" + pr.GatewayNamespace + "/" + pr.GatewayName
+			if nodeSet[parentID] {
+				edges = append(edges, TopologyEdge{Source: parentID, Target: hrID})
+			}
+		}
+		for _, rule := range hr.Rules {
+			for _, b := range rule.Backends {
+				svcNS := b.Namespace
+				if svcNS == "" {
+					svcNS = hr.Namespace
+				}
+				svcID := "svc:" + svcNS + "/" + b.Name
+				addNode(TopologyNode{ID: svcID, Kind: "Service", Name: b.Name, Namespace: svcNS})
+				edges = append(edges, TopologyEdge{Source: hrID, Target: svcID})
+			}
+		}
+	}
+
+	// GRPCRoutes
+	grList, _ := s.ListGRPCRoutes(ctx, "")
+	for _, gr := range grList {
+		grID := "gr:" + gr.Namespace + "/" + gr.Name
+		addNode(TopologyNode{ID: grID, Kind: "GRPCRoute", Name: gr.Name, Namespace: gr.Namespace})
+		for _, pr := range gr.ParentRefs {
+			parentID := "gw:" + pr.GatewayNamespace + "/" + pr.GatewayName
+			if nodeSet[parentID] {
+				edges = append(edges, TopologyEdge{Source: parentID, Target: grID})
+			}
+		}
+		for _, rule := range gr.Rules {
+			for _, b := range rule.Backends {
+				svcNS := b.Namespace
+				if svcNS == "" {
+					svcNS = gr.Namespace
+				}
+				svcID := "svc:" + svcNS + "/" + b.Name
+				addNode(TopologyNode{ID: svcID, Kind: "Service", Name: b.Name, Namespace: svcNS})
+				edges = append(edges, TopologyEdge{Source: grID, Target: svcID})
+			}
+		}
+	}
+
+	return &TopologyData{Nodes: nodes, Edges: edges}, nil
+}
+
+func toGRPCRouteItem(obj unstructured.Unstructured) GRPCRouteItem {
+	spec := gwGetMap(obj.Object, "spec")
+	status := gwGetMap(obj.Object, "status")
+
+	hostnames := make([]string, 0)
+	for _, h := range gwGetSlice(spec, "hostnames") {
+		if hs, ok := h.(string); ok {
+			hostnames = append(hostnames, hs)
+		}
+	}
+
+	statusCondMap := map[string][]GatewayK8sCondition{}
+	for _, p := range gwGetSlice(status, "parents") {
+		pm, ok := p.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		prm := gwGetMap(pm, "parentRef")
+		ns := gwGetString(prm, "namespace")
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		key := ns + "/" + gwGetString(prm, "name")
+		statusCondMap[key] = gwGetConditions(pm, "conditions")
+	}
+
+	parentRefs := make([]HTTPRouteParentRef, 0)
+	for _, p := range gwGetSlice(spec, "parentRefs") {
+		pm, ok := p.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		ns := gwGetString(pm, "namespace")
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		name := gwGetString(pm, "name")
+		parentRefs = append(parentRefs, HTTPRouteParentRef{
+			GatewayNamespace: ns,
+			GatewayName:      name,
+			SectionName:      gwGetString(pm, "sectionName"),
+			Conditions:       statusCondMap[ns+"/"+name],
+		})
+	}
+
+	rules := make([]GRPCRouteRule, 0)
+	for _, r := range gwGetSlice(spec, "rules") {
+		rm, ok := r.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		matches := make([]GRPCRouteMatch, 0)
+		for _, m := range gwGetSlice(rm, "matches") {
+			mm, ok := m.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			var method *GRPCRouteMethod
+			if methodMap := gwGetMap(mm, "method"); methodMap != nil {
+				method = &GRPCRouteMethod{
+					Service: gwGetString(methodMap, "service"),
+					Method:  gwGetString(methodMap, "method"),
+				}
+			}
+			matches = append(matches, GRPCRouteMatch{Method: method})
+		}
+		backends := make([]GRPCRouteBackend, 0)
+		for _, b := range gwGetSlice(rm, "backendRefs") {
+			bm, ok := b.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			bns := gwGetString(bm, "namespace")
+			if bns == "" {
+				bns = obj.GetNamespace()
+			}
+			weight := gwGetInt64(bm, "weight")
+			if weight == 0 {
+				weight = 1
+			}
+			backends = append(backends, GRPCRouteBackend{
+				Name:      gwGetString(bm, "name"),
+				Namespace: bns,
+				Port:      gwGetInt64(bm, "port"),
+				Weight:    weight,
+			})
+		}
+		rules = append(rules, GRPCRouteRule{Matches: matches, Backends: backends})
+	}
+
+	conditions := make([]GatewayK8sCondition, 0)
+	for _, conds := range statusCondMap {
+		conditions = append(conditions, conds...)
+	}
+
+	return GRPCRouteItem{
+		Name:       obj.GetName(),
+		Namespace:  obj.GetNamespace(),
+		Hostnames:  hostnames,
+		ParentRefs: parentRefs,
+		Rules:      rules,
+		Conditions: conditions,
+		CreatedAt:  obj.GetCreationTimestamp().UTC().Format("2006-01-02T15:04:05Z"),
+	}
+}
+
+func toReferenceGrantItem(obj unstructured.Unstructured) ReferenceGrantItem {
+	spec := gwGetMap(obj.Object, "spec")
+
+	parsePeers := func(key string) []ReferenceGrantPeer {
+		peers := make([]ReferenceGrantPeer, 0)
+		for _, p := range gwGetSlice(spec, key) {
+			pm, ok := p.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			peers = append(peers, ReferenceGrantPeer{
+				Group:     gwGetString(pm, "group"),
+				Kind:      gwGetString(pm, "kind"),
+				Namespace: gwGetString(pm, "namespace"),
+				Name:      gwGetString(pm, "name"),
+			})
+		}
+		return peers
+	}
+
+	return ReferenceGrantItem{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+		From:      parsePeers("from"),
+		To:        parsePeers("to"),
+		CreatedAt: obj.GetCreationTimestamp().UTC().Format("2006-01-02T15:04:05Z"),
+	}
 }
 
 // gwParseYAML 將 YAML 字串解析為 Unstructured 物件

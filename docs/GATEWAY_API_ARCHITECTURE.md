@@ -1,6 +1,6 @@
 # Synapse Gateway API 架構設計文件
 
-> 版本：v1.2 | 日期：2026-04-07 | 狀態：Phase 1 & Phase 2 已實作
+> 版本：v1.3 | 日期：2026-04-07 | 狀態：Phase 1、Phase 2 & Phase 3 已實作
 > 對應里程碑：M-GW（Gateway API 整合）
 
 ---
@@ -795,13 +795,31 @@ rules:
 - [x] 刪除確認 dialog（modal.confirm）
 - [x] `GatewayList.tsx` / `HTTPRouteList.tsx`：整合建立/編輯/刪除按鈕
 
-### Phase 3：進階功能
+### Phase 3：進階功能 ✅ 已完成（2026-04-07）
 
-- [ ] `GRPCRoute` 支援（列表 + 詳情 + CRUD）
-- [ ] `ReferenceGrant` 管理頁面
-- [ ] 流量分割視覺化（canary 百分比圓餅圖 / 進度條）
-- [ ] RBAC 範本整合（`clusterroles.go`）
-- [ ] Gateway 拓撲圖（GatewayClass → Gateway → Routes → Services）
+- [x] `GRPCRoute` 支援（列表 + YAML 直編 CRUD，Monaco editor）
+- [x] `ReferenceGrant` 管理頁面（列表 + 建立 + 刪除 + YAML 檢視）
+- [x] 流量分割視覺化（多 backend 時顯示比例色條 + 百分比圖例）
+- [x] RBAC 範本整合（Ops/Dev 寫入權限；Readonly 唯讀；Admin 已有 `*`）
+- [x] Gateway 拓撲圖（@xyflow/react + dagre 自動佈局，GatewayClass → Gateway → Routes → Services）
+
+**新增 GVR**：`GRPCRouteGVR`（v1）、`ReferenceGrantGVR`（v1beta1）
+
+**新增後端**：
+- `gateway_service.go`：`ListGRPCRoutes`、`GetGRPCRoute`、`GetGRPCRouteYAML`、CRUD；`ListReferenceGrants`、`GetReferenceGrantYAML`、`CreateReferenceGrant`、`DeleteReferenceGrant`；`GetTopology`
+- `gateway.go`：對應 handler 方法
+- `routes_cluster.go`：`/grpcroutes`、`/referencegrants`、`/gateway/topology` 路由
+
+**新增前端**：
+- `GRPCRouteList.tsx`：列表 + 行內 YAML 編輯器 Modal
+- `ReferenceGrantList.tsx`：列表 + 建立 Modal + YAML 檢視
+- `GatewayTopology.tsx`：React Flow 拓撲圖，dagre LR 佈局
+- `HTTPRouteDrawer.tsx`：多 backend 時加入流量分割進度條
+
+**RBAC**：
+- `synapse-ops`：Gateway API 全資源 CRUD
+- `synapse-dev`：Gateway/Route CRUD，GatewayClass 唯讀
+- `synapse-readonly`：Gateway API 全資源唯讀
 
 ---
 

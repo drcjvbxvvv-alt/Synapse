@@ -6,6 +6,9 @@ import { gatewayService } from '../../services/gatewayService';
 import GatewayClassList from './GatewayClassList';
 import GatewayList from './GatewayList';
 import HTTPRouteList from './HTTPRouteList';
+import GRPCRouteList from './GRPCRouteList';
+import ReferenceGrantList from './ReferenceGrantList';
+import GatewayTopology from './GatewayTopology';
 import type { GatewayTabProps } from './gatewayTypes';
 
 const GATEWAY_API_DOCS = 'https://gateway-api.sigs.k8s.io/guides/';
@@ -124,6 +127,21 @@ const GatewayAPITab: React.FC<GatewayTabProps> = ({ clusterId }) => {
       key: 'httproutes',
       label: t('gatewayapi.tabs.httproutes'),
       children: <HTTPRouteList clusterId={clusterId} />,
+    },
+    {
+      key: 'grpcroutes',
+      label: t('gatewayapi.tabs.grpcroutes'),
+      children: <GRPCRouteList clusterId={clusterId} />,
+    },
+    {
+      key: 'referencegrants',
+      label: t('gatewayapi.tabs.referencegrants'),
+      children: <ReferenceGrantList clusterId={clusterId} />,
+    },
+    {
+      key: 'topology',
+      label: t('gatewayapi.tabs.topology'),
+      children: <GatewayTopology clusterId={clusterId} />,
     },
   ];
 

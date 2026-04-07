@@ -15,7 +15,10 @@
     "tabs": {
       "gatewayclass": "GatewayClass",
       "gateways": "Gateways",
-      "httproutes": "HTTPRoutes"
+      "httproutes": "HTTPRoutes",
+      "grpcroutes": "GRPCRoutes",
+      "referencegrants": "ReferenceGrants",
+      "topology": "Topology"
     },
     "columns": {
       "name": "Name",
@@ -108,7 +111,9 @@
       "backendWeight": "Weight",
       "createBtn": "Create",
       "saveBtn": "Save",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "createGRPCRoute": "Create GRPCRoute",
+      "editGRPCRoute": "Edit GRPCRoute: {{name}}"
     },
     "messages": {
       "fetchError": "Failed to fetch data",
@@ -129,13 +134,38 @@
       "deleteHTTPRouteSuccess": "HTTPRoute deleted",
       "deleteHTTPRouteError": "Failed to delete HTTPRoute",
       "confirmDeleteHTTPRoute": "Delete HTTPRoute \"{{name}}\"?",
+      "confirmDeleteGRPCRoute": "Delete GRPCRoute \"{{name}}\"?",
+      "confirmDeleteReferenceGrant": "Delete ReferenceGrant \"{{name}}\"?",
       "confirmDeleteTitle": "Confirm Delete",
-      "yamlParseError": "Invalid YAML format"
+      "yamlParseError": "Invalid YAML format",
+      "createGRPCRouteSuccess": "GRPCRoute created",
+      "createGRPCRouteError": "Failed to create GRPCRoute",
+      "updateGRPCRouteSuccess": "GRPCRoute updated",
+      "updateGRPCRouteError": "Failed to update GRPCRoute",
+      "deleteGRPCRouteSuccess": "GRPCRoute deleted",
+      "deleteGRPCRouteError": "Failed to delete GRPCRoute",
+      "createReferenceGrantSuccess": "ReferenceGrant created",
+      "createReferenceGrantError": "Failed to create ReferenceGrant",
+      "deleteReferenceGrantSuccess": "ReferenceGrant deleted",
+      "deleteReferenceGrantError": "Failed to delete ReferenceGrant"
     },
     "pagination": {
       "gatewayClassTotal": "Total {{total}} GatewayClass(es)",
       "gatewayTotal": "Total {{total}} Gateway(s)",
-      "httprouteTotal": "Total {{total}} HTTPRoute(s)"
+      "httprouteTotal": "Total {{total}} HTTPRoute(s)",
+      "grpcrouteTotal": "Total {{total}} GRPCRoute(s)",
+      "referencegrantTotal": "Total {{total}} ReferenceGrant(s)"
+    },
+    "refgrant": {
+      "create": "Create ReferenceGrant",
+      "from": "From",
+      "to": "To"
+    },
+    "topology": {
+      "fetchError": "Failed to fetch topology",
+      "refresh": "Refresh",
+      "loading": "Loading topology...",
+      "empty": "No topology data (no Gateway or Route resources found)"
     }
   },
   "networkpolicy": {

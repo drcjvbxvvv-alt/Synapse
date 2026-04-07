@@ -120,3 +120,95 @@ export interface HTTPRouteItem {
   conditions: GatewayK8sCondition[];
   createdAt: string;
 }
+
+// --- GRPCRoute ---
+
+export interface GRPCRouteMethod {
+  service: string;
+  method?: string;
+}
+
+export interface GRPCRouteMatch {
+  method?: GRPCRouteMethod;
+}
+
+export interface GRPCRouteBackend {
+  name: string;
+  namespace: string;
+  port: number;
+  weight: number;
+}
+
+export interface GRPCRouteRule {
+  matches: GRPCRouteMatch[];
+  backends: GRPCRouteBackend[];
+}
+
+export interface GRPCRouteItem {
+  name: string;
+  namespace: string;
+  hostnames: string[];
+  parentRefs: HTTPRouteParentRef[];
+  rules: GRPCRouteRule[];
+  conditions: GatewayK8sCondition[];
+  createdAt: string;
+}
+
+// --- ReferenceGrant ---
+
+export interface ReferenceGrantPeer {
+  group: string;
+  kind: string;
+  namespace?: string;
+  name?: string;
+}
+
+export interface ReferenceGrantItem {
+  name: string;
+  namespace: string;
+  from: ReferenceGrantPeer[];
+  to: ReferenceGrantPeer[];
+  createdAt: string;
+}
+
+// --- Topology ---
+
+export interface TopologyNode {
+  id: string;
+  kind: 'GatewayClass' | 'Gateway' | 'HTTPRoute' | 'GRPCRoute' | 'Service';
+  name: string;
+  namespace?: string;
+  status?: string;
+}
+
+export interface TopologyEdge {
+  source: string;
+  target: string;
+}
+
+export interface TopologyData {
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
+}
+
+// --- GRPCRoute Form values（Phase 3）---
+
+export interface GRPCRouteBackendFormValue {
+  name: string;
+  port: number;
+  weight: number;
+}
+
+export interface GRPCRouteRuleFormValue {
+  service?: string;
+  method?: string;
+  backends: GRPCRouteBackendFormValue[];
+}
+
+export interface GRPCRouteFormValues {
+  name: string;
+  namespace: string;
+  hostnames: string[];
+  parentRefs: HTTPRouteParentRefFormValue[];
+  rules: GRPCRouteRuleFormValue[];
+}
