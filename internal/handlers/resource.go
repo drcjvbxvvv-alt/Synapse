@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"encoding/csv"
+	"fmt"
+
 	"github.com/clay-wangzhi/Synapse/internal/response"
 	"github.com/clay-wangzhi/Synapse/internal/services"
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
@@ -143,4 +146,102 @@ func (h *ResourceHandler) GetWasteWorkloads(c *gin.Context) {
 		return
 	}
 	response.OK(c, items)
+}
+
+// GetTrend 取得容量佔用月度趨勢
+// GET /api/v1/clusters/:clusterID/resources/trend?months=6
+func (h *ResourceHandler) GetTrend(c *gin.Context) {
+	clusterID, err := parseClusterID(c.Param("clusterID"))
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	cluster, err := h.clusterSvc.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "叢集不存在")
+		return
+	}
+	months := parseIntQuery(c, "months", 6)
+	points, err := h.svc.GetTrend(cluster, months)
+	if err != nil {
+		logger.Error("容量趨勢查詢失敗", "cluster_id", clusterID, "error", err)
+		response.InternalError(c, err.Error())
+		return
+	}
+	response.OK(c, points)
+}
+
+// GetForecast 取得容量耗盡預測
+// GET /api/v1/clusters/:clusterID/resources/forecast?days=180
+func (h *ResourceHandler) GetForecast(c *gin.Context) {
+	clusterID, err := parseClusterID(c.Param("clusterID"))
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	cluster, err := h.clusterSvc.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "叢集不存在")
+		return
+	}
+	days := parseIntQuery(c, "days", 180)
+	result, err := h.svc.GetForecast(cluster, days)
+	if err != nil {
+		logger.Error("容量預測失敗", "cluster_id", clusterID, "error", err)
+		response.InternalError(c, err.Error())
+		return
+	}
+	response.OK(c, result)
+}
+
+// ExportWasteCSV 匯出低效工作負載 CSV
+// GET /api/v1/clusters/:clusterID/resources/waste/export
+func (h *ResourceHandler) ExportWasteCSV(c *gin.Context) {
+	clusterID, err := parseClusterID(c.Param("clusterID"))
+	if err != nil {
+		response.BadRequest(c, "無效的叢集 ID")
+		return
+	}
+	cluster, err := h.clusterSvc.GetCluster(clusterID)
+	if err != nil {
+		response.NotFound(c, "叢集不存在")
+		return
+	}
+	threshold := parseFloatQuery(c, "cpu_threshold", 0.2)
+	items, err := h.svc.GetWasteWorkloads(cluster, threshold)
+	if err != nil {
+		logger.Warn("低效工作負載查詢失敗（CSV）", "cluster_id", clusterID, "error", err)
+		response.ServiceUnavailable(c, "叢集連線中，請稍後再試")
+		return
+	}
+
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"waste-%d.csv\"", clusterID))
+
+	w := csv.NewWriter(c.Writer)
+	_ = w.Write([]string{
+		"命名空間", "工作負載", "類型", "副本",
+		"CPU申請(m)", "CPU使用(m)", "CPU效率(%)",
+		"記憶體申請(MiB)", "記憶體使用(MiB)", "記憶體效率(%)",
+		"廢棄分數", "建議CPU(m)", "建議記憶體(MiB)",
+	})
+	for _, it := range items {
+		recCPU, recMem := "N/A", "N/A"
+		if it.RightSizing != nil {
+			recCPU = fmt.Sprintf("%.0f", it.RightSizing.CPUMillicores)
+			recMem = fmt.Sprintf("%.0f", it.RightSizing.MemoryMiB)
+		}
+		_ = w.Write([]string{
+			it.Namespace, it.Name, it.Kind, fmt.Sprintf("%d", it.Replicas),
+			fmt.Sprintf("%.0f", it.CPURequestMillicores),
+			fmt.Sprintf("%.1f", it.CPUUsageMillicores),
+			fmt.Sprintf("%.1f", it.CPUEfficiency*100),
+			fmt.Sprintf("%.0f", it.MemoryRequestMiB),
+			fmt.Sprintf("%.1f", it.MemoryUsageMiB),
+			fmt.Sprintf("%.1f", it.MemoryEfficiency*100),
+			fmt.Sprintf("%.2f", it.WasteScore),
+			recCPU, recMem,
+		})
+	}
+	w.Flush()
 }

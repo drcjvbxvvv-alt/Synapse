@@ -17,11 +17,19 @@ import {
   App,
   Typography,
   Alert,
+  Form,
+  Radio,
+  Input,
+  Divider,
+  Spin,
 } from 'antd';
 import {
   DownloadOutlined,
   ReloadOutlined,
   WarningOutlined,
+  CloudOutlined,
+  SyncOutlined,
+  SaveOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
@@ -54,7 +62,15 @@ import {
   type NamespaceOccupancy,
   type NamespaceEfficiency,
   type WorkloadEfficiency,
+  type CapacityTrendPoint,
+  type ForecastResult,
 } from '../../services/costService';
+import {
+  CloudBillingService,
+  type CloudBillingConfig,
+  type CloudBillingOverview,
+  type UpdateBillingConfigReq,
+} from '../../services/cloudBillingService';
 
 const { Text } = Typography;
 
@@ -109,6 +125,23 @@ const CostDashboard: React.FC = () => {
   const [wlEffNs, setWlEffNs] = useState('');
   const [wasteItems, setWasteItems] = useState<WorkloadEfficiency[]>([]);
   const [wasteItemsLoading, setWasteItemsLoading] = useState(false);
+
+  // Phase 3: capacity trend + forecast
+  const [capacityTrend, setCapacityTrend] = useState<CapacityTrendPoint[]>([]);
+  const [capacityTrendLoading, setCapacityTrendLoading] = useState(false);
+  const [forecast, setForecast] = useState<ForecastResult | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+
+  // Phase 4: cloud billing
+  const [billingConfig, setBillingConfig] = useState<CloudBillingConfig | null>(null);
+  const [billingConfigLoading, setBillingConfigLoading] = useState(false);
+  const [billingOverview, setBillingOverview] = useState<CloudBillingOverview | null>(null);
+  const [billingOverviewLoading, setBillingOverviewLoading] = useState(false);
+  const [billingProvider, setBillingProvider] = useState<'disabled' | 'aws' | 'gcp'>('disabled');
+  const [billingSaving, setBillingSaving] = useState(false);
+  const [billingSyncing, setBillingSyncing] = useState(false);
+  const [billingMonth, setBillingMonth] = useState(dayjs().format('YYYY-MM'));
+  const [billingForm] = Form.useForm<UpdateBillingConfigReq>();
 
 
   const loadOverview = useCallback(async () => {
@@ -213,6 +246,80 @@ const CostDashboard: React.FC = () => {
     finally { setWasteItemsLoading(false); }
   }, [clusterId]);
 
+  const loadCapacityTrend = useCallback(async () => {
+    if (!clusterId) return;
+    setCapacityTrendLoading(true);
+    try {
+      const data = await ResourceService.getTrend(clusterId, 6);
+      setCapacityTrend(data ?? []);
+    } catch { /* ignore */ }
+    finally { setCapacityTrendLoading(false); }
+  }, [clusterId]);
+
+  const loadForecast = useCallback(async () => {
+    if (!clusterId) return;
+    setForecastLoading(true);
+    try {
+      const data = await ResourceService.getForecast(clusterId, 180);
+      setForecast(data);
+    } catch { /* ignore */ }
+    finally { setForecastLoading(false); }
+  }, [clusterId]);
+
+  const loadBillingConfig = useCallback(async () => {
+    if (!clusterId) return;
+    setBillingConfigLoading(true);
+    try {
+      const cfg = await CloudBillingService.getConfig(clusterId);
+      setBillingConfig(cfg);
+      setBillingProvider(cfg.provider as 'disabled' | 'aws' | 'gcp');
+      billingForm.setFieldsValue({
+        provider: cfg.provider,
+        aws_access_key_id: cfg.aws_access_key_id,
+        aws_region: cfg.aws_region,
+        aws_linked_account_id: cfg.aws_linked_account_id,
+        gcp_project_id: cfg.gcp_project_id,
+        gcp_billing_account_id: cfg.gcp_billing_account_id,
+      });
+    } catch { /* ignore */ }
+    finally { setBillingConfigLoading(false); }
+  }, [clusterId, billingForm]);
+
+  const loadBillingOverview = useCallback(async (m?: string) => {
+    if (!clusterId) return;
+    setBillingOverviewLoading(true);
+    try {
+      const data = await CloudBillingService.getOverview(clusterId, m ?? billingMonth);
+      setBillingOverview(data);
+    } catch { setBillingOverview(null); }
+    finally { setBillingOverviewLoading(false); }
+  }, [clusterId, billingMonth]);
+
+  const saveBillingConfig = async () => {
+    if (!clusterId) return;
+    const values = await billingForm.validateFields();
+    setBillingSaving(true);
+    try {
+      await CloudBillingService.updateConfig(clusterId, values);
+      message.success('帳單設定已儲存');
+      loadBillingConfig();
+    } catch (e: unknown) {
+      message.error((e as Error).message ?? '儲存失敗');
+    } finally { setBillingSaving(false); }
+  };
+
+  const syncBilling = async () => {
+    if (!clusterId) return;
+    setBillingSyncing(true);
+    try {
+      await CloudBillingService.sync(clusterId, billingMonth);
+      message.success('帳單同步完成');
+      loadBillingOverview(billingMonth);
+    } catch (e: unknown) {
+      message.error((e as Error).message ?? '同步失敗');
+    } finally { setBillingSyncing(false); }
+  };
+
   useEffect(() => { loadOverview(); }, [loadOverview]);
   useEffect(() => { loadSnapshot(); }, [loadSnapshot]);
   useEffect(() => { if (activeTab === 'occupancy') { loadNsOccupancy(); } }, [activeTab, loadNsOccupancy]);
@@ -223,6 +330,12 @@ const CostDashboard: React.FC = () => {
   useEffect(() => { if (activeTab === 'workloads') loadWorkloads(1); }, [activeTab, loadWorkloads]);
   useEffect(() => { if (activeTab === 'trend') loadTrend(); }, [activeTab, loadTrend]);
   useEffect(() => { if (activeTab === 'waste') loadWaste(); }, [activeTab, loadWaste]);
+  useEffect(() => {
+    if (activeTab === 'capacity-trend') { loadCapacityTrend(); loadForecast(); }
+  }, [activeTab, loadCapacityTrend, loadForecast]);
+  useEffect(() => {
+    if (activeTab === 'cloud-billing') { loadBillingConfig(); loadBillingOverview(); }
+  }, [activeTab, loadBillingConfig, loadBillingOverview]);
 
   const currency = overview?.config?.currency ?? 'USD';
 
@@ -375,7 +488,7 @@ const CostDashboard: React.FC = () => {
                     <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
                     <YAxis unit="%" />
                     <RechartTooltip formatter={(v) => [`${v}%`, 'CPU 佔用率']} />
-                    <Bar dataKey="cpu" fill="#4e79a7" />
+                    <Bar dataKey="cpu" fill="#7eb8d4" />
                   </BarChart>
                 </ResponsiveContainer>
               </Card>
@@ -507,44 +620,44 @@ const CostDashboard: React.FC = () => {
             loading={nsEffLoading}
             dataSource={nsEfficiency}
             size="small"
-            scroll={{ x: 900 }}
+            scroll={{ x: 1100 }}
             pagination={{ pageSize: 20 }}
             columns={[
-              { title: '命名空間', dataIndex: 'namespace', key: 'namespace', fixed: 'left' },
+              { title: '命名空間', dataIndex: 'namespace', key: 'namespace', fixed: 'left', width: 140 },
               {
-                title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_request',
+                title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_request', width: 110,
                 render: (v: number) => v.toFixed(0), sorter: (a, b) => a.cpu_request_millicores - b.cpu_request_millicores,
               },
               {
-                title: 'CPU 使用 (m)', dataIndex: 'cpu_usage_millicores', key: 'cpu_usage',
+                title: 'CPU 使用 (m)', dataIndex: 'cpu_usage_millicores', key: 'cpu_usage', width: 110,
                 render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? v.toFixed(0) : <Tag>N/A</Tag>,
               },
               {
-                title: 'CPU 效率', dataIndex: 'cpu_efficiency', key: 'cpu_eff',
+                title: 'CPU 效率', dataIndex: 'cpu_efficiency', key: 'cpu_eff', width: 170,
                 render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? (
                   <Progress percent={+(v * 100).toFixed(1)} size="small"
                     status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
-                    format={p => `${p}%`} style={{ width: 120 }} />
+                    format={p => `${p}%`} style={{ width: 130 }} />
                 ) : <Tag>需要 Prometheus</Tag>,
                 sorter: (a, b) => a.cpu_efficiency - b.cpu_efficiency,
               },
               {
-                title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'mem_request',
+                title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'mem_request', width: 130,
                 render: (v: number) => v.toFixed(0),
               },
               {
-                title: '記憶體使用 (MiB)', dataIndex: 'memory_usage_mib', key: 'mem_usage',
+                title: '記憶體使用 (MiB)', dataIndex: 'memory_usage_mib', key: 'mem_usage', width: 130,
                 render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? v.toFixed(0) : <Tag>N/A</Tag>,
               },
               {
-                title: '記憶體效率', dataIndex: 'memory_efficiency', key: 'mem_eff',
+                title: '記憶體效率', dataIndex: 'memory_efficiency', key: 'mem_eff', width: 170,
                 render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? (
                   <Progress percent={+(v * 100).toFixed(1)} size="small"
                     status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
-                    format={p => `${p}%`} style={{ width: 120 }} />
+                    format={p => `${p}%`} style={{ width: 130 }} />
                 ) : <Tag>需要 Prometheus</Tag>,
               },
-              { title: 'Pod 數', dataIndex: 'pod_count', key: 'pod_count' },
+              { title: 'Pod 數', dataIndex: 'pod_count', key: 'pod_count', width: 80 },
             ]}
           />
         </div>
@@ -565,7 +678,7 @@ const CostDashboard: React.FC = () => {
             loading={wlEffLoading}
             dataSource={wlEfficiency}
             size="small"
-            scroll={{ x: 1000 }}
+            scroll={{ x: 1400 }}
             pagination={{
               current: wlEffPage,
               total: wlEffTotal,
@@ -573,34 +686,35 @@ const CostDashboard: React.FC = () => {
               onChange: (p) => { setWlEffPage(p); loadWlEfficiency(p); },
             }}
             columns={[
-              { title: '命名空間', dataIndex: 'namespace', key: 'namespace', width: 140 },
-              { title: '工作負載', dataIndex: 'name', key: 'name', ellipsis: true },
-              { title: '類型', dataIndex: 'kind', key: 'kind', width: 110,
+              { title: '命名空間', dataIndex: 'namespace', key: 'namespace', width: 130, fixed: 'left' },
+              { title: '工作負載', dataIndex: 'name', key: 'name', width: 160, ellipsis: true },
+              { title: '類型', dataIndex: 'kind', key: 'kind', width: 100,
                 render: (k: string) => <Tag color={{ Deployment: 'blue', StatefulSet: 'purple', DaemonSet: 'cyan' }[k] ?? 'default'}>{k}</Tag> },
-              { title: '副本', dataIndex: 'replicas', key: 'replicas', width: 70 },
-              { title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_req', render: (v: number) => v.toFixed(0) },
+              { title: '副本', dataIndex: 'replicas', key: 'replicas', width: 60 },
+              { title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_req', width: 110, render: (v: number) => v.toFixed(0) },
               {
-                title: 'CPU 效率', dataIndex: 'cpu_efficiency', key: 'cpu_eff',
+                title: 'CPU 效率', dataIndex: 'cpu_efficiency', key: 'cpu_eff', width: 160,
                 render: (v: number, r: WorkloadEfficiency) => r.has_metrics ? (
                   <Progress percent={+(v * 100).toFixed(1)} size="small"
                     status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
-                    format={p => `${p}%`} style={{ width: 110 }} />
+                    format={p => `${p}%`} style={{ width: 120 }} />
                 ) : <Tag>需要 Prometheus</Tag>,
                 sorter: (a: WorkloadEfficiency, b: WorkloadEfficiency) => a.cpu_efficiency - b.cpu_efficiency,
               },
-              { title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'mem_req', render: (v: number) => v.toFixed(0) },
+              { title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'mem_req', width: 130, render: (v: number) => v.toFixed(0) },
               {
-                title: '記憶體效率', dataIndex: 'memory_efficiency', key: 'mem_eff',
+                title: '記憶體效率', dataIndex: 'memory_efficiency', key: 'mem_eff', width: 160,
                 render: (v: number, r: WorkloadEfficiency) => r.has_metrics ? (
                   <Progress percent={+(v * 100).toFixed(1)} size="small"
                     status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
-                    format={p => `${p}%`} style={{ width: 110 }} />
+                    format={p => `${p}%`} style={{ width: 120 }} />
                 ) : <Tag>需要 Prometheus</Tag>,
               },
               {
                 title: '廢棄分數',
                 dataIndex: 'waste_score',
                 key: 'waste',
+                width: 90,
                 render: (v: number, r: WorkloadEfficiency) => r.has_metrics ? (
                   <Tag color={v > 0.7 ? 'red' : v > 0.4 ? 'orange' : 'green'}>
                     {(v * 100).toFixed(0)}
@@ -609,8 +723,105 @@ const CostDashboard: React.FC = () => {
                 sorter: (a: WorkloadEfficiency, b: WorkloadEfficiency) => b.waste_score - a.waste_score,
                 defaultSortOrder: 'ascend' as const,
               },
+              {
+                title: '建議 CPU (m)',
+                key: 'rec_cpu',
+                width: 110,
+                render: (_: unknown, r: WorkloadEfficiency) => r.rightsizing
+                  ? <Tag color="geekblue">{r.rightsizing.cpu_recommended_millicores.toFixed(0)}</Tag>
+                  : '—',
+              },
+              {
+                title: '建議記憶體 (MiB)',
+                key: 'rec_mem',
+                width: 130,
+                render: (_: unknown, r: WorkloadEfficiency) => r.rightsizing
+                  ? <Tag color="geekblue">{r.rightsizing.memory_recommended_mib.toFixed(0)}</Tag>
+                  : '—',
+              },
             ]}
           />
+        </div>
+      ),
+    },
+    {
+      key: 'capacity-trend',
+      label: t('cost:tabs.capacityTrend', '容量趨勢'),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            <Button icon={<ReloadOutlined />} onClick={() => { loadCapacityTrend(); loadForecast(); }} loading={capacityTrendLoading || forecastLoading}>
+              {t('common:actions.refresh', '重新整理')}
+            </Button>
+          </Space>
+          {capacityTrend.length === 0 && !capacityTrendLoading ? (
+            <Empty description="尚無歷史快照資料，CostWorker 每日 00:05 UTC 拍攝，連線後隔日可見趨勢。" />
+          ) : (
+            <>
+              <Card title="CPU & 記憶體佔用率月度趨勢" size="small" style={{ marginBottom: 16 }} loading={capacityTrendLoading}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={capacityTrend} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis unit="%" domain={[0, 100]} />
+                    <RechartTooltip formatter={(v) => [`${Number(v ?? 0).toFixed(1)}%`]} />
+                    <Legend />
+                    <Line type="monotone" dataKey="cpu_occupancy_percent" name="CPU 佔用率" stroke="#7eb8d4" strokeWidth={2} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="memory_occupancy_percent" name="記憶體佔用率" stroke="#a8c9a5" strokeWidth={2} dot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Card>
+              <Card title="容量耗盡預測（線性外推）" size="small" loading={forecastLoading}>
+                {forecast && (
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12}>
+                      <Card size="small" title="CPU 佔用率預測" style={{ background: '#fafafa' }}>
+                        <Statistic title="當前佔用率" value={forecast.current_cpu_percent} precision={1} suffix="%" />
+                        <div style={{ marginTop: 12 }}>
+                          <Space direction="vertical" size={4}>
+                            <span>到達 80%：
+                              {forecast.cpu_80_percent_date
+                                ? <Tag color="orange">{forecast.cpu_80_percent_date}</Tag>
+                                : <Tag color="green">預測期內不到達</Tag>}
+                            </span>
+                            <span>到達 100%：
+                              {forecast.cpu_100_percent_date
+                                ? <Tag color="red">{forecast.cpu_100_percent_date}</Tag>
+                                : <Tag color="green">預測期內不到達</Tag>}
+                            </span>
+                          </Space>
+                        </div>
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <Card size="small" title="記憶體佔用率預測" style={{ background: '#fafafa' }}>
+                        <Statistic title="當前佔用率" value={forecast.current_memory_percent} precision={1} suffix="%" />
+                        <div style={{ marginTop: 12 }}>
+                          <Space direction="vertical" size={4}>
+                            <span>到達 80%：
+                              {forecast.memory_80_percent_date
+                                ? <Tag color="orange">{forecast.memory_80_percent_date}</Tag>
+                                : <Tag color="green">預測期內不到達</Tag>}
+                            </span>
+                            <span>到達 100%：
+                              {forecast.memory_100_percent_date
+                                ? <Tag color="red">{forecast.memory_100_percent_date}</Tag>
+                                : <Tag color="green">預測期內不到達</Tag>}
+                            </span>
+                          </Space>
+                        </div>
+                      </Card>
+                    </Col>
+                    <Col xs={24} style={{ marginTop: 8 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        基於近 {forecast.based_on_months} 個月歷史資料進行線性外推，預測期 180 天。數據點不足或趨勢下降時顯示「預測期內不到達」。
+                      </Typography.Text>
+                    </Col>
+                  </Row>
+                )}
+              </Card>
+            </>
+          )}
         </div>
       ),
     },
@@ -628,6 +839,14 @@ const CostDashboard: React.FC = () => {
           <Space style={{ marginBottom: 16 }}>
             <Button icon={<ReloadOutlined />} onClick={loadWasteItems} loading={wasteItemsLoading}>
               {t('common:actions.refresh', '重新整理')}
+            </Button>
+            <Button
+              icon={<DownloadOutlined />}
+              href={ResourceService.getWasteExportURL(clusterId!)}
+              target="_blank"
+              disabled={wasteItems.length === 0}
+            >
+              匯出 CSV
             </Button>
           </Space>
           <Alert
@@ -673,6 +892,20 @@ const CostDashboard: React.FC = () => {
                   ),
                   sorter: (a: WorkloadEfficiency, b: WorkloadEfficiency) => b.waste_score - a.waste_score,
                   defaultSortOrder: 'ascend' as const,
+                },
+                {
+                  title: '建議 CPU (m)',
+                  key: 'rec_cpu',
+                  render: (_: unknown, r: WorkloadEfficiency) => r.rightsizing
+                    ? <Tag color="geekblue">{r.rightsizing.cpu_recommended_millicores.toFixed(0)}</Tag>
+                    : '—',
+                },
+                {
+                  title: '建議記憶體 (MiB)',
+                  key: 'rec_mem',
+                  render: (_: unknown, r: WorkloadEfficiency) => r.rightsizing
+                    ? <Tag color="geekblue">{r.rightsizing.memory_recommended_mib.toFixed(0)}</Tag>
+                    : '—',
                 },
               ]}
             />
@@ -861,6 +1094,227 @@ const CostDashboard: React.FC = () => {
               </LineChart>
             </ResponsiveContainer>
           </Card>
+        </div>
+      ),
+    },
+    {
+      key: 'cloud-billing',
+      label: (
+        <span>
+          <CloudOutlined /> 雲端帳單
+        </span>
+      ),
+      children: (
+        <div>
+          {/* Config card */}
+          <Card
+            title="帳單資料來源設定"
+            size="small"
+            style={{ marginBottom: 16 }}
+            loading={billingConfigLoading}
+            extra={
+              <Space>
+                <Button
+                  icon={<SaveOutlined />}
+                  type="primary"
+                  loading={billingSaving}
+                  onClick={saveBillingConfig}
+                >
+                  儲存設定
+                </Button>
+              </Space>
+            }
+          >
+            <Form form={billingForm} layout="vertical" style={{ maxWidth: 600 }}>
+              <Form.Item name="provider" label="雲端供應商" initialValue="disabled">
+                <Radio.Group onChange={e => setBillingProvider(e.target.value)}>
+                  <Radio.Button value="disabled">停用</Radio.Button>
+                  <Radio.Button value="aws">AWS</Radio.Button>
+                  <Radio.Button value="gcp">GCP</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+
+              {billingProvider === 'aws' && (
+                <>
+                  <Divider orientation="left" plain style={{ fontSize: 13 }}>AWS Cost Explorer</Divider>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name="aws_access_key_id" label="Access Key ID">
+                        <Input placeholder="AKIA..." />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="aws_secret_access_key" label={`Secret Access Key${billingConfig?.aws_secret_set ? ' (已設定，留空保留原值)' : ''}`}>
+                        <Input.Password placeholder={billingConfig?.aws_secret_set ? '******** (保留原值)' : '輸入 Secret'} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="aws_region" label="Region" initialValue="us-east-1">
+                        <Input placeholder="us-east-1" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="aws_linked_account_id" label="Linked Account ID（選填）">
+                        <Input placeholder="123456789012" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </>
+              )}
+
+              {billingProvider === 'gcp' && (
+                <>
+                  <Divider orientation="left" plain style={{ fontSize: 13 }}>GCP Cloud Billing</Divider>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name="gcp_project_id" label="Project ID">
+                        <Input placeholder="my-project-id" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="gcp_billing_account_id" label="Billing Account ID">
+                        <Input placeholder="XXXXXX-XXXXXX-XXXXXX" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={24}>
+                      <Form.Item
+                        name="gcp_service_account_json"
+                        label={`Service Account JSON${billingConfig?.gcp_service_account_set ? ' (已設定，留空保留原值)' : ''}`}
+                      >
+                        <Input.TextArea
+                          rows={5}
+                          placeholder={billingConfig?.gcp_service_account_set ? '已設定（留空保留原值）' : '貼上 service account JSON 內容'}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </>
+              )}
+            </Form>
+
+            {billingConfig && billingConfig.provider !== 'disabled' && (
+              <div style={{ marginTop: 8 }}>
+                {billingConfig.last_synced_at
+                  ? <Typography.Text type="secondary">上次同步：{billingConfig.last_synced_at}</Typography.Text>
+                  : <Typography.Text type="secondary">尚未同步</Typography.Text>}
+                {billingConfig.last_error && (
+                  <Alert type="error" message={billingConfig.last_error} showIcon style={{ marginTop: 8 }} />
+                )}
+              </div>
+            )}
+          </Card>
+
+          {/* Sync controls + overview */}
+          {billingConfig?.provider !== 'disabled' && (
+            <Card
+              title="帳單總覽"
+              size="small"
+              extra={
+                <Space>
+                  <DatePicker.MonthPicker
+                    value={dayjs(billingMonth, 'YYYY-MM')}
+                    onChange={v => v && setBillingMonth(v.format('YYYY-MM'))}
+                    allowClear={false}
+                    style={{ width: 120 }}
+                  />
+                  <Button
+                    icon={<SyncOutlined />}
+                    loading={billingSyncing}
+                    onClick={syncBilling}
+                  >
+                    同步帳單
+                  </Button>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => loadBillingOverview(billingMonth)}
+                    loading={billingOverviewLoading}
+                  >
+                    重新整理
+                  </Button>
+                </Space>
+              }
+            >
+              <Spin spinning={billingOverviewLoading}>
+                {!billingOverview ? (
+                  <Empty description="尚無帳單資料，請先同步" />
+                ) : (
+                  <>
+                    <Row gutter={16} style={{ marginBottom: 20 }}>
+                      <Col xs={24} sm={8}>
+                        <Statistic
+                          title={`${billingOverview.month} 總費用`}
+                          value={billingOverview.total_amount}
+                          precision={2}
+                          suffix={billingOverview.currency}
+                          valueStyle={{ color: '#1677ff' }}
+                        />
+                      </Col>
+                      <Col xs={24} sm={8}>
+                        <Statistic
+                          title="CPU 單位成本"
+                          value={billingOverview.cpu_unit_cost}
+                          precision={4}
+                          suffix="USD/core-hr"
+                        />
+                      </Col>
+                      <Col xs={24} sm={8}>
+                        <Statistic
+                          title="記憶體單位成本"
+                          value={billingOverview.memory_unit_cost}
+                          precision={4}
+                          suffix="USD/GiB-hr"
+                        />
+                      </Col>
+                    </Row>
+                    {billingOverview.services?.length > 0 && (
+                      <Row gutter={16}>
+                        <Col xs={24} lg={14}>
+                          <ResponsiveContainer width="100%" height={260}>
+                            <BarChart
+                              data={billingOverview.services.slice(0, 12).map(s => ({
+                                name: s.service.replace('Amazon ', '').replace('Google ', ''),
+                                amount: +s.amount.toFixed(2),
+                              }))}
+                              layout="vertical"
+                              margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis type="number" unit={` ${billingOverview.currency}`} />
+                              <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
+                              <RechartTooltip formatter={(v) => [`${billingOverview.currency} ${v}`, '費用']} />
+                              <Bar dataKey="amount" fill="#7eb8d4" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Col>
+                        <Col xs={24} lg={10}>
+                          <Table
+                            rowKey="id"
+                            size="small"
+                            dataSource={billingOverview.services}
+                            pagination={{ pageSize: 10, size: 'small' }}
+                            columns={[
+                              { title: '服務', dataIndex: 'service', key: 'service', ellipsis: true },
+                              {
+                                title: '費用',
+                                dataIndex: 'amount',
+                                key: 'amount',
+                                render: (v: number) => <Text strong>{`${billingOverview.currency} ${v.toFixed(2)}`}</Text>,
+                                sorter: (a, b) => b.amount - a.amount,
+                                defaultSortOrder: 'ascend' as const,
+                              },
+                            ]}
+                          />
+                        </Col>
+                      </Row>
+                    )}
+                    {billingOverview.sync_error && (
+                      <Alert type="warning" message={billingOverview.sync_error} showIcon style={{ marginTop: 12 }} />
+                    )}
+                  </>
+                )}
+              </Spin>
+            </Card>
+          )}
         </div>
       ),
     },

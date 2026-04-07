@@ -1,33 +1,97 @@
 # Helm Charts 实现 - 变更日志
 
-## [Unreleased] - 資源治理 Phase 1 + Phase 2
+## [Unreleased] - 資源治理（Resource Governance）Phase 1–4
+
+> 完整設計請見 [`docs/成本架構設計.md`](../../docs/成本架構設計.md)
+> 路由：`/clusters/:clusterId/cost-insights`（叢集維度）、`/cost-insights`（全局）
 
 ### 新增 ✨
 
-#### 資源治理（Resource Governance）Phase 1
-- 新增 `GET /api/v1/clusters/:clusterID/resources/snapshot` — 叢集即時資源佔用快照（CPU/記憶體 allocatable、requested、occupancy、headroom）
-- 新增 `GET /api/v1/clusters/:clusterID/resources/namespaces` — 命名空間資源佔用明細
-- 新增 `GET /api/v1/resources/global/overview` — 跨叢集全平台資源彙總
-- 新增 `cluster_occupancy_snapshots` 資料庫表（每日叢集資源快照，供趨勢分析使用）
-- `CostWorker` 整合 K8s Informer，每日 00:05 UTC 拍攝資源快照
-- 前端「成本分析」頁面新增「資源佔用」Tab，顯示佔用率儀表板、Headroom 剩餘空間及命名空間 BarChart
-- 前端「成本洞察」頁面重構：改用跨叢集資源 API，顯示各叢集 CPU/記憶體佔用率對比圖
+#### Phase 1：無監控基礎版（不依賴 Prometheus）
 
-#### 架構改善（Phase 1）
-- 引入 `K8sInformerManager` 介面（定義於 `services` 包），解除 `services ↔ k8s` 套件循環依賴
-- `k8s.ClusterInformerManager` 新增 `EnsureSync()` 方法（`EnsureAndWait` 的 error-only 包裝）
+**後端**
+- 新增 `internal/models/cost.go` — `ClusterOccupancySnapshot` 模型（`cluster_occupancy_snapshots` 表，每日叢集資源快照）
+- 新增 `internal/services/resource_service.go` — `ResourceService`、`K8sInformerManager` 介面（解除 `services ↔ k8s` 循環依賴）
+- 新增 `internal/handlers/resource.go` — `GetSnapshot`、`GetNamespaceOccupancy`、`GetGlobalOverview`
+- `CostWorker` 整合 K8s Informer，每日 00:05 UTC 拍攝資源快照（`snapshotFromK8s`）
+- `k8s.ClusterInformerManager` 新增 `EnsureSync()` 方法
 
-#### 資源治理（Resource Governance）Phase 2 - 效率分析
-- 新增 `GET /api/v1/clusters/:clusterID/resources/efficiency` — 命名空間效率（K8s 佔用 + Prometheus 使用量）
-- 新增 `GET /api/v1/clusters/:clusterID/resources/workloads` — 工作負載效率列表（Deployment/StatefulSet/DaemonSet，分頁）
-- 新增 `GET /api/v1/clusters/:clusterID/resources/waste?cpu_threshold=0.2` — 低效工作負載篩選
+**API**
+- `GET /api/v1/clusters/:clusterID/resources/snapshot` — 叢集即時佔用快照（allocatable / requested / occupancy / headroom）
+- `GET /api/v1/clusters/:clusterID/resources/namespaces` — 命名空間資源佔用明細
+- `GET /api/v1/resources/global/overview` — 跨叢集全平台資源彙總
+
+**前端**
+- `ui/src/services/costService.ts` 新增 `ResourceService` 及相關型別
+- 「成本分析」頁新增「資源佔用」Tab：佔用率儀表板、Headroom 剩餘、命名空間 BarChart
+- 「成本洞察」頁重構：改用跨叢集資源 API，顯示各叢集 CPU/記憶體對比圖
+
+---
+
+#### Phase 2：效率分析（需要 Prometheus）
+
+**後端**
 - `ResourceService` 注入 `PrometheusService` + `MonitoringConfigService`，實作 PromQL 效率採集
-- `K8sInformerManager` 介面新增 Deployments/StatefulSets/DaemonSets lister
-- 廢棄分數公式：`WasteScore = (1-CPU效率)×0.6 + (1-記憶體效率)×0.4`
-- 無 Prometheus 時自動降級：效率欄位顯示「需要 Prometheus」提示
-- 前端新增「效率分析」Tab：CPU×記憶體效率散點圖（泡泡=CPU佔用）+ 命名空間效率表格
-- 前端新增「工作負載效率」Tab：分頁表格，廢棄分數高→低排序
-- 前端新增「低效識別」Tab：CPU 效率 < 20% 的工作負載，帶廢棄分數警示色
+- `K8sInformerManager` 介面新增 `DeploymentsLister`、`StatefulSetsLister`、`DaemonSetsLister`
+- `handlers/common.go` 新增 `parseIntQuery`、`parseFloatQuery` 工具函式
+- 廢棄分數公式：`WasteScore = (1 - CPU效率) × 0.6 + (1 - 記憶體效率) × 0.4`
+- 無 Prometheus 時自動降級：效率欄位顯示「需要 Prometheus」提示，佔用率正常顯示
+
+**API**
+- `GET /api/v1/clusters/:clusterID/resources/efficiency` — 命名空間效率（K8s 佔用 + PromQL 實際用量）
+- `GET /api/v1/clusters/:clusterID/resources/workloads?namespace=&page=&pageSize=` — 工作負載效率列表（Deployment/StatefulSet/DaemonSet，分頁）
+- `GET /api/v1/clusters/:clusterID/resources/waste?cpu_threshold=0.2` — 低效工作負載篩選
+
+**前端**
+- 新增「效率分析」Tab：CPU × 記憶體效率散點圖（泡泡大小 = CPU 佔用）+ 命名空間效率表格
+- 新增「工作負載效率」Tab：分頁表格，廢棄分數高→低排序
+- 新增「低效識別」Tab：CPU 效率 < 20% 的工作負載，帶廢棄分數警示色
+
+---
+
+#### Phase 3：容量預測與 Right-sizing 建議
+
+**後端**
+- `WorkloadEfficiency` 回應新增 `rightsizing` 欄位（7 日 Max × 安全係數：CPU ×1.2、記憶體 ×1.25，min 10m / 64 MiB）
+- `GetTrend`：讀取 `cluster_occupancy_snapshots`，按月分組平均佔用率
+- `GetForecast`：最小二乘線性迴歸，預測到達 80% / 100% 的日期（180 天期）
+- `ExportWasteCSV`：`encoding/csv` 直接串流至 gin response
+
+**API**
+- `GET /api/v1/clusters/:clusterID/resources/trend?months=6` — 月度容量佔用趨勢
+- `GET /api/v1/clusters/:clusterID/resources/forecast?days=180` — 容量耗盡預測
+- `GET /api/v1/clusters/:clusterID/resources/waste/export` — 低效工作負載 CSV 匯出
+
+**前端**
+- 新增「容量趨勢」Tab：月度佔用率折線圖 + 預測卡片（到達 80%/100% 日期，橙/紅/綠 Tag）
+- 「工作負載效率」Tab 新增建議 CPU / 記憶體欄位（geekblue Tag）
+- 「低效識別」Tab 新增「匯出 CSV」按鈕 + 建議欄位
+
+---
+
+#### Phase 4：可選雲端帳單整合（AWS / GCP）
+
+**後端**
+- 新增 `internal/models/cloud_billing.go` — `CloudBillingConfig`（`json:"-"` 遮蔽 Secret）、`CloudBillingRecord`
+- 新增 `internal/services/cloud_billing_service.go`：
+  - AWS：手動 SigV4 HMAC-SHA256 簽名 → Cost Explorer API → 服務費用明細
+  - GCP：`golang.org/x/oauth2/google` service account → Budget API → 當月支出
+  - 資源單位成本：`cpu_unit_cost = total × 0.65 / cpu-core-hours`、`memory_unit_cost = total × 0.35 / gib-hours`
+- 新增 `internal/handlers/cloud_billing.go` — 4 個 Handler；`GetBillingConfig` 回傳安全 DTO（`aws_secret_set: bool`、`gcp_service_account_set: bool`）
+- `internal/database/database.go` AutoMigrate 加入 `CloudBillingConfig`、`CloudBillingRecord`
+
+**API**
+- `GET  /api/v1/clusters/:clusterID/billing/config` — 取得帳單設定（敏感欄位遮蔽）
+- `PUT  /api/v1/clusters/:clusterID/billing/config` — 更新設定（留空 Secret 欄位保留原值）
+- `POST /api/v1/clusters/:clusterID/billing/sync?month=YYYY-MM` — 觸發帳單同步
+- `GET  /api/v1/clusters/:clusterID/billing/overview?month=YYYY-MM` — 帳單總覽（含服務明細、單位成本）
+
+**前端**
+- 新增 `ui/src/services/cloudBillingService.ts` — API 型別定義與呼叫封裝
+- 「成本分析」頁新增「雲端帳單」Tab：
+  - 供應商選擇（disabled / AWS / GCP）+ 條件式憑證表單（Secret 已設定時顯示保留提示）
+  - 同步按鈕 + 月份選擇器
+  - 帳單總覽：總費用 / CPU 單位成本 / 記憶體單位成本統計卡、服務橫向 BarChart、服務費用表格
 
 ---
 

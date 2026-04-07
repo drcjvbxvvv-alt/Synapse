@@ -453,6 +453,20 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				resources.GET("/efficiency", resourceHandler.GetNamespaceEfficiency)
 				resources.GET("/workloads", resourceHandler.GetWorkloadEfficiency)
 				resources.GET("/waste", resourceHandler.GetWasteWorkloads)
+				resources.GET("/waste/export", resourceHandler.ExportWasteCSV) // Phase 3
+				resources.GET("/trend", resourceHandler.GetTrend)              // Phase 3
+				resources.GET("/forecast", resourceHandler.GetForecast)        // Phase 3
+			}
+
+			// 雲端帳單整合（Phase 4）
+			cloudBillingSvc := services.NewCloudBillingService(d.db)
+			cloudBillingHandler := handlers.NewCloudBillingHandler(cloudBillingSvc, d.clusterSvc)
+			billing := cluster.Group("/billing")
+			{
+				billing.GET("/config", cloudBillingHandler.GetBillingConfig)
+				billing.PUT("/config", cloudBillingHandler.UpdateBillingConfig)
+				billing.POST("/sync", cloudBillingHandler.SyncBilling)
+				billing.GET("/overview", cloudBillingHandler.GetBillingOverview)
 			}
 
 			// 資源成本分析（保留既有金錢估算功能）

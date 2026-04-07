@@ -124,6 +124,12 @@ export interface NamespaceEfficiency {
   has_metrics: boolean;
 }
 
+export interface RightSizingRecommendation {
+  cpu_recommended_millicores: number;
+  memory_recommended_mib: number;
+  confidence: string; // "medium"
+}
+
 export interface WorkloadEfficiency {
   namespace: string;
   name: string;
@@ -137,6 +143,26 @@ export interface WorkloadEfficiency {
   memory_efficiency: number;
   waste_score: number; // 0-1
   has_metrics: boolean;
+  rightsizing?: RightSizingRecommendation;
+}
+
+// ---- Phase 3 型別 ----
+
+export interface CapacityTrendPoint {
+  month: string;                  // "2026-01"
+  cpu_occupancy_percent: number;
+  memory_occupancy_percent: number;
+  node_count: number;
+}
+
+export interface ForecastResult {
+  based_on_months: number;
+  current_cpu_percent: number;
+  current_memory_percent: number;
+  cpu_80_percent_date: string | null;
+  cpu_100_percent_date: string | null;
+  memory_80_percent_date: string | null;
+  memory_100_percent_date: string | null;
 }
 
 export interface WorkloadEfficiencyPage {
@@ -171,6 +197,16 @@ export const ResourceService = {
 
   getWasteWorkloads: (clusterId: string, cpuThreshold = 0.2): Promise<WorkloadEfficiency[]> =>
     request.get(`/clusters/${clusterId}/resources/waste?cpu_threshold=${cpuThreshold}`),
+
+  // Phase 3
+  getTrend: (clusterId: string, months = 6): Promise<CapacityTrendPoint[]> =>
+    request.get(`/clusters/${clusterId}/resources/trend?months=${months}`),
+
+  getForecast: (clusterId: string, days = 180): Promise<ForecastResult> =>
+    request.get(`/clusters/${clusterId}/resources/forecast?days=${days}`),
+
+  getWasteExportURL: (clusterId: string, cpuThreshold = 0.2): string =>
+    `/api/v1/clusters/${clusterId}/resources/waste/export?cpu_threshold=${cpuThreshold}`,
 };
 
 export const CostService = {

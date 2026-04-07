@@ -237,6 +237,11 @@ func describeKubectlPodProgress(pod *corev1.Pod) string {
 func (h *KubectlPodTerminalHandler) ensureKubectlPod(client *kubernetes.Clientset, podName string, userID uint, serviceAccount string, permissionType string, beforeCreate func()) error {
 	ctx := context.Background()
 
+	// 確保命名空間存在
+	if err := ensureNamespace(ctx, client, kubectlPodNamespace); err != nil {
+		return fmt.Errorf("建立命名空間 %s 失敗: %w", kubectlPodNamespace, err)
+	}
+
 	// 檢查 Pod 是否已存在
 	existingPod, err := client.CoreV1().Pods(kubectlPodNamespace).Get(ctx, podName, metav1.GetOptions{})
 	if err == nil {

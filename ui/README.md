@@ -58,6 +58,14 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 #### NetworkPolicy
 - 完整 CRUD；**拓撲視覺化**（以 D3 / 力導向圖呈現 Pod 間允許 / 拒絕流量）
 - **建立精靈**：逐步引導設定 Ingress / Egress 規則，降低設定門檻
+- **策略模擬**：輸入來源 / 目標 Pod，即時預覽流量是否被允許（不需實際變更）
+- **內聯編輯**：拓撲圖直接點選連線編輯規則
+
+#### Service Mesh（Istio）視覺化
+- 自動偵測 Istio 安裝狀態（CRD / istiod Pod）
+- **流量拓撲圖**：基於 Prometheus `istio_requests_total` 呈現服務間 RPS、錯誤率、P99 延遲
+- VirtualService / DestinationRule / Gateway / PeerAuthentication CRD 查看
+- mTLS 狀態 Badge
 
 ---
 
@@ -136,13 +144,30 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 ---
 
-### 💰 成本分析
-- **定價設定**：CPU / 記憶體單價（USD / TWD / CNY / JPY）
-- **命名空間成本**：Bar Chart + 排行表；本月估算費用
-- **工作負載成本**：按 Deployment / StatefulSet 分攤，含利用率進度條
-- **趨勢分析**：6 個月歷史成本 Line Chart
-- **浪費識別**：低利用率工作負載（CPU / Mem 利用率 < 10%）
-- **CSV 匯出**：按月匯出成本報表
+### 💰 資源治理（Resource Governance）
+
+#### 資源佔用分析（不依賴 Prometheus）
+- **佔用率儀表板**：叢集 CPU / 記憶體 allocatable、requested、occupancy、headroom 即時卡片
+- **命名空間佔用**：橫向 BarChart 排行 + 明細表（佔叢集容量百分比）
+- **跨叢集洞察**：全平台佔用率對比、叢集排行、整體效率評分
+
+#### 資源效率分析（需要 Prometheus）
+- **效率散點圖**：CPU 效率 × 記憶體效率象限圖，泡泡大小 = CPU 佔用量
+- **工作負載效率**：Deployment / StatefulSet / DaemonSet 廢棄分數排序；`WasteScore = (1-CPU效率)×0.6 + (1-記憶體效率)×0.4`
+- **低效識別**：CPU 效率 < 20% 工作負載列表，帶廢棄分數警示色
+- **降級策略**：無 Prometheus 時自動降級，佔用率正常顯示
+
+#### 容量規劃與 Right-sizing
+- **容量趨勢**：月度 CPU / 記憶體佔用率折線圖（讀取每日快照）
+- **耗盡預測**：線性迴歸外推，標示到達 80% / 100% 的預測日期（180 天期）
+- **Right-sizing 建議**：基於 7 日最大用量 × 安全係數（CPU ×1.2、記憶體 ×1.25），內嵌於工作負載效率與低效識別頁
+- **CSV 匯出**：低效工作負載報告直接串流下載
+
+#### 雲端帳單整合（可選）
+- **AWS Cost Explorer**：SigV4 簽名對接，取得各服務月度費用明細
+- **GCP Cloud Billing**：Service Account oauth2 對接 Budget API
+- **資源單位成本**：換算 USD/core-hr、USD/GiB-hr，讓帳單費用對應到 K8s 資源使用
+- **帳單設定**：供應商切換（disabled / AWS / GCP）；Secret 欄位遮蔽，留空時保留原值
 
 ---
 
@@ -170,6 +195,21 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 #### Runbook 知識庫
 - 10 個常見場景（OOMKilled / CrashLoopBackOff / 節點 NotReady 等）
 - 支援關鍵字搜尋；以 Collapse 展開步驟式解決流程
+
+---
+
+### 🔗 多叢集工作流程
+
+#### 工作負載遷移
+- **遷移精靈**：3 步驟（選目標叢集 → 資源相容性檢查 → 確認執行）
+- 自動取得來源 Deployment YAML → 套用至目標叢集；同步關聯 ConfigMap / Secret
+- 遷移前檢查：CPU / 記憶體可用空間、目標命名空間是否存在
+
+#### 配置同步策略
+- **策略 CRUD**：設定來源叢集 / 命名空間 / 資源類型（ConfigMap / Secret）/ 目標叢集列表
+- **衝突策略**：overwrite（強制覆蓋）/ skip（跳過已存在）
+- **排程同步**：支援 Cron 表達式定時同步，或手動觸發
+- **同步歷史**：逐次紀錄同步結果（成功 / 失敗 / 跳過筆數）
 
 ---
 
@@ -243,6 +283,14 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 - 記錄 kubectl / Pod Exec / SSH 三種 Terminal 的所有指令
 - 會話列表 + 指令詳情逐筆查詢
 
+#### 部署審批工作流
+- 命名空間保護機制：標記保護命名空間，刪除 / 重大變更需提交審批申請
+- 審批請求列表：管理員審核通過後方可執行操作
+
+#### SIEM 整合
+- Webhook 推送：將稽核日誌批次推送至外部 SIEM 系統（Splunk / Datadog 等）
+- 支援自訂 Header、批次大小、推送頻率
+
 ---
 
 ### ⚙️ 系統設定
@@ -250,6 +298,11 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 - **AI 設定**：Provider 切換（OpenAI / Azure / Claude / Ollama）；API Key / Endpoint / 模型設定
 - **Grafana 整合**：Grafana URL / API Key / Dashboard ID 設定
 - **系統安全**：JWT Secret 強制設定；AES-256-GCM 憑證欄位加密（`ENCRYPTION_KEY` 環境變數）
+- **安全設定 Tab**：
+  - SIEM Webhook 推送設定（稽核日誌外送）
+  - 登入安全參數動態調整（Session TTL / 鎖定閾值 / 密碼最短長度）
+  - 個人 API Token 管理（建立 / 撤銷；SHA-256 hash 儲存，明文僅顯示一次）
+- **通知渠道管理**：集中管理 Webhook / DingTalk（HMAC-SHA256 加簽）/ Slack / Microsoft Teams / Email（SMTP）通知渠道；支援即時測試連線
 - **多叢集同步策略**：設定 ConfigMap / Secret 跨叢集同步規則（來源 / 目標 / 衝突策略 / Cron）
 
 ---

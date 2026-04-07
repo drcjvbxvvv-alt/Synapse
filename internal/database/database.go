@@ -185,6 +185,8 @@ func autoMigrate(db *gorm.DB) error {
 		&models.CostConfig{},         // 成本定價設定表
 		&models.ResourceSnapshot{},          // 資源每日快照表
 		&models.ClusterOccupancySnapshot{},  // 叢集級別佔用快照表（Phase 1）
+		&models.CloudBillingConfig{},         // 雲端帳單設定（Phase 4）
+		&models.CloudBillingRecord{},         // 雲端帳單記錄（Phase 4）
 		&models.ImageScanResult{},    // Trivy 映像掃描結果表
 		&models.BenchResult{},        // CIS kube-bench 評分表
 		&models.SyncPolicy{},         // 多叢集配置同步策略表
