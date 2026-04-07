@@ -2,7 +2,74 @@
   "tabs": {
     "service": "服務（Service）",
     "ingress": "路由（Ingress）",
-    "networkpolicy": "網路策略（NetworkPolicy）"
+    "networkpolicy": "網路策略（NetworkPolicy）",
+    "gatewayapi": "Gateway API"
+  },
+  "gatewayapi": {
+    "notInstalled": "此叢集尚未安裝 Gateway API",
+    "notInstalledDesc": "Gateway API 是 Kubernetes 官方的下一代流量管理標準，取代 Ingress，提供更強大的路由、TLS 與跨 namespace 流量控制能力。",
+    "installCmd": "kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/latest/download/standard-install.yaml",
+    "copyCmd": "複製安裝指令",
+    "officialDocs": "查看官方文件",
+    "recheck": "重新偵測",
+    "tabs": {
+      "gatewayclass": "GatewayClass",
+      "gateways": "Gateways",
+      "httproutes": "HTTPRoutes"
+    },
+    "columns": {
+      "name": "名稱",
+      "namespace": "命名空間",
+      "controller": "控制器",
+      "gatewayClass": "GatewayClass",
+      "listeners": "Listeners",
+      "addresses": "外部地址",
+      "hostnames": "主機名稱",
+      "parentRefs": "父 Gateway",
+      "rules": "規則數",
+      "status": "狀態",
+      "createdAt": "建立時間"
+    },
+    "status": {
+      "accepted": "已接受",
+      "ready": "就緒",
+      "unknown": "未知",
+      "programmed": "已設定"
+    },
+    "drawer": {
+      "conditions": "Conditions",
+      "listeners": "Listeners",
+      "addresses": "外部地址",
+      "routes": "關聯路由",
+      "hostnames": "主機名稱",
+      "parentGateway": "父 Gateway",
+      "rules": "路由規則",
+      "backends": "後端服務",
+      "weight": "權重",
+      "port": "連接埠",
+      "protocol": "協定",
+      "tlsMode": "TLS 模式",
+      "matches": "匹配條件",
+      "filters": "過濾器",
+      "noConditions": "無 Condition 資訊",
+      "noListeners": "無 Listener 資訊",
+      "noRules": "無路由規則",
+      "noBackends": "無後端服務",
+      "noHostnames": "無主機名稱",
+      "noParentRefs": "無父 Gateway",
+      "viewYAML": "查看 YAML"
+    },
+    "messages": {
+      "fetchError": "取得資料失敗",
+      "fetchYAMLError": "取得 YAML 失敗",
+      "checkingAvailability": "偵測 Gateway API...",
+      "recheckSuccess": "偵測完成"
+    },
+    "pagination": {
+      "gatewayClassTotal": "共 {{total}} 個 GatewayClass",
+      "gatewayTotal": "共 {{total}} 個 Gateway",
+      "httprouteTotal": "共 {{total}} 個 HTTPRoute"
+    }
   },
   "networkpolicy": {
     "create": "建立 NetworkPolicy",

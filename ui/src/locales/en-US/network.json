@@ -2,7 +2,74 @@
   "tabs": {
     "service": "Service",
     "ingress": "Ingress",
-    "networkpolicy": "NetworkPolicy"
+    "networkpolicy": "NetworkPolicy",
+    "gatewayapi": "Gateway API"
+  },
+  "gatewayapi": {
+    "notInstalled": "Gateway API is Not Installed",
+    "notInstalledDesc": "Gateway API is the official next-generation traffic management standard for Kubernetes, replacing Ingress with more powerful routing, TLS, and cross-namespace traffic control.",
+    "installCmd": "kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/latest/download/standard-install.yaml",
+    "copyCmd": "Copy Install Command",
+    "officialDocs": "View Official Docs",
+    "recheck": "Re-detect",
+    "tabs": {
+      "gatewayclass": "GatewayClass",
+      "gateways": "Gateways",
+      "httproutes": "HTTPRoutes"
+    },
+    "columns": {
+      "name": "Name",
+      "namespace": "Namespace",
+      "controller": "Controller",
+      "gatewayClass": "GatewayClass",
+      "listeners": "Listeners",
+      "addresses": "Addresses",
+      "hostnames": "Hostnames",
+      "parentRefs": "Parent Gateway",
+      "rules": "Rules",
+      "status": "Status",
+      "createdAt": "Created"
+    },
+    "status": {
+      "accepted": "Accepted",
+      "ready": "Ready",
+      "unknown": "Unknown",
+      "programmed": "Programmed"
+    },
+    "drawer": {
+      "conditions": "Conditions",
+      "listeners": "Listeners",
+      "addresses": "Addresses",
+      "routes": "Associated Routes",
+      "hostnames": "Hostnames",
+      "parentGateway": "Parent Gateway",
+      "rules": "Route Rules",
+      "backends": "Backends",
+      "weight": "Weight",
+      "port": "Port",
+      "protocol": "Protocol",
+      "tlsMode": "TLS Mode",
+      "matches": "Match Conditions",
+      "filters": "Filters",
+      "noConditions": "No conditions",
+      "noListeners": "No listeners",
+      "noRules": "No route rules",
+      "noBackends": "No backends",
+      "noHostnames": "No hostnames",
+      "noParentRefs": "No parent gateways",
+      "viewYAML": "View YAML"
+    },
+    "messages": {
+      "fetchError": "Failed to fetch data",
+      "fetchYAMLError": "Failed to fetch YAML",
+      "checkingAvailability": "Detecting Gateway API...",
+      "recheckSuccess": "Detection complete"
+    },
+    "pagination": {
+      "gatewayClassTotal": "Total {{total}} GatewayClass(es)",
+      "gatewayTotal": "Total {{total}} Gateway(s)",
+      "httprouteTotal": "Total {{total}} HTTPRoute(s)"
+    }
   },
   "networkpolicy": {
     "create": "Create NetworkPolicy",

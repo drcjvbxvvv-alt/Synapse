@@ -295,6 +295,29 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				ingresses.POST("/yaml/apply", resourceYAMLHandler.ApplyIngressYAML)
 			}
 
+			// Gateway API 子分組（Phase 1：唯讀）
+			gatewayHandler := handlers.NewGatewayHandler(d.db, d.clusterSvc, d.k8sMgr)
+			{
+				cluster.GET("/gateway/status", gatewayHandler.GetGatewayAPIStatus)
+				gatewayclasses := cluster.Group("/gatewayclasses")
+				{
+					gatewayclasses.GET("", gatewayHandler.ListGatewayClasses)
+					gatewayclasses.GET("/:name", gatewayHandler.GetGatewayClass)
+				}
+				gateways := cluster.Group("/gateways")
+				{
+					gateways.GET("", gatewayHandler.ListGateways)
+					gateways.GET("/:namespace/:name", gatewayHandler.GetGateway)
+					gateways.GET("/:namespace/:name/yaml", gatewayHandler.GetGatewayYAML)
+				}
+				httproutes := cluster.Group("/httproutes")
+				{
+					httproutes.GET("", gatewayHandler.ListHTTPRoutes)
+					httproutes.GET("/:namespace/:name", gatewayHandler.GetHTTPRoute)
+					httproutes.GET("/:namespace/:name/yaml", gatewayHandler.GetHTTPRouteYAML)
+				}
+			}
+
 			// networkpolicies 子分組
 			npHandler := handlers.NewNetworkPolicyHandler(d.clusterSvc, d.k8sMgr)
 			nps := cluster.Group("/networkpolicies")

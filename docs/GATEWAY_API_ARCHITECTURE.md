@@ -1,6 +1,6 @@
 # Synapse Gateway API 架構設計文件
 
-> 版本：v1.0 | 日期：2026-04-07 | 狀態：設計中
+> 版本：v1.1 | 日期：2026-04-07 | 狀態：Phase 1 已實作
 > 對應里程碑：M-GW（Gateway API 整合）
 
 ---
@@ -771,18 +771,19 @@ rules:
 
 ## 11. 實作路線圖
 
-### Phase 1：唯讀展示（建議優先）
+### Phase 1：唯讀展示 ✅ 已完成（2026-04-07）
 
-- [ ] `internal/services/gateway_service.go`：GVR 定義 + CRD 偵測 + List/Get 方法
-- [ ] `internal/handlers/gateway.go`：Handler（GET 系列）
-- [ ] 注入路由至 `routes_cluster.go`
-- [ ] `ui/src/pages/network/gatewayTypes.ts`：型別定義
-- [ ] `ui/src/services/gatewayService.ts`：API 呼叫
-- [ ] `GatewayClassList.tsx`：列表頁（唯讀）
-- [ ] `GatewayList.tsx` + `GatewayDrawer.tsx`：列表 + 詳情
-- [ ] `HTTPRouteList.tsx` + `HTTPRouteDrawer.tsx`：列表 + 詳情
-- [ ] `NetworkList.tsx`：加入 Gateway API Tab（條件顯示）
-- [ ] 未安裝 CRD 時的引導 UI
+- [x] `internal/services/gateway_service.go`：GVR 定義 + CRD 偵測 + List/Get 方法
+- [x] `internal/handlers/gateway.go`：Handler（GET 系列）
+- [x] 注入路由至 `routes_cluster.go`
+- [x] `ui/src/pages/network/gatewayTypes.ts`：型別定義
+- [x] `ui/src/services/gatewayService.ts`：API 呼叫
+- [x] `GatewayClassList.tsx`：列表頁（唯讀）
+- [x] `GatewayList.tsx` + `GatewayDrawer.tsx`：列表 + 詳情
+- [x] `HTTPRouteList.tsx` + `HTTPRouteDrawer.tsx`：列表 + 詳情
+- [x] `GatewayAPITab.tsx`：根 Tab，含未安裝引導 UI
+- [x] `NetworkList.tsx`：加入 Gateway API Tab
+- [x] i18n：zh-TW / zh-CN / en-US 三語系
 
 ### Phase 2：基本 CRUD
 
