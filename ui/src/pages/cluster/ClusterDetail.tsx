@@ -312,74 +312,43 @@ type="error"
           </Card>
 
           {/* 統計卡片 */}
-            <Row gutter={[20, 20]} className="stats-grid">
-              {/* 節點概覽 */}
-                     <Col xs={24} sm={12} lg={6}>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => navigate(`/clusters/${id}/nodes`)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/nodes`); }}
-                        style={{ background: 'linear-gradient(135deg,#20d6b5,#18b47b)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                        <div style={{ opacity: 0.9, marginBottom: 4 }}>{t('detail.totalNodes')}</div>
-                        <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                          <DesktopOutlined />
-                          {clusterOverview?.nodes || 0}
-                        </div>
-                      </div>
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => navigate(`/clusters/${id}/namespaces`)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/namespaces`); }}
-                        style={{ background: 'linear-gradient(135deg,#ff8a00,#e52e71)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                        <div style={{ opacity: 0.9, marginBottom: 4 }}>{t('detail.totalNamespaces')}</div>
-                        <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                          <FolderFilled />
-                          {clusterOverview?.namespace || 0}
-                        </div>
-                      </div>
-                    </Col>
-
-
-
-              {/* 工作負載概覽（僅總數，漸變數字卡） */}
-               <Col xs={24} sm={12} lg={6}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/clusters/${id}/workloads`)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/workloads`); }}
-                  style={{ background: 'linear-gradient(135deg,#6a11cb,#2575fc)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                  <div style={{ opacity: 0.9, marginBottom: 4 }}>{t('detail.totalWorkloads')}</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <AppstoreOutlined />
-                    {
-                      (clusterOverview?.deployments || 0) +
-                      (clusterOverview?.statefulsets || 0) +
-                      (clusterOverview?.daemonsets || 0) +
-                      (clusterOverview?.jobs || 0) +
-                      (clusterOverview?.rollouts || 0)
-                    }
+            <Row gutter={[16, 16]}>
+              {[
+                { label: t('detail.totalNodes'),      value: clusterOverview?.nodes || 0,      icon: <DesktopOutlined />,   iconBg: '#eff6ff', iconColor: '#3b82f6', to: `/clusters/${id}/nodes` },
+                { label: t('detail.totalNamespaces'), value: clusterOverview?.namespace || 0,  icon: <FolderFilled />,      iconBg: '#f0fdf4', iconColor: '#22c55e', to: `/clusters/${id}/namespaces` },
+                { label: t('detail.totalWorkloads'),  value: (clusterOverview?.deployments || 0) + (clusterOverview?.statefulsets || 0) + (clusterOverview?.daemonsets || 0) + (clusterOverview?.jobs || 0) + (clusterOverview?.rollouts || 0),
+                                                                                                icon: <AppstoreOutlined />,  iconBg: '#f5f3ff', iconColor: '#8b5cf6', to: `/clusters/${id}/workloads` },
+                { label: t('detail.totalPods'),       value: clusterOverview?.pods || 0,       icon: <CloudServerOutlined />, iconBg: '#ecfeff', iconColor: '#06b6d4', to: `/clusters/${id}/pods` },
+              ].map((item) => (
+                <Col key={item.label} xs={24} sm={12} lg={6}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(item.to)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') navigate(item.to); }}
+                    style={{
+                      background: '#fff', borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f0f0f0',
+                      display: 'flex', alignItems: 'center', gap: 16,
+                      transition: 'box-shadow 0.2s, border-color 0.2s',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLDivElement).style.borderColor = '#d0d0d0'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; (e.currentTarget as HTMLDivElement).style.borderColor = '#f0f0f0'; }}
+                  >
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                      background: item.iconBg, color: item.iconColor,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+                    }}>
+                      {item.icon}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 2 }}>{item.label}</div>
+                      <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', lineHeight: 1 }}>{item.value}</div>
+                    </div>
                   </div>
-                </div>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/clusters/${id}/pods`)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/clusters/${id}/pods`); }}
-                  style={{ background: 'linear-gradient(135deg,#36d1dc,#5b86e5)', color: '#fff', borderRadius: 12, padding: '16px 20px', textAlign: 'center', cursor: 'pointer' }}>
-                  <div style={{ opacity: 0.9, marginBottom: 4 }}>{t('detail.totalPods')}</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <CloudServerOutlined />
-                    {clusterOverview?.pods || 0}
-                  </div>
-                </div>
-              </Col>
+                </Col>
+              ))}
             </Row>
 
           {/* 詳細資訊標籤頁 */}
