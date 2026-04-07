@@ -10,9 +10,9 @@ import (
 type NotifyChannel struct {
 	ID              uint           `json:"id" gorm:"primaryKey"`
 	Name            string         `json:"name" gorm:"size:100;not null;uniqueIndex"`
-	Type            string         `json:"type" gorm:"size:20;not null"` // webhook / dingtalk / slack / teams
+	Type            string         `json:"type" gorm:"size:20;not null"` // webhook / telegram / slack / teams
 	WebhookURL      string         `json:"webhookUrl" gorm:"size:1000;not null"`
-	DingTalkSecret  string         `json:"dingTalkSecret,omitempty" gorm:"size:200"` // DingTalk HMAC 簽名金鑰（選填）
+	TelegramChatID  string         `json:"telegramChatId,omitempty" gorm:"column:telegram_chat_id;size:200"` // Telegram Chat ID（Type 為 telegram 時必填）
 	Description     string         `json:"description" gorm:"size:255"`
 	Enabled         bool           `json:"enabled" gorm:"default:true"`
 	CreatedAt       time.Time      `json:"createdAt"`

@@ -128,11 +128,13 @@ export interface PagerdutyConfig {
   description?: string;
 }
 
-// 釘釘告警配置
-export interface DingtalkConfig {
-  apiUrl: string;
-  secret?: string;
+// Telegram 告警配置
+export interface TelegramConfig {
+  botToken: string;
+  chatId: string;
   message?: string;
+  parseMode?: string;
+  disableNotification?: boolean;
 }
 
 // 完整 Receiver 配置
@@ -142,7 +144,7 @@ export interface ReceiverConfig {
   slackConfigs?: SlackConfig[];
   webhookConfigs?: WebhookConfig[];
   pagerdutyConfigs?: PagerdutyConfig[];
-  dingtalkConfigs?: DingtalkConfig[];
+  telegramConfigs?: TelegramConfig[];
 }
 
 // 測試 Receiver 請求

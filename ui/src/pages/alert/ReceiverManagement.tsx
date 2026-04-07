@@ -31,21 +31,21 @@ import {
   type SlackConfig,
   type WebhookConfig,
   type PagerdutyConfig,
-  type DingtalkConfig,
+  type TelegramConfig,
 } from '../../services/alertService';
 
 interface ReceiverManagementProps {
   clusterId: string;
 }
 
-type ReceiverType = 'email' | 'slack' | 'webhook' | 'pagerduty' | 'dingtalk';
+type ReceiverType = 'email' | 'slack' | 'webhook' | 'pagerduty' | 'telegram';
 
 const RECEIVER_TYPE_LABELS: Record<ReceiverType, string> = {
   email: 'Email',
   slack: 'Slack',
   webhook: 'Webhook',
   pagerduty: 'PagerDuty',
-  dingtalk: '釘釘',
+  telegram: 'Telegram',
 };
 
 const RECEIVER_TYPE_COLORS: Record<ReceiverType, string> = {
@@ -53,7 +53,7 @@ const RECEIVER_TYPE_COLORS: Record<ReceiverType, string> = {
   slack: 'purple',
   webhook: 'green',
   pagerduty: 'red',
-  dingtalk: 'orange',
+  telegram: 'cyan',
 };
 
 function getReceiverTypes(r: ReceiverConfig): ReceiverType[] {
@@ -62,7 +62,7 @@ function getReceiverTypes(r: ReceiverConfig): ReceiverType[] {
   if (r.slackConfigs?.length) types.push('slack');
   if (r.webhookConfigs?.length) types.push('webhook');
   if (r.pagerdutyConfigs?.length) types.push('pagerduty');
-  if (r.dingtalkConfigs?.length) types.push('dingtalk');
+  if (r.telegramConfigs?.length) types.push('telegram');
   return types;
 }
 
@@ -140,11 +140,13 @@ const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) =>
         pagerdutyServiceKey: p.serviceKey,
         pagerdutyDescription: p.description,
       });
-    } else if (type === 'dingtalk' && r.dingtalkConfigs?.[0]) {
-      const d = r.dingtalkConfigs[0];
+    } else if (type === 'telegram' && r.telegramConfigs?.[0]) {
+      const tg = r.telegramConfigs[0];
       Object.assign(baseValues, {
-        dingtalkApiUrl: d.apiUrl,
-        dingtalkSecret: d.secret,
+        telegramBotToken: tg.botToken,
+        telegramChatId: tg.chatId,
+        telegramParseMode: tg.parseMode ?? 'HTML',
+        telegramDisableNotification: tg.disableNotification ?? false,
       });
     }
     form.setFieldsValue(baseValues);
@@ -231,12 +233,14 @@ const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) =>
         description: values.pagerdutyDescription as string | undefined,
       };
       receiver.pagerdutyConfigs = [pdCfg];
-    } else if (type === 'dingtalk') {
-      const dtCfg: DingtalkConfig = {
-        apiUrl: values.dingtalkApiUrl as string,
-        secret: values.dingtalkSecret as string | undefined,
+    } else if (type === 'telegram') {
+      const tgCfg: TelegramConfig = {
+        botToken: values.telegramBotToken as string,
+        chatId: values.telegramChatId as string,
+        parseMode: (values.telegramParseMode as string | undefined) ?? 'HTML',
+        disableNotification: values.telegramDisableNotification as boolean | undefined,
       };
-      receiver.dingtalkConfigs = [dtCfg];
+      receiver.telegramConfigs = [tgCfg];
     }
     return receiver;
   }
@@ -414,14 +418,26 @@ const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) =>
                 ),
               },
               {
-                key: 'dingtalk',
-                label: '釘釘',
+                key: 'telegram',
+                label: 'Telegram',
                 children: (
                   <>
-                    <Form.Item name="dingtalkApiUrl" label="Webhook URL" rules={channelType === 'dingtalk' ? [{ required: true, message: '請輸入 Webhook URL' }] : []}>
-                      <Input placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
+                    <Form.Item name="telegramBotToken" label="Bot Token" rules={channelType === 'telegram' ? [{ required: true, message: '請輸入 Bot Token' }] : []}>
+                      <Input.Password placeholder="1234567890:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
                     </Form.Item>
-                    <Form.Item name="dingtalkSecret" label="加簽密鑰（選填）"><Input.Password /></Form.Item>
+                    <Form.Item name="telegramChatId" label="Chat ID" rules={channelType === 'telegram' ? [{ required: true, message: '請輸入 Chat ID' }] : []} extra="群組 Chat ID 以負號開頭，例如 -1001234567890">
+                      <Input placeholder="-1001234567890" />
+                    </Form.Item>
+                    <Form.Item name="telegramParseMode" label="訊息格式" initialValue="HTML">
+                      <Select>
+                        <Select.Option value="HTML">HTML</Select.Option>
+                        <Select.Option value="Markdown">Markdown</Select.Option>
+                        <Select.Option value="">純文字</Select.Option>
+                      </Select>
+                    </Form.Item>
+                    <Form.Item name="telegramDisableNotification" label="靜音傳送" valuePropName="checked" initialValue={false}>
+                      <Switch />
+                    </Form.Item>
                   </>
                 ),
               },

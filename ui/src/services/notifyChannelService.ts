@@ -3,9 +3,9 @@ import { request } from '../utils/api';
 export interface NotifyChannel {
   id: number;
   name: string;
-  type: 'webhook' | 'dingtalk' | 'slack' | 'teams';
+  type: 'webhook' | 'telegram' | 'slack' | 'teams';
   webhookUrl: string;
-  dingTalkSecret?: string;
+  telegramChatId?: string;
   description?: string;
   enabled: boolean;
   createdAt: string;
@@ -16,7 +16,7 @@ export interface CreateNotifyChannelRequest {
   name: string;
   type: string;
   webhookUrl: string;
-  dingTalkSecret?: string;
+  telegramChatId?: string;
   description?: string;
   enabled: boolean;
 }

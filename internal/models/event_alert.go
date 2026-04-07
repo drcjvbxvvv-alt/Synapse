@@ -16,7 +16,7 @@ type EventAlertRule struct {
 	EventReason string         `json:"eventReason" gorm:"size:100"`  // 例如 OOMKilling, BackOff
 	EventType   string         `json:"eventType" gorm:"size:20"`     // Warning / Normal / "" (不限)
 	MinCount    int            `json:"minCount" gorm:"default:1"`    // 觸發所需最小次數
-	NotifyType  string         `json:"notifyType" gorm:"size:20"`    // webhook / email / dingtalk
+	NotifyType  string         `json:"notifyType" gorm:"size:20"`    // webhook / telegram / slack / teams
 	NotifyURL   string         `json:"notifyUrl" gorm:"size:500"`    // Webhook URL
 	Enabled     bool           `json:"enabled" gorm:"default:true"`
 	CreatedAt   time.Time      `json:"createdAt"`

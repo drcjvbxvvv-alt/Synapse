@@ -266,15 +266,13 @@ func (w *EventAlertWorker) notify(rule *models.EventAlertRule, event *corev1.Eve
 		"triggeredAt": time.Now().Format(time.RFC3339),
 	}
 
-	// DingTalk 格式
-	if rule.NotifyType == "dingtalk" {
+	// Telegram 格式
+	if rule.NotifyType == "telegram" {
 		payload = map[string]interface{}{
-			"msgtype": "text",
-			"text": map[string]string{
-				"content": fmt.Sprintf("[Synapse 告警] %s\n叢集: %d | 命名空間: %s | 物件: %s\n原因: %s | 次數: %d\n訊息: %s",
-					rule.Name, rule.ClusterID, event.Namespace, involvedObj,
-					event.Reason, event.Count, event.Message),
-			},
+			"text": fmt.Sprintf("*[Synapse 告警]* %s\n叢集: %d | 命名空間: `%s` | 物件: `%s`\n原因: `%s` | 次數: %d\n訊息: %s",
+				rule.Name, rule.ClusterID, event.Namespace, involvedObj,
+				event.Reason, event.Count, event.Message),
+			"parse_mode": "Markdown",
 		}
 	}
 

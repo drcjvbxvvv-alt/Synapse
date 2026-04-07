@@ -3,9 +3,6 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -37,10 +34,10 @@ func (h *NotifyChannelHandler) ListNotifyChannels(c *gin.Context) {
 		response.InternalError(c, "查詢通知渠道失敗")
 		return
 	}
-	// 遮蔽 DingTalk 簽名金鑰
+	// 遮蔽 Telegram Bot Token
 	for i := range channels {
-		if channels[i].DingTalkSecret != "" {
-			channels[i].DingTalkSecret = "******"
+		if channels[i].TelegramChatID != "" {
+			channels[i].TelegramChatID = "******"
 		}
 	}
 	response.OK(c, channels)
@@ -61,8 +58,8 @@ func (h *NotifyChannelHandler) CreateNotifyChannel(c *gin.Context) {
 		response.InternalError(c, "建立通知渠道失敗")
 		return
 	}
-	if req.DingTalkSecret != "" {
-		req.DingTalkSecret = "******"
+	if req.TelegramChatID != "" {
+		req.TelegramChatID = "******"
 	}
 	response.OK(c, req)
 }
@@ -87,15 +84,15 @@ func (h *NotifyChannelHandler) UpdateNotifyChannel(c *gin.Context) {
 		return
 	}
 
-	// 若 DingTalkSecret 為遮蔽值則保留原值
-	if req.DingTalkSecret == "******" {
-		req.DingTalkSecret = channel.DingTalkSecret
+	// 若 TelegramChatID 為遮蔽值則保留原值
+	if req.TelegramChatID == "******" {
+		req.TelegramChatID = channel.TelegramChatID
 	}
 
 	channel.Name = req.Name
 	channel.Type = req.Type
 	channel.WebhookURL = req.WebhookURL
-	channel.DingTalkSecret = req.DingTalkSecret
+	channel.TelegramChatID = req.TelegramChatID
 	channel.Description = req.Description
 	channel.Enabled = req.Enabled
 
@@ -103,8 +100,8 @@ func (h *NotifyChannelHandler) UpdateNotifyChannel(c *gin.Context) {
 		response.InternalError(c, "更新通知渠道失敗")
 		return
 	}
-	if channel.DingTalkSecret != "" {
-		channel.DingTalkSecret = "******"
+	if channel.TelegramChatID != "" {
+		channel.TelegramChatID = "******"
 	}
 	response.OK(c, channel)
 }
@@ -157,10 +154,10 @@ func sendTestNotification(ch *models.NotifyChannel) error {
 	testMsg := fmt.Sprintf("[Synapse] 通知渠道「%s」測試訊息，傳送時間：%s", ch.Name, time.Now().Format("2006-01-02 15:04:05"))
 
 	switch ch.Type {
-	case "dingtalk":
+	case "telegram":
 		payload = map[string]interface{}{
-			"msgtype": "text",
-			"text":    map[string]string{"content": testMsg},
+			"chat_id": ch.TelegramChatID,
+			"text":    testMsg,
 		}
 	case "slack":
 		payload = map[string]interface{}{"text": testMsg}
@@ -182,19 +179,11 @@ func sendTestNotification(ch *models.NotifyChannel) error {
 	}
 
 	data, _ := json.Marshal(payload)
-	webhookURL := ch.WebhookURL
-
-	// DingTalk HMAC-SHA256 簽名
-	if ch.Type == "dingtalk" && ch.DingTalkSecret != "" {
-		timestamp := time.Now().UnixMilli()
-		sign := dingTalkSign(ch.DingTalkSecret, timestamp)
-		webhookURL = fmt.Sprintf("%s&timestamp=%d&sign=%s", webhookURL, timestamp, sign)
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", webhookURL, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, "POST", ch.WebhookURL, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
@@ -212,23 +201,16 @@ func sendTestNotification(ch *models.NotifyChannel) error {
 	return nil
 }
 
-// dingTalkSign 產生 DingTalk HMAC-SHA256 簽名
-func dingTalkSign(secret string, timestamp int64) string {
-	strToSign := fmt.Sprintf("%d\n%s", timestamp, secret)
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte(strToSign))
-	return base64.StdEncoding.EncodeToString(h.Sum(nil))
-}
-
 // SendToChannel 透過指定渠道傳送通知（供 EventAlertWorker 使用）
 func SendToChannel(ch *models.NotifyChannel, title, content string) error {
 	var payload interface{}
 
 	switch ch.Type {
-	case "dingtalk":
+	case "telegram":
 		payload = map[string]interface{}{
-			"msgtype": "text",
-			"text":    map[string]string{"content": content},
+			"chat_id": ch.TelegramChatID,
+			"text":    fmt.Sprintf("*%s*\n%s", title, content),
+			"parse_mode": "Markdown",
 		}
 	case "slack":
 		payload = map[string]interface{}{"text": content}
@@ -253,18 +235,11 @@ func SendToChannel(ch *models.NotifyChannel, title, content string) error {
 	}
 
 	data, _ := json.Marshal(payload)
-	webhookURL := ch.WebhookURL
-
-	if ch.Type == "dingtalk" && ch.DingTalkSecret != "" {
-		timestamp := time.Now().UnixMilli()
-		sign := dingTalkSign(ch.DingTalkSecret, timestamp)
-		webhookURL = fmt.Sprintf("%s&timestamp=%d&sign=%s", webhookURL, timestamp, sign)
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", webhookURL, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, "POST", ch.WebhookURL, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}

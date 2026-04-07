@@ -127,12 +127,12 @@ type Receiver struct {
 
 // ReceiverConfig 完整 Receiver 配置（用於 CRUD）
 type ReceiverConfig struct {
-	Name          string           `json:"name" yaml:"name"`
-	EmailConfigs  []EmailConfig    `json:"emailConfigs,omitempty" yaml:"email_configs,omitempty"`
-	SlackConfigs  []SlackConfig    `json:"slackConfigs,omitempty" yaml:"slack_configs,omitempty"`
-	WebhookConfigs []WebhookConfig `json:"webhookConfigs,omitempty" yaml:"webhook_configs,omitempty"`
+	Name             string            `json:"name" yaml:"name"`
+	EmailConfigs     []EmailConfig     `json:"emailConfigs,omitempty" yaml:"email_configs,omitempty"`
+	SlackConfigs     []SlackConfig     `json:"slackConfigs,omitempty" yaml:"slack_configs,omitempty"`
+	WebhookConfigs   []WebhookConfig   `json:"webhookConfigs,omitempty" yaml:"webhook_configs,omitempty"`
 	PagerdutyConfigs []PagerdutyConfig `json:"pagerdutyConfigs,omitempty" yaml:"pagerduty_configs,omitempty"`
-	DingtalkConfigs []DingtalkConfig  `json:"dingtalkConfigs,omitempty" yaml:"dingtalk_configs,omitempty"`
+	TelegramConfigs  []TelegramConfig  `json:"telegramConfigs,omitempty" yaml:"telegram_configs,omitempty"`
 }
 
 // EmailConfig Email 告警配置
@@ -171,11 +171,13 @@ type PagerdutyConfig struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
-// DingtalkConfig 釘釘告警配置
-type DingtalkConfig struct {
-	APIURL  string `json:"apiUrl" yaml:"api_url"`
-	Secret  string `json:"secret,omitempty" yaml:"secret,omitempty"`
-	Message string `json:"message,omitempty" yaml:"message,omitempty"`
+// TelegramConfig Telegram 告警配置
+type TelegramConfig struct {
+	BotToken            string `json:"botToken" yaml:"bot_token"`
+	ChatID              string `json:"chatId" yaml:"chat_id"`
+	Message             string `json:"message,omitempty" yaml:"message,omitempty"`
+	ParseMode           string `json:"parseMode,omitempty" yaml:"parse_mode,omitempty"`         // HTML / Markdown
+	DisableNotification bool   `json:"disableNotification,omitempty" yaml:"disable_notification,omitempty"`
 }
 
 // AlertmanagerFullConfig 用於 YAML 解析的 Alertmanager 完整配置結構

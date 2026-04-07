@@ -21,7 +21,7 @@ import type { NotifyChannel } from '../../services/notifyChannelService';
 
 const { Title, Paragraph } = Typography;
 
-const CHANNEL_TYPES = ['webhook', 'dingtalk', 'slack', 'teams'];
+const CHANNEL_TYPES = ['webhook', 'telegram', 'slack', 'teams'];
 
 const NotificationSettings: React.FC = () => {
   const { t } = useTranslation(['settings']);
@@ -62,7 +62,7 @@ const NotificationSettings: React.FC = () => {
       name: ch.name,
       type: ch.type,
       webhookUrl: ch.webhookUrl,
-      dingTalkSecret: ch.dingTalkSecret,
+      telegramChatId: ch.telegramChatId,
       description: ch.description,
       enabled: ch.enabled,
     });
@@ -114,7 +114,7 @@ const NotificationSettings: React.FC = () => {
 
   const typeTagColor: Record<string, string> = {
     webhook: 'blue',
-    dingtalk: 'orange',
+    telegram: 'cyan',
     slack: 'green',
     teams: 'purple',
   };
@@ -258,13 +258,14 @@ const NotificationSettings: React.FC = () => {
             shouldUpdate={(prev, cur) => prev.type !== cur.type}
           >
             {({ getFieldValue }) =>
-              getFieldValue('type') === 'dingtalk' ? (
+              getFieldValue('type') === 'telegram' ? (
                 <Form.Item
-                  name="dingTalkSecret"
-                  label={t('settings:notification.dingTalkSecret')}
-                  extra={t('settings:notification.dingTalkSecretHint')}
+                  name="telegramChatId"
+                  label={t('settings:notification.telegramChatId')}
+                  extra={t('settings:notification.telegramChatIdHint')}
+                  rules={[{ required: true, message: t('settings:notification.telegramChatIdRequired') }]}
                 >
-                  <Input.Password placeholder={t('settings:notification.dingTalkSecretPlaceholder')} />
+                  <Input placeholder="-1001234567890" />
                 </Form.Item>
               ) : null
             }

@@ -299,12 +299,12 @@ const EventAlertRules: React.FC = () => {
           <Form.Item name="notifyType" label="通知方式" rules={[{ required: true }]}>
             <Select>
               <Option value="webhook">Webhook</Option>
-              <Option value="dingtalk">釘釘</Option>
+              <Option value="telegram">Telegram</Option>
               <Option value="slack">Slack</Option>
               <Option value="teams">Microsoft Teams</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="notifyUrl" label="通知 URL" tooltip="Webhook / 釘釘 / Slack / Teams Incoming Webhook URL">
+          <Form.Item name="notifyUrl" label="通知 URL" tooltip="Webhook / Telegram Bot API / Slack / Teams Incoming Webhook URL">
             <Input placeholder="https://..." />
           </Form.Item>
           <Form.Item name="enabled" label="啟用" valuePropName="checked">
