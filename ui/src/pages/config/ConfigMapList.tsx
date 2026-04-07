@@ -324,6 +324,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
   // 行選擇配置
   const rowSelection = {
     selectedRowKeys,
+    columnWidth: 48,
     onChange: (keys: React.Key[]) => {
       setSelectedRowKeys(keys as string[]);
     },

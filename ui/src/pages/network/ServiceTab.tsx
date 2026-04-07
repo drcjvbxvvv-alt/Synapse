@@ -371,6 +371,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   };
 
   const rowSelection = {
+    columnWidth: 48,
     selectedRowKeys,
     onChange: (keys: React.Key[]) => setSelectedRowKeys(keys as string[]),
   };

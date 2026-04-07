@@ -354,6 +354,7 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
 
   // 行選擇配置
   const rowSelection = {
+    columnWidth: 48,
     selectedRowKeys,
     onChange: (keys: React.Key[]) => {
       setSelectedRowKeys(keys as string[]);

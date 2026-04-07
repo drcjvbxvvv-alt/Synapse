@@ -341,6 +341,7 @@ const [allSecrets, setAllSecrets] = useState<SecretListItem[]>([]);
   // 行選擇配置
   const rowSelection = {
     selectedRowKeys,
+    columnWidth: 48,
     onChange: (keys: React.Key[]) => {
       setSelectedRowKeys(keys as string[]);
     },
