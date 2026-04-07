@@ -41,9 +41,10 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, edges, onClose 
   if (!node) return null;
 
   const isWorkload = node.kind === 'Workload';
-  const kindColor = isWorkload
+  const isIngress  = node.kind === 'Ingress';
+  const kindColor  = isWorkload
     ? (WORKLOAD_KIND_COLOR[node.workloadKind ?? ''] ?? '#8c8c8c')
-    : '#fa8c16';
+    : isIngress ? '#722ed1' : '#fa8c16';
 
   // Edges connected to this node
   const outEdges = edges.filter((e) => e.source === node.id); // Service → Workload
@@ -73,7 +74,11 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, edges, onClose 
         </Descriptions.Item>
         <Descriptions.Item label={t('clusterTopology.detail.kind')}>
           <Tag color={kindColor}>
-            {isWorkload ? (node.workloadKind ?? 'Workload') : `Service / ${node.serviceType ?? 'ClusterIP'}`}
+            {isWorkload
+              ? (node.workloadKind ?? 'Workload')
+              : isIngress
+              ? 'Ingress'
+              : `Service / ${node.serviceType ?? 'ClusterIP'}`}
           </Tag>
         </Descriptions.Item>
 
@@ -87,13 +92,20 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, edges, onClose 
           </Descriptions.Item>
         )}
 
+        {/* Ingress-specific */}
+        {isIngress && node.ingressClass && (
+          <Descriptions.Item label={t('clusterTopology.detail.ingressClass')}>
+            <Tag>{node.ingressClass}</Tag>
+          </Descriptions.Item>
+        )}
+
         {/* Service-specific */}
-        {!isWorkload && node.clusterIP && node.clusterIP !== 'None' && (
+        {!isWorkload && !isIngress && node.clusterIP && node.clusterIP !== 'None' && (
           <Descriptions.Item label="ClusterIP">
             <Text code>{node.clusterIP}</Text>
           </Descriptions.Item>
         )}
-        {!isWorkload && node.serviceType && (
+        {!isWorkload && !isIngress && node.serviceType && (
           <Descriptions.Item label={t('clusterTopology.detail.serviceType')}>
             <Tag>{node.serviceType}</Tag>
           </Descriptions.Item>

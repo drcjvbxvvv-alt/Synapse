@@ -2,20 +2,22 @@ import { request } from '../utils/api';
 
 export interface NetworkNode {
   id: string;
-  kind: 'Workload' | 'Service';
+  kind: 'Workload' | 'Service' | 'Ingress';
   name: string;
   namespace: string;
-  workloadKind?: string; // Deployment | StatefulSet | DaemonSet | Job | Pod
+  workloadKind?: string;    // Deployment | StatefulSet | DaemonSet | Job | Pod
   labels?: Record<string, string>;
   readyCount: number;
   totalCount: number;
   clusterIP?: string;
   serviceType?: string;
+  ingressClass?: string;    // Phase C: nginx | traefik | istio …
 }
 
 export interface NetworkEdge {
   source: string;
   target: string;
+  kind?: string;         // "" (static) | "ingress"
   health: 'healthy' | 'degraded' | 'down' | 'unknown';
   ports?: string;
   // Phase B: Istio enrichment

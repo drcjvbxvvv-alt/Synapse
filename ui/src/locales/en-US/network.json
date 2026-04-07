@@ -28,8 +28,11 @@
       "serviceType": "Service Type",
       "labels": "Labels",
       "connectedWorkloads": "Connected Workloads",
-      "connectedServices": "Connected Services"
-    }
+      "connectedServices": "Connected Services",
+      "ingressClass": "Ingress Class"
+    },
+    "autoRefreshStart": "Enable auto-refresh (15s)",
+    "autoRefreshStop": "Stop auto-refresh"
   },
   "gatewayapi": {
     "notInstalled": "Gateway API is Not Installed",

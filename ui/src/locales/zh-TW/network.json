@@ -28,8 +28,11 @@
       "serviceType": "服務類型",
       "labels": "標籤",
       "connectedWorkloads": "關聯工作負載",
-      "connectedServices": "關聯服務"
-    }
+      "connectedServices": "關聯服務",
+      "ingressClass": "Ingress 控制器"
+    },
+    "autoRefreshStart": "開啟每 15 秒自動刷新",
+    "autoRefreshStop": "停止自動刷新"
   },
   "gatewayapi": {
     "notInstalled": "此叢集尚未安裝 Gateway API",

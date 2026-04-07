@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, Select, Spin, Empty, Tag, App, Space, Tooltip, Switch } from 'antd';
-import { ReloadOutlined, ApiOutlined } from '@ant-design/icons';
+import { ReloadOutlined, ApiOutlined, SyncOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { networkTopologyService } from '../../services/networkTopologyService';
 import type { NetworkNode, NetworkEdge, TopologyIntegrationStatus } from '../../services/networkTopologyService';
@@ -24,6 +24,8 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [integrations, setIntegrations] = useState<TopologyIntegrationStatus | null>(null);
   const [enrich, setEnrich] = useState(false);
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load namespace list + integration status
   useEffect(() => {
@@ -60,6 +62,17 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     loadTopology();
   }, [loadTopology]);
 
+  // Auto-refresh every 15 seconds when enabled
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (autoRefresh) {
+      timerRef.current = setInterval(loadTopology, 15000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [autoRefresh, loadTopology]);
+
   return (
     <div>
       {/* Toolbar */}
@@ -77,6 +90,13 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
         <Button icon={<ReloadOutlined />} loading={loading} onClick={loadTopology}>
           {t('clusterTopology.refresh')}
         </Button>
+        <Tooltip title={autoRefresh ? t('clusterTopology.autoRefreshStop') : t('clusterTopology.autoRefreshStart')}>
+          <Button
+            icon={<SyncOutlined spin={autoRefresh} />}
+            type={autoRefresh ? 'primary' : 'default'}
+            onClick={() => setAutoRefresh((v) => !v)}
+          />
+        </Tooltip>
 
         {/* Integration badges */}
         {integrations?.istio && (
@@ -115,7 +135,8 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
           {Object.entries(WORKLOAD_KIND_COLOR).slice(0, 4).map(([kind, color]) => (
             <Tag key={kind} color={color} style={{ fontSize: 11 }}>{kind}</Tag>
           ))}
-          <Tag color="orange" style={{ fontSize: 11 }}>Service</Tag>
+          <Tag color="orange"  style={{ fontSize: 11 }}>Service</Tag>
+          <Tag color="purple"  style={{ fontSize: 11 }}>Ingress</Tag>
         </Space>
         <Space wrap size={4}>
           {HEALTH_LEGEND.map(({ key, color }) => (

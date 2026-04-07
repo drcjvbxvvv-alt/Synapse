@@ -14,7 +14,7 @@ import (
 
 type NetworkNode struct {
 	ID           string            `json:"id"`
-	Kind         string            `json:"kind"`                   // "Workload" | "Service"
+	Kind         string            `json:"kind"`                   // "Workload" | "Service" | "Ingress"
 	Name         string            `json:"name"`
 	Namespace    string            `json:"namespace"`
 	WorkloadKind string            `json:"workloadKind,omitempty"` // Deployment|StatefulSet|DaemonSet|Job|Pod
@@ -23,12 +23,14 @@ type NetworkNode struct {
 	TotalCount   int               `json:"totalCount"`
 	ClusterIP    string            `json:"clusterIP,omitempty"`
 	ServiceType  string            `json:"serviceType,omitempty"`
+	IngressClass string            `json:"ingressClass,omitempty"` // Phase C: nginx | traefik | istio …
 }
 
 type NetworkEdge struct {
 	Source       string  `json:"source"`
 	Target       string  `json:"target"`
-	Health       string  `json:"health"` // "healthy"|"degraded"|"down"|"unknown"
+	Kind         string  `json:"kind,omitempty"`   // "" (static) | "ingress"
+	Health       string  `json:"health"`           // "healthy"|"degraded"|"down"|"unknown"
 	Ports        string  `json:"ports,omitempty"`
 	// Phase B: Istio enrichment (omitted when not available)
 	RequestRate  float64 `json:"requestRate,omitempty"`  // req/s
@@ -106,6 +108,10 @@ func networkWorkloadNodeID(ns, kind, name string) string {
 
 func networkServiceNodeID(ns, name string) string {
 	return fmt.Sprintf("service/%s/%s", ns, name)
+}
+
+func networkIngressNodeID(ns, name string) string {
+	return fmt.Sprintf("ingress/%s/%s", ns, name)
 }
 
 // labelsContain returns true if all selector key-values exist in labels.
@@ -381,6 +387,74 @@ func GetClusterNetworkTopology(
 			}
 			edgeSet[ek] = true
 			edges = append(edges, NetworkEdge{Source: svcID, Target: podID, Health: health, Ports: ports})
+		}
+	}
+
+	// 8. List Ingresses and build Ingress → Service edges (Phase C)
+	for _, ns := range namespaces {
+		ingList, err := clientset.NetworkingV1().Ingresses(ns).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			continue
+		}
+		for _, ing := range ingList.Items {
+			ingID := networkIngressNodeID(ing.Namespace, ing.Name)
+			if !nodeSet[ingID] {
+				nodeSet[ingID] = true
+				ingressClass := ""
+				if ing.Spec.IngressClassName != nil {
+					ingressClass = *ing.Spec.IngressClassName
+				}
+				nodes = append(nodes, NetworkNode{
+					ID:           ingID,
+					Kind:         "Ingress",
+					Name:         ing.Name,
+					Namespace:    ing.Namespace,
+					IngressClass: ingressClass,
+				})
+			}
+
+			addIngressEdge := func(svcName, port string) {
+				svcID := networkServiceNodeID(ing.Namespace, svcName)
+				if !nodeSet[svcID] {
+					return // skip if target service not in selected namespaces
+				}
+				ek := ingID + "->" + svcID
+				if edgeSet[ek] {
+					return
+				}
+				edgeSet[ek] = true
+				edges = append(edges, NetworkEdge{
+					Source: ingID,
+					Target: svcID,
+					Kind:   "ingress",
+					Health: "healthy",
+					Ports:  port,
+				})
+			}
+
+			// Rules-based backends
+			for _, rule := range ing.Spec.Rules {
+				if rule.HTTP == nil {
+					continue
+				}
+				for _, path := range rule.HTTP.Paths {
+					if path.Backend.Service == nil {
+						continue
+					}
+					port := ""
+					if path.Backend.Service.Port.Number > 0 {
+						port = fmt.Sprintf("%d", path.Backend.Service.Port.Number)
+					} else if path.Backend.Service.Port.Name != "" {
+						port = path.Backend.Service.Port.Name
+					}
+					addIngressEdge(path.Backend.Service.Name, port)
+				}
+			}
+
+			// Default backend
+			if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
+				addIngressEdge(ing.Spec.DefaultBackend.Service.Name, "")
+			}
 		}
 	}
 

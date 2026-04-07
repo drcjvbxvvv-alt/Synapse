@@ -28,8 +28,11 @@
       "serviceType": "服务类型",
       "labels": "标签",
       "connectedWorkloads": "关联工作负载",
-      "connectedServices": "关联服务"
-    }
+      "connectedServices": "关联服务",
+      "ingressClass": "Ingress 控制器"
+    },
+    "autoRefreshStart": "开启每 15 秒自动刷新",
+    "autoRefreshStop": "停止自动刷新"
   },
   "gatewayapi": {
     "notInstalled": "此集群尚未安装 Gateway API",
