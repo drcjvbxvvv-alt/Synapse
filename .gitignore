@@ -218,6 +218,7 @@ data/
 ui/playwright-report/
 ui/test-results/
 .test-backend.pid
+.dev/
 
 # Embedded frontend build artifacts
 ui/dist

@@ -26,10 +26,13 @@ help:
 	@echo "$(BLUE)║         Synapse Makefile 命令                          ║$(NC)"
 	@echo "$(BLUE)╚═══════════════════════════════════════════════════════════╝$(NC)"
 	@echo ""
-	@echo "$(GREEN)开发命令:$(NC)"
-	@echo "  make dev            - 启动开发环境"
-	@echo "  make dev-backend    - 仅启动后端开发服务"
-	@echo "  make dev-frontend   - 仅启动前端开发服务"
+	@echo "$(GREEN)開發命令:$(NC)"
+	@echo "  make dev            - 啟動完整開發環境（MySQL + 後端 + 前端）"
+	@echo "  make dev-backend    - 啟動 MySQL + 後端（不含前端）"
+	@echo "  make dev-frontend   - 啟動前端開發伺服器"
+	@echo "  make dev-mysql      - 僅啟動 MySQL + Adminer"
+	@echo "  make dev-stop       - 停止所有開發服務"
+	@echo "  make dev-reset      - 清除 MySQL volume 並重新初始化"
 	@echo ""
 	@echo "$(GREEN)构建命令:$(NC)"
 	@echo "  make build          - 构建前后端"
@@ -70,24 +73,32 @@ help:
 # 开发命令
 # ==========================================
 
-## dev: 启动开发环境
+## dev: 啟動完整開發環境（MySQL + 後端 + 前端）
 dev:
-	@echo "$(BLUE)启动开发环境...$(NC)"
-	$(COMPOSE_CMD) up -d mysql grafana grafana-init
-	@echo "$(GREEN)基础服务已启动$(NC)"
-	@echo "请在单独的终端运行:"
-	@echo "  后端: go run main.go"
-	@echo "  前端: cd ui && npm run dev"
+	@bash scripts/dev.sh
 
-## dev-backend: 启动后端开发服务
+## dev-backend: 啟動 MySQL + 後端（不含前端）
 dev-backend:
-	@echo "$(BLUE)启动后端开发服务...$(NC)"
-	go run main.go
+	@bash scripts/dev.sh --backend-only
 
-## dev-frontend: 启动前端开发服务
+## dev-frontend: 啟動前端開發伺服器
 dev-frontend:
-	@echo "$(BLUE)启动前端开发服务...$(NC)"
-	cd ui && npm run dev
+	@bash scripts/dev.sh --frontend-only
+
+## dev-mysql: 僅啟動 MySQL + Adminer
+dev-mysql:
+	@echo "$(BLUE)啟動 MySQL 開發環境...$(NC)"
+	docker compose -f docker-compose.dev.yml up -d
+	@echo "$(GREEN)MySQL 已啟動$(NC)"
+	docker compose -f docker-compose.dev.yml ps
+
+## dev-stop: 停止所有開發服務
+dev-stop:
+	@bash scripts/dev.sh --stop
+
+## dev-reset: 清除 MySQL volume 並重新初始化
+dev-reset:
+	@bash scripts/dev.sh --reset
 
 # ==========================================
 # 构建命令
