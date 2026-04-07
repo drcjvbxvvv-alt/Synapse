@@ -32,6 +32,7 @@ die()   { error "$*"; exit 1; }
 # ── 旗標解析 ──────────────────────────────────────────────────────────────────
 OPT_BACKEND_ONLY=0
 OPT_FRONTEND_ONLY=0
+OPT_MYSQL_ONLY=0
 OPT_NO_MYSQL=0
 OPT_BUILD=0
 OPT_STOP=0
@@ -41,6 +42,7 @@ for arg in "$@"; do
   case "$arg" in
     --backend-only)  OPT_BACKEND_ONLY=1  ;;
     --frontend-only) OPT_FRONTEND_ONLY=1 ;;
+    --mysql-only)    OPT_MYSQL_ONLY=1    ;;
     --no-mysql)      OPT_NO_MYSQL=1      ;;
     --build)         OPT_BUILD=1         ;;
     --stop)          OPT_STOP=1          ;;
@@ -112,6 +114,36 @@ set +o allexport
 mkdir -p "$PID_DIR"
 
 # ── MySQL ─────────────────────────────────────────────────────────────────────
+if [ "$OPT_MYSQL_ONLY" -eq 1 ]; then
+  info "啟動 MySQL + Adminer..."
+  $COMPOSE up -d
+
+  info "等待 MySQL 就緒..."
+  MAX_WAIT=60
+  ELAPSED=0
+  until $COMPOSE exec -T mysql mysqladmin ping \
+      -h 127.0.0.1 \
+      -u "${MYSQL_USER:-synapse}" \
+      -p"${MYSQL_PASSWORD:-Synapse@2026}" \
+      --silent 2>/dev/null; do
+    ELAPSED=$((ELAPSED + 2))
+    if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
+      error "MySQL 在 ${MAX_WAIT}s 內未就緒，查看日誌："
+      $COMPOSE logs --tail=20 mysql
+      die "啟動失敗"
+    fi
+    printf "  等待中... %ds\r" "$ELAPSED"
+    sleep 2
+  done
+  ok "MySQL 就緒"
+
+  echo ""
+  echo -e "  ${G}MySQL${N}   → 127.0.0.1:${MYSQL_PORT:-3306}  (${MYSQL_USER:-synapse} / ${MYSQL_PASSWORD:-Synapse@2026})"
+  echo -e "  ${G}Adminer${N} → http://localhost:${ADMINER_PORT:-8080}"
+  echo ""
+  exit 0
+fi
+
 if [ "$OPT_NO_MYSQL" -eq 0 ]; then
   info "啟動 MySQL + Adminer..."
   $COMPOSE up -d
