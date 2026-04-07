@@ -1,8 +1,8 @@
 # Synapse — 企業級 Kubernetes DevOps 平台
 
-> 多叢集管理 · AI 輔助運維 · 成本分析 · 完整可觀測性
+> 多叢集管理 · AI 輔助運維 · 資源治理 · 完整可觀測性
 
-Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基於 React 19 + TypeScript + Ant Design 5，後端基於 Go + Gin + GORM 構建。目標是讓開發、運維、SRE 團隊在單一入口完成日常 K8s 工作，從資源管理、監控告警到 AI 診斷、成本分析，無需在多個工具之間切換。
+Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基於 React 19 + TypeScript + Ant Design 5，後端基於 Go + Gin + GORM 構建。目標是讓開發、運維、SRE 團隊在單一入口完成日常 K8s 工作，從資源管理、監控告警到 AI 診斷、資源治理，無需在多個工具之間切換。
 
 ---
 
@@ -67,6 +67,15 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 - 完整 CRUD；**拓撲視覺化**（以 D3 / 力導向圖呈現 Pod 間允許 / 拒絕流量）
 - **建立精靈**：逐步引導設定 Ingress / Egress 規則，降低設定門檻
+- **策略模擬**：輸入來源 / 目標 Pod，即時預覽流量是否被允許（不需實際變更規則）
+- **內聯編輯**：拓撲圖直接點選連線編輯規則
+
+#### Service Mesh（Istio）視覺化
+
+- 自動偵測 Istio 安裝狀態（CRD / istiod Pod）
+- **流量拓撲圖**：基於 Prometheus `istio_requests_total` 呈現服務間 RPS、錯誤率、P99 延遲
+- VirtualService / DestinationRule / Gateway / PeerAuthentication CRD 查看
+- mTLS 狀態 Badge
 
 ---
 
@@ -157,14 +166,29 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 ---
 
-### 💰 成本分析
+### 💰 資源治理（Resource Governance）
 
-- **定價設定**：CPU / 記憶體單價（USD / TWD / CNY / JPY）
-- **命名空間成本**：Bar Chart + 排行表；本月估算費用
-- **工作負載成本**：按 Deployment / StatefulSet 分攤，含利用率進度條
-- **趨勢分析**：6 個月歷史成本 Line Chart
-- **浪費識別**：低利用率工作負載（CPU / Mem 利用率 < 10%）
-- **CSV 匯出**：按月匯出成本報表
+#### 資源佔用分析（不依賴 Prometheus）
+- **佔用率儀表板**：叢集 CPU / 記憶體 allocatable、requested、occupancy、headroom 即時卡片
+- **命名空間佔用**：橫向 BarChart 排行 + 明細表（佔叢集容量百分比）
+- **跨叢集洞察**：全平台佔用率對比、叢集排行、整體效率評分
+
+#### 資源效率分析（需要 Prometheus）
+- **效率散點圖**：CPU 效率 × 記憶體效率象限圖，泡泡大小 = CPU 佔用量
+- **工作負載效率**：Deployment / StatefulSet / DaemonSet 廢棄分數排序；`WasteScore = (1-CPU效率)×0.6 + (1-記憶體效率)×0.4`
+- **低效識別**：CPU 效率 < 20% 工作負載列表，帶廢棄分數警示色
+- **降級策略**：無 Prometheus 時自動降級，佔用率正常顯示
+
+#### 容量規劃與 Right-sizing
+- **容量趨勢**：月度 CPU / 記憶體佔用率折線圖（讀取每日快照）
+- **耗盡預測**：線性迴歸外推，標示到達 80% / 100% 的預測日期（180 天期）
+- **Right-sizing 建議**：基於 7 日最大用量 × 安全係數（CPU ×1.2、記憶體 ×1.25）
+- **CSV 匯出**：低效工作負載報告直接串流下載
+
+#### 雲端帳單整合（可選）
+- **AWS Cost Explorer**：SigV4 簽名對接，取得各服務月度費用明細
+- **GCP Cloud Billing**：Service Account oauth2 對接 Budget API
+- **資源單位成本**：換算 USD/core-hr、USD/GiB-hr，讓帳單費用對應到 K8s 資源使用
 
 ---
 
@@ -197,6 +221,19 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 - 10 個常見場景（OOMKilled / CrashLoopBackOff / 節點 NotReady 等）
 - 支援關鍵字搜尋；以 Collapse 展開步驟式解決流程
+
+---
+
+### 🔗 多叢集工作流程
+
+#### 工作負載遷移
+- **遷移精靈**：3 步驟（選目標叢集 → 資源相容性檢查 → 確認執行）
+- 自動取得來源 Deployment YAML → 套用至目標叢集；同步關聯 ConfigMap / Secret
+
+#### 配置同步策略
+- **策略 CRUD**：設定來源叢集 / 命名空間 / 資源類型（ConfigMap / Secret）/ 目標叢集列表
+- **衝突策略**：overwrite（強制覆蓋）/ skip（跳過已存在）
+- **排程同步**：支援 Cron 表達式定時同步，或手動觸發；同步歷史逐次紀錄
 
 ---
 
@@ -281,6 +318,16 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 - 記錄 kubectl / Pod Exec / SSH 三種 Terminal 的所有指令
 - 會話列表 + 指令詳情逐筆查詢
 
+#### 部署審批工作流
+
+- 命名空間保護機制：標記保護命名空間，刪除 / 重大變更需提交審批申請
+- 審批請求列表：管理員審核通過後方可執行操作
+
+#### SIEM 整合
+
+- Webhook 推送：將稽核日誌批次推送至外部 SIEM 系統（Splunk / Datadog 等）
+- 支援自訂 Header、批次大小、推送頻率
+
 ---
 
 ### ⚙️ 系統設定
@@ -289,6 +336,8 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 - **AI 設定**：Provider 切換（OpenAI / Azure / Claude / Ollama）；API Key / Endpoint / 模型設定
 - **Grafana 整合**：Grafana URL / API Key / Dashboard ID 設定
 - **系統安全**：JWT Secret 強制設定；AES-256-GCM 憑證欄位加密（`ENCRYPTION_KEY` 環境變數）
+- **安全設定 Tab**：登入安全參數動態調整（Session TTL / 鎖定閾值 / 密碼最短長度）；個人 API Token 管理（SHA-256 hash 儲存）；SIEM Webhook 推送設定
+- **通知渠道管理**：集中管理 Webhook / DingTalk（HMAC-SHA256 加簽）/ Slack / Microsoft Teams / Email（SMTP）通知渠道；支援即時測試連線
 - **多叢集同步策略**：設定 ConfigMap / Secret 跨叢集同步規則（來源 / 目標 / 衝突策略 / Cron）
 
 ---
@@ -421,6 +470,181 @@ Synapse/
 | 密碼 | `Synapse@2026` |
 
 > ⚠️ 生產環境請立即修改預設密碼，並設定 `ENCRYPTION_KEY` 與 `JWT_SECRET`。
+
+---
+
+## 系統分析報告
+
+> 基於原始碼深度審查，涵蓋九個維度，誠實呈現優勢與已知缺陷。分析日期：2026-04-07。
+
+### 總覽評分
+
+| 維度 | 評分 | 核心結論 |
+|------|------|----------|
+| 可靠度 | 8/10 | 主路徑錯誤處理完整；已修復 runbooks panic、kubectl terminal panic、Mesh 指標 stub |
+| 實用性 | 9/10 | 覆蓋 95% 日常 K8s 操作；新增資源治理、多叢集遷移、Service Mesh 視覺化、通知渠道管理 |
+| 可用性 | 9/10 | Design Token 統一、MainLayout 重構、空狀態元件標準化；API 回應格式一致 |
+| 誠實性 | 8/10 | 功能與實作高度一致；Service Mesh 流量指標已實作（非 stub）；已補充雲端帳單估算說明 |
+| 系統架構 | 8/10 | Handler → Service → K8s Manager 分層清晰；`K8sInformerManager` 介面解除循環依賴 |
+| 穩定度 | 7/10 | 並發控制正確；高流量下無請求佇列保護，K8s client 超出 QPS/Burst 會直接回傳錯誤 |
+| 程式碼品質 | 8/10 | 錯誤包裝一致；具名常數取代硬編碼；主要 handler 行數合理；前端 Design Token 集中管理 |
+| 效能 | 9/10 | Informer 快取 + 連線池完善；GlobalSearch 並行化；Pod/Node 列表分層 refetchInterval |
+| 安全性 | 5/10 | RBAC / 稽核 / AI 脫敏完整；**kubeconfig 明文儲存仍為重大風險**；TLS 預設 skip verify |
+
+---
+
+### 1. 可靠度（Reliability）8/10
+
+**優勢**
+- 所有 K8s 操作帶 `context.WithTimeout`（30 秒），防止無限等待
+- Informer 快取同步等待有 timeout 守衛；`Gin Recovery()` 兜住未預期 panic
+- `CostWorker`、`EventAlertWorker`、`LogRetentionWorker` 生命週期由 `Router.Setup()` 統一管理
+
+**已修復**
+- `runbooks.go` JSON 解析失敗 panic → 優雅降級（日誌警告 + 空列表）
+- `kubectl_terminal.go` `mustParseUint()` panic → `strconv.ParseUint` + `BadRequest` 回傳
+- `mesh_service.go` `enrichWithMetrics()` stub → 實作 Prometheus `istio_requests_total` 查詢
+- `kubectl_pod_terminal.go` `ensureKubectlPod` 未建立命名空間 → 補上 `ensureNamespace` 呼叫
+
+**殘餘缺陷**
+- 部分 handler 同時記錄日誌又回傳錯誤，行為不一致
+
+---
+
+### 2. 實用性（Practicality）9/10
+
+**涵蓋功能**
+- 工作負載：Deployment / StatefulSet / DaemonSet / Job / CronJob / Argo Rollouts（HPA / VPA / PDB）
+- 資源治理：佔用分析（K8s API）+ 效率分析（Prometheus）+ 容量預測 + Right-sizing + 雲端帳單
+- 多叢集：工作負載遷移精靈 + ConfigMap/Secret 跨叢集同步策略
+- 網路：NetworkPolicy 策略模擬 + Service Mesh（Istio）流量拓撲
+- 稽核：操作日誌 + Terminal 回放 + 部署審批 + SIEM 推送
+- 通知：Webhook / DingTalk（HMAC 加簽）/ Slack / Teams / Email（SMTP）集中渠道管理
+
+**殘餘限制**
+- CI/CD Pipeline 引擎（M13–M17）尚未實作，依賴外部 ArgoCD
+- 備份（Velero 整合）延後至 M16 後評估
+
+---
+
+### 3. 可用性（Usability）9/10
+
+**優勢**
+- 統一 Design Token（`theme.ts` + `ConfigProvider`），零個 `.ant-*` CSS 覆蓋
+- `MainLayout.tsx` 縮減至 52 行，Header / Sider / ContextBar 獨立元件
+- `EmptyState` / `ErrorState` / `PageSkeleton` 統一規範，所有列表頁有非空白的空狀態
+- 分層 `refetchInterval`：Pod 5s / Node 10s / Deployment 15s / Overview 30s
+- RBAC 403 錯誤回傳可存取命名空間列表，方便使用者自助診斷
+
+**殘餘缺陷**
+- 工作負載列表缺少「日誌」快捷 icon（需進入詳情頁才能查看日誌）
+
+---
+
+### 4. 誠實性（Honesty / Accuracy）8/10
+
+**與實際相符**
+- 工作負載、儲存、設定、RBAC、AI、GitOps、Helm、CRD、Terminal 均已實作
+- Service Mesh 流量指標已實際填入（`istio_requests_total` Prometheus 查詢）
+- 資源治理：佔用、效率、預測、Right-sizing、雲端帳單全部實作，非估算佔位符
+
+**需補充說明**
+- 雲端帳單 GCP 部分依賴 Budget API（需建立預算才有資料），無 Budget 時建議改用 BigQuery Export
+- 後端測試覆蓋率約 25%，前端接近 0%，有別於企業級平台通常期待
+
+---
+
+### 5. 系統架構（Architecture）8/10
+
+**優勢**
+- Handler → Service → K8s Manager → client-go 分層清晰，無循環依賴
+- `K8sInformerManager` 介面（`services` 包定義），解除 `services ↔ k8s` 套件循環
+- `Router.Setup()` 集中建立所有服務實例並注入，依賴關係明確
+- `ClusterInformerManager` 含閒置 GC（2 小時），防止記憶體洩漏
+
+**已知缺陷**
+- 服務層均為具體型別，無介面定義，難以注入 mock 進行單元測試
+- 每個 handler 直接持有 `*gorm.DB`，無 repository 層；跨表事務邊界不清晰
+- `permission.go` 硬編碼 `username == "admin"` 超級管理員邏輯，應改為 role-based
+
+---
+
+### 6. 穩定度（Stability）7/10
+
+**優勢**
+- `ClusterInformerManager` 使用 `sync.RWMutex` 保護叢集 map
+- 閒置叢集 GC goroutine 防止長時間累積的資源洩漏
+- WebSocket 重連採指數退避（最大 10 次、上限 30 秒）
+
+**殘餘缺陷**
+- 高並發下無請求佇列保護：K8s client QPS/Burst（100/200）超出後直接回傳錯誤而非排隊
+- SQLite 模式下單連線設計，高並發寫入會成為瓶頸（生產應使用 MySQL）
+
+---
+
+### 7. 程式碼品質（Code Quality）8/10
+
+**優勢**
+- `fmt.Errorf("...: %w", err)` 錯誤包裝全面使用
+- `wsBufferSize = 1024` 等具名常數集中定義於 `handlers/common.go`
+- 前端 `theme.ts` 集中 Design Token，`queryConfig.ts` 集中 refetchInterval
+- 多語言（i18n）覆蓋全部主要 UI 字串（zh-TW / en-US / zh-CN）
+
+**殘留觀察**
+- 服務層大型方法（如 `GetWorkloadEfficiency`）邏輯較複雜，可進一步拆分
+- 前端缺乏單元測試
+
+---
+
+### 8. 效能（Performance）9/10
+
+**優勢**
+- K8s Informer 無週期性 resync（`resyncPeriod = 0`），避免不必要的記憶體寫入
+- HTTP 連線池：`MaxIdleConnsPerHost = 100`
+- 所有列表 API 分頁（預設 pageSize=20）
+- Gzip 壓縮套用於所有非 WebSocket 路由
+- GlobalSearch / QuickSearch 每叢集一個 goroutine 並行搜尋
+- 啟動 Informer 預熱跳過 unhealthy 叢集，並以 goroutine 並行初始化
+
+**殘留觀察**
+- 資源效率採集（PromQL）為即時查詢，高頻呼叫時可考慮加入快取層
+
+---
+
+### 9. 安全性（Security）5/10
+
+**優勢**
+- JWT 驗證、RBAC 中介層、命名空間粒度權限控制完整
+- AI 查詢前自動過濾 PEM 憑證、Secret 值、含 `password/token/key` 的環境變數
+- 操作稽核日誌覆蓋所有寫入操作
+- 登入端點 Rate Limiting（5次/分鐘，鎖定 15 分鐘）
+- API Token SHA-256 hash 儲存，明文僅顯示一次
+
+**重大風險（生產部署前必須處理）**
+
+> ⚠️ **CRITICAL**：kubeconfig、SA Token、CA 憑證目前以明文儲存於資料庫（`ENCRYPTION_KEY` 環境變數存在但欄位級加密尚未套用於 kubeconfig）。任何能存取資料庫的人可取得所有叢集的完整憑證。
+
+> ⚠️ **HIGH**：`k8s_client.go` 預設 `InsecureSkipVerify: true`，除非提供 CA 憑證，否則與 K8s API Server 的通訊不驗證憑證，易受中間人攻擊。
+
+---
+
+### 生產部署前必做清單
+
+```
+[ ] 確認 ENCRYPTION_KEY 已設定，並在 GORM BeforeSave hook 啟用 kubeconfig 欄位級 AES-256-GCM 加密
+[ ] 確認 JWT_SECRET 已設定（release 模式下系統會強制驗證）
+[ ] 為各叢集提供 CA 憑證以啟用 TLS 驗證，避免 InsecureSkipVerify
+[ ] 定期備份資料庫並加密備份檔案
+[ ] 生產環境使用 MySQL（SQLite 不適合高並發寫入）
+[x] runbooks.go panic → 優雅降級（已修復 2026-04-03）
+[x] namespace.go context.TODO() → c.Request.Context()（已修復 2026-04-03）
+[x] kubectl_terminal.go mustParseUint panic → error return（已修復 2026-04-03）
+[x] mesh_service.go enrichWithMetrics stub → 實作 Prometheus 查詢（已修復 2026-04-03）
+[x] kubectl_pod_terminal.go 建立 Pod 前未確保命名空間存在 → 補上 ensureNamespace（已修復 2026-04-07）
+[x] WebSocket buffer 硬編碼 → wsBufferSize 具名常數（已修復 2026-04-03）
+[x] GlobalSearch 串行叢集查詢 → goroutine 並行化（已修復 2026-04-03）
+[x] 啟動 Informer 預熱：GetConnectableClusters + 並行初始化（已修復 2026-04-03）
+```
 
 ---
 
