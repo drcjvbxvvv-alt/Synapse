@@ -700,43 +700,32 @@ const NodeList: React.FC = () => {
     <App>
       <div style={{ padding: '24px' }}>
         {/* 統計卡片 */}
-        <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #00d4aa 0%, #00b894 100%)' }}>
-              <Statistic
-                title={t('overview.total')}
-                value={totalNodes}
-                prefix={<DesktopOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #006eff 0%, #1a7aff 100%)' }}>
-              <Statistic
-                title={t('overview.ready')}
-                value={readyNodes}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #ff9f43 0%, #ff7675 100%)' }}>
-              <Statistic
-                title={t('overview.notReady')}
-                value={notReadyNodes}
-                prefix={<ExclamationCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="stats-card" style={{ background: 'linear-gradient(135deg, #a55eea 0%, #8e44ad 100%)' }}>
-              <Statistic
-                title={t('overview.maintenance')}
-                value={maintenanceNodes}
-                prefix={<Badge status="processing" />}
-              />
-            </Card>
-          </Col>
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          {[
+            { label: t('overview.total'),       value: totalNodes,       icon: <DesktopOutlined />,           iconBg: '#eff6ff', iconColor: '#3b82f6' },
+            { label: t('overview.ready'),        value: readyNodes,       icon: <CheckCircleOutlined />,        iconBg: '#f0fdf4', iconColor: '#22c55e' },
+            { label: t('overview.notReady'),     value: notReadyNodes,    icon: <ExclamationCircleOutlined />,  iconBg: '#fff7ed', iconColor: '#f97316' },
+            { label: t('overview.maintenance'),  value: maintenanceNodes, icon: <SettingOutlined />,            iconBg: '#f5f3ff', iconColor: '#8b5cf6' },
+          ].map((item) => (
+            <Col key={item.label} xs={24} sm={12} lg={6}>
+              <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }} bodyStyle={{ padding: '20px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 10,
+                    background: item.iconBg, color: item.iconColor,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 20, flexShrink: 0,
+                  }}>
+                    {item.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 2 }}>{item.label}</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', lineHeight: 1 }}>{item.value}</div>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          ))}
         </Row>
 
         {/* 節點列表卡片 */}

@@ -23,31 +23,6 @@
   font-weight: 400;
 }
 
-/* 彩色統計卡片（Overview 頁使用，白色文字在彩色漸層背景上） */
-.stats-card {
-  border: none;
-  color: #ffffff;
-  border-radius: 16px;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-}
-
-.stats-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-  pointer-events: none;
-}
-
-.stats-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.16);
-}
 
 /* 內容區域 */
 .content-wrapper {
