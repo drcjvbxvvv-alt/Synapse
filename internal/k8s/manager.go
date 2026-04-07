@@ -275,6 +275,12 @@ func (m *ClusterInformerManager) EnsureAndWait(ctx context.Context, cluster *mod
 	return rt, nil
 }
 
+// EnsureSync 等待叢集 Informer 就緒，只返回 error（供 services 層的介面使用）
+func (m *ClusterInformerManager) EnsureSync(ctx context.Context, cluster *models.Cluster, timeout time.Duration) error {
+	_, err := m.EnsureAndWait(ctx, cluster, timeout)
+	return err
+}
+
 // PodsLister 返回 Pods 的 Lister
 func (m *ClusterInformerManager) PodsLister(clusterID uint) corev1listers.PodLister {
 	m.mu.RLock()

@@ -52,6 +52,73 @@ export interface WasteItem {
   days: number;
 }
 
+// ---- 資源治理（Phase 1）型別 ----
+
+export interface ResourceMetrics {
+  cpu_millicores: number;
+  memory_mib: number;
+}
+
+export interface OccupancyPercent {
+  cpu: number;
+  memory: number;
+}
+
+export interface ClusterResourceSnapshot {
+  cluster_id: number;
+  collected_at: string;
+  allocatable: ResourceMetrics;
+  requested: ResourceMetrics;
+  occupancy: OccupancyPercent;
+  headroom: ResourceMetrics;
+  node_count: number;
+  pod_count: number;
+  has_metrics: boolean;
+}
+
+export interface NamespaceOccupancy {
+  namespace: string;
+  cpu_request_millicores: number;
+  memory_request_mib: number;
+  cpu_occupancy_percent: number;
+  memory_occupancy_percent: number;
+  pod_count: number;
+}
+
+export interface ClusterResourceSummary {
+  cluster_id: number;
+  cluster_name: string;
+  cpu_occupancy_percent: number;
+  memory_occupancy_percent: number;
+  allocatable_cpu_millicores: number;
+  allocatable_memory_mib: number;
+  requested_cpu_millicores: number;
+  requested_memory_mib: number;
+  node_count: number;
+  pod_count: number;
+  informer_ready: boolean;
+}
+
+export interface GlobalResourceOverview {
+  collected_at: string;
+  cluster_count: number;
+  ready_count: number;
+  avg_cpu_occupancy_percent: number;
+  avg_memory_occupancy_percent: number;
+  clusters: ClusterResourceSummary[];
+}
+
+export const ResourceService = {
+  getSnapshot: (clusterId: string): Promise<ClusterResourceSnapshot> =>
+    request.get(`/clusters/${clusterId}/resources/snapshot`),
+
+  getNamespaceOccupancy: (clusterId: string): Promise<NamespaceOccupancy[]> =>
+    request.get(`/clusters/${clusterId}/resources/namespaces`),
+
+  getGlobalOverview: (): Promise<GlobalResourceOverview> =>
+    request.get('/resources/global/overview'),
+};
+
 export const CostService = {
   getConfig: (clusterId: string): Promise<CostConfig> =>
     request.get(`/clusters/${clusterId}/cost/config`),

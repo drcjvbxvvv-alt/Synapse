@@ -123,7 +123,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	eventAlertWorker.Start()
 
 	// 啟動成本快照工作器（每日 00:05 UTC 拍攝資源用量快照）
-	costWorker := services.NewCostWorker(db, clusterSvc)
+	costWorker := services.NewCostWorker(db, clusterSvc, k8sMgr)
 	costWorker.Start()
 
 	// 啟動日誌保留清理工作器（預設保留 90 天）

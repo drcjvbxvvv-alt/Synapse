@@ -1,5 +1,24 @@
 # Helm Charts 实现 - 变更日志
 
+## [Unreleased] - 資源治理 Phase 1
+
+### 新增 ✨
+
+#### 資源治理（Resource Governance）Phase 1
+- 新增 `GET /api/v1/clusters/:clusterID/resources/snapshot` — 叢集即時資源佔用快照（CPU/記憶體 allocatable、requested、occupancy、headroom）
+- 新增 `GET /api/v1/clusters/:clusterID/resources/namespaces` — 命名空間資源佔用明細
+- 新增 `GET /api/v1/resources/global/overview` — 跨叢集全平台資源彙總
+- 新增 `cluster_occupancy_snapshots` 資料庫表（每日叢集資源快照，供趨勢分析使用）
+- `CostWorker` 整合 K8s Informer，每日 00:05 UTC 拍攝資源快照
+- 前端「成本分析」頁面新增「資源佔用」Tab，顯示佔用率儀表板、Headroom 剩餘空間及命名空間 BarChart
+- 前端「成本洞察」頁面重構：改用跨叢集資源 API，顯示各叢集 CPU/記憶體佔用率對比圖
+
+#### 架構改善
+- 引入 `K8sInformerManager` 介面（定義於 `services` 包），解除 `services ↔ k8s` 套件循環依賴
+- `k8s.ClusterInformerManager` 新增 `EnsureSync()` 方法（`EnsureAndWait` 的 error-only 包裝）
+
+---
+
 ## [1.0.1] - 2026-01-27
 
 ### 修复 🐛

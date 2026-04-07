@@ -10,6 +10,8 @@ import (
 
 	"github.com/clay-wangzhi/Synapse/internal/models"
 	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"gorm.io/gorm"
 )
 
@@ -478,17 +480,19 @@ type CostWorker struct {
 	promSvc    *PrometheusService
 	monitorSvc *MonitoringConfigService
 	clusterSvc *ClusterService
+	k8sMgr     K8sInformerManager
 	stopCh     chan struct{}
 	ticker     *time.Ticker
 }
 
 // NewCostWorker 建立工作器
-func NewCostWorker(db *gorm.DB, clusterSvc *ClusterService) *CostWorker {
+func NewCostWorker(db *gorm.DB, clusterSvc *ClusterService, k8sMgr K8sInformerManager) *CostWorker {
 	return &CostWorker{
 		db:         db,
 		promSvc:    NewPrometheusService(),
 		monitorSvc: NewMonitoringConfigService(db),
 		clusterSvc: clusterSvc,
+		k8sMgr:     k8sMgr,
 		stopCh:     make(chan struct{}),
 	}
 }
@@ -674,14 +678,127 @@ func (w *CostWorker) snapshotFromPrometheus(clusterID uint, date time.Time, monC
 		w.upsertSnapshot(snap)
 	}
 
+	// 同時儲存叢集級別佔用快照（K8s Informer）
+	w.snapshotClusterOccupancy(clusterID, date)
+
 	logger.Info("成本快照完成（Prometheus）", "cluster_id", clusterID, "namespaces", len(nsMap))
 }
 
-// snapshotFromK8s 無 Prometheus 時，從 K8s API 取得 resource requests（無 usage）
+// snapshotFromK8s 無 Prometheus 時，從 K8s Informer 取得 resource requests（usage 保持 0）
 func (w *CostWorker) snapshotFromK8s(clusterID uint, date time.Time) {
-	// 僅記錄 request，usage 保持 0（在告警中顯示 N/A）
-	// 實際實作需要 metrics-server API；此處為預留 placeholder
-	logger.Debug("成本快照：叢集無 Prometheus 設定，跳過快照", "cluster_id", clusterID)
+	if w.k8sMgr == nil {
+		logger.Debug("成本快照：k8sMgr 未初始化，跳過 K8s 快照", "cluster_id", clusterID)
+		return
+	}
+
+	// 取得 Pods（使用本地 Informer 快取，不直接呼叫 API Server）
+	podLister := w.k8sMgr.PodsLister(clusterID)
+	if podLister == nil {
+		logger.Debug("成本快照：叢集 Informer 未就緒，跳過 K8s 快照", "cluster_id", clusterID)
+		return
+	}
+	pods, err := podLister.List(labels.Everything())
+	if err != nil {
+		logger.Warn("成本快照：取得 Pod 列表失敗", "cluster_id", clusterID, "error", err)
+		return
+	}
+
+	// 按 Namespace 彙總 requests
+	type nsAgg struct {
+		cpuReq float64
+		memReq float64
+		pods   int
+	}
+	nsMap := make(map[string]*nsAgg)
+
+	for _, pod := range pods {
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		ns := pod.Namespace
+		if _, ok := nsMap[ns]; !ok {
+			nsMap[ns] = &nsAgg{}
+		}
+		nsMap[ns].pods++
+		for _, c := range pod.Spec.Containers {
+			nsMap[ns].cpuReq += float64(c.Resources.Requests.Cpu().MilliValue())
+			nsMap[ns].memReq += float64(c.Resources.Requests.Memory().Value()) / 1024 / 1024
+		}
+	}
+
+	for ns, agg := range nsMap {
+		snap := &models.ResourceSnapshot{
+			ClusterID:  clusterID,
+			Namespace:  ns,
+			Workload:   "_namespace_total_",
+			Date:       date,
+			CpuRequest: agg.cpuReq,
+			CpuUsage:   0, // 無 Prometheus，usage 保持 0
+			MemRequest: agg.memReq,
+			MemUsage:   0,
+			PodCount:   agg.pods,
+		}
+		w.upsertSnapshot(snap)
+	}
+
+	// 同時儲存叢集級別佔用快照
+	w.snapshotClusterOccupancy(clusterID, date)
+
+	logger.Info("成本快照完成（K8s API）", "cluster_id", clusterID, "namespaces", len(nsMap))
+}
+
+// snapshotClusterOccupancy 儲存叢集級別佔用快照到 cluster_occupancy_snapshots
+func (w *CostWorker) snapshotClusterOccupancy(clusterID uint, date time.Time) {
+	nodeLister := w.k8sMgr.NodesLister(clusterID)
+	podLister := w.k8sMgr.PodsLister(clusterID)
+	if nodeLister == nil || podLister == nil {
+		return
+	}
+
+	nodes, _ := nodeLister.List(labels.Everything())
+	pods, _ := podLister.List(labels.Everything())
+
+	var allocCPU, allocMem float64
+	nodeCount := 0
+	for _, node := range nodes {
+		if node.Spec.Unschedulable {
+			continue
+		}
+		for _, cond := range node.Status.Conditions {
+			if cond.Type == corev1.NodeReady && cond.Status == corev1.ConditionTrue {
+				allocCPU += float64(node.Status.Allocatable.Cpu().MilliValue())
+				allocMem += float64(node.Status.Allocatable.Memory().Value()) / 1024 / 1024
+				nodeCount++
+				break
+			}
+		}
+	}
+
+	var reqCPU, reqMem float64
+	podCount := 0
+	for _, pod := range pods {
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		podCount++
+		for _, c := range pod.Spec.Containers {
+			reqCPU += float64(c.Resources.Requests.Cpu().MilliValue())
+			reqMem += float64(c.Resources.Requests.Memory().Value()) / 1024 / 1024
+		}
+	}
+
+	snap := &models.ClusterOccupancySnapshot{
+		ClusterID:         clusterID,
+		Date:              date,
+		AllocatableCPU:    allocCPU,
+		AllocatableMemory: allocMem,
+		RequestedCPU:      reqCPU,
+		RequestedMemory:   reqMem,
+		NodeCount:         nodeCount,
+		PodCount:          podCount,
+	}
+	w.db.Where("cluster_id = ? AND date = ?", clusterID, date).
+		Assign(*snap).FirstOrCreate(snap)
 }
 
 // upsertSnapshot 插入快照（同一叢集 + 命名空間 + 日期只保留一筆）

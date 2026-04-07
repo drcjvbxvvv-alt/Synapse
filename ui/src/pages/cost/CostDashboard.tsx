@@ -47,11 +47,14 @@ import {
 import EmptyState from '../../components/EmptyState';
 import {
   CostService,
+  ResourceService,
   type CostConfig,
   type CostItem,
   type CostOverview,
   type TrendPoint,
   type WasteItem,
+  type ClusterResourceSnapshot,
+  type NamespaceOccupancy,
 } from '../../services/costService';
 
 const { Text } = Typography;
@@ -91,6 +94,12 @@ const CostDashboard: React.FC = () => {
   // Waste
   const [waste, setWaste] = useState<WasteItem[]>([]);
   const [wasteLoading, setWasteLoading] = useState(false);
+
+  // Resource occupancy (Phase 1)
+  const [snapshot, setSnapshot] = useState<ClusterResourceSnapshot | null>(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [nsOccupancy, setNsOccupancy] = useState<NamespaceOccupancy[]>([]);
+  const [nsOccLoading, setNsOccLoading] = useState(false);
 
   // Config modal
   const [configOpen, setConfigOpen] = useState(false);
@@ -148,7 +157,28 @@ const CostDashboard: React.FC = () => {
     finally { setWasteLoading(false); }
   }, [clusterId]);
 
+  const loadSnapshot = useCallback(async () => {
+    if (!clusterId) return;
+    setSnapshotLoading(true);
+    try {
+      const data = await ResourceService.getSnapshot(clusterId);
+      setSnapshot(data);
+    } catch { /* ignore */ }
+    finally { setSnapshotLoading(false); }
+  }, [clusterId]);
+
+  const loadNsOccupancy = useCallback(async () => {
+    if (!clusterId) return;
+    setNsOccLoading(true);
+    try {
+      const data = await ResourceService.getNamespaceOccupancy(clusterId);
+      setNsOccupancy(data ?? []);
+    } catch { /* ignore */ }
+    finally { setNsOccLoading(false); }
+  }, [clusterId]);
+
   useEffect(() => { loadOverview(); }, [loadOverview]);
+  useEffect(() => { if (activeTab === 'occupancy') { loadSnapshot(); loadNsOccupancy(); } }, [activeTab, loadSnapshot, loadNsOccupancy]);
   useEffect(() => { if (activeTab === 'namespaces') loadNsCosts(); }, [activeTab, loadNsCosts]);
   useEffect(() => { if (activeTab === 'workloads') loadWorkloads(1); }, [activeTab, loadWorkloads]);
   useEffect(() => { if (activeTab === 'trend') loadTrend(); }, [activeTab, loadTrend]);
@@ -258,6 +288,114 @@ const CostDashboard: React.FC = () => {
   );
 
   const tabItems = [
+    {
+      key: 'occupancy',
+      label: t('cost:tabs.occupancy', '資源佔用'),
+      children: (
+        <div>
+          <Space style={{ marginBottom: 16 }}>
+            <Button icon={<ReloadOutlined />} onClick={() => { loadSnapshot(); loadNsOccupancy(); }}>
+              {t('common:actions.refresh', '重新整理')}
+            </Button>
+          </Space>
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:occupancy.cpuOccupancy', 'CPU 佔用率')}
+                  value={snapshot?.occupancy.cpu ?? 0}
+                  precision={1}
+                  suffix="%"
+                  loading={snapshotLoading}
+                  valueStyle={{ color: (snapshot?.occupancy.cpu ?? 0) > 80 ? '#cf1322' : '#3f8600' }}
+                />
+                <Progress percent={+(snapshot?.occupancy.cpu ?? 0).toFixed(1)} showInfo={false} status={(snapshot?.occupancy.cpu ?? 0) > 80 ? 'exception' : 'normal'} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:occupancy.memOccupancy', '記憶體佔用率')}
+                  value={snapshot?.occupancy.memory ?? 0}
+                  precision={1}
+                  suffix="%"
+                  loading={snapshotLoading}
+                  valueStyle={{ color: (snapshot?.occupancy.memory ?? 0) > 80 ? '#cf1322' : '#3f8600' }}
+                />
+                <Progress percent={+(snapshot?.occupancy.memory ?? 0).toFixed(1)} showInfo={false} status={(snapshot?.occupancy.memory ?? 0) > 80 ? 'exception' : 'normal'} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:occupancy.nodeCount', '節點數')}
+                  value={snapshot?.node_count ?? 0}
+                  loading={snapshotLoading}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:occupancy.podCount', 'Pod 數')}
+                  value={snapshot?.pod_count ?? 0}
+                  loading={snapshotLoading}
+                />
+              </Card>
+            </Col>
+          </Row>
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col xs={24} lg={14}>
+              <Card title={t('cost:occupancy.nsBreakdown', '命名空間 CPU 佔用')} size="small">
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart
+                    data={nsOccupancy.slice(0, 15).map(n => ({ name: n.namespace, cpu: +n.cpu_occupancy_percent.toFixed(2) }))}
+                    margin={{ top: 5, right: 20, left: 10, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
+                    <YAxis unit="%" />
+                    <RechartTooltip formatter={(v) => [`${v}%`, 'CPU 佔用率']} />
+                    <Bar dataKey="cpu" fill="#4e79a7" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+            </Col>
+            <Col xs={24} lg={10}>
+              <Card title={t('cost:occupancy.headroom', '可用空間')} size="small">
+                <Statistic
+                  title={t('cost:occupancy.cpuHeadroom', 'CPU 剩餘 (millicores)')}
+                  value={+(snapshot?.headroom.cpu_millicores ?? 0).toFixed(0)}
+                  loading={snapshotLoading}
+                />
+                <Statistic
+                  title={t('cost:occupancy.memHeadroom', '記憶體剩餘 (MiB)')}
+                  value={+(snapshot?.headroom.memory_mib ?? 0).toFixed(0)}
+                  loading={snapshotLoading}
+                  style={{ marginTop: 16 }}
+                />
+              </Card>
+            </Col>
+          </Row>
+          <Table
+            rowKey="namespace"
+            columns={[
+              { title: t('cost:table.namespace'), dataIndex: 'namespace', key: 'namespace' },
+              { title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_request_millicores', render: (v: number) => v.toFixed(0) },
+              { title: 'CPU 佔用 %', dataIndex: 'cpu_occupancy_percent', key: 'cpu_occupancy_percent', render: (v: number) => `${v.toFixed(2)}%` },
+              { title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'memory_request_mib', render: (v: number) => v.toFixed(0) },
+              { title: '記憶體佔用 %', dataIndex: 'memory_occupancy_percent', key: 'memory_occupancy_percent', render: (v: number) => `${v.toFixed(2)}%` },
+              { title: 'Pod 數', dataIndex: 'pod_count', key: 'pod_count' },
+            ]}
+            dataSource={nsOccupancy}
+            loading={nsOccLoading}
+            size="small"
+            scroll={{ x: 700 }}
+            pagination={{ pageSize: 20 }}
+          />
+        </div>
+      ),
+    },
     {
       key: 'overview',
       label: t('cost:tabs.overview'),

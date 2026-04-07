@@ -183,7 +183,8 @@ func autoMigrate(db *gorm.DB) error {
 		&models.EventAlertRule{},     // K8s Event 告警規則表
 		&models.EventAlertHistory{},  // Event 告警歷史紀錄表
 		&models.CostConfig{},         // 成本定價設定表
-		&models.ResourceSnapshot{},   // 資源每日快照表
+		&models.ResourceSnapshot{},          // 資源每日快照表
+		&models.ClusterOccupancySnapshot{},  // 叢集級別佔用快照表（Phase 1）
 		&models.ImageScanResult{},    // Trivy 映像掃描結果表
 		&models.BenchResult{},        // CIS kube-bench 評分表
 		&models.SyncPolicy{},         // 多叢集配置同步策略表

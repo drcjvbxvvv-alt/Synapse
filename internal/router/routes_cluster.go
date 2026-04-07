@@ -443,7 +443,16 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				eventAlerts.GET("/history", eventAlertHandler.ListHistory)
 			}
 
-			// 資源成本分析
+			// 資源治理（Phase 1：K8s API 即時佔用分析）
+			resourceSvc := services.NewResourceService(d.db, d.k8sMgr, d.clusterSvc)
+			resourceHandler := handlers.NewResourceHandler(resourceSvc, d.clusterSvc)
+			resources := cluster.Group("/resources")
+			{
+				resources.GET("/snapshot", resourceHandler.GetSnapshot)
+				resources.GET("/namespaces", resourceHandler.GetNamespaceOccupancy)
+			}
+
+			// 資源成本分析（保留既有金錢估算功能）
 			costHandler := handlers.NewCostHandler(d.db)
 			cost := cluster.Group("/cost")
 			{

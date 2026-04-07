@@ -29,3 +29,18 @@ type ResourceSnapshot struct {
 }
 
 func (ResourceSnapshot) TableName() string { return "resource_snapshots" }
+
+// ClusterOccupancySnapshot 叢集級別每日資源佔用快照（用於趨勢分析，不依賴 Prometheus）
+type ClusterOccupancySnapshot struct {
+	ID                uint      `json:"id" gorm:"primaryKey"`
+	ClusterID         uint      `json:"cluster_id" gorm:"uniqueIndex:idx_cluster_date;not null"`
+	Date              time.Time `json:"date" gorm:"uniqueIndex:idx_cluster_date;not null"` // UTC 00:00
+	AllocatableCPU    float64   `json:"allocatable_cpu"`    // millicores（來自 Node.Status.Allocatable）
+	AllocatableMemory float64   `json:"allocatable_memory"` // MiB
+	RequestedCPU      float64   `json:"requested_cpu"`      // millicores（來自 Pod requests 加總）
+	RequestedMemory   float64   `json:"requested_memory"`   // MiB
+	NodeCount         int       `json:"node_count"`
+	PodCount          int       `json:"pod_count"`
+}
+
+func (ClusterOccupancySnapshot) TableName() string { return "cluster_occupancy_snapshots" }

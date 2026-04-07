@@ -10,6 +10,11 @@ import (
 // registerSystemRoutes registers audit, system-settings, permissions, AI, search,
 // overview, cross-cluster workload, image, multicluster, and WebSocket-adjacent routes.
 func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup, d *routeDeps) {
+	// 資源治理全局視角（跨叢集彙總）
+	globalResourceSvc := services.NewResourceService(d.db, d.k8sMgr, d.clusterSvc)
+	globalResourceHandler := handlers.NewResourceHandler(globalResourceSvc, d.clusterSvc)
+	protected.GET("/resources/global/overview", globalResourceHandler.GetGlobalOverview)
+
 	// 審批工作流（全域）（§8.3 Phase C）
 	globalApprovalHandler := handlers.NewApprovalHandler(d.db, d.clusterSvc)
 	approvals := protected.Group("/approvals")
