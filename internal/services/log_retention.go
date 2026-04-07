@@ -3,16 +3,21 @@ package services
 import (
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/metrics"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/pkg/logger"
 	"gorm.io/gorm"
 )
 
 // LogRetentionWorker 定期清理超過保留期限的操作日誌
 type LogRetentionWorker struct {
 	db        *gorm.DB
-	retention time.Duration // 保留時長（預設 90 天）
+	retention time.Duration  // 保留時長（預設 90 天）
+	metrics   *metrics.WorkerMetrics
 }
+
+// SetMetrics attaches Prometheus worker metrics.
+func (w *LogRetentionWorker) SetMetrics(m *metrics.WorkerMetrics) { w.metrics = m }
 
 // NewLogRetentionWorker 建立保留策略工作器；retention=0 時使用預設 90 天
 func NewLogRetentionWorker(db *gorm.DB, retention time.Duration) *LogRetentionWorker {
@@ -43,8 +48,17 @@ func (w *LogRetentionWorker) Start() {
 }
 
 func (w *LogRetentionWorker) cleanup() {
+	var run *metrics.WorkerRun
+	if w.metrics != nil {
+		run = w.metrics.Start("log_retention")
+	}
+
 	cutoff := time.Now().Add(-w.retention)
 	result := w.db.Where("created_at < ?", cutoff).Delete(&models.OperationLog{})
+
+	if run != nil {
+		run.Done(result.Error)
+	}
 	if result.Error != nil {
 		logger.Error("日誌保留清理失敗", "error", result.Error)
 		return

@@ -16,13 +16,13 @@ import (
 
 	"encoding/json"
 
-	"github.com/clay-wangzhi/Synapse/internal/config"
-	"github.com/clay-wangzhi/Synapse/internal/k8s"
-	"github.com/clay-wangzhi/Synapse/internal/middleware"
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/k8s"
+	"github.com/shaia/Synapse/internal/middleware"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 )
 
 type SecretHandler struct {

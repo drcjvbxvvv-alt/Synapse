@@ -773,18 +773,216 @@ POST   /clusters/:id/alertmanager/receivers/:name/test  測試推送
 
 ---
 
-### 5.15 Synapse 自身可觀測性（小型 Sprint，1 週）🟢 低優先級
+### 5.15 Synapse 自身可觀測性（Sprint，2 週）✅ 已完成（2026-04-07）
 
 > **現況：** 平台監控所有 K8s 叢集，但 Synapse 本身無 Prometheus metrics endpoint，無法自監控。
+> 支援 **VM 和容器雙部署情境**，應用層指標完全一致，差異只在基礎設施（scrape 設定、log 收集方式）。
+
+---
+
+#### 架構決策
+
+| 決策項目 | 選擇 | 理由 |
+|---------|------|------|
+| Registry 方案 | **自訂 Registry（方案 B）** | 與現有 `routeDeps` 注入模式一致；測試時可獨立實例化，不污染全域 |
+| Metrics 開關 | **config 設定，部署時決定** | `observability.enabled: false` 時不建立 Registry、不暴露端點 |
+| `/metrics` 驗證 | **可選 Bearer Token** | `observability.metrics_token: ""` 留空 = 不驗證；有值 = 需帶 Authorization header |
+| GORM 指標 | **RegisterCallback（Before/After）** | 無額外 package；統一掛 Create/Update/Delete/Query |
+| HTTP 指標 label | **`c.FullPath()` 模板路徑** | 避免 `:clusterID` 等動態參數造成高基數 |
+| Log 格式 | **JSON**（`LOG_FORMAT=json`） | 已有 `slog.NewJSONHandler`，只需設定環境變數；Promtail/Filebeat 可直接解析 |
+| Worker 指標 | **所有 Worker 統一納入** | `EventAlertWorker`、`CostWorker`、`LogRetentionWorker`；共用同一組 label |
+
+---
+
+#### 新增設定結構
+
+```go
+// internal/config/config.go 新增
+type ObservabilityConfig struct {
+    Enabled      bool   `mapstructure:"enabled"`       // false = 完全關閉，不暴露任何端點
+    MetricsPath  string `mapstructure:"metrics_path"`  // 預設 /metrics
+    MetricsToken string `mapstructure:"metrics_token"` // 空 = 不驗證
+    HealthPath   string `mapstructure:"health_path"`   // 預設 /healthz
+    ReadyPath    string `mapstructure:"ready_path"`    // 預設 /readyz
+}
+```
+
+`config.yaml` 範例：
+```yaml
+observability:
+  enabled: true
+  metrics_path: /metrics
+  metrics_token: ""          # 填入值後需帶 Authorization: Bearer <token>
+  health_path: /healthz
+  ready_path: /readyz
+```
+
+---
+
+#### Metrics Registry 設計（`internal/metrics/`）
+
+```
+internal/metrics/
+├── registry.go       # Registry struct + New() + Handler()
+├── http.go           # HTTP 請求指標
+├── websocket.go      # WebSocket 連線指標
+├── database.go       # GORM callback hook + 指標定義
+├── worker.go         # Worker 執行指標（共用 label）
+└── k8s.go            # Informer / K8s API 指標
+```
+
+**Registry struct：**
+```go
+type Registry struct {
+    reg        *prometheus.Registry
+    HTTP       *HTTPMetrics
+    WebSocket  *WSMetrics
+    DB         *DBMetrics
+    Worker     *WorkerMetrics
+    K8s        *K8sMetrics
+}
+
+func New() *Registry          // 建立並註冊所有指標（含 GoCollector + ProcessCollector）
+func (r *Registry) Handler() http.Handler  // promhttp.HandlerFor(r.reg, ...)
+```
+
+---
+
+#### 指標清單
+
+**HTTP 層（Gin middleware）**
+
+| 指標名稱 | 類型 | Labels | 說明 |
+|---------|------|--------|------|
+| `synapse_http_requests_total` | Counter | method, path, status | 請求總數 |
+| `synapse_http_request_duration_seconds` | Histogram | method, path | 延遲分佈（buckets: 0.01~10s） |
+| `synapse_http_requests_in_flight` | Gauge | — | 當前進行中請求數 |
+
+**WebSocket 層**
+
+| 指標名稱 | 類型 | Labels | 說明 |
+|---------|------|--------|------|
+| `synapse_websocket_connections_active` | Gauge | type | 當前連線數（pod-exec / kubectl / ssh / log-stream） |
+| `synapse_websocket_connections_total` | Counter | type | 累計連線建立數 |
+| `synapse_websocket_errors_total` | Counter | type | 連線錯誤數 |
+
+**資料庫層（GORM Before/After callback）**
+
+| 指標名稱 | 類型 | Labels | 說明 |
+|---------|------|--------|------|
+| `synapse_db_query_duration_seconds` | Histogram | operation | 查詢延遲（create/update/delete/query） |
+| `synapse_db_slow_queries_total` | Counter | operation | 慢查詢（> 500ms） |
+| `synapse_db_errors_total` | Counter | operation | DB 錯誤數 |
+
+**Background Workers**
+
+| 指標名稱 | 類型 | Labels | 說明 |
+|---------|------|--------|------|
+| `synapse_worker_last_run_timestamp` | Gauge | worker | 最後執行時間（unix） |
+| `synapse_worker_run_duration_seconds` | Gauge | worker | 最後一次執行耗時 |
+| `synapse_worker_errors_total` | Counter | worker | 累計錯誤次數 |
+
+worker label 值：`cost` / `event_alert` / `log_retention`
+
+**K8s / Informer 層**
+
+| 指標名稱 | 類型 | Labels | 說明 |
+|---------|------|--------|------|
+| `synapse_k8s_clusters_active` | Gauge | — | 目前已初始化 Informer 的叢集數 |
+| `synapse_k8s_api_requests_total` | Counter | cluster_id, resource | K8s API 呼叫總數 |
+| `synapse_k8s_api_errors_total` | Counter | cluster_id, resource | K8s API 錯誤數 |
+
+**Go runtime + Process（自動）**
+
+由 `collectors.NewGoCollector()` + `collectors.NewProcessCollector()` 自動提供：
+goroutine 數、heap、GC pause、fd 數、RSS 記憶體——無需額外實作。
+
+---
+
+#### Health / Ready Endpoint 設計
+
+```
+GET /healthz → 200（永遠快速回應，只要 process 存活）
+{
+  "status": "ok",
+  "uptime": "3h12m44s"
+}
+
+GET /readyz → 200 or 503
+{
+  "status": "degraded",          // ok | degraded
+  "checks": {
+    "database":   { "status": "ok",      "latency_ms": 2 },
+    "k8s":        { "status": "ok",      "clusters": 3, "unreachable": 0 },
+    "prometheus": { "status": "warn",    "message": "未設定，部分功能不可用" }
+  }
+}
+```
+
+`/readyz` 回 503 情境：DB 無法連線，或所有叢集均不可達。
+
+---
+
+#### 端點安全規則
+
+| `metrics_token` 值 | `/metrics` 行為 |
+|-------------------|----------------|
+| `""`（空） | 直接回傳，不驗證 |
+| `"abc123"` | 需帶 `Authorization: Bearer abc123`，否則 401 |
+
+`/healthz` 和 `/readyz` **永遠不驗證**，供 LB / systemd 探針使用。
+
+---
 
 #### 待實作任務
 
-| 任務 | 檔案 | 說明 |
-|------|------|------|
-| 引入 `github.com/prometheus/client_golang` | `go.mod` | — |
-| 暴露 `GET /metrics` endpoint | `internal/router/router.go` | 標準 Prometheus 格式 |
-| 自訂 metrics：活躍 WebSocket 連線數、K8s 請求 QPS、Informer 快取大小、DB 查詢延遲 | `internal/middleware/metrics.go` | — |
-| Grafana Dashboard JSON（Synapse 自監控） | `deploy/grafana/synapse-dashboard.json` | — |
+| 任務 | 檔案 | 週次 | 狀態 |
+|------|------|------|------|
+| 新增 `ObservabilityConfig` 至 `Config` struct | `internal/config/config.go` | W1 | ✅ |
+| 新增 `internal/metrics/registry.go` — `Registry` struct + `New()` + `Handler()` | `internal/metrics/registry.go` | W1 | ✅ |
+| HTTP 指標定義 + Gin middleware（`c.FullPath()` label） | `internal/metrics/http.go` + `internal/middleware/metrics.go` | W1 | ✅ |
+| WebSocket 指標定義 | `internal/metrics/websocket.go` | W1 | ✅ |
+| GORM Before/After callback 掛載（4 種 operation） | `internal/metrics/database.go` | W1 | ✅ |
+| Worker 指標定義；`CostWorker`、`EventAlertWorker`、`LogRetentionWorker` 各自埋點 | `internal/metrics/worker.go` | W2 | ✅ |
+| K8s / Informer 指標定義；在 `ClusterInformerManager` 埋點 | `internal/metrics/k8s.go` | W2 | ✅ |
+| `Registry` 注入 `routeDeps`；路由中掛載 `/metrics`（可選 token 驗證）、`/healthz`、`/readyz` | `internal/router/deps.go` + `router.go` | W2 | ✅ |
+| `ObservabilityConfig` 開關邏輯：`enabled: false` 時跳過所有初始化 | `internal/router/router.go` | W2 | ✅ |
+| 補充 `config.yaml` 範例 + 環境變數說明 | `deploy/config.example.yaml` | W2 | ✅ |
+| Prometheus Alert Rules YAML | `deploy/monitoring/synapse-alerts.yaml` | W2 | ✅ |
+| Grafana Dashboard JSON | `deploy/monitoring/synapse-dashboard.json` | W2 | 待辦（低優先） |
+| **VM 部署指南**：systemd unit 範本、Prometheus static_configs 範本、Promtail config 範本、logrotate 範本 | `docs/deploy/vm-observability.md` | W2 | ✅ |
+
+---
+
+#### VM 部署鏈路（文件範本清單）
+
+```
+Synapse Process（VM）
+  ├── /metrics          ←  Prometheus scrape（static_configs）
+  ├── /healthz          ←  systemd ExecStartPost / HAProxy check
+  ├── /readyz           ←  Uptime Kuma / Blackbox Exporter
+  └── stdout JSON log   →  Promtail（tail log file）→ Loki
+
+VM Host
+  └── node_exporter     ←  Prometheus scrape（另一個 job，採集 CPU/MEM/Disk）
+```
+
+`docs/deploy/vm-observability.md` 將包含：
+- systemd `synapse.service` 完整範本
+- `prometheus.yml` scrape_configs 範本（含 node_exporter + synapse 兩個 job）
+- Promtail JSON pipeline 設定（含 level / request_id label extraction）
+- logrotate `/etc/logrotate.d/synapse` 範本
+- Grafana datasource 接入說明
+
+---
+
+#### 完成指標
+
+- `go tool pprof` 可在任何環境接入 Synapse process（bonus：`/debug/pprof` 僅限 debug mode）
+- Prometheus 可正常 scrape `/metrics`，PromQL 查到上述所有指標
+- `/healthz` 回 200；DB 斷線時 `/readyz` 回 503
+- `enabled: false` 時，所有 observability 端點均不存在（`404` 或根本未註冊路由）
+- VM 和 K8s 使用完全相同的二進位，僅靠設定檔切換行為
 
 ---
 

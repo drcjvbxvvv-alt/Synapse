@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/models"
 )
 
 // ElasticsearchService queries an Elasticsearch cluster via its REST API.

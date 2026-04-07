@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/pkg/logger"
 )
 
 //go:embed dashboards/*.json

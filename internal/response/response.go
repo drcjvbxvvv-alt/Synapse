@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/clay-wangzhi/Synapse/internal/apierrors"
+	"github.com/shaia/Synapse/internal/apierrors"
 )
 
 // ErrorBody 統一錯誤響應體

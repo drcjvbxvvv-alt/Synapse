@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/metrics"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/pkg/logger"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"gorm.io/gorm"
@@ -483,7 +484,11 @@ type CostWorker struct {
 	k8sMgr     K8sInformerManager
 	stopCh     chan struct{}
 	ticker     *time.Ticker
+	metrics    *metrics.WorkerMetrics
 }
+
+// SetMetrics attaches Prometheus worker metrics.
+func (w *CostWorker) SetMetrics(m *metrics.WorkerMetrics) { w.metrics = m }
 
 // NewCostWorker 建立工作器
 func NewCostWorker(db *gorm.DB, clusterSvc *ClusterService, k8sMgr K8sInformerManager) *CostWorker {
@@ -542,9 +547,17 @@ func (w *CostWorker) Stop() {
 
 // snapshot 對所有叢集拍攝資源快照
 func (w *CostWorker) snapshot() {
+	var run *metrics.WorkerRun
+	if w.metrics != nil {
+		run = w.metrics.Start("cost")
+	}
+
 	clusters, err := w.clusterSvc.GetAllClusters()
 	if err != nil {
 		logger.Error("成本快照：取得叢集列表失敗", "error", err)
+		if run != nil {
+			run.Done(err)
+		}
 		return
 	}
 
@@ -558,6 +571,10 @@ func (w *CostWorker) snapshot() {
 			continue
 		}
 		w.snapshotFromPrometheus(cluster.ID, today, monCfg)
+	}
+
+	if run != nil {
+		run.Done(nil)
 	}
 }
 

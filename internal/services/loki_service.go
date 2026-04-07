@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/models"
 )
 
 // LokiService queries a Loki instance via its HTTP API.

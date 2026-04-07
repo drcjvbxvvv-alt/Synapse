@@ -1,0 +1,103 @@
+groups:
+  - name: synapse.process
+    rules:
+      - alert: SynapseDown
+        expr: up{job="synapse"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Synapse process is down"
+          description: "Synapse has been unreachable for more than 1 minute."
+
+      - alert: SynapseHighErrorRate
+        expr: |
+          rate(synapse_http_requests_total{status=~"5.."}[5m])
+          / rate(synapse_http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse HTTP 5xx error rate > 5%"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: SynapseHighLatency
+        expr: |
+          histogram_quantile(0.99,
+            rate(synapse_http_request_duration_seconds_bucket[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse p99 latency > 2s"
+          description: "p99 response time is {{ $value | humanizeDuration }}."
+
+  - name: synapse.database
+    rules:
+      - alert: SynapseDBSlowQueries
+        expr: rate(synapse_db_slow_queries_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse DB slow queries > 1/s"
+          description: "Operation {{ $labels.operation }} has {{ $value }} slow queries/s."
+
+      - alert: SynapseDBErrors
+        expr: rate(synapse_db_errors_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse DB errors > 0.5/s"
+
+  - name: synapse.workers
+    rules:
+      - alert: SynapseWorkerStale
+        expr: |
+          time() - synapse_worker_last_run_timestamp > 3600
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse worker {{ $labels.worker }} has not run in 1h"
+          description: "Worker {{ $labels.worker }} last ran {{ $value | humanizeDuration }} ago."
+
+      - alert: SynapseWorkerErrors
+        expr: increase(synapse_worker_errors_total[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse worker {{ $labels.worker }} had errors in the last hour"
+
+  - name: synapse.k8s
+    rules:
+      - alert: SynapseInformerNotSynced
+        expr: synapse_cluster_informer_synced == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse Informer for cluster {{ $labels.cluster_id }} is not synced"
+
+  - name: synapse.runtime
+    rules:
+      - alert: SynapseHighGoroutines
+        expr: go_goroutines{job="synapse"} > 5000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse goroutine count > 5000"
+          description: "Current goroutine count: {{ $value }}. Possible goroutine leak."
+
+      - alert: SynapseHighHeapAlloc
+        expr: go_memstats_heap_alloc_bytes{job="synapse"} > 2e9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Synapse heap allocation > 2 GB"
+          description: "Heap in use: {{ $value | humanize1024 }}B."

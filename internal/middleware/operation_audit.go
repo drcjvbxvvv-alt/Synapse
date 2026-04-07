@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/constants"
-	"github.com/clay-wangzhi/Synapse/internal/services"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/constants"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )

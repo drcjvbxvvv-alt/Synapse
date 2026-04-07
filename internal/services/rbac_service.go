@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/clay-wangzhi/Synapse/internal/templates/rbac"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/templates/rbac"
+	"github.com/shaia/Synapse/pkg/logger"
 
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"

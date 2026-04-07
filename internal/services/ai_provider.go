@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/pkg/logger"
 )
 
 // ChatMessage OpenAI Chat 訊息格式

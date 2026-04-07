@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/internal/services"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/metrics"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,6 +27,7 @@ import (
 )
 
 type ClusterRuntime struct {
+	clusterID    uint                // 所屬叢集 ID
 	k8sClient    *services.K8sClient // 快取的 K8sClient（包含 clientset 和 rest.Config）
 	clientset    *kubernetes.Clientset
 	factory      informers.SharedInformerFactory
@@ -51,7 +53,8 @@ type ClusterRuntime struct {
 type ClusterInformerManager struct {
 	mu          sync.RWMutex
 	clusters    map[uint]*ClusterRuntime
-	syncTimeout time.Duration // configurable cache-sync timeout (default 30s)
+	syncTimeout time.Duration        // configurable cache-sync timeout (default 30s)
+	k8sMetrics  *metrics.K8sMetrics // optional; nil = disabled
 }
 
 func NewClusterInformerManager() *ClusterInformerManager {
@@ -59,6 +62,11 @@ func NewClusterInformerManager() *ClusterInformerManager {
 		clusters:    make(map[uint]*ClusterRuntime),
 		syncTimeout: 30 * time.Second,
 	}
+}
+
+// SetMetrics attaches Prometheus K8s metrics to the manager.
+func (m *ClusterInformerManager) SetMetrics(km *metrics.K8sMetrics) {
+	m.k8sMetrics = km
 }
 
 // SetSyncTimeout overrides the default cache-sync timeout.
@@ -90,6 +98,7 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 
 	rt := &ClusterRuntime{
+		clusterID:    cluster.ID,
 		k8sClient:    kc,
 		clientset:    clientset,
 		factory:      factory,
@@ -137,6 +146,9 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	})
 
 	m.clusters[cluster.ID] = rt
+	if m.k8sMetrics != nil {
+		m.k8sMetrics.ClustersActive.Set(float64(len(m.clusters)))
+	}
 	return rt, nil
 }
 
@@ -166,6 +178,9 @@ func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRun
 		ok := cache.WaitForCacheSync(rt.stopCh, syncedFuncs...)
 		if ok {
 			rt.synced = true
+			if m.k8sMetrics != nil {
+				m.k8sMetrics.InformerSynced.WithLabelValues(fmt.Sprintf("%d", rt.clusterID)).Set(1)
+			}
 		}
 		close(syncCh)
 	}()
@@ -459,6 +474,9 @@ func (m *ClusterInformerManager) StopForCluster(clusterID uint) {
 	rt, ok := m.clusters[clusterID]
 	if ok {
 		delete(m.clusters, clusterID)
+		if m.k8sMetrics != nil {
+			m.k8sMetrics.ClustersActive.Set(float64(len(m.clusters)))
+		}
 	}
 	m.mu.Unlock()
 

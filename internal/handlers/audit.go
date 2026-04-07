@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/clay-wangzhi/Synapse/internal/apierrors"
-	"github.com/clay-wangzhi/Synapse/internal/config"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/shaia/Synapse/internal/apierrors"
+	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
 )
 
 // AuditHandler 審計處理器

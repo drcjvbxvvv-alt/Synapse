@@ -6,8 +6,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"github.com/clay-wangzhi/Synapse/internal/apierrors"
-	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/apierrors"
+	"github.com/shaia/Synapse/internal/models"
 )
 
 // UserService 使用者管理服務

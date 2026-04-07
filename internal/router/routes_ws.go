@@ -1,8 +1,8 @@
 package router
 
 import (
-	"github.com/clay-wangzhi/Synapse/internal/handlers"
-	"github.com/clay-wangzhi/Synapse/internal/middleware"
+	"github.com/shaia/Synapse/internal/handlers"
+	"github.com/shaia/Synapse/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 

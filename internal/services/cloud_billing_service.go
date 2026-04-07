@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/models"
 	"golang.org/x/oauth2/google"
 	"gorm.io/gorm"
 )

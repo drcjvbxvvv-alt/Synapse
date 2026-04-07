@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/config"
-	"github.com/clay-wangzhi/Synapse/internal/k8s"
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/k8s"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

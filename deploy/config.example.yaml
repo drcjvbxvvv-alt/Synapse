@@ -1,0 +1,45 @@
+# Synapse 設定範例（config.example.yaml）
+# 複製為 config.yaml 並依環境調整；所有值均可透過環境變數覆蓋（見下方注釋）
+
+server:
+  port: 8080          # env: SERVER_PORT
+  mode: release       # env: SERVER_MODE  (debug | release)
+
+database:
+  driver: mysql       # env: DB_DRIVER  (sqlite | mysql)
+  host: 127.0.0.1     # env: DB_HOST
+  port: 3306          # env: DB_PORT
+  username: synapse   # env: DB_USERNAME
+  password: ""        # env: DB_PASSWORD
+  database: synapse   # env: DB_DATABASE
+  charset: utf8mb4    # env: DB_CHARSET
+  # 或使用完整 DSN（優先於以上各欄位）：
+  # dsn: "synapse:password@tcp(127.0.0.1:3306)/synapse?charset=utf8mb4&parseTime=True&loc=Local"
+  # env: DB_DSN
+
+jwt:
+  secret: "change-me-in-production"  # env: JWT_SECRET
+  expire_time: 24                     # env: JWT_EXPIRE_TIME  (hours)
+
+log:
+  level: info    # env: LOG_LEVEL   (debug | info | warn | error)
+  format: json   # env: LOG_FORMAT  (text | json) — json 方便 Promtail/Filebeat 解析
+
+k8s:
+  default_namespace: default  # env: K8S_DEFAULT_NAMESPACE
+  informer_sync_timeout: 30   # env: INFORMER_SYNC_TIMEOUT  (seconds)
+
+security:
+  encryption_key: ""  # env: ENCRYPTION_KEY  (AES-256-GCM key, 32 bytes hex)
+
+# ── 可觀測性 ─────────────────────────────────────────────────────────────────
+# 控制 Synapse 自身的 Prometheus metrics 端點、健康探針。
+# 所有端點均不計入操作審計日誌。
+observability:
+  enabled: true             # env: OBSERVABILITY_ENABLED
+                            #   false = 完全關閉，不建立 Registry，不暴露任何端點
+  metrics_path: /metrics    # env: METRICS_PATH
+  metrics_token: ""         # env: METRICS_TOKEN
+                            #   空字串 = 不驗證；有值 = 需帶 Authorization: Bearer <token>
+  health_path: /healthz     # env: HEALTH_PATH  — 永遠 200，供 LB / systemd 存活探針
+  ready_path: /readyz       # env: READY_PATH   — 檢查 DB；DB 不通時回 503

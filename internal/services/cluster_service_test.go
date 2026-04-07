@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/models"
 )
 
 // ClusterServiceTestSuite 定義叢集服務測試套件

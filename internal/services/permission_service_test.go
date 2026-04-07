@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	permModels "github.com/clay-wangzhi/Synapse/internal/models"
+	permModels "github.com/shaia/Synapse/internal/models"
 )
 
 // PermissionServiceTestSuite 定義權限服務測試套件

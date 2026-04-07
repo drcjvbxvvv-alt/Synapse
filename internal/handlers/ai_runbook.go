@@ -3,8 +3,8 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/runbooks"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/runbooks"
 )
 
 // AIRunbookHandler serves the built-in runbook knowledge base.

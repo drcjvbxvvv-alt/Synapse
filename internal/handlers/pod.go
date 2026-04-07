@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/config"
-	"github.com/clay-wangzhi/Synapse/internal/k8s"
-	"github.com/clay-wangzhi/Synapse/internal/middleware"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/k8s"
+	"github.com/shaia/Synapse/internal/middleware"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 
 	"strings"
 
@@ -458,7 +458,13 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	req := k8sClient.GetClientset().CoreV1().Pods(namespace).GetLogs(name, logOptions)
 	logs, err := req.Stream(ctx)
 	if err != nil {
-		response.InternalError(c, "獲取日誌失敗: "+err.Error())
+		errMsg := err.Error()
+		// previous=true 但容器從未重啟，K8s 回傳此錯誤
+		if strings.Contains(errMsg, "previous") || strings.Contains(errMsg, "not waiting to start") {
+			response.BadRequest(c, "沒有上一個容器的日誌（Pod 尚未重啟過）")
+			return
+		}
+		response.InternalError(c, "獲取日誌失敗: "+errMsg)
 		return
 	}
 	defer func() {

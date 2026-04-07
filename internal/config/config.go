@@ -1,19 +1,29 @@
 package config
 
 import (
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/pkg/logger"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 // Config 應用配置結構
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Log      LogConfig      `mapstructure:"log"`
-	K8s      K8sConfig      `mapstructure:"k8s"`
-	Security SecurityConfig `mapstructure:"security"`
+	Server          ServerConfig          `mapstructure:"server"`
+	Database        DatabaseConfig        `mapstructure:"database"`
+	JWT             JWTConfig             `mapstructure:"jwt"`
+	Log             LogConfig             `mapstructure:"log"`
+	K8s             K8sConfig             `mapstructure:"k8s"`
+	Security        SecurityConfig        `mapstructure:"security"`
+	Observability   ObservabilityConfig   `mapstructure:"observability"`
+}
+
+// ObservabilityConfig 可觀測性配置
+type ObservabilityConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`       // false = 完全關閉
+	MetricsPath  string `mapstructure:"metrics_path"`  // 預設 /metrics
+	MetricsToken string `mapstructure:"metrics_token"` // 空 = 不驗證
+	HealthPath   string `mapstructure:"health_path"`   // 預設 /healthz
+	ReadyPath    string `mapstructure:"ready_path"`    // 預設 /readyz
 }
 
 // ServerConfig 伺服器配置
@@ -99,6 +109,13 @@ func Load() *Config {
 	// 繫結安全環境變數
 	_ = viper.BindEnv("security.encryption_key", "ENCRYPTION_KEY")
 
+	// 繫結可觀測性環境變數
+	_ = viper.BindEnv("observability.enabled", "OBSERVABILITY_ENABLED")
+	_ = viper.BindEnv("observability.metrics_path", "METRICS_PATH")
+	_ = viper.BindEnv("observability.metrics_token", "METRICS_TOKEN")
+	_ = viper.BindEnv("observability.health_path", "HEALTH_PATH")
+	_ = viper.BindEnv("observability.ready_path", "READY_PATH")
+
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		logger.Fatal("配置解析失敗: %v", err)
@@ -148,4 +165,11 @@ func setDefaults() {
 
 	// 安全預設配置（空字串表示禁用加密）
 	viper.SetDefault("security.encryption_key", "")
+
+	// 可觀測性預設配置
+	viper.SetDefault("observability.enabled", true)
+	viper.SetDefault("observability.metrics_path", "/metrics")
+	viper.SetDefault("observability.metrics_token", "")
+	viper.SetDefault("observability.health_path", "/healthz")
+	viper.SetDefault("observability.ready_path", "/readyz")
 }

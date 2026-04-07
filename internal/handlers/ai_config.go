@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 )
 
 // AIConfigHandler AI 配置處理器

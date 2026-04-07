@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/shaia/Synapse/internal/services"
 )
 
 // AuthHandlerTestSuite 定義認證處理器測試套件

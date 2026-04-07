@@ -1,5 +1,6 @@
 import { request } from '../utils/api';
 import { buildWebSocketUrl } from '../utils/wsUrl';
+import { tokenManager } from './authService';
 import type { ApiResponse } from '../types';
 
 export interface ContainerInfo {
@@ -310,10 +311,15 @@ export class PodService {
       params.append('sinceSeconds', options.sinceSeconds.toString());
     }
 
+    const token = tokenManager.getToken();
+    if (token) {
+      params.append('token', token);
+    }
+
     const url = buildWebSocketUrl(
       `/ws/clusters/${clusterId}/pods/${namespace}/${name}/logs?${params}`
     );
-    
+
     return new WebSocket(url);
   }
 }

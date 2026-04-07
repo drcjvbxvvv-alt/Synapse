@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/k8s"
-	"github.com/clay-wangzhi/Synapse/internal/middleware"
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/k8s"
+	"github.com/shaia/Synapse/internal/middleware"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -28,7 +28,7 @@ import (
 
 const (
 	kubectlPodNamespace    = "synapse-system"
-	kubectlPodImage        = "registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/kubectl:v0.1"
+	kubectlPodImage        = "ahernshaiaa/kubectl:v0.1"
 	kubectlPodPrefix       = "synapse-kubectl-"
 	kubectlIdleTimeout     = 1 * time.Hour
 	kubectlCleanupInterval = 10 * time.Minute

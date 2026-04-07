@@ -6,9 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/clay-wangzhi/Synapse/internal/constants"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/shaia/Synapse/internal/constants"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
 )
 
 // OperationLogHandler 操作日誌處理器

@@ -16,8 +16,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/clay-wangzhi/Synapse/internal/config"
-	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/services"
 )
 
 // PodHandlerTestSuite 定義 Pod 處理器測試套件

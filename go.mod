@@ -1,4 +1,4 @@
-module github.com/clay-wangzhi/Synapse
+module github.com/shaia/Synapse
 
 go 1.25.0
 

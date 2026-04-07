@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/metrics"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -98,14 +99,18 @@ func (s *EventAlertService) recordHistory(history *models.EventAlertHistory) {
 
 // EventAlertWorker 後臺事件掃描工作器
 type EventAlertWorker struct {
-	db         *gorm.DB
+	db          *gorm.DB
 	k8sProvider K8sClientProvider
-	clusterSvc *ClusterService
-	ticker     *time.Ticker
-	stopCh     chan struct{}
+	clusterSvc  *ClusterService
+	ticker      *time.Ticker
+	stopCh      chan struct{}
+	metrics     *metrics.WorkerMetrics
 	// 已觸發紀錄的去重 key: clusterID|ruleID|involvedObj|reason → last trigger time
 	seen map[string]time.Time
 }
+
+// SetMetrics attaches Prometheus worker metrics.
+func (w *EventAlertWorker) SetMetrics(m *metrics.WorkerMetrics) { w.metrics = m }
 
 // NewEventAlertWorker 建立工作器
 func NewEventAlertWorker(db *gorm.DB, k8sProvider K8sClientProvider, clusterSvc *ClusterService) *EventAlertWorker {
@@ -144,10 +149,18 @@ func (w *EventAlertWorker) Stop() {
 
 // scan 掃描所有叢集的 K8s Events 並與規則比對
 func (w *EventAlertWorker) scan() {
+	var run *metrics.WorkerRun
+	if w.metrics != nil {
+		run = w.metrics.Start("event_alert")
+	}
+
 	svc := NewEventAlertService(w.db)
 	clusters, err := w.clusterSvc.GetAllClusters()
 	if err != nil {
 		logger.Error("Event 告警：取得叢集列表失敗", "error", err)
+		if run != nil {
+			run.Done(err)
+		}
 		return
 	}
 
@@ -214,6 +227,9 @@ func (w *EventAlertWorker) scan() {
 				})
 			}
 		}
+	}
+	if run != nil {
+		run.Done(nil)
 	}
 }
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/models"
 )
 
 // SetMonitoringAuth 為 HTTP 請求設定監控系統認證（Prometheus/AlertManager 共用）

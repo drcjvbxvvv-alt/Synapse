@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/clay-wangzhi/Synapse/internal/config"
-	"github.com/clay-wangzhi/Synapse/internal/database"
-	"github.com/clay-wangzhi/Synapse/internal/router"
-	"github.com/clay-wangzhi/Synapse/pkg/crypto"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
+	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/database"
+	"github.com/shaia/Synapse/internal/router"
+	"github.com/shaia/Synapse/pkg/crypto"
+	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )

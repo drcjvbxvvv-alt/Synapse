@@ -1,10 +1,11 @@
 package router
 
 import (
-	"github.com/clay-wangzhi/Synapse/internal/config"
-	"github.com/clay-wangzhi/Synapse/internal/k8s"
-	"github.com/clay-wangzhi/Synapse/internal/middleware"
-	"github.com/clay-wangzhi/Synapse/internal/services"
+	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/k8s"
+	smetrics "github.com/shaia/Synapse/internal/metrics"
+	"github.com/shaia/Synapse/internal/middleware"
+	"github.com/shaia/Synapse/internal/services"
 	"gorm.io/gorm"
 )
 
@@ -13,6 +14,7 @@ type routeDeps struct {
 	db               *gorm.DB
 	cfg              *config.Config
 	k8sMgr           *k8s.ClusterInformerManager
+	metrics          *smetrics.Registry
 	clusterSvc       *services.ClusterService
 	prometheusSvc    *services.PrometheusService
 	opLogSvc         *services.OperationLogService

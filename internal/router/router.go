@@ -2,6 +2,7 @@ package router
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -12,15 +13,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/clay-wangzhi/Synapse/internal/config"
-	"github.com/clay-wangzhi/Synapse/internal/handlers"
-	"github.com/clay-wangzhi/Synapse/internal/k8s"
-	"github.com/clay-wangzhi/Synapse/internal/middleware"
-	"github.com/clay-wangzhi/Synapse/internal/models"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
-	"github.com/clay-wangzhi/Synapse/pkg/logger"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/handlers"
+	"github.com/shaia/Synapse/internal/k8s"
+	smetrics "github.com/shaia/Synapse/internal/metrics"
+	"github.com/shaia/Synapse/internal/middleware"
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 )
 
 // staticFS 儲存嵌入的前端靜態檔案系統，由 Setup 注入
@@ -30,52 +31,117 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	staticFS = frontendFS
 	r := gin.New()
 
-	// 根據環境設定 gin 模式（可選）
-	// if cfg.Server.Mode == "release" {
-	// 	gin.SetMode(gin.ReleaseMode)
-	// }
+	// ── Observability registry ─────────────────────────────────────────────
+	var reg *smetrics.Registry
+	if cfg.Observability.Enabled {
+		reg = smetrics.New()
+		// Attach GORM callbacks
+		reg.DB.Register(db)
+	}
 
-	// 建立操作審計日誌服務
-	opLogSvc := services.NewOperationLogService(db)
-
-	// 全域性中介軟體
+	// ── Global middleware ──────────────────────────────────────────────────
+	var httpMetrics *smetrics.HTTPMetrics
+	if reg != nil {
+		httpMetrics = reg.HTTP
+	}
 	r.Use(
-		middleware.RequestID(),              // 注入 X-Request-ID
+		middleware.RequestID(),
 		gin.Recovery(),
 		gin.Logger(),
 		middleware.CORS(),
+	)
+
+	// Build opLogSvc early so OperationAudit middleware can be set up
+	opLogSvc := services.NewOperationLogService(db)
+	r.Use(
 		middleware.OperationAudit(opLogSvc),
-		middleware.PrometheusMetrics(),      // 應用層 Prometheus 指標
+		middleware.PrometheusMetrics(httpMetrics),
 		gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/ws/"})),
 	)
 
-	// Prometheus metrics（不掛 Gzip，讓 Prometheus scraper 直接讀取）
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	// ── Observability endpoints ────────────────────────────────────────────
+	obsCfg := cfg.Observability
+	healthPath := obsCfg.HealthPath
+	if healthPath == "" {
+		healthPath = "/healthz"
+	}
+	readyPath := obsCfg.ReadyPath
+	if readyPath == "" {
+		readyPath = "/readyz"
+	}
 
-	// Health endpoints：liveness 與 readiness
-	r.GET("/healthz", func(c *gin.Context) {
-		response.OK(c, gin.H{"status": "ok"})
+	startTime := time.Now()
+
+	// /healthz — always responds 200 as long as the process is alive
+	r.GET(healthPath, func(c *gin.Context) {
+		response.OK(c, gin.H{
+			"status": "ok",
+			"uptime": time.Since(startTime).Round(time.Second).String(),
+		})
 	})
-	r.GET("/readyz", func(c *gin.Context) {
+
+	// /readyz — checks DB connectivity; returns 503 if degraded
+	r.GET(readyPath, func(c *gin.Context) {
+		checks := gin.H{}
+		overallOK := true
+
 		sqlDB, err := db.DB()
 		if err != nil {
-			response.Error(c, http.StatusServiceUnavailable, "DB_UNAVAILABLE", "database unavailable")
+			checks["database"] = gin.H{"status": "error", "message": err.Error()}
+			overallOK = false
+		} else if err = sqlDB.Ping(); err != nil {
+			checks["database"] = gin.H{"status": "error", "message": err.Error()}
+			overallOK = false
+		} else {
+			checks["database"] = gin.H{"status": "ok"}
+		}
+
+		status := "ok"
+		if !overallOK {
+			status = "degraded"
+		}
+		body := gin.H{"status": status, "checks": checks}
+		if !overallOK {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"code": 503, "data": body})
 			return
 		}
-		if err := sqlDB.Ping(); err != nil {
-			response.Error(c, http.StatusServiceUnavailable, "DB_PING_FAILED", "database ping failed")
-			return
-		}
-		response.OK(c, gin.H{"ready": true, "db": "ok"})
+		response.OK(c, body)
 	})
 
-	// 統一的 Service 例項，避免重複建立
+	// /metrics — only when observability is enabled
+	if reg != nil {
+		metricsPath := obsCfg.MetricsPath
+		if metricsPath == "" {
+			metricsPath = "/metrics"
+		}
+		metricsHandler := reg.Handler()
+		if obsCfg.MetricsToken != "" {
+			expectedAuth := "Bearer " + obsCfg.MetricsToken
+			r.GET(metricsPath, func(c *gin.Context) {
+				if c.GetHeader("Authorization") != expectedAuth {
+					c.Header("WWW-Authenticate", `Bearer realm="synapse-metrics"`)
+					c.AbortWithStatus(http.StatusUnauthorized)
+					return
+				}
+				metricsHandler.ServeHTTP(c.Writer, c.Request)
+			})
+		} else {
+			r.GET(metricsPath, gin.WrapH(metricsHandler))
+		}
+		logger.Info("Observability enabled",
+			"metrics", metricsPath,
+			"health", healthPath,
+			"ready", readyPath,
+			"token_auth", obsCfg.MetricsToken != "",
+		)
+	}
+
+	// ── Services ───────────────────────────────────────────────────────────
 	clusterSvc := services.NewClusterService(db)
 	prometheusSvc := services.NewPrometheusService()
-	auditSvc := services.NewAuditService(db)           // 審計服務
-	permissionSvc := services.NewPermissionService(db) // 權限服務
+	auditSvc := services.NewAuditService(db)
+	permissionSvc := services.NewPermissionService(db)
 
-	// 初始化 Grafana 服務（始終建立例項，從資料庫讀取配置，env 僅控制代理和自動同步）
 	grafanaSettingSvc := services.NewGrafanaSettingService(db)
 	grafanaSvc := services.NewGrafanaService("", "")
 	grafanaConfig, err := grafanaSettingSvc.GetGrafanaConfig()
@@ -91,14 +157,19 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	} else {
 		logger.Info("Grafana 尚未配置連線資訊，請在系統設定中配置")
 	}
-	// 始終將 grafanaSvc 傳給 monitoringConfigSvc，執行時透過 IsEnabled() 判斷是否同步資料來源
 	monitoringConfigSvc := services.NewMonitoringConfigServiceWithGrafana(db, grafanaSvc)
-	// K8s Informer 管理器（套用可設定的快取同步逾時）
+
+	// ── K8s Informer manager ───────────────────────────────────────────────
 	k8sMgr := k8s.NewClusterInformerManager()
 	if cfg.K8s.InformerSyncTimeout > 0 {
 		k8sMgr.SetSyncTimeout(time.Duration(cfg.K8s.InformerSyncTimeout) * time.Second)
 	}
-	// 預熱可連線叢集的 Informer（後臺執行，不阻塞啟動；跳過 unhealthy 叢集，並行初始化）
+	// Attach k8s metrics to manager if observability is on
+	if reg != nil {
+		k8sMgr.SetMetrics(reg.K8s)
+	}
+
+	// Pre-warm Informers for connectable clusters (background, non-blocking)
 	go func() {
 		clusters, err := clusterSvc.GetConnectableClusters()
 		if err != nil {
@@ -118,44 +189,44 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		wg.Wait()
 	}()
 
-	// 啟動 Event 告警工作器（後臺週期掃描 K8s Events 並比對規則）
+	// ── Background workers ─────────────────────────────────────────────────
 	eventAlertWorker := services.NewEventAlertWorker(db, k8sMgr, clusterSvc)
-	eventAlertWorker.Start()
-
-	// 啟動成本快照工作器（每日 00:05 UTC 拍攝資源用量快照）
 	costWorker := services.NewCostWorker(db, clusterSvc, k8sMgr)
-	costWorker.Start()
-
-	// 啟動日誌保留清理工作器（預設保留 90 天）
 	logRetentionWorker := services.NewLogRetentionWorker(db, 0)
+
+	if reg != nil {
+		eventAlertWorker.SetMetrics(reg.Worker)
+		costWorker.SetMetrics(reg.Worker)
+		logRetentionWorker.SetMetrics(reg.Worker)
+	}
+
+	eventAlertWorker.Start()
+	costWorker.Start()
 	logRetentionWorker.Start()
 
-	// 啟動閒置叢集 GC（每 30 分鐘掃描，閒置超過 2 小時則停止 informer）
 	k8sMgr.StartGC(30*time.Minute, 2*time.Hour)
 
-	// /api/v1
+	// ── API routes ─────────────────────────────────────────────────────────
 	api := r.Group("/api/v1")
 
-	// Auth 僅開放登入與登出，其餘走受保護分組
 	auth := api.Group("/auth")
 	{
 		authSvc := services.NewAuthService(db, cfg.JWT.Secret, cfg.JWT.ExpireTime)
 		authHandler := handlers.NewAuthHandler(authSvc, opLogSvc)
 		auth.POST("/login", middleware.LoginRateLimit(), authHandler.Login)
 		auth.POST("/logout", authHandler.Logout)
-		auth.GET("/status", authHandler.GetAuthStatus) // 獲取認證狀態（無需登入）
-		// /me 必須帶 Auth
+		auth.GET("/status", authHandler.GetAuthStatus)
 		auth.GET("/me", middleware.AuthRequired(cfg.JWT.Secret), authHandler.GetProfile)
 		auth.POST("/change-password", middleware.AuthRequired(cfg.JWT.Secret), authHandler.ChangePassword)
 	}
 
-	// 建立權限中介軟體（在受保護路由和 WebSocket 路由中共用）
 	permMiddleware := middleware.NewPermissionMiddleware(permissionSvc)
 
 	deps := routeDeps{
 		db:               db,
 		cfg:              cfg,
 		k8sMgr:           k8sMgr,
+		metrics:          reg,
 		clusterSvc:       clusterSvc,
 		prometheusSvc:    prometheusSvc,
 		opLogSvc:         opLogSvc,
@@ -166,11 +237,9 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		permMiddleware:   permMiddleware,
 	}
 
-	// 受保護的業務路由
 	protected := api.Group("")
 	protected.Use(middleware.AuthRequired(cfg.JWT.Secret))
 	{
-		// users - 使用者管理（僅平臺管理員）
 		userSvc := services.NewUserService(db)
 		userHandler := handlers.NewUserHandler(userSvc)
 		users := protected.Group("/users")
@@ -192,12 +261,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 
 	registerWSRoutes(r, &deps)
 
-	// 嵌入前端靜態檔案服務
 	setupStatic(r)
 
-	// TODO:
-	// - 統一錯誤處理/響應格式中介軟體
-	// - OpenAPI/Swagger 文件路由（/swagger/*any）
 	return r, k8sMgr
 }
 
@@ -209,7 +274,6 @@ func setupStatic(r *gin.Engine) {
 		return
 	}
 
-	// 靜態資源快取（assets 目錄包含帶 hash 的檔案，可以長期快取）
 	assetsGroup := r.Group("/assets")
 	assetsGroup.Use(func(c *gin.Context) {
 		c.Header("Cache-Control", "public, max-age=31536000, immutable")
@@ -217,17 +281,14 @@ func setupStatic(r *gin.Engine) {
 	})
 	assetsGroup.StaticFS("/", http.FS(assetsFS))
 
-	// 所有未匹配的路由回退到 index.html（SPA 路由支援）
 	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 
-		// API 和 WebSocket 路徑返回 404
 		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/ws/") {
 			response.NotFound(c, "not found")
 			return
 		}
 
-		// 嘗試提供靜態檔案（如 favicon.ico 等根目錄檔案）
 		filePath := strings.TrimPrefix(path, "/")
 		if filePath != "" {
 			if f, err := staticFS.Open("ui/dist/" + filePath); err == nil {
@@ -238,7 +299,6 @@ func setupStatic(r *gin.Engine) {
 			}
 		}
 
-		// 回退到 index.html
 		content, err := staticFS.ReadFile("ui/dist/index.html")
 		if err != nil {
 			response.InternalError(c, "frontend not available")
@@ -248,11 +308,10 @@ func setupStatic(r *gin.Engine) {
 	})
 }
 
-// mustSub 是 fs.Sub 的便捷封裝
 func mustSub(fsys fs.FS, dir string) fs.FS {
 	sub, err := fs.Sub(fsys, dir)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("fs.Sub(%q): %v", dir, err))
 	}
 	return sub
 }

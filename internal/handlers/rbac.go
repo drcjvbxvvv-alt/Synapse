@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	"github.com/clay-wangzhi/Synapse/internal/k8s"
-	"github.com/clay-wangzhi/Synapse/internal/response"
-	"github.com/clay-wangzhi/Synapse/internal/services"
-	"github.com/clay-wangzhi/Synapse/internal/templates/rbac"
+	"github.com/shaia/Synapse/internal/k8s"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/internal/templates/rbac"
 )
 
 // RBACHandler RBAC 權限管理處理器

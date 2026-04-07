@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/clay-wangzhi/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/models"
 
 	"gorm.io/gorm"
 )
