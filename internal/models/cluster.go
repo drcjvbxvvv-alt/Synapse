@@ -44,6 +44,14 @@ type Cluster struct {
 
 // BeforeSave encrypts sensitive fields before INSERT or UPDATE.
 func (c *Cluster) BeforeSave(_ *gorm.DB) error {
+	// MySQL JSON 欄位不接受空字串，統一用 "null" 作為空值
+	if c.MonitoringConfig == "" {
+		c.MonitoringConfig = "null"
+	}
+	if c.AlertManagerConfig == "" {
+		c.AlertManagerConfig = "null"
+	}
+
 	if !crypto.IsEnabled() {
 		return nil
 	}
