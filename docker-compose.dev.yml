@@ -1,0 +1,72 @@
+# =============================================================================
+# Synapse — 開發環境 Docker Compose
+# 用法：
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml down -v   # 清除資料
+#
+# 包含服務：
+#   mysql    — MySQL 8.0，自動匯入 deploy/sql/init_mysql.sql
+#   adminer  — 輕量 DB 管理 UI，http://localhost:8080
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8.0
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: synapse-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-SynapseRoot@2026}
+      MYSQL_DATABASE:      ${MYSQL_DATABASE:-synapse}
+      MYSQL_USER:          ${MYSQL_USER:-synapse}
+      MYSQL_PASSWORD:      ${MYSQL_PASSWORD:-Synapse@2026}
+      TZ: Asia/Taipei
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      # 資料持久化
+      - mysql_data:/var/lib/mysql
+      # 開發用輕量設定
+      - ./deploy/docker/mysql/conf/my.dev.cnf:/etc/mysql/conf.d/synapse.cnf:ro
+      # 初始化 SQL（僅在 volume 為空時執行）
+      - ./deploy/sql/init_mysql.sql:/docker-entrypoint-initdb.d/01-synapse-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1",
+             "-u", "${MYSQL_USER:-synapse}", "-p${MYSQL_PASSWORD:-Synapse@2026}"]
+      interval: 10s
+      timeout:  5s
+      retries:  10
+      start_period: 30s
+    networks:
+      - synapse-dev
+
+  # ---------------------------------------------------------------------------
+  # Adminer — DB 管理 UI
+  # 存取：http://localhost:8080
+  #   伺服器: mysql  |  使用者: synapse  |  密碼: Synapse@2026  |  資料庫: synapse
+  # ---------------------------------------------------------------------------
+  adminer:
+    image: adminer:latest
+    container_name: synapse-adminer-dev
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+      ADMINER_DESIGN:         pepa-linha-dark
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    networks:
+      - synapse-dev
+
+volumes:
+  mysql_data:
+    name: synapse-mysql-dev-data
+
+networks:
+  synapse-dev:
+    name: synapse-dev
