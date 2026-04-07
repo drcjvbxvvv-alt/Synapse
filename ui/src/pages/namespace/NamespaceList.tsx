@@ -647,7 +647,7 @@ const [form] = Form.useForm();
           </Form.Item>
 
           <Form.Item
-            name={['labels', 'description']}
+            name={['annotations', 'description']}
             label={t("create.descriptionLabel")}
           >
             <Input.TextArea
