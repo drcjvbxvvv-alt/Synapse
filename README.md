@@ -77,6 +77,25 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 - VirtualService / DestinationRule / Gateway / PeerAuthentication CRD 查看
 - mTLS 狀態 Badge
 
+#### Gateway API
+
+- 自動偵測叢集是否安裝 Gateway API CRD（`gateway.networking.k8s.io`），未安裝時顯示一鍵安裝指令
+- **GatewayClass**：列表 + 詳情抽屜（Controller、Conditions）
+- **Gateway**：CRUD + YAML 編輯（Monaco）；Listeners、Addresses、Conditions 詳情
+- **HTTPRoute**：CRUD + YAML；parentRefs、Hostnames、Rules（Match / Backend / Filter）詳情；多後端流量權重視覺化（堆疊色條）
+- **GRPCRoute**：CRUD + YAML（gRPC 方法比對規則）
+- **ReferenceGrant**：建立 / 刪除 + YAML 查看（跨 namespace 流量授權）
+- **Gateway 拓撲**：React Flow 有向圖，GatewayClass → Gateway → HTTPRoute/GRPCRoute → Service，dagre LR 自動排版
+
+#### 叢集網路拓樸（Cluster Topology）
+
+- **靜態拓樸**（零依賴，所有叢集適用）：以 Service selector 比對建立 Service → Workload 連線；Endpoint readiness 決定邊健康狀態（Healthy / Degraded / Down / Unknown）
+- **Workload 自動折疊**：批次解析 Pod → ReplicaSet → Deployment ownerRef，以 Workload 節點呈現 Ready/Total 計數
+- **ParticleEdge 動畫**：SVG `animateMotion` 粒子沿邊流動，顏色 / 速度對應健康狀態
+- **命名空間篩選**：多選下拉，縮小可見範圍
+- **Cilium 偵測**：自動偵測 `hubble-relay` Service，工具列顯示版本徽章
+- **Istio 指標強化**（`Istio Metrics` 開關，Istio 已安裝時可用）：透過 K8s API Server Proxy 查詢叢集內 Prometheus，取得 requestRate / errorRate / latencyP99ms；errorRate > 5% 轉橙色、> 20% 轉紅色；邊標籤即時顯示錯誤率
+
 ---
 
 ### 🗂 設定管理（ConfigMap / Secret）
@@ -372,6 +391,8 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 | **react-window**          | 大列表虛擬捲動               |
 | **@tanstack/react-query** | API 快取與狀態管理           |
 | **react-force-graph-2d**  | NetworkPolicy 拓撲視覺化     |
+| **@xyflow/react**         | Gateway API / 叢集網路拓樸視覺化（React Flow v12） |
+| **@dagrejs/dagre**        | 拓樸圖自動節點排版（LR 有向圖） |
 | **dayjs**                 | 時間處理                     |
 | **i18next**               | 多語言（繁中 / 簡中 / 英文） |
 
@@ -482,7 +503,7 @@ Synapse/
 | 維度 | 評分 | 核心結論 |
 |------|------|----------|
 | 可靠度 | 8/10 | 主路徑錯誤處理完整；已修復 runbooks panic、kubectl terminal panic、Mesh 指標 stub |
-| 實用性 | 9/10 | 覆蓋 95% 日常 K8s 操作；新增資源治理、多叢集遷移、Service Mesh 視覺化、通知渠道管理 |
+| 實用性 | 9/10 | 覆蓋 95% 日常 K8s 操作；新增資源治理、多叢集遷移、Service Mesh 視覺化、Gateway API 完整 CRUD、叢集網路拓樸圖 |
 | 可用性 | 9/10 | Design Token 統一、MainLayout 重構、空狀態元件標準化；API 回應格式一致 |
 | 誠實性 | 8/10 | 功能與實作高度一致；Service Mesh 流量指標已實作（非 stub）；已補充雲端帳單估算說明 |
 | 系統架構 | 8/10 | Handler → Service → K8s Manager 分層清晰；`K8sInformerManager` 介面解除循環依賴 |
@@ -517,7 +538,7 @@ Synapse/
 - 工作負載：Deployment / StatefulSet / DaemonSet / Job / CronJob / Argo Rollouts（HPA / VPA / PDB）
 - 資源治理：佔用分析（K8s API）+ 效率分析（Prometheus）+ 容量預測 + Right-sizing + 雲端帳單
 - 多叢集：工作負載遷移精靈 + ConfigMap/Secret 跨叢集同步策略
-- 網路：NetworkPolicy 策略模擬 + Service Mesh（Istio）流量拓撲
+- 網路：NetworkPolicy 策略模擬 + Service Mesh（Istio）流量拓撲 + Gateway API（GatewayClass / Gateway / HTTPRoute / GRPCRoute / ReferenceGrant）+ 叢集網路拓樸圖（靜態 + Istio/Cilium 條件整合）
 - 稽核：操作日誌 + Terminal 回放 + 部署審批 + SIEM 推送
 - 通知：Webhook / DingTalk（HMAC 加簽）/ Slack / Teams / Email（SMTP）集中渠道管理
 
