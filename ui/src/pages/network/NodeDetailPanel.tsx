@@ -191,6 +191,11 @@ const ConnectionRow: React.FC<ConnectionRowProps> = ({ edge, targetId, direction
         <HealthBadge health={edge.health} />
       </div>
 
+      {edge.kind === 'istio-flow' && (
+        <div style={{ fontSize: 10, color: '#13c2c2', marginTop: 3, fontWeight: 500 }}>
+          Istio 實際流量
+        </div>
+      )}
       {edge.ports && (
         <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 4 }}>
           Ports: <Text code style={{ fontSize: 11 }}>{edge.ports}</Text>

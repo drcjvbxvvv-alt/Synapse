@@ -206,6 +206,12 @@ function resolveEdgeStyle(d: ParticleEdgeData): { stroke: string; particle: stri
   if (d.kind === 'ingress') {
     return { stroke: '#722ed1', particle: '#722ed1', dur: '2s' };
   }
+  // Istio actual call-direction edges: cyan, speed driven by error rate
+  if (d.kind === 'istio-flow') {
+    if ((d.errorRate ?? 0) > 0.2)  return { stroke: '#ff4d4f', particle: '#ff4d4f', dur: '1.5s' };
+    if ((d.errorRate ?? 0) > 0.05) return { stroke: '#fa8c16', particle: '#fa8c16', dur: '2.5s' };
+    return { stroke: '#13c2c2', particle: '#13c2c2', dur: '1.8s' };
+  }
   // Istio metrics override static health colour when available
   if (d.requestRate !== undefined) {
     if ((d.errorRate ?? 0) > 0.2)    return { stroke: '#ff4d4f', particle: '#ff4d4f', dur: '1.5s' };
@@ -230,8 +236,12 @@ const ParticleEdge: React.FC<EdgeProps> = ({
     targetX, targetY, targetPosition,
   });
 
-  // Build tooltip: show Istio metrics if available
-  const label = hasIstio && (d.errorRate ?? 0) > 0.01
+  // Label: show rps for istio-flow edges; error rate for any edge with high error
+  const label = d.kind === 'istio-flow' && d.requestRate !== undefined
+    ? (d.requestRate > 0
+        ? `${d.requestRate.toFixed(1)} rps${(d.errorRate ?? 0) > 0.01 ? ` · ${((d.errorRate ?? 0) * 100).toFixed(0)}% err` : ''}`
+        : null)
+    : hasIstio && (d.errorRate ?? 0) > 0.01
     ? `${((d.errorRate ?? 0) * 100).toFixed(1)}% err`
     : null;
 

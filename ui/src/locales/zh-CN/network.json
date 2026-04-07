@@ -32,7 +32,9 @@
       "ingressClass": "Ingress 控制器"
     },
     "autoRefreshStart": "开启每 15 秒自动刷新",
-    "autoRefreshStop": "停止自动刷新"
+    "autoRefreshStop": "停止自动刷新",
+    "istioFlowLabel": "调用方向",
+    "istioFlowTooltip": "显示 Istio 检测到的实际 Workload→Service 调用方向边（青色）"
   },
   "gatewayapi": {
     "notInstalled": "此集群尚未安装 Gateway API",

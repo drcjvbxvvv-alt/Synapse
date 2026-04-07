@@ -32,7 +32,9 @@
       "ingressClass": "Ingress Class"
     },
     "autoRefreshStart": "Enable auto-refresh (15s)",
-    "autoRefreshStop": "Stop auto-refresh"
+    "autoRefreshStop": "Stop auto-refresh",
+    "istioFlowLabel": "Call Direction",
+    "istioFlowTooltip": "Show actual Workload→Service call edges observed by Istio (cyan)"
   },
   "gatewayapi": {
     "notInstalled": "Gateway API is Not Installed",

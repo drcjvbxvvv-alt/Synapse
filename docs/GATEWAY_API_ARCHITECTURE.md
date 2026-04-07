@@ -1,7 +1,7 @@
 # Synapse Gateway API 架構設計文件
 
-> 版本：v1.4 | 日期：2026-04-08 | 狀態：Phase 1、Phase 2 & Phase 3 已實作；Phase 4 規劃中
-> 對應里程碑：M-GW（Gateway API 整合）
+> 版本：v1.5 | 日期：2026-04-08 | 狀態：Phase 1–3 已實作；Phase 4-A / 4-B 已實作；Phase 4-C / 4-D 規劃中
+> 對應里程碑：M-GW（Gateway API 整合）、M-TOPO（叢集網路拓撲）
 
 ---
 
@@ -19,7 +19,8 @@
 10. [RBAC 權限設計](#10-rbac-權限設計)
 11. [實作路線圖](#11-實作路線圖)
 12. [技術選型決策](#12-技術選型決策)
-13. [Phase 4：叢集網路拓撲圖（規劃中）](#13-phase-4叢集網路拓撲圖規劃中)
+13. [Phase 4：叢集網路拓撲圖](#13-phase-4叢集網路拓撲圖)
+14. [Phase 4 深化路線圖（v1.6）](#14-phase-4-深化路線圖v16)
 
 ---
 
@@ -826,9 +827,9 @@ rules:
 
 ---
 
-## 13. Phase 4：叢集網路拓撲圖（規劃中）
+## 13. Phase 4：叢集網路拓撲圖
 
-> 狀態：📋 規劃中 | 預計版本：v1.5
+> 狀態：✅ Phase A（靜態拓樸）已實作 | ✅ Phase B（Cilium/Istio 偵測 + Istio Metrics）已實作 | ✅ Phase C（Ingress 節點）已實作 | ✅ Phase D（Istio 呼叫方向邊）已實作 | 📋 Phase E 規劃中
 
 ### 13.1 背景與目標
 
@@ -1241,3 +1242,506 @@ ui/src/locales/*/network.json                    ← 新增 i18n 鍵值
 | 前端表單 | 動態陣列表單（Ant Design Form.List） | Rules 為巢狀陣列，需動態增刪，Form.List 最適合 |
 | YAML 直編 | 複用現有 Monaco editor + YAML apply 模式 | 保持一致性，進階用戶可繞過表單 |
 | CRD 偵測快取 | 每個請求即時呼叫 Discovery API | 先不快取，未來視效能需求加入 5 分鐘 in-memory cache |
+
+---
+
+## 14. Phase 4 深化路線圖（v1.6）
+
+> 狀態：📋 架構規劃中 | 預計版本：v1.6
+>
+> 本節記錄 Phase A/B 已落地後，三個高優先順序的深化方向：
+> **C — Ingress 節點補全、D — Istio 實際呼叫方向邊、E — NetworkPolicy 覆層**
+
+---
+
+### 14.1 已實作現況總結
+
+#### 後端實作檔案
+
+| 檔案 | 功能 | 狀態 |
+|------|------|------|
+| `internal/services/network_topology_service.go` | 靜態拓樸建構（Pod rollup、Service→Workload 邊、Endpoint 健康） | ✅ 完成 |
+| `internal/services/topology_integration_service.go` | Cilium/Istio 偵測、Prometheus 查詢封裝 | ✅ 完成 |
+| `internal/handlers/network_topology.go` | `GET /clusters/:id/network/topology`、`GET /clusters/:id/network/integrations` | ✅ 完成 |
+
+#### 前端實作檔案
+
+| 檔案 | 功能 | 狀態 |
+|------|------|------|
+| `ui/src/pages/network/ClusterTopologyGraph.tsx` | React Flow 畫布、WorkloadNode、ServiceNode、ParticleEdge | ✅ 完成 |
+| `ui/src/pages/network/ClusterTopologyTab.tsx` | 整合 toolbar（namespace filter、Istio switch、版本 badge）| ✅ 完成 |
+| `ui/src/services/networkTopologyService.ts` | API client | ✅ 完成 |
+
+#### 目前圖的節點/邊模型
+
+```
+節點類型：Workload（Deployment/StatefulSet/DaemonSet/Job/Pod rollup）、Service、Ingress（✅ Phase C）
+邊類型：
+  - Service → Workload（label selector 靜態推算）
+  - Ingress → Service（✅ Phase C，紫色粒子）
+  - Workload → Service（✅ Phase D，istio-flow，青色粒子，需啟用 Istio Metrics）
+邊健康：Endpoint readiness（Phase A）/ Istio error rate（Phase B enrich）
+缺失：NetworkPolicy 封鎖邊（Phase E）
+```
+
+---
+
+### 14.2 Phase C — Ingress 節點（補全外部流量入口）✅ 已實作
+
+#### 問題
+
+目前拓樸圖的流量路徑從 Service 開始，外部請求的入口（Ingress / IngressClass）不可見。
+
+```
+現在：Service → Workload
+目標：[Ingress] → Service → Workload
+```
+
+#### 後端變更
+
+**`network_topology_service.go`** — 新增 Ingress 資源列取與節點建構：
+
+```go
+// IngressNode 的 ID 格式
+func networkIngressNodeID(ns, name string) string {
+    return fmt.Sprintf("ingress/%s/%s", ns, name)
+}
+
+// 在 GetClusterNetworkTopology 末段新增（步驟 8）
+type ingressInfo struct {
+    Name          string
+    Namespace     string
+    IngressClass  string   // spec.ingressClassName
+    BackendServices []ingressBackend
+}
+
+type ingressBackend struct {
+    ServiceName string
+    ServicePort int32
+    Host        string
+    Path        string
+}
+
+// 列取 Ingress，解析 spec.rules[].http.paths[].backend
+for _, ns := range namespaces {
+    ingList, err := clientset.NetworkingV1().Ingresses(ns).List(ctx, metav1.ListOptions{})
+    if err != nil { continue }
+    for _, ing := range ingList.Items {
+        info := &ingressInfo{
+            Name:         ing.Name,
+            Namespace:    ing.Namespace,
+            IngressClass: ptr2str(ing.Spec.IngressClassName),
+        }
+        for _, rule := range ing.Spec.Rules {
+            if rule.HTTP == nil { continue }
+            for _, path := range rule.HTTP.Paths {
+                if path.Backend.Service == nil { continue }
+                info.BackendServices = append(info.BackendServices, ingressBackend{
+                    ServiceName: path.Backend.Service.Name,
+                    ServicePort: path.Backend.Service.Port.Number,
+                    Host:        rule.Host,
+                    Path:        path.Path,
+                })
+            }
+        }
+        // 加入 Ingress 節點
+        id := networkIngressNodeID(ing.Namespace, ing.Name)
+        nodes = append(nodes, NetworkNode{
+            ID:           id,
+            Kind:         "Ingress",
+            Name:         ing.Name,
+            Namespace:    ing.Namespace,
+            IngressClass: info.IngressClass,
+        })
+        // 建立 Ingress → Service 邊
+        for _, be := range info.BackendServices {
+            svcID := networkServiceNodeID(ing.Namespace, be.ServiceName)
+            ek := id + "->" + svcID
+            if !edgeSet[ek] {
+                edgeSet[ek] = true
+                edges = append(edges, NetworkEdge{
+                    Source: id,
+                    Target: svcID,
+                    Kind:   "ingress",
+                    Health: "healthy",  // Ingress 邊不依賴 Endpoint
+                    Ports:  fmt.Sprintf("%d", be.ServicePort),
+                })
+            }
+        }
+    }
+}
+```
+
+**`NetworkNode` DTO 新增欄位：**
+
+```go
+type NetworkNode struct {
+    // ... 現有欄位 ...
+    IngressClass string `json:"ingressClass,omitempty"` // nginx / traefik / istio
+}
+
+type NetworkEdge struct {
+    // ... 現有欄位 ...
+    Kind string `json:"kind,omitempty"` // "" | "ingress" | "policy-allow" | "policy-deny" | "istio-flow"
+}
+```
+
+#### 前端變更
+
+**`ClusterTopologyGraph.tsx`** — 新增 `IngressNode` 自訂節點：
+
+```tsx
+const IngressNode = ({ data }: { data: NetworkNode }) => (
+  <div style={{
+    background: '#f9f0ff',
+    border: '2px solid #722ed1',
+    borderRadius: 8,
+    padding: '6px 12px',
+    minWidth: 140,
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <GlobalOutlined style={{ color: '#722ed1' }} />
+      <Text strong style={{ fontSize: 12 }}>{data.name}</Text>
+    </div>
+    {data.ingressClass && (
+      <Tag color="purple" style={{ fontSize: 10, marginTop: 4 }}>
+        {data.ingressClass}
+      </Tag>
+    )}
+    <Handle type="source" position={Position.Right} />
+  </div>
+);
+
+// 加入 nodeTypes
+const nodeTypes = {
+  WorkloadNode,
+  ServiceNode,
+  IngressNode,   // ← 新增
+};
+```
+
+**ParticleEdge** — 依 `data.kind` 決定 Ingress 邊樣式：
+
+```tsx
+// resolveEdgeStyle 新增 ingress 分支
+if (data?.kind === 'ingress') {
+  return { color: '#722ed1', speed: '2s', width: 2 };
+}
+```
+
+**dagre 佈局調整**：Ingress 節點放最左側（rank 0），Service 居中，Workload 最右。
+
+---
+
+### 14.3 Phase D — Istio 實際呼叫方向邊 ✅ 已實作
+
+#### 問題
+
+Phase B 的 Istio metrics enrich 只做了「用 Prometheus 數據覆蓋邊的顏色/速度」，但邊本身仍是由 label selector 靜態推算的 `Service → Workload`。
+
+真正的問題：**拓樸圖顯示的是「哪個 Service 選中了哪個 Workload」，而不是「哪個 Workload 在呼叫哪個 Service」**。
+
+以一個微服務場景為例：
+
+```
+frontend-svc → frontend-deploy   （靜態）
+api-svc      → api-deploy        （靜態）
+order-svc    → order-deploy      （靜態）
+
+實際流量（Istio metrics 知道）：
+frontend-deploy → api-svc → api-deploy
+api-deploy      → order-svc → order-deploy
+```
+
+目前圖看不出 frontend 呼叫 api、api 呼叫 order 這個關係。
+
+#### 資料來源
+
+`QueryIstioMetrics` 已查詢 `istio_requests_total` 並拿到 `source_workload` + `destination_workload`。但 `destination_workload` 不等於 Service 名稱，它是 Pod 背後的 Deployment 名稱。
+
+從 Istio metrics 推算呼叫者邊的對應規則：
+
+```
+source_workload（呼叫方 Workload）
+    → destination_service_name（被呼叫的 Service，Istio label）
+    → destination_workload（被呼叫的 Workload）
+```
+
+Prometheus query 需要加入 `destination_service_name` label：
+
+```promql
+sum(
+  rate(istio_requests_total{reporter="destination"}[1m])
+) by (
+  source_workload, source_workload_namespace,
+  destination_service,              ← 新增
+  destination_workload, destination_workload_namespace
+)
+```
+
+#### 後端變更
+
+**`topology_integration_service.go`** — `IstioEdgeMetrics` 新增 `DestService`，更新 PromQL：
+
+```go
+type IstioEdgeMetrics struct {
+    SourceWorkload      string
+    SourceNamespace     string
+    DestService         string  // ← 新增：Istio destination_service label
+    DestWorkload        string
+    DestNamespace       string
+    RequestRate         float64
+    ErrorRate           float64
+    LatencyP99ms        float64
+}
+
+// PromQL 新增 destination_service
+rateQL := `sum(rate(istio_requests_total{reporter="destination"}[1m])) by (
+    source_workload, source_workload_namespace,
+    destination_service,
+    destination_workload, destination_workload_namespace
+)`
+```
+
+**`network_topology_service.go`** — `EnrichWithIstioMetrics` 新增「呼叫方邊」建構：
+
+```go
+func (t *ClusterNetworkTopology) EnrichWithIstioMetrics(metrics map[string]*IstioEdgeMetrics) {
+    // ... 現有邏輯（覆寫 Service→Workload 邊的健康/速率）...
+
+    // 新增：從 Istio metrics 建立 Workload → Service 呼叫邊
+    // 建立 service name → service node ID 索引
+    svcByName := map[string]string{} // "ns/svcName" → nodeID
+    for _, n := range t.Nodes {
+        if n.Kind == "Service" {
+            svcByName[n.Namespace+"/"+n.Name] = n.ID
+        }
+    }
+    wlByName := map[string]string{} // "ns/wlName" → nodeID
+    for _, n := range t.Nodes {
+        if n.Kind == "Workload" {
+            wlByName[n.Namespace+"/"+n.Name] = n.ID
+        }
+    }
+
+    edgeSet := map[string]bool{}
+    for _, e := range t.Edges {
+        edgeSet[e.Source+"->"+e.Target] = true
+    }
+
+    for _, m := range metrics {
+        if m.RequestRate == 0 { continue }
+
+        srcID, srcOK := wlByName[m.SourceNamespace+"/"+m.SourceWorkload]
+        // destination_service → 找對應 Service 節點
+        dstSvcID, dstOK := svcByName[m.DestNamespace+"/"+m.DestService]
+        if !srcOK || !dstOK { continue }
+
+        ek := srcID + "->" + dstSvcID
+        if edgeSet[ek] { continue }
+        edgeSet[ek] = true
+
+        health := "healthy"
+        if m.ErrorRate > 0.2 { health = "down" } else if m.ErrorRate > 0.05 { health = "degraded" }
+
+        t.Edges = append(t.Edges, NetworkEdge{
+            Source:       srcID,
+            Target:       dstSvcID,
+            Kind:         "istio-flow",   // 區分靜態邊 vs 實際流量邊
+            Health:       health,
+            RequestRate:  m.RequestRate,
+            ErrorRate:    m.ErrorRate,
+            LatencyP99ms: m.LatencyP99ms,
+        })
+    }
+}
+```
+
+#### 前端變更
+
+**`ParticleEdge`** — 依 `data.kind === 'istio-flow'` 調整視覺：
+
+```tsx
+// istio-flow 邊用虛線 + 箭頭，表示「實際呼叫方向」
+if (data?.kind === 'istio-flow') {
+    const rps = data.requestRate ?? 0;
+    const count = rps > 10 ? 3 : rps > 1 ? 2 : 1;
+    return { color: '#13c2c2', speed: '1.5s', width: 1.5, particleCount: count, dashed: false };
+}
+```
+
+**`ClusterTopologyTab.tsx`** — toolbar 新增圖層開關：
+
+```tsx
+<Tooltip title="顯示 Istio 實際呼叫方向邊（需啟用 Istio Metrics）">
+  <Switch
+    size="small"
+    checked={showIstioFlows}
+    onChange={setShowIstioFlows}
+    disabled={!integrations?.istio || !enrich}
+  />
+  <Text style={{ fontSize: 12 }}>呼叫方向</Text>
+</Tooltip>
+```
+
+前端過濾：`showIstioFlows` 為 false 時，從 edges 中排除 `kind === 'istio-flow'` 的邊，保持圖的整潔度。
+
+#### 視覺效果
+
+```
+開啟前（靜態）：        開啟後（+ Istio 流量方向）：
+
+frontend-svc           frontend-svc
+    │                      │    ▲ (istio-flow, cyan)
+    ▼                      ▼    │
+frontend-deploy  ──────▶ api-svc ──────▶ api-deploy
+                    (Istio 顯示 frontend 在呼叫 api-svc)
+```
+
+---
+
+### 14.4 Phase E — NetworkPolicy 覆層
+
+#### 問題
+
+NetworkPolicy 在 Synapse 已有 CRUD 功能（`/network/policies`），但與拓樸圖是兩個完全獨立的入口。用戶無法在圖上直觀看到「哪條連線被 NetworkPolicy 封鎖」。
+
+#### NetworkPolicy 推論邏輯
+
+K8s NetworkPolicy 沒有顯式 Deny 資源，邏輯為：
+
+```
+規則：一旦某個 Pod 被任何 NetworkPolicy 的 podSelector 選中，
+      該 Pod 的所有未明確放行的 ingress 流量都被拒絕。
+
+推論步驟：
+for each edge (Service S → Workload W):
+  targetPods = Pods 屬於 W
+  for each targetPod in targetPods:
+    matchedPolicies = NetworkPolicies where podSelector ∩ targetPod.labels ≠ ∅
+    if len(matchedPolicies) == 0:
+      edge.policyStatus = "allow-all"     // 無任何 policy，全通
+    else:
+      allowed = false
+      for policy in matchedPolicies:
+        for ingressRule in policy.spec.ingress:
+          if ingressRule.from matches sourcePod/Namespace:
+            allowed = true; break
+      edge.policyStatus = allowed ? "policy-allow" : "policy-deny"
+```
+
+#### 後端變更
+
+**`network_topology_service.go`** — `GetClusterNetworkTopology` 新增 `includePolicy` 參數：
+
+```go
+type TopologyOptions struct {
+    Namespaces    []string
+    IncludePolicy bool
+    IncludeIngress bool
+    Enrich        bool   // Istio metrics enrich
+}
+
+// 步驟 9（若 IncludePolicy）：列取 NetworkPolicy 並推論邊狀態
+func inferNetworkPolicies(
+    ctx context.Context,
+    clientset kubernetes.Interface,
+    namespaces []string,
+    edges []NetworkEdge,
+    nodes []NetworkNode,
+) []NetworkEdge {
+    // 建立 workload node → pod labels 索引（已在 workloads map 中）
+    // 建立 service → workload 邊的 target workload 索引
+    // 列取所有 namespace 的 NetworkPolicy
+    // 對每條邊執行上述推論演算法
+    // 在 NetworkEdge 填入 PolicyStatus / PolicyName
+}
+```
+
+**`NetworkEdge` DTO 新增欄位：**
+
+```go
+type NetworkEdge struct {
+    // ... 現有欄位 ...
+    Kind         string `json:"kind,omitempty"`         // ingress | policy-allow | policy-deny | istio-flow
+    PolicyStatus string `json:"policyStatus,omitempty"` // allow-all | policy-allow | policy-deny
+    PolicyName   string `json:"policyName,omitempty"`   // 觸發的 NetworkPolicy 名稱
+}
+```
+
+**handler 新增 query param：**
+
+```go
+includePolicy := c.Query("policy") == "true"
+includeIngress := c.Query("ingress") == "true"
+```
+
+#### 前端變更
+
+**`ParticleEdge`** — `policy-deny` 邊特殊樣式：
+
+```tsx
+if (data?.policyStatus === 'policy-deny') {
+    return {
+        color: '#ff4d4f',
+        dashed: true,
+        particleCount: 0,   // 無粒子流動（表示封鎖）
+        label: '🔒 blocked',
+    };
+}
+if (data?.policyStatus === 'policy-allow') {
+    return { color: '#1677ff', width: 1 };  // 藍色細線：明確放行
+}
+```
+
+**`ClusterTopologyTab.tsx`** — toolbar 圖層開關：
+
+```tsx
+<Switch size="small" checked={showPolicy} onChange={setShowPolicy} />
+<Text style={{ fontSize: 12 }}>NetworkPolicy</Text>
+```
+
+#### 視覺效果
+
+```
+┌─ namespace: frontend ──────────────────────┐
+│  [frontend-svc] ──────────▶ [frontend-wl]  │
+│       │                                     │
+│       │ 🔒 blocked (NetworkPolicy: deny-api)│  ← 虛線 + 紅色 + 無粒子
+│       ▼                                     │
+│  [api-svc]                                  │
+└────────────────────────────────────────────-┘
+```
+
+---
+
+### 14.5 實作優先順序與工作量估算
+
+| Phase | 功能 | 後端改動 | 前端改動 | 預估工時 | 優先 |
+|-------|------|---------|---------|---------|------|
+| **C** | Ingress 節點 | ~80 行（新增 Ingress 列取 + 節點/邊建構） | ~100 行（IngressNode + 邊樣式） | 0.5 天 | ✅ 已完成 |
+| **D** | Istio 呼叫方向邊 | ~60 行（PromQL 調整 + EnrichWithIstioMetrics 擴充） | ~50 行（圖層開關 + ParticleEdge 樣式） | 0.5 天 | ✅ 已完成 |
+| **E** | NetworkPolicy 覆層 | ~150 行（推論演算法 + TopologyOptions） | ~80 行（邊樣式 + 圖層開關） | 1 天 | ⭐⭐ |
+| **F** | Cilium Hubble 流量 | ~200 行（Hubble REST API client） | ~100 行 | 2 天 | ⭐（Backlog） |
+
+**建議實作順序**：C → D → E，C + D 可以同一個 commit 交付。
+
+---
+
+### 14.6 共用設計原則
+
+1. **不破壞現有 API**：所有新功能以 query param opt-in（`?ingress=true&policy=true`），前端預設不開啟，避免對不需要的叢集增加 API 壓力。
+
+2. **邊的 `kind` 欄位是語義分層鍵**：
+
+   | `kind` 值 | 含義 | 資料來源 |
+   |-----------|------|---------|
+   | `""` (空) | 靜態 Service→Workload（label selector） | K8s Endpoints |
+   | `"ingress"` | Ingress→Service（外部入口） | K8s Ingress |
+   | `"istio-flow"` | Workload→Service（實際呼叫方向） | Istio Prometheus |
+   | `"policy-allow"` | 被 NetworkPolicy 明確放行 | K8s NetworkPolicy |
+   | `"policy-deny"` | 被 NetworkPolicy 封鎖 | K8s NetworkPolicy |
+
+3. **前端圖層控制**：每種 `kind` 對應一個圖層開關，用戶可自由組合，避免資訊過載。
+
+4. **效能邊界**：Phase C/D/E 的新增 API 呼叫（Ingress list、NetworkPolicy list）都是輕量資源，不需要 cache。Istio Prometheus 查詢保持 15s timeout 上限。

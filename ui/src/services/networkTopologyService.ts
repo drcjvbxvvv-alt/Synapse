@@ -17,7 +17,7 @@ export interface NetworkNode {
 export interface NetworkEdge {
   source: string;
   target: string;
-  kind?: string;         // "" (static) | "ingress"
+  kind?: string;         // "" (static) | "ingress" | "istio-flow"
   health: 'healthy' | 'degraded' | 'down' | 'unknown';
   ports?: string;
   // Phase B: Istio enrichment

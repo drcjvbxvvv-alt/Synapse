@@ -25,6 +25,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [enrich, setEnrich] = useState(false);
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [showIstioFlows, setShowIstioFlows] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load namespace list + integration status
@@ -128,6 +129,20 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
           </Tooltip>
         )}
 
+        {/* Istio call-direction flow toggle (only useful when enrich is on) */}
+        {integrations?.istio && enrich && (
+          <Tooltip title={t('clusterTopology.istioFlowTooltip')}>
+            <Space size={4}>
+              <Switch
+                size="small"
+                checked={showIstioFlows}
+                onChange={setShowIstioFlows}
+              />
+              <span style={{ fontSize: 12 }}>{t('clusterTopology.istioFlowLabel')}</span>
+            </Space>
+          </Tooltip>
+        )}
+
         <div style={{ flex: 1 }} />
 
         {/* Legend */}
@@ -137,6 +152,12 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
           ))}
           <Tag color="orange"  style={{ fontSize: 11 }}>Service</Tag>
           <Tag color="purple"  style={{ fontSize: 11 }}>Ingress</Tag>
+          {integrations?.istio && enrich && (
+            <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ display: 'inline-block', width: 20, height: 2, background: '#13c2c2', borderRadius: 1 }} />
+              {t('clusterTopology.istioFlowLabel')}
+            </span>
+          )}
         </Space>
         <Space wrap size={4}>
           {HEALTH_LEGEND.map(({ key, color }) => (
@@ -158,7 +179,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
       ) : (
         <ClusterTopologyGraph
           topoNodes={nodes}
-          topoEdges={edges}
+          topoEdges={showIstioFlows ? edges : edges.filter((e) => e.kind !== 'istio-flow')}
           onNodeClick={setSelectedNode}
         />
       )}

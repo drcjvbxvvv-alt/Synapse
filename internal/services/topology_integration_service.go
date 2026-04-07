@@ -22,13 +22,15 @@ type TopologyIntegrationStatus struct {
 
 // IstioEdgeMetrics 單條邊的 Istio 流量指標
 type IstioEdgeMetrics struct {
-	SourceWorkload      string
-	SourceNamespace     string
-	DestWorkload        string
-	DestNamespace       string
-	RequestRate         float64 // req/s (1m rate)
-	ErrorRate           float64 // 0.0-1.0 (5xx / total)
-	LatencyP99ms        float64 // ms (P99)
+	SourceWorkload       string
+	SourceNamespace      string
+	DestService          string  // destination_service_name（Phase D：建立 Workload→Service 邊用）
+	DestServiceNamespace string  // destination_service_namespace
+	DestWorkload         string
+	DestNamespace        string
+	RequestRate          float64 // req/s (1m rate)
+	ErrorRate            float64 // 0.0-1.0 (5xx / total)
+	LatencyP99ms         float64 // ms (P99)
 }
 
 // ---- Detection ----
@@ -152,17 +154,20 @@ func QueryIstioMetrics(ctx context.Context, clientset kubernetes.Interface) (map
 		k := edgeKey(srcNs, src, dstNs, dst)
 		if _, ok := result[k]; !ok {
 			result[k] = &IstioEdgeMetrics{
-				SourceWorkload:  src,
-				SourceNamespace: srcNs,
-				DestWorkload:    dst,
-				DestNamespace:   dstNs,
+				SourceWorkload:       src,
+				SourceNamespace:      srcNs,
+				DestService:          m["destination_service_name"],      // Phase D
+				DestServiceNamespace: m["destination_service_namespace"], // Phase D
+				DestWorkload:         dst,
+				DestNamespace:        dstNs,
 			}
 		}
 		return result[k]
 	}
 
 	// Query 1: total request rate
-	rateQL := `sum(rate(istio_requests_total{reporter="destination"}[1m])) by (source_workload, source_workload_namespace, destination_workload, destination_workload_namespace)`
+	// destination_service_name / destination_service_namespace 供 Phase D 建立 Workload→Service 邊
+	rateQL := `sum(rate(istio_requests_total{reporter="destination"}[1m])) by (source_workload, source_workload_namespace, destination_service_name, destination_service_namespace, destination_workload, destination_workload_namespace)`
 	resps, err := queryIstioPrometheus(ctx, clientset, rateQL)
 	if err != nil {
 		return nil, fmt.Errorf("query request rate: %w", err)
@@ -181,7 +186,7 @@ func QueryIstioMetrics(ctx context.Context, clientset kubernetes.Interface) (map
 	}
 
 	// Query 2: 5xx error rate
-	errorQL := `sum(rate(istio_requests_total{reporter="destination",response_code=~"5.."}[1m])) by (source_workload, source_workload_namespace, destination_workload, destination_workload_namespace)`
+	errorQL := `sum(rate(istio_requests_total{reporter="destination",response_code=~"5.."}[1m])) by (source_workload, source_workload_namespace, destination_service_name, destination_service_namespace, destination_workload, destination_workload_namespace)`
 	errResps, err := queryIstioPrometheus(ctx, clientset, errorQL)
 	if err == nil {
 		for _, resp := range errResps {
@@ -200,7 +205,7 @@ func QueryIstioMetrics(ctx context.Context, clientset kubernetes.Interface) (map
 	}
 
 	// Query 3: P99 latency
-	latencyQL := `histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter="destination"}[1m])) by (le, source_workload, source_workload_namespace, destination_workload, destination_workload_namespace))`
+	latencyQL := `histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter="destination"}[1m])) by (le, source_workload, source_workload_namespace, destination_service_name, destination_service_namespace, destination_workload, destination_workload_namespace))`
 	latResps, err := queryIstioPrometheus(ctx, clientset, latencyQL)
 	if err == nil {
 		for _, resp := range latResps {
