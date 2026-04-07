@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Tag, Badge, Tooltip } from 'antd';
 import {
   ReactFlow,
@@ -13,6 +13,7 @@ import {
   getBezierPath,
   Position,
   Handle,
+  type NodeMouseHandler,
 } from '@xyflow/react';
 import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
@@ -268,9 +269,18 @@ const runDagreLayout = (nodes: Node[], edges: Edge[]): Node[] => {
 interface ClusterTopologyGraphProps {
   topoNodes: NetworkNode[];
   topoEdges: NetworkEdge[];
+  onNodeClick?: (node: NetworkNode) => void;
 }
 
-const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, topoEdges }) => {
+const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, topoEdges, onNodeClick }) => {
+  const handleNodeClick = useCallback<NodeMouseHandler>(
+    (_evt, rfNode) => {
+      const original = topoNodes.find((n) => n.id === rfNode.id);
+      if (original) onNodeClick?.(original);
+    },
+    [topoNodes, onNodeClick],
+  );
+
   const { nodes, edges } = useMemo(() => {
     const rfNodes: Node[] = topoNodes.map((n) => {
       if (n.kind === 'Service') {
@@ -328,6 +338,7 @@ const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, 
         nodesDraggable
         nodesConnectable={false}
         elementsSelectable
+        onNodeClick={handleNodeClick}
       >
         <Background />
         <Controls />

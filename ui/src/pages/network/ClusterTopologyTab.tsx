@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { networkTopologyService } from '../../services/networkTopologyService';
 import type { NetworkNode, NetworkEdge, TopologyIntegrationStatus } from '../../services/networkTopologyService';
 import ClusterTopologyGraph, { HEALTH_LEGEND, WORKLOAD_KIND_COLOR } from './ClusterTopologyGraph';
+import NodeDetailPanel from './NodeDetailPanel';
 import { namespaceService } from '../../services/namespaceService';
 
 interface ClusterTopologyTabProps {
@@ -22,6 +23,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [selectedNs, setSelectedNs] = useState<string[]>([]);
   const [integrations, setIntegrations] = useState<TopologyIntegrationStatus | null>(null);
   const [enrich, setEnrich] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
 
   // Load namespace list + integration status
   useEffect(() => {
@@ -133,8 +135,18 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
       ) : nodes.length === 0 ? (
         <Empty description={t('clusterTopology.empty')} style={{ padding: 60 }} />
       ) : (
-        <ClusterTopologyGraph topoNodes={nodes} topoEdges={edges} />
+        <ClusterTopologyGraph
+          topoNodes={nodes}
+          topoEdges={edges}
+          onNodeClick={setSelectedNode}
+        />
       )}
+
+      <NodeDetailPanel
+        node={selectedNode}
+        edges={edges}
+        onClose={() => setSelectedNode(null)}
+      />
     </div>
   );
 };

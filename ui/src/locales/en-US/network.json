@@ -20,7 +20,16 @@
     },
     "detected": "detected",
     "enrichLabel": "Istio Metrics",
-    "enrichTooltip": "Enrich edges with real-time Istio traffic metrics (request rate, error rate, P99 latency)"
+    "enrichTooltip": "Enrich edges with real-time Istio traffic metrics (request rate, error rate, P99 latency)",
+    "detail": {
+      "namespace": "Namespace",
+      "kind": "Kind",
+      "readiness": "Readiness",
+      "serviceType": "Service Type",
+      "labels": "Labels",
+      "connectedWorkloads": "Connected Workloads",
+      "connectedServices": "Connected Services"
+    }
   },
   "gatewayapi": {
     "notInstalled": "Gateway API is Not Installed",

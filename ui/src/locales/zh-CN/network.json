@@ -20,7 +20,16 @@
     },
     "detected": "已检测",
     "enrichLabel": "Istio 指标",
-    "enrichTooltip": "以 Istio 实时流量指标增强边信息（请求率、错误率、P99 延迟）"
+    "enrichTooltip": "以 Istio 实时流量指标增强边信息（请求率、错误率、P99 延迟）",
+    "detail": {
+      "namespace": "命名空间",
+      "kind": "类型",
+      "readiness": "就绪状态",
+      "serviceType": "服务类型",
+      "labels": "标签",
+      "connectedWorkloads": "关联工作负载",
+      "connectedServices": "关联服务"
+    }
   },
   "gatewayapi": {
     "notInstalled": "此集群尚未安装 Gateway API",

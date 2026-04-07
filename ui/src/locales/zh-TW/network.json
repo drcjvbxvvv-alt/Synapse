@@ -20,7 +20,16 @@
     },
     "detected": "已偵測",
     "enrichLabel": "Istio 指標",
-    "enrichTooltip": "以 Istio 即時流量指標強化邊資訊（請求率、錯誤率、P99 延遲）"
+    "enrichTooltip": "以 Istio 即時流量指標強化邊資訊（請求率、錯誤率、P99 延遲）",
+    "detail": {
+      "namespace": "命名空間",
+      "kind": "類型",
+      "readiness": "就緒狀態",
+      "serviceType": "服務類型",
+      "labels": "標籤",
+      "connectedWorkloads": "關聯工作負載",
+      "connectedServices": "關聯服務"
+    }
   },
   "gatewayapi": {
     "notInstalled": "此叢集尚未安裝 Gateway API",
