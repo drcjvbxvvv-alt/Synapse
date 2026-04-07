@@ -8,10 +8,6 @@ import {
   Progress,
   Button,
   Space,
-  Modal,
-  Form,
-  InputNumber,
-  Select,
   DatePicker,
   Tag,
   Tooltip,
@@ -23,12 +19,9 @@ import {
   Alert,
 } from 'antd';
 import {
-  SettingOutlined,
   DownloadOutlined,
   ReloadOutlined,
   WarningOutlined,
-  DollarOutlined,
-  CloudOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
@@ -58,7 +51,6 @@ import {
 } from '../../services/costService';
 
 const { Text } = Typography;
-const { Option } = Select;
 
 const COLORS = [
   '#4e79a7', '#f28e2b', '#e15759', '#76b7b2',
@@ -101,10 +93,6 @@ const CostDashboard: React.FC = () => {
   const [nsOccupancy, setNsOccupancy] = useState<NamespaceOccupancy[]>([]);
   const [nsOccLoading, setNsOccLoading] = useState(false);
 
-  // Config modal
-  const [configOpen, setConfigOpen] = useState(false);
-  const [configForm] = Form.useForm();
-  const [configSaving, setConfigSaving] = useState(false);
 
   const loadOverview = useCallback(async () => {
     if (!clusterId) return;
@@ -178,32 +166,12 @@ const CostDashboard: React.FC = () => {
   }, [clusterId]);
 
   useEffect(() => { loadOverview(); }, [loadOverview]);
-  useEffect(() => { if (activeTab === 'occupancy') { loadSnapshot(); loadNsOccupancy(); } }, [activeTab, loadSnapshot, loadNsOccupancy]);
+  useEffect(() => { loadSnapshot(); }, [loadSnapshot]);
+  useEffect(() => { if (activeTab === 'occupancy') { loadNsOccupancy(); } }, [activeTab, loadNsOccupancy]);
   useEffect(() => { if (activeTab === 'namespaces') loadNsCosts(); }, [activeTab, loadNsCosts]);
   useEffect(() => { if (activeTab === 'workloads') loadWorkloads(1); }, [activeTab, loadWorkloads]);
   useEffect(() => { if (activeTab === 'trend') loadTrend(); }, [activeTab, loadTrend]);
   useEffect(() => { if (activeTab === 'waste') loadWaste(); }, [activeTab, loadWaste]);
-
-  const handleOpenConfig = async () => {
-    if (!clusterId) return;
-    try {
-      const cfg = await CostService.getConfig(clusterId);
-      configForm.setFieldsValue(cfg);
-    } catch { /* use defaults */ }
-    setConfigOpen(true);
-  };
-
-  const handleSaveConfig = async () => {
-    try {
-      const values: CostConfig = await configForm.validateFields();
-      setConfigSaving(true);
-      await CostService.updateConfig(clusterId!, values);
-      message.success(t('cost:config.saveSuccess'));
-      setConfigOpen(false);
-      loadOverview();
-    } catch { /* validation */ }
-    finally { setConfigSaving(false); }
-  };
 
   const currency = overview?.config?.currency ?? 'USD';
 
@@ -401,83 +369,79 @@ const CostDashboard: React.FC = () => {
       label: t('cost:tabs.overview'),
       children: (
         <div>
-          {/* 資料來源說明 Banner（固定顯示，不可關閉） */}
-          <Alert
-            type="info"
-            showIcon
-            message={t('cost:banner.title')}
-            description={t('cost:banner.description')}
-            style={{ marginBottom: 16 }}
-          />
           <Space style={{ marginBottom: 16 }}>
-            {monthPicker}
-            <Button icon={<ReloadOutlined />} onClick={loadOverview}>{t('common:actions.refresh', '重新整理')}</Button>
-            <Button icon={<SettingOutlined />} onClick={handleOpenConfig}>{t('cost:config.title')}</Button>
+            <Button icon={<ReloadOutlined />} onClick={loadSnapshot} loading={snapshotLoading}>
+              {t('common:actions.refresh', '重新整理')}
+            </Button>
           </Space>
-          {/* 無快照資料時顯示設定引導 */}
-          {!overview?.snapshot_count && !overviewLoading ? (
-            <Card>
-              <EmptyState
-                type="not-configured"
-                title={t('cost:overview.noDataTitle')}
-                description={t('cost:overview.noDataDesc')}
-                actions={[
-                  {
-                    label: t('cost:overview.configurePrometheus'),
-                    icon: <SettingOutlined />,
-                    onClick: handleOpenConfig,
-                  },
-                ]}
-              />
-            </Card>
-          ) : (
-            <Row gutter={16} style={{ marginBottom: 24 }}>
-              <Col xs={24} sm={12} lg={6}>
-                <Card>
-                  <Statistic
-                    title={t('cost:overview.totalCost')}
-                    value={overview?.total_cost ?? 0}
-                    precision={4}
-                    prefix={<DollarOutlined />}
-                    suffix={currency}
-                    loading={overviewLoading}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Card>
-                  <Statistic
-                    title={t('cost:overview.topNamespace')}
-                    value={overview?.top_namespace || '—'}
-                    prefix={<CloudOutlined />}
-                    loading={overviewLoading}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Card>
-                  <Statistic
-                    title={t('cost:overview.wastePercent')}
-                    value={overview?.waste_percent ?? 0}
-                    precision={1}
-                    suffix="%"
-                    prefix={<WarningOutlined style={{ color: '#faad14' }} />}
-                    loading={overviewLoading}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Card>
-                  <Statistic
-                    title={t('cost:overview.snapshotDays')}
-                    value={overview?.snapshot_count ?? 0}
-                    suffix={t('common:table.days', '天')}
-                    loading={overviewLoading}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          )}
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:occupancy.cpuOccupancy', 'CPU 佔用率')}
+                  value={snapshot?.occupancy.cpu ?? 0}
+                  precision={1}
+                  suffix="%"
+                  loading={snapshotLoading}
+                  valueStyle={{ color: (snapshot?.occupancy.cpu ?? 0) > 80 ? '#cf1322' : '#3f8600' }}
+                />
+                <Progress
+                  percent={+(snapshot?.occupancy.cpu ?? 0).toFixed(1)}
+                  showInfo={false}
+                  status={(snapshot?.occupancy.cpu ?? 0) > 80 ? 'exception' : 'normal'}
+                  style={{ marginTop: 8 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:occupancy.memOccupancy', '記憶體佔用率')}
+                  value={snapshot?.occupancy.memory ?? 0}
+                  precision={1}
+                  suffix="%"
+                  loading={snapshotLoading}
+                  valueStyle={{ color: (snapshot?.occupancy.memory ?? 0) > 80 ? '#cf1322' : '#3f8600' }}
+                />
+                <Progress
+                  percent={+(snapshot?.occupancy.memory ?? 0).toFixed(1)}
+                  showInfo={false}
+                  status={(snapshot?.occupancy.memory ?? 0) > 80 ? 'exception' : 'normal'}
+                  style={{ marginTop: 8 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={t('cost:occupancy.nodeCount', '節點數')}
+                  value={snapshot?.node_count ?? 0}
+                  loading={snapshotLoading}
+                />
+                <Statistic
+                  title={t('cost:occupancy.podCount', 'Pod 數')}
+                  value={snapshot?.pod_count ?? 0}
+                  loading={snapshotLoading}
+                  style={{ marginTop: 12 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card title={t('cost:occupancy.headroom', '可用空間')} size="small">
+                <Statistic
+                  title={t('cost:occupancy.cpuHeadroom', 'CPU 剩餘 (m)')}
+                  value={+(snapshot?.headroom.cpu_millicores ?? 0).toFixed(0)}
+                  loading={snapshotLoading}
+                />
+                <Statistic
+                  title={t('cost:occupancy.memHeadroom', '記憶體剩餘 (MiB)')}
+                  value={+(snapshot?.headroom.memory_mib ?? 0).toFixed(0)}
+                  loading={snapshotLoading}
+                  style={{ marginTop: 12 }}
+                />
+              </Card>
+            </Col>
+          </Row>
         </div>
       ),
     },
@@ -625,45 +589,9 @@ const CostDashboard: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Card
-        bordered={false}
-        title={t('cost:title')}
-        extra={
-          <Button icon={<SettingOutlined />} onClick={handleOpenConfig}>
-            {t('cost:config.title')}
-          </Button>
-        }
-      >
+      <Card bordered={false} title={t('cost:title')}>
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
-
-      <Modal
-        title={t('cost:config.title')}
-        open={configOpen}
-        onOk={handleSaveConfig}
-        onCancel={() => setConfigOpen(false)}
-        confirmLoading={configSaving}
-        width={480}
-        destroyOnClose
-      >
-        <Alert type="info" message={t('cost:config.hint')} style={{ marginBottom: 16 }} />
-        <Form form={configForm} layout="vertical">
-          <Form.Item name="cpu_price_per_core" label={t('cost:config.cpuPrice')} rules={[{ required: true }]}>
-            <InputNumber min={0} step={0.001} precision={4} style={{ width: '100%' }} addonBefore="$" />
-          </Form.Item>
-          <Form.Item name="mem_price_per_gib" label={t('cost:config.memPrice')} rules={[{ required: true }]}>
-            <InputNumber min={0} step={0.001} precision={4} style={{ width: '100%' }} addonBefore="$" />
-          </Form.Item>
-          <Form.Item name="currency" label={t('cost:config.currency')} rules={[{ required: true }]}>
-            <Select>
-              <Option value="USD">USD</Option>
-              <Option value="TWD">TWD</Option>
-              <Option value="CNY">CNY</Option>
-              <Option value="JPY">JPY</Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 };
