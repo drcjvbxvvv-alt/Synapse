@@ -143,3 +143,10 @@
     align-items: stretch;
   }
 }
+
+/* 擴縮容 Modal — 副本數 InputNumber 大字置中 */
+.scale-replicas-input .ant-input-number-input {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+}

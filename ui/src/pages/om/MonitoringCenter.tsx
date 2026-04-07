@@ -577,7 +577,7 @@ const [healthDiagnosis, setHealthDiagnosis] = useState<HealthDiagnosisResponse |
       >
         <Row gutter={[16, 16]}>
           {controlPlaneStatus.components.map((component) => (
-            <Col xs={24} sm={12} md={6} key={component.name}>
+            <Col xs={24} sm={12} key={component.name}>
               <Card
                 size="small"
                 hoverable

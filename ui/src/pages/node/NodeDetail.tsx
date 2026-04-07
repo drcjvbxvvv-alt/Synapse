@@ -16,7 +16,6 @@ import {
   Modal,
   message,
   Menu,
-  Result,
   Empty,
   Select,
   Alert,
@@ -46,6 +45,7 @@ import {
 import { nodeService } from '../../services/nodeService';
 import { PodService } from '../../services/podService';
 import type { Node, NodeTaint, Pod, NodeCondition } from '../../types';
+import ErrorPage from '../../components/ErrorPage';
 import type { ColumnsType } from 'antd/es/table';
 import SSHTerminal from '../../components/SSHTerminal';
 import MonitoringCharts from '../../components/MonitoringCharts';
@@ -471,18 +471,14 @@ const NodeDetail: React.FC = () => {
 
   if (!node && !loading) {
     return (
-      <Card>
-        <Result
-          status="404"
-          title={t('messages.nodeNotFound')}
-          subTitle={t('messages.checkNodeName')}
-          extra={
-            <Button type="primary" onClick={() => navigate(`/clusters/${clusterId}/nodes`)}>
-              {t('actions.backToList')}
-            </Button>
-          }
-        />
-      </Card>
+      <ErrorPage
+        status={404}
+        title={t('messages.nodeNotFound')}
+        subTitle={t('messages.checkNodeName')}
+        showHome={false}
+        showBack
+        onRetry={() => navigate(`/clusters/${clusterId}/nodes`)}
+      />
     );
   }
 

@@ -167,7 +167,7 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/configs/secret/:namespace/:name" element={<SecretDetail />} />
               <Route path="clusters/:clusterId/configs/secret/:namespace/:name/edit" element={<SecretEdit />} />
               {/* 網路管理路由（Service和Ingress） */}
-              <Route path="clusters/:clusterId/network" element={<NetworkList />} />
+              <Route path="clusters/:clusterId/network" element={<ErrorBoundary fallbackType="section"><NetworkList /></ErrorBoundary>} />
               <Route path="clusters/:clusterId/network/service/:namespace/:name/edit" element={<ServiceEdit />} />
               <Route path="clusters/:clusterId/network/ingress/:namespace/:name/edit" element={<IngressEdit />} />
               {/* 儲存管理路由（PVC、PV、StorageClass） */}
@@ -211,7 +211,7 @@ const AppContent: React.FC = () => {
               {/* Event 告警規則引擎 */}
               <Route path="clusters/:clusterId/event-alerts" element={<EventAlertRules />} />
               {/* 資源成本分析 */}
-              <Route path="clusters/:clusterId/cost" element={<CostDashboard />} />
+              <Route path="clusters/:clusterId/cost-insights" element={<CostDashboard />} />
               {/* 安全掃描 */}
               <Route path="clusters/:id/security" element={<SecurityDashboard />} />
               {/* 多叢集工作流程 */}

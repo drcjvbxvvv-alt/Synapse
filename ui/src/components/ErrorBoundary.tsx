@@ -1,6 +1,10 @@
 import React, { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { Result, Button } from 'antd';
+import { Button, Space, Typography } from 'antd';
+import { WarningOutlined, ReloadOutlined, HomeOutlined } from '@ant-design/icons';
+import ErrorPage from './ErrorPage';
+
+const { Text } = Typography;
 
 interface Props {
   children: ReactNode;
@@ -12,7 +16,6 @@ interface State {
   errorRef: string | null;
 }
 
-/** 產生隨機參考編號供使用者回報，不暴露技術細節 */
 function generateErrorRef(): string {
   return `ERR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
@@ -28,7 +31,6 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // 僅記錄到主控台，不暴露給使用者介面
     console.error('[ErrorBoundary]', error, errorInfo);
   }
 
@@ -38,46 +40,76 @@ class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // Section fallback：行內卡片式錯誤（用於 Terminal、LogCenter 等局部元件）
       if (this.props.fallbackType === 'section') {
         return (
-          <Result
-            status="error"
-            title="元件載入失敗"
-            subTitle="此元件發生錯誤，請重試或重新整理頁面。"
-            extra={
-              <Button type="primary" onClick={this.handleReset}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 240,
+            padding: 32,
+          }}>
+            <div style={{
+              background: '#fff',
+              border: '1px solid #fee2e2',
+              borderRadius: 16,
+              padding: '32px 40px',
+              textAlign: 'center',
+              maxWidth: 420,
+            }}>
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                background: '#fef2f2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}>
+                <WarningOutlined style={{ fontSize: 24, color: '#ef4444' }} />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 8 }}>
+                元件載入失敗
+              </div>
+              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
+                此元件發生錯誤，請重試或重新整理頁面。
+              </div>
+              {this.state.errorRef && (
+                <Text
+                  type="secondary"
+                  style={{
+                    display: 'inline-block',
+                    marginBottom: 20,
+                    fontSize: 11,
+                    background: '#f3f4f6',
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {this.state.errorRef}
+                </Text>
+              )}
+              <br />
+              <Button type="primary" icon={<ReloadOutlined />} onClick={this.handleReset} style={{ borderRadius: 8 }}>
                 重試
               </Button>
-            }
-          />
+            </div>
+          </div>
         );
       }
 
+      // Page fallback：全頁錯誤 → 使用自製 ErrorPage
       return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-          <Result
-            status="500"
-            title="頁面發生錯誤"
-            subTitle={
-              <>
-                發生了未預期的錯誤，請重新整理頁面或聯絡管理員。
-                {this.state.errorRef && (
-                  <div style={{ marginTop: 4, fontSize: 12, color: '#999' }}>
-                    參考編號：{this.state.errorRef}
-                  </div>
-                )}
-              </>
-            }
-            extra={[
-              <Button type="primary" key="retry" onClick={this.handleReset}>
-                重試
-              </Button>,
-              <Button key="home" onClick={() => { window.location.href = '/'; }}>
-                返回首頁
-              </Button>,
-            ]}
-          />
-        </div>
+        <ErrorPage
+          status={500}
+          errorRef={this.state.errorRef ?? undefined}
+          onRetry={this.handleReset}
+          showHome
+          showBack={false}
+        />
       );
     }
 

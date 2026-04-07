@@ -31,7 +31,7 @@ import { useTranslation } from 'react-i18next';
 
 const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
 
   const [allIngresses, setAllIngresses] = useState<Ingress[]>([]);
@@ -132,7 +132,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
     if (!clusterId) return;
     setLoadingNamespaces(true);
     IngressService.getIngressNamespaces(clusterId)
-      .then(setNamespaces)
+      .then(data => setNamespaces(data || []))
       .catch((err) => console.error('載入命名空間失敗:', err))
       .finally(() => setLoadingNamespaces(false));
   }, [clusterId]);
@@ -216,7 +216,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       return;
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: t('common:messages.confirmDelete'),
       content: t('network:ingress.messages.confirmDeleteBatch', { count: selectedRowKeys.length }),
       okText: t('common:actions.confirm'),

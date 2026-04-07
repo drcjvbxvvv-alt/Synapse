@@ -3,36 +3,25 @@
  *
  * 用於 Card / 區塊內的資料載入失敗狀態。
  * 與 ErrorPage（全頁錯誤）有所區別：此元件為行內使用，體積較小。
- *
- * types:
- *   - network    : 網路請求失敗（預設）
- *   - permission : 無存取權限（403）
- *   - offline    : 叢集離線 / API 不可達
- *   - unknown    : 未知錯誤
  */
 import React from 'react';
-import { Result, Button, Space } from 'antd';
+import { Button, Space } from 'antd';
 import {
   WifiOutlined,
   LockOutlined,
   DisconnectOutlined,
   WarningOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 
 export type ErrorStateType = 'network' | 'permission' | 'offline' | 'unknown';
 
 interface ErrorStateProps {
-  /** 錯誤類型，決定預設圖示與文字 */
   type?: ErrorStateType;
-  /** 覆蓋預設標題 */
   title?: string;
-  /** 覆蓋預設說明文字 */
   description?: string;
-  /** 重試回呼，有值時顯示「重試」按鈕 */
   onRetry?: () => void;
-  /** 額外行動按鈕 */
   extra?: React.ReactNode;
-  /** 緊湊模式（減少 padding） */
   compact?: boolean;
 }
 
@@ -40,28 +29,38 @@ interface TypeConfig {
   icon: React.ReactNode;
   title: string;
   description: string;
+  iconBg: string;
+  iconColor: string;
 }
 
 const TYPE_CONFIG: Record<ErrorStateType, TypeConfig> = {
   network: {
-    icon: <WifiOutlined style={{ fontSize: 40, color: '#ff4d4f' }} />,
+    icon: <WifiOutlined style={{ fontSize: 22 }} />,
     title: '資料載入失敗',
     description: '請求失敗，請確認網路狀態後重試。',
+    iconBg: '#fef2f2',
+    iconColor: '#ef4444',
   },
   permission: {
-    icon: <LockOutlined style={{ fontSize: 40, color: '#faad14' }} />,
+    icon: <LockOutlined style={{ fontSize: 22 }} />,
     title: '無存取權限',
     description: '您沒有存取此資源的權限，請聯絡管理員。',
+    iconBg: '#fffbeb',
+    iconColor: '#f59e0b',
   },
   offline: {
-    icon: <DisconnectOutlined style={{ fontSize: 40, color: '#ff4d4f' }} />,
+    icon: <DisconnectOutlined style={{ fontSize: 22 }} />,
     title: '叢集無法連線',
     description: '無法連線至叢集 API，請確認叢集狀態。',
+    iconBg: '#fef2f2',
+    iconColor: '#ef4444',
   },
   unknown: {
-    icon: <WarningOutlined style={{ fontSize: 40, color: '#faad14' }} />,
+    icon: <WarningOutlined style={{ fontSize: 22 }} />,
     title: '發生錯誤',
     description: '操作發生未預期的錯誤，請重試或聯絡管理員。',
+    iconBg: '#fffbeb',
+    iconColor: '#f59e0b',
   },
 };
 
@@ -75,25 +74,70 @@ const ErrorState: React.FC<ErrorStateProps> = ({
 }) => {
   const config = TYPE_CONFIG[type];
 
-  const actions = (
-    <Space>
-      {onRetry && (
-        <Button type="primary" onClick={onRetry}>
-          重試
-        </Button>
-      )}
-      {extra}
-    </Space>
-  );
-
   return (
-    <Result
-      icon={config.icon}
-      title={title ?? config.title}
-      subTitle={description ?? config.description}
-      extra={onRetry || extra ? actions : undefined}
-      style={compact ? { padding: '24px 16px' } : undefined}
-    />
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: compact ? '24px 16px' : '48px 24px',
+      textAlign: 'center',
+    }}>
+      {/* 圖示圓圈 */}
+      <div style={{
+        width: 52,
+        height: 52,
+        borderRadius: '50%',
+        background: config.iconBg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+        color: config.iconColor,
+        border: `1px solid ${config.iconColor}20`,
+      }}>
+        {config.icon}
+      </div>
+
+      {/* 標題 */}
+      <div style={{
+        fontSize: compact ? 14 : 16,
+        fontWeight: 600,
+        color: '#111827',
+        marginBottom: 8,
+      }}>
+        {title ?? config.title}
+      </div>
+
+      {/* 說明 */}
+      <div style={{
+        fontSize: 13,
+        color: '#6b7280',
+        lineHeight: 1.6,
+        maxWidth: 320,
+        marginBottom: (onRetry || extra) ? 20 : 0,
+      }}>
+        {description ?? config.description}
+      </div>
+
+      {/* 操作按鈕 */}
+      {(onRetry || extra) && (
+        <Space>
+          {onRetry && (
+            <Button
+              type="primary"
+              icon={<ReloadOutlined />}
+              onClick={onRetry}
+              size={compact ? 'small' : 'middle'}
+              style={{ borderRadius: 8 }}
+            >
+              重試
+            </Button>
+          )}
+          {extra}
+        </Space>
+      )}
+    </div>
   );
 };
 

@@ -83,12 +83,12 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     if (path.match(/\/clusters\/[^/]+\/helm/)) return ['cluster-helm'];
     if (path.match(/\/clusters\/[^/]+\/crds/)) return ['cluster-crds'];
     if (path.match(/\/clusters\/[^/]+\/event-alerts/)) return ['cluster-event-alerts'];
+    if (path.match(/\/clusters\/[^/]+\/cost-insights/)) return ['cost-insights'];
     if (path.match(/\/clusters\/[^/]+\/cost/)) return ['cluster-cost'];
     if (path.match(/\/clusters\/[^/]+\/security/)) return ['cluster-security'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
-    if (path.match(/\/clusters\/[^/]+\/cost-insights/)) return ['cost-insights'];
     if (path === '/overview' || path === '/') return ['overview'];
     if (path.startsWith('/clusters') && !path.match(/\/clusters\/[^/]+\//)) return ['cluster-management'];
     if (path === '/access/users') return ['access-users'];
@@ -165,7 +165,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
         { key: 'observability-logs', icon: <FileTextOutlined />, label: t('menu.logs'), onClick: () => clusterNav('logs') },
         { key: 'observability-alerts', icon: <AlertOutlined />, label: t('menu.alerts'), onClick: () => clusterNav('alerts') },
         { key: 'cluster-event-alerts', icon: <AlertOutlined />, label: t('menu.eventAlerts', 'Event 告警'), onClick: () => clusterNav('event-alerts') },
-        { key: 'cluster-cost', icon: <DollarOutlined />, label: t('menu.costAnalysis', '成本分析'), onClick: () => clusterNav('cost') },
+        { key: 'cluster-cost', icon: <DollarOutlined />, label: t('menu.costAnalysis', '成本分析'), onClick: () => clusterNav('cost-insights') },
         { key: 'cluster-security', icon: <SafetyOutlined />, label: t('menu.securityScan', '安全掃描'), onClick: () => clusterNav('security') },
       ],
     },

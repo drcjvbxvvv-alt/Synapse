@@ -64,7 +64,7 @@ const IngressForm: React.FC<IngressFormProps> = ({
             
             <Form.Item label={t('network:ingress.edit.namespace')} name="namespace" rules={[{ required: true, message: t('network:ingress.edit.namespaceRequired') }]}>
               <Select disabled placeholder={t('network:ingress.edit.namespacePlaceholder')}>
-                {namespaces.map((ns) => (
+                {(namespaces || []).map((ns) => (
                   <Select.Option key={ns.name} value={ns.name}>
                     {ns.name}
                   </Select.Option>
