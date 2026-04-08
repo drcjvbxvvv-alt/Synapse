@@ -51,64 +51,71 @@ const NotInstalledCard: React.FC<NotInstalledCardProps> = ({
           padding: '20px 24px',
           width: '100%',
           maxWidth: 600,
+          boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
-      <Space align="start" size={12} style={{ width: '100%' }}>
-        <WarningFilled style={{ fontSize: 20, color: '#fa8c16', marginTop: 2 }} />
-        <Space direction="vertical" size={6} style={{ flex: 1, minWidth: 0 }}>
-          <Text strong style={{ fontSize: 15 }}>{title}</Text>
-          {description && <Text type="secondary">{description}</Text>}
+        {/* Header row: icon + text, 原生 flexbox 確保 minWidth:0 正確約束 */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <WarningFilled style={{ fontSize: 20, color: '#fa8c16', marginTop: 2, flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Text strong style={{ fontSize: 15, display: 'block' }}>{title}</Text>
+            {description && (
+              <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>{description}</Text>
+            )}
 
-          {command && (
-            <Space direction="vertical" size={4} style={{ width: '100%', marginTop: 4 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {commandLabel ?? t('installCommand')}
-              </Text>
-              <div
-                style={{
-                  background: '#1f1f1f',
-                  borderRadius: 6,
-                  padding: '10px 14px',
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                  color: '#e6e6e6',
-                  overflowX: 'auto',
-                  whiteSpace: 'pre',
-                }}
-              >
-                {command}
-              </div>
-            </Space>
-          )}
-
-          <Space style={{ marginTop: 8 }} wrap>
             {command && (
-              <Button size="small" icon={<CopyOutlined />} onClick={handleCopy}>
-                {t('copyCommand')}
-              </Button>
+              <div style={{ marginTop: 10 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {commandLabel ?? t('installCommand')}
+                </Text>
+                <div
+                  style={{
+                    background: '#1f1f1f',
+                    borderRadius: 6,
+                    padding: '10px 14px',
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    color: '#e6e6e6',
+                    overflowX: 'auto',
+                    whiteSpace: 'pre',
+                    marginTop: 4,
+                    maxWidth: '100%',
+                  }}
+                >
+                  {command}
+                </div>
+              </div>
             )}
-            {docsUrl && (
-              <Button
-                size="small"
-                icon={<LinkOutlined />}
-                onClick={() => window.open(docsUrl, '_blank', 'noopener')}
-              >
-                {t('viewDocs')}
-              </Button>
-            )}
-            {onRecheck && (
-              <Button
-                size="small"
-                icon={<ReloadOutlined />}
-                loading={recheckLoading}
-                onClick={onRecheck}
-              >
-                {t('recheck')}
-              </Button>
-            )}
-          </Space>
-        </Space>
-      </Space>
+
+            <Space style={{ marginTop: 12 }} wrap>
+              {command && (
+                <Button size="small" icon={<CopyOutlined />} onClick={handleCopy}>
+                  {t('copyCommand')}
+                </Button>
+              )}
+              {docsUrl && (
+                <Button
+                  size="small"
+                  icon={<LinkOutlined />}
+                  onClick={() => window.open(docsUrl, '_blank', 'noopener')}
+                >
+                  {t('viewDocs')}
+                </Button>
+              )}
+              {onRecheck && (
+                <Button
+                  size="small"
+                  icon={<ReloadOutlined />}
+                  loading={recheckLoading}
+                  onClick={onRecheck}
+                >
+                  {t('recheck')}
+                </Button>
+              )}
+            </Space>
+          </div>
+        </div>
       </div>
     </div>
   );
