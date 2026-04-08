@@ -254,5 +254,10 @@
   "installCommand": "安装命令：",
   "copyCommand": "复制安装命令",
   "viewDocs": "查看官方文档",
-  "recheck": "重新检测"
+  "recheck": "重新检测",
+  "notification": {
+    "title": "消息通知",
+    "markAllRead": "全部标为已读",
+    "empty": "暂无通知"
+  }
 }

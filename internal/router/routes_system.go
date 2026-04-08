@@ -153,6 +153,16 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		systemSettings.POST("/notify-channels/:id/test", notifyChannelHandler.TestNotifyChannel)
 	}
 
+	// 消息通知（全域，跨叢集 Event Alert History）
+	notifyHandler := handlers.NewNotificationHandler(d.db)
+	notifications := protected.Group("/notifications")
+	{
+		notifications.GET("", notifyHandler.ListNotifications)
+		notifications.GET("/unread-count", notifyHandler.UnreadCount)
+		notifications.PUT("/read-all", notifyHandler.MarkAllRead)
+		notifications.PUT("/:id/read", notifyHandler.MarkRead)
+	}
+
 	// API Token 管理（任意已登入使用者，非 PlatformAdmin Only）
 	sysSecurityHandler := handlers.NewSystemSecurityHandler(d.db)
 	userTokens := protected.Group("/users/me/tokens")

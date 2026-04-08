@@ -1,8 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layout, Button, Badge, Dropdown, Avatar, Space } from 'antd';
+import { Layout, Dropdown, Avatar, Space } from 'antd';
 import {
-  BellOutlined,
   UserOutlined,
   GlobalOutlined,
   SettingOutlined,
@@ -12,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import type { MenuProps } from 'antd';
 import synapseIcon from '../assets/synapse-icon.svg';
 import SearchDropdown from '../components/SearchDropdown';
+import NotificationPopover from '../components/NotificationPopover';
 import { tokenManager } from '../services/authService';
 import { supportedLanguages } from '../i18n';
 
@@ -114,14 +114,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onSearch }) => {
 
       {/* 右側工具區 */}
       <Space size="middle">
-        <Badge count={3} size="small" offset={[-8, 10]}>
-          <Button
-            type="text"
-            icon={<BellOutlined />}
-            size="large"
-            style={{ color: '#ffffff' }}
-          />
-        </Badge>
+        <NotificationPopover />
 
         <Dropdown
           menu={{

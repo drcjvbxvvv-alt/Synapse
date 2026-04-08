@@ -31,17 +31,18 @@ func (EventAlertRule) TableName() string {
 
 // EventAlertHistory Event 告警歷史紀錄
 type EventAlertHistory struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	RuleID      uint      `json:"ruleId" gorm:"index;not null"`
-	ClusterID   uint      `json:"clusterId" gorm:"index;not null"`
-	RuleName    string    `json:"ruleName" gorm:"size:100"`
-	Namespace   string    `json:"namespace" gorm:"size:100"`
-	EventReason string    `json:"eventReason" gorm:"size:100"`
-	EventType   string    `json:"eventType" gorm:"size:20"`
-	Message     string    `json:"message" gorm:"type:text"`
-	InvolvedObj string    `json:"involvedObj" gorm:"size:200"` // kind/name
-	NotifyResult string   `json:"notifyResult" gorm:"size:50"` // sent / failed / disabled
-	TriggeredAt time.Time `json:"triggeredAt" gorm:"index"`
+	ID           uint      `json:"id" gorm:"primaryKey"`
+	RuleID       uint      `json:"ruleId" gorm:"index;not null"`
+	ClusterID    uint      `json:"clusterId" gorm:"index;not null"`
+	RuleName     string    `json:"ruleName" gorm:"size:100"`
+	Namespace    string    `json:"namespace" gorm:"size:100"`
+	EventReason  string    `json:"eventReason" gorm:"size:100"`
+	EventType    string    `json:"eventType" gorm:"size:20"`
+	Message      string    `json:"message" gorm:"type:text"`
+	InvolvedObj  string    `json:"involvedObj" gorm:"size:200"` // kind/name
+	NotifyResult string    `json:"notifyResult" gorm:"size:50"` // sent / failed / disabled
+	IsRead       bool      `json:"isRead" gorm:"default:false;index"`
+	TriggeredAt  time.Time `json:"triggeredAt" gorm:"index"`
 }
 
 // TableName 指定表名

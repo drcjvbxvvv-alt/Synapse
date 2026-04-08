@@ -254,5 +254,10 @@
   "installCommand": "Install command:",
   "copyCommand": "Copy Install Command",
   "viewDocs": "View Official Docs",
-  "recheck": "Recheck"
+  "recheck": "Recheck",
+  "notification": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications"
+  }
 }
