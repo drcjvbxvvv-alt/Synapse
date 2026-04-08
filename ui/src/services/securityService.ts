@@ -96,6 +96,7 @@ export interface ConstraintSummary {
 }
 
 export interface GatekeeperSummary {
+  installed: boolean;
   total_violations: number;
   constraints: ConstraintSummary[];
 }

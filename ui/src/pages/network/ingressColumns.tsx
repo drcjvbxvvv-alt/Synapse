@@ -1,6 +1,7 @@
 import React from 'react';
-import { Space, Tag, Tooltip, Button, Popconfirm, Typography } from 'antd';
-import { SafetyCertificateOutlined } from '@ant-design/icons';
+import { Space, Tag, Tooltip, Typography } from 'antd';
+import { SafetyCertificateOutlined, CodeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ActionButtons } from '../../components/ActionButtons';
 import { IngressService } from '../../services/ingressService';
 import type { Ingress } from '../../types';
 import type { ColumnsType } from 'antd/es/table';
@@ -162,39 +163,24 @@ export function getIngressColumns(
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 150,
+      width: 90,
       render: (_: unknown, record: Ingress) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handlers.onViewYAML(record)}
-          >
-            YAML
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handlers.onEdit(record)}
-          >
-            {t('common:actions.edit')}
-          </Button>
-          <Popconfirm
-            title={t('network:ingress.messages.confirmDeleteItem')}
-            description={t('network:ingress.messages.confirmDeleteDesc', { name: record.name })}
-            onConfirm={() => handlers.onDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button
-              type="link"
-              size="small"
-              danger
-            >
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            { key: 'yaml', label: 'YAML', icon: <CodeOutlined />, onClick: () => handlers.onViewYAML(record) },
+            { key: 'edit', label: t('common:actions.edit'), icon: <EditOutlined />, onClick: () => handlers.onEdit(record) },
+          ]}
+          more={[
+            {
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+              onClick: () => handlers.onDelete(record),
+              confirm: {
+                title: t('network:ingress.messages.confirmDeleteItem'),
+                description: t('network:ingress.messages.confirmDeleteDesc', { name: record.name }),
+              },
+            },
+          ]}
+        />
       ),
     },
   ];

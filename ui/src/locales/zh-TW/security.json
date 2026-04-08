@@ -73,6 +73,42 @@
     "namespace": "命名空間",
     "message": "訊息",
     "noData": "未發現違規，或 Gatekeeper 尚未安裝",
-    "notInstalled": "Gatekeeper 未安裝或無法存取"
+    "notInstalled": "Gatekeeper 未安裝或無法存取",
+    "notDetectedMsg": "未偵測到 OPA/Gatekeeper",
+    "notDetectedDesc": "請先在叢集中安裝 Gatekeeper，Synapse 將自動收集 Constraint 違規資訊。"
+  },
+  "cert": {
+    "pageTitle": "憑證管理（cert-manager）",
+    "notDetected": "未偵測到 cert-manager",
+    "installDesc": "請先在叢集中安裝 cert-manager，Synapse 將自動識別憑證並提供到期管理。",
+    "reinstallBtn": "安裝完成後點此重新偵測",
+    "tabCerts": "憑證",
+    "tabIssuers": "簽發者",
+    "emptyCerts": "無憑證資源",
+    "emptyIssuers": "無 Issuer / ClusterIssuer 資源",
+    "status": {
+      "Valid": "有效",
+      "Expiring": "即將到期",
+      "Expired": "已到期",
+      "NotReady": "未就緒"
+    },
+    "issuerStatus": {
+      "ready": "就緒",
+      "notReady": "未就緒"
+    },
+    "columns": {
+      "status": "狀態",
+      "name": "名稱",
+      "dnsNames": "DNS 名稱",
+      "issuer": "Issuer",
+      "secret": "Secret",
+      "expiry": "到期時間"
+    },
+    "issuerColumns": {
+      "ready": "就緒",
+      "name": "名稱",
+      "kind": "類型",
+      "backend": "後端"
+    }
   }
 }

@@ -6,12 +6,10 @@ import {
   Tag,
   Input,
   Select,
-  Modal,
   Drawer,
   Typography,
   App,
   Tooltip,
-  Popconfirm,
   Segmented,
 } from 'antd';
 import {
@@ -22,7 +20,11 @@ import {
   ApartmentOutlined,
   ToolOutlined,
   SafetyCertificateOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
+import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import type { TablePaginationConfig } from 'antd/es/table';
 import MonacoEditor from '@monaco-editor/react';
@@ -30,6 +32,7 @@ import { NetworkPolicyService, type NetworkPolicyInfo } from '../../services/net
 import NetworkPolicyTopology from './NetworkPolicyTopology';
 import NetworkPolicyWizard from './NetworkPolicyWizard';
 import NetworkPolicySimulator from './NetworkPolicySimulator';
+import NetworkPolicyForm from './NetworkPolicyForm';
 import { namespaceService } from '../../services/namespaceService';
 
 const { Text } = Typography;
@@ -40,35 +43,6 @@ interface NetworkPolicyTabProps {
   onCountChange?: (count: number) => void;
 }
 
-const DEFAULT_YAML = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: my-network-policy
-  namespace: default
-spec:
-  podSelector:
-    matchLabels:
-      app: myapp
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              role: frontend
-      ports:
-        - protocol: TCP
-          port: 8080
-  egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              role: database
-      ports:
-        - protocol: TCP
-          port: 5432
-`;
 
 const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountChange }) => {
   const { t } = useTranslation(['network', 'common']);
@@ -76,6 +50,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
 
   const [viewMode, setViewMode] = useState<'list' | 'topology' | 'simulate'>('list');
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [policies, setPolicies] = useState<NetworkPolicyInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,7 +64,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
   // YAML drawer state (view / edit)
   const [yamlDrawerOpen, setYamlDrawerOpen] = useState(false);
   const [yamlContent, setYamlContent] = useState('');
-  const [yamlMode, setYamlMode] = useState<'view' | 'edit' | 'create'>('view');
+  const [yamlMode, setYamlMode] = useState<'view' | 'edit'>('view');
   const [selectedPolicy, setSelectedPolicy] = useState<NetworkPolicyInfo | null>(null);
   const [yamlSaving, setYamlSaving] = useState(false);
 
@@ -156,32 +131,26 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
   };
 
   const handleCreateClick = () => {
-    setYamlContent(DEFAULT_YAML);
-    setSelectedPolicy(null);
-    setYamlMode('create');
-    setYamlDrawerOpen(true);
+    setCreateModalOpen(true);
   };
 
   const handleYAMLSave = async () => {
+    if (yamlMode !== 'edit' || !selectedPolicy) return;
     setYamlSaving(true);
     try {
-      if (yamlMode === 'create') {
-        await NetworkPolicyService.create(clusterId, namespace || 'default', yamlContent);
-        message.success(t('network:networkpolicy.messages.createSuccess'));
-        setYamlDrawerOpen(false);
-        fetchPolicies(1, pageSize);
-        setCurrentPage(1);
-      } else if (yamlMode === 'edit' && selectedPolicy) {
-        await NetworkPolicyService.update(clusterId, selectedPolicy.namespace, selectedPolicy.name, yamlContent);
-        message.success(t('network:networkpolicy.messages.updateSuccess'));
-        setYamlDrawerOpen(false);
-        fetchPolicies();
-      }
+      await NetworkPolicyService.update(clusterId, selectedPolicy.namespace, selectedPolicy.name, yamlContent);
+      message.success(t('network:networkpolicy.messages.updateSuccess'));
+      setYamlDrawerOpen(false);
+      fetchPolicies();
     } catch {
       message.error(t('common:messages.error'));
     } finally {
       setYamlSaving(false);
     }
+  };
+
+  const handleSimulate = (_policy: NetworkPolicyInfo) => {
+    setViewMode('simulate');
   };
 
   const handleDelete = async (policy: NetworkPolicyInfo) => {
@@ -264,36 +233,31 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 150,
+      width: 90,
       render: (_: unknown, record: NetworkPolicyInfo) => (
-        <Space size="small">
-          <Button type="link" size="small" onClick={() => handleViewYAML(record)}>
-            YAML
-          </Button>
-          <Button type="link" size="small" onClick={() => handleEditYAML(record)}>
-            {t('common:actions.edit')}
-          </Button>
-          <Popconfirm
-            title={t('network:networkpolicy.messages.confirmDeleteTitle')}
-            description={t('network:networkpolicy.messages.confirmDeleteDesc', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            { key: 'edit', label: t('common:actions.edit'), icon: <EditOutlined />, onClick: () => handleEditYAML(record) },
+            { key: 'simulate', label: t('network:networkpolicy.columns.simulate', '策略模擬'), icon: <PlayCircleOutlined />, onClick: () => handleSimulate(record) },
+          ]}
+          more={[
+            {
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+              onClick: () => handleDelete(record),
+              confirm: {
+                title: t('network:networkpolicy.messages.confirmDeleteTitle'),
+                description: t('network:networkpolicy.messages.confirmDeleteDesc', { name: record.name }),
+              },
+            },
+          ]}
+        />
       ),
     },
   ];
 
-  const drawerTitle = yamlMode === 'create'
-    ? t('network:networkpolicy.createTitle')
-    : yamlMode === 'edit'
-      ? t('network:networkpolicy.editTitle', { name: selectedPolicy?.name })
-      : t('network:networkpolicy.viewTitle', { name: selectedPolicy?.name });
+  const drawerTitle = yamlMode === 'edit'
+    ? t('network:networkpolicy.editTitle', { name: selectedPolicy?.name })
+    : t('network:networkpolicy.viewTitle', { name: selectedPolicy?.name });
 
   return (
     <div>
@@ -360,7 +324,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
         columns={columns}
         dataSource={policies}
         loading={loading}
-        scroll={{ x: 900 }}
+        scroll={{ x: 'max-content' }}
         virtual
         pagination={{
           current: currentPage,
@@ -409,6 +373,14 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
         onCreated={() => { setWizardOpen(false); fetchPolicies(1, pageSize); }}
+      />
+
+      {/* 建立 Modal */}
+      <NetworkPolicyForm
+        open={createModalOpen}
+        clusterId={clusterId}
+        onClose={() => setCreateModalOpen(false)}
+        onSuccess={() => { setCreateModalOpen(false); fetchPolicies(1, pageSize); setCurrentPage(1); }}
       />
     </div>
   );

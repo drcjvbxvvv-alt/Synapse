@@ -15,12 +15,19 @@ import {
   Popconfirm,
   Checkbox,
   Drawer,
+  Dropdown,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
   SearchOutlined,
+  LineChartOutlined,
+  EditOutlined,
+  ColumnWidthOutlined,
+  DeleteOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
@@ -28,6 +35,7 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
 import { POLL_INTERVALS } from '../../config/queryConfig';
+import WorkloadCreateModal from '../../components/workload/WorkloadCreateModal';
 const { Option } = Select;
 
 interface StatefulSetTabProps {
@@ -51,11 +59,12 @@ const { t } = useTranslation(['workload', 'common']);
   
   
   // 操作狀態
+  const [createModalVisible, setCreateModalVisible] = useState(false);
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleWorkload, setScaleWorkload] = useState<WorkloadInfo | null>(null);
   const [scaleReplicas, setScaleReplicas] = useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  
+
   // 多條件搜尋狀態
   interface SearchCondition {
     field: 'name' | 'namespace' | 'image' | 'status' | 'cpuLimit' | 'cpuRequest' | 'memoryLimit' | 'memoryRequest';
@@ -408,45 +417,19 @@ message.error(t('messages.fetchError', { type: 'StatefulSet' }));
     {
       title: t('columns.actions'),
       key: 'actions',
-      width: 220,
+      width: 120,
       fixed: 'right' as const,
       render: (record: WorkloadInfo) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => navigate(`/clusters/${clusterId}/workloads/${record.namespace}/${record.name}?type=StatefulSet&tab=monitoring`)}
-          >
-            {t('actions.monitoring')}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=StatefulSet&namespace=${record.namespace}&name=${record.name}`)}
-          >
-            {t('actions.edit')}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => {
-              setScaleWorkload(record);
-              setScaleReplicas(record.replicas || 1);
-              setScaleModalVisible(true);
-            }}
-          >
-            {t('actions.scale')}
-          </Button>
-          <Popconfirm
-            title={t('actions.confirmDelete', { type: 'StatefulSet' })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('actions.delete')}
-            </Button>
-          </Popconfirm>
+        <Space size={0}>
+          <Tooltip title={t('common:actions.monitoring')}>
+            <Button type="link" size="small" icon={<LineChartOutlined />} onClick={() => handleMonitor(record)} />
+          </Tooltip>
+          <Tooltip title={t('common:actions.edit')}>
+            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          </Tooltip>
+          <Dropdown menu={{ items: moreActions(record) }} trigger={['click']}>
+            <Button type="link" size="small" icon={<MoreOutlined />} />
+          </Dropdown>
         </Space>
       ),
     },
@@ -515,6 +498,59 @@ loadWorkloads();
 message.error(t('messages.deleteError'));
 }
   };
+
+  const handleMonitor = (record: WorkloadInfo) => {
+    navigate(`/clusters/${clusterId}/workloads/${record.namespace}/${record.name}?type=StatefulSet&tab=monitoring`);
+  };
+
+  const handleEdit = (record: WorkloadInfo) => {
+    navigate(`/clusters/${clusterId}/workloads/create?type=StatefulSet&namespace=${record.namespace}&name=${record.name}`);
+  };
+
+  const handleRestart = async (record: WorkloadInfo) => {
+    try {
+      await WorkloadService.restartWorkload(clusterId, record.namespace, record.name, 'StatefulSet');
+      message.success(t('actions.restartSuccess', { name: record.name }));
+      loadWorkloads();
+    } catch {
+      message.error(t('actions.restartError'));
+    }
+  };
+
+  const moreActions = (record: WorkloadInfo): MenuProps['items'] => [
+    {
+      key: 'scale',
+      label: t('common:actions.scale'),
+      icon: <ColumnWidthOutlined />,
+      onClick: () => {
+        setScaleWorkload(record);
+        setScaleReplicas(record.replicas || 1);
+        setScaleModalVisible(true);
+      },
+    },
+    {
+      key: 'restart',
+      label: t('common:actions.restart'),
+      icon: <ReloadOutlined />,
+      onClick: () => handleRestart(record),
+    },
+    { type: 'divider' },
+    {
+      key: 'delete',
+      danger: true,
+      icon: <DeleteOutlined />,
+      label: (
+        <Popconfirm
+          title={t('actions.confirmDelete', { type: 'StatefulSet' })}
+          onConfirm={() => handleDelete(record)}
+          okText={t('common:actions.confirm')}
+          cancelText={t('common:actions.cancel')}
+        >
+          {t('common:actions.delete')}
+        </Popconfirm>
+      ),
+    },
+  ];
 
   // 批次重新部署
   const handleBatchRedeploy = async () => {
@@ -649,8 +685,8 @@ message.success(t('messages.columnSettingsSaved'));
           <Button
             type="primary"
             icon={<PlusOutlined />}
-          onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=StatefulSet`)}
-          >
+          onClick={() => setCreateModalVisible(true)}
+>
             {t('actions.create', { type: 'StatefulSet' })}
           </Button>
       </div>
@@ -726,7 +762,7 @@ message.success(t('messages.columnSettingsSaved'));
         }}
         columns={filteredColumns}
         dataSource={workloads}
-        locale={{ emptyText: t('common:noData') }}
+        locale={{ emptyText: t('common:messages.noData') }}
         rowKey={(record) => `${record.namespace}/${record.name}`}
         loading={loading}
         pagination={{
@@ -801,6 +837,17 @@ pageSizeOptions: ['10', '20', '50', '100'],
           ))}
         </Space>
       </Drawer>
+
+      <WorkloadCreateModal
+        open={createModalVisible}
+        workloadType="StatefulSet"
+        clusterId={clusterId}
+        onClose={() => setCreateModalVisible(false)}
+        onSuccess={() => {
+          setCreateModalVisible(false);
+          loadWorkloads();
+        }}
+      />
     </div>
   );
 };

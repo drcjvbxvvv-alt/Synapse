@@ -13,19 +13,23 @@ import {
   App,
   Drawer,
   Checkbox,
+  theme,
 } from 'antd';
 import {
   ReloadOutlined,
   SearchOutlined,
   SettingOutlined,
-  CheckCircleOutlined,
   DeleteOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { StorageService } from '../../services/storageService';
 import type { StorageClass } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
+import { StatusTag } from '../../components/StatusTag';
+import { ActionButtons } from '../../components/ActionButtons';
 
 const { Link } = Typography;
 
@@ -36,7 +40,8 @@ interface StorageClassTabProps {
 
 const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountChange }) => {
   const { message, modal } = App.useApp();
-  
+  const { token } = theme.useToken();
+
   // 資料狀態
 const { t } = useTranslation(['storage', 'common']);
 const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
@@ -357,7 +362,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
             {name}
           </Link>
           {record.isDefault && (
-            <Tag color="green" icon={<CheckCircleOutlined />}>
+            <Tag color="success" style={{ marginLeft: token.marginXS }}>
               {t('storage:columns.default')}
             </Tag>
           )}
@@ -381,96 +386,67 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
       dataIndex: 'reclaimPolicy',
       key: 'reclaimPolicy',
       width: 100,
-      render: (policy: string) => (
-        <Tag color={StorageService.getReclaimPolicyColor(policy)}>
-          {policy || '-'}
-        </Tag>
-      ),
+      render: (policy: string) => <StatusTag status={policy} />,
     },
     {
       title: t('storage:columns.volumeBindingMode'),
       dataIndex: 'volumeBindingMode',
       key: 'volumeBindingMode',
       width: 150,
-      render: (mode: string) => {
-        const colorMap: Record<string, string> = {
-          'Immediate': 'blue',
-          'WaitForFirstConsumer': 'orange',
-        };
-        return mode ? (
-          <Tag color={colorMap[mode] || 'default'}>
-            {mode}
-          </Tag>
-        ) : '-';
-      },
+      render: (mode: string) => <StatusTag status={mode} />,
     },
     {
       title: t('storage:columns.allowVolumeExpansion'),
       dataIndex: 'allowVolumeExpansion',
       key: 'allowVolumeExpansion',
       width: 100,
-      render: (allow: boolean) => (
-        <Tag color={allow ? 'green' : 'default'}>
-          {allow ? t('storage:yes') : t('storage:no')}
-        </Tag>
-      ),
+      render: (v: boolean) => <StatusTag status={v ? 'true_yes' : 'false_no'} />,
     },
     {
       title: t('storage:columns.isDefault'),
       dataIndex: 'isDefault',
       key: 'isDefault',
       width: 100,
-      render: (isDefault: boolean) => (
-        isDefault ? (
-          <Tag color="green" icon={<CheckCircleOutlined />}>{t('storage:yes')}</Tag>
-        ) : (
-          <Tag color="default">{t('storage:no')}</Tag>
-        )
-      ),
+      render: (v: boolean) => <StatusTag status={v ? 'true_yes' : 'false_no'} />,
     },
     {
       title: t('common:table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 180,
+      width: 160,
       sorter: true,
       sortOrder: sortField === 'createdAt' ? sortOrder : null,
-      render: (createdAt: string) => {
-        if (!createdAt) return '-';
-        const date = new Date(createdAt);
-        return date.toLocaleString();
-      },
+      render: (time: string) => time ? dayjs(time).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 120,
+      width: 90,
       render: (_: unknown, record: StorageClass) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleViewYAML(record)}
-          >
-            YAML
-          </Button>
-          <Popconfirm
-            title={t('storage:messages.confirmDeleteSC')}
-            description={t('storage:messages.confirmDeleteSCDesc', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button
-              type="link"
-              size="small"
-              danger
-            >
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            {
+              key: 'yaml',
+              label: 'YAML',
+              icon: <CodeOutlined />,
+              onClick: () => handleViewYAML(record),
+            },
+          ]}
+          more={[
+            {
+              key: 'delete',
+              label: t('common:actions.delete'),
+              icon: <DeleteOutlined />,
+              danger: true,
+              confirm: {
+                title: t('storage:messages.confirmDeleteSC'),
+                description: t('storage:messages.confirmDeleteSCDesc', { name: record.name }),
+              },
+              onClick: () => handleDelete(record),
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -589,7 +565,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
         rowSelection={rowSelection}
         loading={loading}
         virtual
-        scroll={{ x: 1300, y: 600 }}
+        scroll={{ x: 'max-content', y: 600 }}
         size="middle"
         onChange={handleTableChange}
         pagination={{

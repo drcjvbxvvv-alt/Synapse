@@ -83,7 +83,7 @@ func (h *ResourceYAMLHandler) ApplyConfigMapYAML(c *gin.Context) {
 		cm.Namespace = "default"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -130,7 +130,7 @@ func (h *ResourceYAMLHandler) GetConfigMapYAML(c *gin.Context) {
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	cm, err := k8sClient.GetClientset().CoreV1().ConfigMaps(c.Param("namespace")).Get(ctx, c.Param("name"), metav1.GetOptions{})
@@ -173,7 +173,7 @@ func (h *ResourceYAMLHandler) ApplySecretYAML(c *gin.Context) {
 		secret.Namespace = "default"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -234,7 +234,7 @@ func (h *ResourceYAMLHandler) GetSecretYAML(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	secret, err := k8sClient.GetClientset().CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -287,7 +287,7 @@ func (h *ResourceYAMLHandler) ApplyServiceYAML(c *gin.Context) {
 		svc.Namespace = "default"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -356,7 +356,7 @@ func (h *ResourceYAMLHandler) ApplyIngressYAML(c *gin.Context) {
 		ing.Namespace = "default"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -422,7 +422,7 @@ func (h *ResourceYAMLHandler) ApplyPVCYAML(c *gin.Context) {
 		pvc.Namespace = "default"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -486,7 +486,7 @@ func (h *ResourceYAMLHandler) ApplyPVYAML(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -547,7 +547,7 @@ func (h *ResourceYAMLHandler) ApplyStorageClassYAML(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -626,7 +626,7 @@ func (h *ResourceYAMLHandler) GetServiceYAMLClean(c *gin.Context) {
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	svc, err := k8sClient.GetClientset().CoreV1().Services(c.Param("namespace")).Get(ctx, c.Param("name"), metav1.GetOptions{})
@@ -647,7 +647,7 @@ func (h *ResourceYAMLHandler) GetIngressYAMLClean(c *gin.Context) {
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	ing, err := k8sClient.GetClientset().NetworkingV1().Ingresses(c.Param("namespace")).Get(ctx, c.Param("name"), metav1.GetOptions{})
@@ -668,7 +668,7 @@ func (h *ResourceYAMLHandler) GetPVCYAMLClean(c *gin.Context) {
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	pvc, err := k8sClient.GetClientset().CoreV1().PersistentVolumeClaims(c.Param("namespace")).Get(ctx, c.Param("name"), metav1.GetOptions{})
@@ -689,7 +689,7 @@ func (h *ResourceYAMLHandler) GetPVYAMLClean(c *gin.Context) {
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	pv, err := k8sClient.GetClientset().CoreV1().PersistentVolumes().Get(ctx, c.Param("name"), metav1.GetOptions{})
@@ -710,7 +710,7 @@ func (h *ResourceYAMLHandler) GetStorageClassYAMLClean(c *gin.Context) {
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	sc, err := k8sClient.GetClientset().StorageV1().StorageClasses().Get(ctx, c.Param("name"), metav1.GetOptions{})

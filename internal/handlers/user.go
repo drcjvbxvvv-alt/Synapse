@@ -22,8 +22,8 @@ func NewUserHandler(userService *services.UserService) *UserHandler {
 
 // ListUsers 獲取使用者列表
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 	if page < 1 {
 		page = 1
 	}

@@ -13,7 +13,6 @@
 import React from 'react';
 import { Empty, Button, Space, Typography } from 'antd';
 import {
-  InboxOutlined,
   LockOutlined,
   DisconnectOutlined,
   SettingOutlined,
@@ -38,7 +37,7 @@ interface EmptyStateProps {
   /** 覆蓋預設說明文字 */
   description?: string;
   /** 自訂圖示（覆蓋 type 對應的預設圖示） */
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | string;
   /** 行動按鈕，最多建議 2 個 */
   actions?: EmptyStateAction[];
   /** 外層容器的 style */
@@ -46,16 +45,16 @@ interface EmptyStateProps {
 }
 
 interface TypeConfig {
-  icon: React.ReactNode;
+  icon: React.ReactNode | string;
   title: string;
   description: string;
 }
 
 const TYPE_CONFIG: Record<EmptyStateType, TypeConfig> = {
   'no-data': {
-    icon: <InboxOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />,
-    title: '目前沒有資料',
-    description: '此叢集目前沒有相關資源。',
+    icon: Empty.PRESENTED_IMAGE_DEFAULT,
+    title: '暫無資料',
+    description: '',
   },
   'no-permission': {
     icon: <LockOutlined style={{ fontSize: 48, color: '#faad14' }} />,
@@ -84,18 +83,23 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   const config = TYPE_CONFIG[type];
   const displayIcon = icon ?? config.icon;
-  const displayTitle = title ?? config.title;
-  const displayDescription = description ?? config.description;
+
+  // When only description is passed (no explicit title), treat it as the sole message.
+  // When title is passed explicitly, show both title and description.
+  const displayTitle = title ?? (description !== undefined ? description : config.title);
+  const displayDescription = title !== undefined
+    ? (description ?? config.description)
+    : (description !== undefined ? '' : config.description);
 
   return (
     <Empty
       style={{ padding: '32px 0', ...style }}
       image={displayIcon}
-      imageStyle={{ height: 'auto' }}
+      imageStyle={typeof displayIcon !== 'string' ? { height: 'auto' } : undefined}
       description={
         <Space direction="vertical" size={4}>
           <Text strong style={{ fontSize: 15 }}>{displayTitle}</Text>
-          <Text type="secondary">{displayDescription}</Text>
+          {displayDescription && <Text type="secondary">{displayDescription}</Text>}
         </Space>
       }
     >

@@ -17,6 +17,7 @@ import {
   Row,
   Col,
   Divider,
+  theme,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -31,6 +32,7 @@ import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
 import { useTranslation } from 'react-i18next';
 import MonitoringCharts from '../../components/MonitoringCharts';
+import WorkloadMetricsChart from '../../components/WorkloadMetricsChart';
 
 
 const { Title } = Typography;
@@ -47,6 +49,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
   }>();
   const [searchParams] = useSearchParams();
 const { t } = useTranslation(["workload", "common"]);
+const { token } = theme.useToken();
 const navigate = useNavigate();
   
   // URL 路徑中的 type 是小寫（如 statefulset），需要對映為 API 期望的 PascalCase
@@ -265,9 +268,9 @@ const navigate = useNavigate();
             <Button
               icon={<RobotOutlined />}
               onClick={handleAIDiagnose}
-              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none' }}
+              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: token.colorBgContainer, border: 'none' }}
             >
-              AI 診斷
+              {t('actions.aiDiagnose')}
             </Button>
 
             <Popconfirm
@@ -292,12 +295,12 @@ onConfirm={handleDelete}
           } 
           key="monitoring"
         >
-          {clusterId && namespace && name && (
-            <MonitoringCharts 
-              clusterId={clusterId} 
+          {clusterId && namespace && name && type && (
+            <WorkloadMetricsChart
+              clusterId={clusterId}
               namespace={namespace}
-              workloadName={name}
-              type="workload"
+              name={name}
+              workloadKind={type}
             />
           )}
         </TabPane>

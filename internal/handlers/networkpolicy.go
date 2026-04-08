@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -129,8 +128,8 @@ func (h *NetworkPolicyHandler) ListNetworkPolicies(c *gin.Context) {
 
 	namespace := c.DefaultQuery("namespace", "")
 	search := c.DefaultQuery("search", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	// 命名空間權限檢查
 	nsInfo, hasAccess := middleware.CheckNamespacePermission(c, namespace)
@@ -246,6 +245,7 @@ func (h *NetworkPolicyHandler) CreateNetworkPolicy(c *gin.Context) {
 	var req struct {
 		Namespace string `json:"namespace" binding:"required"`
 		YAML      string `json:"yaml" binding:"required"`
+		DryRun    bool   `json:"dryRun"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "參數錯誤: "+err.Error())
@@ -261,14 +261,21 @@ func (h *NetworkPolicyHandler) CreateNetworkPolicy(c *gin.Context) {
 		np.Namespace = req.Namespace
 	}
 
-	created, err := clientset.NetworkingV1().NetworkPolicies(np.Namespace).Create(context.Background(), &np, metav1.CreateOptions{})
+	var dryRunOpt []string
+	if req.DryRun {
+		dryRunOpt = []string{metav1.DryRunAll}
+	}
+
+	created, err := clientset.NetworkingV1().NetworkPolicies(np.Namespace).Create(context.Background(), &np, metav1.CreateOptions{DryRun: dryRunOpt})
 	if err != nil {
 		logger.Error("建立 NetworkPolicy 失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("建立 NetworkPolicy 失敗: %v", err))
 		return
 	}
 
-	logger.Info("NetworkPolicy 建立成功", "clusterId", clusterID, "namespace", created.Namespace, "name", created.Name)
+	if !req.DryRun {
+		logger.Info("NetworkPolicy 建立成功", "clusterId", clusterID, "namespace", created.Namespace, "name", created.Name)
+	}
 	response.OK(c, h.convertToInfo(created))
 }
 

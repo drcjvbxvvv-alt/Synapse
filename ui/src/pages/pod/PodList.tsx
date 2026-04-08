@@ -27,6 +27,9 @@ import {
   SettingOutlined,
   SearchOutlined,
   DeleteOutlined,
+  CodeOutlined,
+  FileTextOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
@@ -392,7 +395,7 @@ const PodList: React.FC = () => {
   };
 
   // 檢視Pod日誌
-  const handleViewLogs = (pod: PodInfo) => {
+  const handleLogs = (pod: PodInfo) => {
     navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/logs`);
   };
 
@@ -495,7 +498,7 @@ const PodList: React.FC = () => {
   }), [selectedRowKeys]);
 
   // 操作選單
-  const getActionMenuItems = (record: PodInfo): MenuProps['items'] => [
+  const morePodActions = (record: PodInfo): MenuProps['items'] => [
     {
       key: 'monitor',
       label: tc('menu.monitoring'),
@@ -675,36 +678,29 @@ const PodList: React.FC = () => {
     {
       title: tc('table.actions'),
       key: 'actions',
-      width: 180,
+      width: 120,
       fixed: 'right' as const,
       render: (_: unknown, record: PodInfo) => (
-        <Space size="small">
+        <Space size={0}>
           <Tooltip title={t('actions.terminal')}>
             <Button
               type="link"
               size="small"
+              icon={<CodeOutlined />}
               onClick={() => handleTerminal(record)}
               disabled={record.status !== 'Running'}
-            >
-              {t('actions.login')}
-            </Button>
+            />
           </Tooltip>
-          <Tooltip title={t('actions.viewLogs')}>
+          <Tooltip title={t('actions.logs')}>
             <Button
               type="link"
               size="small"
-              onClick={() => handleViewLogs(record)}
-            >
-              {t('actions.logs')}
-            </Button>
+              icon={<FileTextOutlined />}
+              onClick={() => handleLogs(record)}
+            />
           </Tooltip>
-          <Dropdown
-            menu={{ items: getActionMenuItems(record) }}
-            trigger={['click']}
-          >
-            <Button type="link" size="small">
-              {tc('actions.more')}
-            </Button>
+          <Dropdown menu={{ items: morePodActions(record) }} trigger={['click']}>
+            <Button type="link" size="small" icon={<MoreOutlined />} />
           </Dropdown>
         </Space>
       ),

@@ -202,7 +202,7 @@ func (h *VPAHandler) ListVPA(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	list, err := vpaClient.Namespace(namespace).List(ctx, metav1.ListOptions{})
@@ -253,7 +253,7 @@ func (h *VPAHandler) CreateVPA(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	obj := buildVPAObject(&req)
@@ -304,7 +304,7 @@ func (h *VPAHandler) UpdateVPA(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	existing, err := vpaClient.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -360,7 +360,7 @@ func (h *VPAHandler) DeleteVPA(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	if err := vpaClient.Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
@@ -404,7 +404,7 @@ func (h *VPAHandler) GetWorkloadVPA(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	list, err := vpaClient.Namespace(namespace).List(ctx, metav1.ListOptions{})

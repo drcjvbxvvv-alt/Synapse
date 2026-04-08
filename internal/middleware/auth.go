@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -33,8 +34,11 @@ func AuthRequired(secret string) gin.HandlerFunc {
 			return
 		}
 
-		// 解析JWT token
+		// 解析JWT token（驗證簽名算法，防止 Algorithm Substitution Attack）
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
 			return []byte(secret), nil
 		})
 

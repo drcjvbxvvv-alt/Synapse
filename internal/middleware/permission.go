@@ -213,9 +213,12 @@ func PlatformAdminRequired(db *gorm.DB) gin.HandlerFunc {
 
 		// 檢查使用者是否直接擁有 admin 權限
 		var count int64
-		db.Model(&models.ClusterPermission{}).
+		if err := db.Model(&models.ClusterPermission{}).
 			Where("user_id = ? AND permission_type = ?", userID, models.PermissionTypeAdmin).
-			Count(&count)
+			Count(&count).Error; err != nil {
+			response.InternalError(c, "權限查詢失敗")
+			return
+		}
 		if count > 0 {
 			c.Next()
 			return
@@ -223,11 +226,19 @@ func PlatformAdminRequired(db *gorm.DB) gin.HandlerFunc {
 
 		// 檢查使用者所在使用者組是否擁有 admin 權限
 		var groupIDs []uint
-		db.Model(&models.UserGroupMember{}).Where("user_id = ?", userID).Pluck("user_group_id", &groupIDs)
+		if err := db.Model(&models.UserGroupMember{}).
+			Where("user_id = ?", userID).
+			Pluck("user_group_id", &groupIDs).Error; err != nil {
+			response.InternalError(c, "使用者組查詢失敗")
+			return
+		}
 		if len(groupIDs) > 0 {
-			db.Model(&models.ClusterPermission{}).
+			if err := db.Model(&models.ClusterPermission{}).
 				Where("user_group_id IN ? AND permission_type = ?", groupIDs, models.PermissionTypeAdmin).
-				Count(&count)
+				Count(&count).Error; err != nil {
+				response.InternalError(c, "使用者組權限查詢失敗")
+				return
+			}
 			if count > 0 {
 				c.Next()
 				return

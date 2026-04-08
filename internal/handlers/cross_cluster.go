@@ -84,7 +84,7 @@ func (h *CrossClusterHandler) ListCrossClusterWorkloads(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
 	defer cancel()
 
 	var results []WorkloadSummary
@@ -184,7 +184,7 @@ func (h *CrossClusterHandler) GetCrossClusterStats(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
 	defer cancel()
 
 	type ClusterStats struct {

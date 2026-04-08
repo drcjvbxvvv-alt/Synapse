@@ -100,7 +100,7 @@ func (h *CRDHandler) ListCRDs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
 	_, resourceLists, err := k8sClient.GetClientset().Discovery().ServerGroupsAndResources()
@@ -195,7 +195,7 @@ func (h *CRDHandler) ListCRDResources(c *gin.Context) {
 		Resource: plural,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)
 	defer cancel()
 
 	var list *unstructured.UnstructuredList
@@ -276,7 +276,7 @@ func (h *CRDHandler) GetCRDResource(c *gin.Context) {
 		Resource: plural,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
 	var obj *unstructured.Unstructured
@@ -337,7 +337,7 @@ func (h *CRDHandler) DeleteCRDResource(c *gin.Context) {
 		Resource: plural,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
 	deletePolicy := metav1.DeletePropagationForeground

@@ -73,7 +73,7 @@ func (h *ImageHandler) SyncImages(c *gin.Context) {
 
 	total := 0
 	now := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
 	defer cancel()
 
 	for _, cluster := range clusters {

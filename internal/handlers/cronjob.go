@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,8 +54,8 @@ func (h *CronJobHandler) ListCronJobs(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Query("namespace")
 	searchName := c.Query("search")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	logger.Info("獲取CronJob列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
 
@@ -85,7 +84,7 @@ func (h *CronJobHandler) ListCronJobs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -166,7 +165,7 @@ func (h *CronJobHandler) GetCronJob(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -225,7 +224,7 @@ func (h *CronJobHandler) GetCronJobNamespaces(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -284,7 +283,7 @@ func (h *CronJobHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	var objMap map[string]interface{}
@@ -348,7 +347,7 @@ func (h *CronJobHandler) DeleteCronJob(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()

@@ -37,6 +37,27 @@ import {
 
 const { Title } = Typography;
 
+// ── Unified chart style (shared with CostDashboard) ──────────────────────────
+const BAR_PROPS = {
+  radius: [5, 5, 0, 0] as [number, number, number, number],
+  maxBarSize: 44,
+  isAnimationActive: true,
+  animationBegin: 0,
+  animationDuration: 800,
+  animationEasing: 'ease-out' as const,
+};
+
+const TOOLTIP_STYLE = {
+  contentStyle: {
+    borderRadius: 10,
+    border: 'none',
+    boxShadow: '0 6px 24px rgba(0,0,0,0.10)',
+    fontSize: 13,
+  },
+};
+
+const GRID_STYLE = { stroke: '#f0f0f0', strokeDasharray: '4 4' };
+
 const GlobalCostInsights: React.FC = () => {
   const { t } = useTranslation(['cost', 'common']);
   const navigate = useNavigate();
@@ -196,12 +217,12 @@ const GlobalCostInsights: React.FC = () => {
           <Card title={t('cost:global.occupancyChart', '各叢集資源佔用率')} size="small">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={barData} margin={{ top: 5, right: 20, left: 10, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid {...GRID_STYLE} />
                 <XAxis dataKey="name" angle={-20} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
                 <YAxis unit="%" />
-                <RechartTooltip formatter={(v) => [`${v}%`]} />
-                <Bar dataKey="cpu" name="CPU 佔用率" fill="#7eb8d4" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="memory" name="記憶體佔用率" fill="#a8c9a5" radius={[3, 3, 0, 0]} />
+                <RechartTooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v}%`]} />
+                <Bar dataKey="cpu" name="CPU 佔用率" fill="#5B8FF9" {...BAR_PROPS} />
+                <Bar dataKey="memory" name="記憶體佔用率" fill="#5AD8A6" {...BAR_PROPS} animationBegin={100} />
               </BarChart>
             </ResponsiveContainer>
           </Card>

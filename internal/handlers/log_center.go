@@ -78,7 +78,7 @@ func (h *LogCenterHandler) GetContainerLogs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	logs, err := h.aggregator.GetContainerLogs(ctx, cluster, namespace, podName, container, tailLines, sinceSeconds, previous)
@@ -118,7 +118,7 @@ func (h *LogCenterHandler) GetEventLogs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	listOpts := metav1.ListOptions{
@@ -193,7 +193,7 @@ func (h *LogCenterHandler) SearchLogs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
 	defer cancel()
 
 	results, total, err := h.aggregator.SearchLogs(ctx, cluster, &query)
@@ -244,7 +244,7 @@ func (h *LogCenterHandler) GetLogStats(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取事件統計
@@ -555,7 +555,7 @@ func (h *LogCenterHandler) GetNamespacesForLogs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒
@@ -602,7 +602,7 @@ func (h *LogCenterHandler) GetPodsForLogs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒
@@ -675,7 +675,7 @@ func (h *LogCenterHandler) ExportLogs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
 	defer cancel()
 
 	// 設定較大的限制用於匯出

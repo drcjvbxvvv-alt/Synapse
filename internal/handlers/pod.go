@@ -130,8 +130,8 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 	labelSelector := c.Query("labelSelector")
 	fieldSelector := c.Query("fieldSelector")
 	search := c.Query("search") // 新增搜尋參數
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	logger.Info("獲取Pod列表: cluster=%s, namespace=%s, node=%s, search=%s", clusterId, namespace, nodeName, search)
 
@@ -151,7 +151,7 @@ func (h *PodHandler) GetPods(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒
@@ -326,7 +326,7 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 使用 informer+lister 獲取Pod詳情
@@ -379,7 +379,7 @@ func (h *PodHandler) DeletePod(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 刪除Pod
@@ -429,7 +429,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 構建日誌選項
@@ -695,7 +695,7 @@ func (h *PodHandler) GetPodNamespaces(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒
@@ -756,7 +756,7 @@ func (h *PodHandler) GetPodNodes(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒

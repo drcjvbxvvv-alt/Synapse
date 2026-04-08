@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -113,8 +112,8 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Query("namespace")
 	searchName := c.Query("search")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	logger.Info("獲取Deployment列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
 
@@ -129,7 +128,7 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
@@ -196,7 +195,7 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -253,7 +252,7 @@ func (h *DeploymentHandler) GetDeploymentNamespaces(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒
@@ -330,7 +329,7 @@ func (h *DeploymentHandler) ScaleDeployment(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -380,7 +379,7 @@ func (h *DeploymentHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 解析YAML
@@ -450,7 +449,7 @@ func (h *DeploymentHandler) DeleteDeployment(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -616,7 +615,7 @@ func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
 	}
 
 	clientset := k8sClient.GetClientset()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取Deployment
@@ -718,7 +717,7 @@ func (h *DeploymentHandler) GetDeploymentServices(c *gin.Context) {
 	}
 
 	clientset := k8sClient.GetClientset()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取Deployment
@@ -805,7 +804,7 @@ func (h *DeploymentHandler) GetDeploymentIngresses(c *gin.Context) {
 	}
 
 	clientset := k8sClient.GetClientset()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取Ingresses
@@ -880,7 +879,7 @@ func (h *DeploymentHandler) GetDeploymentHPA(c *gin.Context) {
 	}
 
 	clientset := k8sClient.GetClientset()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取HPA列表
@@ -965,7 +964,7 @@ func (h *DeploymentHandler) GetDeploymentReplicaSets(c *gin.Context) {
 	}
 
 	clientset := k8sClient.GetClientset()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 檢查Deployment是否存在
@@ -1049,7 +1048,7 @@ func (h *DeploymentHandler) GetDeploymentEvents(c *gin.Context) {
 	}
 
 	clientset := k8sClient.GetClientset()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取Events

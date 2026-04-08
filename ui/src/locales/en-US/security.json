@@ -73,6 +73,42 @@
     "namespace": "Namespace",
     "message": "Message",
     "noData": "No violations found, or Gatekeeper is not installed",
-    "notInstalled": "Gatekeeper is not installed or unreachable"
+    "notInstalled": "Gatekeeper is not installed or unreachable",
+    "notDetectedMsg": "OPA/Gatekeeper Not Detected",
+    "notDetectedDesc": "Please install Gatekeeper in your cluster first. Synapse will automatically collect Constraint violation data."
+  },
+  "cert": {
+    "pageTitle": "Certificate Management (cert-manager)",
+    "notDetected": "cert-manager Not Detected",
+    "installDesc": "Please install cert-manager in your cluster first. Synapse will automatically detect certificates and provide expiry management.",
+    "reinstallBtn": "Click here to re-detect after installation",
+    "tabCerts": "Certificates",
+    "tabIssuers": "Issuers",
+    "emptyCerts": "No certificate resources",
+    "emptyIssuers": "No Issuer / ClusterIssuer resources",
+    "status": {
+      "Valid": "Valid",
+      "Expiring": "Expiring Soon",
+      "Expired": "Expired",
+      "NotReady": "Not Ready"
+    },
+    "issuerStatus": {
+      "ready": "Ready",
+      "notReady": "Not Ready"
+    },
+    "columns": {
+      "status": "Status",
+      "name": "Name",
+      "dnsNames": "DNS Names",
+      "issuer": "Issuer",
+      "secret": "Secret",
+      "expiry": "Expiry"
+    },
+    "issuerColumns": {
+      "ready": "Ready",
+      "name": "Name",
+      "kind": "Kind",
+      "backend": "Backend"
+    }
   }
 }

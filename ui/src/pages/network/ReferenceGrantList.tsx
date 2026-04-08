@@ -1,27 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Space, Button, Select, App, Modal, Popconfirm } from 'antd';
-import { ReloadOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
+import { ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import { parseApiError } from '@/utils/api';
 import type { ReferenceGrantItem, ReferenceGrantPeer, GatewayTabProps } from './gatewayTypes';
 import MonacoEditor from '@monaco-editor/react';
-import * as YAML from 'yaml';
-
-const DEFAULT_YAML = `apiVersion: gateway.networking.k8s.io/v1beta1
-kind: ReferenceGrant
-metadata:
-  name: allow-httproute
-  namespace: backend
-spec:
-  from:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      namespace: frontend
-  to:
-    - group: ""
-      kind: Service
-`;
+import ReferenceGrantForm from './ReferenceGrantForm';
 
 const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
@@ -30,8 +15,6 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
   const [createVisible, setCreateVisible] = useState(false);
-  const [yamlContent, setYamlContent] = useState(DEFAULT_YAML);
-  const [submitting, setSubmitting] = useState(false);
   const [yamlViewItem, setYamlViewItem] = useState<ReferenceGrantItem | null>(null);
   const [viewYaml, setViewYaml] = useState('');
 
@@ -71,23 +54,6 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
       setViewYaml(r.yaml);
     } catch {
       setViewYaml('# Failed to load YAML');
-    }
-  };
-
-  const handleCreate = async () => {
-    setSubmitting(true);
-    try {
-      const parsed = YAML.parse(yamlContent) as Record<string, unknown>;
-      const ns = (parsed?.metadata as Record<string, string>)?.['namespace'] ?? 'default';
-      await gatewayService.createReferenceGrant(clusterId, ns, yamlContent);
-      message.success(t('gatewayapi.messages.createReferenceGrantSuccess'));
-      setCreateVisible(false);
-      setYamlContent(DEFAULT_YAML);
-      loadData();
-    } catch (err) {
-      message.error(parseApiError(err) || t('gatewayapi.messages.createReferenceGrantError'));
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -169,7 +135,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
         <div style={{ flex: 1 }} />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setYamlContent(DEFAULT_YAML); setCreateVisible(true); }}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateVisible(true)}>
           {t('gatewayapi.refgrant.create')}
         </Button>
       </div>
@@ -186,26 +152,12 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
         size="middle"
       />
 
-      {/* Create Modal */}
-      <Modal
-        title={t('gatewayapi.refgrant.create')}
+      <ReferenceGrantForm
         open={createVisible}
-        onCancel={() => setCreateVisible(false)}
-        onOk={handleCreate}
-        okText={t('gatewayapi.form.createBtn')}
-        cancelText={t('gatewayapi.form.cancel')}
-        confirmLoading={submitting}
-        width={860}
-        destroyOnClose
-      >
-        <MonacoEditor
-          height="420px"
-          language="yaml"
-          value={yamlContent}
-          onChange={(v) => setYamlContent(v || '')}
-          options={{ minimap: { enabled: false }, fontSize: 13, wordWrap: 'on', scrollBeyondLastLine: false }}
-        />
-      </Modal>
+        clusterId={clusterId}
+        onClose={() => setCreateVisible(false)}
+        onSuccess={() => { setCreateVisible(false); loadData(); }}
+      />
 
       {/* YAML View Modal */}
       <Modal

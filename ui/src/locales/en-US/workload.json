@@ -42,7 +42,8 @@
     "restartError": "Restart failed",
     "confirmRedeploy": "Confirm Redeploy",
     "confirmRedeployDesc": "Are you sure you want to redeploy {{count}} selected {{type}}(s)?",
-    "selectRedeploy": "Please select {{type}}(s) to redeploy"
+    "selectRedeploy": "Please select {{type}}(s) to redeploy",
+    "aiDiagnose": "AI Diagnose"
   },
   "detail": {
     "title": "Workload Detail",
@@ -176,7 +177,8 @@
     "scheduling": "Scheduling",
     "history": "Revisions",
     "events": "Events",
-    "monitoring": "Monitoring"
+    "monitoring": "Monitoring",
+    "metrics": "Metrics"
   },
   "create": {
     "title": "{{action}} {{type}}",

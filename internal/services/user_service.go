@@ -54,7 +54,7 @@ func (s *UserService) CreateUser(req *CreateUserRequest) (*models.User, error) {
 	}
 
 	salt := fmt.Sprintf("kp_%s_salt", req.Username)
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password+salt), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password+salt), 12)
 	if err != nil {
 		return nil, fmt.Errorf("密碼加密失敗: %w", err)
 	}
@@ -191,7 +191,7 @@ func (s *UserService) ResetPassword(id uint, newPassword string) error {
 		return apierrors.ErrAuthLDAPReadonly()
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword+user.Salt), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword+user.Salt), 12)
 	if err != nil {
 		return fmt.Errorf("密碼加密失敗: %w", err)
 	}

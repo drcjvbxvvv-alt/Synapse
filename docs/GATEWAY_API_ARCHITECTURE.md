@@ -1,6 +1,6 @@
 # Synapse Gateway API 架構設計文件
 
-> 版本：v1.5 | 日期：2026-04-08 | 狀態：Phase 1–3 已實作；Phase 4-A / 4-B 已實作；Phase 4-C / 4-D 規劃中
+> 版本：v1.6 | 日期：2026-04-08 | 狀態：Phase 1–3 已實作；Phase 4-A–F 全部已實作
 > 對應里程碑：M-GW（Gateway API 整合）、M-TOPO（叢集網路拓撲）
 
 ---
@@ -829,7 +829,7 @@ rules:
 
 ## 13. Phase 4：叢集網路拓撲圖
 
-> 狀態：✅ Phase A–E 全部已實作 | 📋 Phase F（Cilium Hubble）Backlog
+> 狀態：✅ Phase A–F 全部已實作
 
 ### 13.1 背景與目標
 
@@ -1247,10 +1247,10 @@ ui/src/locales/*/network.json                    ← 新增 i18n 鍵值
 
 ## 14. Phase 4 深化路線圖（v1.6）
 
-> 狀態：📋 架構規劃中 | 預計版本：v1.6
+> 狀態：✅ 全部已實作（v1.6）
 >
-> 本節記錄 Phase A/B 已落地後，三個高優先順序的深化方向：
-> **C — Ingress 節點補全、D — Istio 實際呼叫方向邊、E — NetworkPolicy 覆層**
+> 本節記錄 Phase A/B 已落地後的六個深化方向：
+> **C — Ingress 節點、D — Istio 呼叫方向邊、E — NetworkPolicy 覆層、F — Cilium Hubble 流量**
 
 ---
 
@@ -1718,20 +1718,78 @@ if (data?.policyStatus === 'policy-allow') {
 
 ---
 
-### 14.5 實作優先順序與工作量估算
+### 14.5 Phase F — Cilium Hubble 流量指標 ✅ 已實作
+
+**目標**：在叢集安裝 Cilium 並啟用 Hubble 指標時，以封包級別的真實流量資料（flow rate / drop rate）強化拓樸邊，補充 Istio 無法覆蓋的非 sidecar 流量。
+
+#### 14.5.1 資料來源
+
+Hubble 透過 Prometheus 暴露 `hubble_flows_processed_total` 指標，標籤包括：
+- `verdict`：`FORWARDED` | `DROPPED` | `AUDIT`
+- `direction`：`ingress` | `egress`
+- `source`：`namespace/pod-name` 格式
+- `destination`：`namespace/pod-name` 格式
+- `reason`：丟棄原因（僅 `DROPPED` verdict）
+
+聚合層級：以 **命名空間對**（srcNs→dstNs）為粒度進行聚合，與現有 Service→Workload 邊對應。
+
+#### 14.5.2 後端實作
+
+**新增至 `topology_integration_service.go`**：
+
+| 符號 | 說明 |
+|------|------|
+| `HubbleEdgeMetrics` | `SourceNamespace`, `DestNamespace`, `FlowRate`, `DropRate`, `TopDropReason` |
+| `parseHubbleNs(label)` | 從 `"namespace/pod"` 解析出命名空間 |
+| `queryHubblePrometheus(ctx, clientset, promQL)` | 嘗試 5 個可能的 Prometheus endpoint（`cilium-monitoring`, `kube-system`, `monitoring` 等） |
+| `QueryHubbleMetrics(ctx, clientset)` | 查詢 forwarded + dropped flows，回傳 `map["srcNs→dstNs"]*HubbleEdgeMetrics` |
+
+**新增至 `network_topology_service.go`**：
+
+| 符號 | 說明 |
+|------|------|
+| `NetworkEdge.HubbleFlowRate` | forwarded flows/s |
+| `NetworkEdge.HubbleDropRate` | 0.0–1.0，丟棄率 |
+| `NetworkEdge.HubbleDropReason` | 主要丟棄原因（e.g. `POLICY_DENIED`） |
+| `extractNsFromNodeID(id)` | 從 `"workload/ns/kind/name"` / `"service/ns/name"` 提取命名空間 |
+| `EnrichWithHubbleMetrics(metrics)` | 以命名空間對匹配邊，注入 Hubble 指標並在 Istio 無資料時更新健康狀態 |
+
+**更新 `network_topology.go`**：
+- 新增 `?hubble=true` query param
+- Cilium 偵測成功後呼叫 `QueryHubbleMetrics` + `EnrichWithHubbleMetrics`（15s timeout）
+
+#### 14.5.3 前端實作
+
+| 元件 | 改動 |
+|------|------|
+| `networkTopologyService.ts` | `NetworkEdge` 新增三個 Hubble 欄位；`getTopology` 新增 `hubble?` 參數 |
+| `ClusterTopologyTab.tsx` | 新增 `showHubble` state；Cilium 偵測到時顯示 Hubble Switch；傳入 `getTopology` |
+| `ClusterTopologyGraph.tsx` | `ParticleEdgeData` 新增 Hubble 欄位；`resolveEdgeStyle` 依 drop rate 決定顏色；label 顯示 `⬇ X% drop` |
+| `NodeDetailPanel.tsx` | `ConnectionRow` 顯示 Hubble flow rate + drop rate + drop reason（紫色 Hubble 標籤） |
+
+#### 14.5.4 設計決策
+
+- **Prometheus fallback**：嘗試 `cilium-monitoring`、`kube-system`、`monitoring` 等命名空間下的 Prometheus，相容不同 Cilium 安裝方式。
+- **命名空間粒度**：Hubble 指標聚合到 srcNs→dstNs，不追蹤個別 Pod，避免爆炸性的標籤組合。
+- **優先順序**：Istio 指標（工作負載層）優先於 Hubble（封包層），兩者互補。
+- **軟失敗**：Hubble drop query 失敗不影響 forward flow 顯示；整體 Hubble 失敗不影響靜態拓樸返回。
+
+---
+
+### 14.7 實作優先順序與工作量估算
 
 | Phase | 功能 | 後端改動 | 前端改動 | 預估工時 | 優先 |
 |-------|------|---------|---------|---------|------|
 | **C** | Ingress 節點 | ~80 行（新增 Ingress 列取 + 節點/邊建構） | ~100 行（IngressNode + 邊樣式） | 0.5 天 | ✅ 已完成 |
 | **D** | Istio 呼叫方向邊 | ~60 行（PromQL 調整 + EnrichWithIstioMetrics 擴充） | ~50 行（圖層開關 + ParticleEdge 樣式） | 0.5 天 | ✅ 已完成 |
 | **E** | NetworkPolicy 覆層 | ~150 行（推論演算法 + TopologyOptions） | ~80 行（邊樣式 + 圖層開關） | 1 天 | ✅ 已完成 |
-| **F** | Cilium Hubble 流量 | ~200 行（Hubble REST API client） | ~100 行 | 2 天 | ⭐（Backlog） |
+| **F** | Cilium Hubble 流量 | ~200 行（HubbleEdgeMetrics + QueryHubbleMetrics + EnrichWithHubbleMetrics） | ~80 行（Hubble Switch + ParticleEdge drop label + NodeDetailPanel Hubble row） | 0.5 天 | ✅ 已完成 |
 
-**建議實作順序**：C → D → E，C + D 可以同一個 commit 交付。
+**建議實作順序**：C → D → E → F（全部已完成）。
 
 ---
 
-### 14.6 共用設計原則
+### 14.8 共用設計原則
 
 1. **不破壞現有 API**：所有新功能以 query param opt-in（`?ingress=true&policy=true`），前端預設不開啟，避免對不需要的叢集增加 API 壓力。
 

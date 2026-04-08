@@ -1,5 +1,7 @@
 import React from 'react';
-import { Button, Space, Tag, Popconfirm, Typography, Tooltip } from 'antd';
+import { Tag, Typography, Tooltip } from 'antd';
+import { CodeOutlined, EditOutlined, ApiOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ActionButtons } from '../../components/ActionButtons';
 import { ServiceService } from '../../services/serviceService';
 import type { Service } from '../../types';
 import type { ColumnsType } from 'antd/es/table';
@@ -112,7 +114,8 @@ export function getServiceColumns(options: ServiceColumnsOptions): ColumnsType<S
       title: t('common:table.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 180,
+      width: 160,
+      ellipsis: true,
       sorter: true,
       sortOrder: sortField === 'createdAt' ? sortOrder : null,
       render: (createdAt: string) => {
@@ -134,30 +137,25 @@ export function getServiceColumns(options: ServiceColumnsOptions): ColumnsType<S
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 180,
+      width: 90,
       render: (_: unknown, record: Service) => (
-        <Space size="small">
-          <Button type="link" size="small" onClick={() => onViewYAML(record)}>
-            YAML
-          </Button>
-          <Button type="link" size="small" onClick={() => onEdit(record)}>
-            {t('common:actions.edit')}
-          </Button>
-          <Button type="link" size="small" onClick={() => onViewEndpoints(record)}>
-            Endpoints
-          </Button>
-          <Popconfirm
-            title={t('network:service.messages.confirmDeleteItem')}
-            description={t('network:service.messages.confirmDeleteDesc', { name: record.name })}
-            onConfirm={() => onDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            { key: 'yaml', label: 'YAML', icon: <CodeOutlined />, onClick: () => onViewYAML(record) },
+            { key: 'edit', label: t('common:actions.edit'), icon: <EditOutlined />, onClick: () => onEdit(record) },
+          ]}
+          more={[
+            { key: 'endpoints', label: 'Endpoints', icon: <ApiOutlined />, onClick: () => onViewEndpoints(record) },
+            {
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+              onClick: () => onDelete(record),
+              confirm: {
+                title: t('network:service.messages.confirmDeleteItem'),
+                description: t('network:service.messages.confirmDeleteDesc', { name: record.name }),
+              },
+            },
+          ]}
+        />
       ),
     },
   ];

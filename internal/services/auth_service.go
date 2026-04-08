@@ -108,7 +108,7 @@ func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword strin
 	}
 
 	// 生成新密碼雜湊
-	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword+user.Salt), bcrypt.DefaultCost)
+	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword+user.Salt), 12)
 	if err != nil {
 		return fmt.Errorf("密碼加密失敗: %w", err)
 	}
@@ -171,7 +171,9 @@ func (s *AuthService) authenticateLDAP(username, password string) (*models.User,
 
 	ldapUser, err := s.ldapService.Authenticate(username, password)
 	if err != nil {
-		return nil, fmt.Errorf("LDAP認證失敗: %v", err)
+		// 僅記錄詳細錯誤於 server log，避免 LDAP 伺服器資訊洩露給客戶端
+		logger.Warn("LDAP認證失敗", "username", username, "error", err)
+		return nil, apierrors.ErrAuthInvalidCredentials()
 	}
 
 	var user models.User

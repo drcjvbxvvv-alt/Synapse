@@ -84,7 +84,7 @@ func (h *MeshHandler) GetStatus(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
 	status := h.meshSvc.GetStatus(ctx, k8sClient.GetClientset())
@@ -113,7 +113,7 @@ func (h *MeshHandler) GetTopology(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	topology, err := h.meshSvc.GetTopology(ctx, k8sClient.GetClientset(), clusterID, namespace)
@@ -134,7 +134,7 @@ func (h *MeshHandler) ListVirtualServices(c *gin.Context) {
 
 	namespace := c.Query("namespace")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	list, err := h.meshSvc.ListVirtualServices(ctx, dynClient, namespace)
@@ -160,7 +160,7 @@ func (h *MeshHandler) GetVirtualService(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
 	obj, err := h.meshSvc.GetVirtualService(ctx, dynClient, namespace, name)
@@ -194,7 +194,7 @@ func (h *MeshHandler) CreateVirtualService(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	created, err := h.meshSvc.CreateVirtualService(ctx, dynClient, namespace, json.RawMessage(body))
@@ -227,7 +227,7 @@ func (h *MeshHandler) UpdateVirtualService(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	updated, err := h.meshSvc.UpdateVirtualService(ctx, dynClient, namespace, name, json.RawMessage(body))
@@ -254,7 +254,7 @@ func (h *MeshHandler) DeleteVirtualService(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
 	if err := h.meshSvc.DeleteVirtualService(ctx, dynClient, namespace, name); err != nil {
@@ -279,7 +279,7 @@ func (h *MeshHandler) ListDestinationRules(c *gin.Context) {
 
 	namespace := c.Query("namespace")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	list, err := h.meshSvc.ListDestinationRules(ctx, dynClient, namespace)
@@ -305,7 +305,7 @@ func (h *MeshHandler) GetDestinationRule(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
 	obj, err := h.meshSvc.GetDestinationRule(ctx, dynClient, namespace, name)
@@ -339,7 +339,7 @@ func (h *MeshHandler) CreateDestinationRule(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	created, err := h.meshSvc.CreateDestinationRule(ctx, dynClient, namespace, json.RawMessage(body))
@@ -372,7 +372,7 @@ func (h *MeshHandler) UpdateDestinationRule(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	updated, err := h.meshSvc.UpdateDestinationRule(ctx, dynClient, namespace, name, json.RawMessage(body))
@@ -399,7 +399,7 @@ func (h *MeshHandler) DeleteDestinationRule(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
 	if err := h.meshSvc.DeleteDestinationRule(ctx, dynClient, namespace, name); err != nil {

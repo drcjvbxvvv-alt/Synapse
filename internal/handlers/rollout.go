@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -83,7 +82,7 @@ func (h *RolloutHandler) CheckRolloutCRD(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒
@@ -104,8 +103,8 @@ func (h *RolloutHandler) ListRollouts(c *gin.Context) {
 	clusterId := c.Param("clusterID")
 	namespace := c.Query("namespace")
 	searchName := c.Query("search")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	logger.Info("獲取Rollout列表: cluster=%s, namespace=%s, search=%s", clusterId, namespace, searchName)
 
@@ -121,7 +120,7 @@ func (h *RolloutHandler) ListRollouts(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒
@@ -241,7 +240,7 @@ func (h *RolloutHandler) GetRollout(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	rolloutClient, err := k8sClient.GetRolloutClient()
@@ -304,7 +303,7 @@ func (h *RolloutHandler) GetRolloutNamespaces(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 確保 informer 快取就緒
@@ -387,7 +386,7 @@ func (h *RolloutHandler) ScaleRollout(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	rolloutClient, err := k8sClient.GetRolloutClient()
@@ -444,7 +443,7 @@ func (h *RolloutHandler) ApplyYAML(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 解析YAML
@@ -520,7 +519,7 @@ func (h *RolloutHandler) DeleteRollout(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	rolloutClient, err := k8sClient.GetRolloutClient()
@@ -650,7 +649,7 @@ func (h *RolloutHandler) GetRolloutPods(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取Rollout
@@ -756,7 +755,7 @@ func (h *RolloutHandler) GetRolloutServices(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取Rollout
@@ -848,7 +847,7 @@ func (h *RolloutHandler) GetRolloutIngresses(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取Rollout物件
@@ -1023,7 +1022,7 @@ func (h *RolloutHandler) GetRolloutHPA(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -1071,7 +1070,7 @@ func (h *RolloutHandler) GetRolloutReplicaSets(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 獲取Rollout
@@ -1134,7 +1133,7 @@ func (h *RolloutHandler) GetRolloutEvents(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	clientset := k8sClient.GetClientset()
@@ -1176,7 +1175,7 @@ func (h *RolloutHandler) PromoteRollout(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	patch := []byte(`{"spec":{"paused":false}}`)
@@ -1216,7 +1215,7 @@ func (h *RolloutHandler) PromoteFullRollout(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// 先取得現有 Rollout，設定 status.promoteFull = true 並透過 UpdateStatus 更新
@@ -1262,7 +1261,7 @@ func (h *RolloutHandler) AbortRollout(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	existing, err := rolloutClient.ArgoprojV1alpha1().Rollouts(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -1307,7 +1306,7 @@ func (h *RolloutHandler) GetRolloutAnalysisRuns(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	// List AnalysisRuns 以 rollout owner label 過濾

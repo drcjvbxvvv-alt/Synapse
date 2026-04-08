@@ -60,8 +60,8 @@ func maskURL(raw string) string {
 
 // GetClusters 獲取叢集列表（按使用者權限過濾，支援分頁 page/pageSize）
 func (h *ClusterHandler) GetClusters(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 	if page < 1 {
 		page = 1
 	}

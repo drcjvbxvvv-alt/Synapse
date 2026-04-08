@@ -31,8 +31,8 @@ func (h *EventAlertHandler) ListRules(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	rules, total, err := h.svc.ListRules(clusterID, page, pageSize)
 	if err != nil {
@@ -150,8 +150,8 @@ func (h *EventAlertHandler) ListHistory(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	items, total, err := h.svc.ListHistory(clusterID, page, pageSize)
 	if err != nil {

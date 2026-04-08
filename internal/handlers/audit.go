@@ -34,8 +34,8 @@ func NewAuditHandler(db *gorm.DB, cfg *config.Config) *AuditHandler {
 // GetAuditLogs 獲取統一審計日誌（委派 OperationLogService.List）
 // 支援查詢參數：page, pageSize, username, module, action, result(success/failed), startTime, endTime, keyword
 func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	req := &services.OperationLogListRequest{
 		Page:         page,
@@ -91,8 +91,8 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 // GetTerminalSessions 獲取終端會話記錄
 func (h *AuditHandler) GetTerminalSessions(c *gin.Context) {
 	// 解析查詢參數
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 	userIDStr := c.Query("userId")
 	clusterIDStr := c.Query("clusterId")
 	targetType := c.Query("targetType")
@@ -166,8 +166,8 @@ func (h *AuditHandler) GetTerminalCommands(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "100"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 100)
 
 	resp, err := h.auditService.GetSessionCommands(uint(sessionID), page, pageSize)
 	if err != nil {

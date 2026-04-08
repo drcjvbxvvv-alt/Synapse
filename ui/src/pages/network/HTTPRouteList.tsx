@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Tag, Space, Button, Select, App, Popconfirm } from 'antd';
-import { ReloadOutlined, CheckCircleOutlined, QuestionCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { Table, Tag, Space, Button, Select, App } from 'antd';
+import { ReloadOutlined, CheckCircleOutlined, QuestionCircleOutlined, PlusOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import { parseApiError } from '@/utils/api';
@@ -127,28 +128,23 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
       title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 120,
+      width: 70,
       render: (_: unknown, record: HTTPRouteItem) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => { setEditingRoute(record); setFormVisible(true); }}
-          >
-            {t('common:actions.edit')}
-          </Button>
-          <Popconfirm
-            title={t('network:gatewayapi.messages.confirmDeleteTitle')}
-            description={t('network:gatewayapi.messages.confirmDeleteHTTPRoute', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            { key: 'view', label: t('common:actions.viewDetails'), icon: <EyeOutlined />, onClick: () => setDrawerItem(record) },
+          ]}
+          more={[
+            {
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+              onClick: () => handleDelete(record),
+              confirm: {
+                title: t('network:gatewayapi.messages.confirmDeleteTitle'),
+                description: t('network:gatewayapi.messages.confirmDeleteHTTPRoute', { name: record.name }),
+              },
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -185,6 +181,7 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
           showTotal: (total) => t('network:gatewayapi.pagination.httprouteTotal', { total }),
         }}
         size="middle"
+        scroll={{ x: 'max-content' }}
       />
 
       <HTTPRouteDrawer

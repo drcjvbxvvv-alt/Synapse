@@ -141,8 +141,8 @@ export class NetworkPolicyService {
     return request.get(`/clusters/${clusterId}/networkpolicies/${namespace}/${name}/yaml`);
   }
 
-  static async create(clusterId: string, namespace: string, yamlContent: string): Promise<ApiResponse<NetworkPolicyInfo>> {
-    return request.post(`/clusters/${clusterId}/networkpolicies`, { namespace, yaml: yamlContent });
+  static async create(clusterId: string, namespace: string, yamlContent: string, dryRun = false): Promise<ApiResponse<NetworkPolicyInfo>> {
+    return request.post(`/clusters/${clusterId}/networkpolicies`, { namespace, yaml: yamlContent, dryRun });
   }
 
   static async update(

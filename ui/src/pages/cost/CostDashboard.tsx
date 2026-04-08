@@ -74,10 +74,32 @@ import {
 
 const { Text } = Typography;
 
+// ── Unified chart color palette (AntV G2 Colorful) ──────────────────────────
+// chart-only: data visualization colors are exempt from design token rule (analogous to TERMINAL_COLORS)
 const COLORS = [
-  '#4e79a7', '#f28e2b', '#e15759', '#76b7b2',
-  '#59a14f', '#edc948', '#b07aa1', '#ff9da7',
+  '#5B8FF9', '#5AD8A6', '#F6BD16', '#E8684A',
+  '#6DC8EC', '#9867BC', '#FF9D4D', '#269A99',
 ];
+
+const BAR_PROPS = {
+  radius: [5, 5, 0, 0] as [number, number, number, number],
+  maxBarSize: 44,
+  isAnimationActive: true,
+  animationBegin: 0,
+  animationDuration: 800,
+  animationEasing: 'ease-out' as const,
+};
+
+const TOOLTIP_STYLE = {
+  contentStyle: {
+    borderRadius: 10,
+    border: 'none',
+    boxShadow: '0 6px 24px rgba(0,0,0,0.10)',
+    fontSize: 13,
+  },
+};
+
+const GRID_STYLE = { stroke: '#f0f0f0', strokeDasharray: '4 4' };
 
 const CostDashboard: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
@@ -301,10 +323,10 @@ const CostDashboard: React.FC = () => {
     setBillingSaving(true);
     try {
       await CloudBillingService.updateConfig(clusterId, values);
-      message.success('帳單設定已儲存');
+      message.success(t('cost:billing.saveSuccess'));
       loadBillingConfig();
     } catch (e: unknown) {
-      message.error((e as Error).message ?? '儲存失敗');
+      message.error((e as Error).message ?? t('common:messages.failed'));
     } finally { setBillingSaving(false); }
   };
 
@@ -313,10 +335,10 @@ const CostDashboard: React.FC = () => {
     setBillingSyncing(true);
     try {
       await CloudBillingService.sync(clusterId, billingMonth);
-      message.success('帳單同步完成');
+      message.success(t('cost:billing.syncSuccess'));
       loadBillingOverview(billingMonth);
     } catch (e: unknown) {
-      message.error((e as Error).message ?? '同步失敗');
+      message.error((e as Error).message ?? t('cost:billing.syncError'));
     } finally { setBillingSyncing(false); }
   };
 
@@ -484,11 +506,11 @@ const CostDashboard: React.FC = () => {
                     data={nsOccupancy.slice(0, 15).map(n => ({ name: n.namespace, cpu: +n.cpu_occupancy_percent.toFixed(2) }))}
                     margin={{ top: 5, right: 20, left: 10, bottom: 60 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid {...GRID_STYLE} />
                     <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
                     <YAxis unit="%" />
-                    <RechartTooltip formatter={(v) => [`${v}%`, 'CPU 佔用率']} />
-                    <Bar dataKey="cpu" fill="#7eb8d4" />
+                    <RechartTooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v}%`, t('cost:occupancy.cpuRateLabel')]} />
+                    <Bar dataKey="cpu" fill="#5B8FF9" {...BAR_PROPS} />
                   </BarChart>
                 </ResponsiveContainer>
               </Card>
@@ -513,11 +535,11 @@ const CostDashboard: React.FC = () => {
             rowKey="namespace"
             columns={[
               { title: t('cost:table.namespace'), dataIndex: 'namespace', key: 'namespace' },
-              { title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_request_millicores', render: (v: number) => v.toFixed(0) },
-              { title: 'CPU 佔用 %', dataIndex: 'cpu_occupancy_percent', key: 'cpu_occupancy_percent', render: (v: number) => `${v.toFixed(2)}%` },
-              { title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'memory_request_mib', render: (v: number) => v.toFixed(0) },
-              { title: '記憶體佔用 %', dataIndex: 'memory_occupancy_percent', key: 'memory_occupancy_percent', render: (v: number) => `${v.toFixed(2)}%` },
-              { title: 'Pod 數', dataIndex: 'pod_count', key: 'pod_count' },
+              { title: t('cost:occupancy.cpuRequestCol'), dataIndex: 'cpu_request_millicores', key: 'cpu_request_millicores', render: (v: number) => v.toFixed(0) },
+              { title: t('cost:occupancy.cpuOccupancyCol'), dataIndex: 'cpu_occupancy_percent', key: 'cpu_occupancy_percent', render: (v: number) => `${v.toFixed(2)}%` },
+              { title: t('cost:occupancy.memRequestCol'), dataIndex: 'memory_request_mib', key: 'memory_request_mib', render: (v: number) => v.toFixed(0) },
+              { title: t('cost:occupancy.memOccupancyCol'), dataIndex: 'memory_occupancy_percent', key: 'memory_occupancy_percent', render: (v: number) => `${v.toFixed(2)}%` },
+              { title: t('cost:occupancy.podCountCol'), dataIndex: 'pod_count', key: 'pod_count' },
             ]}
             dataSource={nsOccupancy}
             loading={nsOccLoading}
@@ -542,13 +564,13 @@ const CostDashboard: React.FC = () => {
             <Alert
               type="info"
               showIcon
-              message="效率分析需要 Prometheus 監控資料，目前顯示佔用率資訊。請在叢集監控設定中配置 Prometheus。"
+              message={t('cost:occupancy.efficiencyNoMetrics')}
               style={{ marginBottom: 16 }}
             />
           )}
           <Row gutter={16} style={{ marginBottom: 24 }}>
             <Col xs={24} lg={14}>
-              <Card title="命名空間效率分佈（CPU 效率 vs 記憶體效率）" size="small">
+              <Card title={t('cost:occupancy.nsEfficiency')} size="small">
                 <ResponsiveContainer width="100%" height={320}>
                   <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -602,14 +624,14 @@ const CostDashboard: React.FC = () => {
               </Card>
             </Col>
             <Col xs={24} lg={10}>
-              <Card title="象限說明" size="small" style={{ height: '100%' }}>
+              <Card title={t('cost:occupancy.quadrantLegend')} size="small" style={{ height: '100%' }}>
                 <div style={{ padding: 8, fontSize: 13, lineHeight: 2 }}>
-                  <div><Tag color="red">❌ 高佔用 低效率</Tag> 過度申請，優先降低 requests</div>
-                  <div><Tag color="green">✅ 高佔用 高效率</Tag> 健康，可考慮擴充容量</div>
-                  <div><Tag color="orange">⚠️ 低佔用 低效率</Tag> 閒置資源，考慮縮減或清理</div>
-                  <div><Tag color="blue">💡 低佔用 高效率</Tag> 效能良好，資源充裕</div>
+                  <div><Tag color="red">❌</Tag> {t('cost:occupancy.quadrantHighOccupancyLowEff')}</div>
+                  <div><Tag color="green">✅</Tag> {t('cost:occupancy.quadrantHighOccupancyHighEff')}</div>
+                  <div><Tag color="orange">⚠️</Tag> {t('cost:occupancy.quadrantLowOccupancyLowEff')}</div>
+                  <div><Tag color="blue">💡</Tag> {t('cost:occupancy.quadrantLowOccupancyHighEff')}</div>
                   <div style={{ marginTop: 12, color: '#888' }}>
-                    泡泡大小 = CPU 佔用率（越大表示佔用越多叢集容量）
+                    {t('cost:occupancy.bubbleDesc')}
                   </div>
                 </div>
               </Card>
@@ -1008,11 +1030,11 @@ const CostDashboard: React.FC = () => {
               <Card title={t('cost:tabs.namespaces')} size="small">
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={barData} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid {...GRID_STYLE} />
                     <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
                     <YAxis />
-                    <RechartTooltip formatter={(v) => [`${currency} ${v}`, t('cost:table.estCost')]} />
-                    <Bar dataKey="cost" fill="#4e79a7" />
+                    <RechartTooltip {...TOOLTIP_STYLE} formatter={(v) => [`${currency} ${v}`, t('cost:table.estCost')]} />
+                    <Bar dataKey="cost" fill="#5B8FF9" {...BAR_PROPS} />
                   </BarChart>
                 </ResponsiveContainer>
               </Card>
@@ -1101,14 +1123,14 @@ const CostDashboard: React.FC = () => {
       key: 'cloud-billing',
       label: (
         <span>
-          <CloudOutlined /> 雲端帳單
+          <CloudOutlined /> {t('cost:tabs.cloudBilling')}
         </span>
       ),
       children: (
         <div>
           {/* Config card */}
           <Card
-            title="帳單資料來源設定"
+            title={t('cost:billing.configTitle')}
             size="small"
             style={{ marginBottom: 16 }}
             loading={billingConfigLoading}
@@ -1120,15 +1142,15 @@ const CostDashboard: React.FC = () => {
                   loading={billingSaving}
                   onClick={saveBillingConfig}
                 >
-                  儲存設定
+                  {t('cost:billing.saveConfig')}
                 </Button>
               </Space>
             }
           >
             <Form form={billingForm} layout="vertical" style={{ maxWidth: 600 }}>
-              <Form.Item name="provider" label="雲端供應商" initialValue="disabled">
+              <Form.Item name="provider" label={t('cost:billing.provider')} initialValue="disabled">
                 <Radio.Group onChange={e => setBillingProvider(e.target.value)}>
-                  <Radio.Button value="disabled">停用</Radio.Button>
+                  <Radio.Button value="disabled">{t('cost:billing.providerDisabled')}</Radio.Button>
                   <Radio.Button value="aws">AWS</Radio.Button>
                   <Radio.Button value="gcp">GCP</Radio.Button>
                 </Radio.Group>
@@ -1139,22 +1161,22 @@ const CostDashboard: React.FC = () => {
                   <Divider orientation="left" plain style={{ fontSize: 13 }}>AWS Cost Explorer</Divider>
                   <Row gutter={16}>
                     <Col span={12}>
-                      <Form.Item name="aws_access_key_id" label="Access Key ID">
+                      <Form.Item name="aws_access_key_id" label={t('cost:billing.accessKeyId')}>
                         <Input placeholder="AKIA..." />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item name="aws_secret_access_key" label={`Secret Access Key${billingConfig?.aws_secret_set ? ' (已設定，留空保留原值)' : ''}`}>
-                        <Input.Password placeholder={billingConfig?.aws_secret_set ? '******** (保留原值)' : '輸入 Secret'} />
+                      <Form.Item name="aws_secret_access_key" label={`${t('cost:billing.secretAccessKey')}${billingConfig?.aws_secret_set ? ` (${t('cost:billing.secretSet')})` : ''}`}>
+                        <Input.Password placeholder={billingConfig?.aws_secret_set ? `******** (${t('cost:billing.keepOriginal')})` : t('cost:billing.inputSecret')} />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item name="aws_region" label="Region" initialValue="us-east-1">
+                      <Form.Item name="aws_region" label={t('cost:billing.region')} initialValue="us-east-1">
                         <Input placeholder="us-east-1" />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item name="aws_linked_account_id" label="Linked Account ID（選填）">
+                      <Form.Item name="aws_linked_account_id" label={t('cost:billing.linkedAccountId')}>
                         <Input placeholder="123456789012" />
                       </Form.Item>
                     </Col>
@@ -1179,11 +1201,11 @@ const CostDashboard: React.FC = () => {
                     <Col span={24}>
                       <Form.Item
                         name="gcp_service_account_json"
-                        label={`Service Account JSON${billingConfig?.gcp_service_account_set ? ' (已設定，留空保留原值)' : ''}`}
+                        label={`${t('cost:billing.serviceAccountJson')}${billingConfig?.gcp_service_account_set ? ` (${t('cost:billing.secretSet')})` : ''}`}
                       >
                         <Input.TextArea
                           rows={5}
-                          placeholder={billingConfig?.gcp_service_account_set ? '已設定（留空保留原值）' : '貼上 service account JSON 內容'}
+                          placeholder={billingConfig?.gcp_service_account_set ? t('cost:billing.savedKeepOriginal') : t('cost:billing.pasteServiceAccount')}
                         />
                       </Form.Item>
                     </Col>
@@ -1195,8 +1217,8 @@ const CostDashboard: React.FC = () => {
             {billingConfig && billingConfig.provider !== 'disabled' && (
               <div style={{ marginTop: 8 }}>
                 {billingConfig.last_synced_at
-                  ? <Typography.Text type="secondary">上次同步：{billingConfig.last_synced_at}</Typography.Text>
-                  : <Typography.Text type="secondary">尚未同步</Typography.Text>}
+                  ? <Typography.Text type="secondary">{t('cost:billing.lastSync')}{billingConfig.last_synced_at}</Typography.Text>
+                  : <Typography.Text type="secondary">{t('cost:billing.neverSynced')}</Typography.Text>}
                 {billingConfig.last_error && (
                   <Alert type="error" message={billingConfig.last_error} showIcon style={{ marginTop: 8 }} />
                 )}
@@ -1207,7 +1229,7 @@ const CostDashboard: React.FC = () => {
           {/* Sync controls + overview */}
           {billingConfig?.provider !== 'disabled' && (
             <Card
-              title="帳單總覽"
+              title={t('cost:billing.overview')}
               size="small"
               extra={
                 <Space>
@@ -1222,27 +1244,27 @@ const CostDashboard: React.FC = () => {
                     loading={billingSyncing}
                     onClick={syncBilling}
                   >
-                    同步帳單
+                    {t('cost:billing.syncBtn')}
                   </Button>
                   <Button
                     icon={<ReloadOutlined />}
                     onClick={() => loadBillingOverview(billingMonth)}
                     loading={billingOverviewLoading}
                   >
-                    重新整理
+                    {t('common:actions.refresh')}
                   </Button>
                 </Space>
               }
             >
               <Spin spinning={billingOverviewLoading}>
                 {!billingOverview ? (
-                  <Empty description="尚無帳單資料，請先同步" />
+                  <Empty description={t('cost:billing.emptyData')} />
                 ) : (
                   <>
                     <Row gutter={16} style={{ marginBottom: 20 }}>
                       <Col xs={24} sm={8}>
                         <Statistic
-                          title={`${billingOverview.month} 總費用`}
+                          title={`${billingOverview.month} ${t('cost:billing.totalCost')}`}
                           value={billingOverview.total_amount}
                           precision={2}
                           suffix={billingOverview.currency}
@@ -1278,11 +1300,18 @@ const CostDashboard: React.FC = () => {
                               layout="vertical"
                               margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
                             >
-                              <CartesianGrid strokeDasharray="3 3" />
+                              <CartesianGrid {...GRID_STYLE} />
                               <XAxis type="number" unit={` ${billingOverview.currency}`} />
                               <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
-                              <RechartTooltip formatter={(v) => [`${billingOverview.currency} ${v}`, '費用']} />
-                              <Bar dataKey="amount" fill="#7eb8d4" />
+                              <RechartTooltip {...TOOLTIP_STYLE} formatter={(v) => [`${billingOverview.currency} ${v}`, '費用']} />
+                              <Bar dataKey="amount" fill="#5B8FF9"
+                                radius={[0, 5, 5, 0]}
+                                maxBarSize={44}
+                                isAnimationActive={true}
+                                animationBegin={0}
+                                animationDuration={800}
+                                animationEasing="ease-out"
+                              />
                             </BarChart>
                           </ResponsiveContainer>
                         </Col>

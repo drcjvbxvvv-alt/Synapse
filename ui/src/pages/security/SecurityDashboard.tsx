@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
 import {
   Tabs,
   Table,
@@ -21,6 +22,7 @@ import {
   Tooltip,
   Badge,
   message,
+  theme,
 } from 'antd';
 import {
   SafetyOutlined,
@@ -47,12 +49,13 @@ import type {
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
+// Use antd preset tag color names (theme-aware, no hardcoded hex)
 const SEVERITY_COLORS: Record<string, string> = {
-  CRITICAL: '#cf1322',
-  HIGH: '#d46b08',
-  MEDIUM: '#d48806',
-  LOW: '#52c41a',
-  UNKNOWN: '#8c8c8c',
+  CRITICAL: 'red',
+  HIGH: 'orange',
+  MEDIUM: 'gold',
+  LOW: 'green',
+  UNKNOWN: 'default',
 };
 
 function SeverityTag({ severity, count }: { severity: string; count: number }) {
@@ -68,6 +71,7 @@ function SeverityTag({ severity, count }: { severity: string; count: number }) {
 
 function ImageScanTab({ clusterId }: { clusterId: number }) {
   const { t } = useTranslation('security');
+  const { token } = theme.useToken();
   const [results, setResults] = useState<ScanResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [scanModalOpen, setScanModalOpen] = useState(false);
@@ -171,7 +175,7 @@ function ImageScanTab({ clusterId }: { clusterId: number }) {
       dataIndex: 'scanned_at',
       key: 'scanned_at',
       width: 160,
-      render: (v) => (v ? new Date(v).toLocaleString() : '-'),
+      render: (v) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'),
     },
     {
       title: '',
@@ -258,7 +262,7 @@ function ImageScanTab({ clusterId }: { clusterId: number }) {
         width={900}
       >
         {detailLoading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+          <div style={{ textAlign: 'center', padding: token.paddingXL }}><Spin /></div>
         ) : (
           <Table
             dataSource={vulns}
@@ -278,6 +282,7 @@ function ImageScanTab({ clusterId }: { clusterId: number }) {
 
 function BenchTab({ clusterId }: { clusterId: number }) {
   const { t } = useTranslation('security');
+  const { token } = theme.useToken();
   const [results, setResults] = useState<BenchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [triggering, setTriggering] = useState(false);
@@ -340,7 +345,7 @@ function BenchTab({ clusterId }: { clusterId: number }) {
       dataIndex: 'run_at',
       key: 'run_at',
       width: 160,
-      render: (v, r) => (v ? new Date(v).toLocaleString() : new Date(r.created_at).toLocaleString()),
+      render: (v, r) => dayjs(v || r.created_at).format('YYYY-MM-DD HH:mm'),
     },
     {
       title: t('bench.status'),
@@ -434,7 +439,7 @@ function BenchTab({ clusterId }: { clusterId: number }) {
         width={900}
       >
         {detailLoading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+          <div style={{ textAlign: 'center', padding: token.paddingXL }}><Spin /></div>
         ) : (
           <Collapse>
             {sections.map((ctrl: any, idx: number) => (
@@ -481,6 +486,7 @@ function BenchTab({ clusterId }: { clusterId: number }) {
 
 function GatekeeperTab({ clusterId }: { clusterId: number }) {
   const { t } = useTranslation('security');
+  const { token } = theme.useToken();
   const [data, setData] = useState<GatekeeperSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -534,7 +540,7 @@ function GatekeeperTab({ clusterId }: { clusterId: number }) {
           <Space>
             <Text>
               {t('gatekeeper.totalViolations')}:{' '}
-              <Text strong style={{ color: data.total_violations > 0 ? '#cf1322' : '#52c41a' }}>
+              <Text strong style={{ color: data.total_violations > 0 ? token.colorError : token.colorSuccess }}>
                 {data.total_violations}
               </Text>
             </Text>
@@ -547,9 +553,19 @@ function GatekeeperTab({ clusterId }: { clusterId: number }) {
 
       {error && <Alert type="warning" message={error} style={{ marginBottom: 16 }} />}
 
+      {data && !data.installed && (
+        <Alert
+          type="info"
+          showIcon
+          message={t('gatekeeper.notDetectedMsg')}
+          description={t('gatekeeper.notDetectedDesc')}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
-      ) : (
+        <div style={{ textAlign: 'center', padding: token.paddingXL }}><Spin /></div>
+      ) : data?.installed === false ? null : (
         <Table
           scroll={{ x: 'max-content' }}
           dataSource={data?.constraints ?? []}

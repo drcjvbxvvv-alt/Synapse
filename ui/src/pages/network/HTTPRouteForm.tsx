@@ -9,14 +9,17 @@ import {
   Space,
   Tabs,
   Divider,
+  Alert,
+  Tooltip,
   App,
 } from 'antd';
-import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, MinusCircleOutlined, ExclamationCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
 import { getNamespaces } from '../../services/configService';
 import { gatewayService } from '../../services/gatewayService';
+import { parseApiError } from '@/utils/api';
 import type {
   HTTPRouteItem,
   HTTPRouteFormValues,
@@ -132,6 +135,8 @@ const HTTPRouteForm: React.FC<HTTPRouteFormProps> = ({
   const [activeTab, setActiveTab] = useState('form');
   const [yamlContent, setYamlContent] = useState(DEFAULT_YAML);
   const [loading, setLoading] = useState(false);
+  const [dryRunning, setDryRunning] = useState(false);
+  const [dryRunResult, setDryRunResult] = useState<{ success: boolean; message: string } | null>(null);
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [gateways, setGateways] = useState<GatewayItem[]>([]);
 
@@ -152,6 +157,7 @@ const HTTPRouteForm: React.FC<HTTPRouteFormProps> = ({
       setYamlContent(DEFAULT_YAML);
     }
     setActiveTab('form');
+    setDryRunResult(null);
   }, [open, clusterId, editing, form]);
 
   const handleTabChange = (key: string) => {
@@ -162,6 +168,36 @@ const HTTPRouteForm: React.FC<HTTPRouteFormProps> = ({
       catch { message.error(t('gatewayapi.messages.yamlParseError')); }
     }
     setActiveTab(key);
+  };
+
+  const getCurrentYaml = (): string => {
+    if (activeTab === 'form') {
+      try { return formToYaml(form.getFieldsValue()); } catch { return yamlContent; }
+    }
+    return yamlContent;
+  };
+
+  const handleDryRun = async () => {
+    const yaml = getCurrentYaml();
+    try { YAML.parse(yaml); } catch (err) {
+      setDryRunResult({ success: false, message: t('gatewayapi.messages.yamlParseError') + ': ' + String(err) });
+      return;
+    }
+    setDryRunning(true);
+    setDryRunResult(null);
+    try {
+      const ns = ((YAML.parse(yaml) as Record<string, unknown>)?.metadata as Record<string, string> | undefined)?.namespace ?? 'default';
+      if (isEdit && editing) {
+        await gatewayService.updateHTTPRoute(clusterId, editing.namespace, editing.name, yaml, true);
+      } else {
+        await gatewayService.createHTTPRoute(clusterId, ns, yaml, true);
+      }
+      setDryRunResult({ success: true, message: t('gatewayapi.form.dryRunPassed') });
+    } catch (err: unknown) {
+      setDryRunResult({ success: false, message: parseApiError(err) || t('gatewayapi.form.dryRunFailed') });
+    } finally {
+      setDryRunning(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -197,18 +233,44 @@ const HTTPRouteForm: React.FC<HTTPRouteFormProps> = ({
     ? t('gatewayapi.form.editHTTPRoute', { name: editing!.name })
     : t('gatewayapi.form.createHTTPRoute');
 
+  const footer = (
+    <Space>
+      <Tooltip title={t('gatewayapi.form.preCheckTooltip')}>
+        <Button
+          icon={dryRunResult?.success ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
+          onClick={handleDryRun}
+          loading={dryRunning}
+        >
+          {t('gatewayapi.form.preCheck')}
+        </Button>
+      </Tooltip>
+      <Button onClick={onClose}>{t('gatewayapi.form.cancel')}</Button>
+      <Button type="primary" loading={loading} onClick={handleSubmit}>
+        {isEdit ? t('gatewayapi.form.saveBtn') : t('gatewayapi.form.createBtn')}
+      </Button>
+    </Space>
+  );
+
   return (
     <Modal
       title={title}
       open={open}
       onCancel={onClose}
-      onOk={handleSubmit}
-      okText={isEdit ? t('gatewayapi.form.saveBtn') : t('gatewayapi.form.createBtn')}
-      cancelText={t('gatewayapi.form.cancel')}
-      confirmLoading={loading}
+      footer={footer}
       width={900}
       destroyOnClose
     >
+      {dryRunResult && (
+        <Alert
+          message={dryRunResult.success ? t('gatewayapi.form.dryRunCheckPassed') : t('gatewayapi.form.dryRunCheckFailed')}
+          description={dryRunResult.message}
+          type={dryRunResult.success ? 'success' : 'error'}
+          showIcon
+          closable
+          onClose={() => setDryRunResult(null)}
+          style={{ marginBottom: 12 }}
+        />
+      )}
       <Tabs
         activeKey={activeTab}
         onChange={handleTabChange}

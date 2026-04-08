@@ -1,35 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Tag, Space, Button, Select, App, Modal, Popconfirm } from 'antd';
+import { Table, Tag, Space, Button, Select, App } from 'antd';
 import {
   ReloadOutlined,
   PlusOutlined,
   CheckCircleOutlined,
   QuestionCircleOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
+import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import { parseApiError } from '@/utils/api';
 import type { GRPCRouteItem, GatewayK8sCondition, GatewayTabProps } from './gatewayTypes';
-import MonacoEditor from '@monaco-editor/react';
-import * as YAML from 'yaml';
-
-const DEFAULT_YAML = `apiVersion: gateway.networking.k8s.io/v1
-kind: GRPCRoute
-metadata:
-  name: my-grpcroute
-  namespace: default
-spec:
-  parentRefs:
-    - name: my-gateway
-  rules:
-    - matches:
-        - method:
-            service: foo.v1.Foo
-            method: Bar
-      backendRefs:
-        - name: my-service
-          port: 50051
-`;
+import GRPCRouteForm from './GRPCRouteForm';
 
 const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
@@ -38,9 +22,7 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
   const [formVisible, setFormVisible] = useState(false);
-  const [yamlContent, setYamlContent] = useState(DEFAULT_YAML);
   const [editingItem, setEditingItem] = useState<GRPCRouteItem | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const namespaces = [...new Set(items.map((i) => i.namespace))].sort();
 
@@ -63,18 +45,11 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
 
   const handleCreate = () => {
     setEditingItem(null);
-    setYamlContent(DEFAULT_YAML);
     setFormVisible(true);
   };
 
-  const handleEdit = async (item: GRPCRouteItem) => {
+  const handleEdit = (item: GRPCRouteItem) => {
     setEditingItem(item);
-    try {
-      const r = await gatewayService.getGRPCRouteYAML(clusterId, item.namespace, item.name);
-      setYamlContent(r.yaml);
-    } catch {
-      setYamlContent(DEFAULT_YAML);
-    }
     setFormVisible(true);
   };
 
@@ -85,27 +60,6 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
       loadData();
     } catch (err) {
       message.error(parseApiError(err) || t('gatewayapi.messages.deleteGRPCRouteError'));
-    }
-  };
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    try {
-      const parsed = YAML.parse(yamlContent) as Record<string, unknown>;
-      const ns = (parsed?.metadata as Record<string, string>)?.['namespace'] ?? 'default';
-      if (editingItem) {
-        await gatewayService.updateGRPCRoute(clusterId, editingItem.namespace, editingItem.name, yamlContent);
-        message.success(t('gatewayapi.messages.updateGRPCRouteSuccess'));
-      } else {
-        await gatewayService.createGRPCRoute(clusterId, ns, yamlContent);
-        message.success(t('gatewayapi.messages.createGRPCRouteSuccess'));
-      }
-      setFormVisible(false);
-      loadData();
-    } catch (err) {
-      message.error(parseApiError(err) || t(editingItem ? 'gatewayapi.messages.updateGRPCRouteError' : 'gatewayapi.messages.createGRPCRouteError'));
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -176,24 +130,23 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
       title: t('gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 120,
+      width: 70,
       render: (_: unknown, record: GRPCRouteItem) => (
-        <Space size="small">
-          <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            {t('common:actions.edit')}
-          </Button>
-          <Popconfirm
-            title={t('gatewayapi.messages.confirmDeleteTitle')}
-            description={t('gatewayapi.messages.confirmDeleteGRPCRoute', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            { key: 'edit', label: t('common:actions.edit'), icon: <EditOutlined />, onClick: () => handleEdit(record) },
+          ]}
+          more={[
+            {
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+              onClick: () => handleDelete(record),
+              confirm: {
+                title: t('gatewayapi.messages.confirmDeleteTitle'),
+                description: t('gatewayapi.messages.confirmDeleteGRPCRoute', { name: record.name }),
+              },
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -226,27 +179,16 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
           showTotal: (total) => t('gatewayapi.pagination.grpcrouteTotal', { total }),
         }}
         size="middle"
+        scroll={{ x: 'max-content' }}
       />
 
-      <Modal
-        title={editingItem ? t('gatewayapi.form.editGRPCRoute', { name: editingItem.name }) : t('gatewayapi.form.createGRPCRoute')}
+      <GRPCRouteForm
         open={formVisible}
-        onCancel={() => setFormVisible(false)}
-        onOk={handleSubmit}
-        okText={editingItem ? t('gatewayapi.form.saveBtn') : t('gatewayapi.form.createBtn')}
-        cancelText={t('gatewayapi.form.cancel')}
-        confirmLoading={submitting}
-        width={860}
-        destroyOnClose
-      >
-        <MonacoEditor
-          height="500px"
-          language="yaml"
-          value={yamlContent}
-          onChange={(v) => setYamlContent(v || '')}
-          options={{ minimap: { enabled: false }, fontSize: 13, wordWrap: 'on', scrollBeyondLastLine: false }}
-        />
-      </Modal>
+        clusterId={clusterId}
+        editing={editingItem}
+        onClose={() => setFormVisible(false)}
+        onSuccess={() => { setFormVisible(false); loadData(); }}
+      />
     </>
   );
 };

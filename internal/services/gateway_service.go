@@ -583,7 +583,7 @@ func (s *GatewayService) DeleteGateway(ctx context.Context, namespace, name stri
 }
 
 // CreateHTTPRoute 從 YAML 建立 HTTPRoute
-func (s *GatewayService) CreateHTTPRoute(ctx context.Context, namespace, yamlStr string) (*HTTPRouteItem, error) {
+func (s *GatewayService) CreateHTTPRoute(ctx context.Context, namespace, yamlStr string, dryRun bool) (*HTTPRouteItem, error) {
 	obj, err := gwParseYAML(yamlStr)
 	if err != nil {
 		return nil, err
@@ -591,7 +591,11 @@ func (s *GatewayService) CreateHTTPRoute(ctx context.Context, namespace, yamlStr
 	if namespace != "" {
 		obj.SetNamespace(namespace)
 	}
-	result, err := s.dynClient.Resource(HTTPRouteGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, metav1.CreateOptions{})
+	opts := metav1.CreateOptions{}
+	if dryRun {
+		opts.DryRun = []string{metav1.DryRunAll}
+	}
+	result, err := s.dynClient.Resource(HTTPRouteGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -600,7 +604,7 @@ func (s *GatewayService) CreateHTTPRoute(ctx context.Context, namespace, yamlStr
 }
 
 // UpdateHTTPRoute 從 YAML 更新 HTTPRoute
-func (s *GatewayService) UpdateHTTPRoute(ctx context.Context, namespace, name, yamlStr string) (*HTTPRouteItem, error) {
+func (s *GatewayService) UpdateHTTPRoute(ctx context.Context, namespace, name, yamlStr string, dryRun bool) (*HTTPRouteItem, error) {
 	existing, err := s.dynClient.Resource(HTTPRouteGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -612,7 +616,11 @@ func (s *GatewayService) UpdateHTTPRoute(ctx context.Context, namespace, name, y
 	obj.SetNamespace(namespace)
 	obj.SetName(name)
 	obj.SetResourceVersion(existing.GetResourceVersion())
-	result, err := s.dynClient.Resource(HTTPRouteGVR).Namespace(namespace).Update(ctx, obj, metav1.UpdateOptions{})
+	opts := metav1.UpdateOptions{}
+	if dryRun {
+		opts.DryRun = []string{metav1.DryRunAll}
+	}
+	result, err := s.dynClient.Resource(HTTPRouteGVR).Namespace(namespace).Update(ctx, obj, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +675,7 @@ func (s *GatewayService) GetGRPCRouteYAML(ctx context.Context, namespace, name s
 	return string(data), nil
 }
 
-func (s *GatewayService) CreateGRPCRoute(ctx context.Context, namespace, yamlStr string) (*GRPCRouteItem, error) {
+func (s *GatewayService) CreateGRPCRoute(ctx context.Context, namespace, yamlStr string, dryRun bool) (*GRPCRouteItem, error) {
 	obj, err := gwParseYAML(yamlStr)
 	if err != nil {
 		return nil, err
@@ -675,7 +683,11 @@ func (s *GatewayService) CreateGRPCRoute(ctx context.Context, namespace, yamlStr
 	if namespace != "" {
 		obj.SetNamespace(namespace)
 	}
-	result, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, metav1.CreateOptions{})
+	opts := metav1.CreateOptions{}
+	if dryRun {
+		opts.DryRun = []string{metav1.DryRunAll}
+	}
+	result, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -683,7 +695,7 @@ func (s *GatewayService) CreateGRPCRoute(ctx context.Context, namespace, yamlStr
 	return &item, nil
 }
 
-func (s *GatewayService) UpdateGRPCRoute(ctx context.Context, namespace, name, yamlStr string) (*GRPCRouteItem, error) {
+func (s *GatewayService) UpdateGRPCRoute(ctx context.Context, namespace, name, yamlStr string, dryRun bool) (*GRPCRouteItem, error) {
 	existing, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -695,7 +707,11 @@ func (s *GatewayService) UpdateGRPCRoute(ctx context.Context, namespace, name, y
 	obj.SetNamespace(namespace)
 	obj.SetName(name)
 	obj.SetResourceVersion(existing.GetResourceVersion())
-	result, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).Update(ctx, obj, metav1.UpdateOptions{})
+	opts := metav1.UpdateOptions{}
+	if dryRun {
+		opts.DryRun = []string{metav1.DryRunAll}
+	}
+	result, err := s.dynClient.Resource(GRPCRouteGVR).Namespace(namespace).Update(ctx, obj, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -740,7 +756,7 @@ func (s *GatewayService) GetReferenceGrantYAML(ctx context.Context, namespace, n
 	return string(data), nil
 }
 
-func (s *GatewayService) CreateReferenceGrant(ctx context.Context, namespace, yamlStr string) (*ReferenceGrantItem, error) {
+func (s *GatewayService) CreateReferenceGrant(ctx context.Context, namespace, yamlStr string, dryRun bool) (*ReferenceGrantItem, error) {
 	obj, err := gwParseYAML(yamlStr)
 	if err != nil {
 		return nil, err
@@ -748,7 +764,11 @@ func (s *GatewayService) CreateReferenceGrant(ctx context.Context, namespace, ya
 	if namespace != "" {
 		obj.SetNamespace(namespace)
 	}
-	result, err := s.dynClient.Resource(ReferenceGrantGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, metav1.CreateOptions{})
+	opts := metav1.CreateOptions{}
+	if dryRun {
+		opts.DryRun = []string{metav1.DryRunAll}
+	}
+	result, err := s.dynClient.Resource(ReferenceGrantGVR).Namespace(obj.GetNamespace()).Create(ctx, obj, opts)
 	if err != nil {
 		return nil, err
 	}

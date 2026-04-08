@@ -348,6 +348,7 @@ func (h *GatewayHandler) CreateHTTPRoute(c *gin.Context) {
 	var req struct {
 		Namespace string `json:"namespace" binding:"required"`
 		YAML      string `json:"yaml" binding:"required"`
+		DryRun    bool   `json:"dryRun"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "請求格式錯誤: "+err.Error())
@@ -362,7 +363,7 @@ func (h *GatewayHandler) CreateHTTPRoute(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
-	item, err := svc.CreateHTTPRoute(ctx, req.Namespace, req.YAML)
+	item, err := svc.CreateHTTPRoute(ctx, req.Namespace, req.YAML, req.DryRun)
 	if err != nil {
 		logger.Error("建立 HTTPRoute 失敗", "error", err)
 		response.BadRequest(c, fmt.Sprintf("建立 HTTPRoute 失敗: %v", err))
@@ -378,7 +379,8 @@ func (h *GatewayHandler) UpdateHTTPRoute(c *gin.Context) {
 	name := c.Param("name")
 
 	var req struct {
-		YAML string `json:"yaml" binding:"required"`
+		YAML   string `json:"yaml" binding:"required"`
+		DryRun bool   `json:"dryRun"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "請求格式錯誤: "+err.Error())
@@ -393,7 +395,7 @@ func (h *GatewayHandler) UpdateHTTPRoute(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 
-	item, err := svc.UpdateHTTPRoute(ctx, namespace, name, req.YAML)
+	item, err := svc.UpdateHTTPRoute(ctx, namespace, name, req.YAML, req.DryRun)
 	if err != nil {
 		logger.Error("更新 HTTPRoute 失敗", "error", err, "namespace", namespace, "name", name)
 		response.BadRequest(c, fmt.Sprintf("更新 HTTPRoute 失敗: %v", err))
@@ -502,6 +504,7 @@ func (h *GatewayHandler) CreateGRPCRoute(c *gin.Context) {
 	var req struct {
 		Namespace string `json:"namespace" binding:"required"`
 		YAML      string `json:"yaml" binding:"required"`
+		DryRun    bool   `json:"dryRun"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "請求格式錯誤: "+err.Error())
@@ -513,7 +516,7 @@ func (h *GatewayHandler) CreateGRPCRoute(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
-	item, err := svc.CreateGRPCRoute(ctx, req.Namespace, req.YAML)
+	item, err := svc.CreateGRPCRoute(ctx, req.Namespace, req.YAML, req.DryRun)
 	if err != nil {
 		response.BadRequest(c, fmt.Sprintf("建立 GRPCRoute 失敗: %v", err))
 		return
@@ -524,7 +527,8 @@ func (h *GatewayHandler) CreateGRPCRoute(c *gin.Context) {
 func (h *GatewayHandler) UpdateGRPCRoute(c *gin.Context) {
 	namespace, name := c.Param("namespace"), c.Param("name")
 	var req struct {
-		YAML string `json:"yaml" binding:"required"`
+		YAML   string `json:"yaml" binding:"required"`
+		DryRun bool   `json:"dryRun"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "請求格式錯誤: "+err.Error())
@@ -536,7 +540,7 @@ func (h *GatewayHandler) UpdateGRPCRoute(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
-	item, err := svc.UpdateGRPCRoute(ctx, namespace, name, req.YAML)
+	item, err := svc.UpdateGRPCRoute(ctx, namespace, name, req.YAML, req.DryRun)
 	if err != nil {
 		response.BadRequest(c, fmt.Sprintf("更新 GRPCRoute 失敗: %v", err))
 		return
@@ -597,6 +601,7 @@ func (h *GatewayHandler) CreateReferenceGrant(c *gin.Context) {
 	var req struct {
 		Namespace string `json:"namespace" binding:"required"`
 		YAML      string `json:"yaml" binding:"required"`
+		DryRun    bool   `json:"dryRun"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "請求格式錯誤: "+err.Error())
@@ -608,7 +613,7 @@ func (h *GatewayHandler) CreateReferenceGrant(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
-	item, err := svc.CreateReferenceGrant(ctx, req.Namespace, req.YAML)
+	item, err := svc.CreateReferenceGrant(ctx, req.Namespace, req.YAML, req.DryRun)
 	if err != nil {
 		response.BadRequest(c, fmt.Sprintf("建立 ReferenceGrant 失敗: %v", err))
 		return

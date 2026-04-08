@@ -5,7 +5,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  Popconfirm,
   Select,
   Space,
   Table,
@@ -15,7 +14,10 @@ import {
 import {
   PlusOutlined,
   ReloadOutlined,
+  CodeOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
+import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import MonacoEditor from '@monaco-editor/react';
 import { MeshService, type DestinationRuleSummary } from '../../services/meshService';
@@ -182,24 +184,23 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 140,
+      width: 70,
       render: (_: unknown, record: DestinationRuleSummary) => (
-        <Space size="small">
-          <Button type="link" size="small" onClick={() => handleViewYAML(record)}>
-            YAML
-          </Button>
-          <Popconfirm
-            title={t('common:messages.confirmDelete')}
-            description={t('network:servicemesh.confirmDeleteDR', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            { key: 'yaml', label: t('common:actions.view') + ' YAML', icon: <CodeOutlined />, onClick: () => handleViewYAML(record) },
+          ]}
+          more={[
+            {
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+              onClick: () => handleDelete(record),
+              confirm: {
+                title: t('common:messages.confirmDelete'),
+                description: t('network:servicemesh.confirmDeleteDR', { name: record.name }),
+              },
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -230,7 +231,7 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
         loading={loading}
         size="middle"
         pagination={{ pageSize: 20 }}
-        scroll={{ x: 800 }}
+        scroll={{ x: 'max-content' }}
       />
 
       {/* YAML Viewer */}

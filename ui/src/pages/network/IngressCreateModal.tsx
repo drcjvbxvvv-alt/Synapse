@@ -405,12 +405,15 @@ spec:
       <Form.Item
         label={t('network:create.ingressName')}
         name="name"
-        rules={[{ required: true, message: t('network:create.ingressNameRequired') }]}
+        rules={[
+          { required: true, message: t('network:create.ingressNameRequired') },
+          { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: t('network:create.ingressNamePattern') },
+        ]}
       >
         <Input placeholder="my-ingress" />
       </Form.Item>
 
-      <Form.Item label="Ingress Class" name="ingressClassName">
+      <Form.Item label={t('network:create.ingressClassName')} name="ingressClassName">
         <Input placeholder="nginx" />
       </Form.Item>
 
@@ -431,7 +434,7 @@ spec:
                   
                   <Form.Item
                     {...field}
-                    label="Host"
+                    label={t('network:create.host')}
                     name={[field.name, 'host']}
                     rules={[{ required: true, message: t('network:create.hostRequired') }]}
                   >
@@ -555,11 +558,16 @@ spec:
       title={t('network:create.ingressTitle')}
       open={visible}
       onCancel={handleCancel}
-      onOk={handleSubmit}
-      confirmLoading={loading}
       width={900}
-      okText={t('network:create.createBtn')}
-      cancelText={t('common:actions.cancel')}
+      destroyOnHidden
+      footer={[
+        <Button key="cancel" onClick={handleCancel}>
+          {t('common:actions.cancel')}
+        </Button>,
+        <Button key="submit" type="primary" loading={loading} onClick={handleSubmit}>
+          {t('common:actions.create')}
+        </Button>,
+      ]}
     >
       <Tabs
         activeKey={activeTab}

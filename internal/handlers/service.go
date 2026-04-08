@@ -88,8 +88,8 @@ func (h *ServiceHandler) ListServices(c *gin.Context) {
 	namespace := c.DefaultQuery("namespace", "")
 	serviceType := c.DefaultQuery("type", "")
 	search := c.DefaultQuery("search", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)

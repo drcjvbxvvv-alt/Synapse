@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -20,6 +22,7 @@ type GatekeeperViolation struct {
 
 // GatekeeperSummary groups violations by constraint type.
 type GatekeeperSummary struct {
+	Installed       bool                  `json:"installed"`
 	TotalViolations int                   `json:"total_violations"`
 	Constraints     []ConstraintSummary   `json:"constraints"`
 }
@@ -50,10 +53,14 @@ func GetGatekeeperViolations(k8sClient *K8sClient) (*GatekeeperSummary, error) {
 	// List all ConstraintTemplates to discover constraint kinds
 	templateList, err := dynClient.Resource(constraintTemplateGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list ConstraintTemplates (Gatekeeper may not be installed): %w", err)
+		// Gatekeeper CRDs not present — treat as not installed, not an error
+		if k8serrors.IsNotFound(err) || isNoMatchError(err) {
+			return &GatekeeperSummary{Installed: false, Constraints: []ConstraintSummary{}}, nil
+		}
+		return nil, fmt.Errorf("failed to list ConstraintTemplates: %w", err)
 	}
 
-	summary := &GatekeeperSummary{}
+	summary := &GatekeeperSummary{Installed: true}
 
 	for _, template := range templateList.Items {
 		// The constraint kind is the CRD name from spec.crd.spec.names.kind
@@ -137,6 +144,18 @@ func GetGatekeeperViolations(k8sClient *K8sClient) (*GatekeeperSummary, error) {
 	}
 
 	return summary, nil
+}
+
+// isNoMatchError returns true when the API server doesn't know the resource type
+// (e.g. Gatekeeper CRDs not installed).
+func isNoMatchError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "no matches for kind") ||
+		strings.Contains(msg, "no kind is registered") ||
+		strings.Contains(msg, "the server could not find the requested resource")
 }
 
 // resourceNameForKind converts a CamelCase Kind to a lowercase plural resource name.

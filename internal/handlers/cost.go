@@ -109,8 +109,8 @@ func (h *CostHandler) GetWorkloadCosts(c *gin.Context) {
 	}
 	month := c.DefaultQuery("month", currentMonth())
 	namespace := c.DefaultQuery("namespace", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	items, total, err := h.svc.GetWorkloadCosts(clusterID, month, namespace, page, pageSize)
 	if err != nil {

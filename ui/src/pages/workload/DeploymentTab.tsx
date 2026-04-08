@@ -15,7 +15,9 @@ import {
   Popconfirm,
   Checkbox,
   Drawer,
+  Dropdown,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -25,6 +27,11 @@ import {
   DeploymentUnitOutlined,
   ArrowRightOutlined,
   ExclamationCircleOutlined,
+  LineChartOutlined,
+  EditOutlined,
+  ColumnWidthOutlined,
+  DeleteOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { Typography } from 'antd';
 const { Text } = Typography;
@@ -34,6 +41,7 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
 import { POLL_INTERVALS } from '../../config/queryConfig';
+import WorkloadCreateModal from '../../components/workload/WorkloadCreateModal';
 const { Option } = Select;
 
 interface DeploymentTabProps {
@@ -57,6 +65,7 @@ const { t } = useTranslation(['workload', 'common']);
   
   
   // 操作狀態
+  const [createModalVisible, setCreateModalVisible] = useState(false);
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
   const [scaleWorkload, setScaleWorkload] = useState<WorkloadInfo | null>(null);
   const [scaleReplicas, setScaleReplicas] = useState(1);
@@ -229,6 +238,53 @@ message.error(t('messages.scaleError'));
 message.error(t('messages.deleteError'));
 }
   };
+
+  // 監控
+  const handleMonitor = (workload: WorkloadInfo) => {
+    navigate(`/clusters/${clusterId}/workloads/deployment/${workload.namespace}/${workload.name}?tab=monitoring`);
+  };
+
+  // 編輯
+  const handleEdit = (workload: WorkloadInfo) => {
+    navigate(`/clusters/${clusterId}/workloads/create?type=Deployment&namespace=${workload.namespace}&name=${workload.name}`);
+  };
+
+  // 更多操作選單
+  const moreActions = (record: WorkloadInfo): MenuProps['items'] => [
+    {
+      key: 'scale',
+      label: t('actions.scale'),
+      icon: <ColumnWidthOutlined />,
+      onClick: () => {
+        setScaleWorkload(record);
+        setScaleReplicas(record.replicas || 1);
+        setScaleModalVisible(true);
+      },
+    },
+    {
+      key: 'restart',
+      label: t('actions.restart'),
+      icon: <ReloadOutlined />,
+      onClick: () => handleRestart(record),
+    },
+    { type: 'divider' },
+    {
+      key: 'delete',
+      danger: true,
+      icon: <DeleteOutlined />,
+      label: (
+        <Popconfirm
+          title={t('actions.confirmDelete', { type: 'Deployment' })}
+          description={t('actions.confirmDeleteDesc', { name: record.name })}
+          onConfirm={() => handleDelete(record)}
+          okText={t('common:actions.confirm')}
+          cancelText={t('common:actions.cancel')}
+        >
+          {t('common:actions.delete')}
+        </Popconfirm>
+      ),
+    },
+  ];
 
   // 行內重啟單一 Deployment
   const handleRestart = async (workload: WorkloadInfo) => {
@@ -574,61 +630,19 @@ message.success(t('messages.columnSettingsSaved'));
     {
       title: t('columns.actions'),
       key: 'actions',
-      width: 270,
+      width: 120,
       fixed: 'right' as const,
       render: (record: WorkloadInfo) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => navigate(`/clusters/${clusterId}/workloads/deployment/${record.namespace}/${record.name}?tab=monitoring`)}
-          >
-            {t('actions.monitoring')}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=Deployment&namespace=${record.namespace}&name=${record.name}`)}
-          >
-            {t('actions.edit')}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => {
-              setScaleWorkload(record);
-              setScaleReplicas(record.replicas || 1);
-              setScaleModalVisible(true);
-            }}
-          >
-            {t('actions.scale')}
-          </Button>
-          <Popconfirm
-            title={t('actions.confirmRestart')}
-            description={t('actions.confirmRestartDesc', { name: record.name })}
-            onConfirm={() => handleRestart(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small">
-              {t('actions.restart')}
-            </Button>
-          </Popconfirm>
-          <Popconfirm
-            title={t('actions.confirmDelete', { type: 'Deployment' })}
-            description={t('actions.confirmDeleteDesc', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button
-              type="link"
-              size="small"
-              danger
-            >
-              {t('actions.delete')}
-            </Button>
-          </Popconfirm>
+        <Space size={0}>
+          <Tooltip title={t('actions.monitoring')}>
+            <Button type="link" size="small" icon={<LineChartOutlined />} onClick={() => handleMonitor(record)} />
+          </Tooltip>
+          <Tooltip title={t('common:actions.edit')}>
+            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          </Tooltip>
+          <Dropdown menu={{ items: moreActions(record) }} trigger={['click']}>
+            <Button type="link" size="small" icon={<MoreOutlined />} />
+          </Dropdown>
         </Space>
       ),
     },
@@ -683,7 +697,7 @@ message.success(t('messages.columnSettingsSaved'));
           <Button
             type="primary"
             icon={<PlusOutlined />}
-          onClick={() => navigate(`/clusters/${clusterId}/workloads/create?type=Deployment`)}
+            onClick={() => setCreateModalVisible(true)}
           >
             {t('actions.create', { type: 'Deployment' })}
           </Button>
@@ -758,7 +772,7 @@ style={{ flex: 1 }}
       <Table
         columns={columns}
         dataSource={workloads}
-        locale={{ emptyText: t('common:noData') }}
+        locale={{ emptyText: t('common:messages.noData') }}
         rowKey={(record) => `${record.namespace}-${record.name}-${record.type}`}
         rowSelection={rowSelection}
         loading={loading}
@@ -1038,6 +1052,17 @@ onChange: (page, size) => {
           </Space>
         </div>
       </Drawer>
+
+      <WorkloadCreateModal
+        open={createModalVisible}
+        workloadType="Deployment"
+        clusterId={clusterId}
+        onClose={() => setCreateModalVisible(false)}
+        onSuccess={() => {
+          setCreateModalVisible(false);
+          loadWorkloads();
+        }}
+      />
 </div>
   );
 };

@@ -320,7 +320,15 @@ func createDefaultUser(db *gorm.DB) {
 	}
 
 	salt := "synapse_salt"
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("Synapse@2026"+salt), bcrypt.DefaultCost)
+
+	// 優先從環境變數讀取初始密碼，未設定則使用內建預設值並警告
+	initPassword := os.Getenv("SYNAPSE_ADMIN_PASSWORD")
+	if initPassword == "" {
+		initPassword = "Synapse@2026"
+		logger.Warn("⚠  SYNAPSE_ADMIN_PASSWORD 未設定，使用內建預設密碼（生產環境請設定此環境變數）")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(initPassword+salt), 12)
 	if err != nil {
 		logger.Error("生成密碼雜湊失敗: %v", err)
 		return
@@ -338,7 +346,14 @@ func createDefaultUser(db *gorm.DB) {
 	if err := db.Create(&user).Error; err != nil {
 		logger.Error("建立預設使用者失敗: %v", err)
 	} else {
-		logger.Info("預設管理員使用者建立成功: admin/Synapse@2026")
+		logger.Info("預設管理員使用者建立成功（帳號: admin，密碼來源: %s）",
+			func() string {
+				if os.Getenv("SYNAPSE_ADMIN_PASSWORD") != "" {
+					return "SYNAPSE_ADMIN_PASSWORD 環境變數"
+				}
+				return "內建預設值"
+			}(),
+		)
 	}
 }
 

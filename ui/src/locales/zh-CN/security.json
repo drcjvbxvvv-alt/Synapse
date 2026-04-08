@@ -73,6 +73,42 @@
     "namespace": "命名空间",
     "message": "消息",
     "noData": "未发现违规，或 Gatekeeper 尚未安装",
-    "notInstalled": "Gatekeeper 未安装或无法访问"
+    "notInstalled": "Gatekeeper 未安装或无法访问",
+    "notDetectedMsg": "未检测到 OPA/Gatekeeper",
+    "notDetectedDesc": "请先在集群中安装 Gatekeeper，Synapse 将自动收集 Constraint 违规信息。"
+  },
+  "cert": {
+    "pageTitle": "证书管理（cert-manager）",
+    "notDetected": "未检测到 cert-manager",
+    "installDesc": "请先在集群中安装 cert-manager，Synapse 将自动识别证书并提供到期管理。",
+    "reinstallBtn": "安装完成后点此重新检测",
+    "tabCerts": "证书",
+    "tabIssuers": "签发者",
+    "emptyCerts": "无证书资源",
+    "emptyIssuers": "无 Issuer / ClusterIssuer 资源",
+    "status": {
+      "Valid": "有效",
+      "Expiring": "即将到期",
+      "Expired": "已到期",
+      "NotReady": "未就绪"
+    },
+    "issuerStatus": {
+      "ready": "就绪",
+      "notReady": "未就绪"
+    },
+    "columns": {
+      "status": "状态",
+      "name": "名称",
+      "dnsNames": "DNS 名称",
+      "issuer": "Issuer",
+      "secret": "Secret",
+      "expiry": "到期时间"
+    },
+    "issuerColumns": {
+      "ready": "就绪",
+      "name": "名称",
+      "kind": "类型",
+      "backend": "后端"
+    }
   }
 }

@@ -111,7 +111,7 @@
     "kubeconfigContent": "Kubeconfig 內容",
     "kubeconfigContentPlaceholder": "請貼上完整的 kubeconfig 檔案內容...",
     "kubeconfigContentRequired": "請輸入 kubeconfig 內容",
-    "kubeconfigHint": "請貼上使用 <code>kubectl config view --raw --minify --flatten --context=&lt;context-name&gt;</code> 匯出的完整 kubeconfig，確保憑證資料已內嵌（非檔案路徑）。",
+    "kubeconfigHint": "如何取得 kubeconfig：<br/><b>① 查詢 context 名稱</b>　<code>kubectl config get-contexts</code>　→ 找 <b>NAME</b> 欄的值（例如 <code>my-cluster</code>）<br/><b>② 匯出單一叢集設定</b>　<code>kubectl config view --raw --minify --flatten --context=my-cluster</code><br/><b>③ 貼上輸出內容</b>　將整段文字貼到上方欄位（憑證已內嵌，非檔案路徑）",
     "apiServerAddress": "API Server 地址",
     "apiServerRequired": "請輸入 API Server 地址",
     "apiServerValid": "請輸入有效的 URL 地址",

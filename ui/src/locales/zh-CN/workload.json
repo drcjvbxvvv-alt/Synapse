@@ -42,7 +42,8 @@
     "restartError": "重启失败",
     "confirmRedeploy": "确认重新部署",
     "confirmRedeployDesc": "确定要重新部署选中的 {{count}} 个{{type}}吗？",
-    "selectRedeploy": "请先选择要重新部署的{{type}}"
+    "selectRedeploy": "请先选择要重新部署的{{type}}",
+    "aiDiagnose": "AI 诊断"
   },
   "detail": {
     "title": "工作负载详情",
@@ -176,7 +177,8 @@
     "scheduling": "调度策略",
     "history": "版本记录",
     "events": "事件列表",
-    "monitoring": "监控"
+    "monitoring": "监控",
+    "metrics": "性能指标"
   },
   "create": {
     "title": "{{action}} {{type}}",

@@ -101,7 +101,7 @@ func (h *PDBHandler) ListPDB(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	list, err := k8sClient.GetClientset().PolicyV1().PodDisruptionBudgets(namespace).List(ctx, metav1.ListOptions{})
@@ -137,7 +137,7 @@ func (h *PDBHandler) GetWorkloadPDB(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	list, err := k8sClient.GetClientset().PolicyV1().PodDisruptionBudgets(namespace).List(ctx, metav1.ListOptions{})
@@ -190,7 +190,7 @@ func (h *PDBHandler) CreatePDB(c *gin.Context) {
 		Spec: buildPDBSpec(&req),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	created, err := k8sClient.GetClientset().PolicyV1().PodDisruptionBudgets(req.Namespace).Create(ctx, pdb, metav1.CreateOptions{})
@@ -234,7 +234,7 @@ func (h *PDBHandler) UpdatePDB(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	existing, err := k8sClient.GetClientset().PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -279,7 +279,7 @@ func (h *PDBHandler) DeletePDB(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	if err := k8sClient.GetClientset().PolicyV1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {

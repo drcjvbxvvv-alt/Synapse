@@ -111,7 +111,7 @@
     "kubeconfigContent": "Kubeconfig Content",
     "kubeconfigContentPlaceholder": "Paste the complete kubeconfig file content...",
     "kubeconfigContentRequired": "Please enter kubeconfig content",
-    "kubeconfigHint": "Paste the full kubeconfig exported via <code>kubectl config view --raw --minify --flatten --context=&lt;context-name&gt;</code>. Certificate data must be embedded (not file paths).",
+    "kubeconfigHint": "How to get your kubeconfig:<br/><b>① Find your context name</b>　<code>kubectl config get-contexts</code>　→ copy a value from the <b>NAME</b> column (e.g. <code>my-cluster</code>)<br/><b>② Export the cluster config</b>　<code>kubectl config view --raw --minify --flatten --context=my-cluster</code><br/><b>③ Paste the output</b>　paste the entire output above (certificates are embedded, not file paths)",
     "apiServerAddress": "API Server Address",
     "apiServerRequired": "Please enter API Server address",
     "apiServerValid": "Please enter a valid URL",

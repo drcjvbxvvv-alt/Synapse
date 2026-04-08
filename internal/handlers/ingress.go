@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	networkingv1 "k8s.io/api/networking/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/yaml"
@@ -93,8 +94,8 @@ func (h *IngressHandler) ListIngresses(c *gin.Context) {
 	namespace := c.DefaultQuery("namespace", "")
 	ingressClass := c.DefaultQuery("ingressClass", "")
 	search := c.DefaultQuery("search", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
@@ -533,7 +534,11 @@ func (h *IngressHandler) CreateIngress(c *gin.Context) {
 
 	if err != nil {
 		logger.Error("建立Ingress失敗", "error", err, "clusterId", clusterID)
-		response.InternalError(c, fmt.Sprintf("建立Ingress失敗: %v", err))
+		if k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
+			response.BadRequest(c, fmt.Sprintf("建立Ingress失敗: %v", err))
+		} else {
+			response.InternalError(c, fmt.Sprintf("建立Ingress失敗: %v", err))
+		}
 		return
 	}
 

@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  Card, 
-  Tabs, 
-  Spin, 
-  message, 
-  Button, 
+import {
+  Card,
+  Tabs,
+  Spin,
+  message,
+  Button,
   Space,
   Tag,
   Descriptions,
   Typography,
   Row,
-  Col
+  Col,
+  theme,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -30,6 +31,7 @@ import SchedulingTab from './tabs/SchedulingTab';
 import HistoryTab from './tabs/HistoryTab';
 import EventsTab from './tabs/EventsTab';
 import MonitoringTab from './tabs/MonitoringTab';
+import WorkloadMetricsChart from '../../components/WorkloadMetricsChart';
 
 const { Title, Text } = Typography;
 
@@ -67,6 +69,7 @@ const DeploymentDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   
 const { t } = useTranslation(["workload", "common"]);
+const { token } = theme.useToken();
 const [loading, setLoading] = useState(false);
   const [deployment, setDeployment] = useState<DeploymentDetailData | null>(null);
   // 從 URL 參數獲取預設 Tab，支援透過 ?tab=monitoring 直接跳轉到監控頁
@@ -154,7 +157,7 @@ const [loading, setLoading] = useState(false);
 
   if (loading && !deployment) {
     return (
-      <div style={{ textAlign: 'center', padding: '100px 0' }}>
+      <div style={{ textAlign: 'center', padding: `${token.paddingXL * 3}px 0` }}>
         <Spin size="large" tip={t("common:messages.loading")} />
       </div>
     );
@@ -162,7 +165,7 @@ const [loading, setLoading] = useState(false);
 
   if (!deployment) {
     return (
-      <div style={{ textAlign: 'center', padding: '100px 0' }}>
+      <div style={{ textAlign: 'center', padding: `${token.paddingXL * 3}px 0` }}>
         <Text type="secondary">{t("messages.notFound", { type: "Deployment" })}</Text>
       </div>
     );
@@ -264,12 +267,29 @@ const [loading, setLoading] = useState(false);
         />
       ),
     },
+    {
+      key: 'metrics',
+      label: (
+        <span>
+          <LineChartOutlined style={{ marginRight: 4 }} />
+          {t('detailTabs.metrics')}
+        </span>
+      ),
+      children: (
+        <WorkloadMetricsChart
+          clusterId={clusterId!}
+          namespace={deployment.namespace}
+          name={deployment.name}
+          workloadKind="deployments"
+        />
+      ),
+    },
   ];
 
   return (
-    <div style={{ padding: '16px 24px', background: '#f0f2f5', minHeight: '100vh' }}>
+    <div style={{ padding: `${token.padding}px ${token.paddingLG}px`, background: token.colorBgLayout, minHeight: '100vh' }}>
       {/* 頂部導航區域 */}
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: token.margin }}>
         <Space>
           <Button 
             icon={<ArrowLeftOutlined />} 
@@ -282,11 +302,11 @@ const [loading, setLoading] = useState(false);
       </div>
 
       {/* 標題和操作按鈕 */}
-      <div style={{ 
-        background: '#fff', 
-        padding: '16px 24px', 
-        marginBottom: 16,
-        borderRadius: '8px',
+      <div style={{
+        background: token.colorBgContainer,
+        padding: `${token.padding}px ${token.paddingLG}px`,
+        marginBottom: token.margin,
+        borderRadius: token.borderRadius,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'

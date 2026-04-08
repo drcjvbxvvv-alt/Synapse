@@ -6,7 +6,6 @@ import {
   Tag,
   Input,
   Select,
-  Popconfirm,
   Typography,
   Tooltip,
   Modal,
@@ -19,12 +18,14 @@ import {
   SearchOutlined,
   SettingOutlined,
   DeleteOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import { StorageService } from '../../services/storageService';
 import type { PV } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
+import { ActionButtons } from '../../components/ActionButtons';
 
 const { Link } = Typography;
 
@@ -439,32 +440,31 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 120,
+      width: 90,
       render: (_: unknown, record: PV) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleViewYAML(record)}
-          >
-            YAML
-          </Button>
-          <Popconfirm
-            title={t('storage:messages.confirmDeletePVItem')}
-            description={t('storage:messages.confirmDeletePVDesc', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button
-              type="link"
-              size="small"
-              danger
-            >
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            {
+              key: 'yaml',
+              label: 'YAML',
+              icon: <CodeOutlined />,
+              onClick: () => handleViewYAML(record),
+            },
+          ]}
+          more={[
+            {
+              key: 'delete',
+              label: t('common:actions.delete'),
+              icon: <DeleteOutlined />,
+              danger: true,
+              confirm: {
+                title: t('storage:messages.confirmDeletePVItem'),
+                description: t('storage:messages.confirmDeletePVDesc', { name: record.name }),
+              },
+              onClick: () => handleDelete(record),
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -584,7 +584,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
         rowSelection={rowSelection}
         loading={loading}
         virtual
-        scroll={{ x: 1400, y: 600 }}
+        scroll={{ x: 'max-content', y: 600 }}
         size="middle"
         onChange={handleTableChange}
         pagination={{

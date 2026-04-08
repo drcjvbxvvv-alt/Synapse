@@ -53,6 +53,11 @@ export const nodeService = {
     return request.post(`/clusters/${clusterId}/nodes/${name}/uncordon`);
   },
 
+  // 新增 / 更新節點標籤
+  patchNodeLabels: async (clusterId: string, name: string, labels: Record<string, string>): Promise<void> => {
+    await request.patch(`/clusters/${clusterId}/nodes/${name}/labels`, { labels });
+  },
+
   // 驅逐節點 (Drain)
   drainNode: async (
     clusterId: string, 

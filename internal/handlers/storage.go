@@ -72,8 +72,8 @@ func (h *StorageHandler) ListPVCs(c *gin.Context) {
 	namespace := c.DefaultQuery("namespace", "")
 	status := c.DefaultQuery("status", "")
 	search := c.DefaultQuery("search", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
@@ -456,8 +456,8 @@ func (h *StorageHandler) ListPVs(c *gin.Context) {
 	// 獲取查詢參數
 	status := c.DefaultQuery("status", "")
 	search := c.DefaultQuery("search", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)
@@ -796,8 +796,8 @@ func (h *StorageHandler) ListStorageClasses(c *gin.Context) {
 
 	// 獲取查詢參數
 	search := c.DefaultQuery("search", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	page := parsePage(c)
+	pageSize := parsePageSize(c, 20)
 
 	// 從叢集服務獲取叢集資訊
 	cluster, err := h.clusterService.GetCluster(clusterID)

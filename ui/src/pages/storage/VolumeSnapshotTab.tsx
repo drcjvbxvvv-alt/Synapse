@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Badge, Modal, Form, Input, Select,
-  Popconfirm, Typography, Spin, App, Tooltip,
+  Typography, Spin, App, Tooltip,
 } from 'antd';
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import NotInstalledCard from '../../components/NotInstalledCard';
 import {
@@ -139,17 +140,23 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
       render: (v: string) => v ? new Date(v).toLocaleString() : '—',
     },
     {
-      title: t('snapshot.actions'), key: 'actions', fixed: 'right' as const, width: 100,
+      title: t('snapshot.actions'), key: 'actions', fixed: 'right' as const, width: 90,
       render: (_: unknown, r: VolumeSnapshotInfo) => (
-        <Popconfirm
-          title={t('snapshot.confirmDelete')}
-          description={t('snapshot.confirmDeleteDesc', { name: r.name })}
-          onConfirm={() => handleDelete(r.namespace, r.name)}
-          okText={t('snapshot.confirm')}
-          cancelText={t('snapshot.cancel')}
-        >
-          <Button type="link" size="small" danger>{t('snapshot.delete')}</Button>
-        </Popconfirm>
+        <ActionButtons
+          more={[
+            {
+              key: 'delete',
+              label: t('snapshot.delete'),
+              icon: <DeleteOutlined />,
+              danger: true,
+              confirm: {
+                title: t('snapshot.confirmDelete'),
+                description: t('snapshot.confirmDeleteDesc', { name: r.name }),
+              },
+              onClick: () => handleDelete(r.namespace, r.name),
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -177,7 +184,7 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
         dataSource={snapshots}
         loading={loading}
         size="small"
-        scroll={{ x: 900 }}
+        scroll={{ x: 'max-content' }}
         pagination={{ pageSize: 20, showSizeChanger: true, showTotal: tot => t('snapshot.total', { total: tot }) }}
       />
 
