@@ -42,13 +42,15 @@ interface PanelProps { clusterId: string }
 const HPATab: React.FC<PanelProps> = ({ clusterId }) => {
   const { t } = useTranslation('workload');
   return (
-    <Alert
-      type="info"
-      showIcon
-      message={t('autoscaling.hpa.redirectHint')}
-      description={t('autoscaling.hpa.redirectDesc')}
-      style={{ maxWidth: 600 }}
-    />
+    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', paddingTop: 48 }}>
+      <Alert
+        type="info"
+        showIcon
+        message={t('autoscaling.hpa.redirectHint')}
+        description={t('autoscaling.hpa.redirectDesc')}
+        style={{ width: '100%', maxWidth: 600 }}
+      />
+    </div>
   );
 };
 
