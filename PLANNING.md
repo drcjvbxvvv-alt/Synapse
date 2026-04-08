@@ -17,7 +17,7 @@
    - [5.19 彈性伸縮深化（KEDA / Karpenter / CAS）](#519-彈性伸縮深化sprint3-週-待實作)
    - [5.20 策略與合規深化（Kyverno / PSA / RBAC）](#520-策略與合規深化sprint3-週-待實作)
    - [5.21 叢集運維工具箱](#521-叢集運維工具箱sprint2-週-待實作)
-   - [5.22 VolumeSnapshot + Velero 深化](#522-volumesnapshot--velero-深化sprint2-週-待實作)
+   - [5.22 VolumeSnapshot + Velero 深化](#522-volumesnapshot--velero-深化sprint2-週-已完成2026-04-08)
    - [5.23 臨時偵錯容器 UI](#523-臨時偵錯容器ephemeral-debug-containers-uisprint1-週-待實作)
    - [5.24 映像安全深化（Trivy + Falco）](#524-映像安全深化sprint2-週-待實作)
    - [5.25 YAML 自動回滾機制](#525-yaml-自動回滾機制sprint2-週-待實作)
@@ -1314,7 +1314,7 @@ type RBACRiskItem struct {
 
 ---
 
-### 5.22 VolumeSnapshot + Velero 深化（Sprint，2 週）🔲 待實作
+### 5.22 VolumeSnapshot + Velero 深化（Sprint，2 週）✅ 已完成（2026-04-08）
 
 > **現況：** §5.4（StorageClass / PVC）已完成。但 VolumeSnapshot CRD 和 Velero Backup / Restore 完全不可見，而這是 Stateful 應用的核心保護機制。
 
@@ -1671,7 +1671,7 @@ error      →  ✕ 回滾失敗，請手動處理
 | M20 | **彈性伸縮深化 KEDA / Karpenter / CAS**（§5.19） | ✅ 已完成（2026-04-08） | 🟡 中 | 3 週 |
 | M21 | **策略與合規深化 Kyverno / PSA / RBAC 風險**（§5.20） | 🔲 待實作 | 🟡 中 | 3 週 |
 | M22 | **叢集運維工具箱 Deprecated API / Drain**（§5.21） | 🔲 待實作 | 🟡 中 | 2 週 |
-| M23 | **VolumeSnapshot + Velero 深化**（§5.22） | 🔲 待實作 | 🟢 低 | 2 週 |
+| M23 | **VolumeSnapshot + Velero 深化**（§5.22） | ✅ 已完成 | 🟢 低 | 2 週 |
 | M24 | **臨時偵錯容器 UI**（§5.23） | 🔲 待實作 | 🟡 中 | 1 週 |
 | M25 | **映像安全深化 Trivy + Falco**（§5.24） | 🔲 待實作 | 🟡 中 | 2 週 |
 

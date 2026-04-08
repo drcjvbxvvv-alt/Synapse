@@ -582,6 +582,27 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			pfHandler := handlers.NewPortForwardHandler(d.db, d.clusterSvc, d.k8sMgr)
 			cluster.POST("/pods/:namespace/:name/portforward", pfHandler.StartPortForward)
 
+			// VolumeSnapshot + Velero（§5.22）
+			vsHandler := handlers.NewVolumeSnapshotHandler(d.db, d.clusterSvc, d.k8sMgr)
+			vsGroup := cluster.Group("/volume-snapshots")
+			{
+				vsGroup.GET("/status", vsHandler.CheckVolumeSnapshotCRD)
+				vsGroup.GET("", vsHandler.ListVolumeSnapshots)
+				vsGroup.POST("", vsHandler.CreateVolumeSnapshot)
+				vsGroup.DELETE("/:namespace/:name", vsHandler.DeleteVolumeSnapshot)
+			}
+			cluster.GET("/volume-snapshot-classes", vsHandler.ListVolumeSnapshotClasses)
+			veleroGroup := cluster.Group("/velero")
+			{
+				veleroGroup.GET("/status", vsHandler.CheckVelero)
+				veleroGroup.GET("/backups", vsHandler.ListVeleroBackups)
+				veleroGroup.GET("/restores", vsHandler.ListVeleroRestores)
+				veleroGroup.POST("/restores", vsHandler.TriggerRestore)
+				veleroGroup.GET("/schedules", vsHandler.ListVeleroSchedules)
+				veleroGroup.POST("/schedules", vsHandler.CreateVeleroSchedule)
+				veleroGroup.DELETE("/schedules/:name", vsHandler.DeleteVeleroSchedule)
+			}
+
 			// 彈性伸縮深化（§5.19）：KEDA / Karpenter / CAS
 			autoscalingHandler := handlers.NewAutoscalingHandler(d.db, d.clusterSvc, d.k8sMgr)
 			keda := cluster.Group("/keda")

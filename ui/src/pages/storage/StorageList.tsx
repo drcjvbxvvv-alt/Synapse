@@ -8,6 +8,8 @@ import {
 import PVCTab from './PVCTab';
 import PVTab from './PVTab';
 import StorageClassTab from './StorageClassTab';
+import VolumeSnapshotTab from './VolumeSnapshotTab';
+import VeleroTab from './VeleroTab';
 import { useTranslation } from 'react-i18next';
 
 const StorageList: React.FC = () => {
@@ -63,6 +65,16 @@ const [searchParams, setSearchParams] = useSearchParams();
           onCountChange={setSCCount}
         />
       ),
+    },
+    {
+      key: 'snapshot',
+      label: t('storage:tabs.snapshot'),
+      children: <VolumeSnapshotTab clusterId={clusterId || ''} />,
+    },
+    {
+      key: 'velero',
+      label: t('storage:tabs.velero'),
+      children: <VeleroTab clusterId={clusterId || ''} />,
     },
   ];
 
