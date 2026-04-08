@@ -11,15 +11,13 @@ import {
   Typography,
   App,
   Tooltip,
+  Popconfirm,
   Segmented,
 } from 'antd';
 import {
   ReloadOutlined,
   SearchOutlined,
   PlusOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  EditOutlined,
   UnorderedListOutlined,
   ApartmentOutlined,
   ToolOutlined,
@@ -74,7 +72,7 @@ spec:
 
 const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountChange }) => {
   const { t } = useTranslation(['network', 'common']);
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
 
   const [viewMode, setViewMode] = useState<'list' | 'topology' | 'simulate'>('list');
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -186,21 +184,14 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
     }
   };
 
-  const handleDelete = (policy: NetworkPolicyInfo) => {
-    modal.confirm({
-      title: t('network:networkpolicy.messages.confirmDeleteTitle'),
-      content: t('network:networkpolicy.messages.confirmDeleteDesc', { name: policy.name }),
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await NetworkPolicyService.delete(clusterId, policy.namespace, policy.name);
-          message.success(t('common:messages.deleteSuccess'));
-          fetchPolicies();
-        } catch {
-          message.error(t('common:messages.deleteError'));
-        }
-      },
-    });
+  const handleDelete = async (policy: NetworkPolicyInfo) => {
+    try {
+      await NetworkPolicyService.delete(clusterId, policy.namespace, policy.name);
+      message.success(t('common:messages.deleteSuccess'));
+      fetchPolicies();
+    } catch {
+      message.error(t('common:messages.deleteError'));
+    }
   };
 
   const columns = [
@@ -273,18 +264,26 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 140,
+      width: 150,
       render: (_: unknown, record: NetworkPolicyInfo) => (
-        <Space>
-          <Tooltip title={t('common:actions.view')}>
-            <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewYAML(record)} />
-          </Tooltip>
-          <Tooltip title={t('common:actions.edit')}>
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleEditYAML(record)} />
-          </Tooltip>
-          <Tooltip title={t('common:actions.delete')}>
-            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
-          </Tooltip>
+        <Space size="small">
+          <Button type="link" size="small" onClick={() => handleViewYAML(record)}>
+            YAML
+          </Button>
+          <Button type="link" size="small" onClick={() => handleEditYAML(record)}>
+            {t('common:actions.edit')}
+          </Button>
+          <Popconfirm
+            title={t('network:networkpolicy.messages.confirmDeleteTitle')}
+            description={t('network:networkpolicy.messages.confirmDeleteDesc', { name: record.name })}
+            onConfirm={() => handleDelete(record)}
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
+          >
+            <Button type="link" size="small" danger>
+              {t('common:actions.delete')}
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },

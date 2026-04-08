@@ -23,7 +23,6 @@ import {
   SettingOutlined,
   SearchOutlined,
   DeleteOutlined,
-  EyeOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -461,23 +460,19 @@ const [form] = Form.useForm();
           <Button
             type="link"
             size="small"
-            icon={<EyeOutlined />}
             onClick={() => handleViewDetail(record.name)}
           >{t('common:actions.viewDetails')}</Button>
           {!['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(record.name) && (
             <Popconfirm
-              title={t('common:actions.delete')}
-              description={`確定要刪除命名空間 "${record.name}" 嗎？此操作將刪除該命名空間下的所有資源。`}
+              title={t('actions.confirmDelete')}
+              description={t('actions.confirmDeleteDesc', { name: record.name })}
               onConfirm={() => handleDelete(record.name)}
-              okText={t("common:actions.confirm")}
-              cancelText={t("common:actions.cancel")}
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
             >
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              >{t('common:actions.delete')}</Button>
+              <Button type="link" size="small" danger>
+                {t('common:actions.delete')}
+              </Button>
             </Popconfirm>
           )}
         </Space>
