@@ -12,6 +12,10 @@ export interface NetworkNode {
   clusterIP?: string;
   serviceType?: string;
   ingressClass?: string;    // Phase C: nginx | traefik | istio …
+  hosts?: string[];          // Phase C: Ingress hostnames
+  hasHPA?: boolean;          // §7.3: HPA attached
+  hpaMin?: number;           // §7.3: minReplicas
+  hpaMax?: number;           // §7.3: maxReplicas
 }
 
 export interface NetworkEdge {
@@ -27,6 +31,10 @@ export interface NetworkEdge {
   // Phase E: NetworkPolicy overlay
   policyStatus?: 'policy-allow' | 'policy-deny' | 'policy-restricted';
   policyName?: string;
+  // Phase F: Cilium Hubble real flow data
+  hubbleFlowRate?: number;   // forwarded flows/s
+  hubbleDropRate?: number;   // 0.0-1.0
+  hubbleDropReason?: string; // e.g. "POLICY_DENIED"
 }
 
 export interface ClusterNetworkTopology {
@@ -37,6 +45,7 @@ export interface ClusterNetworkTopology {
 export interface TopologyIntegrationStatus {
   cilium: boolean;
   ciliumVersion?: string;
+  hubbleMetrics: boolean; // Prometheus 確實有 Hubble 指標（hubble-relay 存在不等於有指標）
   istio: boolean;
   istioVersion?: string;
 }
@@ -47,12 +56,14 @@ export const networkTopologyService = {
     namespaces?: string[],
     enrich?: boolean,
     policy?: boolean,
+    hubble?: boolean,
   ): Promise<ClusterNetworkTopology> =>
     request.get(`/clusters/${clusterId}/network/topology`, {
       params: {
         ...(namespaces?.length ? { namespaces: namespaces.join(',') } : {}),
         ...(enrich  ? { enrich:  'true' } : {}),
         ...(policy  ? { policy:  'true' } : {}),
+        ...(hubble  ? { hubble:  'true' } : {}),
       },
     }),
 

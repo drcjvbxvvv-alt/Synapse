@@ -90,6 +90,7 @@ func (h *NetworkTopologyHandler) GetClusterTopology(c *gin.Context) {
 
 	enrich := c.Query("enrich") == "true"
 	policy := c.Query("policy") == "true"
+	hubble := c.Query("hubble") == "true"
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
@@ -102,21 +103,23 @@ func (h *NetworkTopologyHandler) GetClusterTopology(c *gin.Context) {
 		return
 	}
 
-	// Phase B: Optionally enrich with Istio metrics
-	if enrich {
-		integCtx, integCancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
-		status := services.DetectIntegrations(integCtx, clientset)
+	// 若有任何整合功能啟用，執行一次整合偵測供後續所有 Phase 共用（避免重複 API 呼叫）
+	var integStatus services.TopologyIntegrationStatus
+	if enrich || hubble {
+		integCtx, integCancel := context.WithTimeout(c.Request.Context(), 5*time.Second) // 5s: 輕量 List 呼叫，避免拖累拓樸查詢
+		integStatus = services.DetectIntegrations(integCtx, clientset)
 		integCancel()
+	}
 
-		if status.Istio {
-			metricsCtx, metricsCancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
-			metrics, err := services.QueryIstioMetrics(metricsCtx, clientset)
-			metricsCancel()
-			if err != nil {
-				logger.Warn("Istio metrics 查詢失敗（繼續返回靜態拓樸）", "error", err)
-			} else {
-				topo.EnrichWithIstioMetrics(metrics)
-			}
+	// Phase B: Optionally enrich with Istio metrics
+	if enrich && integStatus.Istio {
+		metricsCtx, metricsCancel := context.WithTimeout(c.Request.Context(), 15*time.Second) // 15s: 對應 Prometheus scrape 間隔，留足計算時間
+		metrics, err := services.QueryIstioMetrics(metricsCtx, clientset)
+		metricsCancel()
+		if err != nil {
+			logger.Warn("Istio metrics 查詢失敗（繼續返回靜態拓樸）", "error", err)
+		} else {
+			topo.EnrichWithIstioMetrics(metrics)
 		}
 	}
 
@@ -127,6 +130,18 @@ func (h *NetworkTopologyHandler) GetClusterTopology(c *gin.Context) {
 			logger.Warn("NetworkPolicy 推論失敗（繼續返回拓樸）", "error", err)
 		}
 		policyCancel()
+	}
+
+	// Phase F: Optionally enrich with Cilium Hubble flow metrics
+	if hubble && integStatus.HubbleMetrics {
+		hubbleCtx, hubbleCancel := context.WithTimeout(c.Request.Context(), 15*time.Second) // 15s: 同 Istio，對應 Prometheus scrape 間隔
+		hubbleMetrics, err := services.QueryHubbleMetrics(hubbleCtx, clientset)
+		hubbleCancel()
+		if err != nil {
+			logger.Warn("Hubble metrics 查詢失敗（繼續返回拓樸）", "error", err)
+		} else {
+			topo.EnrichWithHubbleMetrics(hubbleMetrics)
+		}
 	}
 
 	response.OK(c, topo)

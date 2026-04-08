@@ -29,7 +29,8 @@
       "labels": "标签",
       "connectedWorkloads": "关联工作负载",
       "connectedServices": "关联服务",
-      "ingressClass": "Ingress 控制器"
+      "ingressClass": "Ingress 控制器",
+      "hosts": "主机名"
     },
     "autoRefreshStart": "开启每 15 秒自动刷新",
     "autoRefreshStop": "停止自动刷新",
@@ -38,7 +39,10 @@
     "policyLabel": "NetworkPolicy",
     "policyTooltip": "叠加显示 NetworkPolicy 对连接的允许/封锁状态",
     "policyAllow": "明确允许",
-    "policyDeny": "封锁"
+    "policyDeny": "封锁",
+    "hubbleLabel": "Hubble 流量",
+    "hubbleTooltip": "以 Cilium Hubble 实时封包流量数据强化边（流量速率 / 封包丢弃率）",
+    "searchPlaceholder": "搜索名称或命名空间"
   },
   "gatewayapi": {
     "notInstalled": "此集群尚未安装 Gateway API",

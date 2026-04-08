@@ -753,6 +753,7 @@ style={{ flex: 1 }}
       <Table
         columns={columns}
         dataSource={workloads}
+        locale={{ emptyText: t('common:noData') }}
         rowKey={(record) => `${record.namespace}-${record.name}-${record.type}`}
         rowSelection={rowSelection}
         loading={loading}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/shaia/Synapse/internal/models"
@@ -14,6 +15,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"gorm.io/gorm"
 )
+
+const clusterListCacheTTL = 30 * time.Second
+
+type allClustersCache struct {
+	clusters  []*models.Cluster
+	expiresAt time.Time
+}
 
 // StoredCluster 儲存的叢集資訊結構體
 type StoredCluster struct {
@@ -30,12 +38,21 @@ type StoredCluster struct {
 
 // ClusterService 叢集服務
 type ClusterService struct {
-	db *gorm.DB
+	db       *gorm.DB
+	cacheMu  sync.RWMutex
+	allCache *allClustersCache
 }
 
 // NewClusterService 建立叢集服務
 func NewClusterService(db *gorm.DB) *ClusterService {
 	return &ClusterService{db: db}
+}
+
+// invalidateClusterCache 清除叢集列表快取（Create/Delete 時呼叫）
+func (s *ClusterService) invalidateClusterCache() {
+	s.cacheMu.Lock()
+	s.allCache = nil
+	s.cacheMu.Unlock()
 }
 
 // CreateCluster 建立叢集
@@ -77,6 +94,7 @@ func (s *ClusterService) CreateCluster(cluster *models.Cluster) error {
 		return fmt.Errorf("建立叢集失敗: %w", err)
 	}
 
+	s.invalidateClusterCache()
 	logger.Info("叢集建立成功", "id", cluster.ID, "name", cluster.Name)
 	return nil
 }
@@ -93,13 +111,25 @@ func (s *ClusterService) GetCluster(id uint) (*models.Cluster, error) {
 	return &cluster, nil
 }
 
-// GetAllClusters 獲取所有叢集
+// GetAllClusters 獲取所有叢集（附 30 秒 TTL 快取，Create/Delete 時自動失效）
 func (s *ClusterService) GetAllClusters() ([]*models.Cluster, error) {
+	s.cacheMu.RLock()
+	if s.allCache != nil && time.Now().Before(s.allCache.expiresAt) {
+		result := s.allCache.clusters
+		s.cacheMu.RUnlock()
+		return result, nil
+	}
+	s.cacheMu.RUnlock()
+
 	var clusters []*models.Cluster
 	if err := s.db.Find(&clusters).Error; err != nil {
 		logger.Error("獲取叢集列表失敗", "error", err)
 		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
+
+	s.cacheMu.Lock()
+	s.allCache = &allClustersCache{clusters: clusters, expiresAt: time.Now().Add(clusterListCacheTTL)}
+	s.cacheMu.Unlock()
 	return clusters, nil
 }
 
@@ -194,6 +224,7 @@ func (s *ClusterService) DeleteCluster(id uint) error {
 			return fmt.Errorf("刪除叢集失敗: %w", err)
 		}
 
+		s.invalidateClusterCache()
 		logger.Info("叢集刪除成功", "id", id, "name", cluster.Name)
 		return nil
 	})
@@ -229,21 +260,31 @@ func (s *ClusterService) GetClusterStats() (*models.ClusterStats, error) {
 		return &stats, nil // 返回基礎統計，不因為指標獲取失敗而整體失敗
 	}
 
-	// 統計總節點數和就緒節點數
-	totalNodes := 0
-	readyNodes := 0
-	totalPods := 0
-	runningPods := 0
-
+	// 並行獲取各叢集實時指標（避免串行 K8s API 呼叫導致 N*timeout 延遲）
+	var (
+		mu          sync.Mutex
+		totalNodes  int
+		readyNodes  int
+		totalPods   int
+		runningPods int
+		wg          sync.WaitGroup
+	)
 	for _, cluster := range clusters {
-		// 獲取叢集的實時指標
-		if metrics := s.getClusterRealTimeMetrics(cluster); metrics != nil {
-			totalNodes += metrics.NodeCount
-			readyNodes += metrics.ReadyNodes
-			totalPods += metrics.PodCount
-			runningPods += metrics.RunningPods
-		}
+		cluster := cluster // capture
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if m := s.getClusterRealTimeMetrics(cluster); m != nil {
+				mu.Lock()
+				totalNodes += m.NodeCount
+				readyNodes += m.ReadyNodes
+				totalPods += m.PodCount
+				runningPods += m.RunningPods
+				mu.Unlock()
+			}
+		}()
 	}
+	wg.Wait()
 
 	stats.TotalNodes = totalNodes
 	stats.ReadyNodes = readyNodes

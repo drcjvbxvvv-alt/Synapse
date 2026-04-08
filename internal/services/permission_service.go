@@ -56,21 +56,25 @@ func (s *PermissionService) UpdateUserGroup(id uint, name, description string) (
 
 // DeleteUserGroup 刪除使用者組
 func (s *PermissionService) DeleteUserGroup(id uint) error {
-	// 檢查是否有關聯的權限配置
+	// 前置檢查：有關聯權限配置時拒絕刪除（在事務外檢查即可，失敗只是拒絕，不涉及資料修改）
 	var count int64
-	s.db.Model(&models.ClusterPermission{}).Where("user_group_id = ?", id).Count(&count)
+	if err := s.db.Model(&models.ClusterPermission{}).Where("user_group_id = ?", id).Count(&count).Error; err != nil {
+		return fmt.Errorf("查詢使用者組權限失敗: %w", err)
+	}
 	if count > 0 {
 		return apierrors.ErrGroupHasPermissions()
 	}
 
-	// 刪除使用者組成員關聯
-	s.db.Where("user_group_id = ?", id).Delete(&models.UserGroupMember{})
-
-	// 刪除使用者組
-	if err := s.db.Delete(&models.UserGroup{}, id).Error; err != nil {
-		return fmt.Errorf("刪除使用者組失敗: %w", err)
-	}
-	return nil
+	// 使用事務確保成員關聯與使用者組本體同時刪除，失敗時自動回滾
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_group_id = ?", id).Delete(&models.UserGroupMember{}).Error; err != nil {
+			return fmt.Errorf("刪除使用者組成員關聯失敗: %w", err)
+		}
+		if err := tx.Delete(&models.UserGroup{}, id).Error; err != nil {
+			return fmt.Errorf("刪除使用者組失敗: %w", err)
+		}
+		return nil
+	})
 }
 
 // GetUserGroup 獲取使用者組詳情
@@ -82,10 +86,12 @@ func (s *PermissionService) GetUserGroup(id uint) (*models.UserGroup, error) {
 	return &group, nil
 }
 
-// ListUserGroups 獲取使用者組列表
+// ListUserGroups 獲取使用者組列表（只 Preload 使用者基本欄位，避免拉取多餘資料）
 func (s *PermissionService) ListUserGroups() ([]models.UserGroup, error) {
 	var groups []models.UserGroup
-	if err := s.db.Preload("Users").Find(&groups).Error; err != nil {
+	if err := s.db.Preload("Users", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id, username, email, display_name")
+	}).Find(&groups).Error; err != nil {
 		return nil, fmt.Errorf("獲取使用者組列表失敗: %w", err)
 	}
 	return groups, nil

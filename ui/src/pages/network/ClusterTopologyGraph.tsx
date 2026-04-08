@@ -1,10 +1,13 @@
-import React, { useMemo, useCallback } from 'react';
-import { Tag, Badge, Tooltip } from 'antd';
+import React, { useMemo, useCallback, useRef } from 'react';
+import { Tag, Badge, Tooltip, Button } from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
+import { toPng } from 'html-to-image';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  Panel,
   EdgeLabelRenderer,
   type Node,
   type Edge,
@@ -18,20 +21,12 @@ import {
 import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 import type { NetworkNode, NetworkEdge } from '../../services/networkTopologyService';
+import { WORKLOAD_KIND_COLOR } from './constants';
 
 // ---- Constants ----
 
-const NODE_W = 160;
-const NODE_H = 72;
-
-const WORKLOAD_KIND_COLOR: Record<string, string> = {
-  Deployment: '#1677ff',
-  StatefulSet: '#722ed1',
-  DaemonSet: '#13c2c2',
-  Job: '#fa8c16',
-  Pod: '#8c8c8c',
-  ReplicaSet: '#1677ff',
-};
+const NODE_W = 160; // px: 適合顯示 18 字元名稱 + badge，不至於撐開 Dagre 間距
+const NODE_H = 72;  // px: 容納 kind tag + name + namespace + ready count 四行
 
 const HEALTH_EDGE: Record<string, { stroke: string; particle: string; dur: string }> = {
   healthy:  { stroke: '#52c41a', particle: '#52c41a', dur: '1.8s' },
@@ -63,6 +58,11 @@ interface IngressNodeData extends Record<string, unknown> {
   ingressClass?: string;
 }
 
+// ---- Helpers ----
+
+const MAX_LABEL = 18;
+const truncate = (s: string) => s.length > MAX_LABEL ? s.slice(0, MAX_LABEL) + '…' : s;
+
 // ---- Custom nodes ----
 
 const WorkloadNode: React.FC<NodeProps> = ({ data }) => {
@@ -93,11 +93,13 @@ const WorkloadNode: React.FC<NodeProps> = ({ data }) => {
         </Tag>
         <Badge status={status} />
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, wordBreak: 'break-all', lineHeight: 1.3 }}>
-        {d.name}
-      </div>
-      <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 1 }}>
-        {d.namespace}
+      <Tooltip title={d.name.length > MAX_LABEL ? d.name : undefined} placement="top">
+        <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          {truncate(d.name)}
+        </div>
+      </Tooltip>
+      <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        {truncate(d.namespace)}
       </div>
       <div style={{ fontSize: 10, color: d.readyCount < d.totalCount ? '#fa8c16' : '#52c41a', marginTop: 2 }}>
         {d.readyCount}/{d.totalCount} Ready
@@ -136,11 +138,13 @@ const ServiceNode: React.FC<NodeProps> = ({ data }) => {
           {d.serviceType || 'ClusterIP'}
         </Tag>
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, wordBreak: 'break-all', lineHeight: 1.3 }}>
-        {d.name}
-      </div>
-      <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 1 }}>
-        {d.namespace}
+      <Tooltip title={d.name.length > MAX_LABEL ? d.name : undefined} placement="top">
+        <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          {truncate(d.name)}
+        </div>
+      </Tooltip>
+      <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        {truncate(d.namespace)}
       </div>
       {d.clusterIP && d.clusterIP !== 'None' && (
         <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 1 }}>
@@ -177,11 +181,13 @@ const IngressNode: React.FC<NodeProps> = ({ data }) => {
           </Tag>
         )}
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, wordBreak: 'break-all', lineHeight: 1.3 }}>
-        {d.name}
-      </div>
-      <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 1 }}>
-        {d.namespace}
+      <Tooltip title={d.name.length > MAX_LABEL ? d.name : undefined} placement="top">
+        <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          {truncate(d.name)}
+        </div>
+      </Tooltip>
+      <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        {truncate(d.namespace)}
       </div>
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
     </div>
@@ -201,6 +207,10 @@ interface ParticleEdgeData extends Record<string, unknown> {
   latencyP99ms?: number;
   policyStatus?: string;
   policyName?: string;
+  // Phase F: Hubble
+  hubbleFlowRate?: number;
+  hubbleDropRate?: number;
+  hubbleDropReason?: string;
 }
 
 interface EdgeStyle {
@@ -239,6 +249,12 @@ function resolveEdgeStyle(d: ParticleEdgeData): EdgeStyle {
     if ((d.latencyP99ms ?? 0) > 500) return { stroke: '#faad14', particle: '#faad14', dur: '2.5s' };
     if (d.requestRate > 0)            return { stroke: '#52c41a', particle: '#52c41a', dur: '1.8s' };
   }
+  // Hubble drop-rate override (Phase F)
+  if (d.hubbleFlowRate !== undefined || d.hubbleDropRate !== undefined) {
+    if ((d.hubbleDropRate ?? 0) > 0.5)  return { stroke: '#ff4d4f', particle: '#ff4d4f', dur: '1.5s' };
+    if ((d.hubbleDropRate ?? 0) > 0.1)  return { stroke: '#fa8c16', particle: '#fa8c16', dur: '2.5s' };
+    if ((d.hubbleFlowRate ?? 0) > 0)    return { stroke: '#52c41a', particle: '#52c41a', dur: '1.8s' };
+  }
   return HEALTH_EDGE[d.health ?? 'unknown'] ?? HEALTH_EDGE.unknown;
 }
 
@@ -265,6 +281,8 @@ const ParticleEdge: React.FC<EdgeProps> = ({
     ? `${d.requestRate.toFixed(1)} rps${(d.errorRate ?? 0) > 0.01 ? ` · ${((d.errorRate ?? 0) * 100).toFixed(0)}% err` : ''}`
     : hasIstio && (d.errorRate ?? 0) > 0.01
     ? `${((d.errorRate ?? 0) * 100).toFixed(1)}% err`
+    : (d.hubbleDropRate ?? 0) > 0.01
+    ? `⬇ ${(d.hubbleDropRate! * 100).toFixed(0)}% drop`
     : null;
 
   return (
@@ -354,6 +372,21 @@ interface ClusterTopologyGraphProps {
 }
 
 const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, topoEdges, onNodeClick }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const exportPng = useCallback(() => {
+    const el = containerRef.current?.querySelector<HTMLElement>('.react-flow__renderer');
+    if (!el) return;
+    toPng(el, { backgroundColor: '#fff', pixelRatio: 2 })
+      .then((dataUrl) => {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = 'topology.png';
+        a.click();
+      })
+      .catch(() => {/* ignore */});
+  }, []);
+
   const handleNodeClick = useCallback<NodeMouseHandler>(
     (_evt, rfNode) => {
       const original = topoNodes.find((n) => n.id === rfNode.id);
@@ -423,6 +456,9 @@ const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, 
         latencyP99ms: e.latencyP99ms,
         policyStatus: e.policyStatus,
         policyName: e.policyName,
+        hubbleFlowRate: e.hubbleFlowRate,
+        hubbleDropRate: e.hubbleDropRate,
+        hubbleDropReason: e.hubbleDropReason,
       } as ParticleEdgeData,
     }));
 
@@ -431,7 +467,7 @@ const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, 
   }, [topoNodes, topoEdges]);
 
   return (
-    <div style={{ height: 560, border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'hidden' }}>
+    <div ref={containerRef} style={{ height: 'calc(100vh - 320px)', minHeight: 480, border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'hidden' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -446,6 +482,16 @@ const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, 
       >
         <Background />
         <Controls />
+        <Panel position="top-right">
+          <Button
+            size="small"
+            icon={<DownloadOutlined />}
+            onClick={exportPng}
+            style={{ background: 'rgba(255,255,255,0.9)', fontSize: 11 }}
+          >
+            PNG
+          </Button>
+        </Panel>
         <MiniMap
           nodeColor={(n) =>
             n.type === 'service'  ? '#fa8c16' :

@@ -59,6 +59,9 @@ const [pod, setPod] = useState<PodInfo | null>(null);
   
   const logsRef = useRef<HTMLPreElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const followingRef = useRef(false); // stable ref to avoid stale closure in onclose
 
   // 獲取Pod詳情
   const fetchPodDetail = useCallback(async () => {
@@ -113,111 +116,121 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     }
   }, [clusterId, namespace, name, selectedContainer, previous, tailLines, sinceSeconds]);
 
+  // 建立 WebSocket 連線（支援重連呼叫）
+  const connectWebSocket = useCallback(() => {
+    if (!clusterId || !namespace || !name) return;
+    try {
+      const ws = PodService.createLogStream(clusterId, namespace, name, {
+        container: selectedContainer || undefined,
+        previous,
+        tailLines,
+        sinceSeconds,
+      });
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        reconnectAttemptsRef.current = 0;
+        setConnected(true);
+        setLoading(false);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg: LogMessage = JSON.parse(event.data);
+          switch (msg.type) {
+            case 'connected':
+              message.success(t('pod:logs.connectedToStream'));
+              break;
+            case 'log':
+              if (msg.data) {
+                setLogs((prev) => prev + msg.data);
+                setTimeout(() => {
+                  if (logsRef.current) {
+                    logsRef.current.scrollTop = logsRef.current.scrollHeight;
+                  }
+                }, 0);
+              }
+              break;
+            case 'end':
+              message.info(t('pod:logs.streamEnded'));
+              followingRef.current = false;
+              setFollowing(false);
+              setConnected(false);
+              break;
+            case 'error':
+              message.error(msg.message || t('pod:logs.streamError'));
+              followingRef.current = false;
+              setFollowing(false);
+              setConnected(false);
+              break;
+            case 'closed':
+              followingRef.current = false;
+              setFollowing(false);
+              setConnected(false);
+              break;
+            default:
+              break;
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      ws.onerror = () => {
+        setConnected(false);
+        setLoading(false);
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        setLoading(false);
+        // 指數退避重連（只在用戶仍想跟蹤時）
+        if (followingRef.current) {
+          const attempts = reconnectAttemptsRef.current;
+          const delay = Math.min(1000 * Math.pow(2, attempts), 30000); // 1s → 2s → 4s … 最多 30s
+          reconnectAttemptsRef.current += 1;
+          reconnectTimerRef.current = setTimeout(() => {
+            if (followingRef.current) {
+              setLoading(true);
+              connectWebSocket();
+            }
+          }, delay);
+        }
+      };
+    } catch {
+      message.error(t('pod:logs.createConnectionFailed'));
+      followingRef.current = false;
+      setFollowing(false);
+      setLoading(false);
+    }
+  }, [clusterId, namespace, name, selectedContainer, previous, tailLines, sinceSeconds, t]);
+
   // 開始/停止跟蹤日誌
   const toggleFollow = () => {
     if (following) {
-      // 停止跟蹤 - 關閉WebSocket連線
+      // 停止跟蹤
+      followingRef.current = false;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
+      reconnectAttemptsRef.current = 0;
       setFollowing(false);
       setConnected(false);
     } else {
-      // 開始跟蹤 - 建立WebSocket連線
       if (!clusterId || !namespace || !name) {
         message.error(t('pod:logs.missingParams'));
         return;
       }
-      
+      followingRef.current = true;
+      reconnectAttemptsRef.current = 0;
       setFollowing(true);
       setLoading(true);
-      
-      try {
-        // 建立WebSocket連線
-        const ws = PodService.createLogStream(clusterId, namespace, name, {
-          container: selectedContainer || undefined,
-          previous,
-          tailLines,
-          sinceSeconds,
-        });
-        
-        wsRef.current = ws;
-        
-        // WebSocket事件處理
-        ws.onopen = () => {
-          console.log('WebSocket連線已建立');
-          setConnected(true);
-          setLoading(false);
-        };
-        
-        ws.onmessage = (event) => {
-          try {
-            const msg: LogMessage = JSON.parse(event.data);
-            
-            switch (msg.type) {
-              case 'connected':
-                message.success(t('pod:logs.connectedToStream'));
-                break;
-                
-              case 'start':
-                break;
-                
-              case 'log':
-                // 追加日誌內容
-                if (msg.data) {
-                  setLogs((prev) => prev + msg.data);
-                  
-                  // 自動滾動到底部
-                  setTimeout(() => {
-                    if (logsRef.current) {
-                      logsRef.current.scrollTop = logsRef.current.scrollHeight;
-                    }
-                  }, 0);
-                }
-                break;
-                
-              case 'end':
-                message.info(t('pod:logs.streamEnded'));
-                setFollowing(false);
-                setConnected(false);
-                break;
-                
-              case 'error':
-                message.error(msg.message || t('pod:logs.streamError'));
-                setFollowing(false);
-                setConnected(false);
-                break;
-                
-              case 'closed':
-                setFollowing(false);
-                setConnected(false);
-                break;
-            }
-          } catch (error) {
-            console.error('解析WebSocket訊息失敗:', error);
-          }
-        };
-        
-        ws.onerror = (error) => {
-          console.error('WebSocket錯誤:', error);
-          message.error(t('pod:logs.wsConnectionError'));
-          setFollowing(false);
-          setConnected(false);
-          setLoading(false);
-        };
-        
-        ws.onclose = () => {
-          setFollowing(false);
-          setConnected(false);
-          setLoading(false);
-        };
-      } catch (error) {
-        console.error('建立WebSocket連線失敗:', error);
-        message.error(t('pod:logs.createConnectionFailed'));
-        setFollowing(false);
-        setLoading(false);
-      }
+      connectWebSocket();
     }
   };
 
@@ -261,9 +274,11 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     }
   }, [selectedContainer, previous, tailLines, sinceSeconds, fetchLogs]);
 
-  // 元件解除安裝時清理WebSocket連線
+  // 元件解除安裝時清理 WebSocket 連線與重連計時器
   useEffect(() => {
     return () => {
+      followingRef.current = false;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;

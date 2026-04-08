@@ -3,11 +3,13 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 import zhTW from '../locales/zh-TW';
+import zhCN from '../locales/zh-CN';
 import enUS from '../locales/en-US';
 
 // 支援的語言列表
 export const supportedLanguages = [
   { code: 'zh-TW', name: '繁體中文' },
+  { code: 'zh-CN', name: '简体中文' },
   { code: 'en-US', name: 'English' },
 ];
 
@@ -23,9 +25,10 @@ i18n
   .init({
     resources: {
       'zh-TW': zhTW,
+      'zh-CN': zhCN,
       'en-US': enUS,
     },
-    fallbackLng: defaultLanguage,
+    fallbackLng: 'en-US', // 不支援的語系 fallback 到英文
     defaultNS: 'common',
 ns: ['common', 'cluster', 'node', 'pod', 'overview', 'workload', 'namespace', 'yaml', 'search', 'terminal', 'storage', 'permission', 'nodeOps', 'settings', 'profile', 'om', 'plugins', 'logs', 'audit', 'alert', 'network', 'config', 'components', 'helm', 'cost', 'security'],
 // 語言檢測選項

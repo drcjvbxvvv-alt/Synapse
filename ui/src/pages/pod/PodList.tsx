@@ -843,6 +843,7 @@ const PodList: React.FC = () => {
           <Table
             columns={columns}
             dataSource={pods}
+            locale={{ emptyText: tc('noData') }}
             rowKey={(record) => `${record.namespace}/${record.name}`}
             rowSelection={rowSelection}
             loading={loading}

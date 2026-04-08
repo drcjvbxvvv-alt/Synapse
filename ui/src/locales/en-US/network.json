@@ -29,7 +29,8 @@
       "labels": "Labels",
       "connectedWorkloads": "Connected Workloads",
       "connectedServices": "Connected Services",
-      "ingressClass": "Ingress Class"
+      "ingressClass": "Ingress Class",
+      "hosts": "Hostnames"
     },
     "autoRefreshStart": "Enable auto-refresh (15s)",
     "autoRefreshStop": "Stop auto-refresh",
@@ -38,7 +39,10 @@
     "policyLabel": "NetworkPolicy",
     "policyTooltip": "Overlay NetworkPolicy allow/deny status on edges",
     "policyAllow": "Allowed",
-    "policyDeny": "Blocked"
+    "policyDeny": "Blocked",
+    "hubbleLabel": "Hubble Flows",
+    "hubbleTooltip": "Enrich edges with Cilium Hubble real flow data (flow rate / drop rate)",
+    "searchPlaceholder": "Search name or namespace"
   },
   "gatewayapi": {
     "notInstalled": "Gateway API is Not Installed",

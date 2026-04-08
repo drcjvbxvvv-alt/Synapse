@@ -94,7 +94,7 @@ func (h *ConfigMapHandler) GetConfigMaps(c *gin.Context) {
 	}
 
 	// 確保 informer 已啟動並同步
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
 	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
@@ -178,6 +178,7 @@ func (h *ConfigMapHandler) GetConfigMaps(c *gin.Context) {
 
 	pagedItems := items[start:end]
 
+	warnLargeDataset(c, total)
 	response.PagedList(c, pagedItems, int64(total), page, pageSize)
 }
 

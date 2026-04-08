@@ -2,6 +2,7 @@ import React from 'react';
 import { Drawer, Badge, Tag, Descriptions, Divider, Typography, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { NetworkNode, NetworkEdge } from '../../services/networkTopologyService';
+import { WORKLOAD_KIND_COLOR, HEALTH_COLOR } from './constants';
 
 const { Text } = Typography;
 
@@ -10,22 +11,6 @@ interface NodeDetailPanelProps {
   edges: NetworkEdge[];
   onClose: () => void;
 }
-
-const WORKLOAD_KIND_COLOR: Record<string, string> = {
-  Deployment:  '#1677ff',
-  StatefulSet: '#722ed1',
-  DaemonSet:   '#13c2c2',
-  Job:         '#fa8c16',
-  Pod:         '#8c8c8c',
-  ReplicaSet:  '#1677ff',
-};
-
-const HEALTH_COLOR: Record<string, string> = {
-  healthy:  '#52c41a',
-  degraded: '#fa8c16',
-  down:     '#ff4d4f',
-  unknown:  '#d9d9d9',
-};
 
 const HealthBadge: React.FC<{ health: string }> = ({ health }) => {
   const status =
@@ -91,11 +76,27 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, edges, onClose 
             />
           </Descriptions.Item>
         )}
+        {isWorkload && node.hasHPA && (
+          <Descriptions.Item label="HPA">
+            <Tag color="blue" style={{ fontSize: 11 }}>
+              {node.hpaMin} – {node.hpaMax} replicas
+            </Tag>
+          </Descriptions.Item>
+        )}
 
         {/* Ingress-specific */}
         {isIngress && node.ingressClass && (
           <Descriptions.Item label={t('clusterTopology.detail.ingressClass')}>
             <Tag>{node.ingressClass}</Tag>
+          </Descriptions.Item>
+        )}
+        {isIngress && node.hosts && node.hosts.length > 0 && (
+          <Descriptions.Item label={t('clusterTopology.detail.hosts')}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {node.hosts.map((h) => (
+                <Tag key={h} style={{ fontSize: 11, fontFamily: 'monospace' }}>{h}</Tag>
+              ))}
+            </div>
           </Descriptions.Item>
         )}
 
@@ -232,6 +233,22 @@ const ConnectionRow: React.FC<ConnectionRowProps> = ({ edge, targetId, direction
           {edge.latencyP99ms !== undefined && edge.latencyP99ms > 0 && (
             <span style={{ color: '#8c8c8c' }}>
               P99 {edge.latencyP99ms.toFixed(0)}ms
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Phase F: Hubble flow data */}
+      {(edge.hubbleFlowRate !== undefined || edge.hubbleDropRate !== undefined) && (
+        <div style={{ fontSize: 10, color: '#722ed1', marginTop: 3, fontWeight: 500 }}>
+          Hubble:
+          {edge.hubbleFlowRate !== undefined && (
+            <span style={{ marginLeft: 4 }}>{edge.hubbleFlowRate.toFixed(1)} flows/s</span>
+          )}
+          {edge.hubbleDropRate !== undefined && edge.hubbleDropRate > 0 && (
+            <span style={{ marginLeft: 4, color: '#ff4d4f' }}>
+              {(edge.hubbleDropRate * 100).toFixed(1)}% drop
+              {edge.hubbleDropReason ? ` (${edge.hubbleDropReason})` : ''}
             </span>
           )}
         </div>

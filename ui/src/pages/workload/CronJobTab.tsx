@@ -704,6 +704,7 @@ const { t } = useTranslation(['workload', 'common']);
         }}
         columns={filteredColumns}
         dataSource={workloads}
+        locale={{ emptyText: t('common:noData') }}
         rowKey={(record) => `${record.namespace}/${record.name}`}
         loading={loading}
         pagination={{

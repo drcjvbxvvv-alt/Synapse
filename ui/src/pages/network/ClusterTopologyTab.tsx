@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Button, Select, Spin, Empty, Tag, App, Space, Tooltip, Switch } from 'antd';
-import { ReloadOutlined, ApiOutlined, SyncOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Button, Select, Input, Spin, Empty, Tag, App, Space, Tooltip, Switch } from 'antd';
+import { ReloadOutlined, ApiOutlined, SyncOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { networkTopologyService } from '../../services/networkTopologyService';
 import type { NetworkNode, NetworkEdge, TopologyIntegrationStatus } from '../../services/networkTopologyService';
@@ -27,7 +27,10 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showIstioFlows, setShowIstioFlows] = useState(true);
   const [showPolicy, setShowPolicy] = useState(false);
+  const [showHubble, setShowHubble] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isInteractingRef = useRef(false);
 
   // Load namespace list + integration status
   useEffect(() => {
@@ -51,6 +54,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
         selectedNs.length > 0 ? selectedNs : undefined,
         enrich,
         showPolicy,
+        showHubble,
       );
       setNodes(data.nodes ?? []);
       setEdges(data.edges ?? []);
@@ -59,22 +63,42 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     } finally {
       setLoading(false);
     }
-  }, [clusterId, selectedNs, enrich, showPolicy, message, t]);
+  }, [clusterId, selectedNs, enrich, showPolicy, showHubble, message, t]);
 
   useEffect(() => {
     loadTopology();
   }, [loadTopology]);
 
-  // Auto-refresh every 15 seconds when enabled
+  // Pause auto-refresh when detail panel is open
+  useEffect(() => {
+    isInteractingRef.current = selectedNode !== null;
+  }, [selectedNode]);
+
+  // Auto-refresh every 15 seconds when enabled, skipped during interaction
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (autoRefresh) {
-      timerRef.current = setInterval(loadTopology, 15000);
+      timerRef.current = setInterval(() => {
+        if (!isInteractingRef.current) loadTopology();
+      }, 15000);
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [autoRefresh, loadTopology]);
+
+  // Filter nodes by search text
+  const filteredNodes = useMemo(() => {
+    if (!searchText.trim()) return nodes;
+    const lower = searchText.toLowerCase();
+    return nodes.filter((n) => n.name.toLowerCase().includes(lower) || n.namespace.toLowerCase().includes(lower));
+  }, [nodes, searchText]);
+
+  const filteredEdges = useMemo(() => {
+    if (!searchText.trim()) return edges;
+    const nodeIds = new Set(filteredNodes.map((n) => n.id));
+    return edges.filter((e) => nodeIds.has(e.source) || nodeIds.has(e.target));
+  }, [edges, filteredNodes, searchText]);
 
   return (
     <div>
@@ -89,6 +113,14 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
           style={{ minWidth: 240, maxWidth: 480 }}
           options={allNamespaces.map((ns) => ({ value: ns, label: ns }))}
           maxTagCount="responsive"
+        />
+        <Input
+          allowClear
+          prefix={<SearchOutlined />}
+          placeholder={t('clusterTopology.searchPlaceholder')}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{ width: 180 }}
         />
         <Button icon={<ReloadOutlined />} loading={loading} onClick={loadTopology}>
           {t('clusterTopology.refresh')}
@@ -157,6 +189,20 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
           </Tooltip>
         )}
 
+        {/* Hubble real flow toggle (only when Hubble Prometheus metrics are confirmed available) */}
+        {integrations?.hubbleMetrics && (
+          <Tooltip title={t('clusterTopology.hubbleTooltip')}>
+            <Space size={4}>
+              <Switch
+                size="small"
+                checked={showHubble}
+                onChange={setShowHubble}
+              />
+              <span style={{ fontSize: 12 }}>{t('clusterTopology.hubbleLabel')}</span>
+            </Space>
+          </Tooltip>
+        )}
+
         <div style={{ flex: 1 }} />
 
         {/* Legend */}
@@ -204,8 +250,8 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
         <Empty description={t('clusterTopology.empty')} style={{ padding: 60 }} />
       ) : (
         <ClusterTopologyGraph
-          topoNodes={nodes}
-          topoEdges={showIstioFlows ? edges : edges.filter((e) => e.kind !== 'istio-flow')}
+          topoNodes={filteredNodes}
+          topoEdges={showIstioFlows ? filteredEdges : filteredEdges.filter((e) => e.kind !== 'istio-flow')}
           onNodeClick={setSelectedNode}
         />
       )}
