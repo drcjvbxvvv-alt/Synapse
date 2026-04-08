@@ -93,7 +93,7 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
 
   if (!installed) {
     return (
-      <div style={{ paddingTop: 40 }}>
+      <>
         <NotInstalledCard
           title={t('snapshot.notInstalled')}
           description={t('snapshot.installHint')}
@@ -102,7 +102,7 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
           onRecheck={load}
           recheckLoading={loading}
         />
-      </div>
+      </>
     );
   }
 

@@ -42,18 +42,20 @@ const NotInstalledCard: React.FC<NotInstalledCardProps> = ({
   };
 
   return (
-    <div
-      style={{
-        background: '#fffbe6',
-        border: '1px solid #ffe58f',
-        borderRadius: 8,
-        padding: '20px 24px',
-        maxWidth: 640,
-      }}
-    >
-      <Space align="start" size={12}>
+    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', paddingTop: 48 }}>
+      <div
+        style={{
+          background: '#fffbe6',
+          border: '1px solid #ffe58f',
+          borderRadius: 8,
+          padding: '20px 24px',
+          width: '100%',
+          maxWidth: 600,
+        }}
+      >
+      <Space align="start" size={12} style={{ width: '100%' }}>
         <WarningFilled style={{ fontSize: 20, color: '#fa8c16', marginTop: 2 }} />
-        <Space direction="vertical" size={6} style={{ flex: 1 }}>
+        <Space direction="vertical" size={6} style={{ flex: 1, minWidth: 0 }}>
           <Text strong style={{ fontSize: 15 }}>{title}</Text>
           {description && <Text type="secondary">{description}</Text>}
 
@@ -107,6 +109,7 @@ const NotInstalledCard: React.FC<NotInstalledCardProps> = ({
           </Space>
         </Space>
       </Space>
+      </div>
     </div>
   );
 };

@@ -397,7 +397,7 @@ const VeleroTab: React.FC<VeleroTabProps> = ({ clusterId }) => {
 
   if (!installed) {
     return (
-      <div style={{ paddingTop: 40 }}>
+      <>
         <NotInstalledCard
           title={t('velero.notInstalled')}
           description={t('velero.installHint')}
@@ -413,7 +413,7 @@ const VeleroTab: React.FC<VeleroTabProps> = ({ clusterId }) => {
           }}
           recheckLoading={loading}
         />
-      </div>
+      </>
     );
   }
 

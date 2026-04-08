@@ -89,7 +89,7 @@ const KEDATab: React.FC<PanelProps> = ({ clusterId }) => {
 
   if (!installed) {
     return (
-      <div style={{ paddingTop: 40 }}>
+      <>
         <NotInstalledCard
           title={t('autoscaling.keda.notInstalled')}
           description={t('autoscaling.keda.installHint')}
@@ -98,7 +98,7 @@ const KEDATab: React.FC<PanelProps> = ({ clusterId }) => {
           onRecheck={load}
           recheckLoading={loading}
         />
-      </div>
+      </>
     );
   }
 
@@ -227,7 +227,7 @@ const KarpenterTab: React.FC<PanelProps> = ({ clusterId }) => {
 
   if (!installed) {
     return (
-      <div style={{ paddingTop: 40 }}>
+      <>
         <NotInstalledCard
           title={t('autoscaling.karpenter.notInstalled')}
           description={t('autoscaling.karpenter.installHint')}
@@ -236,7 +236,7 @@ const KarpenterTab: React.FC<PanelProps> = ({ clusterId }) => {
           onRecheck={load}
           recheckLoading={loading}
         />
-      </div>
+      </>
     );
   }
 
@@ -306,7 +306,7 @@ const CASTabPanel: React.FC<PanelProps> = ({ clusterId }) => {
 
   if (!status?.installed) {
     return (
-      <div style={{ paddingTop: 40 }}>
+      <>
         <NotInstalledCard
           title={t('autoscaling.cas.notInstalled')}
           description={t('autoscaling.cas.installHint')}
@@ -315,7 +315,7 @@ const CASTabPanel: React.FC<PanelProps> = ({ clusterId }) => {
           onRecheck={load}
           recheckLoading={loading}
         />
-      </div>
+      </>
     );
   }
 
