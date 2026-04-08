@@ -636,7 +636,7 @@ const { t } = useTranslation(['workload', 'common']);
               ? `${t('actions.batchRedeploy')} (${selectedRowKeys.length})`
               : t('actions.redeploy')}
           </Button>
-          <Button onClick={handleExport}>
+          <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
             {selectedRowKeys.length > 1
               ? `${t('actions.batchExport')} (${selectedRowKeys.length})`
               : t('actions.export')}

@@ -772,7 +772,7 @@ const PodList: React.FC = () => {
                   ? `${t('actions.batchDelete')} (${selectedRowKeys.length})`
                   : tc('actions.delete')}
               </Button>
-              <Button onClick={handleExport}>
+              <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
                 {selectedRowKeys.length > 1
                   ? `${tc('actions.batchExport')} (${selectedRowKeys.length})`
                   : tc('actions.export')}

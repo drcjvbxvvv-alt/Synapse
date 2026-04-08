@@ -846,7 +846,7 @@ const NodeList: React.FC = () => {
               >
                 {isBatch ? t('actions.batchLabel') : '新增標籤'}
               </Button>
-              <Button onClick={handleExport}>
+              <Button disabled={selectedNodes.length === 0} onClick={handleExport}>
                 {selectedNodes.length > 1
                   ? `${tc('actions.batchExport')} (${selectedNodes.length})`
                   : tc('actions.export')}

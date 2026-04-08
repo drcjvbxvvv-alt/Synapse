@@ -509,7 +509,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
               ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
               : t('common:actions.delete')}
           </Button>
-          <Button onClick={handleExport}>
+          <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
             {selectedRowKeys.length > 1
               ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
               : t('common:actions.export')}
