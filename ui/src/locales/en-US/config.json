@@ -12,7 +12,8 @@
     },
     "columns": {
       "dataCount": "Data Items",
-      "age": "Age"
+      "age": "Age",
+      "history": "Version History"
     },
     "messages": {
       "fetchConfigMapError": "Failed to fetch ConfigMap list",
@@ -122,6 +123,12 @@
     "sensitiveDataHidden": "Sensitive data is hidden, click the toggle above to view or edit",
     "hideContent": "Hide content",
     "showContent": "Show content",
+    "formTab": "Form Mode",
+    "yamlTab": "YAML Mode",
+    "preCheck": "Pre-check",
+    "preCheckTooltip": "Pre-check validates the configuration via dry-run against Kubernetes",
+    "dryRunCheckPassed": "Pre-check passed",
+    "dryRunCheckFailed": "Pre-check failed",
     "messages": {
       "yamlFormatError": "YAML format error: {{error}}",
       "unknownError": "Unknown error",
@@ -134,7 +141,9 @@
       "configMapCreateSuccess": "ConfigMap created successfully",
       "secretCreateSuccess": "Secret created successfully",
       "configMapCreateError": "Failed to create ConfigMap",
-      "secretCreateError": "Failed to create Secret"
+      "secretCreateError": "Failed to create Secret",
+      "dryRunPassed": "Pre-check passed! Configuration is valid and safe to create.",
+      "dryRunFailed": "Pre-check failed"
     }
   },
   "edit": {

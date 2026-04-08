@@ -11,11 +11,10 @@ import {
   Tooltip,
   Form,
   App,
-  Popconfirm,
   Checkbox,
   Drawer,
   Card,
-  Badge,
+  theme,
 } from 'antd';
 import {
   PlusOutlined,
@@ -23,8 +22,10 @@ import {
   SettingOutlined,
   SearchOutlined,
   DeleteOutlined,
-  TagsOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
+import { StatusTag } from '../../components/StatusTag';
+import { ActionButtons } from '../../components/ActionButtons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import {
@@ -37,10 +38,13 @@ import {
 import { useTranslation } from 'react-i18next';
 const { Option } = Select;
 
+const SYSTEM_NAMESPACES = ['default', 'kube-system', 'kube-public', 'kube-node-lease', 'cert-manager'];
+
 const NamespaceList: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
+  const { token } = theme.useToken();
 const { t } = useTranslation(["namespace", "common"]);
 const [form] = Form.useForm();
 
@@ -197,8 +201,7 @@ const [form] = Form.useForm();
     }
 
     // 過濾掉系統命名空間
-    const systemNamespaces = ['default', 'kube-system', 'kube-public', 'kube-node-lease'];
-    const toDelete = selectedRowKeys.filter(ns => !systemNamespaces.includes(ns));
+    const toDelete = selectedRowKeys.filter(ns => !SYSTEM_NAMESPACES.includes(ns));
 
     if (toDelete.length === 0) {
       message.warning(t('common:messages.cannotDeleteSystem'));
@@ -391,15 +394,7 @@ const [form] = Form.useForm();
       width: 100,
       sorter: true,
       sortOrder: sortField === 'status' ? sortOrder : null,
-      render: (status: string) => {
-        const isActive = status === 'Active';
-        return (
-          <Badge
-            status={isActive ? 'success' : 'warning'}
-            text={isActive ? t('common:status.active') : status}
-          />
-        );
-      },
+      render: (status: string) => <StatusTag status={status} />,
     },
     {
       title: t('columns.labels'),
@@ -408,20 +403,19 @@ const [form] = Form.useForm();
       width: 250,
       render: (labels: Record<string, string>) => {
         if (!labels || Object.keys(labels).length === 0) {
-          return <span style={{ color: '#999' }}>--</span>;
+          return <span style={{ color: token.colorTextTertiary, fontSize: token.fontSizeSM }}>--</span>;
         }
-        const labelArray = Object.entries(labels).slice(0, 2);
-        const moreCount = Object.keys(labels).length - 2;
+        const entries = Object.entries(labels);
+        const visible = entries.slice(0, 2);
+        const rest = entries.slice(2);
         return (
           <Space size={[0, 4]} wrap>
-            {labelArray.map(([key, value]) => (
-              <Tooltip key={key} title={`${key}: ${value}`}>
-                <Tag icon={<TagsOutlined />}>{key}</Tag>
-              </Tooltip>
+            {visible.map(([k, v]) => (
+              <Tag key={k} style={{ fontSize: token.fontSizeSM }}>{k}={v}</Tag>
             ))}
-            {moreCount > 0 && (
-              <Tooltip title={t('columns.moreLabels', { count: moreCount })}>
-                <Tag>+{moreCount}</Tag>
+            {rest.length > 0 && (
+              <Tooltip title={rest.map(([k, v]) => `${k}=${v}`).join('\n')}>
+                <Tag style={{ cursor: 'pointer', fontSize: token.fontSizeSM }}>+{rest.length}</Tag>
               </Tooltip>
             )}
           </Space>
@@ -432,7 +426,7 @@ const [form] = Form.useForm();
       title: t('columns.createdAt'),
       dataIndex: 'creationTimestamp',
       key: 'creationTimestamp',
-      width: 180,
+      width: 160,
       sorter: true,
       sortOrder: sortField === 'creationTimestamp' ? sortOrder : null,
       render: (text: string) => {
@@ -453,30 +447,34 @@ const [form] = Form.useForm();
     {
       title: t('common:table.actions'),
       key: 'actions',
-      width: 150,
+      width: 90,
       fixed: 'right' as const,
-      render: (record: NamespaceData) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleViewDetail(record.name)}
-          >{t('common:actions.viewDetails')}</Button>
-          {!['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(record.name) && (
-            <Popconfirm
-              title={t('actions.confirmDelete')}
-              description={t('actions.confirmDeleteDesc', { name: record.name })}
-              onConfirm={() => handleDelete(record.name)}
-              okText={t('common:actions.confirm')}
-              cancelText={t('common:actions.cancel')}
-            >
-              <Button type="link" size="small" danger>
-                {t('common:actions.delete')}
-              </Button>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_: unknown, record: NamespaceData) => {
+        const isSystem = SYSTEM_NAMESPACES.includes(record.name);
+        return (
+          <ActionButtons
+            primary={[{
+              key: 'view',
+              label: t('common:actions.viewDetails'),
+              icon: <EyeOutlined />,
+              onClick: () => handleViewDetail(record.name),
+            }]}
+            more={[
+              ...(!isSystem ? [{
+                key: 'delete',
+                label: t('common:actions.delete'),
+                icon: <DeleteOutlined />,
+                danger: true as const,
+                confirm: {
+                  title: t('actions.confirmDelete'),
+                  description: t('actions.confirmDeleteDesc', { name: record.name }),
+                },
+                onClick: () => handleDelete(record.name),
+              }] : []),
+            ]}
+          />
+        );
+      },
     },
   ];
 
@@ -598,8 +596,7 @@ const [form] = Form.useForm();
           rowKey="name"
           rowSelection={rowSelection}
           loading={loading}
-          virtual
-          scroll={{ x: 900, y: 600 }}
+          scroll={{ x: 'max-content' }}
           size="middle"
           onChange={handleTableChange}
           pagination={{

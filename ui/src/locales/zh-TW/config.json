@@ -12,7 +12,8 @@
     },
     "columns": {
       "dataCount": "資料項數量",
-      "age": "存在時間"
+      "age": "存在時間",
+      "history": "版本歷史"
     },
     "messages": {
       "fetchConfigMapError": "取得 ConfigMap 列表失敗",
@@ -62,7 +63,7 @@
     "noLabels": "無標籤",
     "noAnnotations": "無標記",
     "dataContent": "資料內容",
-    "noData": "無資料",
+    "noData": "暫無資料",
     "name": "名稱",
     "namespace": "命名空間",
     "type": "類型",
@@ -122,6 +123,12 @@
     "sensitiveDataHidden": "敏感資料已隱藏，點擊上方開關查看或編輯",
     "hideContent": "隱藏內容",
     "showContent": "顯示內容",
+    "formTab": "表單模式",
+    "yamlTab": "YAML 模式",
+    "preCheck": "預檢",
+    "preCheckTooltip": "預檢會透過 dry-run 驗證是否符合 Kubernetes 規範",
+    "dryRunCheckPassed": "預檢通過",
+    "dryRunCheckFailed": "預檢失敗",
     "messages": {
       "yamlFormatError": "YAML 格式錯誤: {{error}}",
       "unknownError": "未知錯誤",
@@ -134,7 +141,9 @@
       "configMapCreateSuccess": "ConfigMap 建立成功",
       "secretCreateSuccess": "Secret 建立成功",
       "configMapCreateError": "建立 ConfigMap 失敗",
-      "secretCreateError": "建立 Secret 失敗"
+      "secretCreateError": "建立 Secret 失敗",
+      "dryRunPassed": "預檢通過！設定有效，可以安全建立。",
+      "dryRunFailed": "預檢失敗"
     }
   },
   "edit": {

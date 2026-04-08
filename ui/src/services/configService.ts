@@ -79,16 +79,13 @@ interface NamespaceObject {
 // 獲取命名空間列表（通用）
 export const getNamespaces = async (clusterId: number): Promise<string[]> => {
   try {
-    // 直接使用叢集的命名空間介面
-    const response = await request.get<NamespaceObject[]>(
+    const response = await request.get<{ items: NamespaceObject[] }>(
       `/clusters/${clusterId}/namespaces`
     );
-    // 提取命名空間名稱陣列
-    return response.map((ns) => ns.name);
+    return (response.items ?? []).map((ns) => ns.name);
   } catch (error) {
     console.error('獲取命名空間列表失敗:', error);
-    // 返回預設命名空間
-    return ['default', 'kube-system', 'kube-public', 'kube-node-lease'];
+    return [];
   }
 };
 
@@ -142,6 +139,7 @@ export const configMapService = {
       labels?: Record<string, string>;
       annotations?: Record<string, string>;
       data?: Record<string, string>;
+      dryRun?: boolean;
     }
   ): Promise<{ name: string; namespace: string }> {
     return request.post<{ name: string; namespace: string }>(
@@ -248,6 +246,7 @@ export const secretService = {
       labels?: Record<string, string>;
       annotations?: Record<string, string>;
       data?: Record<string, string>;
+      dryRun?: boolean;
     }
   ): Promise<{ name: string; namespace: string }> {
     return request.post<{ name: string; namespace: string }>(

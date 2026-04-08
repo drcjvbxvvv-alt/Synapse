@@ -8,10 +8,10 @@ import {
   Modal,
   Select,
   Tooltip,
-  Popconfirm,
   Drawer,
   Checkbox,
   App,
+  theme,
 } from 'antd';
 import {
   PlusOutlined,
@@ -19,12 +19,18 @@ import {
   ReloadOutlined,
   DeleteOutlined,
   SettingOutlined,
+  EyeOutlined,
+  EditOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { configMapService, type ConfigMapListItem, type NamespaceItem } from '../../services/configService';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
+import { ActionButtons } from '../../components/ActionButtons';
+import ConfigMapForm from './ConfigMapForm';
 
 const { Option } = Select;
 
@@ -36,9 +42,11 @@ interface ConfigMapListProps {
 const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
-  
+  const { token } = theme.useToken();
+
   // 資料狀態
 const { t } = useTranslation(['config', 'common']);
+const [createModalOpen, setCreateModalOpen] = useState(false);
 const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
   const [configMaps, setConfigMaps] = useState<ConfigMapListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -372,22 +380,24 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
       dataIndex: 'labels',
       key: 'labels',
       width: 250,
-      render: (labels: Record<string, string>) => (
-        <Space size={[0, 4]} wrap>
-          {Object.entries(labels || {}).slice(0, 3).map(([key, value]) => (
-            <Tooltip key={key} title={`${key}=${value}`}>
-              <Tag style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {`${key}=${value}`}
-              </Tag>
-            </Tooltip>
-          ))}
-          {Object.keys(labels || {}).length > 3 && (
-            <Tooltip title={Object.entries(labels).slice(3).map(([k, v]) => `${k}=${v}`).join('\n')}>
-              <Tag>+{Object.keys(labels).length - 3}</Tag>
-            </Tooltip>
-          )}
-        </Space>
-      ),
+      render: (labels: Record<string, string>) => {
+        const entries = Object.entries(labels ?? {});
+        if (entries.length === 0) {
+          return <span style={{ color: token.colorTextTertiary }}>—</span>;
+        }
+        return (
+          <Space size={4} wrap>
+            {entries.slice(0, 2).map(([k, v]) => (
+              <Tag key={k}>{k}={v}</Tag>
+            ))}
+            {entries.length > 2 && (
+              <Tooltip title={entries.slice(2).map(([k, v]) => `${k}=${v}`).join('\n')}>
+                <Tag>+{entries.length - 2}</Tag>
+              </Tooltip>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: t('config:list.columns.dataCount'),
@@ -397,7 +407,9 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
       align: 'center',
       sorter: true,
       sortOrder: sortField === 'dataCount' ? sortOrder : null,
-      render: (count: number) => <Tag color="green">{count}</Tag>,
+      render: (count: number) => (
+        <span style={{ color: token.colorTextSecondary }}>{count}</span>
+      ),
     },
     {
       title: t('common:table.createdAt'),
@@ -422,47 +434,58 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
     },
     {
       title: t('config:list.columns.age'),
-      dataIndex: 'age',
+      dataIndex: 'creationTimestamp',
       key: 'age',
       width: 100,
+      render: (createdAt: string) => {
+        if (!createdAt) return '-';
+        const diff = dayjs().diff(dayjs(createdAt), 'minute');
+        if (diff < 60) return `${diff}m`;
+        if (diff < 1440) return `${Math.floor(diff / 60)}h`;
+        return `${Math.floor(diff / 1440)}d`;
+      },
     },
     {
       title: t('common:table.actions'),
       key: 'actions',
-      width: 150,
+      width: 90,
       fixed: 'right' as const,
       render: (_: unknown, record: ConfigMapListItem) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}`)}
-          >
-            {t('common:actions.view')}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}/edit`)}
-          >
-            {t('common:actions.edit')}
-          </Button>
-          <Popconfirm
-            title={t('config:list.messages.confirmDeleteConfigMap')}
-            description={t('config:list.messages.confirmDeleteDesc', { name: record.name })}
-            onConfirm={() => handleDelete(record.namespace, record.name)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button
-              type="link"
-              size="small"
-              danger
-            >
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
+        <ActionButtons
+          primary={[
+            {
+              key: 'view',
+              label: t('common:actions.view'),
+              icon: <EyeOutlined />,
+              onClick: () => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}`),
+            },
+            {
+              key: 'edit',
+              label: t('common:actions.edit'),
+              icon: <EditOutlined />,
+              onClick: () => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}/edit`),
+            },
+          ]}
+          more={[
+            {
+              key: 'history',
+              label: t('config:list.columns.history'),
+              icon: <HistoryOutlined />,
+              onClick: () => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}/history`),
+            },
+            {
+              key: 'delete',
+              label: t('common:actions.delete'),
+              icon: <DeleteOutlined />,
+              danger: true,
+              confirm: {
+                title: t('config:list.messages.confirmDeleteConfigMap'),
+                description: t('config:list.messages.confirmDeleteDesc', { name: record.name }),
+              },
+              onClick: () => handleDelete(record.namespace, record.name),
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -515,7 +538,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => navigate(`/clusters/${clusterId}/configs/configmap/create`)}
+          onClick={() => setCreateModalOpen(true)}
         >
           {t('config:list.createConfigMap')}
         </Button>
@@ -588,7 +611,7 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
         rowSelection={rowSelection}
         loading={loading}
         virtual
-        scroll={{ x: 1200, y: 600 }}
+        scroll={{ x: 'max-content', y: 600 }}
         size="middle"
         onChange={handleTableChange}
         pagination={{
@@ -604,6 +627,14 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
           },
           pageSizeOptions: ['10', '20', '50', '100'],
         }}
+      />
+
+      {/* 建立 ConfigMap Modal */}
+      <ConfigMapForm
+        open={createModalOpen}
+        clusterId={clusterId}
+        onClose={() => setCreateModalOpen(false)}
+        onSuccess={() => { setCreateModalOpen(false); loadConfigMaps(); }}
       />
 
       {/* 列設定抽屜 */}

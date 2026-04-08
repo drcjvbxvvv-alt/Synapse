@@ -60,11 +60,11 @@ export const gatewayService = {
     request.get(`/clusters/${clusterId}/httproutes/${namespace}/${name}/yaml`),
 
   // HTTPRoute CRUD
-  createHTTPRoute: (clusterId: string, namespace: string, yaml: string) =>
-    request.post(`/clusters/${clusterId}/httproutes`, { namespace, yaml }),
+  createHTTPRoute: (clusterId: string, namespace: string, yaml: string, dryRun = false) =>
+    request.post(`/clusters/${clusterId}/httproutes`, { namespace, yaml, dryRun }),
 
-  updateHTTPRoute: (clusterId: string, namespace: string, name: string, yaml: string) =>
-    request.put(`/clusters/${clusterId}/httproutes/${namespace}/${name}`, { yaml }),
+  updateHTTPRoute: (clusterId: string, namespace: string, name: string, yaml: string, dryRun = false) =>
+    request.put(`/clusters/${clusterId}/httproutes/${namespace}/${name}`, { yaml, dryRun }),
 
   deleteHTTPRoute: (clusterId: string, namespace: string, name: string) =>
     request.delete(`/clusters/${clusterId}/httproutes/${namespace}/${name}`),
@@ -81,11 +81,11 @@ export const gatewayService = {
   getGRPCRouteYAML: (clusterId: string, namespace: string, name: string): Promise<{ yaml: string }> =>
     request.get(`/clusters/${clusterId}/grpcroutes/${namespace}/${name}/yaml`),
 
-  createGRPCRoute: (clusterId: string, namespace: string, yaml: string) =>
-    request.post(`/clusters/${clusterId}/grpcroutes`, { namespace, yaml }),
+  createGRPCRoute: (clusterId: string, namespace: string, yaml: string, dryRun = false) =>
+    request.post(`/clusters/${clusterId}/grpcroutes`, { namespace, yaml, dryRun }),
 
-  updateGRPCRoute: (clusterId: string, namespace: string, name: string, yaml: string) =>
-    request.put(`/clusters/${clusterId}/grpcroutes/${namespace}/${name}`, { yaml }),
+  updateGRPCRoute: (clusterId: string, namespace: string, name: string, yaml: string, dryRun = false) =>
+    request.put(`/clusters/${clusterId}/grpcroutes/${namespace}/${name}`, { yaml, dryRun }),
 
   deleteGRPCRoute: (clusterId: string, namespace: string, name: string) =>
     request.delete(`/clusters/${clusterId}/grpcroutes/${namespace}/${name}`),
@@ -99,8 +99,8 @@ export const gatewayService = {
   getReferenceGrantYAML: (clusterId: string, namespace: string, name: string): Promise<{ yaml: string }> =>
     request.get(`/clusters/${clusterId}/referencegrants/${namespace}/${name}/yaml`),
 
-  createReferenceGrant: (clusterId: string, namespace: string, yaml: string) =>
-    request.post(`/clusters/${clusterId}/referencegrants`, { namespace, yaml }),
+  createReferenceGrant: (clusterId: string, namespace: string, yaml: string, dryRun = false) =>
+    request.post(`/clusters/${clusterId}/referencegrants`, { namespace, yaml, dryRun }),
 
   deleteReferenceGrant: (clusterId: string, namespace: string, name: string) =>
     request.delete(`/clusters/${clusterId}/referencegrants/${namespace}/${name}`),

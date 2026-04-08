@@ -27,7 +27,9 @@
     "confirmBatchDelete": "確認批次刪除",
     "confirmBatchDeleteDesc": "確定要刪除選取的 {{count}} 個命名空間嗎？此操作將刪除這些命名空間下的所有資源。",
     "selectDeleteFirst": "請先選擇要刪除的命名空間",
-    "cannotDeleteSystem": "不能刪除系統命名空間"
+    "cannotDeleteSystem": "不能刪除系統命名空間",
+    "quota": "資源配額",
+    "limit": "資源限制"
   },
   "create": {
     "title": "建立命名空間",

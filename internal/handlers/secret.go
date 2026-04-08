@@ -355,6 +355,7 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 		Labels      map[string]string `json:"labels"`
 		Annotations map[string]string `json:"annotations"`
 		Data        map[string]string `json:"data"` // Base64編碼的資料
+		DryRun      bool              `json:"dryRun"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -408,7 +409,12 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 		Data: dataBytes,
 	}
 
-	created, err := clientset.CoreV1().Secrets(req.Namespace).Create(context.Background(), secret, metav1.CreateOptions{})
+	createOpts := metav1.CreateOptions{}
+	if req.DryRun {
+		createOpts.DryRun = []string{metav1.DryRunAll}
+	}
+
+	created, err := clientset.CoreV1().Secrets(req.Namespace).Create(context.Background(), secret, createOpts)
 	if err != nil {
 		logger.Error("建立Secret失敗", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
 		if k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
@@ -417,6 +423,10 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 			response.InternalError(c, fmt.Sprintf("建立Secret失敗: %v", err))
 		}
 		return
+	}
+
+	if !req.DryRun {
+		logger.Info("建立Secret成功", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name)
 	}
 
 	response.OK(c, gin.H{

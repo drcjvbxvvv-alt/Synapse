@@ -27,7 +27,9 @@
     "confirmBatchDelete": "Confirm Batch Delete",
     "confirmBatchDeleteDesc": "Are you sure you want to delete {{count}} selected namespaces? This will delete all resources under these namespaces.",
     "selectDeleteFirst": "Please select namespaces to delete first",
-    "cannotDeleteSystem": "Cannot delete system namespaces"
+    "cannotDeleteSystem": "Cannot delete system namespaces",
+    "quota": "Resource Quota",
+    "limit": "Resource Limits"
   },
   "create": {
     "title": "Create Namespace",

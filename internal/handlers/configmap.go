@@ -338,6 +338,7 @@ func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 		Labels      map[string]string `json:"labels"`
 		Annotations map[string]string `json:"annotations"`
 		Data        map[string]string `json:"data"`
+		DryRun      bool              `json:"dryRun"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -378,11 +379,20 @@ func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 		Data: req.Data,
 	}
 
-	created, err := clientset.CoreV1().ConfigMaps(req.Namespace).Create(context.Background(), configMap, metav1.CreateOptions{})
+	createOpts := metav1.CreateOptions{}
+	if req.DryRun {
+		createOpts.DryRun = []string{metav1.DryRunAll}
+	}
+
+	created, err := clientset.CoreV1().ConfigMaps(req.Namespace).Create(context.Background(), configMap, createOpts)
 	if err != nil {
 		logger.Error("建立ConfigMap失敗", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
 		response.InternalError(c, fmt.Sprintf("建立ConfigMap失敗: %v", err))
 		return
+	}
+
+	if !req.DryRun {
+		logger.Info("建立ConfigMap成功", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name)
 	}
 
 	response.OK(c, gin.H{
