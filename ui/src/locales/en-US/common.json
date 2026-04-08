@@ -250,5 +250,9 @@
     "systemInfo": "System Info"
   },
   "featureInDev": "This feature is under active development",
-  "featureInDevDesc": "We are working hard to build powerful features for you. Stay tuned."
+  "featureInDevDesc": "We are working hard to build powerful features for you. Stay tuned.",
+  "installCommand": "Install command:",
+  "copyCommand": "Copy Install Command",
+  "viewDocs": "View Official Docs",
+  "recheck": "Recheck"
 }

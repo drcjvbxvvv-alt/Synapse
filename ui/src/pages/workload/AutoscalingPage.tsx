@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Tabs, Table, Tag, Button, Space, Spin, Empty, Alert, Typography, Tooltip,
+  Tabs, Table, Tag, Button, Space, Spin, Alert, Typography, Tooltip,
   Badge, Select, App,
 } from 'antd';
 import {
   ReloadOutlined, ThunderboltOutlined, NodeIndexOutlined,
   ClusterOutlined, RocketOutlined,
 } from '@ant-design/icons';
+import NotInstalledCard from '../../components/NotInstalledCard';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import {
@@ -88,17 +89,16 @@ const KEDATab: React.FC<PanelProps> = ({ clusterId }) => {
 
   if (!installed) {
     return (
-      <Empty
-        image={<ThunderboltOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />}
-        description={
-          <Space direction="vertical" size={4}>
-            <Text strong>{t('autoscaling.keda.notInstalled')}</Text>
-            <Text type="secondary">{t('autoscaling.keda.installHint')}</Text>
-            <Text code>helm install keda kedacore/keda --namespace keda --create-namespace</Text>
-          </Space>
-        }
-        style={{ paddingTop: 60 }}
-      />
+      <div style={{ paddingTop: 40 }}>
+        <NotInstalledCard
+          title={t('autoscaling.keda.notInstalled')}
+          description={t('autoscaling.keda.installHint')}
+          command="helm install keda kedacore/keda --namespace keda --create-namespace"
+          docsUrl="https://keda.sh/docs/latest/deploy/"
+          onRecheck={load}
+          recheckLoading={loading}
+        />
+      </div>
     );
   }
 
@@ -227,17 +227,16 @@ const KarpenterTab: React.FC<PanelProps> = ({ clusterId }) => {
 
   if (!installed) {
     return (
-      <Empty
-        image={<NodeIndexOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />}
-        description={
-          <Space direction="vertical" size={4}>
-            <Text strong>{t('autoscaling.karpenter.notInstalled')}</Text>
-            <Text type="secondary">{t('autoscaling.karpenter.installHint')}</Text>
-            <Text code>helm install karpenter oci://public.ecr.aws/karpenter/karpenter ...</Text>
-          </Space>
-        }
-        style={{ paddingTop: 60 }}
-      />
+      <div style={{ paddingTop: 40 }}>
+        <NotInstalledCard
+          title={t('autoscaling.karpenter.notInstalled')}
+          description={t('autoscaling.karpenter.installHint')}
+          command="helm install karpenter oci://public.ecr.aws/karpenter/karpenter --version 1.0.0 -n karpenter --create-namespace"
+          docsUrl="https://karpenter.sh/docs/getting-started/getting-started-with-karpenter/"
+          onRecheck={load}
+          recheckLoading={loading}
+        />
+      </div>
     );
   }
 
@@ -307,16 +306,16 @@ const CASTabPanel: React.FC<PanelProps> = ({ clusterId }) => {
 
   if (!status?.installed) {
     return (
-      <Empty
-        image={<ClusterOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />}
-        description={
-          <Space direction="vertical" size={4}>
-            <Text strong>{t('autoscaling.cas.notInstalled')}</Text>
-            <Text type="secondary">{t('autoscaling.cas.installHint')}</Text>
-          </Space>
-        }
-        style={{ paddingTop: 60 }}
-      />
+      <div style={{ paddingTop: 40 }}>
+        <NotInstalledCard
+          title={t('autoscaling.cas.notInstalled')}
+          description={t('autoscaling.cas.installHint')}
+          command="helm install cluster-autoscaler autoscaler/cluster-autoscaler --namespace kube-system"
+          docsUrl="https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler"
+          onRecheck={load}
+          recheckLoading={loading}
+        />
+      </div>
     );
   }
 

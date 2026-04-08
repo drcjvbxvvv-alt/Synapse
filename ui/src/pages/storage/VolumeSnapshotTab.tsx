@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Badge, Modal, Form, Input, Select,
-  Popconfirm, Typography, Empty, Spin, App, Tooltip,
+  Popconfirm, Typography, Spin, App, Tooltip,
 } from 'antd';
-import { PlusOutlined, ReloadOutlined, CameraOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import NotInstalledCard from '../../components/NotInstalledCard';
 import {
   snapshotService,
   type VolumeSnapshotInfo, type VolumeSnapshotClassInfo,
@@ -92,17 +93,16 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
 
   if (!installed) {
     return (
-      <Empty
-        image={<CameraOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />}
-        description={
-          <Space direction="vertical" size={4}>
-            <Text strong>{t('snapshot.notInstalled')}</Text>
-            <Text type="secondary">{t('snapshot.installHint')}</Text>
-            <Text code>kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml</Text>
-          </Space>
-        }
-        style={{ paddingTop: 60 }}
-      />
+      <div style={{ paddingTop: 40 }}>
+        <NotInstalledCard
+          title={t('snapshot.notInstalled')}
+          description={t('snapshot.installHint')}
+          command="kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml"
+          docsUrl="https://kubernetes-csi.github.io/docs/volume-snapshots.html"
+          onRecheck={load}
+          recheckLoading={loading}
+        />
+      </div>
     );
   }
 

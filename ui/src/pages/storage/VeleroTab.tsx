@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Badge, Modal, Form, Input, Switch,
-  Popconfirm, Typography, Empty, Spin, App, Tabs, Tooltip, Progress,
+  Popconfirm, Typography, Spin, App, Tabs, Tooltip, Progress,
 } from 'antd';
 import {
-  ReloadOutlined, PlusOutlined, PlayCircleOutlined, DatabaseOutlined,
+  ReloadOutlined, PlusOutlined, PlayCircleOutlined,
 } from '@ant-design/icons';
+import NotInstalledCard from '../../components/NotInstalledCard';
 import { useTranslation } from 'react-i18next';
 import {
   snapshotService, backupPhaseColor, restorePhaseColor,
@@ -376,6 +377,8 @@ const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clus
 // Main VeleroTab
 // ═══════════════════════════════════════════════════════════════════════════
 
+const VELERO_INSTALL_CMD = 'helm install velero vmware-tanzu/velero --namespace velero --create-namespace';
+
 const VeleroTab: React.FC<VeleroTabProps> = ({ clusterId }) => {
   const { t } = useTranslation('storage');
   const { message } = App.useApp();
@@ -394,17 +397,23 @@ const VeleroTab: React.FC<VeleroTabProps> = ({ clusterId }) => {
 
   if (!installed) {
     return (
-      <Empty
-        image={<DatabaseOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />}
-        description={
-          <Space direction="vertical" size={4}>
-            <Text strong>{t('velero.notInstalled')}</Text>
-            <Text type="secondary">{t('velero.installHint')}</Text>
-            <Text code>helm install velero vmware-tanzu/velero --namespace velero --create-namespace ...</Text>
-          </Space>
-        }
-        style={{ paddingTop: 60 }}
-      />
+      <div style={{ paddingTop: 40 }}>
+        <NotInstalledCard
+          title={t('velero.notInstalled')}
+          description={t('velero.installHint')}
+          command={VELERO_INSTALL_CMD}
+          docsUrl="https://velero.io/docs/main/basic-install/"
+          onRecheck={() => {
+            setInstalled(null);
+            setLoading(true);
+            snapshotService.checkVelero(clusterId, veleroNS)
+              .then(res => setInstalled(res.data.installed))
+              .catch(() => message.error(t('velero.fetchStatusError')))
+              .finally(() => setLoading(false));
+          }}
+          recheckLoading={loading}
+        />
+      </div>
     );
   }
 

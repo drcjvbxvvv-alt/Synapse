@@ -250,5 +250,9 @@
     "systemInfo": "系统信息"
   },
   "featureInDev": "该功能正在积极开发中",
-  "featureInDevDesc": "我们正在努力为您打造强大的功能，敬请期待。"
+  "featureInDevDesc": "我们正在努力为您打造强大的功能，敬请期待。",
+  "installCommand": "安装命令：",
+  "copyCommand": "复制安装命令",
+  "viewDocs": "查看官方文档",
+  "recheck": "重新检测"
 }
