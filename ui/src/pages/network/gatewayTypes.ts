@@ -179,6 +179,8 @@ export interface TopologyNode {
   name: string;
   namespace?: string;
   status?: string;
+  subKind?: string;    // listener summary (e.g. "HTTP:80") or service type
+  hostnames?: string[]; // HTTPRoute / GRPCRoute hostnames
 }
 
 export interface TopologyEdge {

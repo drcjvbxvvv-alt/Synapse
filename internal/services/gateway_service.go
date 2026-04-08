@@ -164,11 +164,13 @@ type ReferenceGrantItem struct {
 // --- Topology DTO ---
 
 type TopologyNode struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`      // GatewayClass | Gateway | HTTPRoute | GRPCRoute | Service
-	Name      string `json:"name"`
-	Namespace string `json:"namespace,omitempty"`
-	Status    string `json:"status,omitempty"`
+	ID        string   `json:"id"`
+	Kind      string   `json:"kind"`                // GatewayClass | Gateway | HTTPRoute | GRPCRoute | Service
+	Name      string   `json:"name"`
+	Namespace string   `json:"namespace,omitempty"`
+	Status    string   `json:"status,omitempty"`
+	SubKind   string   `json:"subKind,omitempty"`   // listener summary e.g. "HTTP:80" | service type
+	Hostnames []string `json:"hostnames,omitempty"` // HTTPRoute / GRPCRoute hostnames
 }
 
 type TopologyEdge struct {
@@ -793,7 +795,17 @@ func (s *GatewayService) GetTopology(ctx context.Context) (*TopologyData, error)
 				break
 			}
 		}
-		addNode(TopologyNode{ID: gwID, Kind: "Gateway", Name: gw.Name, Namespace: gw.Namespace, Status: status})
+		// Build listener summary (e.g. "HTTP:80" or "HTTP:80 HTTPS:443")
+		listenerSummary := ""
+		for _, l := range gw.Listeners {
+			part := fmt.Sprintf("%s:%d", l.Protocol, l.Port)
+			if listenerSummary == "" {
+				listenerSummary = part
+			} else {
+				listenerSummary += " " + part
+			}
+		}
+		addNode(TopologyNode{ID: gwID, Kind: "Gateway", Name: gw.Name, Namespace: gw.Namespace, Status: status, SubKind: listenerSummary})
 		gcID := "gc:" + gw.GatewayClass
 		if nodeSet[gcID] {
 			edges = append(edges, TopologyEdge{Source: gcID, Target: gwID})
@@ -804,7 +816,7 @@ func (s *GatewayService) GetTopology(ctx context.Context) (*TopologyData, error)
 	hrList, _ := s.ListHTTPRoutes(ctx, "")
 	for _, hr := range hrList {
 		hrID := "hr:" + hr.Namespace + "/" + hr.Name
-		addNode(TopologyNode{ID: hrID, Kind: "HTTPRoute", Name: hr.Name, Namespace: hr.Namespace})
+		addNode(TopologyNode{ID: hrID, Kind: "HTTPRoute", Name: hr.Name, Namespace: hr.Namespace, Hostnames: hr.Hostnames})
 		for _, pr := range hr.ParentRefs {
 			parentID := "gw:" + pr.GatewayNamespace + "/" + pr.GatewayName
 			if nodeSet[parentID] {
@@ -828,7 +840,7 @@ func (s *GatewayService) GetTopology(ctx context.Context) (*TopologyData, error)
 	grList, _ := s.ListGRPCRoutes(ctx, "")
 	for _, gr := range grList {
 		grID := "gr:" + gr.Namespace + "/" + gr.Name
-		addNode(TopologyNode{ID: grID, Kind: "GRPCRoute", Name: gr.Name, Namespace: gr.Namespace})
+		addNode(TopologyNode{ID: grID, Kind: "GRPCRoute", Name: gr.Name, Namespace: gr.Namespace, Hostnames: gr.Hostnames})
 		for _, pr := range gr.ParentRefs {
 			parentID := "gw:" + pr.GatewayNamespace + "/" + pr.GatewayName
 			if nodeSet[parentID] {

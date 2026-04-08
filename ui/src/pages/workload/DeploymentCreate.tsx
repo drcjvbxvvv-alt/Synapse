@@ -48,8 +48,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
   const editName = searchParams.get('name');
   const isEdit = !!(editNamespace && editName);
   
-  // 編輯模式預設使用 YAML 編輯器（避免表單格式化導致欄位丟失）
-  const [editMode, setEditMode] = useState<'form' | 'yaml'>(isEdit ? 'yaml' : 'form');
+  const [editMode, setEditMode] = useState<'form' | 'yaml'>('form');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dryRunning, setDryRunning] = useState(false);
@@ -427,24 +426,14 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
           <h2 style={{ margin: 0 }}>
             {isEdit ? t('create.edit') : t('create.create')} {workloadType}
           </h2>
-          {/* 編輯模式只支援 YAML 編輯，避免表單格式化導致複雜欄位丟失 */}
-          {isEdit ? (
-            <Tooltip title={t("create.yamlModeOnly")}>
-              <Space>
-                <CodeOutlined />
-                <span>{t('create.yamlMode')}</span>
-              </Space>
-            </Tooltip>
-          ) : (
-            <Segmented
-              value={editMode}
-              onChange={handleModeChange}
-              options={[
-                { value: 'form', icon: <FormOutlined />, label: t('create.formMode') },
-                { value: 'yaml', icon: <CodeOutlined />, label: t('create.yamlMode') },
-              ]}
-            />
-          )}
+          <Segmented
+            value={editMode}
+            onChange={handleModeChange}
+            options={[
+              { value: 'form', icon: <FormOutlined />, label: t('create.formMode') },
+              { value: 'yaml', icon: <CodeOutlined />, label: t('create.yamlMode') },
+            ]}
+          />
         </Space>
         
         <Space>

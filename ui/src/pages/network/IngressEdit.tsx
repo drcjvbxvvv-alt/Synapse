@@ -4,11 +4,15 @@ import {
   Button,
   Space,
   message,
-  Spin,
   Alert,
   Modal,
   Typography,
   App,
+  Segmented,
+  Row,
+  Col,
+  Input,
+  Select,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -16,6 +20,10 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   DiffOutlined,
+  FormOutlined,
+  CodeOutlined,
+  PlusOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { IngressService } from '../../services/ingressService';
@@ -44,6 +52,15 @@ const [loading, setLoading] = useState(true);
   const [yamlContent, setYamlContent] = useState('');
   const [originalYaml, setOriginalYaml] = useState('');
 
+  // 編輯模式
+  const [editMode, setEditMode] = useState<'form' | 'yaml'>('form');
+
+  // 表單狀態
+  const [formIngressClass, setFormIngressClass] = useState('');
+  const [formLabels, setFormLabels] = useState<{key:string;value:string}[]>([]);
+  const [formAnnotations, setFormAnnotations] = useState<{key:string;value:string}[]>([]);
+  const [formRules, setFormRules] = useState<{host:string; paths:{path:string;pathType:string;serviceName:string;servicePort:string}[]}[]>([]);
+
   // 預檢相關狀態
   const [dryRunning, setDryRunning] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<{
@@ -55,6 +72,24 @@ const [loading, setLoading] = useState(true);
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
 
+  const parseYamlToForm = (yamlStr: string) => {
+    try {
+      const parsed = YAML.parse(yamlStr) as any;
+      setFormIngressClass(parsed?.spec?.ingressClassName || '');
+      setFormLabels(Object.entries(parsed?.metadata?.labels || {}).map(([k, v]) => ({key: k, value: String(v)})));
+      setFormAnnotations(Object.entries(parsed?.metadata?.annotations || {}).map(([k, v]) => ({key: k, value: String(v)})));
+      setFormRules((parsed?.spec?.rules || []).map((r: any) => ({
+        host: r.host || '',
+        paths: (r.http?.paths || []).map((p: any) => ({
+          path: p.path || '/',
+          pathType: p.pathType || 'Prefix',
+          serviceName: p.backend?.service?.name || '',
+          servicePort: String(p.backend?.service?.port?.number || 80),
+        })),
+      })));
+    } catch {}
+  };
+
   // 載入 Ingress 詳情
   const loadIngress = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;
@@ -65,6 +100,7 @@ const [loading, setLoading] = useState(true);
       const yamlStr = response.yaml || '';
       setYamlContent(yamlStr);
       setOriginalYaml(yamlStr);
+      parseYamlToForm(yamlStr);
     } catch (error: unknown) {
       message.error(parseApiError(error) || t('network:editPage.loadIngressError'));
       navigate(`/clusters/${clusterId}/network`);
@@ -77,13 +113,56 @@ const [loading, setLoading] = useState(true);
     loadIngress();
   }, [loadIngress]);
 
+  const buildYamlFromForm = () => {
+    const labelsObj = Object.fromEntries(formLabels.filter(l => l.key).map(l => [l.key, l.value]));
+    const annotationsObj = Object.fromEntries(formAnnotations.filter(l => l.key).map(l => [l.key, l.value]));
+    const rulesArr = formRules.map(r => ({
+      host: r.host,
+      http: { paths: r.paths.map(p => ({
+        path: p.path,
+        pathType: p.pathType,
+        backend: { service: { name: p.serviceName, port: { number: isNaN(Number(p.servicePort)) ? p.servicePort : Number(p.servicePort) } } },
+      })) },
+    }));
+    let existingMeta = {name: ingressName, namespace: namespace || ''};
+    try {
+      const parsed = YAML.parse(originalYaml) as any;
+      existingMeta = {name: parsed?.metadata?.name || ingressName, namespace: parsed?.metadata?.namespace || namespace || ''};
+    } catch {}
+    const obj = {
+      apiVersion: 'networking.k8s.io/v1', kind: 'Ingress',
+      metadata: { ...existingMeta, labels: labelsObj, annotations: annotationsObj },
+      spec: {
+        ...(formIngressClass ? {ingressClassName: formIngressClass} : {}),
+        rules: rulesArr,
+      },
+    };
+    return YAML.stringify(obj);
+  };
+
+  const handleModeChange = (mode: string) => {
+    if (mode === 'yaml') {
+      const y = buildYamlFromForm();
+      setYamlContent(y);
+    } else {
+      parseYamlToForm(yamlContent);
+    }
+    setEditMode(mode as 'form' | 'yaml');
+  };
+
   // 預檢（Dry Run）
   const handleDryRun = async () => {
     if (!clusterId) return;
 
+    let currentYaml = yamlContent;
+    if (editMode === 'form') {
+      currentYaml = buildYamlFromForm();
+      setYamlContent(currentYaml);
+    }
+
     // 驗證 YAML 格式
     try {
-      YAML.parse(yamlContent);
+      YAML.parse(currentYaml);
     } catch (error) {
       message.error(t('network:editPage.yamlFormatError', { error: error instanceof Error ? error.message : t('network:editPage.unknownError') }));
       return;
@@ -93,7 +172,7 @@ const [loading, setLoading] = useState(true);
     setDryRunResult(null);
 
     try {
-      await ResourceService.applyYAML(clusterId, 'Ingress', yamlContent, true);
+      await ResourceService.applyYAML(clusterId, 'Ingress', currentYaml, true);
       setDryRunResult({
         success: true,
         message: t('network:editPage.dryRunSuccess'),
@@ -129,9 +208,15 @@ const [loading, setLoading] = useState(true);
   const handleSubmit = async () => {
     if (!clusterId || !namespace || !name) return;
 
+    let currentYaml = yamlContent;
+    if (editMode === 'form') {
+      currentYaml = buildYamlFromForm();
+      setYamlContent(currentYaml);
+    }
+
     // 驗證 YAML 格式
     try {
-      YAML.parse(yamlContent);
+      YAML.parse(currentYaml);
     } catch (error) {
       message.error(t('network:editPage.yamlFormatError', { error: error instanceof Error ? error.message : t('network:editPage.unknownError') }));
       return;
@@ -140,9 +225,9 @@ const [loading, setLoading] = useState(true);
     // 執行預檢
     setSubmitting(true);
     try {
-      await ResourceService.applyYAML(clusterId, 'Ingress', yamlContent, true);
+      await ResourceService.applyYAML(clusterId, 'Ingress', currentYaml, true);
       // 預檢透過，展示 diff 對比
-      setPendingYaml(yamlContent);
+      setPendingYaml(currentYaml);
       setDiffModalVisible(true);
     } catch (error: unknown) {
       message.error(t('network:editPage.dryRunFailedPrefix', { error: parseApiError(error) || t('network:editPage.unknownError') }));
@@ -153,7 +238,7 @@ const [loading, setLoading] = useState(true);
 
   // 返回上一頁
   const handleBack = () => {
-    if (yamlContent !== originalYaml) {
+    if (yamlContent !== originalYaml || editMode === 'form') {
       modal.confirm({
         title: t('network:editPage.confirmLeave'),
         content: t('network:editPage.confirmLeaveDesc'),
@@ -168,7 +253,7 @@ const [loading, setLoading] = useState(true);
 
   if (loading) return <PageSkeleton variant="detail" />;
 
-  const hasChanges = yamlContent !== originalYaml;
+  const hasChanges = editMode === 'form' ? true : yamlContent !== originalYaml;
 
   return (
     <div style={{ padding: '24px' }}>
@@ -183,11 +268,19 @@ const [loading, setLoading] = useState(true);
               <Title level={4} style={{ margin: 0 }}>
                 {t('network:editPage.editIngress', { name: ingressName })}
               </Title>
-              {hasChanges && (
+              {hasChanges && editMode === 'yaml' && (
                 <Text type="warning">{t('network:editPage.unsavedChanges')}</Text>
               )}
             </Space>
             <Space>
+              <Segmented
+                value={editMode}
+                onChange={handleModeChange}
+                options={[
+                  { value: 'form', icon: <FormOutlined />, label: '表單模式' },
+                  { value: 'yaml', icon: <CodeOutlined />, label: 'YAML 模式' },
+                ]}
+              />
               <Button
                 icon={<CheckCircleOutlined />}
                 loading={dryRunning}
@@ -203,7 +296,7 @@ const [loading, setLoading] = useState(true);
                 icon={<SaveOutlined />}
                 loading={submitting}
                 onClick={handleSubmit}
-                disabled={!hasChanges}
+                disabled={editMode === 'yaml' ? !hasChanges : false}
               >
                 {t('network:editPage.save')}
               </Button>
@@ -224,33 +317,89 @@ const [loading, setLoading] = useState(true);
           />
         )}
 
-        {/* YAML 編輯器 */}
-        <Card title={t('network:editPage.yamlEditor')}>
-          <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
-            <MonacoEditor
-              height="600px"
-              language="yaml"
-              value={yamlContent}
-              onChange={(value) => {
-                setYamlContent(value || '');
-                setDryRunResult(null);
-              }}
-              options={{
-                minimap: { enabled: true },
-                fontSize: 14,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                insertSpaces: true,
-                wordWrap: 'on',
-                folding: true,
-                bracketPairColorization: { enabled: true },
-              }}
-              theme="vs-light"
-            />
-          </div>
-        </Card>
+        {/* 表單或 YAML 編輯器 */}
+        {editMode === 'form' ? (
+          <Space direction="vertical" style={{width: '100%'}} size="middle">
+            {/* 基本資訊 */}
+            <Card title="基本資訊">
+              <Row gutter={16}>
+                <Col span={12}><div><label>名稱</label><Input value={ingressName} disabled /></div></Col>
+                <Col span={12}><div><label>命名空間</label><Input value={namespace} disabled /></div></Col>
+                <Col span={12}><div style={{marginTop: 8}}><label>Ingress Class</label><Input value={formIngressClass} onChange={e => setFormIngressClass(e.target.value)} placeholder="nginx" /></div></Col>
+              </Row>
+            </Card>
+            {/* 標籤 */}
+            <Card title="標籤" extra={<Button size="small" icon={<PlusOutlined />} onClick={() => setFormLabels(p => [...p, {key: '', value: ''}])}>新增</Button>}>
+              {formLabels.map((item, i) => (
+                <Row key={i} gutter={8} style={{marginBottom: 8}}>
+                  <Col span={10}><Input placeholder="key" value={item.key} onChange={e => setFormLabels(p => p.map((x, j) => j === i ? {...x, key: e.target.value} : x))} /></Col>
+                  <Col span={10}><Input placeholder="value" value={item.value} onChange={e => setFormLabels(p => p.map((x, j) => j === i ? {...x, value: e.target.value} : x))} /></Col>
+                  <Col span={4}><Button danger icon={<DeleteOutlined />} onClick={() => setFormLabels(p => p.filter((_, j) => j !== i))} /></Col>
+                </Row>
+              ))}
+            </Card>
+            {/* 注解 */}
+            <Card title="注解 (Annotations)" extra={<Button size="small" icon={<PlusOutlined />} onClick={() => setFormAnnotations(p => [...p, {key: '', value: ''}])}>新增</Button>}>
+              {formAnnotations.map((item, i) => (
+                <Row key={i} gutter={8} style={{marginBottom: 8}}>
+                  <Col span={10}><Input placeholder="key" value={item.key} onChange={e => setFormAnnotations(p => p.map((x, j) => j === i ? {...x, key: e.target.value} : x))} /></Col>
+                  <Col span={10}><Input placeholder="value" value={item.value} onChange={e => setFormAnnotations(p => p.map((x, j) => j === i ? {...x, value: e.target.value} : x))} /></Col>
+                  <Col span={4}><Button danger icon={<DeleteOutlined />} onClick={() => setFormAnnotations(p => p.filter((_, j) => j !== i))} /></Col>
+                </Row>
+              ))}
+            </Card>
+            {/* 規則 */}
+            <Card title="路由規則" extra={<Button size="small" icon={<PlusOutlined />} onClick={() => setFormRules(p => [...p, {host: '', paths: [{path: '/', pathType: 'Prefix', serviceName: '', servicePort: '80'}]}])}>新增規則</Button>}>
+              {formRules.map((rule, ri) => (
+                <Card key={ri} size="small" style={{marginBottom: 12}}
+                  title={<Input placeholder="Host (e.g. example.com)" value={rule.host} onChange={e => setFormRules(p => p.map((r, j) => j === ri ? {...r, host: e.target.value} : r))} style={{width: 300}} />}
+                  extra={<Button danger size="small" icon={<DeleteOutlined />} onClick={() => setFormRules(p => p.filter((_, j) => j !== ri))}>刪除規則</Button>}>
+                  {rule.paths.map((path, pi) => (
+                    <Row key={pi} gutter={8} style={{marginBottom: 8}} align="middle">
+                      <Col span={5}><Input placeholder="Path /" value={path.path} onChange={e => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, path: e.target.value} : pp)} : r))} /></Col>
+                      <Col span={4}>
+                        <Select value={path.pathType} style={{width: '100%'}} onChange={v => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, pathType: v} : pp)} : r))}
+                          options={['Prefix', 'Exact', 'ImplementationSpecific'].map(v => ({value: v, label: v}))} />
+                      </Col>
+                      <Col span={8}><Input placeholder="Service 名稱" value={path.serviceName} onChange={e => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, serviceName: e.target.value} : pp)} : r))} /></Col>
+                      <Col span={4}><Input placeholder="Port" value={path.servicePort} onChange={e => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, servicePort: e.target.value} : pp)} : r))} /></Col>
+                      <Col span={3}><Button danger size="small" icon={<DeleteOutlined />} onClick={() => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.filter((_, k) => k !== pi)} : r))} /></Col>
+                    </Row>
+                  ))}
+                  <Button size="small" icon={<PlusOutlined />} onClick={() => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: [...r.paths, {path: '/', pathType: 'Prefix', serviceName: '', servicePort: '80'}]} : r))}>新增路徑</Button>
+                </Card>
+              ))}
+            </Card>
+          </Space>
+        ) : (
+          /* YAML 編輯器 */
+          <Card title={t('network:editPage.yamlEditor')}>
+            <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
+              <MonacoEditor
+                height="600px"
+                language="yaml"
+                value={yamlContent}
+                onChange={(value) => {
+                  setYamlContent(value || '');
+                  setDryRunResult(null);
+                }}
+                options={{
+                  minimap: { enabled: true },
+                  fontSize: 14,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 2,
+                  insertSpaces: true,
+                  wordWrap: 'on',
+                  folding: true,
+                  bracketPairColorization: { enabled: true },
+                }}
+                theme="vs-light"
+              />
+            </div>
+          </Card>
+        )}
       </Space>
 
       {/* YAML Diff 對比 Modal */}
@@ -318,4 +467,3 @@ const [loading, setLoading] = useState(true);
 };
 
 export default IngressEdit;
-

@@ -9,6 +9,10 @@ import {
   Modal,
   Typography,
   App,
+  Segmented,
+  Row,
+  Col,
+  Input,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -16,6 +20,10 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   DiffOutlined,
+  FormOutlined,
+  CodeOutlined,
+  PlusOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { configMapService, type ConfigMapDetail } from '../../services/configService';
@@ -44,6 +52,14 @@ const [loading, setLoading] = useState(true);
   const [yamlContent, setYamlContent] = useState('');
   const [originalYaml, setOriginalYaml] = useState('');
 
+  // 編輯模式
+  const [editMode, setEditMode] = useState<'form' | 'yaml'>('form');
+
+  // 表單狀態
+  const [formLabels, setFormLabels] = useState<{ key: string; value: string }[]>([]);
+  const [formAnnotations, setFormAnnotations] = useState<{ key: string; value: string }[]>([]);
+  const [formData, setFormData] = useState<{ key: string; value: string }[]>([]);
+
   // 預檢相關狀態
   const [dryRunning, setDryRunning] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<{
@@ -54,6 +70,22 @@ const [loading, setLoading] = useState(true);
   // Diff 對比相關狀態
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
+
+  // 從表單狀態同步到 YAML
+  const syncFormToYaml = useCallback(() => {
+    const labelsObj = Object.fromEntries(formLabels.filter(l => l.key).map(l => [l.key, l.value]));
+    const annotationsObj = Object.fromEntries(formAnnotations.filter(l => l.key).map(l => [l.key, l.value]));
+    const dataObj = Object.fromEntries(formData.filter(d => d.key).map(d => [d.key, d.value]));
+    const yamlObj = {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      metadata: { name, namespace, labels: labelsObj, annotations: annotationsObj },
+      data: dataObj,
+    };
+    const yamlStr = YAML.stringify(yamlObj);
+    setYamlContent(yamlStr);
+    return yamlStr;
+  }, [formLabels, formAnnotations, formData, name, namespace]);
 
   // 載入 ConfigMap 詳情
   const loadConfigMap = useCallback(async () => {
@@ -82,6 +114,11 @@ const [loading, setLoading] = useState(true);
       const yamlStr = YAML.stringify(yamlObj);
       setYamlContent(yamlStr);
       setOriginalYaml(yamlStr);
+
+      // 初始化表單狀態
+      setFormLabels(Object.entries(data.labels || {}).map(([key, value]) => ({ key, value })));
+      setFormAnnotations(Object.entries(data.annotations || {}).map(([key, value]) => ({ key, value })));
+      setFormData(Object.entries(data.data || {}).map(([key, value]) => ({ key, value: String(value) })));
     } catch (error: unknown) {
       message.error(parseApiError(error) || t('config:edit.messages.loadConfigMapError'));
       navigate(`/clusters/${clusterId}/configs`);
@@ -94,13 +131,33 @@ const [loading, setLoading] = useState(true);
     loadConfigMap();
   }, [loadConfigMap]);
 
+  // 模式切換
+  const handleModeChange = (mode: string) => {
+    if (mode === 'yaml') {
+      syncFormToYaml();
+    } else {
+      try {
+        const parsed = YAML.parse(yamlContent) as any;
+        setFormLabels(Object.entries(parsed?.metadata?.labels || {}).map(([k, v]) => ({ key: k, value: String(v) })));
+        setFormAnnotations(Object.entries(parsed?.metadata?.annotations || {}).map(([k, v]) => ({ key: k, value: String(v) })));
+        setFormData(Object.entries(parsed?.data || {}).map(([k, v]) => ({ key: k, value: String(v) })));
+      } catch {}
+    }
+    setEditMode(mode as 'form' | 'yaml');
+  };
+
   // 預檢（Dry Run）
   const handleDryRun = async () => {
     if (!clusterId) return;
 
+    let currentYaml = yamlContent;
+    if (editMode === 'form') {
+      currentYaml = syncFormToYaml();
+    }
+
     // 驗證 YAML 格式
     try {
-      YAML.parse(yamlContent);
+      YAML.parse(currentYaml);
     } catch (error) {
       message.error(t('config:edit.messages.yamlFormatError', { error: error instanceof Error ? error.message : t('config:edit.messages.unknownError') }));
       return;
@@ -110,7 +167,7 @@ const [loading, setLoading] = useState(true);
     setDryRunResult(null);
 
     try {
-      await ResourceService.applyYAML(clusterId, 'ConfigMap', yamlContent, true);
+      await ResourceService.applyYAML(clusterId, 'ConfigMap', currentYaml, true);
       setDryRunResult({
         success: true,
         message: t('config:edit.messages.dryRunPassed'),
@@ -146,9 +203,24 @@ const [loading, setLoading] = useState(true);
   const handleSubmit = async () => {
     if (!clusterId || !namespace || !name) return;
 
+    let currentYaml = yamlContent;
+    if (editMode === 'form') {
+      const labelsObj = Object.fromEntries(formLabels.filter(l => l.key).map(l => [l.key, l.value]));
+      const annotationsObj = Object.fromEntries(formAnnotations.filter(l => l.key).map(l => [l.key, l.value]));
+      const dataObj = Object.fromEntries(formData.filter(d => d.key).map(d => [d.key, d.value]));
+      const yamlObj = {
+        apiVersion: 'v1',
+        kind: 'ConfigMap',
+        metadata: { name, namespace, labels: labelsObj, annotations: annotationsObj },
+        data: dataObj,
+      };
+      currentYaml = YAML.stringify(yamlObj);
+      setYamlContent(currentYaml);
+    }
+
     // 驗證 YAML 格式
     try {
-      YAML.parse(yamlContent);
+      YAML.parse(currentYaml);
     } catch (error) {
       message.error(t('config:edit.messages.yamlFormatError', { error: error instanceof Error ? error.message : t('config:edit.messages.unknownError') }));
       return;
@@ -157,9 +229,9 @@ const [loading, setLoading] = useState(true);
     // 執行預檢
     setSubmitting(true);
     try {
-      await ResourceService.applyYAML(clusterId, 'ConfigMap', yamlContent, true);
+      await ResourceService.applyYAML(clusterId, 'ConfigMap', currentYaml, true);
       // 預檢透過，展示 diff 對比
-      setPendingYaml(yamlContent);
+      setPendingYaml(currentYaml);
       setDiffModalVisible(true);
     } catch (error: unknown) {
       message.error(t('config:edit.messages.dryRunFailedWithError', { error: parseApiError(error) || t('config:edit.messages.unknownError') }));
@@ -209,6 +281,14 @@ const [loading, setLoading] = useState(true);
               )}
             </Space>
             <Space>
+              <Segmented
+                value={editMode}
+                onChange={handleModeChange}
+                options={[
+                  { value: 'form', icon: <FormOutlined />, label: '表單模式' },
+                  { value: 'yaml', icon: <CodeOutlined />, label: 'YAML 模式' },
+                ]}
+              />
               <Button
                 icon={<CheckCircleOutlined />}
                 loading={dryRunning}
@@ -224,7 +304,7 @@ const [loading, setLoading] = useState(true);
                 icon={<SaveOutlined />}
                 loading={submitting}
                 onClick={handleSubmit}
-                disabled={!hasChanges}
+                disabled={!hasChanges && editMode === 'yaml'}
               >
                 {t('common:actions.save')}
               </Button>
@@ -245,33 +325,188 @@ const [loading, setLoading] = useState(true);
           />
         )}
 
+        {/* 表單模式 */}
+        {editMode === 'form' && (
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            {/* 基本資訊 */}
+            <Card title="基本資訊">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong>名稱</Text>
+                  </div>
+                  <Input value={name} disabled />
+                </Col>
+                <Col span={12}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong>命名空間</Text>
+                  </div>
+                  <Input value={namespace} disabled />
+                </Col>
+              </Row>
+            </Card>
+
+            {/* 標籤 */}
+            <Card
+              title="標籤 (Labels)"
+              extra={
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => setFormLabels(prev => [...prev, { key: '', value: '' }])}
+                >
+                  新增
+                </Button>
+              }
+            >
+              {formLabels.map((item, i) => (
+                <Row key={i} gutter={8} style={{ marginBottom: 8 }}>
+                  <Col span={10}>
+                    <Input
+                      placeholder="key"
+                      value={item.key}
+                      onChange={e => setFormLabels(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
+                    />
+                  </Col>
+                  <Col span={10}>
+                    <Input
+                      placeholder="value"
+                      value={item.value}
+                      onChange={e => setFormLabels(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
+                    />
+                  </Col>
+                  <Col span={4}>
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => setFormLabels(prev => prev.filter((_, j) => j !== i))}
+                    />
+                  </Col>
+                </Row>
+              ))}
+              {formLabels.length === 0 && (
+                <Text type="secondary">無標籤</Text>
+              )}
+            </Card>
+
+            {/* 注解 */}
+            <Card
+              title="注解 (Annotations)"
+              extra={
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => setFormAnnotations(prev => [...prev, { key: '', value: '' }])}
+                >
+                  新增
+                </Button>
+              }
+            >
+              {formAnnotations.map((item, i) => (
+                <Row key={i} gutter={8} style={{ marginBottom: 8 }}>
+                  <Col span={10}>
+                    <Input
+                      placeholder="key"
+                      value={item.key}
+                      onChange={e => setFormAnnotations(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
+                    />
+                  </Col>
+                  <Col span={10}>
+                    <Input
+                      placeholder="value"
+                      value={item.value}
+                      onChange={e => setFormAnnotations(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
+                    />
+                  </Col>
+                  <Col span={4}>
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => setFormAnnotations(prev => prev.filter((_, j) => j !== i))}
+                    />
+                  </Col>
+                </Row>
+              ))}
+              {formAnnotations.length === 0 && (
+                <Text type="secondary">無注解</Text>
+              )}
+            </Card>
+
+            {/* 資料 */}
+            <Card
+              title="資料 (Data)"
+              extra={
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => setFormData(prev => [...prev, { key: '', value: '' }])}
+                >
+                  新增
+                </Button>
+              }
+            >
+              {formData.map((item, i) => (
+                <Row key={i} gutter={8} style={{ marginBottom: 8 }}>
+                  <Col span={10}>
+                    <Input
+                      placeholder="key"
+                      value={item.key}
+                      onChange={e => setFormData(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
+                    />
+                  </Col>
+                  <Col span={10}>
+                    <Input.TextArea
+                      placeholder="value"
+                      rows={3}
+                      value={item.value}
+                      onChange={e => setFormData(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
+                    />
+                  </Col>
+                  <Col span={4}>
+                    <Button
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => setFormData(prev => prev.filter((_, j) => j !== i))}
+                    />
+                  </Col>
+                </Row>
+              ))}
+              {formData.length === 0 && (
+                <Text type="secondary">無資料</Text>
+              )}
+            </Card>
+          </Space>
+        )}
+
         {/* YAML 編輯器 */}
-        <Card title={t('config:edit.yamlEditor')}>
-          <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
-            <MonacoEditor
-              height="600px"
-              language="yaml"
-              value={yamlContent}
-              onChange={(value) => {
-                setYamlContent(value || '');
-                setDryRunResult(null);
-              }}
-              options={{
-                minimap: { enabled: true },
-                fontSize: 14,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                insertSpaces: true,
-                wordWrap: 'on',
-                folding: true,
-                bracketPairColorization: { enabled: true },
-              }}
-              theme="vs-light"
-            />
-          </div>
-        </Card>
+        {editMode === 'yaml' && (
+          <Card title={t('config:edit.yamlEditor')}>
+            <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
+              <MonacoEditor
+                height="600px"
+                language="yaml"
+                value={yamlContent}
+                onChange={(value) => {
+                  setYamlContent(value || '');
+                  setDryRunResult(null);
+                }}
+                options={{
+                  minimap: { enabled: true },
+                  fontSize: 14,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 2,
+                  insertSpaces: true,
+                  wordWrap: 'on',
+                  folding: true,
+                  bracketPairColorization: { enabled: true },
+                }}
+                theme="vs-light"
+              />
+            </div>
+          </Card>
+        )}
       </Space>
 
       {/* YAML Diff 對比 Modal */}

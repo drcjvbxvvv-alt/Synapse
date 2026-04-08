@@ -117,7 +117,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
 
   useEffect(() => {
     namespaceService.getNamespaces(clusterId)
-      .then(res => setNamespaces((res as { items?: { name: string }[] }).items?.map(n => n.name) ?? []))
+      .then(res => setNamespaces(res.map(n => n.name)))
       .catch(() => {});
   }, [clusterId]);
 

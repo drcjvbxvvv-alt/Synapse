@@ -94,12 +94,11 @@ const NetworkPolicyWizard: React.FC<Props> = ({ clusterId, namespaces, open, onC
     setValidationError(null);
     try {
       const res = await NetworkPolicyService.wizardValidate(clusterId, buildRequest(targetStep));
-      const data = (res as { data?: { valid: boolean; message?: string; yaml?: string } }).data;
-      if (!data?.valid) {
-        setValidationError(data?.message ?? '驗證失敗');
+      if (!res.valid) {
+        setValidationError(res.message ?? '驗證失敗');
         return false;
       }
-      if (data.yaml) setPreviewYAML(data.yaml);
+      if (res.yaml) setPreviewYAML(res.yaml);
       return true;
     } catch (e) {
       setValidationError(String(e));
@@ -111,7 +110,14 @@ const NetworkPolicyWizard: React.FC<Props> = ({ clusterId, namespaces, open, onC
 
   const handleNext = async () => {
     const ok = await validate(step + 1);
-    if (ok) { setValidationError(null); setStep(s => s + 1); }
+    if (!ok) return;
+    // 進入確認頁（step 1 → 2）時再呼叫 step=3 產生 YAML 預覽
+    if (step === 1) {
+      const previewOk = await validate(3);
+      if (!previewOk) return;
+    }
+    setValidationError(null);
+    setStep(s => s + 1);
   };
 
   const handleSubmit = async () => {
