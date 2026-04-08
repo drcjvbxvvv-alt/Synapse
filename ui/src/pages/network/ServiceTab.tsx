@@ -293,12 +293,15 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   const handleExport = () => {
     try {
       const filteredData = filterServices(allServices);
-      if (filteredData.length === 0) {
+      const sourceData = selectedRowKeys.length > 0
+        ? filteredData.filter(s => selectedRowKeys.includes(`${s.namespace}/${s.name}`))
+        : filteredData;
+      if (sourceData.length === 0) {
         message.warning(t('common:messages.noExportData'));
         return;
       }
 
-      const dataToExport = filteredData.map(s => ({
+      const dataToExport = sourceData.map(s => ({
         [t('network:service.export.name')]: s.name,
         [t('network:service.export.namespace')]: s.namespace,
         [t('network:service.export.type')]: s.type,
@@ -324,7 +327,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       link.href = URL.createObjectURL(blob);
       link.download = `service-list-${Date.now()}.csv`;
       link.click();
-      message.success(t('common:messages.exportCount', { count: filteredData.length }));
+      message.success(t('common:messages.exportCount', { count: sourceData.length }));
     } catch (error) {
       console.error('Export failed:', error);
       message.error(t('common:messages.exportError'));
@@ -388,7 +391,9 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
               : t('common:actions.delete')}
           </Button>
           <Button onClick={handleExport}>
-            {t('common:actions.export')}
+            {selectedRowKeys.length > 1
+              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+              : t('common:actions.export')}
           </Button>
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>

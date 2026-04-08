@@ -227,13 +227,15 @@ const [allSecrets, setAllSecrets] = useState<SecretListItem[]>([]);
   const handleExport = () => {
     try {
       const filteredData = filterSecrets(allSecrets);
-      
-      if (filteredData.length === 0) {
+      const sourceData = selectedRowKeys.length > 0
+        ? filteredData.filter(item => selectedRowKeys.includes(`${item.namespace}/${item.name}`))
+        : filteredData;
+      if (sourceData.length === 0) {
         message.warning(t('common:messages.noExportData'));
         return;
       }
 
-      const dataToExport = filteredData.map(item => ({
+      const dataToExport = sourceData.map(item => ({
         [t('config:list.export.name')]: item.name,
         [t('config:list.export.namespace')]: item.namespace,
         [t('config:list.export.type')]: item.type,
@@ -267,7 +269,7 @@ const [allSecrets, setAllSecrets] = useState<SecretListItem[]>([]);
       link.href = URL.createObjectURL(blob);
       link.download = `secret-list-${Date.now()}.csv`;
       link.click();
-      message.success(t('config:list.messages.exportSuccess', { count: filteredData.length }));
+      message.success(t('config:list.messages.exportSuccess', { count: sourceData.length }));
     } catch (error) {
       console.error('匯出失敗:', error);
       message.error(t('common:messages.exportError'));
@@ -540,7 +542,9 @@ const [allSecrets, setAllSecrets] = useState<SecretListItem[]>([]);
               : t('common:actions.delete')}
           </Button>
           <Button onClick={handleExport}>
-            {t('common:actions.export')}
+            {selectedRowKeys.length > 1
+              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+              : t('common:actions.export')}
           </Button>
         </Space>
         <Button

@@ -334,16 +334,16 @@ const PodList: React.FC = () => {
   // 匯出功能（匯出所有篩選後的資料，包含所有列）
   const handleExport = () => {
     try {
-      // 獲取所有篩選後的資料（不限於當前頁）
       const filteredData = filterPods(allPods);
-      
-      if (filteredData.length === 0) {
+      const sourceData = selectedRowKeys.length > 0
+        ? filteredData.filter(pod => selectedRowKeys.includes(`${pod.namespace}/${pod.name}`))
+        : filteredData;
+      if (sourceData.length === 0) {
         message.warning(tc('messages.noData'));
         return;
       }
 
-      // 匯出篩選後的所有資料（包含所有列）
-      const dataToExport = filteredData.map(pod => {
+      const dataToExport = sourceData.map(pod => {
         const resources = getPodResources(pod);
         return {
           [t('columns.name')]: pod.name,
@@ -773,7 +773,9 @@ const PodList: React.FC = () => {
                   : tc('actions.delete')}
               </Button>
               <Button onClick={handleExport}>
-                {tc('actions.export')}
+                {selectedRowKeys.length > 1
+                  ? `${tc('actions.batchExport')} (${selectedRowKeys.length})`
+                  : tc('actions.export')}
               </Button>
             </Space>
           </div>

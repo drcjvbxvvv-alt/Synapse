@@ -67,6 +67,7 @@
     "submit": "提交",
     "import": "匯入",
     "export": "匯出",
+    "batchExport": "批次匯出",
     "view": "查看",
     "viewDetails": "查看詳情",
     "back": "返回",

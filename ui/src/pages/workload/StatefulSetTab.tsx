@@ -547,8 +547,11 @@ message.error(t('messages.redeployError'));
   // 匯出
   const handleExport = () => {
     const filteredData = filterWorkloads(sortWorkloads(allWorkloads));
-    
-const headers = [
+    const sourceData = selectedRowKeys.length > 0
+      ? filteredData.filter(w => selectedRowKeys.includes(`${w.namespace}/${w.name}`))
+      : filteredData;
+
+    const headers = [
       t('columns.name'),
       t('columns.namespace'),
       t('columns.status'),
@@ -560,7 +563,7 @@ const headers = [
       t('columns.images'),
       t('columns.createdAt')
     ];
-const dataToExport = filteredData.map(workload => [
+    const dataToExport = sourceData.map(workload => [
       workload.name,
       workload.namespace,
       workload.status,
@@ -638,8 +641,10 @@ message.success(t('messages.columnSettingsSaved'));
               : t('actions.redeploy')}
           </Button>
           <Button onClick={handleExport}>
-            {t('actions.export')}
-            </Button>
+            {selectedRowKeys.length > 1
+              ? `${t('actions.batchExport')} (${selectedRowKeys.length})`
+              : t('actions.export')}
+          </Button>
         </Space>
           <Button
             type="primary"

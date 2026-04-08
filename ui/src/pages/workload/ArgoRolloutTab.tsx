@@ -541,7 +541,10 @@ const { t } = useTranslation(['workload', 'common']);
   // 匯出
   const handleExport = () => {
     const filteredData = filterWorkloads(sortWorkloads(allWorkloads));
-    
+    const sourceData = selectedRowKeys.length > 0
+      ? filteredData.filter(w => selectedRowKeys.includes(`${w.namespace}/${w.name}`))
+      : filteredData;
+
     const headers = [
       t('columns.name'),
       t('columns.namespace'),
@@ -555,7 +558,7 @@ const { t } = useTranslation(['workload', 'common']);
       t('columns.createdAt')
     ];
     
-    const dataToExport = filteredData.map(workload => [
+    const dataToExport = sourceData.map(workload => [
       workload.name,
       workload.namespace,
       workload.status,
@@ -633,7 +636,11 @@ const { t } = useTranslation(['workload', 'common']);
               ? `${t('actions.batchRedeploy')} (${selectedRowKeys.length})`
               : t('actions.redeploy')}
           </Button>
-          <Button onClick={handleExport}>{t('actions.export')}</Button>
+          <Button onClick={handleExport}>
+            {selectedRowKeys.length > 1
+              ? `${t('actions.batchExport')} (${selectedRowKeys.length})`
+              : t('actions.export')}
+          </Button>
         </Space>
         <Button
           type="primary"

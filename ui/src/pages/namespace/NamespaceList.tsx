@@ -238,16 +238,16 @@ const [form] = Form.useForm();
   // 匯出功能
   const handleExport = () => {
     try {
-      // 獲取所有篩選後的資料
       const filteredData = filterNamespaces(allNamespaces);
-
-      if (filteredData.length === 0) {
+      const sourceData = selectedRowKeys.length > 0
+        ? filteredData.filter(ns => selectedRowKeys.includes(ns.name))
+        : filteredData;
+      if (sourceData.length === 0) {
         message.warning(t('common:messages.noExportData'));
         return;
       }
 
-      // 匯出篩選後的所有資料
-      const dataToExport = filteredData.map(ns => ({
+      const dataToExport = sourceData.map(ns => ({
         [t('columns.name')]: ns.name,
         [t('columns.status')]: ns.status === 'Active' ? t('common:status.active') : ns.status,
         [t('columns.labels')]: ns.labels ? Object.entries(ns.labels).map(([k, v]) => `${k}=${v}`).join('; ') : '-',
@@ -279,7 +279,7 @@ const [form] = Form.useForm();
       link.href = URL.createObjectURL(blob);
       link.download = `namespace-list-${Date.now()}.csv`;
       link.click();
-      message.success(t('common:messages.exportCount', { count: filteredData.length }));
+      message.success(t('common:messages.exportCount', { count: sourceData.length }));
     } catch (error) {
       console.error('匯出失敗:', error);
       message.error(t('common:messages.exportError'));
@@ -525,7 +525,11 @@ const [form] = Form.useForm();
                 ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
                 : t('common:actions.delete')}
             </Button>
-            <Button onClick={handleExport}>{t('common:actions.export')}</Button>
+            <Button onClick={handleExport}>
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+                : t('common:actions.export')}
+            </Button>
           </Space>
           <Button
             type="primary"

@@ -307,13 +307,15 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
   const handleExport = () => {
     try {
       const filteredData = filterPVCs(allPVCs);
-      
-      if (filteredData.length === 0) {
+      const sourceData = selectedRowKeys.length > 0
+        ? filteredData.filter(p => selectedRowKeys.includes(`${p.namespace}/${p.name}`))
+        : filteredData;
+      if (sourceData.length === 0) {
         message.warning(t('common:messages.noExportData'));
         return;
       }
 
-      const dataToExport = filteredData.map(p => ({
+      const dataToExport = sourceData.map(p => ({
         [t('storage:export.pvcNameLabel')]: p.name,
         [t('storage:export.namespaceLabel')]: p.namespace,
         [t('storage:export.statusLabel')]: p.status,
@@ -340,7 +342,7 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
       link.href = URL.createObjectURL(blob);
       link.download = `pvc-list-${Date.now()}.csv`;
       link.click();
-      message.success(t('common:messages.exportCount', { count: filteredData.length }));
+      message.success(t('common:messages.exportCount', { count: sourceData.length }));
     } catch (error) {
       console.error('Export failed:', error);
       message.error(t('common:messages.exportError'));
@@ -523,7 +525,9 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
               : t('common:actions.delete')}
           </Button>
           <Button onClick={handleExport}>
-            {t('common:actions.export')}
+            {selectedRowKeys.length > 1
+              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+              : t('common:actions.export')}
           </Button>
         </Space>
       </div>

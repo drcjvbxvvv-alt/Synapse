@@ -288,16 +288,16 @@ message.error(t('messages.redeployError'));
   // 匯出功能（匯出所有篩選後的資料，包含所有列）
   const handleExport = () => {
     try {
-      // 獲取所有篩選後的資料（不限於當前頁）
       const filteredData = filterWorkloads(allWorkloads);
-      
-      if (filteredData.length === 0) {
-message.warning(t('messages.noExportData'));
-return;
+      const sourceData = selectedRowKeys.length > 0
+        ? filteredData.filter(w => selectedRowKeys.includes(`${w.namespace}-${w.name}-${w.type}`))
+        : filteredData;
+      if (sourceData.length === 0) {
+        message.warning(t('messages.noExportData'));
+        return;
       }
 
-// 匯出篩選後的所有資料（包含所有列）
-      const dataToExport = filteredData.map(w => ({
+      const dataToExport = sourceData.map(w => ({
         [t('columns.name')]: w.name,
         [t('columns.namespace')]: w.namespace,
         [t('columns.status')]: w.status,
@@ -339,7 +339,7 @@ year: 'numeric',
       link.href = URL.createObjectURL(blob);
       link.download = `deployment-list-${Date.now()}.csv`;
       link.click();
-message.success(t('messages.exportSuccess', { count: filteredData.length }));
+      message.success(t('messages.exportSuccess', { count: sourceData.length }));
     } catch (error) {
       console.error('匯出失敗:', error);
       message.error(t('messages.exportError'));
@@ -675,8 +675,10 @@ message.success(t('messages.columnSettingsSaved'));
               : t('actions.redeploy')}
           </Button>
           <Button onClick={handleExport}>
-            {t('actions.export')}
-            </Button>
+            {selectedRowKeys.length > 1
+              ? `${t('actions.batchExport')} (${selectedRowKeys.length})`
+              : t('actions.export')}
+          </Button>
         </Space>
           <Button
             type="primary"

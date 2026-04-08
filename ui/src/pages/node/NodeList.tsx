@@ -441,16 +441,16 @@ const NodeList: React.FC = () => {
   // 匯出功能
   const handleExport = () => {
     try {
-      // 獲取所有篩選後的資料
       const filteredData = filterNodes(allNodes);
-      
-      if (filteredData.length === 0) {
+      const sourceData = selectedNodes.length > 0
+        ? filteredData.filter(node => selectedNodes.includes(node.id))
+        : filteredData;
+      if (sourceData.length === 0) {
         appMessage.warning(tc('messages.noData'));
         return;
       }
 
-      // 匯出篩選後的所有資料
-      const dataToExport = filteredData.map(node => ({
+      const dataToExport = sourceData.map(node => ({
         [t('columns.name')]: node.name,
         [t('columns.status')]: node.status,
         [t('columns.roles')]: node.roles?.join(', ') || '-',
@@ -847,7 +847,9 @@ const NodeList: React.FC = () => {
                 {isBatch ? t('actions.batchLabel') : '新增標籤'}
               </Button>
               <Button onClick={handleExport}>
-                {tc('actions.export')}
+                {selectedNodes.length > 1
+                  ? `${tc('actions.batchExport')} (${selectedNodes.length})`
+                  : tc('actions.export')}
               </Button>
             </Space>
           </div>

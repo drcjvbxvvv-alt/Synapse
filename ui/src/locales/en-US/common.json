@@ -67,6 +67,7 @@
     "submit": "Submit",
     "import": "Import",
     "export": "Export",
+    "batchExport": "Batch Export",
     "view": "View",
     "viewDetails": "View Details",
     "back": "Back",

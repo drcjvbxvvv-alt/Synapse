@@ -285,13 +285,15 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
   const handleExport = () => {
     try {
       const filteredData = filterStorageClasses(allStorageClasses);
-      
-      if (filteredData.length === 0) {
+      const sourceData = selectedRowKeys.length > 0
+        ? filteredData.filter(s => selectedRowKeys.includes(s.name))
+        : filteredData;
+      if (sourceData.length === 0) {
         message.warning(t('common:messages.noExportData'));
         return;
       }
 
-      const dataToExport = filteredData.map(s => ({
+      const dataToExport = sourceData.map(s => ({
         [t('storage:export.nameLabel')]: s.name,
         [t('storage:export.provisionerLabel')]: s.provisioner,
         [t('storage:export.reclaimPolicyLabel')]: s.reclaimPolicy || '-',
@@ -317,7 +319,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
       link.href = URL.createObjectURL(blob);
       link.download = `storageclass-list-${Date.now()}.csv`;
       link.click();
-      message.success(t('common:messages.exportCount', { count: filteredData.length }));
+      message.success(t('common:messages.exportCount', { count: sourceData.length }));
     } catch (error) {
       console.error('Export failed:', error);
       message.error(t('common:messages.exportError'));
@@ -514,7 +516,9 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
               : t('common:actions.delete')}
           </Button>
           <Button onClick={handleExport}>
-            {t('common:actions.export')}
+            {selectedRowKeys.length > 1
+              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+              : t('common:actions.export')}
           </Button>
         </Space>
       </div>

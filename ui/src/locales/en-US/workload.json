@@ -30,6 +30,7 @@
     "redeploy": "Redeploy",
     "batchRedeploy": "Batch Redeploy",
     "export": "Export",
+    "batchExport": "Batch Export",
     "create": "Create {{type}}",
     "confirmDelete": "Delete this {{type}}?",
     "confirmDeleteDesc": "Are you sure you want to delete {{name}}?",

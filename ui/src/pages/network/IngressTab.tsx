@@ -249,12 +249,15 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
   const handleExport = () => {
     try {
       const filteredData = filterIngresses(allIngresses);
-      if (filteredData.length === 0) {
+      const sourceData = selectedRowKeys.length > 0
+        ? filteredData.filter(i => selectedRowKeys.includes(`${i.namespace}/${i.name}`))
+        : filteredData;
+      if (sourceData.length === 0) {
         message.warning(t('common:messages.noExportData'));
         return;
       }
 
-      const dataToExport = filteredData.map(i => ({
+      const dataToExport = sourceData.map(i => ({
         [t('network:ingress.export.name')]: i.name,
         [t('network:ingress.export.namespace')]: i.namespace,
         [t('network:ingress.export.ingressClass')]: IngressService.formatIngressClass(i.ingressClassName),
@@ -283,7 +286,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       link.href = URL.createObjectURL(blob);
       link.download = `ingress-list-${Date.now()}.csv`;
       link.click();
-      message.success(t('common:messages.exportCount', { count: filteredData.length }));
+      message.success(t('common:messages.exportCount', { count: sourceData.length }));
     } catch (error) {
       console.error('Export failed:', error);
       message.error(t('common:messages.exportError'));
@@ -368,7 +371,9 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
               : t('common:actions.delete')}
           </Button>
           <Button onClick={handleExport}>
-            {t('common:actions.export')}
+            {selectedRowKeys.length > 1
+              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+              : t('common:actions.export')}
           </Button>
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>

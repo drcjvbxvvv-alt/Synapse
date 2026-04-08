@@ -30,6 +30,7 @@
     "redeploy": "重新部署",
     "batchRedeploy": "批次重新部署",
     "export": "匯出",
+    "batchExport": "批次匯出",
     "create": "建立 {{type}}",
     "confirmDelete": "確定要刪除這個 {{type}} 嗎？",
     "confirmDeleteDesc": "確定要刪除 {{name}} 嗎？",
