@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   App, Button, Card, Input, Space, Table, Tag, Tooltip, Typography,
 } from 'antd';
 import {
-  SearchOutlined, SyncOutlined, InfoCircleOutlined,
+  SearchOutlined, SyncOutlined, InfoCircleOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { imageService, type ImageIndex } from '../../services/imageService';
@@ -58,7 +58,12 @@ const ImageSearch: React.FC = () => {
     }
   };
 
-  React.useEffect(() => { loadStatus(); }, []);
+  useEffect(() => {
+    loadStatus();
+    // 每 5 分鐘自動刷新狀態，反映 Worker 每小時同步的結果
+    const interval = setInterval(loadStatus, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const columns: ColumnsType<ImageIndex> = [
     {
@@ -112,15 +117,22 @@ const ImageSearch: React.FC = () => {
   return (
     <Card
       title={
-        <Space>
+        <Space wrap>
           <SearchOutlined />
           Image Tag 全域搜尋
           {syncStatus && (
-            <Tooltip title={`最後同步：${new Date(syncStatus.lastSyncAt).toLocaleString('zh-TW')}`}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                <InfoCircleOutlined /> 已索引 {syncStatus.indexed} 筆
-              </Text>
-            </Tooltip>
+            <>
+              <Tooltip title={`最後同步：${new Date(syncStatus.lastSyncAt).toLocaleString('zh-TW')}`}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  <InfoCircleOutlined /> 已索引 {syncStatus.indexed} 筆
+                </Text>
+              </Tooltip>
+              <Tooltip title={`下次自動同步約：${new Date(new Date(syncStatus.lastSyncAt).getTime() + 3600_000).toLocaleString('zh-TW')}`}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  <ClockCircleOutlined /> 每小時自動同步
+                </Text>
+              </Tooltip>
+            </>
           )}
         </Space>
       }
@@ -130,7 +142,7 @@ const ImageSearch: React.FC = () => {
           onClick={handleSync}
           loading={syncing}
         >
-          掃描並同步索引
+          立即同步
         </Button>
       }
     >

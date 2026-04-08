@@ -753,18 +753,19 @@ POST   /clusters/:id/alertmanager/receivers/:name/test  測試推送
 
 ---
 
-### 5.13 映像索引自動同步 Worker（小型 Sprint，3 天）🟡 中優先級
+### 5.13 映像索引自動同步 Worker（小型 Sprint，3 天）✅ 已完成（2026-04-08）
 
-> **現況：** `SyncImages` API 存在，但需手動呼叫觸發，無 cron 自動更新，索引會隨叢集部署而過期。
+> **現況：** `SyncImages` API 已存在，Worker 已上線，每小時自動增量掃描所有叢集。
 
-#### 待實作任務
+#### 已實作內容
 
 | 任務 | 檔案 | 說明 |
 |------|------|------|
-| `ImageIndexWorker` — 每小時增量掃描 | `internal/services/image_index_worker.go` | 複用 `CostWorker` 框架；只更新有變動的工作負載 |
-| 增量更新邏輯（比對 ResourceVersion 避免全量重建） | `internal/services/image_index_worker.go` | 降低 K8s API 壓力 |
-| `Router.Setup()` 啟動 Worker | `internal/router/router.go` | 統一生命週期管理 |
-| 前端「映像索引」頁新增「上次同步時間」+ 手動觸發按鈕 | `ui/src/pages/workload/ImageSearch.tsx` | 補齊狀態可見性 |
+| `ImageIndexWorker` — 每小時增量掃描 | `internal/services/image_index_worker.go` | 啟動即執行首次同步，之後每小時一次 |
+| 增量更新（ResourceVersion 比對，只更新變動工作負載） | `internal/services/image_index_worker.go` | 使用 Informer Lister（快取），零額外 K8s API 壓力 |
+| 已刪除工作負載自動清理 | `internal/services/image_index_worker.go` | rvCache 追蹤存活 key，stale 條目自動刪除 |
+| `router.go` 啟動 Worker + Metrics 注入 | `internal/router/router.go` | 統一生命週期管理 |
+| 前端顯示「每小時自動同步」badge + 下次同步時間 | `ui/src/pages/workload/ImageSearch.tsx` | 狀態每 5 分鐘自動刷新；手動觸發按鈕保留 |
 
 ---
 
