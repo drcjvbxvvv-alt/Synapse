@@ -43,7 +43,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
 
     networkTopologyService.getIntegrations(clusterId)
       .then(setIntegrations)
-      .catch(() => setIntegrations({ cilium: false, istio: false }));
+      .catch(() => setIntegrations({ cilium: false, istio: false, hubbleMetrics: false }));
   }, [clusterId]);
 
   const loadTopology = useCallback(async () => {
