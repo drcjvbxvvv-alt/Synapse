@@ -160,7 +160,7 @@ export function getIngressColumns(
     },
     {
       title: t('common:table.actions'),
-      key: 'action',
+      key: 'actions',
       fixed: 'right' as const,
       width: 150,
       render: (_: unknown, record: Ingress) => (

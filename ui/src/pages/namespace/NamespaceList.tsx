@@ -519,7 +519,12 @@ const [form] = Form.useForm();
               danger
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchDelete}
-            >{t('common:actions.batchDelete')}</Button>
+              icon={<DeleteOutlined />}
+            >
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
+                : t('common:actions.delete')}
+            </Button>
             <Button onClick={handleExport}>{t('common:actions.export')}</Button>
           </Space>
           <Button

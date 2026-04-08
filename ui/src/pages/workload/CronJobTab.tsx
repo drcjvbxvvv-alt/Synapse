@@ -622,7 +622,12 @@ const { t } = useTranslation(['workload', 'common']);
           <Button
             disabled={selectedRowKeys.length === 0}
             onClick={handleBatchRedeploy}
-          >{t('actions.batchRedeploy')}</Button>
+            icon={<ReloadOutlined />}
+          >
+            {selectedRowKeys.length > 1
+              ? `${t('actions.batchRedeploy')} (${selectedRowKeys.length})`
+              : t('actions.redeploy')}
+          </Button>
           <Button onClick={handleExport}>{t('actions.export')}</Button>
         </Space>
         <Button
@@ -699,6 +704,7 @@ const { t } = useTranslation(['workload', 'common']);
       {/* 表格 */}
       <Table
         rowSelection={{
+          columnWidth: 48,
           selectedRowKeys,
           onChange: (keys) => setSelectedRowKeys(keys as string[]),
         }}

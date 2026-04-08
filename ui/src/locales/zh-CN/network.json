@@ -207,6 +207,16 @@
       "empty": "暂无拓扑数据（尚无 Gateway 或路由资源）"
     }
   },
+  "servicemesh": {
+    "createVirtualService": "创建 VirtualService",
+    "createDestinationRule": "创建 DestinationRule",
+    "fetchVSError": "获取 VirtualService 列表失败",
+    "fetchVSDetailError": "获取 VirtualService 详情失败",
+    "deleteVSSuccess": "VirtualService 删除成功",
+    "confirmDeleteVS": "确定要删除 VirtualService「{{name}}」吗？",
+    "fetchDRError": "获取 DestinationRule 列表失败",
+    "confirmDeleteDR": "确定要删除 DestinationRule「{{name}}」吗？"
+  },
   "networkpolicy": {
     "create": "创建 NetworkPolicy",
     "createTitle": "创建 NetworkPolicy",

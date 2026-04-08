@@ -19,6 +19,7 @@ import {
   SearchOutlined,
   SettingOutlined,
   CheckCircleOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { StorageService } from '../../services/storageService';
 import type { StorageClass } from '../../types';
@@ -440,7 +441,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
     },
     {
       title: t('common:table.actions'),
-      key: 'action',
+      key: 'actions',
       fixed: 'right' as const,
       width: 120,
       render: (_: unknown, record: StorageClass) => (
@@ -474,7 +475,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
 
   // 根據可見性過濾列
   const columns = allColumns.filter(col => {
-    if (col.key === 'action') return true;
+    if (col.key === 'actions') return true;
     if (col.key === 'name') return true;
     return visibleColumns.includes(col.key as string);
   });
@@ -506,8 +507,11 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
             disabled={selectedRowKeys.length === 0}
             onClick={handleBatchDelete}
             danger
+            icon={<DeleteOutlined />}
           >
-            {t('common:actions.batchDelete')}
+            {selectedRowKeys.length > 1
+              ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
+              : t('common:actions.delete')}
           </Button>
           <Button onClick={handleExport}>
             {t('common:actions.export')}

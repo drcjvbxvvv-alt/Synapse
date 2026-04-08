@@ -2,25 +2,22 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Button,
-  Card,
   Space,
   Spin,
   Tabs,
   Table,
   Tag,
-  Tooltip,
+  Popconfirm,
   App,
   Typography,
-  Empty,
 } from 'antd';
 import {
   PlusOutlined,
-  DeleteOutlined,
-  EyeOutlined,
   ReloadOutlined,
   CopyOutlined,
   LinkOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import MonacoEditor from '@monaco-editor/react';
 import { Modal } from 'antd';
 import { MeshService, type MeshStatus, type VirtualServiceSummary } from '../../services/meshService';
@@ -40,7 +37,8 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
   clusterId,
   namespaces,
 }) => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
+  const { t } = useTranslation(['network', 'common']);
   const [items, setItems] = useState<VirtualServiceSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespace, setNamespace] = useState('');
@@ -55,11 +53,11 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
       const data = (res as unknown as { data: { items: VirtualServiceSummary[] } }).data ?? res;
       setItems((data as { items: VirtualServiceSummary[] }).items ?? []);
     } catch {
-      message.error('取得 VirtualService 列表失敗');
+      message.error(t('network:servicemesh.fetchVSError'));
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, message]);
+  }, [clusterId, namespace, message, t]);
 
   useEffect(() => {
     fetchList();
@@ -72,25 +70,18 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
       setYamlContent(JSON.stringify(obj, null, 2));
       setYamlOpen(true);
     } catch {
-      message.error('取得 VirtualService 詳情失敗');
+      message.error(t('network:servicemesh.fetchVSDetailError'));
     }
   };
 
-  const handleDelete = (record: VirtualServiceSummary) => {
-    modal.confirm({
-      title: '確認刪除',
-      content: `確定要刪除 VirtualService "${record.name}" 嗎？`,
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await MeshService.deleteVirtualService(clusterId, record.namespace, record.name);
-          message.success('VirtualService 刪除成功');
-          fetchList();
-        } catch {
-          message.error('刪除失敗');
-        }
-      },
-    });
+  const handleDelete = async (record: VirtualServiceSummary) => {
+    try {
+      await MeshService.deleteVirtualService(clusterId, record.namespace, record.name);
+      message.success(t('network:servicemesh.deleteVSSuccess'));
+      fetchList();
+    } catch {
+      message.error(t('common:messages.deleteError'));
+    }
   };
 
   const getHosts = (record: VirtualServiceSummary): string[] => {
@@ -100,12 +91,12 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
 
   const columns = [
     {
-      title: '名稱',
+      title: t('network:gatewayapi.columns.name'),
       dataIndex: 'name',
       render: (v: string) => <Text strong>{v}</Text>,
     },
     {
-      title: '命名空間',
+      title: t('network:gatewayapi.columns.namespace'),
       dataIndex: 'namespace',
       render: (v: string) => <Tag color="blue">{v}</Tag>,
     },
@@ -116,23 +107,31 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
         getHosts(record).map(h => <Tag key={h}>{h}</Tag>),
     },
     {
-      title: '建立時間',
+      title: t('network:gatewayapi.columns.createdAt'),
       dataIndex: 'createdAt',
       render: (v: string) => (v ? new Date(v).toLocaleString() : '—'),
     },
     {
-      title: '操作',
+      title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 120,
+      width: 140,
       render: (_: unknown, record: VirtualServiceSummary) => (
-        <Space>
-          <Tooltip title="檢視 YAML">
-            <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewYAML(record)} />
-          </Tooltip>
-          <Tooltip title="刪除">
-            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
-          </Tooltip>
+        <Space size="small">
+          <Button type="link" size="small" onClick={() => handleViewYAML(record)}>
+            YAML
+          </Button>
+          <Popconfirm
+            title={t('common:messages.confirmDelete')}
+            description={t('network:servicemesh.confirmDeleteVS', { name: record.name })}
+            onConfirm={() => handleDelete(record)}
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
+          >
+            <Button type="link" size="small" danger>
+              {t('common:actions.delete')}
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -140,12 +139,13 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
 
   return (
     <div>
-      <Space style={{ marginBottom: 12 }} wrap>
-        <Button icon={<ReloadOutlined />} onClick={fetchList}>重新整理</Button>
+      <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <Button icon={<ReloadOutlined />} onClick={fetchList} loading={loading} />
+        <div style={{ flex: 1 }} />
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          建立 VirtualService
+          {t('network:servicemesh.createVirtualService')}
         </Button>
-      </Space>
+      </div>
 
       <Table
         rowKey={r => `${r.namespace}/${r.name}`}

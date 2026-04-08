@@ -27,6 +27,7 @@
     "scale": "Scale",
     "delete": "Delete",
     "editYAML": "Edit YAML",
+    "redeploy": "Redeploy",
     "batchRedeploy": "Batch Redeploy",
     "export": "Export",
     "create": "Create {{type}}",

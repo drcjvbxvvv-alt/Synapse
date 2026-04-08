@@ -500,7 +500,9 @@ const [allConfigMaps, setAllConfigMaps] = useState<ConfigMapListItem[]>([]);
             icon={<DeleteOutlined />}
             onClick={handleBatchDelete}
           >
-            {t('common:actions.batchDelete')} {selectedRowKeys.length > 0 && `(${selectedRowKeys.length})`}
+            {selectedRowKeys.length > 1
+              ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
+              : t('common:actions.delete')}
           </Button>
           <Button onClick={handleExport}>
             {t('common:actions.export')}

@@ -27,6 +27,7 @@
     "scale": "擴縮容",
     "delete": "刪除",
     "editYAML": "編輯 YAML",
+    "redeploy": "重新部署",
     "batchRedeploy": "批次重新部署",
     "export": "匯出",
     "create": "建立 {{type}}",

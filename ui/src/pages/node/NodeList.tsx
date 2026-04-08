@@ -21,6 +21,7 @@ import {
   Checkbox,
   Drawer,
   App,
+  Form,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -34,6 +35,8 @@ import {
   CodeOutlined,
   SearchOutlined,
   SettingOutlined,
+  PlusOutlined,
+  MinusCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
@@ -71,6 +74,11 @@ const NodeList: React.FC = () => {
   const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
   const [currentSearchField, setCurrentSearchField] = useState<'name' | 'status' | 'version' | 'roles'>('name');
   const [currentSearchValue, setCurrentSearchValue] = useState('');
+
+  // 新增標籤 Modal 狀態
+  const [labelModalOpen, setLabelModalOpen] = useState(false);
+  const [labelForm] = Form.useForm<{ entries: { key: string; value: string }[] }>();
+  const [labelSubmitting, setLabelSubmitting] = useState(false);
 
   // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
@@ -138,20 +146,100 @@ const NodeList: React.FC = () => {
     setSelectedNodes(selectedRowKeys);
   };
 
-  // 批次操作
-  const handleBatchCordon = () => {
-    message.info(`${t('actions.cordon')} ${selectedNodes.length} nodes`);
-    // TODO: 實現批次封鎖邏輯
+  // 批次 / 單一操作（依勾選數動態切換標籤）
+  const isBatch = selectedNodes.length > 1;
+
+  const handleBatchCordon = async () => {
+    if (selectedNodes.length === 0) return;
+    try {
+      await Promise.all(selectedNodes.map(n => nodeService.cordonNode(selectedClusterId, String(n))));
+      message.success(isBatch
+        ? `已封鎖 ${selectedNodes.length} 個節點`
+        : t('messages.cordonSuccess'));
+      setSelectedNodes([]);
+      handleRefresh();
+    } catch {
+      message.error(t('messages.cordonError'));
+    }
   };
 
-  const handleBatchUncordon = () => {
-    message.info(`${t('actions.uncordon')} ${selectedNodes.length} nodes`);
-    // TODO: 實現批次解封邏輯
+  const handleBatchUncordon = async () => {
+    if (selectedNodes.length === 0) return;
+    try {
+      await Promise.all(selectedNodes.map(n => nodeService.uncordonNode(selectedClusterId, String(n))));
+      message.success(isBatch
+        ? `已解封 ${selectedNodes.length} 個節點`
+        : t('messages.uncordonSuccess'));
+      setSelectedNodes([]);
+      handleRefresh();
+    } catch {
+      message.error(t('messages.uncordonError'));
+    }
+  };
+
+  const handleBatchDrain = () => {
+    if (selectedNodes.length === 0) return;
+    const names = selectedNodes.map(String);
+    modal.confirm({
+      title: isBatch ? `批次驅逐 ${names.length} 個節點` : t('actions.drain'),
+      content: isBatch
+        ? `確定要驅逐這 ${names.length} 個節點上的所有 Pod 嗎？此操作可能導致服務中斷。`
+        : t('actions.confirmDrain', { name: names[0] }),
+      okText: tc('actions.confirm'),
+      cancelText: tc('actions.cancel'),
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await Promise.all(names.map(name =>
+            nodeService.drainNode(selectedClusterId, name, {
+              ignoreDaemonSets: true,
+              deleteLocalData: true,
+              gracePeriodSeconds: 30,
+            })
+          ));
+          message.success(isBatch
+            ? `已驅逐 ${names.length} 個節點的 Pod`
+            : t('messages.drainSuccess'));
+          setSelectedNodes([]);
+          handleRefresh();
+        } catch {
+          message.error(t('messages.drainError'));
+        }
+      },
+    });
   };
 
   const handleBatchLabel = () => {
-    message.info(`Add labels to ${selectedNodes.length} nodes`);
-    // TODO: 實現批次新增標籤邏輯
+    labelForm.setFieldsValue({ entries: [{ key: '', value: '' }] });
+    setLabelModalOpen(true);
+  };
+
+  const handleLabelSubmit = async () => {
+    const values = await labelForm.validateFields();
+    const labelsMap: Record<string, string> = {};
+    for (const { key, value } of values.entries) {
+      if (key.trim()) labelsMap[key.trim()] = value.trim();
+    }
+    if (Object.keys(labelsMap).length === 0) return;
+    setLabelSubmitting(true);
+    try {
+      await Promise.all(
+        selectedNodes.map(n => nodeService.patchNodeLabels(selectedClusterId, String(n), labelsMap))
+      );
+      message.success(
+        selectedNodes.length > 1
+          ? `已為 ${selectedNodes.length} 個節點新增標籤`
+          : '標籤已更新'
+      );
+      setLabelModalOpen(false);
+      labelForm.resetFields();
+      setSelectedNodes([]);
+      handleRefresh();
+    } catch {
+      message.error('更新標籤失敗');
+    } finally {
+      setLabelSubmitting(false);
+    }
   };
 
   // 單個節點操作
@@ -590,7 +678,7 @@ const NodeList: React.FC = () => {
     },
     {
       title: tc('table.actions'),
-      key: 'action',
+      key: 'actions',
       width: 150,
       fixed: 'right' as const,
       render: (_, record) => (
@@ -737,19 +825,26 @@ const NodeList: React.FC = () => {
                 disabled={selectedNodes.length === 0}
                 onClick={handleBatchCordon}
               >
-                {t('actions.batchCordon')}
+                {isBatch ? t('actions.batchCordon') : t('actions.cordon')}
               </Button>
               <Button
                 disabled={selectedNodes.length === 0}
                 onClick={handleBatchUncordon}
               >
-                {t('actions.batchUncordon')}
+                {isBatch ? t('actions.batchUncordon') : t('actions.uncordon')}
+              </Button>
+              <Button
+                disabled={selectedNodes.length === 0}
+                danger
+                onClick={handleBatchDrain}
+              >
+                {isBatch ? '批次驅逐' : t('actions.drain')}
               </Button>
               <Button
                 disabled={selectedNodes.length === 0}
                 onClick={handleBatchLabel}
               >
-                {t('actions.batchLabel')}
+                {isBatch ? t('actions.batchLabel') : '新增標籤'}
               </Button>
               <Button onClick={handleExport}>
                 {tc('actions.export')}
@@ -855,32 +950,51 @@ const NodeList: React.FC = () => {
           />
         </Card>
 
-        {/* 批次操作欄 */}
-        {selectedNodes.length > 0 && (
-          <Card
-            style={{
-              position: 'fixed',
-              bottom: 20,
-              left: 20,
-              right: 20,
-              zIndex: 1000,
-              boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.15)',
-            }}
-          >
-            <Row justify="space-between" align="middle">
-              <Col>
-                {tc('table.selected')} {selectedNodes.length} {t('list.nodes')}
-              </Col>
-              <Col>
-                <Space>
-                  <Button onClick={handleBatchCordon}>{t('actions.batchCordon')}</Button>
-                  <Button onClick={handleBatchUncordon}>{t('actions.batchUncordon')}</Button>
-                  <Button onClick={handleBatchLabel}>{t('actions.batchLabel')}</Button>
-                </Space>
-              </Col>
-            </Row>
-          </Card>
-        )}
+        {/* 新增標籤 Modal */}
+        <Modal
+          title={isBatch ? `批次新增標籤（${selectedNodes.length} 個節點）` : '新增標籤'}
+          open={labelModalOpen}
+          onCancel={() => { setLabelModalOpen(false); labelForm.resetFields(); }}
+          onOk={handleLabelSubmit}
+          okText="套用"
+          cancelText={tc('actions.cancel')}
+          confirmLoading={labelSubmitting}
+        >
+          <Form form={labelForm} layout="vertical">
+            <Form.List name="entries" initialValue={[{ key: '', value: '' }]}>
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(field => (
+                    <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                      <Form.Item
+                        {...field}
+                        name={[field.name, 'key']}
+                        rules={[{ required: true, message: '請輸入鍵名' }]}
+                        noStyle
+                      >
+                        <Input placeholder="key" style={{ width: 160 }} />
+                      </Form.Item>
+                      <span>=</span>
+                      <Form.Item
+                        {...field}
+                        name={[field.name, 'value']}
+                        noStyle
+                      >
+                        <Input placeholder="value" style={{ width: 160 }} />
+                      </Form.Item>
+                      {fields.length > 1 && (
+                        <MinusCircleOutlined onClick={() => remove(field.name)} />
+                      )}
+                    </Space>
+                  ))}
+                  <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />} size="small">
+                    新增標籤
+                  </Button>
+                </>
+              )}
+            </Form.List>
+          </Form>
+        </Modal>
 
         {/* 列設定抽屜 */}
         <Drawer

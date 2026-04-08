@@ -668,8 +668,11 @@ message.success(t('messages.columnSettingsSaved'));
 <Button
             disabled={selectedRowKeys.length === 0}
             onClick={handleBatchRedeploy}
+            icon={<ReloadOutlined />}
           >
-            {t('actions.batchRedeploy')}
+            {selectedRowKeys.length > 1
+              ? `${t('actions.batchRedeploy')} (${selectedRowKeys.length})`
+              : t('actions.redeploy')}
           </Button>
           <Button onClick={handleExport}>
             {t('actions.export')}

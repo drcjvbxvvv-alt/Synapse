@@ -15,6 +15,7 @@ import {
   SearchOutlined,
   PlusOutlined,
   SettingOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { ServiceService } from '../../services/serviceService';
 import type { Service } from '../../types';
@@ -351,7 +352,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   }), [sortField, sortOrder, clusterId, t]);
 
   const columns = allColumns.filter(col => {
-    if (col.key === 'action' || col.key === 'name') return true;
+    if (col.key === 'actions' || col.key === 'name') return true;
     return visibleColumns.includes(col.key as string);
   });
 
@@ -381,8 +382,10 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger>
-            {t('common:actions.batchDelete')}
+          <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger icon={<DeleteOutlined />}>
+            {selectedRowKeys.length > 1
+              ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
+              : t('common:actions.delete')}
           </Button>
           <Button onClick={handleExport}>
             {t('common:actions.export')}

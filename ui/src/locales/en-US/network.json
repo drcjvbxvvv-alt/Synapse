@@ -207,6 +207,16 @@
       "empty": "No topology data (no Gateway or Route resources found)"
     }
   },
+  "servicemesh": {
+    "createVirtualService": "Create VirtualService",
+    "createDestinationRule": "Create DestinationRule",
+    "fetchVSError": "Failed to fetch VirtualService list",
+    "fetchVSDetailError": "Failed to fetch VirtualService details",
+    "deleteVSSuccess": "VirtualService deleted successfully",
+    "confirmDeleteVS": "Delete VirtualService \"{{name}}\"?",
+    "fetchDRError": "Failed to fetch DestinationRule list",
+    "confirmDeleteDR": "Delete DestinationRule \"{{name}}\"?"
+  },
   "networkpolicy": {
     "create": "Create NetworkPolicy",
     "createTitle": "Create NetworkPolicy",

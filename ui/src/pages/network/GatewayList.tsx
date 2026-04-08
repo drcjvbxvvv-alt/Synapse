@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Tag, Space, Button, Select, App } from 'antd';
-import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Tag, Space, Button, Select, App, Popconfirm } from 'antd';
+import { ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import { parseApiError } from '@/utils/api';
@@ -9,7 +9,7 @@ import GatewayDrawer from './GatewayDrawer';
 import GatewayForm from './GatewayForm';
 
 const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
   const [items, setItems] = useState<GatewayItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,21 +37,14 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
     loadData();
   }, [loadData]);
 
-  const handleDelete = (item: GatewayItem) => {
-    modal.confirm({
-      title: t('network:gatewayapi.messages.confirmDeleteTitle'),
-      content: t('network:gatewayapi.messages.confirmDeleteGateway', { name: item.name }),
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await gatewayService.deleteGateway(clusterId, item.namespace, item.name);
-          message.success(t('network:gatewayapi.messages.deleteGatewaySuccess'));
-          loadData();
-        } catch (err) {
-          message.error(parseApiError(err) || t('network:gatewayapi.messages.deleteGatewayError'));
-        }
-      },
-    });
+  const handleDelete = async (item: GatewayItem) => {
+    try {
+      await gatewayService.deleteGateway(clusterId, item.namespace, item.name);
+      message.success(t('network:gatewayapi.messages.deleteGatewaySuccess'));
+      loadData();
+    } catch (err) {
+      message.error(parseApiError(err) || t('network:gatewayapi.messages.deleteGatewayError'));
+    }
   };
 
   const filtered = namespaceFilter
@@ -131,24 +124,30 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
     {
-      title: t('network:gatewayapi.columns.actions', '操作'),
+      title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
-      width: 80,
+      fixed: 'right' as const,
+      width: 120,
       render: (_: unknown, record: GatewayItem) => (
-        <Space size={4}>
+        <Space size="small">
           <Button
             type="link"
             size="small"
-            icon={<EditOutlined />}
             onClick={() => { setEditingGateway(record); setFormVisible(true); }}
-          />
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
-          />
+          >
+            {t('common:actions.edit')}
+          </Button>
+          <Popconfirm
+            title={t('network:gatewayapi.messages.confirmDeleteTitle')}
+            description={t('network:gatewayapi.messages.confirmDeleteGateway', { name: record.name })}
+            onConfirm={() => handleDelete(record)}
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
+          >
+            <Button type="link" size="small" danger>
+              {t('common:actions.delete')}
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },

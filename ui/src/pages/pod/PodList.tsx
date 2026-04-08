@@ -26,6 +26,7 @@ import {
   ReloadOutlined,
   SettingOutlined,
   SearchOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
@@ -486,6 +487,7 @@ const PodList: React.FC = () => {
   }, [routeClusterId, loadPods]);
 
   const rowSelection = useMemo(() => ({
+    columnWidth: 48,
     selectedRowKeys,
     onChange: (keys: React.Key[]) => {
       setSelectedRowKeys(keys as string[]);
@@ -764,8 +766,11 @@ const PodList: React.FC = () => {
                 danger
                 disabled={selectedRowKeys.length === 0}
                 onClick={handleBatchDelete}
+                icon={<DeleteOutlined />}
               >
-                {t('actions.batchDelete')}
+                {selectedRowKeys.length > 1
+                  ? `${t('actions.batchDelete')} (${selectedRowKeys.length})`
+                  : tc('actions.delete')}
               </Button>
               <Button onClick={handleExport}>
                 {tc('actions.export')}

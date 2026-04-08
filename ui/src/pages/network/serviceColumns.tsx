@@ -132,7 +132,7 @@ export function getServiceColumns(options: ServiceColumnsOptions): ColumnsType<S
     },
     {
       title: t('common:table.actions'),
-      key: 'action',
+      key: 'actions',
       fixed: 'right' as const,
       width: 180,
       render: (_: unknown, record: Service) => (

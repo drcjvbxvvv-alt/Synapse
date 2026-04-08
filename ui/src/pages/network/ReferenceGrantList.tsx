@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Tag, Space, Button, Select, App, Modal } from 'antd';
-import { ReloadOutlined, PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { Table, Tag, Space, Button, Select, App, Modal, Popconfirm } from 'antd';
+import { ReloadOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import { parseApiError } from '@/utils/api';
@@ -24,8 +24,8 @@ spec:
 `;
 
 const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
-  const { message, modal } = App.useApp();
-  const { t } = useTranslation('network');
+  const { message } = App.useApp();
+  const { t } = useTranslation(['network', 'common']);
   const [items, setItems] = useState<ReferenceGrantItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -54,21 +54,14 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
 
   const filtered = namespaceFilter ? items.filter((i) => i.namespace === namespaceFilter) : items;
 
-  const handleDelete = (item: ReferenceGrantItem) => {
-    modal.confirm({
-      title: t('gatewayapi.messages.confirmDeleteTitle'),
-      content: t('gatewayapi.messages.confirmDeleteReferenceGrant', { name: item.name }),
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await gatewayService.deleteReferenceGrant(clusterId, item.namespace, item.name);
-          message.success(t('gatewayapi.messages.deleteReferenceGrantSuccess'));
-          loadData();
-        } catch (err) {
-          message.error(parseApiError(err) || t('gatewayapi.messages.deleteReferenceGrantError'));
-        }
-      },
-    });
+  const handleDelete = async (item: ReferenceGrantItem) => {
+    try {
+      await gatewayService.deleteReferenceGrant(clusterId, item.namespace, item.name);
+      message.success(t('gatewayapi.messages.deleteReferenceGrantSuccess'));
+      loadData();
+    } catch (err) {
+      message.error(parseApiError(err) || t('gatewayapi.messages.deleteReferenceGrantError'));
+    }
   };
 
   const handleViewYAML = async (item: ReferenceGrantItem) => {
@@ -140,11 +133,24 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
     {
       title: t('gatewayapi.columns.actions'),
       key: 'actions',
-      width: 80,
+      fixed: 'right' as const,
+      width: 140,
       render: (_: unknown, record: ReferenceGrantItem) => (
-        <Space size={4}>
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewYAML(record)} />
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
+        <Space size="small">
+          <Button type="link" size="small" onClick={() => handleViewYAML(record)}>
+            YAML
+          </Button>
+          <Popconfirm
+            title={t('gatewayapi.messages.confirmDeleteTitle')}
+            description={t('gatewayapi.messages.confirmDeleteReferenceGrant', { name: record.name })}
+            onConfirm={() => handleDelete(record)}
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
+          >
+            <Button type="link" size="small" danger>
+              {t('common:actions.delete')}
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
