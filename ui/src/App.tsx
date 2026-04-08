@@ -55,6 +55,7 @@ import EventAlertRules from './pages/alert/EventAlertRules';
 import CostDashboard from './pages/cost/CostDashboard';
 import GlobalCostInsights from './pages/cost/GlobalCostInsights';
 import SecurityDashboard from './pages/security/SecurityDashboard';
+import CertificateList from './pages/security/CertificateList';
 import MultiClusterPage from './pages/multicluster';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager } from './services/authService';
@@ -62,6 +63,7 @@ import { PermissionGuard } from './components/PermissionGuard';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage'
 import PipelineRunDemo from './pages/pipeline/PipelineRunDemo';
+import AutoscalingPage from './pages/workload/AutoscalingPage';
 import './App.css';
 
 // 認證保護元件
@@ -144,6 +146,7 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/pods/:namespace/:name" element={<PodDetail />} />
               <Route path="clusters/:clusterId/pods/:namespace/:name/logs" element={<PodLogs />} />
               <Route path="clusters/:clusterId/pods/:namespace/:name/terminal" element={<ErrorBoundary fallbackType="section"><PodTerminal /></ErrorBoundary>} />
+              <Route path="clusters/:clusterId/autoscaling" element={<AutoscalingPage />} />
               <Route path="clusters/:clusterId/workloads" element={<WorkloadList />} />
               <Route path="clusters/:clusterId/workloads/create" element={<DeploymentCreate />} />
               <Route path="clusters/:clusterId/workloads/deployment/:namespace/:name" element={<DeploymentDetail />} />
@@ -215,6 +218,8 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:clusterId/cost-insights" element={<CostDashboard />} />
               {/* 安全掃描 */}
               <Route path="clusters/:id/security" element={<SecurityDashboard />} />
+              {/* cert-manager 憑證管理 */}
+              <Route path="clusters/:id/certificates" element={<CertificateList />} />
               {/* 成本洞察 - 跨叢集全局視角 */}
               <Route path="cost-insights" element={<GlobalCostInsights />} />
               {/* 多叢集工作流程 */}

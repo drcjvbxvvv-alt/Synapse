@@ -414,6 +414,59 @@
     "conditionReason": "原因",
     "conditionMessage": "消息"
   },
+  "autoscaling": {
+    "pageTitle": "弹性伸缩",
+    "tabs": {
+      "hpa": "HPA",
+      "keda": "KEDA（事件驱动）",
+      "karpenter": "Karpenter（节点配置）",
+      "cas": "Cluster Autoscaler"
+    },
+    "hpa": {
+      "redirectHint": "HPA 管理",
+      "redirectDesc": "HPA 设置请前往各工作负载详情页的「弹性伸缩」Tab 进行管理。"
+    },
+    "keda": {
+      "notInstalled": "未检测到 KEDA",
+      "installHint": "安装 KEDA 以启用事件驱动弹性伸缩（Kafka、Redis、Prometheus、Cron 等触发器）",
+      "fetchError": "获取 KEDA 资源失败",
+      "scaledObjects": "ScaledObject 列表",
+      "scaledJobs": "ScaledJob 列表",
+      "target": "伸缩目标",
+      "replicas": "实例数（当前 / 期望）",
+      "triggers": "触发器",
+      "current": "当前实例数",
+      "desired": "期望实例数",
+      "ready": "就绪"
+    },
+    "karpenter": {
+      "notInstalled": "未检测到 Karpenter",
+      "installHint": "安装 Karpenter 以启用节点自动配置（按需自动添加 / 移除节点）",
+      "fetchError": "获取 Karpenter 资源失败",
+      "nodePools": "NodePool 列表",
+      "nodeClaims": "NodeClaim 列表",
+      "limits": "资源上限",
+      "consolidation": "整合策略",
+      "nodePool": "所属 NodePool",
+      "nodeName": "节点名称"
+    },
+    "cas": {
+      "notInstalled": "未检测到 Cluster Autoscaler",
+      "installHint": "Cluster Autoscaler 需部署于 kube-system 命名空间，Deployment 名称为 cluster-autoscaler",
+      "fetchError": "获取 Cluster Autoscaler 状态失败",
+      "installed": "已安装",
+      "nodeGroups": "节点组数量",
+      "statusDetail": "状态详情（cluster-autoscaler-status ConfigMap）"
+    }
+  },
+  "common": {
+    "name": "名称",
+    "namespace": "命名空间",
+    "createdAt": "创建时间",
+    "refresh": "刷新",
+    "yes": "是",
+    "no": "否"
+  },
   "scheduling": {
     "loading": "加载中...",
     "noScheduling": "未配置调度策略",

@@ -414,6 +414,59 @@
     "conditionReason": "Reason",
     "conditionMessage": "Message"
   },
+  "autoscaling": {
+    "pageTitle": "Autoscaling",
+    "tabs": {
+      "hpa": "HPA",
+      "keda": "KEDA (Event-Driven)",
+      "karpenter": "Karpenter (Node Provisioning)",
+      "cas": "Cluster Autoscaler"
+    },
+    "hpa": {
+      "redirectHint": "HPA Management",
+      "redirectDesc": "Manage HPA settings in the Scaling tab of each workload's detail page, or navigate to the workload list."
+    },
+    "keda": {
+      "notInstalled": "KEDA Not Detected",
+      "installHint": "Install KEDA to enable event-driven autoscaling (Kafka, Redis, Prometheus, Cron, etc.)",
+      "fetchError": "Failed to fetch KEDA resources",
+      "scaledObjects": "ScaledObject List",
+      "scaledJobs": "ScaledJob List",
+      "target": "Scale Target",
+      "replicas": "Replicas (Current / Desired)",
+      "triggers": "Triggers",
+      "current": "Current Replicas",
+      "desired": "Desired Replicas",
+      "ready": "Ready"
+    },
+    "karpenter": {
+      "notInstalled": "Karpenter Not Detected",
+      "installHint": "Install Karpenter to enable automatic node provisioning (auto-add/remove nodes on demand)",
+      "fetchError": "Failed to fetch Karpenter resources",
+      "nodePools": "NodePool List",
+      "nodeClaims": "NodeClaim List",
+      "limits": "Resource Limits",
+      "consolidation": "Consolidation Policy",
+      "nodePool": "NodePool",
+      "nodeName": "Node Name"
+    },
+    "cas": {
+      "notInstalled": "Cluster Autoscaler Not Detected",
+      "installHint": "Cluster Autoscaler must be deployed in kube-system namespace with Deployment name cluster-autoscaler",
+      "fetchError": "Failed to fetch Cluster Autoscaler status",
+      "installed": "Installed",
+      "nodeGroups": "Node Groups",
+      "statusDetail": "Status Detail (cluster-autoscaler-status ConfigMap)"
+    }
+  },
+  "common": {
+    "name": "Name",
+    "namespace": "Namespace",
+    "createdAt": "Created At",
+    "refresh": "Refresh",
+    "yes": "Yes",
+    "no": "No"
+  },
   "scheduling": {
     "loading": "Loading...",
     "noScheduling": "No scheduling policy configured",

@@ -23,6 +23,8 @@ import {
   FileTextOutlined,
   DollarOutlined,
   SafetyOutlined,
+  SafetyCertificateOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { MenuProps as AntMenuProps } from 'antd';
@@ -68,6 +70,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
   const getSelectedKeys = useCallback((): string[] => {
     const path = location.pathname;
     if (path.match(/\/clusters\/[^/]+\/overview/)) return ['cluster-overview'];
+    if (path.match(/\/clusters\/[^/]+\/autoscaling/)) return ['k8s-autoscaling'];
     if (path.match(/\/clusters\/[^/]+\/workloads/)) return ['k8s-workloads'];
     if (path.match(/\/clusters\/[^/]+\/pods/)) return ['k8s-pods'];
     if (path.match(/\/clusters\/[^/]+\/network/)) return ['k8s-network'];
@@ -85,6 +88,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     if (path === '/cost-insights') return ['cost-insights'];
     if (path.match(/\/clusters\/[^/]+\/cost-insights/)) return ['cluster-cost'];
     if (path.match(/\/clusters\/[^/]+\/security/)) return ['cluster-security'];
+    if (path.match(/\/clusters\/[^/]+\/certificates/)) return ['cluster-certificates'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
@@ -140,6 +144,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
       key: 'kubernetes-resources', label: t('menu.kubernetesResources'),
       children: [
         { key: 'k8s-workloads', icon: <RocketOutlined />, label: t('menu.workloads'), onClick: () => clusterNav('workloads') },
+        { key: 'k8s-autoscaling', icon: <ThunderboltOutlined />, label: t('menu.autoscaling', '彈性伸縮'), onClick: () => clusterNav('autoscaling') },
         { key: 'k8s-pods', icon: <ContainerOutlined />, label: t('menu.pods'), onClick: () => clusterNav('pods') },
         { key: 'k8s-network', icon: <ApiOutlined />, label: t('menu.serviceAndRoutes'), onClick: () => clusterNav('network?tab=service') },
         { key: 'k8s-storage', icon: <HddOutlined />, label: t('menu.storage'), onClick: () => clusterNav('storage') },
@@ -167,6 +172,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
         { key: 'cluster-event-alerts', icon: <AlertOutlined />, label: t('menu.eventAlerts', 'Event 告警'), onClick: () => clusterNav('event-alerts') },
         { key: 'cluster-cost', icon: <DollarOutlined />, label: t('menu.costAnalysis', '成本分析'), onClick: () => clusterNav('cost-insights') },
         { key: 'cluster-security', icon: <SafetyOutlined />, label: t('menu.securityScan', '安全掃描'), onClick: () => clusterNav('security') },
+        { key: 'cluster-certificates', icon: <SafetyCertificateOutlined />, label: t('menu.certificates', '憑證管理'), onClick: () => clusterNav('certificates') },
       ],
     },
   ], [t, clusterNav]);

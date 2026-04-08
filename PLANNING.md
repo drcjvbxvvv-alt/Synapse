@@ -12,6 +12,15 @@
 3. [邊界天花板分析](#3-邊界天花板分析)
 4. [待實作優化](#4-待實作優化)
 5. [待實作功能](#5-待實作功能)
+   - [5.17 工作負載內嵌 Prometheus 指標](#517-工作負載內嵌-prometheus-指標sprint2-週-待實作)
+   - [5.18 cert-manager 憑證管理](#518-cert-manager-憑證管理sprint2-週-待實作)
+   - [5.19 彈性伸縮深化（KEDA / Karpenter / CAS）](#519-彈性伸縮深化sprint3-週-待實作)
+   - [5.20 策略與合規深化（Kyverno / PSA / RBAC）](#520-策略與合規深化sprint3-週-待實作)
+   - [5.21 叢集運維工具箱](#521-叢集運維工具箱sprint2-週-待實作)
+   - [5.22 VolumeSnapshot + Velero 深化](#522-volumesnapshot--velero-深化sprint2-週-待實作)
+   - [5.23 臨時偵錯容器 UI](#523-臨時偵錯容器ephemeral-debug-containers-uisprint1-週-待實作)
+   - [5.24 映像安全深化（Trivy + Falco）](#524-映像安全深化sprint2-週-待實作)
+   - [5.25 YAML 自動回滾機制](#525-yaml-自動回滾機制sprint2-週-待實作)
 6. [里程碑規劃](#6-里程碑規劃)
 7. [平台演進方向：全能 CI/CD DevOps 平台](#7-平台演進方向全能-cicd-devops-平台)
 8. [附錄](#8-附錄)
@@ -1099,6 +1108,536 @@ os.Chmod(dsn, 0600)
 
 ---
 
+### 5.17 工作負載內嵌 Prometheus 指標（Sprint，2 週）✅ 已完成（2026-04-08）
+
+> **現況：** 叢集概覽頁有整體資源圖表，但 Deployment/Pod 詳情頁無法直接看到該工作負載的 CPU/MEM 趨勢，必須跳出到 Grafana。這是最常見的運維痛點。
+
+---
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 | 狀態 |
+|------|------|------|------|
+| 後端 `GET /clusters/:id/deployments/:ns/:name/metrics` | `internal/handlers/monitoring.go` `GetWorkloadMetrics` | W1 | ✅ 早已存在 |
+| `PrometheusService.QueryWorkloadMetrics()` | `internal/services/prometheus_service.go` | W1 | ✅ 早已存在 |
+| 路由已涵蓋 deployments / statefulsets / daemonsets / rollouts / jobs / cronjobs | `internal/router/routes_cluster.go` | W1 | ✅ 早已存在 |
+| 前端 `WorkloadMetricsChart` 元件（`@ant-design/plots` Line 圖 + Segmented 時間切換） | `ui/src/components/WorkloadMetricsChart.tsx` | W2 | ✅ |
+| Deployment 詳情頁新增「效能指標」Tab | `ui/src/pages/workload/DeploymentDetail.tsx` | W2 | ✅ |
+| StatefulSet / DaemonSet 詳情（WorkloadDetail）修正錯誤 URL，改用 `WorkloadMetricsChart` | `ui/src/pages/workload/WorkloadDetail.tsx` | W2 | ✅ |
+| 時間範圍切換器（15m / 1h / 3h / 24h）+ Prometheus 未設定提示卡 | `WorkloadMetricsChart` | W2 | ✅ |
+
+---
+
+#### API 設計
+
+```
+GET /api/v1/clusters/:clusterId/workloads/:namespace/:name/metrics
+  ?range=1h          # 15m / 1h / 3h / 24h
+  &step=60           # 秒，auto-computed by range
+  &type=deployment   # deployment / statefulset / daemonset
+
+Response:
+{
+  "cpu": [{ "time": 1712345678, "value": 0.42 }, ...],
+  "memory": [{ "time": 1712345678, "value": 134217728 }, ...]
+}
+```
+
+---
+
+#### Data Model（後端）
+
+```go
+type WorkloadMetricsResponse struct {
+    CPU    []MetricPoint `json:"cpu"`
+    Memory []MetricPoint `json:"memory"`
+}
+type MetricPoint struct {
+    Time  int64   `json:"time"`
+    Value float64 `json:"value"`
+}
+```
+
+---
+
+#### 完成指標
+
+- Deployment 詳情頁顯示 CPU / Memory 折線圖，時間軸與 Grafana 資料一致
+- 切換時間範圍不需重整頁面
+- Prometheus 未設定時，圖表顯示「未設定 Prometheus 資料來源」提示卡
+
+---
+
+### 5.18 cert-manager 憑證管理（Sprint，2 週）✅ 已完成（2026-04-08）
+
+> **現況：** Ingress TLS 在 K8s 叢集中廣泛使用 cert-manager，但 Synapse 完全看不到 `Certificate` / `Issuer` / `ClusterIssuer` CRD，憑證即將到期也無告警。
+
+---
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 | 狀態 |
+|------|------|------|------|
+| Dynamic client 查詢 cert-manager CRD（無需 typed client 依賴） | `internal/handlers/cert_manager.go` | W1 | ✅ |
+| `GET /clusters/:id/cert-manager/status` 偵測安裝狀態 | 同上 | W1 | ✅ |
+| `GET /clusters/:id/cert-manager/certificates` 憑證列表 | 同上 | W1 | ✅ |
+| `GET /clusters/:id/cert-manager/issuers` Issuer+ClusterIssuer 列表 | 同上 | W1 | ✅ |
+| 路由注入 | `internal/router/routes_cluster.go` | W1 | ✅ |
+| 前端憑證管理頁（Certificate + Issuer 雙 Tab，到期狀態 Badge / 天數 Tag） | `ui/src/pages/security/CertificateList.tsx` | W2 | ✅ |
+| 未安裝 cert-manager 顯示安裝引導 Alert | 同上 | W2 | ✅ |
+| 路由 `clusters/:id/certificates` + 側邊欄「憑證管理」項 | `App.tsx` + `AppSider.tsx` | W2 | ✅ |
+
+---
+
+#### Data Model
+
+```go
+type CertificateSummary struct {
+    Name       string    `json:"name"`
+    Namespace  string    `json:"namespace"`
+    Ready      bool      `json:"ready"`
+    SecretName string    `json:"secretName"`
+    Issuer     string    `json:"issuer"`
+    DNSNames   []string  `json:"dnsNames"`
+    NotBefore  time.Time `json:"notBefore"`
+    NotAfter   time.Time `json:"notAfter"`
+    DaysLeft   int       `json:"daysLeft"`
+}
+```
+
+---
+
+#### 完成指標
+
+- 憑證列表顯示所有 `Certificate` 資源及到期狀態
+- `DaysLeft ≤ 30` 自動標記 `Expiring`，觸發告警渠道通知
+- 無 cert-manager 安裝時，頁面顯示「未偵測到 cert-manager，請先安裝」
+
+---
+
+### 5.19 彈性伸縮深化（Sprint，3 週）✅ 已完成（2026-04-08）
+
+> **現況：** HPA 已支援，KEDA / Karpenter / Cluster Autoscaler 已整合至統一彈性伸縮頁。
+
+#### 已實作內容
+
+| 任務 | 檔案 | 狀態 |
+|------|------|------|
+| KEDA CRD 偵測 + ScaledObject / ScaledJob 列表 API | `internal/handlers/autoscaling.go` | ✅ |
+| Karpenter CRD 偵測 + NodePool / NodeClaim 列表 API | `internal/handlers/autoscaling.go` | ✅ |
+| Cluster Autoscaler 偵測 + ConfigMap 狀態讀取 | `internal/handlers/autoscaling.go` | ✅ |
+| 路由註冊（/keda、/karpenter、/cas） | `internal/router/routes_cluster.go` | ✅ |
+| 前端 API 服務層 | `ui/src/services/autoscalingService.ts` | ✅ |
+| 統一「彈性伸縮」頁（HPA / KEDA / Karpenter / CAS 四 Tab） | `ui/src/pages/workload/AutoscalingPage.tsx` | ✅ |
+| 側邊選單「彈性伸縮」入口 + 路由 | `AppSider.tsx`, `App.tsx` | ✅ |
+| 三語 i18n（zh-TW / en-US / zh-CN） | `ui/src/locales/*/workload.json` | ✅ |
+
+**未安裝時顯示引導說明（含 helm 安裝指令），已安裝時直接列出資源。**
+
+---
+
+### 5.20 策略與合規深化（Sprint，3 週）🔲 待實作
+
+> **現況：** §5.9（M9）已有基礎安全掃描。但 Kyverno / OPA Gatekeeper 策略違規、Pod Security Admission 分析、RBAC 風險評分尚未實作，這是企業客戶合規的核心需求。
+
+---
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| Kyverno `PolicyReport` / `ClusterPolicyReport` Informer | `internal/k8s/informers/policy_report.go` | W1 |
+| OPA Gatekeeper `ConstraintTemplate` + Constraint 列表 API | `internal/handlers/gatekeeper.go` | W1 |
+| 前端策略違規列表（按嚴重度分組 / 資源連結） | `ui/src/pages/security/PolicyViolationList.tsx` | W2 |
+| PSA（Pod Security Admission）分析：掃描命名空間 label，標記 `privileged` / `baseline` / `restricted` | `internal/services/psa_scanner.go` | W2 |
+| RBAC 風險評分引擎（`cluster-admin` binding、wildcard verbs、secrets get 等）| `internal/services/rbac_risk.go` | W3 |
+| 前端合規儀表板（違規統計 + PSA 熱力圖 + RBAC 風險 Top 10） | `ui/src/pages/security/ComplianceDashboard.tsx` | W3 |
+
+---
+
+#### Data Model
+
+```go
+type PolicyViolation struct {
+    PolicyName string `json:"policyName"`
+    RuleName   string `json:"ruleName"`
+    Resource   string `json:"resource"`     // "Deployment/default/nginx"
+    Namespace  string `json:"namespace"`
+    Severity   string `json:"severity"`     // high / medium / low
+    Message    string `json:"message"`
+    Source     string `json:"source"`       // kyverno / gatekeeper
+}
+
+type RBACRiskItem struct {
+    Subject     string   `json:"subject"`   // ServiceAccount / User / Group
+    Namespace   string   `json:"namespace"`
+    RiskScore   int      `json:"riskScore"` // 0-100
+    RiskReasons []string `json:"riskReasons"`
+}
+```
+
+---
+
+#### 完成指標
+
+- Kyverno / Gatekeeper 違規顯示在合規儀表板，可下鑽到具體資源
+- RBAC 風險評分可辨識 `cluster-admin` 綁定及 wildcard 動詞濫用
+- PSA 分析顯示每個命名空間的安全等級，`privileged` 命名空間標記警告
+
+---
+
+### 5.21 叢集運維工具箱（Sprint，2 週）🔲 待實作
+
+> **現況：** K8s 版本升級前需掃描 deprecated API、控制面元件健康狀況（etcd / scheduler / controller-manager）無從查看、節點維護（cordon/drain）無 GUI 工作流。
+
+---
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| Deprecated API 掃描（使用 `pluto` 邏輯或自實作 API version map） | `internal/services/deprecated_api_scanner.go` | W1 |
+| `GET /clusters/:id/deprecated-apis` — 列出所有部署中的 deprecated 資源 | `internal/handlers/cluster_ops.go` | W1 |
+| 控制面健康 API（etcd metrics / `/readyz` / component status） | `internal/handlers/control_plane.go` | W1 |
+| 節點 Cordon / Drain / Uncordon API（包含 drain grace period 設定） | `internal/handlers/node_ops.go` | W2 |
+| 前端節點操作確認 Modal（顯示受影響 Pod 清單） | `ui/src/pages/cluster/NodeMaintenanceModal.tsx` | W2 |
+| 前端「叢集健康」Tab（控制面狀態 + deprecated API 報告） | `ui/src/pages/cluster/ClusterHealthTab.tsx` | W2 |
+
+---
+
+#### 完成指標
+
+- Deprecated API 報告顯示目前叢集部署中使用已棄用 API 的資源清單，含對應的替換版本
+- 控制面元件 `etcd` / `scheduler` / `controller-manager` 健康狀態可見
+- Cordon/Drain 操作前顯示影響評估，Drain 完成後狀態自動更新
+
+---
+
+### 5.22 VolumeSnapshot + Velero 深化（Sprint，2 週）🔲 待實作
+
+> **現況：** §5.4（StorageClass / PVC）已完成。但 VolumeSnapshot CRD 和 Velero Backup / Restore 完全不可見，而這是 Stateful 應用的核心保護機制。
+
+---
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| `VolumeSnapshot` / `VolumeSnapshotClass` Informer | `internal/k8s/informers/volume_snapshot.go` | W1 |
+| `GET /clusters/:id/volume-snapshots` 列表 + 詳情 API | `internal/handlers/volume_snapshot.go` | W1 |
+| 前端 PVC 詳情頁新增「快照」Tab（列出關聯快照 + 建立快照按鈕） | `ui/src/pages/storage/PVCDetail.tsx` | W1 |
+| Velero `Backup` / `Restore` / `Schedule` CRD 列表 API | `internal/handlers/velero.go` | W2 |
+| 前端 Velero 備份中心（Backup 列表 / 狀態 / 觸發 Restore） | `ui/src/pages/storage/VeleroBackupCenter.tsx` | W2 |
+| Backup 排程（Schedule）管理 CRUD | 同上 | W2 |
+
+---
+
+#### 完成指標
+
+- VolumeSnapshot 可在 PVC 詳情頁觸發建立並查看快照列表
+- Velero Backup 狀態（`Completed` / `Failed` / `InProgress`）即時可見
+- Restore 操作可從 UI 觸發並追蹤進度
+
+---
+
+### 5.23 臨時偵錯容器（Ephemeral Debug Containers）UI（Sprint，1 週）🔲 待實作
+
+> **現況：** K8s 1.23+ 正式支援 `kubectl debug` 注入 ephemeral container，但 Synapse 的 Pod 詳情頁沒有 GUI 觸發入口，進階排查只能靠 terminal 手動輸入指令。
+
+---
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| 後端 `POST /clusters/:id/pods/:ns/:name/debug` — 注入 ephemeral container | `internal/handlers/pod_debug.go` | W1 |
+| 選擇偵錯映像（預設清單：`busybox` / `nicolaka/netshoot` / `alpine` / 自訂）| 同上 | W1 |
+| 前端 Pod 詳情頁「偵錯」按鈕 → 設定 Modal（映像 / target container） | `ui/src/pages/workload/PodDebugModal.tsx` | W1 |
+| 注入成功後自動開啟 Web Terminal 連線至 ephemeral container | `ui/src/pages/workload/PodDetail.tsx` | W1 |
+
+---
+
+#### API 設計
+
+```
+POST /api/v1/clusters/:clusterId/pods/:namespace/:name/debug
+{
+  "image": "nicolaka/netshoot",
+  "targetContainer": "app",      // optional, share PID namespace
+  "name": "debugger-abc123"      // auto-generated if empty
+}
+
+Response: { "containerName": "debugger-abc123" }
+```
+
+---
+
+#### 完成指標
+
+- Pod 詳情頁一鍵注入偵錯容器，自動建立 Web Terminal 連線
+- ephemeral container 列於 Pod 詳情容器清單，有 `ephemeral` badge 標記
+- 叢集版本 < 1.23 時按鈕 disabled 並顯示版本要求
+
+---
+
+### 5.24 映像安全深化（Sprint，2 週）🔲 待實作
+
+> **現況：** §5.9 已有基礎 Trivy 掃描入口，但 CVE 結果沒有內嵌到工作負載詳情頁；Falco 執行期告警完全不可見。
+
+---
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| Workload 詳情頁「安全掃描」Tab（顯示映像 CVE 統計 + Trivy 觸發按鈕） | `ui/src/pages/workload/WorkloadSecurityTab.tsx` | W1 |
+| `GET /clusters/:id/workloads/:ns/:name/security` — 聚合該工作負載所有 container 的 Trivy 結果 | `internal/handlers/workload_security.go` | W1 |
+| CVE 列表可過濾（嚴重度 / 是否有修復版本） | 前端同上 | W1 |
+| Falco `FalcoAlert` 事件 Informer（透過 Falco sidekick HTTP output）| `internal/services/falco_receiver.go` | W2 |
+| `GET /clusters/:id/falco-alerts` 列表 API（含 rule / output / priority） | `internal/handlers/falco.go` | W2 |
+| 前端 Falco 執行期告警列表（安全 Tab 下）+ 告警渠道轉發整合 | `ui/src/pages/security/FalcoAlertList.tsx` | W2 |
+
+---
+
+#### Data Model
+
+```go
+type FalcoAlert struct {
+    Time      time.Time `json:"time"`
+    Rule      string    `json:"rule"`
+    Priority  string    `json:"priority"`   // Emergency / Alert / Critical / Error / Warning / Notice
+    Output    string    `json:"output"`
+    Source    string    `json:"source"`     // syscall / k8s_audit
+    ClusterID uint      `json:"clusterId"`
+    Namespace string    `json:"namespace"`
+    PodName   string    `json:"podName"`
+}
+```
+
+---
+
+#### 完成指標
+
+- Deployment 詳情頁安全 Tab 顯示各容器的 CVE 分佈（Critical / High / Medium / Low）
+- Falco 告警即時出現在安全告警列表，Priority=Critical 觸發已設定的告警渠道
+- 無 Falco sidekick 設定時，顯示設定引導（HTTP output URL = `https://synapse/falco-events`）
+
+---
+
+### 5.25 YAML 自動回滾機制（Sprint，2 週）🔲 待實作
+
+> **目標：** 編輯 YAML 並 Apply 後，若導致 K8s 工作負載異常，系統自動回滾至套用前版本，並即時通知使用者。重要原則：條件謹慎設計，不能太激進。
+
+#### 觸發條件設計
+
+| 條件 | 行為 | 說明 |
+|------|------|------|
+| `CrashLoopBackOff` | ✅ 自動回滾 | 容器持續崩潰重啟 |
+| `ImagePullBackOff` / `ErrImagePull` | ✅ 自動回滾 | 映像無法拉取 |
+| `OOMKilled`（含 restartCount > 0）| ✅ 自動回滾 | 記憶體不足被終止 |
+| `ProgressDeadlineExceeded` | ✅ 自動回滾 | Deployment 超過進度截止時間 |
+| Available replicas < desired | ⚠️ 通知不回滾 | 可能正在滾動更新中 |
+| Pod Pending | ⚠️ 通知不回滾 | 可能資源不足，等待節點 |
+| Readiness probe failing | ⚠️ 通知不回滾 | 應用可能啟動較慢 |
+| `spec.replicas == 0` | ❌ 不干預 | 使用者手動縮為 0 |
+| `dryRun == true` | ❌ 不干預 | 預演模式不啟動監控 |
+
+#### 總體架構
+
+```
+前端 YAML 編輯器
+       │  apply YAML（非 dryRun）
+       ▼
+  ApplyYAML Handler
+       │
+       ├─ 1. 擷取並保存「舊版 YAML 快照」（in-memory）
+       ├─ 2. 執行 Apply（k8s API）
+       ├─ 3. 返回 { jobID, ... } 給前端
+       └─ 4. 啟動 RollbackWatcher goroutine
+                      │
+                      │ 每 10s 輪詢，最多 5 分鐘（首次延遲 15s）
+                      ├─ 檢查 Deployment/StatefulSet/DaemonSet conditions
+                      ├─ 檢查 Pod container statuses
+                      │
+                      ├─ [自動回滾條件] → Apply 舊版 YAML → 推送 SSE 事件
+                      ├─ [通知條件]     → 推送警告 SSE 事件，不動作
+                      └─ [健康/超時]    → 推送 completed SSE 事件，結束
+
+前端 SSE 訂閱 /rollback-watch/:jobID
+       └─ 接收事件 → 更新 YAML Editor 狀態列 / 全域 Notification
+```
+
+#### 後端資料結構
+
+```go
+// internal/services/rollback_watcher.go
+
+type WatchEventType string
+
+const (
+  EventChecking   WatchEventType = "checking"
+  EventTrigger    WatchEventType = "triggered"   // 準備回滾
+  EventRolledBack WatchEventType = "rolled_back" // 回滾完成
+  EventWarning    WatchEventType = "warning"     // 通知但不回滾
+  EventHealthy    WatchEventType = "healthy"     // 確認健康，結束
+  EventTimeout    WatchEventType = "timeout"     // 超時，結束
+  EventError      WatchEventType = "error"
+)
+
+type WatchEvent struct {
+  Type      WatchEventType `json:"type"`
+  Reason    string         `json:"reason"`          // CrashLoopBackOff / ProgressDeadlineExceeded...
+  PodName   string         `json:"podName,omitempty"`
+  Message   string         `json:"message"`
+  Timestamp time.Time      `json:"timestamp"`
+}
+
+type RollbackJob struct {
+  JobID        string
+  ClusterID    uint
+  Namespace    string
+  Name         string
+  Kind         string         // Deployment | StatefulSet | DaemonSet
+  PreviousYAML string         // 回滾用快照（in-memory，TTL 10 分鐘）
+  EventCh      chan WatchEvent
+  CancelFn     context.CancelFunc
+}
+```
+
+#### RollbackWatcher 核心邏輯
+
+```go
+func (w *RollbackWatcher) Run(ctx context.Context) {
+  ticker := time.NewTicker(10 * time.Second)
+  timeout := time.After(5 * time.Minute)
+  time.Sleep(15 * time.Second)  // 等待滾動更新開始，避免誤判
+
+  for {
+    select {
+    case <-ctx.Done():
+      return
+    case <-timeout:
+      w.emit(EventTimeout, "", "", "監控超時，未偵測到異常")
+      return
+    case <-ticker.C:
+      w.emit(EventChecking, "", "", "檢查中...")
+      reason, podName, autoRollback, warn := w.checkHealth(ctx)
+      switch {
+      case autoRollback:
+        w.emit(EventTrigger, reason, podName, "偵測到異常，準備回滾")
+        if err := w.applyRollback(ctx); err != nil {
+          w.emit(EventError, reason, podName, "回滾失敗: "+err.Error())
+        } else {
+          w.emit(EventRolledBack, reason, podName, "已自動回滾至上一版本")
+        }
+        return
+      case warn:
+        w.emit(EventWarning, reason, podName, "警告："+reason+"（不自動回滾）")
+      default:
+        if w.isHealthy(ctx) {
+          w.emit(EventHealthy, "", "", "部署健康，結束監控")
+          return
+        }
+      }
+    }
+  }
+}
+```
+
+#### 防護閘門（Guards）
+
+```go
+func shouldWatch(spec replicas *int32, dryRun bool) bool {
+  if dryRun { return false }                             // DryRun 不監控
+  if spec != nil && *spec == 0 { return false }         // 手動縮為 0 不干預
+  return true
+}
+```
+
+#### API 端點
+
+```
+# Apply + 開始監控（修改現有端點）
+POST /api/clusters/:cid/deployments/:ns/:name/apply-yaml
+     Body: { yaml, dryRun }
+     Response: { jobID, ... }
+
+# SSE 監控流（新增）
+GET  /api/clusters/:cid/rollback-watch/:jobID
+     Content-Type: text/event-stream
+
+# 手動回滾（新增，可選）
+POST /api/clusters/:cid/deployments/:ns/:name/rollback
+     Body: { revision }
+```
+
+SSE 格式沿用現有 `ai_chat.go` 的 `text/event-stream` 模式。
+
+#### 前端狀態機與 UI
+
+YAML Editor 底部狀態列：
+
+```
+idle       →  （無顯示）
+applying   →  正在套用 YAML...
+watching   →  ● 監控中...  已過 00:32  [取消監控]
+healthy    →  ✓ 部署健康，監控結束
+rolled_back → ⚠ CrashLoopBackOff (pod/xxx-abc) — 已自動回滾 ✓
+warning    →  ⚠ Pending — 已通知，不自動回滾
+timeout    →  ⏱ 監控超時（5 分鐘），未偵測到異常
+error      →  ✕ 回滾失敗，請手動處理
+```
+
+回滾發生時額外推送全域 `notification.error`：
+
+```
+❌ 已自動回滾：my-deployment
+原因：CrashLoopBackOff (pod/my-deployment-xxx-yyy)
+已回滾至套用前版本。  [查看詳情]
+```
+
+#### 支援資源範圍（第一版）
+
+| 資源 | 自動回滾 | 通知 |
+|------|----------|------|
+| Deployment | ✅ | ✅ |
+| StatefulSet | ✅ | ✅ |
+| DaemonSet | ✅ | ✅ |
+| Argo Rollout | ❌（使用原生 abort） | — |
+| ConfigMap / Secret | ❌（Pod restart 不可預期） | — |
+| Service / Ingress | ❌（無 Pod 狀態） | — |
+
+#### 待實作任務
+
+| 任務 | 檔案 | 週次 |
+|------|------|------|
+| `RollbackWatcher` + health check | `internal/services/rollback_watcher.go` | W1 |
+| `RollbackRegistry`（in-memory job store + TTL 清理） | `internal/services/rollback_registry.go` | W1 |
+| Deployment ApplyYAML 加快照 + 啟動 watcher + SSE 端點 | `internal/handlers/deployment.go` | W1 |
+| StatefulSet / DaemonSet 同步擴展 | `internal/handlers/statefulset.go`, `daemonset.go` | W1–W2 |
+| 前端 SSE 服務層 | `ui/src/services/rollbackWatchService.ts` | W2 |
+| YAMLEditor 加狀態列 + SSE 訂閱 | `ui/src/pages/yaml/YAMLEditor.tsx` | W2 |
+| 三語 i18n | `ui/src/locales/*/workload.json` | W2 |
+
+**關鍵設計決策：**
+
+| 決策 | 選擇 | 理由 |
+|------|------|------|
+| 快照儲存 | in-memory（TTL 10 分鐘） | 回滾窗口短，無需持久化 |
+| 推送通道 | SSE（沿用 ai_chat.go 模式） | 基礎設施已存在，實作簡單 |
+| 監控間隔 | 10s | 兼顧即時性與 k8s API 壓力 |
+| 監控超時 | 5 分鐘 | 對齊 K8s 預設 progressDeadlineSeconds |
+| 首次延遲 | 15s | 避免滾動更新中短暫不一致觸發誤判 |
+| OOMKilled 閾值 | restartCount > 0 | 一次 OOM 即觸發，防止反覆崩潰 |
+
+**完成指標：**
+- 更新錯誤映像標籤的 Deployment 後，5 分鐘內自動回滾，前端顯示「ImagePullBackOff — 已自動回滾」
+- 更新導致 OOMKilled 的 Deployment 後，偵測後立即回滾
+- DryRun 模式下不啟動監控
+- 手動縮為 0 replicas 後更新 YAML 不觸發回滾
+
+---
+
 ## 6. 里程碑規劃
 
 ### 功能完成狀態總覽
@@ -1126,8 +1665,16 @@ os.Chmod(dsn, 0600)
 | M16 | **原生輕量 GitOps** | 🔲 待實作 | 🟡 中 | 6 週 |
 | M17 | **環境管理 + Promotion 流水線** | 🔲 待實作 | 🟢 低 | 5 週 |
 | — | **前端設計系統統一與體驗優化**（§5.9） | ✅ 已完成（工作負載列表日誌快捷 icon 除外） | — | — |
+| M18 | **工作負載內嵌 Prometheus 指標**（§5.17） | ✅ 已完成（2026-04-08） | 🟡 中 | 2 週 |
+| M19 | **cert-manager 憑證管理**（§5.18） | ✅ 已完成（2026-04-08） | 🟡 中 | 2 週 |
+| M20 | **彈性伸縮深化 KEDA / Karpenter / CAS**（§5.19） | ✅ 已完成（2026-04-08） | 🟡 中 | 3 週 |
+| M21 | **策略與合規深化 Kyverno / PSA / RBAC 風險**（§5.20） | 🔲 待實作 | 🟡 中 | 3 週 |
+| M22 | **叢集運維工具箱 Deprecated API / Drain**（§5.21） | 🔲 待實作 | 🟡 中 | 2 週 |
+| M23 | **VolumeSnapshot + Velero 深化**（§5.22） | 🔲 待實作 | 🟢 低 | 2 週 |
+| M24 | **臨時偵錯容器 UI**（§5.23） | 🔲 待實作 | 🟡 中 | 1 週 |
+| M25 | **映像安全深化 Trivy + Falco**（§5.24） | 🔲 待實作 | 🟡 中 | 2 週 |
 
-**待實作總估計：約 26 週（M13–M17）**
+**待實作總估計：約 26 週（M13–M17）+ 17 週（M18–M25）= 43 週**
 
 ### 建議實作順序
 

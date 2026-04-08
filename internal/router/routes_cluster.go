@@ -114,7 +114,8 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				nodes.POST("/:name/cordon", nodeHandler.CordonNode)
 				nodes.POST("/:name/uncordon", nodeHandler.UncordonNode)
 				nodes.POST("/:name/drain", nodeHandler.DrainNode)
-				nodes.GET("/:name/metrics", monitoringHandler.GetNodeMetrics)
+				nodes.PATCH("/:name/labels", nodeHandler.PatchNodeLabels)
+			nodes.GET("/:name/metrics", monitoringHandler.GetNodeMetrics)
 			}
 
 			// pods 子分組
@@ -580,6 +581,31 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			// Port-Forward（per-pod）（§8.3 Phase D）
 			pfHandler := handlers.NewPortForwardHandler(d.db, d.clusterSvc, d.k8sMgr)
 			cluster.POST("/pods/:namespace/:name/portforward", pfHandler.StartPortForward)
+
+			// 彈性伸縮深化（§5.19）：KEDA / Karpenter / CAS
+			autoscalingHandler := handlers.NewAutoscalingHandler(d.db, d.clusterSvc, d.k8sMgr)
+			keda := cluster.Group("/keda")
+			{
+				keda.GET("/status", autoscalingHandler.CheckKEDA)
+				keda.GET("/scaled-objects", autoscalingHandler.ListScaledObjects)
+				keda.GET("/scaled-jobs", autoscalingHandler.ListScaledJobs)
+			}
+			karpenter := cluster.Group("/karpenter")
+			{
+				karpenter.GET("/status", autoscalingHandler.CheckKarpenter)
+				karpenter.GET("/node-pools", autoscalingHandler.ListNodePools)
+				karpenter.GET("/node-claims", autoscalingHandler.ListNodeClaims)
+			}
+			cluster.GET("/cas/status", autoscalingHandler.GetCASStatus)
+
+			// cert-manager 憑證管理（§5.18）
+			certMgrHandler := handlers.NewCertManagerHandler(d.clusterSvc, d.k8sMgr)
+			cluster.GET("/cert-manager/status", certMgrHandler.CheckCertManagerStatus)
+			certGroup := cluster.Group("/cert-manager")
+			{
+				certGroup.GET("/certificates", certMgrHandler.ListCertificates)
+				certGroup.GET("/issuers", certMgrHandler.ListIssuers)
+			}
 
 			// Service Mesh（Istio）
 			meshSvc := services.NewMeshService(d.prometheusSvc, d.monitoringCfgSvc)
