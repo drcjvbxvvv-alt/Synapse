@@ -2,7 +2,7 @@
 
 > 「任何號稱『完美無缺』的系統都是在實驗室裡的玩具，承認缺陷，正是走向偉大的開始。」
 
-**文件版本**：v1.1 — 2026-04-09
+**文件版本**：v1.2 — 2026-04-09
 **審視範圍**：`internal/`、`pkg/`、`cmd/`、`ui/src/`
 **文件目的**：
 1. 明列已知設計缺陷、反模式、技術債
@@ -29,6 +29,7 @@
 - [十二、ADR 機制與首批 ADR](#十二adr-機制與首批-adr)
 - [十三、測試策略金字塔](#十三測試策略金字塔)
 - [十四、Observability Baseline](#十四observability-baseline)
+- [十五、Claude Code 模型分工建議](#十五claude-code-模型分工建議)
 - [附錄 A：程式碼統計](#附錄-a程式碼統計)
 - [附錄 B：執行手冊索引](#附錄-b執行手冊索引)
 
@@ -771,6 +772,9 @@ type CreateDeploymentRequest struct {
 
 ### Phase 0 — 急救（1~2 週）
 
+> **🤖 主力模型**：Opus 30% / **Sonnet 55%** / Haiku 15%
+> 安全關鍵設計（JWT jti/blacklist、SystemRole migration）用 Opus；P0 清單的實作替換用 Sonnet；批量文字替換（`username == "admin"` → 角色判定）用 Haiku。詳見 §十五.2。
+
 **目標**：解除所有 P0 阻斷。
 
 - [ ] **P0-1** 移除 Salt 日誌輸出
@@ -786,6 +790,9 @@ type CreateDeploymentRequest struct {
 
 ### Phase 1 — 止血（4~6 週）
 
+> **🤖 主力模型**：Opus 15% / **Sonnet 65%** / Haiku 20%
+> Repository 介面設計 + 第一個試點檔（Opus 定調），其餘 Cluster/User/Permission 遷移與路由拆分依樣畫葫蘆（Sonnet）；swag 註解標註與 ErrorBoundary 樣板套用（Haiku）。詳見 §十五.2。
+
 **目標**：解決 P0-4 與 P1 最重要事項。
 
 - [ ] **P0-4** Repository 層導入，試點 3 個 domain（Cluster/User/Permission）
@@ -799,6 +806,9 @@ type CreateDeploymentRequest struct {
 
 ### Phase 2 — 體質改善（2~3 個月）
 
+> **🤖 主力模型**：Opus 15% / **Sonnet 60%** / Haiku 25%
+> Repository 全面推廣與 Handler 拆分（Sonnet + 範本）；OpenTelemetry 初始化設計與 migration 工具選型（Opus）；Axios timeout/前端批量 refactor（Haiku）。詳見 §十五.2。
+
 - [ ] **P0-4** Repository 層覆蓋到所有 40 個 handler
 - [ ] **P1-1** Handler 拆分至 < 500 行/檔
 - [ ] **P1-5** 前端頁面肥胖症 Top 10 頁面拆分
@@ -810,6 +820,9 @@ type CreateDeploymentRequest struct {
 
 ### Phase 3 — 擴展基礎（4~6 個月）
 
+> **🤖 主力模型**：**Opus 30%** / Sonnet 55% / Haiku 15%
+> 多租戶模型、欄位加密、審計雜湊鏈屬安全關鍵設計（Opus 全程主導）；Zustand 狀態管理導入與頁面改寫（Sonnet）；i18n 英文翻譯填值與 lazy loading route 套用（Haiku）。詳見 §十五.2。
+
 - [ ] **P2-1** Multi-tenant 能力（或寫 ADR 決定不做）
 - [ ] **P2-2** 審計日誌雜湊鏈
 - [ ] **P2-3** 全面欄位加密
@@ -819,6 +832,9 @@ type CreateDeploymentRequest struct {
 - [ ] 6.x 深化功能選擇 2~3 項實作
 
 ### Phase 4 — 平台化（6~12 個月）
+
+> **🤖 主力模型**：**Opus 35%** / Sonnet 55% / Haiku 10%
+> Helm Chart HA、Synapse Operator、gRPC API、Plugin 機制均為跨檔案架構設計（Opus 主導）；Operator reconcile loop 與 Helm values 實作（Sonnet）；模板檔案化同步（Haiku）。詳見 §十五.2。
 
 - [ ] Helm Chart HA 部署
 - [ ] Synapse Operator
@@ -1462,6 +1478,168 @@ logger.Info("operation completed",
 - Logs：7 天 hot（全索引）+ 30 天 cold（archive only）
 - Traces：3 天（已經採樣後的）
 - 總儲存成本預算：≤ 專案月預算 5%
+
+---
+
+## 十五、Claude Code 模型分工建議
+
+> 本章節是給「使用 Claude Code 實際執行本藍圖」的工程師看的操作手冊。
+> 目的：把**任務的性質**對應到**最符合成本效益的模型**，避免「什麼都用 Opus」（燒錢）或「什麼都用 Haiku」（翻車）。
+> 原則：**風險/設計深度用大模型、樣板複製用小模型、批量機械工作用最小模型**。
+
+### 15.1 模型選擇基準表
+
+Synapse 目前支援的 Claude Code 模型家族（截至 2026-04）：
+
+| 模型 | 適用任務 | 不適用任務 | 對應本藍圖 |
+|------|---------|-----------|-----------|
+| **Claude Opus 4.6** (`claude-opus-4-6`) | 架構設計、跨檔案重構、安全審查、威脅建模、ADR 撰寫、資料庫 schema 設計、演算法核心、疑難雜症除錯 | 純樣板複製、批量字串替換、純 lint 修正 | P0 安全修復、Repository 介面設計、多租戶/加密/雜湊鏈、Operator、gRPC schema |
+| **Claude Sonnet 4.6** (`claude-sonnet-4-6`) | 依模板實作、功能開發、單元測試、常規 refactor、handler/service 新增、標準 bug 修復 | 極細的安全決策、跨數十檔案的大型設計 | Handler 拆分、路由分檔、Repository 推廣、Zustand 導入、Operator reconcile loop 實作 |
+| **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`) | 批量文字替換、i18n 翻譯填值、簡易 lint 修復、README/註解補完、CI script 小改、模板套用 | 任何需要「判斷」的任務、安全敏感檔案 | `username == "admin"` 替換、swag 註解補齊、i18n 英文翻譯、lazy loading 套用、ErrorBoundary 樣板套用 |
+
+**三條硬規則（任何 Phase 都適用）：**
+
+1. **安全 / 加密 / 權限 / JWT / crypto / 多租戶**：一律 **Opus**。不論任務看起來多小（包含「只改一個 if」），只要檔名或 diff 觸及安全面，升到 Opus。
+2. **超過 3 個檔案的跨檔案 refactor**：優先 **Opus** 規劃 → 產出模板檔 → 其餘檔案讓 **Sonnet** 依模板實作。
+3. **純批量（30+ 檔案相同 pattern）**：先讓 Opus 寫 1 個完整範本（含測試）→ Haiku 執行批量套用 → Sonnet 補修個別例外。
+
+### 15.2 Phase 0–4 逐任務模型指派
+
+#### Phase 0 — 急救（1~2 週）
+
+| 任務 ID | 任務 | 主力模型 | 原因 |
+|---------|------|---------|------|
+| P0-1 | 移除 Salt 日誌輸出 | **Sonnet** | 單點修改，但涉及日誌安全需確認無側洩 |
+| P0-2a | 新增 `SystemRole` 欄位 + migration 設計 | **Opus** | DB schema 變更 + 權限模型設計 |
+| P0-2b | 替換所有 `username == "admin"`（6 處） | **Haiku** | Opus/Sonnet 先出 1 處範本，Haiku 批量替換 |
+| P0-3 | 修復 `TestDeleteUserGroup_Success` | **Sonnet** | 事務保護補強，需理解 permission service |
+| P0-5 | JWT `jti` + `token_blacklist` 表 + middleware | **Opus** | 安全關鍵，需審查整條認證鏈 |
+| P0-6 | Token 移出 localStorage | **Sonnet** | 前端改動，標準 pattern |
+| CI-1 | `make check` target 設計 | **Sonnet** | Makefile 標準樣板 |
+| CI-2 | pre-commit hook | **Haiku** | 純 shell script + git hook 樣板 |
+
+**Phase 0 成本估算基準**：Opus ~30% / Sonnet ~55% / Haiku ~15%。總 token 預算可用 Sonnet 定額的 1.4 倍。
+
+#### Phase 1 — 止血（4~6 週）
+
+| 任務 ID | 任務 | 主力模型 | 原因 |
+|---------|------|---------|------|
+| P0-4a | Repository 介面設計 + BaseRepository 抽象 | **Opus** | 架構定調，錯了會影響全部 40+ handler |
+| P0-4b | Cluster/User/Permission Repository 實作 | **Sonnet** | 依介面模板實作 |
+| P1-2a | 路由拆分總體結構設計 | **Opus** | 10 domain 切分原則 |
+| P1-2b | 實際拆分 routes_*.go | **Sonnet** | 依 Opus 給的骨架執行 |
+| P1-3 | Service Interface 化 | **Opus**（設計）+ **Sonnet**（推廣） | 先設計介面，再批量改寫 |
+| P1-4 | swaggo/swag 註解 + OpenAPI 生成 | **Haiku** | 純註解批量補齊 |
+| P1-6 | Axios timeout 分層 | **Sonnet** | 前端樣板改動 |
+| P1-7 | 全域 ErrorBoundary | **Haiku** | 單一組件套用到 router tree |
+| P1-9a | Service 層測試補齊（→30%） | **Sonnet** | 標準單元測試 |
+| CONTRIB | `docs/CONTRIBUTING.md` | **Sonnet** | 文件撰寫 |
+
+**Phase 1 成本估算基準**：Opus ~15% / Sonnet ~65% / Haiku ~20%。
+
+#### Phase 2 — 體質改善（2~3 個月）
+
+| 任務 ID | 任務 | 主力模型 | 原因 |
+|---------|------|---------|------|
+| P0-4c | Repository 全面推廣（40 handler） | **Sonnet** | 樣板已定，純依樣實作 |
+| P1-1 | Handler 拆分至 < 500 行（10+ 個） | **Sonnet** | 機械性拆分，但需確保測試不破 |
+| P1-5 | 前端頁面肥胖症 Top 10 | **Sonnet** | 組件拆分 |
+| P1-8 | Redis RateLimiter | **Opus**（演算法）+ **Sonnet**（整合） | token bucket 邊界條件 |
+| P1-9b | 測試覆蓋率 → 60% | **Sonnet** | 標準單元測試 |
+| P1-10 | OpenTelemetry 導入 | **Opus** | trace context 傳遞、取樣策略 |
+| P2-4 | golang-migrate 取代 AutoMigrate | **Opus** | schema 遷移策略 + 回滾路徑 |
+| P2-8 | Informer 健康檢查 | **Sonnet** | 依 ClusterInformerManager 模式擴展 |
+
+**Phase 2 成本估算基準**：Opus ~15% / Sonnet ~60% / Haiku ~25%。
+
+#### Phase 3 — 擴展基礎（4~6 個月）
+
+| 任務 ID | 任務 | 主力模型 | 原因 |
+|---------|------|---------|------|
+| P2-1 | Multi-tenant 能力 | **Opus** 全程 | 租戶隔離設計、RLS、跨表 query 改寫 |
+| P2-2 | 審計日誌雜湊鏈 | **Opus** | 密碼學正確性（hash chain、防篡改） |
+| P2-3 | 全面欄位加密 | **Opus**（設計）+ **Sonnet**（欄位推廣） | 加密欄位型別、key rotation |
+| P2-5 | Zustand 狀態管理 | **Sonnet** | 前端架構標準重構 |
+| P2-7 | i18n 英文完整化 | **Haiku** | 翻譯字串填值 |
+| P2-9 | Bundle size monitoring + lazy loading | **Haiku** | Webpack/Vite 設定 + 路由改寫樣板 |
+| 6.x | 深化功能實作 2~3 項 | **Sonnet** | 視功能而定，若為 AI/安全則升 Opus |
+
+**Phase 3 成本估算基準**：**Opus ~30%** / Sonnet ~55% / Haiku ~15%。這是 Opus 比重最高的 Phase 之一，因為安全基礎設施集中在此階段。
+
+#### Phase 4 — 平台化（6~12 個月）
+
+| 任務 ID | 任務 | 主力模型 | 原因 |
+|---------|------|---------|------|
+| PLAT-1 | Helm Chart HA 部署 | **Opus** | PodAntiAffinity、Leader Election、PDB 設計 |
+| PLAT-2 | Synapse Operator | **Opus** 全程 | CRD schema、reconcile loop、finalizer、狀態機 |
+| PLAT-3 | 6.x 剩餘功能 | **Sonnet** | 依前期模式推廣 |
+| PLAT-4 | gRPC API 選擇性開放 | **Opus** | proto 設計、版本策略、雙協議共存 |
+| PLAT-5 | Plugin 機制試點 | **Opus** 全程 | 插件介面 ABI、沙箱、版本相容性 |
+
+**Phase 4 成本估算基準**：**Opus ~35%** / Sonnet ~55% / Haiku ~10%。平台化任務幾乎全部是架構級決策，Opus 比重最高。
+
+### 15.3 跨 Phase 常駐任務（貫穿 Phase 0–4）
+
+| 任務類型 | 建議模型 | 說明 |
+|---------|---------|------|
+| **Code Review** | **Opus** | PR diff 審查需全域視野與風險嗅覺 |
+| **Bug 復現 + 修復** | **Opus** → **Sonnet** | Opus 判斷根因 → Sonnet 補 patch |
+| **CI 失敗排查** | **Sonnet** | 多數為 flaky test / 環境問題 |
+| **文件校稿 / typo** | **Haiku** | 純文字 |
+| **commit message 撰寫** | **Haiku** | 套用 conventional commit 格式 |
+| **i18n 新增一個詞條** | **Haiku** | 複製既有 pattern |
+| **新 handler 按模板建立** | **Sonnet** | 遵循 CLAUDE.md §13 範本 |
+| **ADR 撰寫** | **Opus** | §十二 所列 10 條 ADR 皆為架構決策 |
+| **威脅建模 / STRIDE 檢視** | **Opus** | 需全域安全視野 |
+
+### 15.4 模型切換決策流程（SOP）
+
+當你（或 Claude Code 本身）在選模型時，依序問以下問題，第一個命中的答案就是該任務的模型：
+
+```
+1. 這個任務會碰到 crypto / JWT / 多租戶 / 權限模型 嗎？
+   └ 是 → Opus
+2. 這個任務需要跨 4+ 個檔案 或 需要『設計新的介面』嗎？
+   └ 是 → Opus
+3. 這個任務有現成的模板可直接複製嗎（包括 CLAUDE.md §13 handler 範本）？
+   └ 是 → Sonnet（如果要按模板實作 1~3 個檔案）
+         Haiku（如果只是純文字替換 / 搬運）
+4. 這個任務的失敗會導致 production incident 嗎？
+   └ 是 → Opus（寧可燒錢，不可翻車）
+5. 這個任務是 test / lint / docs / i18n / typo 嗎？
+   └ 是 → Haiku
+6. 其他一切情況 → Sonnet（預設值）
+```
+
+### 15.5 成本優化小技巧
+
+- **Opus 產範本、Sonnet 執行**：涉及 3 檔案以上的任務，先讓 Opus 產出 1 個「完整含測試」範本，再交 Sonnet 推廣。單次 Opus 成本攤提到 N 檔案上，總成本遠低於 N 次 Opus。
+- **Haiku 先跑、Opus 把關**：批量機械任務（i18n、註解補齊），先讓 Haiku 一次跑完，最後讓 Opus 審 diff 一次，catch 異常樣本。
+- **Sonnet 預設、Opus 升級**：除非本章明確列為 Opus 任務，否則預設用 Sonnet。遇到不確定時才升 Opus。
+- **禁止 Haiku 碰安全檔案**：凡是 `internal/middleware/auth*.go` / `pkg/crypto/*.go` / `*token*.go` / `*rbac*.go`，Haiku 一律不碰（無論多小的改動）。
+- **Code Review 反向原則**：PR 作者用 Sonnet 寫的程式碼，Review 要用 Opus 看（大模型逆向審查小模型產出，風險抓得準）。
+
+### 15.6 與 §十二 ADR 的關係
+
+§十二 列出的 10 條 ADR（0001–0010）**全部建議使用 Opus 撰寫**。原因：
+
+- ADR 的核心價值在於**替代方案比較**與**後果推演**，這正是大模型的強項
+- ADR 寫錯代價極高（後續所有 implementation 都會受影響）
+- ADR 屬於一次性工作（不會重複 10 次），成本可控
+
+ADR-0001（Repository 層導入）已在 §十二 附上完整範本，後續 0002–0010 建議沿用相同格式，每次讓 Opus 獨立撰寫一份。
+
+### 15.7 檢查清單：模型選擇是否正確？
+
+每次完成任務後可用以下 checklist 自我驗證：
+
+```
+□ 1. 我是不是為了省錢用 Haiku 動了安全檔案？（若是 → 重做）
+□ 2. 我是不是為了省事用 Opus 做了純文字替換？（若是 → 下次用 Haiku）
+□ 3. 我這個跨檔案 refactor 有沒有先請 Opus 出範本？
+□ 4. 我改的檔案如果出錯會不會阻斷 production？有的話是不是用了 Opus？
+□ 5. 我做的 PR review 是不是用了至少 Sonnet 等級？（Haiku 不該做 review）
+```
 
 ---
 
