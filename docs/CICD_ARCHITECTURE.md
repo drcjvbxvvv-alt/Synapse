@@ -1,8 +1,23 @@
 # Synapse CI/CD 架構設計文件
 
-> 版本：v2.0 | 日期：2026-04-09 | 狀態：設計中（重構）
+> 版本：v2.1 | 日期：2026-04-09 | 狀態：設計中（重構 + 補強）
 > 對應里程碑：M13（CI Pipeline 引擎）、M14（Git 整合）、M15（Registry 整合）、M16（原生 GitOps）、M17（環境流水線）
 > 相關文件：[ARCHITECTURE_REVIEW.md](./ARCHITECTURE_REVIEW.md)、[PLANNING.md](../PLANNING.md)
+
+---
+
+## v2.1 變更記錄（v2.0 → v2.1 補強）
+
+v2.0 完成骨幹重構後，為進入實作前再次把關，v2.1 補上以下「實作必備、上線必看」的章節：
+
+| 新增章節 | 解決的問題 |
+|----------|------------|
+| §21 ADR（架構決策紀錄） | 每個重大設計決策的 context / alternatives / consequences 留痕，避免 6 個月後「為什麼這樣設計」無人能答 |
+| §22 效能 SLA 與容量規劃 | 明確 P50/P95 目標、DB 與 Log 容量估算、擴展觸發點 |
+| §23 安全威脅建模（STRIDE-lite） | 針對 Webhook、Pipeline Pod、Secrets、GitOps 逐點標註 STRIDE 風險與緩解 |
+| §24 資料遷移腳本示意 | GORM AutoMigrate + 手動 SQL 的標準作法，含 `pipeline_versions`、`scan_source`、`snapshot_id` 的平滑遷移 |
+| 附錄 C：真實 Pipeline 範例集 | Java Spring Boot / React Vite / Helm / Terraform 四類範例，涵蓋 90% 實務場景 |
+| 附錄 D：Troubleshooting 手冊 | 十個最可能踩的坑 + 診斷步驟 + 程式碼入口 |
 
 ---
 
@@ -58,8 +73,14 @@
 18. [資料模型總覽](#18-資料模型總覽)
 19. [技術選型](#19-技術選型)
 20. [實作路線圖](#20-實作路線圖)
-21. [附錄 A：Pipeline YAML Schema](#附錄-apipeline-yaml-schema)
-22. [附錄 B：與 ARCHITECTURE_REVIEW.md 對應關係](#附錄-b與-architecture_reviewmd-對應關係)
+21. [ADR（架構決策紀錄）](#21-adr架構決策紀錄)
+22. [效能 SLA 與容量規劃](#22-效能-sla-與容量規劃)
+23. [安全威脅建模（STRIDE-lite）](#23-安全威脅建模stride-lite)
+24. [資料遷移腳本示意](#24-資料遷移腳本示意)
+25. [附錄 A：Pipeline YAML Schema](#附錄-apipeline-yaml-schema)
+26. [附錄 B：與 ARCHITECTURE_REVIEW.md 對應關係](#附錄-b與-architecture_reviewmd-對應關係)
+27. [附錄 C：真實 Pipeline 範例集](#附錄-c真實-pipeline-範例集)
+28. [附錄 D：Troubleshooting 手冊](#附錄-dtroubleshooting-手冊)
 
 ---
 
@@ -1640,6 +1661,649 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 ---
 
+## 21. ADR（架構決策紀錄）
+
+ADR（Architecture Decision Record）在此文件內集中管理，每筆記錄格式：**Context → Decision → Alternatives → Consequences**。實作或後續調整需引用 ADR 編號，避免重大設計被悄悄反轉。
+
+### ADR-001：Pipeline 執行引擎採用 K8s Job，不引入 Tekton / Jenkins
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - Synapse 定位為「單一 binary 部署、零額外元件」的 K8s 平台。
+  - 目標客群多為中型企業、內網環境，抗拒再安裝 Tekton Controller / Jenkins Master 等額外系統。
+  - 現有 `ClusterInformerManager` 已具備多叢集 Job watch 能力，重複利用成本低。
+- **Decision：**
+  - CI Pipeline 執行單元 = 1 個 K8s Job（或 Pod），由 Synapse `PipelineExecutor` service 直接建立。
+  - DAG 調度、重試、artifact、log tail 全部由 Synapse 自行實作於 `internal/services/pipeline/`。
+  - Step image（Kaniko、Maven、Trivy 等）屬於「基礎設施依賴」，可由使用者環境的 Harbor mirror 提供，不算 Synapse 元件。
+- **Alternatives considered：**
+  | 方案 | 否決原因 |
+  |------|---------|
+  | Tekton | 需安裝 CRDs + Controller + Triggers；生態豐富但違反「零元件」原則 |
+  | Jenkins | 架構過重、資源吃緊、與 K8s 整合不夠原生 |
+  | Argo Workflows | 需安裝 Controller；DAG 強大但與 Synapse 現有 Job watcher 重疊 |
+  | 純 CronJob + custom script | 無法表達 DAG、無重試、無 artifact |
+- **Consequences：**
+  - ✅ 客戶零額外安裝；Synapse 單一 binary 即可提供 CI/CD。
+  - ✅ 複用 `ClusterInformerManager`、`AuditService`、`NotifyChannel`。
+  - ❌ 需要自行實作 Tekton 原生支援的功能（workspace、artifact、log persistence、retry），工時約 8 週（M13a+M13b）。
+  - ❌ 缺乏 Tekton Hub 生態；使用者要自己維護 Step image。
+  - 🔓 **Escape hatch：** §6 明列「若需複雜 DAG 或既有 Tekton 資產，Synapse 支援以 Tekton 外掛方式執行」——保留未來整合空間。
+- **追蹤：** `internal/services/pipeline/executor.go`、M13a 里程碑。
+
+---
+
+### ADR-002：M13 拆分為 M13a（核心）+ M13b（進階）
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - v1.0 將 M13 設為單一 8 週里程碑，風險集中在末段整合測試。
+  - Pipeline 引擎實際包含兩層：**引擎核心**（Job 生成、DAG、排程）與 **使用者介面**（前端頁面、YAML editor、log 串流 UX）。這兩層可以獨立交付。
+- **Decision：**
+  - **M13a（4 週）**：核心執行引擎 + 最小 API + CLI 觸發 + 基本日誌。完成後團隊內部即可透過 API 跑出第一條 Pipeline。
+  - **M13b（4 週）**：前端頁面、YAML Editor、即時日誌 SSE、Artifact UI、進階 Step types。
+  - 每 2 週內部 demo 一次，降低「悶頭寫 8 週、最後一刻整合爆炸」風險。
+- **Alternatives considered：**
+  - 保持 8 週單一里程碑：風險集中、無法早期驗證。
+  - 拆成 3 段（3+3+2 週）：切分過細、交付摩擦大於好處。
+- **Consequences：**
+  - ✅ M13a 結束即可供 QA 與 early adopter 試用，回饋早期導入設計。
+  - ✅ M13b 可依 M13a 的實測數據調整優先級（例如延後 YAML Editor、先做 Log SSE）。
+  - ❌ 需要維護兩個里程碑的 Exit Criteria 與驗收清單。
+- **追蹤：** PLANNING.md §7、本文件 §8、§9、§20。
+
+---
+
+### ADR-003：Promotion 擴充既有 `ApprovalRequest`，不建新表
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - `internal/models/approval.go` 已有 `ApprovalRequest` 模型，支援 scale/delete/update/apply 等敏感操作的人工審批。
+  - M17 Promotion（dev→staging→prod）本質上也是「敏感操作的人工審批」，與現有模型高度重疊。
+  - 若另造一張 `promotion_approvals` 表，等於維護兩套審核狀態機、兩份通知邏輯、兩個前端頁面。
+- **Decision：**
+  - 在 `ApprovalRequest.Action` 中新增類型：`promote_environment`、`production_gate`。
+  - 新增可選欄位 `PipelineRunID uint` + `TargetEnvironment string`，以向後相容方式加欄位。
+  - 審核流程、通知、稽核日誌全部走既有 `ApprovalService`。
+  - 前端「待審核」列表合併顯示，不拆兩個 Tab。
+- **Alternatives considered：**
+  | 方案 | 否決原因 |
+  |------|---------|
+  | 建 `promotion_approvals` 新表 | 重複邏輯、兩套通知、兩個前端頁 |
+  | 用 Generic `audit_logs` | 無狀態機、無法查「待我審批」 |
+  | 每次 promotion 走 `ApprovalRequest` + `PipelineRun.current_approval_id` | 正是本 Decision 採用的方案 |
+- **Consequences：**
+  - ✅ 單一審核中心：使用者看一個 Tab 就能處理所有待審。
+  - ✅ 復用既有通知路由（webhook/telegram/slack/teams）。
+  - ❌ `approval_requests` 欄位稍微擴張；需要一次 schema migration。
+  - ❌ 舊有 scale/delete 審批的 UI 需同時支援新 Action 類型；渲染邏輯要加 switch。
+- **追蹤：** `internal/models/approval.go`、§13.2。
+
+---
+
+### ADR-004：Pipeline 版本以 `pipeline_versions` 快照表管理
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - v1.0 只有 `pipelines.steps_json` 一個欄位，會被後續編輯覆蓋。
+  - 問題：歷史 Run 無法重現「當時的 YAML 長什麼樣」；rollback、稽核、比對 diff 都無法做。
+- **Decision：**
+  - 新增 `pipeline_versions` 表：每次 Pipeline 更新建立一份新版快照（`version`、`yaml_raw`、`steps_json`、`author_id`、`commit_msg`）。
+  - `pipelines` 保留 `current_version_id` 指向最新版本。
+  - `pipeline_runs` 新增 `snapshot_id uint FK` 指向執行當下的版本，不讀 `pipelines.steps_json`。
+- **Alternatives considered：**
+  - 用 Git 存 Pipeline YAML（推到 cluster repo）：增加 Git dependency、使用者需管理 repo。
+  - 直接在 `pipeline_runs` 塞一份 `steps_json`：每筆 Run 都複製一整份，浪費儲存且無法 dedupe。
+  - 用 `gorm` soft delete 保留舊版：無法區分「編輯 5 次」vs 「刪除 1 次」。
+- **Consequences：**
+  - ✅ 任意歷史 Run 都能 100% 重現。
+  - ✅ `pipeline_versions` 可按 hash dedupe（未來優化）。
+  - ❌ 多一張表 + 多一層 JOIN；查詢 Run 詳情時要 `LEFT JOIN pipeline_versions`。
+  - ❌ schema migration 需要把現有 `pipelines.steps_json` 灌入 `pipeline_versions`（見 §24.1）。
+- **追蹤：** §7.2、§18、§24.1。
+
+---
+
+### ADR-005：Trivy 採「host exec + K8s Job」雙軌過渡
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - 現況：`internal/services/trivy_service.go:96` 使用 `exec.CommandContext(ctx, "trivy", "image", ...)`，依賴 Synapse 執行主機本地安裝 trivy。
+  - v1.0 CICD 架構文件寫「以 K8s Job 執行 Trivy」，與現況矛盾。
+  - 若直接切換到 K8s Job，既有 GitLab CI 推掃描結果的流程會斷掉。
+- **Decision：**
+  - **Phase 1（立即）**：保留 host exec，但 `image_scan_results` 加 `scan_source` 欄位標記來源（`host_exec` / `gitlab_ci` / `pipeline_step`）。
+  - **Phase 2（M13b 末）**：新增 `trivy-scan` Step type，Pipeline 內的掃描走 K8s Job；host exec 仍可用於手動觸發（backward compat）。
+  - **Phase 3（Post-M13）**：host exec 標記為 deprecated，6 個月後移除；`scan_source` 只剩 `pipeline_step` / `gitlab_ci`。
+  - **Phase 4（可選）**：集中 Trivy DB cache（讀取叢集共享 PVC），降低每次 Step 下載 DB 的時間。
+- **Alternatives considered：**
+  - 直接砍掉 host exec，所有掃描強制走 K8s Job：會破壞現有「手動 trigger scan」功能，使用者無感知情況下突然故障。
+  - 永遠保留 host exec：Synapse 會變成「Docker image 內必須裝 trivy」，增加 release 負擔。
+- **Consequences：**
+  - ✅ 使用者無感知的漸進遷移；每個 Phase 都可 rollback。
+  - ✅ 支援多種掃描來源並存，便於與現有 GitLab CI pipeline 共存。
+  - ❌ 雙軌期間需要額外測試矩陣；Phase 1-2 期間 `trivy_service.go` 與 `pipeline step trivy-scan` 程式碼有部分重複。
+- **追蹤：** §14、`internal/services/trivy_service.go`、`internal/models/security.go`。
+
+---
+
+### ADR-006：PipelineSecret 使用 `pkg/crypto` AES-256-GCM + Ephemeral K8s Secret
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - Pipeline 需要傳遞 Registry password、Git token、cloud credentials 等敏感資料。
+  - v1.0 直接把 secret 塞進 `pipelines.steps_json`，明文存 DB，違反 `CLAUDE.md §10` 安全規則。
+  - Synapse 現有 `pkg/crypto` 已提供 AES-256-GCM + KeyProvider，`Cluster.KubeconfigEnc` 已採用此機制。
+- **Decision：**
+  - 新增 `pipeline_secrets` 表，`value_enc` 欄位使用 `pkg/crypto` 加密，與 `cluster.kubeconfig_enc` 同 KeyProvider。
+  - Pipeline 執行時：
+    1. 解密 `pipeline_secrets.value_enc`。
+    2. 為該次 Run 建立**臨時 K8s Secret**（name = `pipeline-run-<id>-secrets`），`ownerReference` 指向對應的 Job。
+    3. Step Pod 以 `envFrom.secretRef` 或 `volume.secret` 掛載。
+    4. Job 結束 → K8s GC 自動刪除 Secret；另外也設 TTL 保底。
+  - 程式內 Log scrubber 過濾 `${{ secrets.XXX }}` 內容，避免 Log 外洩。
+- **Alternatives considered：**
+  | 方案 | 否決原因 |
+  |------|---------|
+  | 全用 K8s Secret，不存 DB | 無法跨叢集、無集中管理、無版本追蹤 |
+  | 整合 HashiCorp Vault | 增加外部元件依賴，違反 ADR-001 精神 |
+  | Sealed Secrets | 需安裝 controller；使用者門檻高 |
+- **Consequences：**
+  - ✅ 無額外元件；與 Cluster 加密機制一致，易於維護。
+  - ✅ Secret 不落入 Pipeline 執行 Pod image，只在 Run 生命週期內暴露。
+  - ❌ 密鑰輪替需走 `cmd/admin/rotate-key` CLI，並在 DB 端 rekey 所有 `value_enc`。
+  - ❌ K8s API audit log 會看到 ephemeral Secret 的建立/刪除，需跟 SecOps 溝通。
+- **追蹤：** `pkg/crypto`、§7.3、ADR-005（共用 KeyProvider）。
+
+---
+
+### ADR-007：Webhook 走獨立公開路由群組
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - Git Provider 的 Webhook 無法攜帶 Synapse JWT，現有 `middleware.AuthRequired` 會全部 401。
+  - 直接把 webhook 路徑加入 JWT middleware 的 skip list 會讓路由配置混亂、容易忘記 middleware 順序。
+- **Decision：**
+  - 新增 `/api/v1/webhooks/*` 獨立 route group（`internal/router/routes_webhook.go`）。
+  - 此 group 不套 `AuthRequired`；改套：
+    1. `WebhookRateLimit()`（IP-based，預防洪水攻擊）
+    2. `HMACVerify()`（provider-specific secret，驗證簽章）
+    3. `ReplayProtection()`（LRU cache + 時間窗，防重放）
+  - **禁止** 在 `/api/v1/webhooks/*` 下掛任何需要 user context 的 handler。
+- **Alternatives considered：**
+  - 重用 `/api/v1` 並 skip list：容易誤用；審計難。
+  - Webhook 走獨立 port：部署複雜度上升，使用者需配防火牆。
+  - 全部 webhook 改為 pull-based（Synapse polling）：高延遲，Git Provider 側看不出效果。
+- **Consequences：**
+  - ✅ 安全邊界清楚；code review 時一眼能辨認哪個 handler 是「公開 + 無 auth」。
+  - ✅ 路由註冊檔獨立，減少 `router.go` 肥大問題（P1-2）。
+  - ❌ 需要分別註冊兩組 middleware；router 初始化程式碼略長。
+- **追蹤：** §10.1、§10.2、`internal/middleware/webhook_*.go`、`internal/router/routes_webhook.go`。
+
+---
+
+### ADR-008：跨叢集執行復用 `ClusterInformerManager`，不新建 informer pool
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - Pipeline Run 可能指定「在遠端叢集 X 執行 Step」，Synapse 需要在該叢集建立 Job 並 watch 狀態。
+  - v1.0 沒有描述這個路徑。若另建一套「Pipeline Informer Pool」，會有兩套 cluster→client 生命週期管理，互相爭用資源。
+- **Decision：**
+  - Pipeline Executor 透過 `k8sMgr.GetK8sClient(cluster)` 取得 client（與現有 Deployment handler 同路徑）。
+  - Job 的 watch 走 `k8sMgr.JobsLister(clusterID)`（若已有 informer）或 fallback 到 `Watch API` direct call。
+  - 所有 Pipeline 相關的 client 取得必須經由 `ClusterInformerManager`，禁止自建 `rest.Config`。
+- **Alternatives considered：**
+  - 為 Pipeline 另建一套 kubeconfig 池：與 `ClusterInformerManager` 職責重疊、記憶體與 fd 浪費。
+  - 走 SSH tunnel：增加部署複雜度、網路延遲。
+- **Consequences：**
+  - ✅ Cluster 連線生命週期、health check、GC 完全共用。
+  - ✅ Pipeline 繼承 Cluster RBAC、TLS 設定、Proxy 設定。
+  - ❌ 若某叢集 informer lag，Pipeline watch 也會受影響；需監控 `informer_cache_ready` metric。
+- **追蹤：** `internal/k8s/cluster_informer_manager.go`、§7.5。
+
+---
+
+### ADR-009：Log 持久化採用「最後 N MB 落 DB + 全量物件儲存」雙層
+
+- **狀態：** Accepted（2026-04-09）
+- **Context：**
+  - Pipeline Log 需求：即時 SSE 串流 + 歷史查詢 + 失敗分析。
+  - 若全量存 DB，`pipeline_step_runs.log_text` 欄位很快會膨脹到 100GB 級。
+  - 若只走物件儲存（S3 / MinIO），Synapse 需強制依賴外部儲存，違反零元件精神。
+- **Decision：**
+  - **Tier 1（DB）**：`pipeline_step_runs.log_tail` 只存最後 1 MB（可配置），供 UI 快速預覽。
+  - **Tier 2（本機 PVC / S3）**：完整 log 以 `run-<id>/step-<name>.log.gz` 儲存，支援 local disk（預設）與 S3-compatible backend（optional）。
+  - 讀取時優先從 DB 拿 tail；使用者點「下載完整 log」才走物件儲存。
+- **Alternatives considered：**
+  - 全量存 DB：DB 體積爆炸、備份時間失控。
+  - 全量走 S3 + 強制依賴：違反零元件。
+  - 只串流不持久化：使用者關掉頁面就看不到；違反「戰情室」原則。
+- **Consequences：**
+  - ✅ 零元件環境下也能跑（走 local PVC）；有 S3 時自動升級。
+  - ✅ 大 log 不壓垮 DB；DB 備份時間可控。
+  - ❌ Log 查詢有兩個路徑，需要抽象一層 `LogStore interface`。
+  - ❌ Local PVC 模式下 pod 重啟需掛載同一 PVC，部署時注意。
+- **追蹤：** §7.11、`internal/services/pipeline/logstore/`。
+
+---
+
+## 22. 效能 SLA 與容量規劃
+
+本節定義 Pipeline 子系統的**效能基準線**與**容量觸發點**，作為 M13a GA 時的壓測驗收依據，以及運維監控的告警閾值。
+
+### 22.1 效能目標（M13a GA 驗收線）
+
+| 指標 | P50 | P95 | P99 | 備註 |
+|------|-----|-----|-----|------|
+| Webhook 接收 → `pipeline_runs` 寫入 | 100ms | 500ms | 1s | §10.3 流程，含 HMAC 驗證 |
+| `pipeline_runs` 建立 → 首個 Job Pod `Running` | 3s | 10s | 20s | 依 image pull 狀況 |
+| Step Log 產生 → SSE 推送到前端 | 500ms | 2s | 5s | §7.11 WebSocket 延遲 |
+| Pipeline 狀態查詢 API（`GET /runs/:id`） | 50ms | 200ms | 500ms | 含 DB + Log tail |
+| 前端 Run 列表頁首屏載入 | 300ms | 1s | 2s | 100 筆分頁 |
+| Pipeline YAML 驗證（`POST /pipelines/validate`） | 50ms | 150ms | 300ms | JSON Schema 驗證 |
+| Concurrency Group 衝突判定 | 20ms | 100ms | 200ms | DB + LRU cache |
+
+### 22.2 單 Pipeline 執行限制（預設值，可於 YAML 覆蓋）
+
+| 項目 | 預設值 | 可調範圍 | 理由 |
+|------|--------|---------|------|
+| 單 Step timeout | 30min | 1min–2h | 多數 build/test/deploy 30min 內完成 |
+| 整 Pipeline timeout | 2h | 10min–8h | 超時多半代表卡住或死循環 |
+| 單 Step CPU request / limit | 500m / 2 | 100m–8 | 避免 Step 搶爆節點 |
+| 單 Step Memory request / limit | 1Gi / 4Gi | 256Mi–16Gi | Kaniko build 通常 ≥ 2Gi |
+| 單 Step Log 大小上限 | 100 MB | 1–500 MB | 超過截斷，避免壓垮 DB 與 SSE |
+| 單 Pipeline Step 數量上限 | 50 | 1–200 | DAG 節點過多代表該重新拆 Pipeline |
+| Workspace（emptyDir）大小 | 4 Gi | 100Mi–20Gi | 避免撐爆 Node |
+| Artifact 單項大小 | 1 Gi | 10Mi–10Gi | 大檔應推 Registry 不走 Artifact |
+
+### 22.3 並發吞吐目標
+
+| 場景 | 目標 | 壓力測試方法 |
+|------|-----|-------------|
+| 單叢集並發 Running pipelines | ≥ 20 | `hey` 工具連發 50 triggers |
+| 單 Synapse 實例總並發 pipelines（跨叢集） | ≥ 100 | 模擬 5 叢集各 20 |
+| Webhook 峰值 QPS | ≥ 50/s | 符合 GitLab group 50 倉庫同時 push |
+| 前端同時連 Log SSE 連線數 | ≥ 50 | 多使用者同時看不同 Run |
+
+### 22.4 容量基準（中型團隊：100 runs/day × 10 steps）
+
+| 資源 | 日增量 | 1 年累積 | 3 年累積 | 觸發擴展點 |
+|------|-------|---------|---------|-----------|
+| `pipeline_runs` | 100 列 | 36.5 萬 | 110 萬 | 300 萬列後考慮分區 |
+| `pipeline_step_runs` | 1,000 列 | 365 萬 | 1,100 萬 | 1,000 萬列後考慮歸檔 |
+| `pipeline_step_runs.log_tail` (≤1 MB avg 100 KB) | 100 MB | 36.5 GB | 110 GB | DB 表 > 50 GB 切換 S3 tail 儲存 |
+| 完整 Log（gzip 後 ~500 KB avg） | 500 MB | 180 GB | 540 GB | > 200 GB 強制啟用 S3 backend |
+| `pipeline_artifacts` metadata | 500 列 | 18 萬 | 55 萬 | 無需特別處理 |
+| Artifact 實體（本機 PVC 或 S3） | 10 GB | TTL 7 天 = 70 GB | TTL 7 天 = 70 GB | PVC > 500 GB 強制切 S3 |
+| `image_scan_results` | 100 列 | 3.6 萬 | 11 萬 | 無需特別處理 |
+
+### 22.5 瓶頸預警與擴展路徑
+
+| 瓶頸 | 早期訊號 | 短期緩解 | 長期方案 |
+|------|---------|---------|---------|
+| 單機 Rate Limiter（P1-8） | 多 Synapse 實例部署時 limiter 各自為政 | 臨時 sticky session | 切 Redis backend（`github.com/ulule/limiter/v3/drivers/store/redis`） |
+| DB `pipeline_runs` 寫入熱點 | INSERT P95 > 500ms | 加 `(cluster_id, created_at)` 複合索引 | 分區（PostgreSQL partition by range） |
+| DB `pipeline_step_runs` 膨脹 | 表 > 1000 萬列 | 歸檔 6 個月前資料到 `*_archive` 表 | 改 ClickHouse/TimescaleDB |
+| Log 儲存滿 | PVC > 80% | 手動清 GC | `LogStore` 切 S3 |
+| Informer lag（cross-cluster） | `informer_last_sync_age > 30s` | 重啟 informer | 調高 Informer `resyncPeriod`、增加 watch buffer |
+| Concurrency Group LRU miss rate 高 | `concurrency_lru_hit_rate < 80%` | 調大 LRU size | 切 Redis pub/sub |
+
+### 22.6 觀測要點（對應 §16 Metrics）
+
+**SLI（Service Level Indicator，必須有 Prometheus 指標）：**
+```
+pipeline_run_duration_seconds{cluster, result}            histogram
+pipeline_run_queue_wait_seconds{cluster}                  histogram
+pipeline_step_duration_seconds{step_type, result}         histogram
+webhook_ingest_duration_seconds{provider}                 histogram
+pipeline_concurrent_running{cluster}                      gauge
+log_sse_active_connections                                gauge
+log_store_tier{tier}                                      counter  # db / local / s3
+```
+
+**SLO 建議（M13a GA 時）：**
+```
+SLO-1: P95(pipeline_run_queue_wait_seconds) < 10s   （30 日滾動）
+SLO-2: 99% 的 pipeline_runs 能成功進入 Running 狀態
+SLO-3: Webhook 接收 5xx 率 < 0.1%
+SLO-4: Log SSE 斷線率 < 1%
+```
+
+**告警閾值（M13a GA 後觀察 2 週再啟用）：**
+- `rate(pipeline_run_failed_total[5m]) > 0.3` → 短期 failing run 暴增
+- `histogram_quantile(0.95, pipeline_run_queue_wait_seconds) > 30` → 排程壅塞
+- `pipeline_concurrent_running > 80% × max_concurrent` → 接近容量上限
+
+---
+
+## 23. 安全威脅建模（STRIDE-lite）
+
+採用 STRIDE 框架的精簡版：對每個敏感元件列出 **Spoofing / Tampering / Repudiation / Information disclosure / Denial of service / Elevation of privilege** 的風險與緩解措施。本節為 Pipeline 子系統的最小威脅模型，**進入生產前必須 review 一次**。
+
+### 23.1 Webhook 接收端點（`/api/v1/webhooks/*`）
+
+| STRIDE | 風險情境 | 緩解（設計 / 實作位置） |
+|--------|---------|------------------------|
+| **S**poofing | 攻擊者偽造 Git push 事件觸發 Pipeline | HMAC-SHA256 簽章驗證（provider 各自的 secret），`middleware.HMACVerify()` |
+| **T**ampering | 中間人修改 payload（如 branch 名） | HTTPS only（TLS 於 LB 層）+ HMAC 簽章覆蓋整個 payload |
+| **R**epudiation | 攻擊者否認觸發 | 每次 webhook 寫入 `audit_logs` + `pipeline_runs.trigger_payload_hash` |
+| **I**nformation disclosure | Webhook 回應洩漏 Pipeline 配置 | 固定回 `{"received": true}`，不回 payload 細節 |
+| **D**enial of service | 洪水攻擊、惡意 replay | 三層防禦：IP Rate Limit（100 req/min）+ LRU replay cache（5 min）+ `max_concurrent_runs` |
+| **E**levation of privilege | Webhook 繞過 JWT 觸發敏感操作 | Webhook group 內**禁止**掛需要 user context 的 handler；觸發的 Pipeline 以 `pipeline.service_account` 而非觸發者身份執行 |
+
+### 23.2 Pipeline Pod（Step 執行容器）
+
+| STRIDE | 風險情境 | 緩解 |
+|--------|---------|------|
+| **S** | 惡意 YAML 指定他人叢集的 ServiceAccount | `pipeline_run.cluster_id` 與 `pipeline.cluster_id` 必須一致；跨叢集執行需明確在 YAML 宣告且經過 RBAC 檢查 |
+| **T** | Step 修改 Node 系統檔案 | `readOnlyRootFilesystem: true` + `allowPrivilegeEscalation: false` + `runAsNonRoot: true`（§7.7） |
+| **T** | Step 篡改其他 workload 的 Secret/ConfigMap | `automountServiceAccountToken: false` 預設；如需 K8s API 權限，必須在 `pipeline.runtime.service_account` 白名單中明示 |
+| **R** | Step 結束後無法追溯做了什麼 | `kubectl exec` 禁止；所有 step 的 `command` 保留在 `pipeline_step_runs.command_snapshot` |
+| **I** | Step 日誌夾帶 Secret 明文 | Log scrubber 過濾 `${{ secrets.XXX }}` 實際值（§7.11）；Secret 只以 env 注入，不寫 file（可設定） |
+| **I** | Step 連到外部服務洩漏內部 IP/hostname | NetworkPolicy 預設只允許出口到 `allow_egress` 列表；無列表則拒絕外部連線 |
+| **D** | 惡意 Step 佔滿叢集資源 | `resources.limits` 強制（無 limit 則套預設 1Gi / 500m）+ `max_concurrent_runs` |
+| **D** | 無限 fork pod | Pod-level `pids.max` cgroup（若 Node 支援） |
+| **E** | Step 打破 sandbox 取得 Node root | Seccomp `RuntimeDefault` + `runAsNonRoot` + Kaniko 僅限 namespace 白名單 + 敏感叢集可搭 Node taint |
+| **E** | Step 讀取其他 Pipeline Run 的檔案 | emptyDir Workspace per-run；Artifact 讀寫有 `pipeline_id + run_id` 檢核 |
+
+### 23.3 Secrets 管理（`pipeline_secrets` + Ephemeral K8s Secret）
+
+| STRIDE | 風險情境 | 緩解 |
+|--------|---------|------|
+| **S** | 非授權使用者註冊同名 Secret 覆蓋他人 | Secret name 需在 `cluster + namespace` 內唯一；寫入時 RBAC 檢查 |
+| **T** | DB 直連寫入明文 value | `value_enc` 欄位強制走 GORM BeforeSave hook + `pkg/crypto`；`value` 欄位不存在 |
+| **T** | 加密 Key 被換掉導致 rekey | `KeyProvider` 版本化，`value_enc` 含 key_version prefix |
+| **R** | Secret 被誰使用無記錄 | 每次 Pipeline Run 啟動時寫 `audit_logs: secret_referenced` 事件（只記 name，不記 value） |
+| **I** | Log 列 env 值 | §7.11 Log scrubber 過濾 |
+| **I** | `kubectl get secret -o yaml` 讀到 ephemeral Secret | 該 Secret 綁定 ownerRef → Job 結束即刪；且 RBAC 限定 Pipeline Controller ServiceAccount |
+| **D** | 大量 secret 觸發 etcd 壓力 | Ephemeral Secret 只在 Run 生命週期內存在，不超過 50 個 concurrent |
+| **E** | Step 透過 mount Secret 取得所有 Pipeline Secret | Step 只能 mount 該 Run YAML 宣告的 secret name；Pipeline Executor 嚴格 allowlist |
+
+### 23.4 GitOps Reconciler（M16）
+
+| STRIDE | 風險情境 | 緩解 |
+|--------|---------|------|
+| **S** | 假冒 `gitops_apps.source` 指向惡意 repo | Repo URL 需經 Platform Admin 審核；Git clone 使用 readonly deploy key |
+| **T** | Reconciler 誤 apply 錯誤 manifest | Dry-run diff 先顯示，使用者確認後 apply（預設）；自動模式需白名單 |
+| **T** | 惡意 PR 合併後自動部署 | 保留 manual approval（`sync.policy = manual`）；自動模式需搭配 `production_gate` ADR-003 |
+| **R** | 無 sync 歷史 | 每次 sync 寫 `gitops_sync_events` 表 |
+| **I** | `git clone` 曝光 token | 使用 deploy key；token 不存 DB 明文 |
+| **D** | Reconciler 對 Git server 壓力 | Poll interval 最小 30s；ETag cache 優先 |
+| **E** | `kubectl apply` 權限過大 | Reconciler ServiceAccount 僅綁定目標 namespace 的 `edit` Role，禁用 `cluster-admin` |
+
+### 23.5 Webhook Replay Protection 細節
+
+```go
+// internal/middleware/webhook_replay.go
+type ReplayGuard struct {
+    seen *lru.Cache[string, time.Time]  // key = provider+delivery_id
+    ttl  time.Duration                  // 5min
+}
+
+func (g *ReplayGuard) Check(provider, deliveryID string, sentAt time.Time) error {
+    // 1. Reject if timestamp drift > 5min（防 old replay）
+    if time.Since(sentAt) > g.ttl {
+        return ErrStaleWebhook
+    }
+    // 2. Reject if already seen
+    key := provider + ":" + deliveryID
+    if _, ok := g.seen.Get(key); ok {
+        return ErrReplayDetected
+    }
+    g.seen.Add(key, time.Now())
+    return nil
+}
+```
+
+**為何 LRU + TTL 雙層？**
+- LRU 防記憶體爆炸（size=10000）。
+- TTL 防「正當的 retry webhook」被誤認為 replay（Git 通常 1min 內 retry 3 次）。
+
+### 23.6 資料外洩緩解清單
+
+| 外洩來源 | 緩解 |
+|---------|------|
+| Log 輸出 | Log scrubber（§7.11）、`log_tail` 落 DB 前再 filter 一次 |
+| JSON API 回應 | `Secret.Value` 欄位永遠 `json:"-"`；前端只拿 metadata |
+| K8s Secret dump | ephemeral secret + ownerRef + RBAC；`kubectl get secret` 需要 `list` verb |
+| audit log | `operation_logs.payload` 存之前過濾 `password|token|secret` 鍵 |
+| 錯誤訊息 | apierrors 統一 wrap，避免把 `stderr` 原文回傳給使用者 |
+
+---
+
+## 24. 資料遷移腳本示意
+
+本節列出 M13a/M13b/M14 實作時所需的 GORM AutoMigrate + 手動 SQL 範例。遵循 Synapse 現有 `internal/database/migration.go` 模式，**新增欄位優先 AutoMigrate**；既有欄位轉換、資料填充等無法由 GORM 表達的，走 `migration_scripts/` 手動 SQL。
+
+### 24.1 `pipelines.steps_json` → `pipeline_versions` 拆分
+
+**背景：** 現有 `pipelines.steps_json` 只存最新版，遷移後需為歷史 Pipeline 補建第一版快照。
+
+```go
+// internal/database/migrations/m13a_pipeline_versions.go
+package migrations
+
+import (
+    "fmt"
+
+    "gorm.io/gorm"
+
+    "github.com/shaia/Synapse/internal/models"
+    "github.com/shaia/Synapse/pkg/logger"
+)
+
+// M13aPipelineVersions 建立 pipeline_versions 表並從 pipelines.steps_json 灌入初始版本。
+func M13aPipelineVersions(db *gorm.DB) error {
+    // ── Step 1: AutoMigrate 新表 ──────────────────────────────────────────
+    if err := db.AutoMigrate(&models.PipelineVersion{}); err != nil {
+        return fmt.Errorf("auto migrate pipeline_versions: %w", err)
+    }
+
+    // ── Step 2: 為每個已存在的 pipeline 建立 version=1 快照 ───────────────
+    var pipelines []models.Pipeline
+    if err := db.Find(&pipelines).Error; err != nil {
+        return fmt.Errorf("fetch existing pipelines: %w", err)
+    }
+
+    for _, p := range pipelines {
+        // 跳過已有版本的 pipeline（冪等性）
+        var count int64
+        db.Model(&models.PipelineVersion{}).Where("pipeline_id = ?", p.ID).Count(&count)
+        if count > 0 {
+            continue
+        }
+
+        v := &models.PipelineVersion{
+            PipelineID: p.ID,
+            Version:    1,
+            StepsJSON:  p.StepsJSON, // 舊欄位暫保留，遷移完成後 drop
+            YAMLRaw:    "",          // 無原始 YAML 可還原
+            AuthorID:   p.CreatedBy, // 若有 created_by，否則為 0
+            CommitMsg:  "initial version (migrated from steps_json)",
+            CreatedAt:  p.CreatedAt,
+        }
+        if err := db.Create(v).Error; err != nil {
+            return fmt.Errorf("create initial version for pipeline %d: %w", p.ID, err)
+        }
+
+        // 指向最新版本
+        if err := db.Model(&p).Update("current_version_id", v.ID).Error; err != nil {
+            return fmt.Errorf("update current_version_id for pipeline %d: %w", p.ID, err)
+        }
+
+        logger.Info("pipeline migrated to versioned storage",
+            "pipeline_id", p.ID,
+            "version_id", v.ID,
+        )
+    }
+
+    // ── Step 3: 為 pipeline_runs 補 snapshot_id ───────────────────────────
+    //   所有舊 Run 指向 version=1（最接近舊行為的假設）
+    if err := db.Exec(`
+        UPDATE pipeline_runs r
+        SET snapshot_id = (
+            SELECT v.id FROM pipeline_versions v
+            WHERE v.pipeline_id = r.pipeline_id AND v.version = 1
+        )
+        WHERE r.snapshot_id IS NULL OR r.snapshot_id = 0
+    `).Error; err != nil {
+        return fmt.Errorf("backfill pipeline_runs.snapshot_id: %w", err)
+    }
+
+    return nil
+}
+```
+
+**Rollback 策略：**
+- `pipelines.steps_json` 欄位保留到 M13b 結束，期間為雙寫（寫新版 + 同步舊欄位）。
+- M13b 結束 + 監控穩定 2 週後，才執行 `ALTER TABLE pipelines DROP COLUMN steps_json`。
+- 風險：rollback 到 M13a 前版本時，`steps_json` 需要從 `pipeline_versions.current_version_id` 反向同步；提供 `cmd/admin/migrate-downgrade` 子命令。
+
+### 24.2 `image_scan_results` 新增 `scan_source` 欄位
+
+**背景：** ADR-005 要求標記掃描來源，區分 host exec / GitLab CI / Pipeline Step。
+
+```go
+// internal/database/migrations/m13b_scan_source.go
+func M13bScanSource(db *gorm.DB) error {
+    // ── Step 1: AutoMigrate 加欄位 ────────────────────────────────────────
+    if err := db.AutoMigrate(&models.ImageScanResult{}); err != nil {
+        return fmt.Errorf("auto migrate image_scan_results: %w", err)
+    }
+
+    // ── Step 2: 填充歷史資料 ──────────────────────────────────────────────
+    //   所有舊記錄都是 host exec 來源（ADR-005 Phase 1 前的唯一路徑）
+    if err := db.Exec(`
+        UPDATE image_scan_results
+        SET scan_source = 'host_exec'
+        WHERE scan_source IS NULL OR scan_source = ''
+    `).Error; err != nil {
+        return fmt.Errorf("backfill scan_source: %w", err)
+    }
+
+    // ── Step 3: 加非 null 約束（PostgreSQL） ──────────────────────────────
+    if err := db.Exec(`
+        ALTER TABLE image_scan_results
+        ALTER COLUMN scan_source SET DEFAULT 'host_exec',
+        ALTER COLUMN scan_source SET NOT NULL
+    `).Error; err != nil {
+        // SQLite 不支援 ALTER COLUMN SET NOT NULL；用日誌警告，不拋錯
+        logger.Warn("SET NOT NULL skipped (likely SQLite)", "error", err)
+    }
+
+    return nil
+}
+```
+
+### 24.3 `approval_requests` 擴充 Action 類型
+
+**背景：** ADR-003 將 `promote_environment` 與 `production_gate` 加入既有 `ApprovalRequest.Action` 枚舉。
+
+```go
+// internal/database/migrations/m17_promotion_approval.go
+func M17PromotionApproval(db *gorm.DB) error {
+    // AutoMigrate 新欄位（PipelineRunID, TargetEnvironment）
+    if err := db.AutoMigrate(&models.ApprovalRequest{}); err != nil {
+        return fmt.Errorf("auto migrate approval_requests: %w", err)
+    }
+
+    // CHECK constraint（PostgreSQL）— 記錄合法值
+    if err := db.Exec(`
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.check_constraints
+                WHERE constraint_name = 'approval_requests_action_check'
+            ) THEN
+                ALTER TABLE approval_requests
+                ADD CONSTRAINT approval_requests_action_check
+                CHECK (action IN (
+                    'scale', 'delete', 'update', 'apply',
+                    'promote_environment', 'production_gate'
+                ));
+            END IF;
+        END $$;
+    `).Error; err != nil {
+        logger.Warn("approval_requests_action_check skipped", "error", err)
+    }
+
+    return nil
+}
+```
+
+### 24.4 Webhook Replay Cache 表（可選，分散式場景才需要）
+
+**背景：** 單機 LRU 在多 Synapse 實例部署時無法共享；若需跨實例 replay 防護，可落 DB（輕量、不用 Redis）。
+
+```sql
+-- 可選：當 Synapse 多實例部署時啟用
+CREATE TABLE IF NOT EXISTS webhook_delivery_dedupe (
+    provider     VARCHAR(50)  NOT NULL,
+    delivery_id  VARCHAR(200) NOT NULL,
+    received_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (provider, delivery_id)
+);
+
+-- 定期清理（5min TTL）
+DELETE FROM webhook_delivery_dedupe
+WHERE received_at < CURRENT_TIMESTAMP - INTERVAL '5 minutes';
+```
+
+GORM 對應由背景 worker 清理，避免 SQL dialect 不相容：
+
+```go
+// internal/services/webhook_dedupe_worker.go
+func (w *WebhookDedupeWorker) cleanup(ctx context.Context) {
+    cutoff := time.Now().Add(-5 * time.Minute)
+    w.db.WithContext(ctx).
+        Where("received_at < ?", cutoff).
+        Delete(&models.WebhookDeliveryDedupe{})
+}
+```
+
+### 24.5 遷移執行與回滾 SOP
+
+**執行順序（M13a → M17）：**
+```go
+// internal/database/migration.go
+func Migrate(db *gorm.DB) error {
+    migrations := []func(*gorm.DB) error{
+        migrations.M13aPipelineVersions,
+        migrations.M13bScanSource,
+        migrations.M14WebhookModel,          // GitProvider/Webhook 模型
+        migrations.M15RegistryModel,         // registry_credentials
+        migrations.M16GitOpsModel,           // gitops_apps
+        migrations.M17PromotionApproval,
+    }
+    for _, m := range migrations {
+        if err := m(db); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+```
+
+**冪等性要求：**
+每個 migration function 必須可重複執行而不損壞資料：
+- AutoMigrate 本身冪等。
+- 資料填充要先 `SELECT COUNT` 或 `WHERE ... IS NULL` 判斷。
+- CHECK constraint 加入前先查 `information_schema`。
+
+**Rollback 機制：**
+- 不提供 `Down()` migration（Go-Migrate 風格會增加維護負擔）。
+- 改以「前向相容 + 版本化欄位」方式：新欄位默認 nullable，舊程式可忽略；舊欄位保留兩個 release 週期再 drop。
+- 緊急 rollback：DB 層 restore from snapshot + 降級 Synapse binary。
+
+**測試策略：**
+- `internal/database/migration_test.go` 需覆蓋：
+  - 從空 DB 執行完整 migration → 成功
+  - 重複執行同一 migration → 冪等
+  - 從 v1.0 schema（含舊 `pipelines.steps_json`）遷移 → 資料正確
+- CI 在 PR 階段跑 migration test，禁止合併未驗證的 schema 變更。
+
+---
+
 ## 附錄 A：Pipeline YAML Schema
 
 ```yaml
@@ -1778,4 +2442,719 @@ spec:
 
 ---
 
-**文件結束。** 本版本為 v2.0 設計稿，實作前請與團隊 review 並確認章節編號與 M13a/M13b 拆分是否合適。
+## 附錄 C：真實 Pipeline 範例集
+
+本附錄提供四類常見場景的完整 YAML，作為 M13a/M13b 實作時的驗收範本 + 使用者入門教材。每份範例皆可在本地叢集直接跑通（前提：對應 Step image 可 pull）。
+
+### C.1 Java Spring Boot 後端（Maven build → Kaniko → Trivy → Deploy）
+
+```yaml
+apiVersion: synapse.io/v1
+kind: Pipeline
+metadata:
+  name: user-service
+  cluster: dev-cluster
+  namespace: backend-ci
+spec:
+  description: "User service: build jar, image, scan, deploy to staging"
+
+  concurrency:
+    group: "user-service-${GIT_BRANCH}"
+    policy: cancel_previous
+
+  triggers:
+    - type: webhook
+      provider: gitlab-internal
+      repo: "backend/user-service"
+      branch: "main"
+      events: [push, merge_request]
+      path_filter:
+        - "src/**"
+        - "pom.xml"
+        - "Dockerfile"
+
+  runtime:
+    service_account: pipeline-runner
+    pod_security:
+      run_as_non_root: true
+      read_only_root_fs: true
+
+  env:
+    MAVEN_OPTS: "-Xmx2g -XX:+UseG1GC"
+
+  workspace:
+    type: emptyDir
+    size: 6Gi
+
+  steps:
+    # 1) 檢出原始碼
+    - name: checkout
+      type: git-checkout
+      depends_on: []
+      config:
+        repo: "https://gitlab.internal/backend/user-service.git"
+        ref: "${GIT_SHA}"
+        credentials: "gitlab-readonly"   # 對應 pipeline_secrets
+
+    # 2) Maven 編譯 + 單元測試
+    - name: build-and-test
+      type: exec
+      image: maven:3.9-eclipse-temurin-17
+      depends_on: [checkout]
+      cache:
+        paths:
+          - /root/.m2/repository
+      command: |
+        mvn clean verify -B \
+          -DskipITs \
+          -Dmaven.test.failure.ignore=false
+      outputs:
+        - name: jar-artifact
+          path: target/*.jar
+        - name: test-report
+          path: target/surefire-reports/
+      on_failure: abort
+
+    # 3) Kaniko 建置映像（需要寫入權限例外）
+    - name: build-image
+      type: build-image
+      image: gcr.io/kaniko-project/executor:v1.20.0
+      depends_on: [build-and-test]
+      pod_security:
+        read_only_root_fs: false        # Kaniko 例外
+      env:
+        DOCKER_CONFIG: /kaniko/.docker
+      config:
+        context: "."
+        dockerfile: "Dockerfile"
+        destination: "harbor.internal/backend/user-service:${GIT_SHA}"
+        build_args:
+          JAR_FILE: "target/*.jar"
+        registry_credentials: "harbor-ci"  # pipeline_secrets
+      outputs:
+        - name: image-ref
+          from: kaniko-image-ref
+
+    # 4) Trivy 掃描（在 K8s Job 內執行，非 host exec）
+    - name: security-scan
+      type: trivy-scan
+      image: aquasec/trivy:0.50.0
+      depends_on: [build-image]
+      config:
+        target: "${{ steps.build-image.outputs.image-ref }}"
+        severity_threshold: HIGH
+        ignore_unfixed: true
+        exit_on_vulnerability: true
+      on_failure: abort
+      retry:
+        max_attempts: 2
+        backoff_seconds: 30
+
+    # 5) 部署到 staging
+    - name: deploy-staging
+      type: deploy
+      image: bitnami/kubectl:1.30
+      depends_on: [security-scan]
+      config:
+        manifest: "k8s/staging/deployment.yaml"
+        namespace: "user-svc-staging"
+        wait_for_rollout: true
+        rollout_timeout: 5m
+      env:
+        IMAGE_TAG: "${GIT_SHA}"
+
+    # 6) Smoke test
+    - name: smoke-test
+      type: exec
+      image: curlimages/curl:8.7.1
+      depends_on: [deploy-staging]
+      command: |
+        for i in 1 2 3 4 5; do
+          if curl -sf http://user-svc.user-svc-staging.svc:8080/health; then
+            echo "smoke test passed"
+            exit 0
+          fi
+          sleep 5
+        done
+        exit 1
+      retry:
+        max_attempts: 3
+        backoff_seconds: 10
+
+  notifications:
+    on_success:
+      channels: [3]     # NotifyChannel ID, 一般頻道
+    on_failure:
+      channels: [3, 5]  # 加值班頻道
+    on_scan_critical:
+      channels: [3, 5, 7]  # 加 SecOps
+```
+
+**關鍵點：**
+- `build-image` step 把 `pod_security.read_only_root_fs` 設 `false`，是整份 YAML 唯一的例外，Pipeline Executor 會 audit log 記錄此例外。
+- `smoke-test` 用 `retry` 取代 `sleep` loop，符合 §7.10 重試策略。
+- `notifications.on_scan_critical` 為 Pipeline 特有事件，掃描出 CRITICAL 時額外發 SecOps 頻道。
+
+---
+
+### C.2 React + Vite 前端（pnpm build → Kaniko → CDN 同步）
+
+```yaml
+apiVersion: synapse.io/v1
+kind: Pipeline
+metadata:
+  name: admin-portal-web
+  cluster: dev-cluster
+  namespace: frontend-ci
+spec:
+  description: "React admin portal: build, containerize, sync static assets to CDN"
+
+  concurrency:
+    group: "admin-portal-${GIT_BRANCH}"
+    policy: cancel_previous
+
+  triggers:
+    - type: webhook
+      provider: gitlab-internal
+      repo: "frontend/admin-portal"
+      branch: "main"
+      events: [push]
+      path_filter:
+        - "src/**"
+        - "public/**"
+        - "package.json"
+        - "pnpm-lock.yaml"
+
+  runtime:
+    service_account: pipeline-runner
+    pod_security:
+      run_as_non_root: true
+      read_only_root_fs: true
+
+  workspace:
+    type: emptyDir
+    size: 4Gi
+
+  steps:
+    - name: checkout
+      type: git-checkout
+      depends_on: []
+      config:
+        repo: "https://gitlab.internal/frontend/admin-portal.git"
+        ref: "${GIT_SHA}"
+
+    - name: install-deps
+      type: exec
+      image: node:20-alpine
+      depends_on: [checkout]
+      cache:
+        paths:
+          - /workspace/.pnpm-store
+      command: |
+        corepack enable
+        pnpm config set store-dir /workspace/.pnpm-store
+        pnpm install --frozen-lockfile
+
+    - name: lint-and-type-check
+      type: exec
+      image: node:20-alpine
+      depends_on: [install-deps]
+      command: |
+        pnpm run lint
+        pnpm run type-check
+      on_failure: abort
+
+    - name: unit-test
+      type: exec
+      image: node:20-alpine
+      depends_on: [install-deps]
+      command: |
+        pnpm run test:unit
+      outputs:
+        - name: coverage-report
+          path: coverage/
+
+    - name: build
+      type: exec
+      image: node:20-alpine
+      depends_on: [lint-and-type-check, unit-test]
+      env:
+        NODE_OPTIONS: "--max-old-space-size=4096"
+        VITE_API_BASE: "/api/v1"
+      command: |
+        pnpm run build
+      outputs:
+        - name: dist-bundle
+          path: dist/
+
+    - name: build-image
+      type: build-image
+      image: gcr.io/kaniko-project/executor:v1.20.0
+      depends_on: [build]
+      pod_security:
+        read_only_root_fs: false
+      config:
+        context: "."
+        dockerfile: "Dockerfile.nginx"
+        destination: "harbor.internal/frontend/admin-portal:${GIT_SHA}"
+
+    - name: sync-cdn
+      type: exec
+      image: amazon/aws-cli:2.15.0
+      depends_on: [build-image]
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.CDN_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.CDN_SECRET_KEY }}
+      command: |
+        aws s3 sync dist/assets/ s3://cdn-assets/admin-portal/${GIT_SHA}/ \
+          --cache-control "public, max-age=31536000, immutable"
+
+  notifications:
+    on_failure:
+      channels: [3]
+```
+
+**關鍵點：**
+- 前端 Pipeline 通常沒有 Trivy 掃描（靜態資源），但若 build-image 使用 nginx base，仍建議加 scan step。
+- `pnpm` cache 走 `/workspace/.pnpm-store`，workspace 是 emptyDir，同一 Run 內 share。
+
+---
+
+### C.3 Helm Chart 發布
+
+```yaml
+apiVersion: synapse.io/v1
+kind: Pipeline
+metadata:
+  name: platform-charts
+  cluster: ops-cluster
+  namespace: helm-publish
+spec:
+  description: "Helm chart lint, package, push to ChartMuseum"
+
+  triggers:
+    - type: webhook
+      provider: gitlab-internal
+      repo: "platform/helm-charts"
+      branch: "main"
+      events: [push]
+      path_filter:
+        - "charts/**"
+
+  runtime:
+    service_account: pipeline-runner
+
+  steps:
+    - name: checkout
+      type: git-checkout
+      depends_on: []
+      config:
+        repo: "https://gitlab.internal/platform/helm-charts.git"
+        ref: "${GIT_SHA}"
+
+    - name: detect-changed-charts
+      type: exec
+      image: alpine/git:2.43
+      depends_on: [checkout]
+      command: |
+        CHANGED=$(git diff --name-only HEAD~1 HEAD -- charts/ | cut -d'/' -f2 | sort -u)
+        echo "${CHANGED}" > /workspace/changed-charts.txt
+      outputs:
+        - name: changed-list
+          path: /workspace/changed-charts.txt
+
+    - name: helm-lint
+      type: exec
+      image: alpine/helm:3.14.4
+      depends_on: [detect-changed-charts]
+      command: |
+        while read chart; do
+          [ -z "${chart}" ] && continue
+          helm lint "charts/${chart}"
+        done < /workspace/changed-charts.txt
+      on_failure: abort
+
+    - name: helm-package
+      type: exec
+      image: alpine/helm:3.14.4
+      depends_on: [helm-lint]
+      command: |
+        mkdir -p /workspace/packages
+        while read chart; do
+          [ -z "${chart}" ] && continue
+          helm package "charts/${chart}" -d /workspace/packages
+        done < /workspace/changed-charts.txt
+      outputs:
+        - name: helm-packages
+          path: /workspace/packages/*.tgz
+
+    - name: push-to-chartmuseum
+      type: exec
+      image: curlimages/curl:8.7.1
+      depends_on: [helm-package]
+      env:
+        CM_URL: "https://charts.internal"
+        CM_TOKEN: ${{ secrets.CHARTMUSEUM_TOKEN }}
+      command: |
+        for pkg in /workspace/packages/*.tgz; do
+          curl -fsSL \
+            -H "Authorization: Bearer ${CM_TOKEN}" \
+            --data-binary "@${pkg}" \
+            "${CM_URL}/api/charts"
+        done
+
+  notifications:
+    on_success:
+      channels: [3]
+    on_failure:
+      channels: [3, 5]
+```
+
+**關鍵點：**
+- 示範 **step 間用 workspace 共享檔案**（`detect-changed-charts` → `helm-package`）。
+- 示範 **artifact 輸出**（`helm-packages`），可在 Pipeline UI 下載。
+
+---
+
+### C.4 Terraform Infrastructure（terraform plan → 人工審核 → apply）
+
+```yaml
+apiVersion: synapse.io/v1
+kind: Pipeline
+metadata:
+  name: prod-infra
+  cluster: ops-cluster
+  namespace: infra-pipeline
+spec:
+  description: "Terraform plan for prod infra, requires manual approval before apply"
+
+  triggers:
+    - type: webhook
+      provider: gitlab-internal
+      repo: "infra/terraform-prod"
+      branch: "main"
+      events: [push, merge_request]
+      path_filter:
+        - "**.tf"
+        - "**.tfvars"
+
+  runtime:
+    service_account: infra-pipeline-runner
+    pod_security:
+      run_as_non_root: true
+      read_only_root_fs: false  # Terraform 需要寫 .terraform/ 目錄
+
+  workspace:
+    type: pvc
+    pvc_name: terraform-state-cache
+    size: 2Gi
+
+  steps:
+    - name: checkout
+      type: git-checkout
+      depends_on: []
+      config:
+        repo: "https://gitlab.internal/infra/terraform-prod.git"
+        ref: "${GIT_SHA}"
+
+    - name: tf-init
+      type: exec
+      image: hashicorp/terraform:1.7
+      depends_on: [checkout]
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_INFRA_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_INFRA_SECRET_KEY }}
+      command: |
+        terraform init -backend-config=backend.hcl
+
+    - name: tf-validate
+      type: exec
+      image: hashicorp/terraform:1.7
+      depends_on: [tf-init]
+      command: |
+        terraform validate
+      on_failure: abort
+
+    - name: tf-plan
+      type: exec
+      image: hashicorp/terraform:1.7
+      depends_on: [tf-validate]
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_INFRA_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_INFRA_SECRET_KEY }}
+      command: |
+        terraform plan -out=tfplan -input=false
+        terraform show -no-color tfplan > plan-summary.txt
+      outputs:
+        - name: tf-plan-file
+          path: tfplan
+        - name: plan-summary
+          path: plan-summary.txt
+
+    # ── 人工審核閘門（走 ApprovalRequest，ADR-003） ─────────────────────────
+    - name: approval-gate
+      type: approval
+      depends_on: [tf-plan]
+      config:
+        action: production_gate
+        message: "Terraform plan ready. Review plan-summary.txt before approving."
+        required_approvers: 2     # 至少 2 人點頭
+        approver_groups:
+          - infra-leads
+          - platform-sre
+        timeout: 24h              # 24 小時未審核自動取消
+      on_timeout: abort
+
+    - name: tf-apply
+      type: exec
+      image: hashicorp/terraform:1.7
+      depends_on: [approval-gate]
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_INFRA_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_INFRA_SECRET_KEY }}
+      command: |
+        terraform apply -input=false -auto-approve tfplan
+      on_failure:
+        notify: true
+        # 注意：tf-apply 失敗不做自動 rollback，由 SRE 手動介入
+
+  notifications:
+    on_start:
+      channels: [10]               # 基礎設施變更頻道
+    on_approval_requested:
+      channels: [10, 11]           # 加 infra-leads
+    on_success:
+      channels: [10]
+    on_failure:
+      channels: [10, 11, 12]       # 加 on-call
+```
+
+**關鍵點：**
+- 示範 `type: approval` step，銜接 §13.2 ApprovalRequest 擴充。
+- `workspace.type: pvc` 示範持久化 workspace（Terraform state cache）。
+- `tf-apply.on_failure` 明確說明不自動 rollback；Pipeline 設計哲學是「失敗就停，等人」而非「任意回滾」，避免 infra 進入更壞的狀態。
+
+---
+
+## 附錄 D：Troubleshooting 手冊
+
+本附錄針對 M13a/M13b 上線後**最可能遇到的 10 個問題**提供診斷路徑與程式碼入口。Runbook 風格，每個問題均含：**症狀 → 快速檢查 → 根因 → 修復 → 預防**。
+
+### D.1 Pipeline Pod 卡在 `Pending` 一直不 Running
+
+- **症狀：** `pipeline_runs.status = 'running'` 但 Pod `kubectl get pod -n <ns>` 顯示 `Pending`。
+- **快速檢查：**
+  ```bash
+  kubectl describe pod -n <ns> <pod-name> | tail -30
+  ```
+- **常見根因：**
+  1. Image pull 失敗（私有 registry 缺 imagePullSecret）
+  2. Resource request 過大，Node 無法排程
+  3. PVC binding 失敗（`workspace.type: pvc` 時）
+  4. Node affinity / toleration 不符
+- **修復：**
+  - Image pull：檢查 `pipeline.runtime.image_pull_secrets`，對應的 K8s Secret 是否存在
+  - Resource：調小 `resources.requests.cpu/memory`
+  - PVC：確認 StorageClass 存在 + 可動態供應
+- **預防：**
+  - `internal/services/pipeline/executor.go` 建立 Pod 時先做 dry-run + admission webhook 預檢
+  - Metric: `pipeline_pod_pending_seconds`，> 60s 告警
+
+### D.2 Trivy Step 一直 timeout
+
+- **症狀：** `trivy-scan` step 在 `timeout` 後被 kill，error 訊息含 `context deadline exceeded`。
+- **快速檢查：** 查 Step log 最後幾行，通常會看到 `Downloading DB...`
+- **根因：** Trivy 每次都從 GitHub 下載 vulnerability DB（約 300 MB），網路慢的環境會超時。
+- **修復：**
+  - 方案 A：調高 step timeout 到 5 min
+  - 方案 B（推薦）：叢集內部署 Trivy DB mirror，設定 `TRIVY_DB_REPOSITORY` 環境變數
+  - 方案 C：預先 pull `aquasec/trivy-db` 映像到 emptyDir
+- **預防：**
+  - §14 Phase 4 「集中 Trivy DB cache」即為此問題的長期解
+  - Metric: `pipeline_step_duration_seconds{step_type="trivy-scan"}` 觀察趨勢
+
+### D.3 Log SSE 連線 2 秒後斷開
+
+- **症狀：** 前端開 Pipeline Run 詳情頁，log 顯示幾行後不再更新，瀏覽器 DevTools 顯示 `EventSource` 已關閉。
+- **快速檢查：** `curl -N http://synapse/api/v1/pipeline/runs/<id>/logs/stream` 看是否串流正常。
+- **常見根因：**
+  1. Reverse proxy（nginx）buffering 開啟，切斷 SSE
+  2. Gin gzip middleware 包住了 SSE 路徑
+  3. 後端 flush 遺漏
+- **修復：**
+  - nginx 加 `proxy_buffering off; proxy_cache off;`
+  - `internal/router/router.go:59` 的 `gzip.WithExcludedPaths([]string{"/ws/"})` 需擴充 `/api/v1/pipeline/runs/*/logs/stream`
+  - Handler 內 `c.Writer.Flush()` 後加 `c.Writer.(http.Flusher).Flush()`
+- **預防：**
+  - 所有 SSE 路徑加入 gzip exclude list 的統一變數
+  - E2E 測試腳本驗證 SSE 持續 10s 不中斷
+
+### D.4 Webhook 500 錯誤，日誌顯示 HMAC mismatch
+
+- **症狀：** GitLab / GitHub webhook 收到 500，Synapse 日誌：`webhook HMAC verification failed`
+- **快速檢查：**
+  ```bash
+  curl -i -X POST http://synapse/api/v1/webhooks/gitlab/<id> \
+    -H "X-Gitlab-Token: <token>" \
+    -d '{"test":1}'
+  ```
+- **常見根因：**
+  1. Git provider 的 Secret 與 Synapse 側儲存的不一致（使用者忘了更新）
+  2. Reverse proxy 改了 body（例如 nginx 壓縮）
+  3. 不同 provider 的簽章演算法不同（GitHub 用 HMAC-SHA256，Gitea 用 HMAC-SHA1）
+- **修復：**
+  - 在 Git provider 側 reset webhook secret，重新設到 Synapse
+  - 確認 `middleware.HMACVerify` 支援該 provider 的演算法
+  - 檢查 reverse proxy 未對 `/api/v1/webhooks/*` 啟用 body 轉換
+- **預防：**
+  - Webhook 註冊時提供 `POST /api/v1/webhooks/test` 驗證 endpoint
+  - 失敗時返回結構化 error code（`WEBHOOK_HMAC_MISMATCH`）方便前端顯示明確訊息
+
+### D.5 Concurrency Group 沒有取消舊的 Run
+
+- **症狀：** 設定了 `policy: cancel_previous`，但新 Run 開始後舊 Run 仍繼續執行。
+- **快速檢查：**
+  ```sql
+  SELECT id, status, concurrency_group, created_at FROM pipeline_runs
+  WHERE concurrency_group = 'user-service-main'
+  ORDER BY created_at DESC LIMIT 5;
+  ```
+- **根因：**
+  1. 舊 Run 的 Job 已在 K8s 端執行，取消 DB 狀態不會自動 delete Job
+  2. `cancel_previous` 只在 Run **建立時**判定，執行中途若舊 Run 尚在 Pending queue，可能錯過
+- **修復：**
+  - `PipelineExecutor.cancelPreviousInGroup()` 必須同時：
+    1. `UPDATE pipeline_runs SET status='cancelled' WHERE id = <old_id>`
+    2. `clientset.BatchV1().Jobs(ns).Delete(ctx, job_name, ...)`
+    3. 寫 audit log + 通知
+  - 檢查 `internal/services/pipeline/concurrency.go` 是否完整刪除 Job
+- **預防：**
+  - 寫單元測試：「舊 Running run + 新 trigger → 舊 Job 30s 內消失」
+  - Metric: `pipeline_cancellation_latency_seconds`，> 30s 告警
+
+### D.6 `pipeline_runs` 表暴漲，DB 變慢
+
+- **症狀：** DB 大小激增，`pipeline_runs` 查詢 > 1s。
+- **快速檢查：**
+  ```sql
+  SELECT
+    date_trunc('day', created_at) AS d,
+    count(*) AS runs
+  FROM pipeline_runs
+  GROUP BY d ORDER BY d DESC LIMIT 14;
+  ```
+- **根因：** 沒有啟用 GC，或 retention 設太長。
+- **修復：**
+  - 確認 `internal/services/pipeline/gc_worker.go` 正在執行（log 有 `pipeline gc tick`）
+  - 調整 retention：`pipeline_runs` 保留 90 天（status=success）/ 180 天（failed）
+  - `pipeline_step_runs.log_tail` 若超過 10 MB 需 truncate
+- **預防：**
+  - §7.12 GC 策略文件化
+  - Metric: `pipeline_runs_total_rows`，超過閾值告警
+
+### D.7 ephemeral K8s Secret 沒被清掉
+
+- **症狀：** `kubectl get secret -n <ns> | grep pipeline-run-` 列出大量已完成 Run 的 Secret。
+- **快速檢查：** `kubectl get secret pipeline-run-123-secrets -o yaml | grep ownerReferences`
+- **根因：**
+  1. Secret 建立時沒設 `ownerReference`，K8s GC 不會自動刪
+  2. owner Job 已被刪除但 cascade delete 未啟用
+  3. Run 異常結束（例如 Synapse 重啟）漏清理
+- **修復：**
+  - `PipelineExecutor.createRunSecret()` 必須設 `metav1.OwnerReference{Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true)}` 指向 Job
+  - 兜底：GC worker 掃描 `namespace` 內所有 `pipeline-run-*` secret，若對應 Run 已結束 > 1h 則刪除
+- **預防：**
+  - 單元測試：建立 Run → 模擬 Job 完成 → 驗證 Secret 被刪
+  - 定期跑 `kubectl get secret -l synapse.io/pipeline-run -A | wc -l`
+
+### D.8 Webhook 重試導致 Pipeline 跑兩次
+
+- **症狀：** 一次 `git push` 觸發兩次 Pipeline Run，GitLab 側顯示 webhook 重試過。
+- **根因：** `ReplayProtection` 未生效，或 `delivery_id` 為空。
+- **快速檢查：**
+  ```bash
+  grep "webhook received" synapse.log | grep <delivery_id>
+  # 應該只出現一次
+  ```
+- **修復：**
+  - 確認 `middleware.ReplayProtection` 已掛在 webhook route group
+  - 不同 provider 的 delivery ID header 不同：
+    - GitHub: `X-GitHub-Delivery`
+    - GitLab: `X-Gitlab-Event-UUID`（v15+）
+    - Gitea: `X-Gitea-Delivery`
+  - `WebhookAdapter` 需實作 `GetDeliveryID()` 並 fallback 到 `hash(payload + timestamp)` 若 header 缺失
+- **預防：**
+  - §10.2 強制要求所有 provider adapter 實作 `GetDeliveryID()`，CI test 覆蓋所有 provider
+
+### D.9 Pipeline YAML 驗證失敗但錯誤訊息看不懂
+
+- **症狀：** 使用者 POST YAML，返回 400 `invalid pipeline schema: (root): Additional property XYZ is not allowed`，不知道 XYZ 是哪裡錯。
+- **修復：**
+  - JSON Schema 錯誤需經過 user-friendly formatter：
+    ```go
+    // internal/services/pipeline/validator.go
+    func formatSchemaError(err *gojsonschema.ResultError) string {
+        field := err.Field()
+        desc := err.Description()
+        if field == "(root)" {
+            return desc
+        }
+        return fmt.Sprintf("field '%s': %s", field, desc)
+    }
+    ```
+  - 前端 YAML editor 使用 `monaco-yaml` + `synapse-pipeline-schema.json` 做即時 lint，錯誤出現在對應行
+- **預防：**
+  - API 回應包含 `field` / `line` / `column` 三個欄位
+  - 前端錯誤提示顯示 diff-style 的紅線
+
+### D.10 Promotion 審核卡住（超過 24h 仍 pending）
+
+- **症狀：** M17 Promotion 流水線的 `approval-gate` step 一直卡住，使用者抱怨「點了 approve 沒反應」。
+- **快速檢查：**
+  ```sql
+  SELECT id, action, status, resource_name, pipeline_run_id, created_at
+  FROM approval_requests
+  WHERE action = 'production_gate' AND status = 'pending'
+  ORDER BY created_at ASC;
+  ```
+- **常見根因：**
+  1. `ApprovalRequest.status` 已 approved，但 `PipelineExecutor` 的 watcher 未觸發
+  2. `required_approvers: 2` 但只有 1 人點
+  3. Approval 送出後通知發失敗（NotifyChannel 設定錯）
+- **修復：**
+  - 檢查 `internal/services/pipeline/approval_watcher.go` 是否在運作（可能 Synapse 重啟後未 resume）
+  - Watcher 啟動時需掃描所有 `status=pending` 的 `approval_requests WHERE pipeline_run_id IS NOT NULL`，重新綁定 poller
+  - 前端顯示「目前 1/2 批准」的進度，避免使用者以為已完成
+- **預防：**
+  - Approval watcher 做成背景 worker（不依賴記憶體 map）
+  - Metric: `approval_pending_count`，> 10 告警（可能 watcher 失效）
+
+---
+
+### D.11 通用診斷指令速查表
+
+```bash
+# 1. 查特定 Run 的完整狀態
+curl -sH "Authorization: Bearer $TOKEN" \
+  http://synapse/api/v1/pipeline/runs/<id> | jq
+
+# 2. 查 Pipeline 關聯的 K8s Job
+kubectl get job -n <ns> -l synapse.io/pipeline-run=<id>
+
+# 3. 查 Pipeline Pod 日誌（真實容器）
+kubectl logs -n <ns> -l synapse.io/pipeline-run=<id> --all-containers --tail=100
+
+# 4. 查 Synapse 對該 Run 的 log tail
+sqlite3 synapse.db "SELECT log_tail FROM pipeline_step_runs WHERE run_id=<id>;"
+
+# 5. 查最近失敗的 runs
+sqlite3 synapse.db "SELECT id,pipeline_id,status,error FROM pipeline_runs WHERE status='failed' ORDER BY id DESC LIMIT 20;"
+
+# 6. 強制取消 Run（繞過 API，緊急情況）
+sqlite3 synapse.db "UPDATE pipeline_runs SET status='cancelled' WHERE id=<id>;"
+kubectl delete job -n <ns> -l synapse.io/pipeline-run=<id>
+```
+
+---
+
+**文件結束。** 本版本為 v2.1 設計稿，涵蓋重構（v2.0）+ 實作前補強（v2.1）。實作團隊應將本文件與 [ARCHITECTURE_REVIEW.md](./ARCHITECTURE_REVIEW.md) 共同作為 M13–M17 的總綱領，ADR 更動、SLA 調整、威脅模型演進需以 PR 方式回寫本文件。
