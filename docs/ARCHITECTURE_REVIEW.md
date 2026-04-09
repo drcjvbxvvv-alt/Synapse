@@ -2,7 +2,7 @@
 
 > 「任何號稱『完美無缺』的系統都是在實驗室裡的玩具，承認缺陷，正是走向偉大的開始。」
 
-**文件版本**：v1.0 — 2026-04-09
+**文件版本**：v1.1 — 2026-04-09
 **審視範圍**：`internal/`、`pkg/`、`cmd/`、`ui/src/`
 **文件目的**：
 1. 明列已知設計缺陷、反模式、技術債
@@ -23,6 +23,12 @@
 - [六、功能深度拓展](#六功能深度拓展)
 - [七、未來方向路線圖](#七未來方向路線圖)
 - [八、分階段交付計畫](#八分階段交付計畫)
+- [九、Phase Exit Criteria](#九phase-exit-criteria)
+- [十、風險登記表](#十風險登記表)
+- [十一、遷移安全策略](#十一遷移安全策略)
+- [十二、ADR 機制與首批 ADR](#十二adr-機制與首批-adr)
+- [十三、測試策略金字塔](#十三測試策略金字塔)
+- [十四、Observability Baseline](#十四observability-baseline)
 - [附錄 A：程式碼統計](#附錄-a程式碼統計)
 - [附錄 B：執行手冊索引](#附錄-b執行手冊索引)
 
@@ -819,6 +825,643 @@ type CreateDeploymentRequest struct {
 - [ ] 6.x 剩餘功能
 - [ ] gRPC API 選擇性開放
 - [ ] Plugin 機制試點
+
+---
+
+## 九、Phase Exit Criteria
+
+每個 Phase 的「完成」必須以**可驗證的客觀標準**判定，而非「感覺差不多了」。以下為 Phase 0–4 的 Exit Criteria，作為 Stand-up / Review 會議的對照清單。若任一條件未滿足，不可進入下個 Phase。
+
+### Phase 0 — 急救（1–2 週）
+
+**功能性 Criteria：**
+- [ ] `go test ./...` 全綠（含 `TestDeleteUserGroup_Success`）
+- [ ] `go vet ./...` 無警告
+- [ ] `gosec -exclude-dir=vendor ./...` 無 HIGH 或 CRITICAL issue
+- [ ] `grep -r "Printf.*salt"` 於 `internal/` 無結果（P0-1 驗證）
+- [ ] `grep -rn 'username == "admin"' internal/` 無結果（P0-2 驗證）
+- [ ] JWT 含 `jti` 欄位，`token_blacklist` 表存在（P0-5 驗證）
+- [ ] 前端 localStorage 已不儲存 access token（P0-6 驗證；至少 memory-only）
+
+**流程 Criteria：**
+- [ ] `make check` target 存在並能執行
+- [ ] `.githooks/pre-commit` 已啟用並驗證能攔截違規 commit
+- [ ] 提交 Security incident 報告：列出 Phase 0 前已洩漏的敏感資料範圍與處置
+
+**驗收會議：**
+- 由 Platform Lead + Security Lead 共同簽核
+- 附上 `go test`、`gosec`、`grep` 三項指令的完整輸出截圖
+
+### Phase 1 — 止血（4–6 週）
+
+**結構性 Criteria：**
+- [ ] Cluster / User / Permission 三個 domain 已走 Repository pattern，`internal/repositories/` 目錄存在
+- [ ] `grep -l '\*gorm.DB' internal/handlers/{cluster,user,permission}*.go` 無結果（DB 不再直接注入 handler）
+- [ ] `internal/router/routes_*.go` 檔案數 ≥ 10，`router.go` < 300 行
+- [ ] 前 3 大 service（prometheus / om / gateway）定義 interface 且 handler 持有 interface 而非 struct
+- [ ] `make swag` 產生 `docs/swagger.json`，至少覆蓋 `auth/*` `cluster/*` `user/*`
+
+**品質 Criteria：**
+- [ ] Service 測試覆蓋率 ≥ 30%（`go test -cover ./internal/services/...`）
+- [ ] Handler 測試覆蓋率 ≥ 20%
+- [ ] 前端 `ErrorBoundary` 已套用於 router 最外層
+- [ ] Axios 分層 timeout 已落地（list 60s / detail 30s / mutation 45s）
+
+**驗收會議：**
+- 由 Platform Lead + Frontend Lead 共同簽核
+- Demo：新人在沒有前置知識情況下，依據 OpenAPI 文件呼叫任一 cluster API 成功
+
+### Phase 2 — 體質改善（2–3 個月）
+
+**結構性 Criteria：**
+- [ ] 40 個 handler 全數走 Repository pattern，handler 平均行數 < 500
+- [ ] TOP 10 肥胖前端頁面拆分完成，平均行數 < 700
+- [ ] Redis-backed RateLimiter 在多實例環境驗證過
+- [ ] OpenTelemetry：`auth`、`cluster`、`workload` 三個 domain 的 trace 可在 Jaeger 看到完整 span
+- [ ] `golang-migrate` 取代 AutoMigrate，`migrations/` 目錄下至少有 5 份版本檔
+- [ ] Informer 健康檢查 metric 上線（`informer_last_sync_age_seconds`）
+
+**品質 Criteria：**
+- [ ] Service 測試覆蓋率 ≥ 60%
+- [ ] Handler 測試覆蓋率 ≥ 40%
+- [ ] 前端 `ui/src/` 有 Cypress / Playwright E2E 測試，至少 10 個關鍵使用流程
+- [ ] Bundle size 基線報告存在（`pnpm build --report`），首屏 chunk < 500 KB gzipped
+
+**驗收會議：**
+- 由 Platform Lead + SRE Lead 共同簽核
+- Demo：Redis 模式啟用下，兩個 Synapse 實例同時跑 rate limit 不失準
+
+### Phase 3 — 擴展基礎（4–6 個月）
+
+**結構性 Criteria：**
+- [ ] 多租戶（P2-1）決議文件已公告（做 or 不做），若做則 ADR-00X 產生
+- [ ] 審計日誌 hash chain 上線；`audit_logs.prev_hash` 欄位存在
+- [ ] `pkg/crypto` 的 KeyProvider 支援輪替，`rotate-key` CLI 已整合 pipeline / git token / registry cred / cluster kubeconfig
+- [ ] Zustand / Jotai 其中之一作為全域狀態；React Query 已隔離 server state
+- [ ] i18n：英文完整涵蓋所有頁面，CI 檢查 `missing keys` 為 0
+
+**品質 Criteria：**
+- [ ] Phase 3 功能選擇的 2~3 項 §6 深化功能，每項都有 ADR + Exit Criteria
+- [ ] Bundle size 與 Phase 2 基線相比 < +15%（避免膨脹）
+- [ ] 壓力測試：100 concurrent users + 5 clusters × 1000 pods 下，API P95 < 1s
+
+**驗收會議：**
+- 由 Platform Lead + Product Lead 共同簽核
+
+### Phase 4 — 平台化（6–12 個月）
+
+**交付性 Criteria：**
+- [ ] Helm Chart 可供外部使用者部署 HA Synapse（3 replicas + PostgreSQL HA）
+- [ ] Synapse Operator 至少管理 Backup、DB Migration、Version Upgrade 三種 CRD
+- [ ] gRPC API 至少暴露 `Cluster`、`Workload` 兩個 service，並有 Buf.build schema registry
+- [ ] Plugin 機制試點：至少 1 個外部 plugin 能透過 hook 擴充功能
+- [ ] §6 剩餘深化功能完成比例 ≥ 70%
+
+**生態 Criteria：**
+- [ ] 外部貢獻者 ≥ 3 位（非團隊內部）
+- [ ] `CONTRIBUTING.md` / `CODE_OF_CONDUCT.md` / `SECURITY.md` 完整
+- [ ] 至少一篇技術部落格 + 一次社群演講
+
+**驗收會議：**
+- 由 Platform Lead + CTO 共同簽核
+
+---
+
+## 十、風險登記表
+
+本節依 Phase 劃分風險，每條記錄格式：**風險描述 → 可能影響 → 發生機率（H/M/L）→ 影響度（H/M/L）→ 緩解計畫 → 追蹤負責人**。
+
+進入每個 Phase 前必須 review 本表，Phase 結束時更新風險狀態（`Mitigated / Realized / Accepted`）。
+
+### Phase 0 風險
+
+| # | 風險 | 影響 | 機率 | 衝擊 | 緩解 |
+|---|------|------|------|------|------|
+| R0-1 | 修 P0-1 Salt 日誌時，現場日誌中已有洩漏資料 | 歷史憑證外洩 | H | H | ① 立刻發 Security Advisory ② 強制 rotate 所有現場使用者密碼 ③ 清除 log aggregator（ELK/Loki）中相關索引 |
+| R0-2 | `SystemRole` 遷移時 username="admin" 使用者丟失權限 | 平台鎖死 | M | H | ① Migration script 必須先 `ALTER TABLE users ADD COLUMN system_role` + backfill `admin` → `SuperAdmin` ② Rollback SQL 預先備好 ③ 灰度：先在 dev DB 跑 |
+| R0-3 | JWT jti 加入後舊 token 集體失效 | 使用者被迫重登入 | H | M | ① 發佈公告，選在離峰時間上線 ② `token_blacklist` 表用 TTL 自動清理，避免無限成長 ③ 前端偵測 401 後 redirect 到登入頁，不顯示錯誤訊息 |
+| R0-4 | localStorage token 改 memory-only 後，使用者重新整理頁面被登出 | UX 回退 | H | M | ① Phase 0 接受此 trade-off，Phase 1 補 httpOnly cookie 方案 ② 前端加 loading state，避免看起來像錯誤 |
+| R0-5 | `make check` 導入後既有 PR 大量紅燈 | 開發卡住 | H | M | ① 給所有 PR 一週寬限期 ② 分階段啟用：先 `go vet` → `gosec` → `test` |
+
+### Phase 1 風險
+
+| # | 風險 | 影響 | 機率 | 衝擊 | 緩解 |
+|---|------|------|------|------|------|
+| R1-1 | Repository 層導入改動巨大，merge conflict 連環爆 | 開發速度減半 | H | H | ① 試點 3 個 domain 而非全部 ② feature branch rebase 每日同步 main ③ 改動期間凍結對應 handler 的功能迭代 |
+| R1-2 | Router 拆檔後路由註冊順序錯亂，middleware 掛不到 | API 認證失效 | M | H | ① 每個 `routes_*.go` 都有對應的 e2e smoke test ② `router_test.go` 驗證所有 route 都掛了 `AuthRequired` 或白名單 |
+| R1-3 | Service interface 化後 mock 滿天飛，測試變難寫 | 測試覆蓋率下降 | M | M | ① 先在 Platform Lead 設計 mock 生成器（`gomock` or `mockery`）② 寫範例測試讓其他人抄 |
+| R1-4 | swaggo annotation 漏寫，OpenAPI 文件不完整 | 外部整合受阻 | H | L | ① CI 檢查 `swag init` 無 warning ② API changelog 納入 PR template |
+| R1-5 | ErrorBoundary 套上後吞掉原本的錯誤，難以除錯 | Debug 困難 | M | M | ① ErrorBoundary 必須呼叫 `reportError()` 送到後端 `/api/v1/logs/frontend` ② Dev mode 顯示完整 stack |
+
+### Phase 2 風險
+
+| # | 風險 | 影響 | 機率 | 衝擊 | 緩解 |
+|---|------|------|------|------|------|
+| R2-1 | Redis rate limiter 上線後 Redis 單點成瓶頸 | 登入慢 / 429 異常 | M | H | ① Redis 必須用 cluster 模式或 sentinel ② RateLimiter 設計為介面，Redis fail 時 fallback 到 in-memory |
+| R2-2 | OpenTelemetry sampling 過高壓垮 Jaeger | 追蹤丟失 | H | M | ① 採 1% head-based sampling + tail-based 在 error case 100% ② collector 前置 batch processor |
+| R2-3 | `golang-migrate` 取代 AutoMigrate 時，現網 DB 狀態與 migration 版本不對齊 | Migration 失敗鎖死 | M | H | ① 先產生 `baseline.sql` 快照 ② 第一個 migration 標記為 `00000000_baseline.up.sql` = no-op ③ 現場資料庫先手動 insert `schema_migrations` 一列 |
+| R2-4 | Handler 拆分導致 import cycle | 無法 build | L | H | ① 拆分前用 `go list -deps` 盤點依賴 ② 依照「handlers → services → models」嚴格分層，CI 加 `go-cleanarch` 檢查 |
+| R2-5 | 前端頁面拆分後 props drilling 過深 | 可讀性下降 | M | M | ① 拆分時同步引入 Context 或 Zustand ② Lint rule 禁止 props 超過 7 層 |
+
+### Phase 3 風險
+
+| # | 風險 | 影響 | 機率 | 衝擊 | 緩解 |
+|---|------|------|------|------|------|
+| R3-1 | 多租戶改造觸及權限系統核心，造成跨租戶資料洩漏 | 安全事故 | M | CRITICAL | ① 必須先寫 ADR 決定 Project 模型 ② 所有列表查詢強制 `tenant_id` where clause，CI 加 lint rule ③ 滲透測試 |
+| R3-2 | 審計 hash chain 計算效能開銷過大 | API 變慢 | M | M | ① 非同步寫入 audit_logs ② hash 計算走 goroutine ③ benchmark 證明 < 5% overhead 才啟用 |
+| R3-3 | 全面欄位加密後現有明文資料需要 bulk migrate | 停機時間長 | H | H | ① 雙寫模式：新寫加密，舊資料批次遷移 ② 遷移腳本可中斷續跑（checkpoint）③ 維護窗口外跑 |
+| R3-4 | 改用 Zustand 時既有 React Context 全部重寫 | 開發工時爆炸 | H | M | ① 分塊遷移：先 session / cluster / theme 三個 store ② 新寫一律用 Zustand，舊的留到自然迭代時改 |
+| R3-5 | i18n 英文補齊時 key 命名衝突 | 翻譯錯亂 | M | L | ① 先定義 key 命名規範（`domain.component.action`）② 自動化工具掃描 i18next 未使用的 key |
+
+### Phase 4 風險
+
+| # | 風險 | 影響 | 機率 | 衝擊 | 緩解 |
+|---|------|------|------|------|------|
+| R4-1 | Helm Chart HA 模式在多 DB 後 primary election 失敗 | 平台不可用 | M | H | ① PostgreSQL HA 走 CNPG operator 而非自建 ② Readiness probe 要能偵測 leader 狀態 |
+| R4-2 | Operator CRD schema 改動破壞既有使用者 | Upgrade 失敗 | M | H | ① CRD conversion webhook ② 每次 CRD 變更 bump version（v1alpha1 → v1beta1） |
+| R4-3 | gRPC API 暴露後 schema 綁死，未來調整困難 | API 變動成本高 | H | M | ① 用 `Buf.build` 檢查 breaking change ② 明確標記 alpha API，版本升級前不承諾穩定 |
+| R4-4 | Plugin 機制被濫用，plugin 執行時 crash 主程序 | 穩定性下降 | M | H | ① Plugin 走子 process + gRPC hashicorp/go-plugin ② 禁止 in-process plugin |
+| R4-5 | 開源後收到 PR 品質參差，維護負擔暴增 | 團隊耗盡 | H | M | ① 嚴格的 Code Review Checklist ② `good first issue` 標籤引導新貢獻者 ③ 明確的拒絕理由模板 |
+
+### 跨 Phase 持續性風險
+
+| # | 風險 | 緩解 |
+|---|------|------|
+| PR-1 | 關鍵人員離職導致知識流失 | Pair programming + Project Brain 知識庫 + ADR 留痕 |
+| PR-2 | 上游依賴（client-go、gin、gorm）breaking change | 每月固定日 dependency 更新 + 完整 regression |
+| PR-3 | 客戶同時升級多版本 Synapse，migration 不向後相容 | migration 必須跨 N-2 版本相容，舊欄位保留 2 個 release |
+| PR-4 | 安全漏洞批量曝光（CVE 風暴） | 啟用 GitHub Dependabot + `govulncheck` 納入 `make check` |
+| PR-5 | 本文件與現況分歧（文件腐壞） | 每季 review 一次，Exit Criteria 完成後立刻更新本文件 |
+
+---
+
+## 十一、遷移安全策略
+
+大規模重構（P0-4 Repository、P1-2 Router 拆分、Phase 2 OpenTelemetry 等）都會有「程式改壞了但沒人發現」的風險。本節定義三種必備機制：**Canary、Feature Flag、Rollback**，作為所有大改動的預設護欄。
+
+### 11.1 Canary / 灰度發布
+
+**原則：** 任何影響 ≥ 5 個 handler / service 的重構，必須能「先在 10% 流量跑、看指標、再擴大」。
+
+**實作路徑：**
+
+- **單一 Synapse 實例時代**（目前狀態）：
+  - 灰度以「feature flag + canary 使用者白名單」實作。
+  - `internal/config/feature_flags.go` 持有一張 map：`flag_name → []user_id`。
+  - 對應 handler 用 `if features.IsEnabled("use_repo_layer", userID)` 決定走新路徑。
+
+- **多實例時代**（Phase 2 後）：
+  - Gateway（nginx / traefik）依 request header `X-Canary: true` 或 cookie 分流。
+  - Canary 實例單獨部署，指向相同 DB 但只接 10% 流量。
+  - Canary 穩定 ≥ 7 天才全量。
+
+**Metric 守門員：**
+```
+synapse_canary_error_rate < synapse_stable_error_rate * 1.5   # 錯誤率上升 > 50% 自動回滾
+synapse_canary_latency_p95 < synapse_stable_latency_p95 * 1.2 # 延遲上升 > 20% 警告
+```
+
+**自動回滾規則：**
+- 上線後 1 小時內錯誤率超閾值 → 自動降級 flag
+- 需要 Platform Lead + SRE 兩人同意才能二次嘗試
+
+### 11.2 Feature Flag
+
+**模型選擇：** 不引入外部 flag 服務（LaunchDarkly / Unleash），避免新依賴。
+
+**自實作規格：**
+```go
+// internal/features/features.go
+package features
+
+type Flag string
+
+const (
+    FlagRepositoryLayer Flag = "use_repo_layer"            // P0-4
+    FlagRouteSplit      Flag = "use_split_router"          // P1-2
+    FlagOTEL            Flag = "enable_otel_tracing"       // P1-10
+    FlagRedisRateLimit  Flag = "use_redis_ratelimit"       // P1-8
+    FlagZustand         Flag = "use_zustand_store"         // P2-5
+    FlagHashChainAudit  Flag = "enable_audit_hashchain"    // P2-2
+)
+
+type Store interface {
+    IsEnabled(flag Flag, ctx EvalContext) bool
+}
+
+type EvalContext struct {
+    UserID     uint
+    ClusterID  uint
+    Percentage int       // 0~100 for percentage rollout
+}
+```
+
+**三種 flag 來源（fallback 順序）：**
+1. **Env var**（最高優先）：`SYNAPSE_FLAG_USE_REPO_LAYER=true`（CI / dev 用）
+2. **DB 表** `feature_flags`：`(flag_name, enabled, rollout_pct, user_allowlist)`
+3. **Code default**（最後兜底）：保守設為 `false`
+
+**前端 flag：**
+- 後端 `/api/v1/features` 回傳目前登入者的 flag set
+- 前端 React hook `useFeature("use_repo_layer")` 讀取
+
+**Flag 生命週期：**
+- 每個 flag 必須設 **預期移除日期**（卡片描述必填）
+- 超過移除日期 2 週仍未清理，自動開 `tech-debt` issue
+- Phase 結束時強制清理該 Phase 引入的所有 flag（避免「永久 flag」腐蝕）
+
+### 11.3 Rollback 策略
+
+**分層 rollback：**
+
+#### Layer 1：Flag Flip（秒級）
+```bash
+# 緊急時刻最快速的 rollback
+curl -X POST http://synapse/admin/features \
+  -H "Authorization: Bearer $ADMIN" \
+  -d '{"flag":"use_repo_layer","enabled":false}'
+```
+適用於：程式碼層可切換的改動（repo layer、OTEL、ratelimit backend）
+
+#### Layer 2：Binary Rollback（分鐘級）
+```bash
+# 換回前一版 binary / container image
+kubectl set image deployment/synapse synapse=synapse:v1.17.0 -n synapse-system
+```
+適用於：Layer 1 無法覆蓋的程式改動（新 handler、UI 改動）
+
+**前置條件：**
+- 每版 binary 保留 ≥ 3 個歷史版本
+- 每次 release 前跑完整 regression test
+- Helm Chart 支援 `values.yaml` 的 `image.tag` override
+
+#### Layer 3：Schema Rollback（小時級）
+最危險的一種 — 只有迫不得已才用。
+
+**前置條件：**
+- 每次 schema migration 必須有 `down` 腳本（或說明「不可 rollback」）
+- 生產 DB 有每日自動備份 + PITR（Point-In-Time Recovery）
+- 遷移前手動快照：`pg_dump` 或雲端 DB snapshot
+
+**Rollback 流程：**
+1. 停止寫入流量（Maintenance mode）
+2. 執行 `down` migration 或從快照 restore
+3. 回退 binary 到對應版本
+4. 驗證後恢復流量
+
+**明確「不可 rollback」的情境：**
+- 加密欄位輪替：一旦 rekey 完成，舊 key 已銷毀
+- Hash chain 啟用後的 audit 記錄
+- 任何涉及 **資料破壞性清理** 的 migration
+
+這類 migration 必須在 ADR 中標記 `irreversible: true`，實作前 Platform Lead 必須簽核。
+
+### 11.4 Change Freeze（變更凍結）
+
+以下時段禁止合併**非 P0** 的變更：
+- 每週五下午 16:00 之後
+- 國定假日前 1 個工作天
+- 大型客戶重大發布週
+- Phase Exit Criteria 驗證期間
+
+例外需 Platform Lead 書面批准（Slack / issue 留言即可）。
+
+### 11.5 遷移演練（Migration Drill）
+
+每個 Phase 進行中，至少 1 次在 dev 環境模擬：
+- 從前一版本升級到當前版本
+- 跑一次 rollback
+- 記錄耗時、遇到的問題
+
+演練報告存於 `docs/migration_drills/phase-N-YYYYMMDD.md`。
+
+---
+
+## 十二、ADR 機制與首批 ADR
+
+### 12.1 ADR 是什麼
+
+**Architecture Decision Record**：每個重要的設計決策記錄**當時的 Context、選擇、替代方案、後果**。目的：
+
+- 半年後有人問「為什麼這樣設計」時有答案
+- 新人 onboarding 時能快速理解「既有輪子為什麼長這樣」
+- 當 Context 改變時（例如需求變了），可以有根據地重新討論
+
+### 12.2 ADR 存放位置
+
+`docs/adr/`
+- `0001-repository-layer.md`
+- `0002-jwt-revocation.md`
+- `0003-router-split.md`
+- ...
+
+每個 ADR 獨立檔案，檔名格式：`NNNN-kebab-case-title.md`。
+
+### 12.3 ADR 模板
+
+```markdown
+# ADR-NNNN: 標題
+
+- **狀態：** Proposed / Accepted / Superseded / Deprecated（YYYY-MM-DD）
+- **作者：** @username
+- **相關 Phase / 任務：** Phase X / P0-Y
+
+## Context
+（為什麼有這個決策？什麼因素推動？）
+
+## Decision
+（我們決定做什麼？）
+
+## Alternatives Considered
+| 方案 | 否決原因 |
+|------|---------|
+| A | ... |
+
+## Consequences
+- ✅ 好處
+- ❌ 壞處 / 成本
+- ⚠ 需要後續追蹤的事項
+
+## References
+- 相關 code 位置
+- 相關 Issue / PR
+- 相關外部文件
+```
+
+### 12.4 ADR 流程
+
+1. **提議**：寫 `0000-proposal-xxx.md`（狀態 `Proposed`），PR 要求 review
+2. **討論**：PR comment / review 會議討論，可能調整
+3. **決議**：Platform Lead 合入，狀態改 `Accepted`，分配正式編號
+4. **追蹤**：後續若需改變，新建 `Supersedes ADR-NNNN` 的 ADR，舊的改 `Superseded`
+5. **不可修改**：Accepted 後的 ADR 原文不改動，只能以新 ADR 取代（保留歷史決策痕跡）
+
+### 12.5 首批 ADR 建議撰寫順序
+
+| 編號 | 標題 | 對應 Phase | 優先 |
+|------|------|-----------|------|
+| ADR-0001 | Repository 層導入與邊界 | Phase 1 / P0-4 | P0 |
+| ADR-0002 | SystemRole 取代 username == "admin" | Phase 0 / P0-2 | P0 |
+| ADR-0003 | JWT Revocation 機制選型（黑名單 vs 短效+refresh） | Phase 0 / P0-5 | P0 |
+| ADR-0004 | Router 拆分到 domain 檔案的模組邊界 | Phase 1 / P1-2 | P1 |
+| ADR-0005 | Service Interface 化與 Mock 策略 | Phase 1 / P1-3 | P1 |
+| ADR-0006 | golang-migrate 取代 AutoMigrate | Phase 2 / P2-4 | P1 |
+| ADR-0007 | Redis RateLimiter 的分散式模型 | Phase 2 / P1-8 | P1 |
+| ADR-0008 | OpenTelemetry 採樣策略 | Phase 2 / P1-10 | P1 |
+| ADR-0009 | Multi-Tenant Project 模型 | Phase 3 / P2-1 | P2 |
+| ADR-0010 | Audit Hash Chain 演算法選型 | Phase 3 / P2-2 | P2 |
+
+> **Cross-reference：** 本文件外，`docs/CICD_ARCHITECTURE.md §21` 已收錄 9 條 CI/CD 專屬 ADR（編號 `ADR-001 ~ ADR-009`，獨立 namespace）。核心架構 ADR 走 `docs/adr/NNNN-*.md` 0000 系列，CI/CD ADR 保留在 CICD_ARCHITECTURE.md §21。兩者編號 namespace 不衝突，跨域引用時以全名 `ADR-0003` vs `CICD ADR-003` 區分。
+
+### 12.6 ADR-0001 範例草稿（Repository 層導入）
+
+*（以下為範例，實作時請移到 `docs/adr/0001-repository-layer.md`）*
+
+```markdown
+# ADR-0001: Repository 層導入與邊界
+
+- 狀態: Proposed（2026-04-09）
+- 作者: @ahern
+- 相關: Phase 1, P0-4
+
+## Context
+目前 69 個 handler 普遍直接持有 `*gorm.DB`，違反 CLAUDE.md 的分層規則。
+症狀：
+- Handler 單元測試需 mock GORM，困難
+- Service 職責不清，同一 query 散落在多個 handler
+- 換 DB driver 不可能
+
+## Decision
+引入 `internal/repositories/` 層：
+- 每個 domain 一個 Repo interface + implementation
+- Service 持有 Repo interface（而非 *gorm.DB）
+- Handler 不再 import gorm
+
+Phase 1 試點：Cluster、User、Permission 三個 domain。
+Phase 2 擴展：全數 40 個 handler。
+
+## Alternatives
+| 方案 | 否決 |
+|------|-----|
+| 直接把 DB 邏輯塞進 Service | 違反單一職責，測試仍難 |
+| 改用 ent / sqlc 重寫 DAO | 遷移成本過大，不在本專案預算 |
+
+## Consequences
+- ✅ Handler / Service 可獨立單測
+- ✅ DB 實作可替換
+- ❌ 多一層介面，簡單 CRUD 變囉嗦
+- ⚠ 需要 Code Review 守住「不要把商業邏輯漏到 Repo」
+```
+
+---
+
+## 十三、測試策略金字塔
+
+目前測試覆蓋率偏低（P1-9），且沒有明確的測試分層策略。以下定義 Phase 2 結束時應達到的金字塔。
+
+### 13.1 金字塔層級
+
+```
+       ╱╲
+      ╱E2╲          5% — Playwright / Cypress（最關鍵使用流程）
+     ╱────╲
+    ╱ Intg ╲        20% — 真實 DB + real K8s fake client
+   ╱────────╲
+  ╱  Unit   ╲       75% — Service / Repo / utility 純邏輯測試
+ ╱────────────╲
+```
+
+### 13.2 單元測試（Unit）
+
+**範圍：** Service 方法、Repository 方法、純函式 util、前端元件 props 行為
+
+**工具：**
+- 後端：`testing` + `testify/assert` + `sqlmock` (DB mock) + `gomock`（interface mock）
+- 前端：`vitest` + `@testing-library/react`
+
+**規範：**
+- 單一檔案測試時間 < 5s
+- 不依賴外部服務（無網路、無真 DB）
+- 測試名稱明確：`TestClusterService_GetCluster_WhenNotFound_ReturnsError`
+
+**覆蓋率目標（Phase 2 GA）：**
+- Service: ≥ 60%
+- Repository: ≥ 80%
+- 前端 component: ≥ 40%
+
+### 13.3 整合測試（Integration）
+
+**範圍：** Handler + Service + Repository 全鏈路；實際 DB；K8s fake client
+
+**工具：**
+- 後端：`testing` + `httptest.NewRecorder` + `gorm` 連 `sqlite :memory:` 或 `testcontainers-go` PostgreSQL
+- K8s：`k8s.io/client-go/kubernetes/fake` 或 `envtest`（kube-apiserver + etcd local）
+
+**規範：**
+- 每個 handler 至少 3 個 case：happy path、validation error、K8s error
+- 測試時間 < 30s per package
+- CI 執行時間 < 5 min 全部 integration tests
+
+**覆蓋率目標（Phase 2 GA）：**
+- Handler: ≥ 40%
+
+### 13.4 端到端測試（E2E）
+
+**範圍：** 使用者關鍵使用流程，從 UI 點擊到後端回應
+
+**工具：** Playwright（推薦，TypeScript-friendly）
+
+**必測流程（Phase 2 GA 清單）：**
+1. 登入 → 建立 cluster → 查看 cluster overview
+2. 匯入 kubeconfig → workload 列表 → 進入 deployment 詳情
+3. 建立 deployment via Modal → 驗證出現在列表
+4. 修改 replica → rollout 完成 → 驗證 pod 數
+5. 建立 ConfigMap/Secret → mount 到 deployment
+6. 查看 log center → 選特定 pod → 串流正常
+7. NetworkPolicy 建立 → 跨 namespace 連線被阻擋
+8. Rollout 操作：pause / resume / promote
+9. HPA 建立 + 觀察 metrics
+10. 登出 → 驗證 token 失效
+
+**執行頻率：**
+- 每次 PR：跑 smoke（1~3 個核心流程）
+- 每日定時：跑完整套
+- 每個 Release Candidate：全套 + 手動 exploratory
+
+### 13.5 Contract Test（OpenAPI 契約）
+
+**當前缺失：** 前後端之間沒有契約驗證，後端改 schema 前端炸。
+
+**方案（Phase 2 後）：**
+- 後端每次 build 產生 `openapi.json`
+- 前端 CI 驗證 `openapi.json` 與前一版的 breaking change
+- 破壞性改動需 bump API version 或 flag
+
+### 13.6 Performance / Load Test
+
+**工具：** `k6` or `vegeta`
+
+**場景（Phase 3 GA）：**
+- 100 concurrent users 登入 + 查詢 cluster overview
+- 50 concurrent users 開啟 log SSE 連線
+- 5000 pods 在 1 個 cluster 時的 pod list 分頁 API P95 < 1s
+- Webhook 洪水：50 QPS 打 5 分鐘，驗證 replay protection + rate limit 正常
+
+**報告：** 存於 `docs/performance/YYYY-MM-benchmark.md`，可比較不同 release 的效能 regression。
+
+### 13.7 測試基礎設施需求
+
+- CI：每次 PR 跑 unit + integration，E2E 只跑 smoke
+- CI：nightly 跑完整 E2E + perf
+- 測試資料：`testdata/` 目錄；不共用 mutable 狀態
+- Flaky test 零容忍：連續失敗 2 次 → 自動 quarantine + 開 issue
+
+---
+
+## 十四、Observability Baseline
+
+重構過程中最怕「改壞了但沒發現」。Phase 1 結束時必須建立 observability 基線，讓後續改動能以數據驅動判斷好壞。
+
+### 14.1 Three Pillars 覆蓋
+
+#### Pillar 1 — Metrics（Prometheus）
+
+**Golden Signals（每個 service 都要有）：**
+```
+# Latency
+http_request_duration_seconds{method, path, status}         histogram
+
+# Traffic
+http_requests_total{method, path, status}                   counter
+
+# Errors
+http_requests_total{status=~"5.."}                          counter
+
+# Saturation
+go_goroutines                                               gauge
+process_resident_memory_bytes                               gauge
+db_connections_in_use                                       gauge
+```
+
+**業務 metrics（Phase 2 前列上線清單）：**
+```
+cluster_informer_last_sync_age_seconds{cluster}             gauge
+cluster_connection_status{cluster, status}                  gauge
+workload_operations_total{cluster, kind, action, result}    counter
+audit_log_writes_total{action}                              counter
+auth_login_attempts_total{result}                           counter
+auth_token_blacklist_size                                   gauge
+feature_flag_evaluations_total{flag, result}                counter
+```
+
+**Phase 1 Exit：** 至少 Golden Signals + `cluster_informer_*` 已導出到 Prometheus
+
+#### Pillar 2 — Logs
+
+**結構化 log 規範：**
+```go
+logger.Info("operation completed",
+    "trace_id", traceID,       // 與 Pillar 3 串接
+    "cluster_id", clusterID,
+    "user_id", userID,
+    "action", "create_deployment",
+    "duration_ms", 123,
+    "result", "success",
+)
+```
+
+**三個必要欄位：** `trace_id`（追蹤用）、`user_id`（稽核用）、`cluster_id`（多叢集用）
+
+**Log Level 規範：** 已於 `CLAUDE.md §9` 定義，本節不重複。
+
+#### Pillar 3 — Traces（OpenTelemetry）
+
+**Phase 2 完成後必測 trace path：**
+1. HTTP request → Handler → Service → Repository → DB
+2. HTTP request → Handler → Service → K8s API → Informer cache
+3. Background worker → Service → DB / K8s API
+4. Webhook → Pipeline Executor → Job Create → Job Watch
+
+**採樣策略：**
+- Head-based：1% random sample
+- Tail-based（collector 層）：`status = error` 全採樣；`duration > 1s` 全採樣
+- Debug 模式：以 header `X-Debug-Trace: true` 強制採樣
+
+### 14.2 Dashboard 基線（Phase 1 結束）
+
+必須建立以下 Grafana dashboard（存於 `deploy/grafana/dashboards/`）：
+
+1. **Synapse Golden Signals**：每個 endpoint 的 latency / traffic / error
+2. **Cluster Health**：每個 managed cluster 的 connection status、informer lag、resource usage
+3. **Audit Activity**：每日 audit log 量、Top 10 操作、可疑行為（大量 delete 等）
+4. **Auth & Security**：登入成功/失敗率、token blacklist 趨勢、rate limit 命中率
+5. **Background Workers**：EventAlert / Cost / LogRetention / CertExpiry / ImageIndex 各 worker 的 tick 次數、錯誤率、耗時
+
+### 14.3 告警基線（Phase 2 結束）
+
+**P0（立刻呼叫 oncall）：**
+- `up{job="synapse"} == 0`（任何實例 down）
+- `rate(http_requests_total{status=~"5.."}[5m]) > 0.05`（5xx 率 > 5%）
+- `synapse_database_connection_status == 0`
+- `auth_login_attempts_total{result="success"}[30m] == 0`（完全無人能登入 = 登入系統壞了）
+
+**P1（工作時間內處理）：**
+- `cluster_informer_last_sync_age_seconds > 300`
+- `histogram_quantile(0.95, http_request_duration_seconds) > 2`
+- `go_goroutines > 10000`（goroutine leak 徵兆）
+- `audit_log_writes_total == 0`（audit 系統壞了）
+
+**P2（每日 digest）：**
+- 覆蓋率 regression > 5%
+- Flaky test 數量 > 10
+- 冷資料：某個 handler 30 天無流量 → 可能死代碼
+
+### 14.4 Observability 成本控制
+
+- Metrics：保留 14 天 high-res + 90 天 downsample
+- Logs：7 天 hot（全索引）+ 30 天 cold（archive only）
+- Traces：3 天（已經採樣後的）
+- 總儲存成本預算：≤ 專案月預算 5%
 
 ---
 
