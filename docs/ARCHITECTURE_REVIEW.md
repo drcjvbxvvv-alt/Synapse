@@ -2,7 +2,7 @@
 
 > 「任何號稱『完美無缺』的系統都是在實驗室裡的玩具，承認缺陷，正是走向偉大的開始。」
 
-**文件版本**：v1.2 — 2026-04-09
+**文件版本**：v1.3 — 2026-04-09
 **審視範圍**：`internal/`、`pkg/`、`cmd/`、`ui/src/`
 **文件目的**：
 1. 明列已知設計缺陷、反模式、技術債
@@ -658,6 +658,21 @@ type CreateDeploymentRequest struct {
 ## 六、功能深度拓展
 
 以下是在「修完技術債」之後可以考慮的功能深化方向，按優先序排列：
+
+> **🤖 模型分工速查**（詳見 §十五.3 跨 Phase 常駐任務）
+>
+> | 子題 | 主力模型 | 簡要原因 |
+> |------|---------|---------|
+> | 6.1 GitOps 整合深化 | **Opus** | Flux CD 整合、PR preview dry-run，與 CICD §25.2 M16 邏輯高度重疊 |
+> | 6.2 AI 能力深化 | **Opus** | prompt 設計、context 組裝、AI 審批的邊界條件 |
+> | 6.3 多叢集拓撲進化 | Opus（設計）+ **Sonnet**（實作） | 拓撲演算法 Opus 定調，視覺化與頁面 Sonnet |
+> | 6.4 安全治理加強 | **Opus** 全程 | cosign/SBOM/OPA 均為安全關鍵，不可降級 |
+> | 6.5 開發者體驗（CLI / VSCode） | **Sonnet** | CLI 與 extension 為包裝層，依既有 service |
+> | 6.6 成本分析深化 | Opus（演算法）+ **Sonnet**（UI） | Rightsizing 預測演算法 Opus，報表 UI Sonnet |
+> | 6.7 SLO / SLI 管理 | **Opus**（Burn rate）+ **Sonnet**（UI） | Error Budget 燃燒率演算法屬決策核心 |
+> | 6.8 混沌工程 | **Sonnet** | Chaos Mesh 整合屬 adapter，實驗定義屬 CRUD |
+> | 6.9 Audit + Compliance | **Opus** 全程 | SOC2/ISO27001 對應需嚴格正確性 |
+> | 6.10 使用者自助化 | **Sonnet**（工作流）+ **Opus**（quota 審批邏輯） | 自助申請流程 Sonnet，配額決策 Opus |
 
 ### 6.1 GitOps 整合深化
 
@@ -1629,7 +1644,75 @@ Synapse 目前支援的 Claude Code 模型家族（截至 2026-04）：
 
 ADR-0001（Repository 層導入）已在 §十二 附上完整範本，後續 0002–0010 建議沿用相同格式，每次讓 Opus 獨立撰寫一份。
 
-### 15.7 檢查清單：模型選擇是否正確？
+### 15.7 Phase 模型密度熱力圖
+
+把 §15.2 的逐任務指派壓縮成一張可視化圖，方便預算審核與排程會議對齊：
+
+```
+          Opus       Sonnet         Haiku
+Phase 0   ██████     ███████████    ███       30/55/15  急救
+Phase 1   ███        █████████████  ████      15/65/20  止血
+Phase 2   ███        ████████████   █████     15/60/25  體質改善
+Phase 3   ██████     ███████████    ███       30/55/15  擴展基礎
+Phase 4   ███████    ███████████    ██        35/55/10  平台化
+```
+
+**觀察**：
+
+- **Opus 密集區**：Phase 0（JWT + 權限模型）、Phase 3（多租戶 + 加密 + 雜湊鏈）、Phase 4（Operator + gRPC + Plugin）
+- **Sonnet 主力區**：Phase 1、Phase 2（依 Opus 定好的介面大量推廣樣板）
+- **Haiku 比重最高在 Phase 2**：Axios timeout 分層、ErrorBoundary 套用、前端批次 refactor
+
+### 15.8 最危險檔案清單（不論 Phase 一律 Opus）
+
+以下檔案的**任何 PR**（即使只改一行註解）都必須用 Opus，原因是錯誤代價極高、攻擊面大、或屬跨系統整合核心：
+
+```
+# Crypto / Auth / RBAC
+pkg/crypto/*.go
+internal/middleware/auth*.go
+internal/services/*token*.go
+internal/services/*rbac*.go
+internal/services/permission_service.go
+internal/models/user.go                 # SystemRole
+internal/models/cluster.go              # Kubeconfig 加密 hook
+
+# DB Schema / Migration
+internal/database/migrations/*.go
+
+# 跨系統核心
+internal/k8s/cluster_informer_manager.go
+internal/services/cluster_service.go
+```
+
+並與 [CICD_ARCHITECTURE.md §25.1 + §25.8](./CICD_ARCHITECTURE.md#25-claude-code-模型分工建議) 的 CI/CD 專屬危險檔案清單合併使用。
+
+### 15.9 關鍵路徑優先投資建議
+
+若預算有限必須取捨，下表是 Opus 投入的**優先順序**（由高到低），左欄不投資會直接擴散為全專案風險：
+
+| 優先序 | 必保 Opus 投入的任務 | 不投資的代價 |
+|-------|---------------------|-------------|
+| 🔴 P0 | Phase 0：`SystemRole` migration + JWT `jti`/blacklist | 現有漏洞無法關閉，整套權限可繞過 |
+| 🔴 P0 | Phase 1：Repository 介面設計 + BaseRepository | 後續 37 個 handler 遷移全部受影響 |
+| 🟠 P1 | Phase 3：多租戶 + 加密 + 雜湊鏈 | 無法商業化、合規無法達標 |
+| 🟠 P1 | Phase 4：Synapse Operator 與 Helm HA | 無法做 HA 部署，無法進入生產 |
+| 🟡 P2 | Phase 2：OpenTelemetry 導入 + golang-migrate | 可延後半年，以 Prometheus 指標暫補 |
+| 🟡 P2 | Phase 4：gRPC 與 Plugin 機制 | 可延後至 v2 考量 |
+
+**可降級為 Sonnet 的場景**（當 Opus 預算吃緊時）：
+
+- 功能深度 §六 的 6.5（CLI/VSCode extension）、6.8（混沌工程）、6.10（自助化流程）
+- Phase 2 的 P1-1 Handler 拆分、P1-5 前端肥胖頁面拆分（已有模板）
+- 所有 service 層單元測試補齊（P1-9a/9b）
+
+**絕對不可降級為 Sonnet 的紅線**：
+
+- 任何含 `crypto`、`jwt`、`token`、`rbac`、`tenant` 字樣的檔案
+- 任何 migration SQL（即使看起來只是加一個欄位）
+- §十二 所列的 10 條 ADR
+
+### 15.10 檢查清單：模型選擇是否正確？
 
 每次完成任務後可用以下 checklist 自我驗證：
 
@@ -1639,6 +1722,8 @@ ADR-0001（Repository 層導入）已在 §十二 附上完整範本，後續 00
 □ 3. 我這個跨檔案 refactor 有沒有先請 Opus 出範本？
 □ 4. 我改的檔案如果出錯會不會阻斷 production？有的話是不是用了 Opus？
 □ 5. 我做的 PR review 是不是用了至少 Sonnet 等級？（Haiku 不該做 review）
+□ 6. 我動的檔案有沒有出現在 §15.8 的危險清單裡？若有是不是用 Opus？
+□ 7. 我目前所在 Phase 的 Opus 比重（見 §15.7 熱力圖）有沒有嚴重偏離？
 ```
 
 ---
