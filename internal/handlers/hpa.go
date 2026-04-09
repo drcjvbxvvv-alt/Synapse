@@ -15,20 +15,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"gorm.io/gorm"
 )
 
 // HPAHandler HPA 處理器
 type HPAHandler struct {
-	db             *gorm.DB
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewHPAHandler 建立 HPA 處理器
-func NewHPAHandler(db *gorm.DB, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *HPAHandler {
+func NewHPAHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *HPAHandler {
 	return &HPAHandler{
-		db:             db,
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,
 	}

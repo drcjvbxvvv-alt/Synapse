@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/k8s"
 	"github.com/shaia/Synapse/internal/response"
@@ -18,12 +17,8 @@ type SecurityHandler struct {
 	k8sMgr *k8s.ClusterInformerManager
 }
 
-func NewSecurityHandler(db *gorm.DB, k8sMgr *k8s.ClusterInformerManager) *SecurityHandler {
-	return &SecurityHandler{
-		trivy:  services.NewTrivyService(db),
-		bench:  services.NewBenchService(db, k8sMgr),
-		k8sMgr: k8sMgr,
-	}
+func NewSecurityHandler(trivy *services.TrivyService, bench *services.BenchService, k8sMgr *k8s.ClusterInformerManager) *SecurityHandler {
+	return &SecurityHandler{trivy: trivy, bench: bench, k8sMgr: k8sMgr}
 }
 
 // --- Image Scanning ---

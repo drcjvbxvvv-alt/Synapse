@@ -9,7 +9,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // EventAlertHandler Event 告警規則處理器
@@ -18,8 +17,8 @@ type EventAlertHandler struct {
 }
 
 // NewEventAlertHandler 建立 Event 告警處理器
-func NewEventAlertHandler(db *gorm.DB) *EventAlertHandler {
-	return &EventAlertHandler{svc: services.NewEventAlertService(db)}
+func NewEventAlertHandler(svc *services.EventAlertService) *EventAlertHandler {
+	return &EventAlertHandler{svc: svc}
 }
 
 // ListRules 取得告警規則列表

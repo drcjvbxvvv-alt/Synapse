@@ -13,7 +13,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -22,7 +21,6 @@ import (
 
 // NodeHandler 節點處理器
 type NodeHandler struct {
-	db               *gorm.DB
 	cfg              *config.Config
 	clusterService   *services.ClusterService
 	k8sMgr           *k8s.ClusterInformerManager
@@ -31,9 +29,8 @@ type NodeHandler struct {
 }
 
 // NewNodeHandler 建立節點處理器
-func NewNodeHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, promService *services.PrometheusService, monitoringCfgSvc *services.MonitoringConfigService) *NodeHandler {
+func NewNodeHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, promService *services.PrometheusService, monitoringCfgSvc *services.MonitoringConfigService) *NodeHandler {
 	return &NodeHandler{
-		db:               db,
 		cfg:              cfg,
 		clusterService:   clusterService,
 		k8sMgr:           k8sMgr,

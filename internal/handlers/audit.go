@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/apierrors"
 	"github.com/shaia/Synapse/internal/config"
@@ -15,19 +14,17 @@ import (
 
 // AuditHandler 審計處理器
 type AuditHandler struct {
-	db           *gorm.DB
 	cfg          *config.Config
 	auditService *services.AuditService
 	opLogService *services.OperationLogService
 }
 
 // NewAuditHandler 建立審計處理器
-func NewAuditHandler(db *gorm.DB, cfg *config.Config) *AuditHandler {
+func NewAuditHandler(cfg *config.Config, auditSvc *services.AuditService, opLogSvc *services.OperationLogService) *AuditHandler {
 	return &AuditHandler{
-		db:           db,
 		cfg:          cfg,
-		auditService: services.NewAuditService(db),
-		opLogService: services.NewOperationLogService(db),
+		auditService: auditSvc,
+		opLogService: opLogSvc,
 	}
 }
 

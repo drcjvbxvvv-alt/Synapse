@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"gorm.io/gorm"
 )
 
 var vpaGVR = schema.GroupVersionResource{
@@ -29,13 +28,12 @@ var vpaGVR = schema.GroupVersionResource{
 
 // VPAHandler VPA 處理器（透過 dynamic client 存取 CRD）
 type VPAHandler struct {
-	db             *gorm.DB
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-func NewVPAHandler(db *gorm.DB, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *VPAHandler {
-	return &VPAHandler{db: db, clusterService: clusterService, k8sMgr: k8sMgr}
+func NewVPAHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *VPAHandler {
+	return &VPAHandler{clusterService: clusterService, k8sMgr: k8sMgr}
 }
 
 // VPARequest 建立/更新 VPA 請求

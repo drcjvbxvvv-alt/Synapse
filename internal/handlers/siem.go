@@ -7,29 +7,30 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shaia/Synapse/internal/models"
-	"github.com/shaia/Synapse/internal/response"
-	"github.com/shaia/Synapse/pkg/logger"
-
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
 )
 
 // SIEMHandler 稽核日誌 SIEM 匯出處理器
 type SIEMHandler struct {
-	db *gorm.DB
+	svc *services.SIEMService
 }
 
-func NewSIEMHandler(db *gorm.DB) *SIEMHandler {
-	return &SIEMHandler{db: db}
+func NewSIEMHandler(svc *services.SIEMService) *SIEMHandler {
+	return &SIEMHandler{svc: svc}
 }
 
 // GetSIEMConfig 取得 SIEM Webhook 設定
 // GET /api/v1/system/siem/config
 func (h *SIEMHandler) GetSIEMConfig(c *gin.Context) {
-	var cfg models.SIEMWebhookConfig
-	if err := h.db.First(&cfg).Error; err != nil {
-		// 無設定時回傳預設值
+	cfg, err := h.svc.GetConfig(c.Request.Context())
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
+	if cfg.ID == 0 {
 		response.OK(c, gin.H{"enabled": false, "webhookURL": "", "secretHeader": "", "secretValue": ""})
 		return
 	}
@@ -65,19 +66,20 @@ func (h *SIEMHandler) UpdateSIEMConfig(c *gin.Context) {
 		req.BatchSize = 100
 	}
 
-	var cfg models.SIEMWebhookConfig
-	h.db.First(&cfg)
-
+	cfg, err := h.svc.GetConfig(c.Request.Context())
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
 	cfg.Enabled = req.Enabled
 	cfg.WebhookURL = req.WebhookURL
 	cfg.SecretHeader = req.SecretHeader
 	cfg.SecretValue = req.SecretValue
 	cfg.BatchSize = req.BatchSize
 
-	if cfg.ID == 0 {
-		h.db.Create(&cfg)
-	} else {
-		h.db.Save(&cfg)
+	if err := h.svc.SaveConfig(c.Request.Context(), cfg); err != nil {
+		response.InternalError(c, err.Error())
+		return
 	}
 	response.OK(c, gin.H{"message": "SIEM 設定已更新"})
 }
@@ -85,8 +87,8 @@ func (h *SIEMHandler) UpdateSIEMConfig(c *gin.Context) {
 // TestSIEMWebhook 測試 SIEM Webhook 連線
 // POST /api/v1/system/siem/test
 func (h *SIEMHandler) TestSIEMWebhook(c *gin.Context) {
-	var cfg models.SIEMWebhookConfig
-	if err := h.db.First(&cfg).Error; err != nil || cfg.WebhookURL == "" {
+	cfg, err := h.svc.GetConfig(c.Request.Context())
+	if err != nil || cfg.WebhookURL == "" {
 		response.BadRequest(c, "請先設定 Webhook URL")
 		return
 	}
@@ -130,23 +132,18 @@ func (h *SIEMHandler) ExportAuditLogs(c *gin.Context) {
 	startStr := c.Query("start")
 	endStr := c.Query("end")
 
-	db := h.db.Model(&models.OperationLog{})
-
+	var startT, endT *time.Time
 	if startStr != "" {
 		t, err := time.Parse("2006-01-02", startStr)
-		if err == nil {
-			db = db.Where("created_at >= ?", t)
-		}
+		if err == nil { startT = &t }
 	}
 	if endStr != "" {
 		t, err := time.Parse("2006-01-02", endStr)
-		if err == nil {
-			db = db.Where("created_at <= ?", t.Add(24*time.Hour))
-		}
+		if err == nil { endT = &t }
 	}
 
-	var logs []models.OperationLog
-	if err := db.Order("created_at desc").Limit(10000).Find(&logs).Error; err != nil {
+	logs, err := h.svc.ExportAuditLogs(c.Request.Context(), startT, endT)
+	if err != nil {
 		response.InternalError(c, "查詢失敗: "+err.Error())
 		return
 	}
@@ -163,48 +160,3 @@ func (h *SIEMHandler) ExportAuditLogs(c *gin.Context) {
 	c.Data(200, "application/json", b)
 }
 
-// PushToSIEM 推送單條稽核日誌到 SIEM（由 middleware 或 service 呼叫）
-func PushToSIEM(db *gorm.DB, log *models.OperationLog) {
-	var cfg models.SIEMWebhookConfig
-	if err := db.First(&cfg).Error; err != nil || !cfg.Enabled || cfg.WebhookURL == "" {
-		return
-	}
-
-	go func() {
-		payload := map[string]interface{}{
-			"source":       "synapse",
-			"eventType":    "audit",
-			"timestamp":    log.CreatedAt.UTC().Format(time.RFC3339),
-			"username":     log.Username,
-			"module":       log.Module,
-			"action":       log.Action,
-			"method":       log.Method,
-			"path":         log.Path,
-			"statusCode":   log.StatusCode,
-			"success":      log.Success,
-			"clusterName":  log.ClusterName,
-			"namespace":    log.Namespace,
-			"resourceName": log.ResourceName,
-			"clientIP":     log.ClientIP,
-		}
-
-		b, _ := json.Marshal(payload)
-		req, err := http.NewRequest("POST", cfg.WebhookURL, bytes.NewBuffer(b))
-		if err != nil {
-			logger.Warn("SIEM 推送失敗（建立請求）", "err", err)
-			return
-		}
-		req.Header.Set("Content-Type", "application/json")
-		if cfg.SecretHeader != "" {
-			req.Header.Set(cfg.SecretHeader, cfg.SecretValue)
-		}
-
-		client := &http.Client{Timeout: 5 * time.Second}
-		resp, err := client.Do(req)
-		if err != nil {
-			logger.Warn("SIEM 推送失敗", "err", err)
-			return
-		}
-		resp.Body.Close()
-	}()
-}

@@ -36,7 +36,8 @@ func (s *AuthServiceTestSuite) SetupTest() {
 
 	s.db = gormDB
 	s.mock = mock
-	s.service = NewAuthService(gormDB, "test-secret", 24)
+	// nil repo → PermissionService falls back to legacy *gorm.DB path.
+	s.service = NewAuthService(gormDB, "test-secret", 24, nil)
 }
 
 func (s *AuthServiceTestSuite) TearDownTest() {

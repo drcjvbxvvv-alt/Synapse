@@ -22,5 +22,6 @@ type routeDeps struct {
 	auditSvc         *services.AuditService
 	grafanaSvc       *services.GrafanaService
 	monitoringCfgSvc *services.MonitoringConfigService
+	tokenBlacklist   *services.TokenBlacklistService
 	permMiddleware   *middleware.PermissionMiddleware
 }

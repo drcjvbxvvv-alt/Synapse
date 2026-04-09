@@ -4,20 +4,20 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/shaia/Synapse/internal/models"
-	"github.com/shaia/Synapse/internal/response"
-
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 )
 
 // NotificationHandler 消息通知處理器
 type NotificationHandler struct {
-	db *gorm.DB
+	svc *services.NotificationService
 }
 
-func NewNotificationHandler(db *gorm.DB) *NotificationHandler {
-	return &NotificationHandler{db: db}
+func NewNotificationHandler(svc *services.NotificationService) *NotificationHandler {
+	return &NotificationHandler{svc: svc}
 }
 
 // NotificationItem 通知項目（含叢集名稱）
@@ -37,32 +37,29 @@ type NotificationItem struct {
 }
 
 // ListNotifications GET /notifications
-// 回傳最近 100 筆通知（跨所有叢集），含未讀數量
 func (h *NotificationHandler) ListNotifications(c *gin.Context) {
-	pageSize := 50
+	ctx := c.Request.Context()
 
-	var histories []models.EventAlertHistory
-	if err := h.db.Order("triggered_at desc").Limit(pageSize).Find(&histories).Error; err != nil {
+	histories, err := h.svc.ListRecent(ctx, 50)
+	if err != nil {
+		logger.Error("list notifications failed", "error", err)
 		response.InternalError(c, err.Error())
 		return
 	}
 
-	// 取得叢集名稱對照表
-	clusterIDs := make(map[uint]struct{})
+	// build cluster-name lookup
+	clusterIDSet := make(map[uint]struct{}, len(histories))
 	for _, h := range histories {
-		clusterIDs[h.ClusterID] = struct{}{}
+		clusterIDSet[h.ClusterID] = struct{}{}
 	}
-	ids := make([]uint, 0, len(clusterIDs))
-	for id := range clusterIDs {
+	ids := make([]uint, 0, len(clusterIDSet))
+	for id := range clusterIDSet {
 		ids = append(ids, id)
 	}
-	var clusters []models.Cluster
-	if len(ids) > 0 {
-		h.db.Where("id IN ?", ids).Find(&clusters)
-	}
-	clusterNames := make(map[uint]string, len(clusters))
-	for _, cl := range clusters {
-		clusterNames[cl.ID] = cl.Name
+	clusterNames, err := h.svc.ClusterNames(ctx, ids)
+	if err != nil {
+		logger.Error("fetch cluster names failed", "error", err)
+		clusterNames = map[uint]string{}
 	}
 
 	items := make([]NotificationItem, 0, len(histories))
@@ -96,15 +93,12 @@ func (h *NotificationHandler) ListNotifications(c *gin.Context) {
 
 // MarkRead PUT /notifications/:id/read
 func (h *NotificationHandler) MarkRead(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.BadRequest(c, "無效的通知 ID")
 		return
 	}
-	if err := h.db.Model(&models.EventAlertHistory{}).
-		Where("id = ?", id).
-		Update("is_read", true).Error; err != nil {
+	if err := h.svc.MarkRead(c.Request.Context(), uint(id)); err != nil {
 		response.InternalError(c, err.Error())
 		return
 	}
@@ -113,9 +107,7 @@ func (h *NotificationHandler) MarkRead(c *gin.Context) {
 
 // MarkAllRead PUT /notifications/read-all
 func (h *NotificationHandler) MarkAllRead(c *gin.Context) {
-	if err := h.db.Model(&models.EventAlertHistory{}).
-		Where("is_read = ?", false).
-		Update("is_read", true).Error; err != nil {
+	if err := h.svc.MarkAllRead(c.Request.Context()); err != nil {
 		response.InternalError(c, err.Error())
 		return
 	}
@@ -123,9 +115,11 @@ func (h *NotificationHandler) MarkAllRead(c *gin.Context) {
 }
 
 // UnreadCount GET /notifications/unread-count
-// 輕量端點：僅回傳未讀數，供輪詢使用
 func (h *NotificationHandler) UnreadCount(c *gin.Context) {
-	var count int64
-	h.db.Model(&models.EventAlertHistory{}).Where("is_read = ?", false).Count(&count)
+	count, err := h.svc.CountUnread(c.Request.Context())
+	if err != nil {
+		logger.Error("count unread notifications failed", "error", err)
+		count = 0
+	}
 	response.OK(c, gin.H{"unreadCount": count})
 }

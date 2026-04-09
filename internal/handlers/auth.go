@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/shaia/Synapse/internal/apierrors"
 	"github.com/shaia/Synapse/internal/constants"
+	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -14,15 +16,21 @@ import (
 
 // AuthHandler 認證處理器
 type AuthHandler struct {
-	authService *services.AuthService
-	opLogSvc    *services.OperationLogService
+	authService  *services.AuthService
+	opLogSvc     *services.OperationLogService
+	blacklistSvc *services.TokenBlacklistService
 }
 
 // NewAuthHandler 建立認證處理器
-func NewAuthHandler(authService *services.AuthService, opLogSvc *services.OperationLogService) *AuthHandler {
+func NewAuthHandler(
+	authService *services.AuthService,
+	opLogSvc *services.OperationLogService,
+	blacklistSvc *services.TokenBlacklistService,
+) *AuthHandler {
 	return &AuthHandler{
-		authService: authService,
-		opLogSvc:    opLogSvc,
+		authService:  authService,
+		opLogSvc:     opLogSvc,
+		blacklistSvc: blacklistSvc,
 	}
 }
 
@@ -96,20 +104,56 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // Logout 使用者登出
+//
+// 流程（P0-5）：
+//  1. 從 context 取出 jti 與 token_exp（由 AuthRequired 中介軟體寫入）
+//  2. 呼叫 TokenBlacklistService.Revoke 將 jti 寫入黑名單（含 DB + 記憶體快取）
+//  3. 記錄審計日誌
+//
+// 若 blacklistSvc 尚未啟用（測試場景），僅略過撤銷步驟，其餘流程正常進行。
 func (h *AuthHandler) Logout(c *gin.Context) {
-	var userID *uint
+	var userIDPtr *uint
+	var userID uint
 	username := ""
 	if uid := c.GetUint("user_id"); uid > 0 {
-		userID = &uid
+		userID = uid
+		userIDPtr = &uid
 	}
 	if un := c.GetString("username"); un != "" {
 		username = un
 	}
 
+	// 將 token 加入黑名單
+	if h.blacklistSvc != nil {
+		jti := c.GetString("jti")
+		tokenExp, _ := c.Get("token_exp")
+		expTime, _ := tokenExp.(time.Time)
+		if jti != "" && !expTime.IsZero() {
+			if err := h.blacklistSvc.Revoke(
+				c.Request.Context(),
+				jti,
+				userID,
+				expTime,
+				models.TokenRevokeReasonLogout,
+			); err != nil {
+				logger.Error("登出時寫入 token 黑名單失敗",
+					"error", err,
+					"jti", jti,
+					"user_id", userID,
+				)
+			}
+		}
+	}
+
+	logger.Info("使用者登出",
+		"user_id", userID,
+		"username", username,
+	)
+
 	// 記錄登出審計日誌
 	if h.opLogSvc != nil {
 		h.opLogSvc.RecordAsync(&services.LogEntry{
-			UserID:       userID,
+			UserID:       userIDPtr,
 			Username:     username,
 			Method:       "POST",
 			Path:         "/api/v1/auth/logout",

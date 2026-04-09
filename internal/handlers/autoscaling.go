@@ -11,18 +11,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"gorm.io/gorm"
 )
 
 // AutoscalingHandler 彈性伸縮深化（KEDA / Karpenter / CAS）
 type AutoscalingHandler struct {
-	db             *gorm.DB
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-func NewAutoscalingHandler(db *gorm.DB, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *AutoscalingHandler {
-	return &AutoscalingHandler{db: db, clusterService: clusterService, k8sMgr: k8sMgr}
+func NewAutoscalingHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *AutoscalingHandler {
+	return &AutoscalingHandler{clusterService: clusterService, k8sMgr: k8sMgr}
 }
 
 // ─── KEDA GVRs ─────────────────────────────────────────────────────────────

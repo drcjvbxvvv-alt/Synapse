@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
@@ -20,25 +19,7 @@ type OverviewHandler struct {
 }
 
 // NewOverviewHandler 建立總覽處理器
-func NewOverviewHandler(
-	db *gorm.DB,
-	clusterService *services.ClusterService,
-	listerProvider services.InformerListerProvider,
-	promService *services.PrometheusService,
-	monitoringCfgSvc *services.MonitoringConfigService,
-	alertManagerCfgSvc *services.AlertManagerConfigService,
-	alertManagerSvc *services.AlertManagerService,
-	permSvc *services.PermissionService,
-) *OverviewHandler {
-	overviewSvc := services.NewOverviewService(
-		db,
-		clusterService,
-		listerProvider,
-		promService,
-		monitoringCfgSvc,
-		alertManagerCfgSvc,
-		alertManagerSvc,
-	)
+func NewOverviewHandler(overviewSvc *services.OverviewService, permSvc *services.PermissionService) *OverviewHandler {
 	return &OverviewHandler{
 		overviewService: overviewSvc,
 		permissionSvc:   permSvc,

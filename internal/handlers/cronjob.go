@@ -15,7 +15,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -25,14 +24,13 @@ import (
 )
 
 type CronJobHandler struct {
-	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-func NewCronJobHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *CronJobHandler {
-	return &CronJobHandler{db: db, cfg: cfg, clusterService: clusterService, k8sMgr: k8sMgr}
+func NewCronJobHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *CronJobHandler {
+	return &CronJobHandler{cfg: cfg, clusterService: clusterService, k8sMgr: k8sMgr}
 }
 
 type CronJobInfo struct {

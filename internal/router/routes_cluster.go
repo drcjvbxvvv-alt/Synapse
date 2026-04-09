@@ -12,7 +12,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 	// clusters 根分組
 	clusters := protected.Group("/clusters")
 	{
-		clusterHandler := handlers.NewClusterHandler(d.db, d.cfg, d.k8sMgr, d.prometheusSvc, d.monitoringCfgSvc, d.permissionSvc)
+		clusterHandler := handlers.NewClusterHandler(d.cfg, d.k8sMgr, d.clusterSvc, d.prometheusSvc, d.monitoringCfgSvc, d.permissionSvc)
 
 		// 叢集列表和統計（按使用者權限過濾）
 		clusters.GET("", clusterHandler.GetClusters)
@@ -105,7 +105,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// nodes 子分組
-			nodeHandler := handlers.NewNodeHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr, d.prometheusSvc, d.monitoringCfgSvc)
+			nodeHandler := handlers.NewNodeHandler(d.cfg, d.clusterSvc, d.k8sMgr, d.prometheusSvc, d.monitoringCfgSvc)
 			nodes := cluster.Group("/nodes")
 			{
 				nodes.GET("", nodeHandler.GetNodes)
@@ -119,7 +119,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// pods 子分組
-			podHandler := handlers.NewPodHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			podHandler := handlers.NewPodHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			pods := cluster.Group("/pods")
 			{
 				pods.GET("", podHandler.GetPods) // 可考慮使用 query 過濾 namespace/name
@@ -132,7 +132,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// Deployment 子分組
-			deploymentHandler := handlers.NewDeploymentHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			deploymentHandler := handlers.NewDeploymentHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			deployments := cluster.Group("/deployments")
 			{
 				deployments.GET("", deploymentHandler.ListDeployments)
@@ -152,7 +152,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// Rollout 子分組
-			rolloutHandler := handlers.NewRolloutHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			rolloutHandler := handlers.NewRolloutHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			rollouts := cluster.Group("/rollouts")
 			{
 				rollouts.GET("/crd-check", rolloutHandler.CheckRolloutCRD)
@@ -177,7 +177,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// HPA 子分組
-			hpaHandler := handlers.NewHPAHandler(d.db, d.clusterSvc, d.k8sMgr)
+			hpaHandler := handlers.NewHPAHandler(d.clusterSvc, d.k8sMgr)
 			hpa := cluster.Group("/hpa")
 			{
 				hpa.GET("", hpaHandler.ListHPA)
@@ -187,7 +187,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// StatefulSet 子分組
-			statefulSetHandler := handlers.NewStatefulSetHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			statefulSetHandler := handlers.NewStatefulSetHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			statefulSets := cluster.Group("/statefulsets")
 			{
 				statefulSets.GET("", statefulSetHandler.ListStatefulSets)
@@ -200,7 +200,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// DaemonSet 子分組
-			daemonSetHandler := handlers.NewDaemonSetHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			daemonSetHandler := handlers.NewDaemonSetHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			daemonsets := cluster.Group("/daemonsets")
 			{
 				daemonsets.GET("", daemonSetHandler.ListDaemonSets)
@@ -212,7 +212,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// Job 子分組
-			jobHandler := handlers.NewJobHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			jobHandler := handlers.NewJobHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			jobs := cluster.Group("/jobs")
 			{
 				jobs.GET("", jobHandler.ListJobs)
@@ -224,7 +224,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// CronJob 子分組
-			cronJobHandler := handlers.NewCronJobHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			cronJobHandler := handlers.NewCronJobHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			cronjobs := cluster.Group("/cronjobs")
 			{
 				cronjobs.GET("", cronJobHandler.ListCronJobs)
@@ -236,7 +236,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// 通用資源 YAML 處理器（用於 dry-run 和 apply）
-			resourceYAMLHandler := handlers.NewResourceYAMLHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			resourceYAMLHandler := handlers.NewResourceYAMLHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 
 			// configmaps 子分組
 			configMapHandler := handlers.NewConfigMapHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
@@ -268,7 +268,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// services 子分組
-			serviceHandler := handlers.NewServiceHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			serviceHandler := handlers.NewServiceHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			svcGroup := cluster.Group("/services")
 			{
 				svcGroup.GET("", serviceHandler.ListServices)
@@ -283,7 +283,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// ingresses 子分組
-			ingressHandler := handlers.NewIngressHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			ingressHandler := handlers.NewIngressHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 			ingresses := cluster.Group("/ingresses")
 			{
 				ingresses.GET("", ingressHandler.ListIngresses)
@@ -297,7 +297,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// Gateway API 子分組（Phase 1：唯讀）
-			gatewayHandler := handlers.NewGatewayHandler(d.db, d.clusterSvc, d.k8sMgr)
+			gatewayHandler := handlers.NewGatewayHandler(d.clusterSvc, d.k8sMgr)
 			{
 				cluster.GET("/gateway/status", gatewayHandler.GetGatewayAPIStatus)
 				gatewayclasses := cluster.Group("/gatewayclasses")
@@ -364,7 +364,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// storage 子分組 - PVC, PV, StorageClass
-			storageHandler := handlers.NewStorageHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+			storageHandler := handlers.NewStorageHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 
 			// PVCs 子分組
 			pvcs := cluster.Group("/pvcs")
@@ -399,7 +399,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 
 			// ArgoCD / GitOps 外掛中心
 			argoCDSvc := services.NewArgoCDService(d.db)
-			argoCDHandler := handlers.NewArgoCDHandler(d.db, argoCDSvc)
+			argoCDHandler := handlers.NewArgoCDHandler(argoCDSvc)
 			argocd := cluster.Group("/argocd")
 			{
 				// 配置管理
@@ -489,7 +489,8 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// Event 告警規則
-			eventAlertHandler := handlers.NewEventAlertHandler(d.db)
+			eventAlertSvc := services.NewEventAlertService(d.db)
+			eventAlertHandler := handlers.NewEventAlertHandler(eventAlertSvc)
 			eventAlerts := cluster.Group("/event-alerts")
 			{
 				eventAlerts.GET("/rules", eventAlertHandler.ListRules)
@@ -527,7 +528,8 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// 資源成本分析（保留既有金錢估算功能）
-			costHandler := handlers.NewCostHandler(d.db)
+			costSvc := services.NewCostService(d.db)
+			costHandler := handlers.NewCostHandler(costSvc)
 			cost := cluster.Group("/cost")
 			{
 				cost.GET("/config", costHandler.GetConfig)
@@ -541,7 +543,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// VPA 子分組（§8.3 Phase C）
-			vpaHandler := handlers.NewVPAHandler(d.db, d.clusterSvc, d.k8sMgr)
+			vpaHandler := handlers.NewVPAHandler(d.clusterSvc, d.k8sMgr)
 			vpaGroup := cluster.Group("/vpa")
 			{
 				vpaGroup.GET("/crd-check", vpaHandler.CheckVPACRD)
@@ -568,7 +570,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// PDB（PodDisruptionBudget）管理（§8.3 Phase D）
-			pdbHandler := handlers.NewPDBHandler(d.db, d.clusterSvc, d.k8sMgr)
+			pdbHandler := handlers.NewPDBHandler(d.clusterSvc, d.k8sMgr)
 			pdbGroup := cluster.Group("/pdbs")
 			{
 				pdbGroup.GET("", pdbHandler.ListPDB)
@@ -583,7 +585,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			cluster.POST("/pods/:namespace/:name/portforward", pfHandler.StartPortForward)
 
 			// VolumeSnapshot + Velero（§5.22）
-			vsHandler := handlers.NewVolumeSnapshotHandler(d.db, d.clusterSvc, d.k8sMgr)
+			vsHandler := handlers.NewVolumeSnapshotHandler(d.clusterSvc, d.k8sMgr)
 			vsGroup := cluster.Group("/volume-snapshots")
 			{
 				vsGroup.GET("/status", vsHandler.CheckVolumeSnapshotCRD)
@@ -604,7 +606,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			}
 
 			// 彈性伸縮深化（§5.19）：KEDA / Karpenter / CAS
-			autoscalingHandler := handlers.NewAutoscalingHandler(d.db, d.clusterSvc, d.k8sMgr)
+			autoscalingHandler := handlers.NewAutoscalingHandler(d.clusterSvc, d.k8sMgr)
 			keda := cluster.Group("/keda")
 			{
 				keda.GET("/status", autoscalingHandler.CheckKEDA)

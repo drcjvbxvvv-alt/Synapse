@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -34,7 +35,8 @@ func (s *UserServiceTestSuite) SetupTest() {
 
 	s.db = gormDB
 	s.mock = mock
-	s.service = NewUserService(gormDB)
+	// nil repository → service falls back to the legacy *gorm.DB path.
+	s.service = NewUserService(gormDB, nil)
 }
 
 func (s *UserServiceTestSuite) TearDownTest() {
@@ -56,7 +58,7 @@ func (s *UserServiceTestSuite) TestCreateUser_Success() {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
-	user, err := s.service.CreateUser(&CreateUserRequest{
+	user, err := s.service.CreateUser(context.Background(), &CreateUserRequest{
 		Username: "newuser",
 		Password: "password123",
 		Email:    "new@example.com",
@@ -74,7 +76,7 @@ func (s *UserServiceTestSuite) TestCreateUser_DuplicateUsername() {
 		WithArgs("admin").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-	user, err := s.service.CreateUser(&CreateUserRequest{
+	user, err := s.service.CreateUser(context.Background(), &CreateUserRequest{
 		Username: "admin",
 		Password: "password123",
 	})
@@ -89,14 +91,14 @@ func (s *UserServiceTestSuite) TestGetUser_Success() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
 		"id", "username", "password_hash", "salt", "email", "display_name",
-		"auth_type", "status", "last_login_at", "last_login_ip",
+		"auth_type", "status", "system_role", "last_login_at", "last_login_ip",
 		"created_at", "updated_at", "deleted_at",
 	}).AddRow(1, "admin", "hash", "salt", "admin@example.com", "Admin",
-		"local", "active", now, "", now, now, nil)
+		"local", "active", "platform_admin", now, "", now, now, nil)
 
 	s.mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
 
-	user, err := s.service.GetUser(1)
+	user, err := s.service.GetUser(context.Background(), 1)
 	assert.NoError(s.T(), err)
 	assert.NotNil(s.T(), user)
 	assert.Equal(s.T(), "admin", user.Username)
@@ -105,7 +107,7 @@ func (s *UserServiceTestSuite) TestGetUser_Success() {
 func (s *UserServiceTestSuite) TestGetUser_NotFound() {
 	s.mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
 
-	user, err := s.service.GetUser(999)
+	user, err := s.service.GetUser(context.Background(), 999)
 	assert.Error(s.T(), err)
 	assert.Nil(s.T(), user)
 }
@@ -116,24 +118,24 @@ func (s *UserServiceTestSuite) TestUpdateUserStatus_Active() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
 		"id", "username", "password_hash", "salt", "email", "display_name",
-		"auth_type", "status", "last_login_at", "last_login_ip",
+		"auth_type", "status", "system_role", "last_login_at", "last_login_ip",
 		"created_at", "updated_at", "deleted_at",
 	}).AddRow(2, "testuser", "hash", "salt", "test@example.com", "Test",
-		"local", "inactive", now, "", now, now, nil)
+		"local", "inactive", "user", now, "", now, now, nil)
 
 	s.mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
 	s.mock.ExpectBegin()
 	s.mock.ExpectExec(`UPDATE`).WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
-	err := s.service.UpdateUserStatus(2, "active")
+	err := s.service.UpdateUserStatus(context.Background(), 2, "active")
 	assert.NoError(s.T(), err)
 }
 
 func (s *UserServiceTestSuite) TestUpdateUserStatus_UserNotFound() {
 	s.mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
 
-	err := s.service.UpdateUserStatus(999, "active")
+	err := s.service.UpdateUserStatus(context.Background(), 999, "active")
 	assert.Error(s.T(), err)
 }
 
@@ -143,10 +145,10 @@ func (s *UserServiceTestSuite) TestDeleteUser_Success() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
 		"id", "username", "password_hash", "salt", "email", "display_name",
-		"auth_type", "status", "last_login_at", "last_login_ip",
+		"auth_type", "status", "system_role", "last_login_at", "last_login_ip",
 		"created_at", "updated_at", "deleted_at",
 	}).AddRow(2, "testuser", "hash", "salt", "test@example.com", "Test",
-		"local", "active", now, "", now, now, nil)
+		"local", "active", "user", now, "", now, now, nil)
 
 	s.mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
 
@@ -167,7 +169,7 @@ func (s *UserServiceTestSuite) TestDeleteUser_Success() {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
-	err := s.service.DeleteUser(2)
+	err := s.service.DeleteUser(context.Background(), 2)
 	assert.NoError(s.T(), err)
 }
 
@@ -175,16 +177,16 @@ func (s *UserServiceTestSuite) TestDeleteUser_CannotDeleteAdmin() {
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
 		"id", "username", "password_hash", "salt", "email", "display_name",
-		"auth_type", "status", "last_login_at", "last_login_ip",
+		"auth_type", "status", "system_role", "last_login_at", "last_login_ip",
 		"created_at", "updated_at", "deleted_at",
 	}).AddRow(1, "admin", "hash", "salt", "admin@example.com", "Admin",
-		"local", "active", now, "", now, now, nil)
+		"local", "active", "platform_admin", now, "", now, now, nil)
 
 	s.mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
 
-	err := s.service.DeleteUser(1)
+	err := s.service.DeleteUser(context.Background(), 1)
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), err.Error(), "admin")
+	assert.Contains(s.T(), err.Error(), "平台管理員")
 }
 
 func TestUserServiceSuite(t *testing.T) {

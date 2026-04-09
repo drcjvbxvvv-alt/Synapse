@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -19,6 +20,7 @@ import (
 	smetrics "github.com/shaia/Synapse/internal/metrics"
 	"github.com/shaia/Synapse/internal/middleware"
 	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/repositories"
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -136,11 +138,20 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		)
 	}
 
+	// ── Repositories (P0-4b pilot) ─────────────────────────────────────────
+	// Built once and passed into the services that have been migrated to the
+	// Repository layer. Constructors are cheap — they only capture the *gorm.DB
+	// handle — so doing it here keeps wiring in a single place.
+	clusterRepo := repositories.NewClusterRepository(db)
+	userRepo := repositories.NewUserRepository(db)
+	permissionRepo := repositories.NewPermissionRepository(db)
+
 	// ── Services ───────────────────────────────────────────────────────────
-	clusterSvc := services.NewClusterService(db)
+	clusterSvc := services.NewClusterService(db, clusterRepo)
 	prometheusSvc := services.NewPrometheusService()
 	auditSvc := services.NewAuditService(db)
-	permissionSvc := services.NewPermissionService(db)
+	permissionSvc := services.NewPermissionService(db, permissionRepo)
+	tokenBlacklistSvc := services.NewTokenBlacklistService(db)
 
 	grafanaSettingSvc := services.NewGrafanaSettingService(db)
 	grafanaSvc := services.NewGrafanaService("", "")
@@ -171,7 +182,9 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 
 	// Pre-warm Informers for connectable clusters (background, non-blocking)
 	go func() {
-		clusters, err := clusterSvc.GetConnectableClusters()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		clusters, err := clusterSvc.GetConnectableClusters(ctx)
 		if err != nil {
 			logger.Error("預熱 informer 失敗", "error", err)
 			return
@@ -217,13 +230,14 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 
 	auth := api.Group("/auth")
 	{
-		authSvc := services.NewAuthService(db, cfg.JWT.Secret, cfg.JWT.ExpireTime)
-		authHandler := handlers.NewAuthHandler(authSvc, opLogSvc)
+		authSvc := services.NewAuthService(db, cfg.JWT.Secret, cfg.JWT.ExpireTime, permissionRepo)
+		authHandler := handlers.NewAuthHandler(authSvc, opLogSvc, tokenBlacklistSvc)
 		auth.POST("/login", middleware.LoginRateLimit(), authHandler.Login)
-		auth.POST("/logout", authHandler.Logout)
+		// Logout 需要認證才能取得 jti 並加入黑名單
+		auth.POST("/logout", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.Logout)
 		auth.GET("/status", authHandler.GetAuthStatus)
-		auth.GET("/me", middleware.AuthRequired(cfg.JWT.Secret), authHandler.GetProfile)
-		auth.POST("/change-password", middleware.AuthRequired(cfg.JWT.Secret), authHandler.ChangePassword)
+		auth.GET("/me", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.GetProfile)
+		auth.POST("/change-password", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.ChangePassword)
 	}
 
 	permMiddleware := middleware.NewPermissionMiddleware(permissionSvc)
@@ -240,13 +254,14 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		auditSvc:         auditSvc,
 		grafanaSvc:       grafanaSvc,
 		monitoringCfgSvc: monitoringConfigSvc,
+		tokenBlacklist:   tokenBlacklistSvc,
 		permMiddleware:   permMiddleware,
 	}
 
 	protected := api.Group("")
-	protected.Use(middleware.AuthRequired(cfg.JWT.Secret))
+	protected.Use(middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc))
 	{
-		userSvc := services.NewUserService(db)
+		userSvc := services.NewUserService(db, userRepo)
 		userHandler := handlers.NewUserHandler(userSvc)
 		users := protected.Group("/users")
 		users.Use(middleware.PlatformAdminRequired(db))

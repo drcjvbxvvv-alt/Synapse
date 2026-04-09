@@ -16,7 +16,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -26,16 +25,14 @@ import (
 
 // ServiceHandler Service處理器
 type ServiceHandler struct {
-	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewServiceHandler 建立Service處理器
-func NewServiceHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *ServiceHandler {
+func NewServiceHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *ServiceHandler {
 	return &ServiceHandler{
-		db:             db,
 		cfg:            cfg,
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,

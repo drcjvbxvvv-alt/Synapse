@@ -37,7 +37,9 @@ func (s *PermissionServiceTestSuite) SetupTest() {
 
 	s.db = gormDB
 	s.mock = mock
-	s.service = NewPermissionService(gormDB)
+	// nil repo → PermissionService falls back to the legacy *gorm.DB path,
+	// which is what the sqlmock expectations below are written against.
+	s.service = NewPermissionService(gormDB, nil)
 }
 
 // TearDownTest 每個測試後的清理
@@ -120,25 +122,25 @@ func (s *PermissionServiceTestSuite) TestListUserGroups() {
 }
 
 // TestDeleteUserGroup_Success 測試刪除使用者組成功
+// DeleteUserGroup 使用單一事務包裹兩個 Delete 操作，
+// 因此 sqlmock 只會看到一個 Begin/Commit 區塊，
+// 裡面依序執行：刪除成員關聯（DELETE）、軟刪除使用者組本體（UPDATE）
 func (s *PermissionServiceTestSuite) TestDeleteUserGroup_Success() {
-	// 1. 檢查關聯的權限配置 - Count 查詢
+	// 1. 事務外檢查關聯的權限配置
 	s.mock.ExpectQuery(`SELECT count`).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
-	// 2. 刪除關聯的使用者組成員（GORM 的 Where().Delete() 會啟動事務）
+	// 2. 進入事務：先 DELETE 成員關聯，再 UPDATE 軟刪除使用者組
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`DELETE FROM`).
+	s.mock.ExpectExec(`DELETE FROM .user_group_members.`).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	s.mock.ExpectCommit()
-
-	// 3. 刪除使用者組（GORM 軟刪除 - 直接執行 UPDATE deleted_at）
-	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`UPDATE`).
+	s.mock.ExpectExec(`UPDATE .user_groups. SET .deleted_at.`).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	s.mock.ExpectCommit()
 
 	err := s.service.DeleteUserGroup(1)
 	assert.NoError(s.T(), err)
+	assert.NoError(s.T(), s.mock.ExpectationsWereMet())
 }
 
 // TestHasClusterAccess 測試檢查叢集訪問權限

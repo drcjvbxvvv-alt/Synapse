@@ -5,17 +5,26 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/apierrors"
 	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/repositories"
 	"github.com/shaia/Synapse/pkg/logger"
+)
+
+// JWT 標準 claims 常數
+const (
+	JWTIssuer   = "synapse"
+	JWTAudience = "synapse-api"
 )
 
 // LoginResult 登入結果
 type LoginResult struct {
 	Token       string                         `json:"token"`
+	JTI         string                         `json:"-"` // 不回傳給前端，用於伺服端稽核
 	User        models.User                    `json:"user"`
 	ExpiresAt   int64                          `json:"expires_at"`
 	Permissions []models.MyPermissionsResponse `json:"permissions,omitempty"`
@@ -31,11 +40,20 @@ type AuthService struct {
 }
 
 // NewAuthService 建立認證服務
-func NewAuthService(db *gorm.DB, jwtSecret string, jwtExpireTime int) *AuthService {
+//
+// permRepo may be nil — AuthService will then fall back to the legacy
+// *gorm.DB path inside its private PermissionService. When the router
+// wires a real repo, the dual-path feature flag decides which path runs.
+func NewAuthService(
+	db *gorm.DB,
+	jwtSecret string,
+	jwtExpireTime int,
+	permRepo repositories.PermissionRepository,
+) *AuthService {
 	return &AuthService{
 		db:            db,
 		ldapService:   NewLDAPService(db),
-		permissionSvc: NewPermissionService(db),
+		permissionSvc: NewPermissionService(db, permRepo),
 		jwtSecret:     jwtSecret,
 		jwtExpireTime: jwtExpireTime,
 	}
@@ -67,7 +85,7 @@ func (s *AuthService) Login(username, password, authType, clientIP string) (*Log
 	}
 
 	// 生成JWT token
-	tokenString, expiresAt, err := s.generateJWT(user)
+	tokenString, jti, expiresAt, err := s.generateJWT(user)
 	if err != nil {
 		return nil, apierrors.ErrAuthTokenFailed()
 	}
@@ -81,10 +99,11 @@ func (s *AuthService) Login(username, password, authType, clientIP string) (*Log
 	// 獲取使用者權限資訊
 	permissions := s.buildPermissions(user.ID)
 
-	logger.Info("使用者登入成功: %s (認證型別: %s)", user.Username, user.AuthType)
+	logger.Info("使用者登入成功", "username", user.Username, "auth_type", user.AuthType)
 
 	return &LoginResult{
 		Token:       tokenString,
+		JTI:         jti,
 		User:        *user,
 		ExpiresAt:   expiresAt,
 		Permissions: permissions,
@@ -118,7 +137,7 @@ func (s *AuthService) ChangePassword(userID uint, oldPassword, newPassword strin
 		return fmt.Errorf("密碼更新失敗: %w", err)
 	}
 
-	logger.Info("使用者修改密碼成功: %s", user.Username)
+	logger.Info("使用者修改密碼成功", "username", user.Username)
 	return nil
 }
 
@@ -148,10 +167,10 @@ func (s *AuthService) authenticateLocal(username, password string) (*models.User
 	}
 
 	passwordWithSalt := password + user.Salt
-	logger.Info("驗證密碼 - 使用者: %s, Salt: %s", username, user.Salt)
+	logger.Debug("authenticating local user", "username", username)
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(passwordWithSalt)); err != nil {
-		logger.Warn("密碼驗證失敗 - 使用者: %s, 錯誤: %v", username, err)
+		logger.Warn("密碼驗證失敗", "username", username, "error", err)
 		return nil, apierrors.ErrAuthInvalidCredentials()
 	}
 
@@ -190,7 +209,7 @@ func (s *AuthService) authenticateLDAP(username, password string) (*models.User,
 		if err := s.db.Create(&user).Error; err != nil {
 			return nil, fmt.Errorf("建立使用者記錄失敗")
 		}
-		logger.Info("LDAP使用者首次登入，已建立本地記錄: %s", username)
+		logger.Info("LDAP使用者首次登入，已建立本地記錄", "username", username)
 	} else if result.Error != nil {
 		return nil, fmt.Errorf("查詢使用者失敗")
 	} else {
@@ -202,22 +221,39 @@ func (s *AuthService) authenticateLDAP(username, password string) (*models.User,
 	return &user, nil
 }
 
-// generateJWT 生成JWT token
-func (s *AuthService) generateJWT(user *models.User) (string, int64, error) {
-	expiresAt := time.Now().Add(time.Duration(s.jwtExpireTime) * time.Hour)
+// generateJWT 生成 JWT token（含 jti/iss/aud/nbf 標準 claims）
+// 回傳 (token 字串, jti, exp Unix 時間戳, error)
+//
+// claim 說明：
+//   - jti  JWT ID，由 uuid v4 產生，用於支援黑名單撤銷（P0-5）
+//   - iss  簽發者，固定為 synapse，供消費端驗證 token 來源
+//   - aud  受眾，固定為 synapse-api，跨服務時區隔 token 用途
+//   - nbf  Not Before，現在起生效（防止時鐘回退攻擊）
+//   - exp  過期時間，由 config.JWT.ExpireTime 決定
+func (s *AuthService) generateJWT(user *models.User) (string, string, int64, error) {
+	now := time.Now()
+	expiresAt := now.Add(time.Duration(s.jwtExpireTime) * time.Hour)
+	jti := uuid.NewString()
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":   user.ID,
-		"username":  user.Username,
-		"auth_type": user.AuthType,
-		"exp":       expiresAt.Unix(),
+		"jti":         jti,
+		"iss":         JWTIssuer,
+		"aud":         JWTAudience,
+		"nbf":         now.Unix(),
+		"iat":         now.Unix(),
+		"exp":         expiresAt.Unix(),
+		"user_id":     user.ID,
+		"username":    user.Username,
+		"auth_type":   user.AuthType,
+		"system_role": user.SystemRole,
 	})
 
 	tokenString, err := token.SignedString([]byte(s.jwtSecret))
 	if err != nil {
-		return "", 0, fmt.Errorf("簽名token失敗: %w", err)
+		return "", "", 0, fmt.Errorf("簽名token失敗: %w", err)
 	}
 
-	return tokenString, expiresAt.Unix(), nil
+	return tokenString, jti, expiresAt.Unix(), nil
 }
 
 // buildPermissions 構建使用者權限響應

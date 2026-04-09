@@ -26,7 +26,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// 跨叢集統一工作負載檢視（§8.3 Phase C）
-	crossClusterHandler := handlers.NewCrossClusterHandler(d.db, d.clusterSvc, d.permissionSvc, d.k8sMgr)
+	crossClusterHandler := handlers.NewCrossClusterHandler(d.clusterSvc, d.permissionSvc, d.k8sMgr)
 	workloads := protected.Group("/workloads")
 	{
 		workloads.GET("", crossClusterHandler.ListCrossClusterWorkloads)
@@ -72,7 +72,8 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	{
 		alertManagerCfgSvc := services.NewAlertManagerConfigService(d.db)
 		alertManagerSvc := services.NewAlertManagerService()
-		overviewHandler := handlers.NewOverviewHandler(d.db, d.clusterSvc, d.k8sMgr, d.prometheusSvc, d.monitoringCfgSvc, alertManagerCfgSvc, alertManagerSvc, d.permissionSvc)
+		overviewSvc := services.NewOverviewService(d.db, d.clusterSvc, d.k8sMgr, d.prometheusSvc, d.monitoringCfgSvc, alertManagerCfgSvc, alertManagerSvc)
+		overviewHandler := handlers.NewOverviewHandler(overviewSvc, d.permissionSvc)
 		overview.GET("/stats", overviewHandler.GetStats)
 		overview.GET("/resource-usage", overviewHandler.GetResourceUsage)
 		overview.GET("/distribution", overviewHandler.GetDistribution)
@@ -84,7 +85,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	// search
 	search := protected.Group("/search")
 	{
-		searchHandler := handlers.NewSearchHandler(d.db, d.cfg, d.k8sMgr, d.clusterSvc, d.permissionSvc)
+		searchHandler := handlers.NewSearchHandler(d.cfg, d.k8sMgr, d.clusterSvc, d.permissionSvc)
 		search.GET("", searchHandler.GlobalSearch)
 		search.GET("/quick", searchHandler.QuickSearch)
 	}
@@ -94,7 +95,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	audit.Use(middleware.PlatformAdminRequired(d.db))
 	{
 		// 終端會話審計（保持不變）
-		terminalAuditHandler := handlers.NewAuditHandler(d.db, d.cfg)
+		terminalAuditHandler := handlers.NewAuditHandler(d.cfg, d.auditSvc, d.opLogSvc)
 		audit.GET("/terminal/sessions", terminalAuditHandler.GetTerminalSessions)
 		audit.GET("/terminal/sessions/:sessionId", terminalAuditHandler.GetTerminalSession)
 		audit.GET("/terminal/sessions/:sessionId/commands", terminalAuditHandler.GetTerminalCommands)
@@ -117,7 +118,10 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	systemSettings := protected.Group("/system")
 	systemSettings.Use(middleware.PlatformAdminRequired(d.db))
 	{
-		systemSettingHandler := handlers.NewSystemSettingHandler(d.db, d.grafanaSvc)
+		ldapSvc := services.NewLDAPService(d.db)
+		sshSvc := services.NewSSHSettingService(d.db)
+		grafanaSettingSvc := services.NewGrafanaSettingService(d.db)
+		systemSettingHandler := handlers.NewSystemSettingHandler(d.db, ldapSvc, sshSvc, grafanaSettingSvc, d.grafanaSvc)
 		// LDAP 配置
 		systemSettings.GET("/ldap/config", systemSettingHandler.GetLDAPConfig)
 		systemSettings.PUT("/ldap/config", systemSettingHandler.UpdateLDAPConfig)
@@ -136,16 +140,19 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		systemSettings.GET("/grafana/datasource-status", systemSettingHandler.GetGrafanaDataSourceStatus)
 		systemSettings.POST("/grafana/sync-datasources", systemSettingHandler.SyncGrafanaDataSources)
 		// SIEM Webhook 匯出設定（§8.3 Phase D）
-		siemHandler := handlers.NewSIEMHandler(d.db)
+		siemSvc := services.NewSIEMService(d.db)
+		siemHandler := handlers.NewSIEMHandler(siemSvc)
 		systemSettings.GET("/siem/config", siemHandler.GetSIEMConfig)
 		systemSettings.PUT("/siem/config", siemHandler.UpdateSIEMConfig)
 		systemSettings.POST("/siem/test", siemHandler.TestSIEMWebhook)
 		// 安全設定（登入安全參數）
-		sysSecurityHandler := handlers.NewSystemSecurityHandler(d.db)
+		sysSecuritySvc := services.NewSystemSecurityService(d.db)
+		sysSecurityHandler := handlers.NewSystemSecurityHandler(sysSecuritySvc)
 		systemSettings.GET("/security/config", sysSecurityHandler.GetSecurityConfig)
 		systemSettings.PUT("/security/config", sysSecurityHandler.UpdateSecurityConfig)
 		// 通知渠道管理
-		notifyChannelHandler := handlers.NewNotifyChannelHandler(d.db)
+		notifyChannelSvc := services.NewNotifyChannelService(d.db)
+		notifyChannelHandler := handlers.NewNotifyChannelHandler(notifyChannelSvc)
 		systemSettings.GET("/notify-channels", notifyChannelHandler.ListNotifyChannels)
 		systemSettings.POST("/notify-channels", notifyChannelHandler.CreateNotifyChannel)
 		systemSettings.PUT("/notify-channels/:id", notifyChannelHandler.UpdateNotifyChannel)
@@ -154,7 +161,8 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// 消息通知（全域，跨叢集 Event Alert History）
-	notifyHandler := handlers.NewNotificationHandler(d.db)
+	notificationSvc := services.NewNotificationService(d.db)
+	notifyHandler := handlers.NewNotificationHandler(notificationSvc)
 	notifications := protected.Group("/notifications")
 	{
 		notifications.GET("", notifyHandler.ListNotifications)
@@ -164,7 +172,8 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// API Token 管理（任意已登入使用者，非 PlatformAdmin Only）
-	sysSecurityHandler := handlers.NewSystemSecurityHandler(d.db)
+	sysSecuritySvc := services.NewSystemSecurityService(d.db)
+	sysSecurityHandler := handlers.NewSystemSecurityHandler(sysSecuritySvc)
 	userTokens := protected.Group("/users/me/tokens")
 	{
 		userTokens.GET("", sysSecurityHandler.ListAPITokens)
@@ -181,7 +190,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// 稽核日誌 JSON 匯出（§8.3 Phase D）
-	siemExportHandler := handlers.NewSIEMHandler(d.db)
+	siemExportHandler := handlers.NewSIEMHandler(services.NewSIEMService(d.db))
 	protected.GET("/audit/export", siemExportHandler.ExportAuditLogs)
 
 	// permissions - 權限管理
@@ -233,7 +242,8 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	protected.GET("/clusters/:clusterID/my-permissions", permissionHandler.GetMyClusterPermission)
 
 	// AI 配置管理（僅平臺管理員）
-	aiConfigHandler := handlers.NewAIConfigHandler(d.db)
+	aiConfigSvc := services.NewAIConfigService(d.db)
+	aiConfigHandler := handlers.NewAIConfigHandler(aiConfigSvc)
 	aiGroup := protected.Group("/ai")
 	{
 		aiAdminGroup := aiGroup.Group("")
@@ -248,8 +258,8 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// AI Chat + NL Query（叢集級）
-	aiChatHandler := handlers.NewAIChatHandler(d.db, d.clusterSvc, d.k8sMgr)
-	aiNLQueryHandler := handlers.NewAINLQueryHandler(d.db, d.clusterSvc, d.k8sMgr)
+	aiChatHandler := handlers.NewAIChatHandler(d.clusterSvc, aiConfigSvc, d.k8sMgr)
+	aiNLQueryHandler := handlers.NewAINLQueryHandler(d.clusterSvc, aiConfigSvc, d.k8sMgr)
 	aiChat := clusters.Group("/:clusterID/ai")
 	aiChat.Use(d.permMiddleware.ClusterAccessRequired())
 	{
@@ -258,7 +268,9 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// Security Scanning（叢集級）
-	securityHandler := handlers.NewSecurityHandler(d.db, d.k8sMgr)
+	trivySvc := services.NewTrivyService(d.db)
+	benchSvc := services.NewBenchService(d.db, d.k8sMgr)
+	securityHandler := handlers.NewSecurityHandler(trivySvc, benchSvc, d.k8sMgr)
 	securityGroup := clusters.Group("/:clusterID/security")
 	securityGroup.Use(d.permMiddleware.ClusterAccessRequired())
 	{

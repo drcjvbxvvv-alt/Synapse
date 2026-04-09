@@ -5,33 +5,36 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"strconv"
 	"time"
 
-	"github.com/shaia/Synapse/internal/models"
-	"github.com/shaia/Synapse/internal/response"
-	"github.com/shaia/Synapse/pkg/logger"
-
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+
+	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/repositories"
+	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
 )
 
 const securityConfigKey = "security_config"
 
 // SystemSecurityHandler 安全設定處理器（登入安全設定 + API Token 管理）
 type SystemSecurityHandler struct {
-	db *gorm.DB
+	svc *services.SystemSecurityService
 }
 
 // NewSystemSecurityHandler 建立安全設定處理器
-func NewSystemSecurityHandler(db *gorm.DB) *SystemSecurityHandler {
-	return &SystemSecurityHandler{db: db}
+func NewSystemSecurityHandler(svc *services.SystemSecurityService) *SystemSecurityHandler {
+	return &SystemSecurityHandler{svc: svc}
 }
 
 // ─── 登入安全設定 ─────────────────────────────────────────────────────────────
 
 // GetSecurityConfig GET /system/security/config（PlatformAdmin）
 func (h *SystemSecurityHandler) GetSecurityConfig(c *gin.Context) {
-	cfg, err := h.loadSecurityConfig()
+	cfg, err := h.svc.GetSecurityConfig(c.Request.Context())
 	if err != nil {
 		logger.Error("取得安全設定失敗: %v", err)
 		response.InternalError(c, "取得安全設定失敗")
@@ -62,50 +65,16 @@ func (h *SystemSecurityHandler) UpdateSecurityConfig(c *gin.Context) {
 		req.PasswordMinLength = 6
 	}
 
-	b, _ := json.Marshal(req)
-
-	var setting models.SystemSetting
-	h.db.Where("config_key = ?", securityConfigKey).First(&setting)
-	setting.ConfigKey = securityConfigKey
-	setting.Type = "security"
-	setting.Value = string(b)
-	if setting.ID == 0 {
-		if err := h.db.Create(&setting).Error; err != nil {
-			logger.Error("建立安全設定失敗: %v", err)
-			response.InternalError(c, "儲存安全設定失敗")
-			return
-		}
-	} else {
-		if err := h.db.Save(&setting).Error; err != nil {
-			logger.Error("更新安全設定失敗: %v", err)
-			response.InternalError(c, "儲存安全設定失敗")
-			return
-		}
+	if err := h.svc.SaveSecurityConfig(c.Request.Context(), &req); err != nil {
+		logger.Error("儲存安全設定失敗: %v", err)
+		response.InternalError(c, "儲存安全設定失敗")
+		return
 	}
-
 	logger.Info("安全設定更新成功")
 	response.OK(c, gin.H{"message": "安全設定儲存成功"})
 }
 
-// loadSecurityConfig 從 DB 讀取安全設定，找不到時回傳預設值
-func (h *SystemSecurityHandler) loadSecurityConfig() (*models.SystemSecurityConfig, error) {
-	var setting models.SystemSetting
-	err := h.db.Where("config_key = ?", securityConfigKey).First(&setting).Error
-	if err != nil {
-		// 找不到記錄時回傳預設值（非錯誤）
-		if err == gorm.ErrRecordNotFound {
-			cfg := models.GetDefaultSystemSecurityConfig()
-			return &cfg, nil
-		}
-		return nil, err
-	}
-	var cfg models.SystemSecurityConfig
-	if err := json.Unmarshal([]byte(setting.Value), &cfg); err != nil {
-		def := models.GetDefaultSystemSecurityConfig()
-		return &def, nil
-	}
-	return &cfg, nil
-}
+
 
 // ─── API Token 管理 ───────────────────────────────────────────────────────────
 
@@ -123,8 +92,11 @@ type apiTokenResponse struct {
 func (h *SystemSecurityHandler) ListAPITokens(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	var tokens []models.APIToken
-	h.db.Where("user_id = ?", userID).Order("created_at desc").Find(&tokens)
+	tokens, err := h.svc.ListAPITokens(c.Request.Context(), userID.(uint))
+	if err != nil {
+		response.InternalError(c, err.Error())
+		return
+	}
 
 	result := make([]apiTokenResponse, 0, len(tokens))
 	for _, t := range tokens {
@@ -197,7 +169,7 @@ func (h *SystemSecurityHandler) CreateAPIToken(c *gin.Context) {
 		Scopes:    scopesJSON,
 		ExpiresAt: expiresAt,
 	}
-	if err := h.db.Create(&token).Error; err != nil {
+	if err := h.svc.CreateAPIToken(c.Request.Context(), &token); err != nil {
 		logger.Error("建立 API Token 失敗: %v", err)
 		response.InternalError(c, "建立 Token 失敗")
 		return
@@ -220,14 +192,13 @@ func (h *SystemSecurityHandler) DeleteAPIToken(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	tokenID := c.Param("id")
 
-	result := h.db.Where("id = ? AND user_id = ?", tokenID, userID).Delete(&models.APIToken{})
-	if result.Error != nil {
-		logger.Error("撤銷 API Token 失敗: %v", result.Error)
+	tokenIDUint, _ := strconv.ParseUint(tokenID, 10, 64)
+	if err := h.svc.DeleteAPIToken(c.Request.Context(), uint(tokenIDUint), userID.(uint)); err != nil {
+		if errors.Is(err, repositories.ErrNotFound) {
+			response.NotFound(c, "Token 不存在或無權限"); return
+		}
+		logger.Error("撤銷 API Token 失敗: %v", err)
 		response.InternalError(c, "撤銷 Token 失敗")
-		return
-	}
-	if result.RowsAffected == 0 {
-		response.NotFound(c, "Token 不存在或無權限")
 		return
 	}
 

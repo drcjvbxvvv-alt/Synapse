@@ -11,7 +11,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // CostHandler 資源成本分析處理器
@@ -20,8 +19,8 @@ type CostHandler struct {
 }
 
 // NewCostHandler 建立處理器
-func NewCostHandler(db *gorm.DB) *CostHandler {
-	return &CostHandler{svc: services.NewCostService(db)}
+func NewCostHandler(svc *services.CostService) *CostHandler {
+	return &CostHandler{svc: svc}
 }
 
 // currentMonth 取得本月字串（YYYY-MM）

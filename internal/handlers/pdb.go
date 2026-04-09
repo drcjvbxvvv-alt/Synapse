@@ -15,18 +15,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"gorm.io/gorm"
 )
 
 // PDBHandler PodDisruptionBudget 處理器
 type PDBHandler struct {
-	db             *gorm.DB
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-func NewPDBHandler(db *gorm.DB, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *PDBHandler {
-	return &PDBHandler{db: db, clusterService: clusterService, k8sMgr: k8sMgr}
+func NewPDBHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *PDBHandler {
+	return &PDBHandler{clusterService: clusterService, k8sMgr: k8sMgr}
 }
 
 // PDBRequest 建立/更新 PDB 請求

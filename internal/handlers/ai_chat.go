@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/k8s"
 	"github.com/shaia/Synapse/internal/models"
@@ -27,10 +26,10 @@ type AIChatHandler struct {
 }
 
 // NewAIChatHandler 建立 AI 對話處理器
-func NewAIChatHandler(db *gorm.DB, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *AIChatHandler {
+func NewAIChatHandler(clusterSvc *services.ClusterService, aiConfigSvc *services.AIConfigService, k8sMgr *k8s.ClusterInformerManager) *AIChatHandler {
 	return &AIChatHandler{
 		clusterService:  clusterSvc,
-		aiConfigService: services.NewAIConfigService(db),
+		aiConfigService: aiConfigSvc,
 		toolExecutor:    services.NewToolExecutor(k8sMgr, clusterSvc),
 	}
 }

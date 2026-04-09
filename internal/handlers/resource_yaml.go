@@ -11,7 +11,6 @@ import (
 	"github.com/shaia/Synapse/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -22,16 +21,14 @@ import (
 
 // ResourceYAMLHandler 通用資源YAML處理器
 type ResourceYAMLHandler struct {
-	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewResourceYAMLHandler 建立通用資源YAML處理器
-func NewResourceYAMLHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *ResourceYAMLHandler {
+func NewResourceYAMLHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *ResourceYAMLHandler {
 	return &ResourceYAMLHandler{
-		db:             db,
 		cfg:            cfg,
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,

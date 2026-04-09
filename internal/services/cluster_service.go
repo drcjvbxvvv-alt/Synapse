@@ -3,11 +3,14 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/shaia/Synapse/internal/features"
 	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/repositories"
 	"github.com/shaia/Synapse/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
@@ -37,15 +40,32 @@ type StoredCluster struct {
 }
 
 // ClusterService 叢集服務
+//
+// P0-4b migration status: dual-path. When features.FlagRepositoryLayer is
+// enabled the service routes reads/writes through the Repository layer;
+// when disabled it falls back to the legacy *gorm.DB path. The legacy path
+// is kept intact so the flag can be flipped off if a production regression
+// shows up. Once the flag is retired, the *gorm.DB field and all
+// `if features.IsEnabled(...)` branches can be deleted together.
 type ClusterService struct {
 	db       *gorm.DB
+	repo     repositories.ClusterRepository
 	cacheMu  sync.RWMutex
 	allCache *allClustersCache
 }
 
-// NewClusterService 建立叢集服務
-func NewClusterService(db *gorm.DB) *ClusterService {
-	return &ClusterService{db: db}
+// NewClusterService builds a ClusterService with both the legacy DB handle
+// and the new Repository. Both are required during the migration — once the
+// flag is retired, the *gorm.DB parameter can be removed.
+func NewClusterService(db *gorm.DB, repo repositories.ClusterRepository) *ClusterService {
+	return &ClusterService{db: db, repo: repo}
+}
+
+// useRepo reports whether the service should dispatch to the Repository layer.
+// Centralising the check makes the branches grep-friendly (look for useRepo())
+// and ensures the dual paths stay in sync.
+func (s *ClusterService) useRepo() bool {
+	return s.repo != nil && features.IsEnabled(features.FlagRepositoryLayer)
 }
 
 // invalidateClusterCache 清除叢集列表快取（Create/Delete 時呼叫）
@@ -56,7 +76,7 @@ func (s *ClusterService) invalidateClusterCache() {
 }
 
 // CreateCluster 建立叢集
-func (s *ClusterService) CreateCluster(cluster *models.Cluster) error {
+func (s *ClusterService) CreateCluster(ctx context.Context, cluster *models.Cluster) error {
 	// 設定建立時間
 	cluster.CreatedAt = time.Now()
 	cluster.UpdatedAt = time.Now()
@@ -66,11 +86,9 @@ func (s *ClusterService) CreateCluster(cluster *models.Cluster) error {
 	if cluster.MonitoringConfig == "" {
 		cluster.MonitoringConfig = "{}"
 	}
-	// 驗證 MonitoringConfig 是否為有效的 JSON
 	if cluster.MonitoringConfig != "" {
 		var testJSON interface{}
 		if err := json.Unmarshal([]byte(cluster.MonitoringConfig), &testJSON); err != nil {
-			// 如果不是有效的 JSON，設定為空物件
 			cluster.MonitoringConfig = "{}"
 		}
 	}
@@ -79,17 +97,20 @@ func (s *ClusterService) CreateCluster(cluster *models.Cluster) error {
 	if cluster.AlertManagerConfig == "" {
 		cluster.AlertManagerConfig = "{}"
 	}
-	// 驗證 AlertManagerConfig 是否為有效的 JSON
 	if cluster.AlertManagerConfig != "" {
 		var testJSON interface{}
 		if err := json.Unmarshal([]byte(cluster.AlertManagerConfig), &testJSON); err != nil {
-			// 如果不是有效的 JSON，設定為空物件
 			cluster.AlertManagerConfig = "{}"
 		}
 	}
 
-	// 儲存到資料庫
-	if err := s.db.Create(cluster).Error; err != nil {
+	var err error
+	if s.useRepo() {
+		err = s.repo.Create(ctx, cluster)
+	} else {
+		err = s.db.WithContext(ctx).Create(cluster).Error
+	}
+	if err != nil {
 		logger.Error("建立叢集失敗", "error", err)
 		return fmt.Errorf("建立叢集失敗: %w", err)
 	}
@@ -100,10 +121,27 @@ func (s *ClusterService) CreateCluster(cluster *models.Cluster) error {
 }
 
 // GetCluster 獲取單個叢集
+//
+// Note: kept ctx-less in P0-4b because this is the single hottest method in
+// the codebase (150+ call sites across 40+ handlers). Pushing ctx through
+// every caller is a separate refactor scoped for P0-4c. Internally the
+// Repository still runs with a background context — tracing is deferred.
 func (s *ClusterService) GetCluster(id uint) (*models.Cluster, error) {
+	ctx := context.Background()
+	if s.useRepo() {
+		cluster, err := s.repo.Get(ctx, id)
+		if err != nil {
+			if errors.Is(err, repositories.ErrNotFound) {
+				return nil, fmt.Errorf("叢集不存在: %d", id)
+			}
+			return nil, fmt.Errorf("獲取叢集失敗: %w", err)
+		}
+		return cluster, nil
+	}
+
 	var cluster models.Cluster
-	if err := s.db.First(&cluster, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	if err := s.db.WithContext(ctx).First(&cluster, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("叢集不存在: %d", id)
 		}
 		return nil, fmt.Errorf("獲取叢集失敗: %w", err)
@@ -112,7 +150,11 @@ func (s *ClusterService) GetCluster(id uint) (*models.Cluster, error) {
 }
 
 // GetAllClusters 獲取所有叢集（附 30 秒 TTL 快取，Create/Delete 時自動失效）
-func (s *ClusterService) GetAllClusters() ([]*models.Cluster, error) {
+//
+// The TTL cache stays in the service layer intentionally — Repository is
+// stateless, and mixing cache state into a data-access object would break
+// the "same repo can be shared across requests" invariant.
+func (s *ClusterService) GetAllClusters(ctx context.Context) ([]*models.Cluster, error) {
 	s.cacheMu.RLock()
 	if s.allCache != nil && time.Now().Before(s.allCache.expiresAt) {
 		result := s.allCache.clusters
@@ -122,9 +164,18 @@ func (s *ClusterService) GetAllClusters() ([]*models.Cluster, error) {
 	s.cacheMu.RUnlock()
 
 	var clusters []*models.Cluster
-	if err := s.db.Find(&clusters).Error; err != nil {
-		logger.Error("獲取叢集列表失敗", "error", err)
-		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
+	if s.useRepo() {
+		list, err := s.repo.Find(ctx)
+		if err != nil {
+			logger.Error("獲取叢集列表失敗", "error", err)
+			return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
+		}
+		clusters = list
+	} else {
+		if err := s.db.WithContext(ctx).Find(&clusters).Error; err != nil {
+			logger.Error("獲取叢集列表失敗", "error", err)
+			return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
+		}
 	}
 
 	s.cacheMu.Lock()
@@ -133,10 +184,38 @@ func (s *ClusterService) GetAllClusters() ([]*models.Cluster, error) {
 	return clusters, nil
 }
 
-// GetConnectableClusters 獲取可連線的叢集（排除 unhealthy 狀態），用於 Informer 預熱
-func (s *ClusterService) GetConnectableClusters() ([]*models.Cluster, error) {
+// GetClustersByIDs 根據 ID 列表獲取叢集集合（用於按權限過濾）
+//
+// Introduced in P0-4b to replace the raw h.db.Where("id IN ?", ids) call
+// that used to live inside ClusterHandler.getAccessibleClusters. Handlers
+// should not touch the DB at all, so the query is pushed down here.
+func (s *ClusterService) GetClustersByIDs(ctx context.Context, ids []uint) ([]*models.Cluster, error) {
+	if len(ids) == 0 {
+		return []*models.Cluster{}, nil
+	}
+	if s.useRepo() {
+		return s.repo.FindByIDs(ctx, ids)
+	}
 	var clusters []*models.Cluster
-	if err := s.db.Where("status != ?", "unhealthy").Find(&clusters).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Find(&clusters).Error; err != nil {
+		return nil, fmt.Errorf("依 ID 查詢叢集列表失敗: %w", err)
+	}
+	return clusters, nil
+}
+
+// GetConnectableClusters 獲取可連線的叢集（排除 unhealthy 狀態），用於 Informer 預熱
+func (s *ClusterService) GetConnectableClusters(ctx context.Context) ([]*models.Cluster, error) {
+	if s.useRepo() {
+		list, err := s.repo.ListConnectable(ctx)
+		if err != nil {
+			logger.Error("獲取可連線叢集列表失敗", "error", err)
+			return nil, fmt.Errorf("獲取可連線叢集列表失敗: %w", err)
+		}
+		return list, nil
+	}
+
+	var clusters []*models.Cluster
+	if err := s.db.WithContext(ctx).Where("status != ?", "unhealthy").Find(&clusters).Error; err != nil {
 		logger.Error("獲取可連線叢集列表失敗", "error", err)
 		return nil, fmt.Errorf("獲取可連線叢集列表失敗: %w", err)
 	}
@@ -144,34 +223,50 @@ func (s *ClusterService) GetConnectableClusters() ([]*models.Cluster, error) {
 }
 
 // UpdateClusterStatus 更新叢集狀態
-func (s *ClusterService) UpdateClusterStatus(id uint, status string, version string) error {
+func (s *ClusterService) UpdateClusterStatus(ctx context.Context, id uint, status string, version string) error {
 	now := time.Now()
-	result := s.db.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
+	fields := map[string]any{
 		"status":         status,
 		"version":        version,
 		"last_heartbeat": &now,
 		"updated_at":     now,
-	})
+	}
 
+	if s.useRepo() {
+		affected, err := s.repo.UpdateFields(ctx, id, fields)
+		if err != nil {
+			return fmt.Errorf("更新叢集狀態失敗: %w", err)
+		}
+		if affected == 0 {
+			return fmt.Errorf("叢集不存在: %d", id)
+		}
+		return nil
+	}
+
+	result := s.db.WithContext(ctx).Model(&models.Cluster{}).Where("id = ?", id).Updates(fields)
 	if result.Error != nil {
 		return fmt.Errorf("更新叢集狀態失敗: %w", result.Error)
 	}
-
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("叢集不存在: %d", id)
 	}
-
 	return nil
 }
 
 // DeleteCluster 刪除叢集
-func (s *ClusterService) DeleteCluster(id uint) error {
-	// 使用事務確保資料一致性
-	return s.db.Transaction(func(tx *gorm.DB) error {
+//
+// Still uses the raw *gorm.DB path because the transaction needs to touch
+// six unrelated tables (ClusterPermission, TerminalSession, TerminalCommand,
+// ArgoCDConfig, OperationLog, ClusterMetrics) — defining Repository methods
+// for all of them just to cover one code-path adds more noise than value.
+// When the flag is retired and the legacy DB handle is removed, the
+// repository's Transaction() + WithTx() API will absorb this block.
+func (s *ClusterService) DeleteCluster(ctx context.Context, id uint) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1. 檢查叢集是否存在
 		var cluster models.Cluster
 		if err := tx.First(&cluster, id).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("叢集不存在: %d", id)
 			}
 			return fmt.Errorf("查詢叢集失敗: %w", err)
@@ -185,15 +280,13 @@ func (s *ClusterService) DeleteCluster(id uint) error {
 		logger.Info("已刪除叢集關聯的權限", "cluster_id", id)
 
 		// 3. 刪除關聯的終端會話（硬刪除）
-		// 先刪除終端命令記錄
 		if err := tx.Unscoped().Exec(`
-			DELETE FROM terminal_commands 
+			DELETE FROM terminal_commands
 			WHERE session_id IN (SELECT id FROM terminal_sessions WHERE cluster_id = ?)
 		`, id).Error; err != nil {
 			logger.Error("刪除終端命令記錄失敗", "cluster_id", id, "error", err)
 			return fmt.Errorf("刪除終端命令記錄失敗: %w", err)
 		}
-		// 再刪除終端會話
 		if err := tx.Unscoped().Where("cluster_id = ?", id).Delete(&models.TerminalSession{}).Error; err != nil {
 			logger.Error("刪除終端會話失敗", "cluster_id", id, "error", err)
 			return fmt.Errorf("刪除終端會話失敗: %w", err)
@@ -210,13 +303,11 @@ func (s *ClusterService) DeleteCluster(id uint) error {
 		// 5. 清空關聯的操作日誌的叢集引用（保留日誌記錄，只清空叢集ID）
 		if err := tx.Model(&models.OperationLog{}).Where("cluster_id = ?", id).Update("cluster_id", nil).Error; err != nil {
 			logger.Error("清空操作日誌叢集引用失敗", "cluster_id", id, "error", err)
-			// 操作日誌清空失敗不阻止刪除
 		}
 
 		// 6. 刪除叢集監控指標
 		if err := tx.Where("cluster_id = ?", id).Delete(&models.ClusterMetrics{}).Error; err != nil {
 			logger.Error("刪除叢集監控指標失敗", "cluster_id", id, "error", err)
-			// 監控指標刪除失敗不阻止刪除
 		}
 
 		// 7. 硬刪除叢集（使用 Unscoped 繞過軟刪除）
@@ -231,31 +322,30 @@ func (s *ClusterService) DeleteCluster(id uint) error {
 }
 
 // GetClusterStats 獲取叢集統計資訊
-func (s *ClusterService) GetClusterStats() (*models.ClusterStats, error) {
+func (s *ClusterService) GetClusterStats(ctx context.Context) (*models.ClusterStats, error) {
 	var stats models.ClusterStats
-	var totalCount, healthyCount, unhealthyCount int64
 
-	// 統計總叢集數
-	if err := s.db.Model(&models.Cluster{}).Count(&totalCount).Error; err != nil {
+	totalCount, err := s.countClusters(ctx, "")
+	if err != nil {
 		return nil, fmt.Errorf("統計總叢集數失敗: %w", err)
 	}
 	stats.TotalClusters = int(totalCount)
 
-	// 統計健康叢集數
-	if err := s.db.Model(&models.Cluster{}).Where("status = ?", "healthy").Count(&healthyCount).Error; err != nil {
+	healthyCount, err := s.countClusters(ctx, "healthy")
+	if err != nil {
 		return nil, fmt.Errorf("統計健康叢集數失敗: %w", err)
 	}
 	stats.HealthyClusters = int(healthyCount)
 
-	// 統計異常叢集數
-	if err := s.db.Model(&models.Cluster{}).Where("status = ?", "unhealthy").Count(&unhealthyCount).Error; err != nil {
+	unhealthyCount, err := s.countClusters(ctx, "unhealthy")
+	if err != nil {
 		return nil, fmt.Errorf("統計異常叢集數失敗: %w", err)
 	}
 	stats.UnhealthyClusters = int(unhealthyCount)
 
 	// 獲取所有叢集的實時指標統計
-	var clusters []*models.Cluster
-	if err := s.db.Find(&clusters).Error; err != nil {
+	clusters, err := s.GetAllClusters(ctx)
+	if err != nil {
 		logger.Error("獲取叢集列表失敗", "error", err)
 		return &stats, nil // 返回基礎統計，不因為指標獲取失敗而整體失敗
 	}
@@ -292,6 +382,20 @@ func (s *ClusterService) GetClusterStats() (*models.ClusterStats, error) {
 	stats.RunningPods = runningPods
 
 	return &stats, nil
+}
+
+// countClusters is a small helper that keeps GetClusterStats tidy by picking
+// the right dual-path count based on the feature flag.
+func (s *ClusterService) countClusters(ctx context.Context, status string) (int64, error) {
+	if s.useRepo() {
+		return s.repo.CountByStatus(ctx, status)
+	}
+	q := s.db.WithContext(ctx).Model(&models.Cluster{})
+	if status != "" {
+		q = q.Where("status = ?", status)
+	}
+	var total int64
+	return total, q.Count(&total).Error
 }
 
 // getClusterRealTimeMetrics 獲取叢集實時指標
@@ -417,16 +521,20 @@ func fetchResourceMetrics(kc *K8sClient) (cpuPercent, memPercent float64) {
 }
 
 // UpdateClusterMetrics 更新叢集指標到資料庫
-func (s *ClusterService) UpdateClusterMetrics(clusterID uint, metrics *models.ClusterMetrics) error {
-	// 使用UPSERT操作，如果記錄存在則更新，不存在則插入
-	return s.db.Save(metrics).Error
+//
+// Still uses Save() directly — ClusterMetrics has a compound key (cluster_id
+// is the logical primary) and GORM's Save() handles the upsert semantics
+// implicitly. The Repository layer has no dedicated metrics API; this call
+// keeps the legacy path until a ClusterMetricsRepository shows up.
+func (s *ClusterService) UpdateClusterMetrics(ctx context.Context, clusterID uint, metrics *models.ClusterMetrics) error {
+	return s.db.WithContext(ctx).Save(metrics).Error
 }
 
 // GetClusterMetrics 獲取叢集指標
-func (s *ClusterService) GetClusterMetrics(clusterID uint) (*models.ClusterMetrics, error) {
+func (s *ClusterService) GetClusterMetrics(ctx context.Context, clusterID uint) (*models.ClusterMetrics, error) {
 	var metrics models.ClusterMetrics
-	if err := s.db.Where("cluster_id = ?", clusterID).First(&metrics).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	if err := s.db.WithContext(ctx).Where("cluster_id = ?", clusterID).First(&metrics).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // 沒有找到指標記錄，返回nil而不是錯誤
 		}
 		return nil, fmt.Errorf("獲取叢集指標失敗: %w", err)

@@ -21,7 +21,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -29,7 +28,6 @@ import (
 
 // PodHandler Pod處理器
 type PodHandler struct {
-	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
@@ -37,9 +35,8 @@ type PodHandler struct {
 }
 
 // NewPodHandler 建立Pod處理器
-func NewPodHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *PodHandler {
+func NewPodHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *PodHandler {
 	return &PodHandler{
-		db:             db,
 		cfg:            cfg,
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,

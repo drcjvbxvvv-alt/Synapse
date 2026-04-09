@@ -13,19 +13,17 @@ import (
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"gorm.io/gorm"
 )
 
 // CrossClusterHandler 跨叢集統一工作負載檢視
 type CrossClusterHandler struct {
-	db            *gorm.DB
 	clusterSvc    *services.ClusterService
 	permissionSvc *services.PermissionService
 	k8sMgr        *k8s.ClusterInformerManager
 }
 
-func NewCrossClusterHandler(db *gorm.DB, clusterSvc *services.ClusterService, permissionSvc *services.PermissionService, k8sMgr *k8s.ClusterInformerManager) *CrossClusterHandler {
-	return &CrossClusterHandler{db: db, clusterSvc: clusterSvc, permissionSvc: permissionSvc, k8sMgr: k8sMgr}
+func NewCrossClusterHandler(clusterSvc *services.ClusterService, permissionSvc *services.PermissionService, k8sMgr *k8s.ClusterInformerManager) *CrossClusterHandler {
+	return &CrossClusterHandler{clusterSvc: clusterSvc, permissionSvc: permissionSvc, k8sMgr: k8sMgr}
 }
 
 // WorkloadSummary 跨叢集工作負載摘要
@@ -51,22 +49,18 @@ func containerImages(containers []corev1.Container) []string {
 	return imgs
 }
 
-func (h *CrossClusterHandler) getAccessibleClusters(userID uint) ([]*models.Cluster, error) {
+func (h *CrossClusterHandler) getAccessibleClusters(ctx context.Context, userID uint) ([]*models.Cluster, error) {
 	clusterIDs, isAll, err := h.permissionSvc.GetUserAccessibleClusterIDs(userID)
 	if err != nil {
 		return nil, err
 	}
 	if isAll {
-		return h.clusterSvc.GetAllClusters()
+		return h.clusterSvc.GetAllClusters(ctx)
 	}
 	if len(clusterIDs) == 0 {
 		return []*models.Cluster{}, nil
 	}
-	var clusters []*models.Cluster
-	if err := h.db.Where("id IN ?", clusterIDs).Find(&clusters).Error; err != nil {
-		return nil, err
-	}
-	return clusters, nil
+	return h.clusterSvc.GetClustersByIDs(ctx, clusterIDs)
 }
 
 // ListCrossClusterWorkloads 跨叢集列出工作負載
@@ -78,14 +72,14 @@ func (h *CrossClusterHandler) ListCrossClusterWorkloads(c *gin.Context) {
 	filterNS := c.Query("namespace")
 	filterCluster := c.Query("cluster")
 
-	clusters, err := h.getAccessibleClusters(userID)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
+	clusters, err := h.getAccessibleClusters(ctx, userID)
 	if err != nil {
 		response.InternalError(c, "取得叢集列表失敗: "+err.Error())
 		return
 	}
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
-	defer cancel()
 
 	var results []WorkloadSummary
 
@@ -178,14 +172,15 @@ func (h *CrossClusterHandler) ListCrossClusterWorkloads(c *gin.Context) {
 // GET /api/v1/workloads/stats
 func (h *CrossClusterHandler) GetCrossClusterStats(c *gin.Context) {
 	userID := c.GetUint("user_id")
-	clusters, err := h.getAccessibleClusters(userID)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
+	clusters, err := h.getAccessibleClusters(ctx, userID)
 	if err != nil {
 		response.InternalError(c, "取得叢集列表失敗: "+err.Error())
 		return
 	}
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
-	defer cancel()
 
 	type ClusterStats struct {
 		ClusterID    uint   `json:"clusterId"`

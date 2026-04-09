@@ -39,7 +39,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		AuthType: c.Query("auth_type"),
 	}
 
-	users, total, err := h.userService.ListUsers(params)
+	users, total, err := h.userService.ListUsers(c.Request.Context(), params)
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
@@ -56,7 +56,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetUser(uint(id))
+	user, err := h.userService.GetUser(c.Request.Context(), uint(id))
 	if err != nil {
 		response.FromError(c, err)
 		return
@@ -73,7 +73,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.CreateUser(&req)
+	user, err := h.userService.CreateUser(c.Request.Context(), &req)
 	if err != nil {
 		response.FromError(c, err)
 		return
@@ -97,7 +97,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.UpdateUser(uint(id), &req)
+	user, err := h.userService.UpdateUser(c.Request.Context(), uint(id), &req)
 	if err != nil {
 		response.FromError(c, err)
 		return
@@ -121,7 +121,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.DeleteUser(uint(id)); err != nil {
+	if err := h.userService.DeleteUser(c.Request.Context(), uint(id)); err != nil {
 		response.FromError(c, err)
 		return
 	}
@@ -148,7 +148,7 @@ func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.UpdateUserStatus(uint(id), req.Status); err != nil {
+	if err := h.userService.UpdateUserStatus(c.Request.Context(), uint(id), req.Status); err != nil {
 		response.FromError(c, err)
 		return
 	}
@@ -175,7 +175,7 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.ResetPassword(uint(id), req.NewPassword); err != nil {
+	if err := h.userService.ResetPassword(c.Request.Context(), uint(id), req.NewPassword); err != nil {
 		response.FromError(c, err)
 		return
 	}

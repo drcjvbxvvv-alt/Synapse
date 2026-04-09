@@ -16,7 +16,6 @@ import (
 
 	rollouts "github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,16 +31,14 @@ func init() {
 
 // RolloutHandler Rollout處理器
 type RolloutHandler struct {
-	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewRolloutHandler 建立Rollout處理器
-func NewRolloutHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *RolloutHandler {
+func NewRolloutHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *RolloutHandler {
 	return &RolloutHandler{
-		db:             db,
 		cfg:            cfg,
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,

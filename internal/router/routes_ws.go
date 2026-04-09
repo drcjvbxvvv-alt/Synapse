@@ -10,14 +10,14 @@ import (
 func registerWSRoutes(r *gin.Engine, d *routeDeps) {
 	// WebSocket：建議也加認證
 	ws := r.Group("/ws")
-	ws.Use(middleware.AuthRequired(d.cfg.JWT.Secret))
+	ws.Use(middleware.AuthRequired(d.cfg.JWT.Secret, d.tokenBlacklist))
 	{
 		// 終端處理器（注入審計服務）
 		kctl := handlers.NewKubectlTerminalHandler(d.clusterSvc, d.auditSvc)
 		ssh := handlers.NewSSHHandler(d.auditSvc)
 		podTerminal := handlers.NewPodTerminalHandler(d.clusterSvc, d.auditSvc, d.k8sMgr)
 		kubectlPod := handlers.NewKubectlPodTerminalHandler(d.clusterSvc, d.auditSvc, d.k8sMgr)
-		podHandler := handlers.NewPodHandler(d.db, d.cfg, d.clusterSvc, d.k8sMgr)
+		podHandler := handlers.NewPodHandler(d.cfg, d.clusterSvc, d.k8sMgr)
 		logCenterHandler := handlers.NewLogCenterHandler(d.clusterSvc, d.k8sMgr)
 
 		// 節點 SSH 終端（需要平臺管理員權限）

@@ -10,20 +10,17 @@ import (
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
 	"github.com/shaia/Synapse/pkg/logger"
-	"gorm.io/gorm"
 )
 
 // GatewayHandler 管理 Gateway API 資源（Phase 1：唯讀）
 type GatewayHandler struct {
-	db             *gorm.DB
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewGatewayHandler 建立 GatewayHandler
-func NewGatewayHandler(db *gorm.DB, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *GatewayHandler {
+func NewGatewayHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *GatewayHandler {
 	return &GatewayHandler{
-		db:             db,
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,
 	}

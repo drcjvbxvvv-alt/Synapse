@@ -13,6 +13,7 @@ import (
 )
 
 // SystemSettingHandler 系統設定處理器
+// P0-4c: db retained only for getMonitoringClusters; pending Wave 3 extraction.
 type SystemSettingHandler struct {
 	db                    *gorm.DB
 	ldapService           *services.LDAPService
@@ -22,13 +23,19 @@ type SystemSettingHandler struct {
 }
 
 // NewSystemSettingHandler 建立系統設定處理器
-func NewSystemSettingHandler(db *gorm.DB, grafanaService *services.GrafanaService) *SystemSettingHandler {
+func NewSystemSettingHandler(
+	db *gorm.DB,
+	ldapSvc *services.LDAPService,
+	sshSvc *services.SSHSettingService,
+	grafanaSettingSvc *services.GrafanaSettingService,
+	grafanaSvc *services.GrafanaService,
+) *SystemSettingHandler {
 	return &SystemSettingHandler{
 		db:                    db,
-		ldapService:           services.NewLDAPService(db),
-		sshSettingService:     services.NewSSHSettingService(db),
-		grafanaSettingService: services.NewGrafanaSettingService(db),
-		grafanaService:        grafanaService,
+		ldapService:           ldapSvc,
+		sshSettingService:     sshSvc,
+		grafanaSettingService: grafanaSettingSvc,
+		grafanaService:        grafanaSvc,
 	}
 }
 

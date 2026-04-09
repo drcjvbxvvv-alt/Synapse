@@ -16,7 +16,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,16 +25,14 @@ import (
 
 // IngressHandler Ingress處理器
 type IngressHandler struct {
-	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
 // NewIngressHandler 建立Ingress處理器
-func NewIngressHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *IngressHandler {
+func NewIngressHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *IngressHandler {
 	return &IngressHandler{
-		db:             db,
 		cfg:            cfg,
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,

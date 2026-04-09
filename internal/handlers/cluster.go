@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -22,8 +21,12 @@ import (
 )
 
 // ClusterHandler 叢集處理器
+//
+// P0-4b: the raw *gorm.DB field was removed. All persistence goes through
+// the injected services (ClusterService, MonitoringConfigService, …). If a
+// handler method needs a new query, add it to the right service instead of
+// re-adding h.db.
 type ClusterHandler struct {
-	db               *gorm.DB
 	cfg              *config.Config
 	clusterService   *services.ClusterService
 	k8sMgr           *k8s.ClusterInformerManager
@@ -33,11 +36,23 @@ type ClusterHandler struct {
 }
 
 // NewClusterHandler 建立叢集處理器
-func NewClusterHandler(db *gorm.DB, cfg *config.Config, mgr *k8s.ClusterInformerManager, promService *services.PrometheusService, monitoringCfgSvc *services.MonitoringConfigService, permSvc *services.PermissionService) *ClusterHandler {
+//
+// P0-4b: accepts a shared *services.ClusterService instead of building its
+// own. Previously the handler instantiated NewClusterService(db) directly,
+// which defeated dependency injection and, post-P0-4b, would have required
+// the handler to know about the Repository layer. Now the router passes
+// d.clusterSvc so Repository/flag wiring stays in one place.
+func NewClusterHandler(
+	cfg *config.Config,
+	mgr *k8s.ClusterInformerManager,
+	clusterSvc *services.ClusterService,
+	promService *services.PrometheusService,
+	monitoringCfgSvc *services.MonitoringConfigService,
+	permSvc *services.PermissionService,
+) *ClusterHandler {
 	return &ClusterHandler{
-		db:               db,
 		cfg:              cfg,
-		clusterService:   services.NewClusterService(db),
+		clusterService:   clusterSvc,
 		k8sMgr:           mgr,
 		promService:      promService,
 		monitoringCfgSvc: monitoringCfgSvc,
@@ -71,7 +86,7 @@ func (h *ClusterHandler) GetClusters(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	// 獲取使用者可訪問的叢集
-	clusters, err := h.getAccessibleClusters(userID)
+	clusters, err := h.getAccessibleClusters(c.Request.Context(), userID)
 	if err != nil {
 		logger.Error("獲取叢集列表失敗", "error", err)
 		response.InternalError(c, "獲取叢集列表失敗: "+err.Error())
@@ -221,7 +236,7 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 	}
 
 	// 儲存到資料庫
-	err = h.clusterService.CreateCluster(cluster)
+	err = h.clusterService.CreateCluster(c.Request.Context(), cluster)
 	if err != nil {
 		logger.Error("儲存叢集資訊失敗", "error", err)
 		response.InternalError(c, "儲存叢集資訊失敗: "+err.Error())
@@ -293,7 +308,7 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 		h.k8sMgr.StopForCluster(clusterID)
 	}
 
-	err = h.clusterService.DeleteCluster(clusterID)
+	err = h.clusterService.DeleteCluster(c.Request.Context(), clusterID)
 	if err != nil {
 		// 檢查是否是叢集不存在的錯誤
 		if strings.Contains(err.Error(), "叢集不存在") {
@@ -311,7 +326,7 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 func (h *ClusterHandler) GetClusterStats(c *gin.Context) {
 	logger.Info("獲取叢集統計")
 
-	stats, err := h.clusterService.GetClusterStats()
+	stats, err := h.clusterService.GetClusterStats(c.Request.Context())
 	if err != nil {
 		logger.Error("獲取叢集統計失敗", "error", err)
 		response.InternalError(c, "獲取叢集統計失敗: "+err.Error())
@@ -396,9 +411,8 @@ func (h *ClusterHandler) GetClusterOverview(c *gin.Context) {
 
 // getContainerSubnetIPs 獲取容器子網IP資訊
 func (h *ClusterHandler) getContainerSubnetIPs(ctx context.Context, cluster *models.Cluster) (*models.ContainerSubnetIPs, error) {
-	// 獲取監控配置
-	monitoringConfigService := services.NewMonitoringConfigService(h.db)
-	config, err := monitoringConfigService.GetMonitoringConfig(cluster.ID)
+	// 獲取監控配置（使用注入的服務，不再從 h.db 重新構造）
+	config, err := h.monitoringCfgSvc.GetMonitoringConfig(cluster.ID)
 	if err != nil {
 		return nil, fmt.Errorf("獲取監控配置失敗: %w", err)
 	}
@@ -408,9 +422,8 @@ func (h *ClusterHandler) getContainerSubnetIPs(ctx context.Context, cluster *mod
 		return nil, fmt.Errorf("監控功能已禁用")
 	}
 
-	// 查詢容器子網IP資訊
-	prometheusService := services.NewPrometheusService()
-	return prometheusService.QueryContainerSubnetIPs(ctx, config)
+	// 查詢容器子網IP資訊（使用注入的 Prometheus 服務）
+	return h.promService.QueryContainerSubnetIPs(ctx, config)
 }
 
 /*
@@ -740,22 +753,23 @@ func extractLatestValueFromResponse(resp *models.MetricsResponse) float64 {
 }
 
 // getAccessibleClusters 獲取使用者可訪問的叢集列表
-func (h *ClusterHandler) getAccessibleClusters(userID uint) ([]*models.Cluster, error) {
+//
+// P0-4b: the "filter by IDs" branch used to run a raw h.db.Where("id IN ?")
+// query straight from the handler. That has been pushed down into
+// ClusterService.GetClustersByIDs so the handler no longer touches the DB
+// directly and the Repository layer can own the IN-clause translation.
+func (h *ClusterHandler) getAccessibleClusters(ctx context.Context, userID uint) ([]*models.Cluster, error) {
 	clusterIDs, isAll, err := h.permissionSvc.GetUserAccessibleClusterIDs(userID)
 	if err != nil {
 		return nil, err
 	}
 	if isAll {
-		return h.clusterService.GetAllClusters()
+		return h.clusterService.GetAllClusters(ctx)
 	}
 	if len(clusterIDs) == 0 {
 		return []*models.Cluster{}, nil
 	}
-	var clusters []*models.Cluster
-	if err := h.db.Where("id IN ?", clusterIDs).Find(&clusters).Error; err != nil {
-		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
-	}
-	return clusters, nil
+	return h.clusterService.GetClustersByIDs(ctx, clusterIDs)
 }
 
 // maxInt 返回較大的整數，避免出現負數（例如 worker = total - 1）

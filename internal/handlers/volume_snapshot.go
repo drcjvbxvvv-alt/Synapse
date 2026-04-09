@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"gorm.io/gorm"
 )
 
 // ─── GVRs ───────────────────────────────────────────────────────────────────
@@ -31,13 +30,12 @@ var (
 // ─── Handler ────────────────────────────────────────────────────────────────
 
 type VolumeSnapshotHandler struct {
-	db             *gorm.DB
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-func NewVolumeSnapshotHandler(db *gorm.DB, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *VolumeSnapshotHandler {
-	return &VolumeSnapshotHandler{db: db, clusterService: clusterService, k8sMgr: k8sMgr}
+func NewVolumeSnapshotHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *VolumeSnapshotHandler {
+	return &VolumeSnapshotHandler{clusterService: clusterService, k8sMgr: k8sMgr}
 }
 
 // dynClient 共用輔助：取得 dynamic client

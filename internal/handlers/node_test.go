@@ -48,8 +48,9 @@ func (s *NodeHandlerTestSuite) SetupTest() {
 	s.mock = mock
 
 	cfg := &config.Config{}
-	clusterService := services.NewClusterService(gormDB)
-	s.handler = NewNodeHandler(gormDB, cfg, clusterService, nil, nil, nil)
+	// nil repo → ClusterService falls back to the legacy *gorm.DB path.
+	clusterService := services.NewClusterService(gormDB, nil)
+	s.handler = NewNodeHandler(cfg, clusterService, nil, nil, nil)
 
 	s.router = gin.New()
 	s.router.GET("/api/clusters/:clusterID/nodes", s.handler.GetNodes)

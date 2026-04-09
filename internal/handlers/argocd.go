@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/internal/response"
@@ -14,14 +13,12 @@ import (
 
 // ArgoCDHandler ArgoCD 處理器
 type ArgoCDHandler struct {
-	db        *gorm.DB
 	argoCDSvc *services.ArgoCDService
 }
 
 // NewArgoCDHandler 建立 ArgoCD 處理器
-func NewArgoCDHandler(db *gorm.DB, argoCDSvc *services.ArgoCDService) *ArgoCDHandler {
+func NewArgoCDHandler(argoCDSvc *services.ArgoCDService) *ArgoCDHandler {
 	return &ArgoCDHandler{
-		db:        db,
 		argoCDSvc: argoCDSvc,
 	}
 }

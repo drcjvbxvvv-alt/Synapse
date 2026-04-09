@@ -15,7 +15,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -26,14 +25,13 @@ import (
 )
 
 type JobHandler struct {
-	db             *gorm.DB
 	cfg            *config.Config
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
 }
 
-func NewJobHandler(db *gorm.DB, cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *JobHandler {
-	return &JobHandler{db: db, cfg: cfg, clusterService: clusterService, k8sMgr: k8sMgr}
+func NewJobHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *JobHandler {
+	return &JobHandler{cfg: cfg, clusterService: clusterService, k8sMgr: k8sMgr}
 }
 
 type JobInfo struct {

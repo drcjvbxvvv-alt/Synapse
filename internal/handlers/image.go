@@ -60,21 +60,21 @@ func (h *ImageHandler) SyncImages(c *gin.Context) {
 		return
 	}
 
+	total := 0
+	now := time.Now()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
+	defer cancel()
+
 	var clusters []*models.Cluster
 	if isAll {
-		clusters, err = h.clusterService.GetAllClusters()
+		clusters, err = h.clusterService.GetAllClusters(ctx)
 	} else if len(clusterIDs) > 0 {
-		err = h.db.Where("id IN ?", clusterIDs).Find(&clusters).Error
+		clusters, err = h.clusterService.GetClustersByIDs(ctx, clusterIDs)
 	}
 	if err != nil {
 		response.InternalError(c, "取得叢集列表失敗: "+err.Error())
 		return
 	}
-
-	total := 0
-	now := time.Now()
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
-	defer cancel()
 
 	for _, cluster := range clusters {
 		k8sClient, err := h.k8sMgr.GetK8sClient(cluster)

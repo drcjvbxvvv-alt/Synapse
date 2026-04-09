@@ -46,9 +46,12 @@ func (s *AuthHandlerTestSuite) SetupTest() {
 	s.db = gormDB
 	s.mock = mock
 
-	authSvc := services.NewAuthService(gormDB, "test-secret-key-for-unit-tests-only", 24)
+	// nil permRepo → legacy *gorm.DB path, which is what the sqlmock
+	// expectations below are written against.
+	authSvc := services.NewAuthService(gormDB, "test-secret-key-for-unit-tests-only", 24, nil)
 	opLogSvc := services.NewOperationLogService(gormDB)
-	s.handler = NewAuthHandler(authSvc, opLogSvc)
+	// 測試不涉及 Logout 流程，blacklist 傳 nil 即可；Login/GetProfile handler 不會用到
+	s.handler = NewAuthHandler(authSvc, opLogSvc, nil)
 
 	s.router = gin.New()
 	s.router.POST("/api/auth/login", s.handler.Login)

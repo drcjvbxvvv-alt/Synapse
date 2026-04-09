@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/k8s"
 	"github.com/shaia/Synapse/internal/response"
@@ -23,10 +22,10 @@ type AINLQueryHandler struct {
 	toolExecutor    *services.ToolExecutor
 }
 
-func NewAINLQueryHandler(db *gorm.DB, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *AINLQueryHandler {
+func NewAINLQueryHandler(clusterSvc *services.ClusterService, aiConfigSvc *services.AIConfigService, k8sMgr *k8s.ClusterInformerManager) *AINLQueryHandler {
 	return &AINLQueryHandler{
 		clusterService:  clusterSvc,
-		aiConfigService: services.NewAIConfigService(db),
+		aiConfigService: aiConfigSvc,
 		toolExecutor:    services.NewToolExecutor(k8sMgr, clusterSvc),
 	}
 }

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"regexp"
 	"testing"
 	"time"
@@ -38,7 +39,9 @@ func (s *ClusterServiceTestSuite) SetupTest() {
 
 	s.db = gormDB
 	s.mock = mock
-	s.service = NewClusterService(gormDB)
+	// Pass nil repository → service falls back to the legacy *gorm.DB path,
+	// which is what the sqlmock expectations below are written against.
+	s.service = NewClusterService(gormDB, nil)
 }
 
 // TearDownTest 每個測試後的清理
@@ -64,7 +67,7 @@ func (s *ClusterServiceTestSuite) TestCreateCluster() {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
-	err := s.service.CreateCluster(cluster)
+	err := s.service.CreateCluster(context.Background(), cluster)
 	assert.NoError(s.T(), err)
 	assert.NotZero(s.T(), cluster.ID)
 	assert.NotZero(s.T(), cluster.CreatedAt)
@@ -83,7 +86,7 @@ func (s *ClusterServiceTestSuite) TestCreateCluster_DBError() {
 		WillReturnError(gorm.ErrDuplicatedKey)
 	s.mock.ExpectRollback()
 
-	err := s.service.CreateCluster(cluster)
+	err := s.service.CreateCluster(context.Background(), cluster)
 	assert.Error(s.T(), err)
 }
 
@@ -139,7 +142,7 @@ func (s *ClusterServiceTestSuite) TestGetAllClusters_Success() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters`")).
 		WillReturnRows(rows)
 
-	clusters, err := s.service.GetAllClusters()
+	clusters, err := s.service.GetAllClusters(context.Background())
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), clusters, 2)
 	assert.Equal(s.T(), "cluster-1", clusters[0].Name)
@@ -157,7 +160,7 @@ func (s *ClusterServiceTestSuite) TestGetAllClusters_Empty() {
 	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters`")).
 		WillReturnRows(rows)
 
-	clusters, err := s.service.GetAllClusters()
+	clusters, err := s.service.GetAllClusters(context.Background())
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), clusters, 0)
 }
@@ -169,7 +172,7 @@ func (s *ClusterServiceTestSuite) TestUpdateClusterStatus_Success() {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
-	err := s.service.UpdateClusterStatus(1, "connected", "v1.29.0")
+	err := s.service.UpdateClusterStatus(context.Background(), 1, "connected", "v1.29.0")
 	assert.NoError(s.T(), err)
 }
 
@@ -216,7 +219,7 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	s.mock.ExpectCommit()
 
-	err := s.service.DeleteCluster(1)
+	err := s.service.DeleteCluster(context.Background(), 1)
 	assert.NoError(s.T(), err)
 }
 
@@ -228,7 +231,7 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_NotFound() {
 		WillReturnError(gorm.ErrRecordNotFound)
 	s.mock.ExpectRollback()
 
-	err := s.service.DeleteCluster(999)
+	err := s.service.DeleteCluster(context.Background(), 999)
 	assert.Error(s.T(), err)
 	assert.Contains(s.T(), err.Error(), "叢集不存在")
 }

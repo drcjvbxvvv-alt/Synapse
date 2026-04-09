@@ -10,27 +10,28 @@ import (
 	"time"
 
 	"github.com/shaia/Synapse/internal/models"
+	"github.com/shaia/Synapse/internal/repositories"
 	"github.com/shaia/Synapse/internal/response"
+	"github.com/shaia/Synapse/internal/services"
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // NotifyChannelHandler 通知渠道處理器
 type NotifyChannelHandler struct {
-	db *gorm.DB
+	svc *services.NotifyChannelService
 }
 
 // NewNotifyChannelHandler 建立通知渠道處理器
-func NewNotifyChannelHandler(db *gorm.DB) *NotifyChannelHandler {
-	return &NotifyChannelHandler{db: db}
+func NewNotifyChannelHandler(svc *services.NotifyChannelService) *NotifyChannelHandler {
+	return &NotifyChannelHandler{svc: svc}
 }
 
 // ListNotifyChannels GET /system/notify-channels
 func (h *NotifyChannelHandler) ListNotifyChannels(c *gin.Context) {
-	var channels []models.NotifyChannel
-	if err := h.db.Order("created_at DESC").Find(&channels).Error; err != nil {
+	channels, err := h.svc.List(c.Request.Context())
+	if err != nil {
 		response.InternalError(c, "查詢通知渠道失敗")
 		return
 	}
@@ -54,7 +55,7 @@ func (h *NotifyChannelHandler) CreateNotifyChannel(c *gin.Context) {
 		response.BadRequest(c, "名稱、型別和 Webhook URL 為必填")
 		return
 	}
-	if err := h.db.Create(&req).Error; err != nil {
+	if err := h.svc.Create(c.Request.Context(), &req); err != nil {
 		response.InternalError(c, "建立通知渠道失敗")
 		return
 	}
@@ -72,10 +73,10 @@ func (h *NotifyChannelHandler) UpdateNotifyChannel(c *gin.Context) {
 		return
 	}
 
-	var channel models.NotifyChannel
-	if err := h.db.First(&channel, id).Error; err != nil {
-		response.NotFound(c, "通知渠道不存在")
-		return
+	channel, err := h.svc.Get(c.Request.Context(), uint(id))
+	if err != nil {
+		if err == repositories.ErrNotFound { response.NotFound(c, "通知渠道不存在"); return }
+		response.InternalError(c, err.Error()); return
 	}
 
 	var req models.NotifyChannel
@@ -96,7 +97,7 @@ func (h *NotifyChannelHandler) UpdateNotifyChannel(c *gin.Context) {
 	channel.Description = req.Description
 	channel.Enabled = req.Enabled
 
-	if err := h.db.Save(&channel).Error; err != nil {
+	if err := h.svc.Save(c.Request.Context(), channel); err != nil {
 		response.InternalError(c, "更新通知渠道失敗")
 		return
 	}
@@ -113,7 +114,7 @@ func (h *NotifyChannelHandler) DeleteNotifyChannel(c *gin.Context) {
 		response.BadRequest(c, "無效的 ID")
 		return
 	}
-	if err := h.db.Delete(&models.NotifyChannel{}, id).Error; err != nil {
+	if err := h.svc.Delete(c.Request.Context(), uint(id)); err != nil {
 		response.InternalError(c, "刪除通知渠道失敗")
 		return
 	}
@@ -133,13 +134,13 @@ func (h *NotifyChannelHandler) TestNotifyChannel(c *gin.Context) {
 		return
 	}
 
-	var channel models.NotifyChannel
-	if err := h.db.First(&channel, id).Error; err != nil {
-		response.NotFound(c, "通知渠道不存在")
-		return
+	channel, err := h.svc.Get(c.Request.Context(), uint(id))
+	if err != nil {
+		if err == repositories.ErrNotFound { response.NotFound(c, "通知渠道不存在"); return }
+		response.InternalError(c, err.Error()); return
 	}
 
-	if err := sendTestNotification(&channel); err != nil {
+	if err := sendTestNotification(channel); err != nil {
 		logger.Error("測試通知失敗", "channel", channel.Name, "error", err)
 		response.BadRequest(c, "測試通知傳送失敗: "+err.Error())
 		return

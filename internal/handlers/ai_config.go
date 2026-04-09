@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/internal/response"
@@ -19,10 +18,8 @@ type AIConfigHandler struct {
 }
 
 // NewAIConfigHandler 建立 AI 配置處理器
-func NewAIConfigHandler(db *gorm.DB) *AIConfigHandler {
-	return &AIConfigHandler{
-		configService: services.NewAIConfigService(db),
-	}
+func NewAIConfigHandler(svc *services.AIConfigService) *AIConfigHandler {
+	return &AIConfigHandler{configService: svc}
 }
 
 // GetConfig 獲取 AI 配置

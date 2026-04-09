@@ -371,8 +371,11 @@ func (h *KubectlPodTerminalHandler) startCleanupWorker() {
 
 // cleanupIdlePods 清理空閒的 kubectl Pod
 func (h *KubectlPodTerminalHandler) cleanupIdlePods() {
-	// 獲取所有叢集
-	clusters, err := h.clusterService.GetAllClusters()
+	// Background cleanup — no HTTP request, use its own timeout-bounded context.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	clusters, err := h.clusterService.GetAllClusters(ctx)
 	if err != nil {
 		logger.Error("獲取叢集列表失敗", "error", err)
 		return

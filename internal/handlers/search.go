@@ -1,13 +1,12 @@
 package handlers
 
 import (
-	"fmt"
+	"context"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/shaia/Synapse/internal/config"
@@ -20,7 +19,6 @@ import (
 
 // SearchHandler 搜尋處理器
 type SearchHandler struct {
-	db            *gorm.DB
 	cfg           *config.Config
 	k8sMgr        *k8s.ClusterInformerManager
 	clusterSvc    *services.ClusterService
@@ -28,9 +26,8 @@ type SearchHandler struct {
 }
 
 // NewSearchHandler 建立搜尋處理器
-func NewSearchHandler(db *gorm.DB, cfg *config.Config, k8sMgr *k8s.ClusterInformerManager, clusterSvc *services.ClusterService, permSvc *services.PermissionService) *SearchHandler {
+func NewSearchHandler(cfg *config.Config, k8sMgr *k8s.ClusterInformerManager, clusterSvc *services.ClusterService, permSvc *services.PermissionService) *SearchHandler {
 	return &SearchHandler{
-		db:            db,
 		cfg:           cfg,
 		k8sMgr:        k8sMgr,
 		clusterSvc:    clusterSvc,
@@ -63,7 +60,7 @@ func (h *SearchHandler) GlobalSearch(c *gin.Context) {
 	logger.Info("全域性搜尋: %s", query)
 
 	// 獲取使用者可訪問的叢集
-	clusters, err := h.getAccessibleClusters(c.GetUint("user_id"))
+	clusters, err := h.getAccessibleClusters(c.Request.Context(), c.GetUint("user_id"))
 	if err != nil {
 		logger.Error("獲取叢集列表失敗", "error", err)
 		response.InternalError(c, "獲取叢集列表失敗")
@@ -154,7 +151,7 @@ func (h *SearchHandler) QuickSearch(c *gin.Context) {
 	logger.Info("快速搜尋: %s", query)
 
 	// 獲取使用者可訪問的叢集
-	clusters, err := h.getAccessibleClusters(c.GetUint("user_id"))
+	clusters, err := h.getAccessibleClusters(c.Request.Context(), c.GetUint("user_id"))
 	if err != nil {
 		logger.Error("獲取叢集列表失敗", "error", err)
 		response.InternalError(c, "獲取叢集列表失敗")
@@ -509,22 +506,18 @@ func (h *SearchHandler) searchClusterResources(cluster *models.Cluster, query, q
 }
 
 // getAccessibleClusters 獲取使用者可訪問的叢集列表
-func (h *SearchHandler) getAccessibleClusters(userID uint) ([]*models.Cluster, error) {
+func (h *SearchHandler) getAccessibleClusters(ctx context.Context, userID uint) ([]*models.Cluster, error) {
 	clusterIDs, isAll, err := h.permissionSvc.GetUserAccessibleClusterIDs(userID)
 	if err != nil {
 		return nil, err
 	}
 	if isAll {
-		return h.clusterSvc.GetAllClusters()
+		return h.clusterSvc.GetAllClusters(ctx)
 	}
 	if len(clusterIDs) == 0 {
 		return []*models.Cluster{}, nil
 	}
-	var clusters []*models.Cluster
-	if err := h.db.Where("id IN ?", clusterIDs).Find(&clusters).Error; err != nil {
-		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
-	}
-	return clusters, nil
+	return h.clusterSvc.GetClustersByIDs(ctx, clusterIDs)
 }
 
 // getNodeStatus 獲取節點狀態

@@ -48,8 +48,9 @@ func (s *PodHandlerTestSuite) SetupTest() {
 	s.mock = mock
 
 	cfg := &config.Config{}
-	clusterService := services.NewClusterService(gormDB)
-	s.handler = NewPodHandler(gormDB, cfg, clusterService, nil)
+	// nil repo → ClusterService falls back to the legacy *gorm.DB path.
+	clusterService := services.NewClusterService(gormDB, nil)
+	s.handler = NewPodHandler(cfg, clusterService, nil)
 
 	s.router = gin.New()
 	// 新增叢集 ID 路由參數

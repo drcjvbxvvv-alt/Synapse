@@ -68,7 +68,7 @@ func (h *ResourceHandler) GetNamespaceOccupancy(c *gin.Context) {
 // GetGlobalOverview 取得跨叢集全平台資源彙總
 // GET /api/v1/resources/global/overview
 func (h *ResourceHandler) GetGlobalOverview(c *gin.Context) {
-	overview, err := h.svc.GetGlobalOverview()
+	overview, err := h.svc.GetGlobalOverview(c.Request.Context())
 	if err != nil {
 		logger.Error("全局資源彙總失敗", "error", err)
 		response.InternalError(c, err.Error())
