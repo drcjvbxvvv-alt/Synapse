@@ -19,6 +19,11 @@ import (
 const (
 	JWTIssuer   = "synapse"
 	JWTAudience = "synapse-api"
+
+	// RefreshTokenCookieName 是 httpOnly cookie 的名稱
+	RefreshTokenCookieName = "synapse_refresh_token"
+	// RefreshTokenExpireDays refresh token 有效天數
+	RefreshTokenExpireDays = 7
 )
 
 // LoginResult 登入結果
@@ -219,6 +224,88 @@ func (s *AuthService) authenticateLDAP(username, password string) (*models.User,
 	}
 
 	return &user, nil
+}
+
+// IssueAccessToken 以 refresh token 換新 access token。
+// 流程：驗證 refresh token JWT → 確認 token_type == "refresh" → 從 DB 載入最新使用者資料 → 簽發新 access token。
+func (s *AuthService) IssueAccessToken(refreshTokenStr string) (*LoginResult, error) {
+	token, err := jwt.Parse(
+		refreshTokenStr,
+		func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
+			return []byte(s.jwtSecret), nil
+		},
+		jwt.WithIssuer(JWTIssuer),
+		jwt.WithAudience(JWTAudience),
+		jwt.WithValidMethods([]string{"HS256"}),
+	)
+	if err != nil || !token.Valid {
+		return nil, apierrors.ErrAuthTokenFailed()
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, apierrors.ErrAuthTokenFailed()
+	}
+
+	if tokenType, _ := claims["token_type"].(string); tokenType != "refresh" {
+		return nil, apierrors.ErrAuthTokenFailed()
+	}
+
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return nil, apierrors.ErrAuthTokenFailed()
+	}
+	userID := uint(userIDFloat)
+
+	var user models.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return nil, apierrors.ErrUserNotFound()
+	}
+	if user.Status != "active" {
+		return nil, apierrors.ErrAuthAccountDisabled()
+	}
+
+	tokenString, jti, expiresAt, err := s.generateJWT(&user)
+	if err != nil {
+		return nil, apierrors.ErrAuthTokenFailed()
+	}
+
+	permissions := s.buildPermissions(userID)
+
+	return &LoginResult{
+		Token:       tokenString,
+		JTI:         jti,
+		User:        user,
+		ExpiresAt:   expiresAt,
+		Permissions: permissions,
+	}, nil
+}
+
+// GenerateRefreshToken 生成 refresh token 字串（不儲存到 DB，由 cookie 管理生命週期）
+func (s *AuthService) GenerateRefreshToken(user *models.User) (string, string, error) {
+	now := time.Now()
+	expiresAt := now.Add(RefreshTokenExpireDays * 24 * time.Hour)
+	jti := uuid.NewString()
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"jti":        jti,
+		"iss":        JWTIssuer,
+		"aud":        JWTAudience,
+		"nbf":        now.Unix(),
+		"iat":        now.Unix(),
+		"exp":        expiresAt.Unix(),
+		"user_id":    user.ID,
+		"token_type": "refresh",
+	})
+
+	tokenString, err := token.SignedString([]byte(s.jwtSecret))
+	if err != nil {
+		return "", "", fmt.Errorf("簽名 refresh token 失敗: %w", err)
+	}
+	return tokenString, jti, nil
 }
 
 // generateJWT 生成 JWT token（含 jti/iss/aud/nbf 標準 claims）

@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, App as AntdApp, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -58,13 +58,36 @@ import SecurityDashboard from './pages/security/SecurityDashboard';
 import CertificateList from './pages/security/CertificateList';
 import MultiClusterPage from './pages/multicluster';
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
-import { tokenManager } from './services/authService';
+import { tokenManager, silentRefresh } from './services/authService';
 import { PermissionGuard } from './components/PermissionGuard';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage'
 import PipelineRunDemo from './pages/pipeline/PipelineRunDemo';
 import AutoscalingPage from './pages/workload/AutoscalingPage';
 import './App.css';
+
+// ── Auth 初始化 ────────────────────────────────────────────────────────────
+//
+// 頁面重新整理後 accessToken 為 null，若 localStorage 中有 user 資訊（上次有登入過），
+// 嘗試 silent refresh（用 httpOnly cookie 中的 refresh token）。
+// 期間顯示全頁 Spinner，避免 RequireAuth 誤判為未登入並導向登入頁。
+const useAuthInit = () => {
+  const hasStoredSession = !!localStorage.getItem('user');
+  const alreadyHasToken  = tokenManager.isLoggedIn();
+
+  // 若 memory 已有 token，或 localStorage 無 session 記錄，不需要 refresh
+  const [authReady, setAuthReady] = useState(alreadyHasToken || !hasStoredSession);
+
+  useEffect(() => {
+    if (authReady) return;
+
+    silentRefresh().finally(() => {
+      setAuthReady(true);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return authReady;
+};
 
 // 認證保護元件
 interface RequireAuthProps {
@@ -73,9 +96,8 @@ interface RequireAuthProps {
 
 const RequireAuth: React.FC<RequireAuthProps> = ({ children }) => {
   const location = useLocation();
-  
+
   if (!tokenManager.isLoggedIn()) {
-    // 重定向到登入頁，儲存當前位置
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -93,6 +115,15 @@ const antdLocaleMap: Record<string, typeof zhTW> = {
 const AppContent: React.FC = () => {
   const { i18n } = useTranslation();
   const currentLocale = antdLocaleMap[i18n.language] || zhTW;
+  const authReady = useAuthInit();
+
+  if (!authReady) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <ConfigProvider locale={currentLocale} theme={synapseTheme}>

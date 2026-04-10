@@ -275,4 +275,38 @@ export const tokenManager = {
   },
 };
 
+// ── Silent Refresh ──────────────────────────────────────────────────────────
+//
+// P1：httpOnly cookie 中的 refresh token → 換取新 access token。
+// 頁面重新整理後 accessToken 為 null，呼叫此函式可在不重新登入的情況下
+// 恢復 session。成功時回傳 true，失敗時回傳 false（應導向登入頁）。
+//
+// 注意：此函式使用原生 fetch（而非 axios instance），避免 axios interceptor
+// 偵測到 401 時觸發循環導向邏輯。
+export async function silentRefresh(): Promise<boolean> {
+  try {
+    const baseURL = (import.meta as unknown as { env: { VITE_API_BASE_URL?: string } }).env.VITE_API_BASE_URL || '/api/v1';
+    const res = await fetch(`${baseURL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include', // 傳送 httpOnly cookie
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) return false;
+
+    const body = await res.json();
+    const data = body?.data ?? body;
+    if (!data?.token) return false;
+
+    tokenManager.setToken(data.token);
+    tokenManager.setExpiresAt(data.expires_at);
+    if (data.user) tokenManager.setUser(data.user);
+    if (data.permissions) tokenManager.setPermissions(data.permissions);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export default authService;

@@ -230,6 +230,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		authSvc := services.NewAuthService(db, cfg.JWT.Secret, cfg.JWT.ExpireTime, permissionRepo)
 		authHandler := handlers.NewAuthHandler(authSvc, opLogSvc, tokenBlacklistSvc)
 		auth.POST("/login", middleware.LoginRateLimit(), authHandler.Login)
+		auth.POST("/refresh", authHandler.RefreshToken) // silent refresh with httpOnly cookie
 		// Logout 需要認證才能取得 jti 並加入黑名單
 		auth.POST("/logout", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.Logout)
 		auth.GET("/status", authHandler.GetAuthStatus)

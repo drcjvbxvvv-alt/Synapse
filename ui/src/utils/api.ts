@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { tokenManager } from '../services/authService';
+import { tokenManager, silentRefresh } from '../services/authService';
 
 // P1-6：Tiered timeouts
 // GET  → 60 000 ms (handles both list and detail)
@@ -42,25 +42,62 @@ api.interceptors.request.use(
   }
 );
 
+// 標記是否正在 refresh，防止多個 401 同時觸發多次 refresh
+let isRefreshing = false;
+let refreshQueue: Array<(token: string | null) => void> = [];
+
 api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      const requestUrl = error.config?.url || '';
-      const noRedirectUrls = [
-        '/auth/change-password',
-        '/auth/login',
-      ];
-      const shouldRedirect = !noRedirectUrls.some(url => requestUrl.includes(url));
-      if (shouldRedirect) {
+  (response: AxiosResponse) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retried) {
+      const requestUrl = originalRequest?.url || '';
+      // 這些路由本身就是認證路由，401 直接導登入，不嘗試 refresh
+      const skipRefreshUrls = ['/auth/login', '/auth/refresh', '/auth/change-password'];
+      if (skipRefreshUrls.some(u => requestUrl.includes(u))) {
+        return Promise.reject(error);
+      }
+
+      originalRequest._retried = true;
+
+      // 若已在 refreshing，排隊等待
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          refreshQueue.push((token) => {
+            if (token) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(api(originalRequest));
+            } else {
+              reject(error);
+            }
+          });
+        });
+      }
+
+      isRefreshing = true;
+      const ok = await silentRefresh();
+      isRefreshing = false;
+
+      if (ok) {
+        const newToken = tokenManager.getToken();
+        // 通知排隊中的請求
+        refreshQueue.forEach(cb => cb(newToken));
+        refreshQueue = [];
+        // 重試原始請求
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return api(originalRequest);
+      } else {
+        // refresh 失敗，清除狀態並導向登入
+        refreshQueue.forEach(cb => cb(null));
+        refreshQueue = [];
         tokenManager.clear();
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
       }
     }
+
     return Promise.reject(error);
   }
 );

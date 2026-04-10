@@ -100,6 +100,42 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		})
 	}
 
+	// 簽發 refresh token 並存入 httpOnly cookie
+	refreshToken, _, err := h.authService.GenerateRefreshToken(&result.User)
+	if err != nil {
+		logger.Warn("生成 refresh token 失敗，不影響登入", "error", err)
+	} else {
+		secure := c.Request.TLS != nil
+		c.SetCookie(
+			services.RefreshTokenCookieName,
+			refreshToken,
+			int(services.RefreshTokenExpireDays*24*60*60), // MaxAge in seconds
+			"/api/v1/auth",
+			"",
+			secure,
+			true, // HttpOnly
+		)
+	}
+
+	response.OK(c, result)
+}
+
+// RefreshToken 用 httpOnly cookie 中的 refresh token 換取新的 access token
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	refreshToken, err := c.Cookie(services.RefreshTokenCookieName)
+	if err != nil || refreshToken == "" {
+		response.Unauthorized(c, "缺少 refresh token")
+		return
+	}
+
+	result, err := h.authService.IssueAccessToken(refreshToken)
+	if err != nil {
+		// clear stale cookie
+		c.SetCookie(services.RefreshTokenCookieName, "", -1, "/api/v1/auth", "", false, true)
+		response.FromError(c, err)
+		return
+	}
+
 	response.OK(c, result)
 }
 
@@ -144,6 +180,9 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 			}
 		}
 	}
+
+	// 清除 refresh token cookie
+	c.SetCookie(services.RefreshTokenCookieName, "", -1, "/api/v1/auth", "", false, true)
 
 	logger.Info("使用者登出",
 		"user_id", userID,
