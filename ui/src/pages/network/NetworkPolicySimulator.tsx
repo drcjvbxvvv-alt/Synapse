@@ -38,7 +38,7 @@ const NetworkPolicySimulator: React.FC<Props> = ({ clusterId, namespaces }) => {
         port: values.port || 0,
         protocol: values.protocol || 'TCP',
       });
-      setResult((res as { data?: SimulateResult }).data ?? null);
+      setResult(res as SimulateResult);
     } catch (e) {
       setError(String(e));
     } finally {
