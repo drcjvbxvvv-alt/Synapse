@@ -2,7 +2,7 @@
 
 > 「任何號稱『完美無缺』的系統都是在實驗室裡的玩具，承認缺陷，正是走向偉大的開始。」
 
-**文件版本**：v1.6 — 2026-04-09
+**文件版本**：v1.7 — 2026-04-10
 **審視範圍**：`internal/`、`pkg/`、`cmd/`、`ui/src/`
 **文件目的**：
 1. 明列已知設計缺陷、反模式、技術債
@@ -45,8 +45,8 @@
 | --- | --- | --- | --- |
 | 後端 Go 程式碼行數 | ~78,500 | — | — |
 | 前端 TS/TSX 行數 | ~83,600 | — | — |
-| Handler 檔案數 / 平均行數 | 69 / 428 | < 300 | 超標 43% |
-| 最大 Handler 行數 | 1,339 (rollout.go) | < 500 | 超標 168% |
+| Handler 檔案數 / 平均行數 | ~~69 / 428~~ **134 / 223** | < 300 | ✅ 已達標 |
+| 最大 Handler 行數 | ~~1,339 (rollout.go)~~ **477 (resource_yaml_apply.go)** | < 500 | ✅ 已達標 |
 | 最大前端頁面行數 | 1,398 (CostDashboard) | < 600 | 超標 133% |
 | Service 檔案數 / 平均行數 | 50 / 431 | < 400 | 超標 8% |
 | 後端測試檔案數 | 7 | — | — |
@@ -316,7 +316,10 @@ const token = localStorage.getItem('token');
 
 ### P1-1 Handler 檔案肥胖症
 
-**前 5 大 handler**
+> **狀態：✅ 已完成（2026-04-10）**
+> 所有 handler 檔案已拆分至 < 500 行。134 個 handler 檔案（不含測試），平均 223 行/檔。
+
+**拆分前（前 5 大）**
 
 | 檔案 | 行數 |
 | --- | ---: |
@@ -326,14 +329,42 @@ const token = localStorage.getItem('token');
 | `storage.go` | 1,045 |
 | `pod.go` | 979 |
 
-每個 handler 都包含 10+ 個 endpoint、自建 DTO、自建 converter、自建 validator。可維護性快速下滑。
+**拆分後（前 5 大）**
 
-**重構方向**
+| 檔案 | 行數 |
+| --- | ---: |
+| `resource_yaml_apply.go` | 477 |
+| `ssh_terminal.go` | 458 |
+| `job.go` | 457 |
+| `daemonset.go` | 449 |
+| `vpa.go` | 436 |
 
-1. 按 endpoint group 拆檔：`rollout_list.go / rollout_detail.go / rollout_action.go`
-2. 將 converter 獨立到 `internal/handlers/converters/`
-3. DTO 統一到 `internal/handlers/dto/` 並依賴 `validator/v10` 做 struct tag 驗證
-4. 目標：單檔 < 500 行、單函式 < 80 行
+**已執行拆分**
+
+| 原始檔案 | 拆分結果 |
+| --- | --- |
+| `rollout.go` (1,339) | `rollout_handler.go`, `rollout_related.go`, `rollout_converters.go`, `rollout_ops.go` |
+| `networkpolicy.go` (1,106) | `networkpolicy_handler.go`, `networkpolicy_crud.go`, `networkpolicy_cilium.go` |
+| `deployment.go` (1,084) | `deployment_handler.go`, `deployment_crud.go`, `deployment_ops.go` |
+| `storage.go` (1,045) | `storage_handler.go`, `storage_pvc.go`, `storage_class.go` |
+| `pod.go` (979) | `pod_handler.go`, `pod_operations.go`, `pod_converters.go` |
+| `kubectl_terminal.go` (647) | `kubectl_terminal_handler.go`, `kubectl_terminal_ws.go`, `kubectl_terminal_exec.go`, `kubectl_terminal_helpers.go` |
+| `permission.go` (639) | `permission_handler.go`, `permission_user_group.go`, `permission_cluster.go`, `permission_user.go` |
+| `pod_terminal.go` (594) | `pod_terminal_handler.go`, `pod_terminal_ws.go`, `pod_terminal_exec.go`, `pod_terminal_helpers.go` |
+| `volume_snapshot.go` (578) | `volume_snapshot_handler.go`, `volume_snapshot_crd.go`, `volume_snapshot_velero.go`, `volume_snapshot_converters.go` |
+| `alert.go` (573) | `alert_handler.go`, `alert_alerts.go`, `alert_receiver.go` |
+| `configmap.go` (566) | `configmap_handler.go`, `configmap_crud.go` |
+| `system_setting.go` (559) | `system_setting_handler.go`, `system_setting_grafana.go` |
+| `secret.go` (549) | `secret_handler.go`, `secret_crud.go` |
+| `search.go` (535) | `search_handler.go`, `search_resources.go` |
+| `statefulset.go` (502) | `statefulset_handler.go`, `statefulset_ops.go` |
+
+**拆分策略**
+
+1. Handler struct + constructor + DTOs → `*_handler.go`
+2. CRUD 操作（Create/Update/Delete）→ `*_crud.go` 或 `*_ops.go`
+3. 輔助函式與 converters → `*_converters.go` 或 `*_helpers.go`
+4. 相關子資源操作 → `*_related.go`
 
 ### P1-2 Router 單體檔案
 
@@ -930,7 +961,7 @@ type CreateDeploymentRequest struct {
 > Repository 全面推廣與 Handler 拆分（Sonnet + 範本）；OpenTelemetry 初始化設計與 migration 工具選型（Opus）；Axios timeout/前端批量 refactor（Haiku）。詳見 §十五.2。
 
 - [ ] **P0-4c** Repository 層覆蓋到所有 40 個 handler（Batch 1/2/3 推廣，見 `docs/REFACTOR_HANDLER_GUIDE.md` §11）
-- [ ] **P1-1** Handler 拆分至 < 500 行/檔
+- [x] **P1-1** Handler 拆分至 < 500 行/檔 ✅ (2026-04-10)
 - [ ] **P1-5** 前端頁面肥胖症 Top 10 頁面拆分
 - [ ] **P1-8** Redis RateLimiter 實作
 - [ ] **P1-9** 測試覆蓋率：service ≥ 60%、handler ≥ 40%
