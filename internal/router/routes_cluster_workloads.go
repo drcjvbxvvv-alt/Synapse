@@ -21,6 +21,7 @@ func registerClusterWorkloadRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 		nodes.POST("/:name/uncordon", nodeHandler.UncordonNode)
 		nodes.POST("/:name/drain", nodeHandler.DrainNode)
 		nodes.PATCH("/:name/labels", nodeHandler.PatchNodeLabels)
+		nodes.PATCH("/:name/taints", nodeHandler.PatchNodeTaints)
 		nodes.GET("/:name/metrics", monitoringHandler.GetNodeMetrics)
 	}
 

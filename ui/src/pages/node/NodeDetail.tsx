@@ -307,24 +307,42 @@ const NodeDetail: React.FC = () => {
   };
 
   // 處理汙點操作
-  const handleAddTaint = () => {
+  const handleAddTaint = async () => {
     if (!newTaintKey) {
       message.warning(t('messages.taintKeyRequired'));
       return;
     }
-    
-    message.success(tc('messages.success'));
-    // TODO: 實現新增汙點的API呼叫
-    setNewTaintKey('');
-    setNewTaintValue('');
-    setNewTaintEffect('NoSchedule');
-    setTaintModalVisible(false);
+
+    const current = node?.taints ?? [];
+    const newTaint = {
+      key: newTaintKey,
+      value: newTaintValue,
+      effect: newTaintEffect,
+    };
+    const updated = [...current.filter(t => t.key !== newTaintKey), newTaint];
+
+    try {
+      await nodeService.patchNodeTaints(clusterId!, nodeName!, updated);
+      message.success(tc('messages.success'));
+      setNewTaintKey('');
+      setNewTaintValue('');
+      setNewTaintEffect('NoSchedule');
+      setTaintModalVisible(false);
+      fetchNodeDetail();
+    } catch {
+      message.error(t('messages.fetchError'));
+    }
   };
 
-  const handleRemoveTaint = (taint: NodeTaint) => {
-    message.success(tc('messages.success'));
-    console.log('Remove taint:', taint.key);
-    // TODO: 實現移除汙點的API呼叫
+  const handleRemoveTaint = async (taint: NodeTaint) => {
+    const updated = (node?.taints ?? []).filter(t => t.key !== taint.key);
+    try {
+      await nodeService.patchNodeTaints(clusterId!, nodeName!, updated);
+      message.success(tc('messages.success'));
+      fetchNodeDetail();
+    } catch {
+      message.error(t('messages.fetchError'));
+    }
   };
 
   // 獲取狀態標籤

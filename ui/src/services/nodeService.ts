@@ -58,6 +58,15 @@ export const nodeService = {
     await request.patch(`/clusters/${clusterId}/nodes/${name}/labels`, { labels });
   },
 
+  // 替換節點污點列表（傳入空陣列 = 清除所有污點）
+  patchNodeTaints: async (
+    clusterId: string,
+    name: string,
+    taints: Array<{ key: string; value: string; effect: 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute' }>
+  ): Promise<void> => {
+    await request.patch(`/clusters/${clusterId}/nodes/${name}/taints`, { taints });
+  },
+
   // 驅逐節點 (Drain)
   drainNode: async (
     clusterId: string, 
