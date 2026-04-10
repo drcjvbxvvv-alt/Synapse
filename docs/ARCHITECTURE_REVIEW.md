@@ -922,7 +922,7 @@ type CreateDeploymentRequest struct {
 - [x] **P1-6** Axios timeout 分層 ✅（GET 60s / POST·PUT·DELETE 45s，2026-04-10）
 - [x] **P1-7** 套用全域 ErrorBoundary ✅（2026-04-10；handleReload + retryLabel）
 - [ ] **P1-9** 測試覆蓋率：service ≥ 30%、handler ≥ 20%
-- [ ] 建立 `docs/CONTRIBUTING.md` 與 Code Review Checklist
+- [x] 建立 `docs/CONTRIBUTING.md` 與 Code Review Checklist ✅（含 PR 流程、前後端 checklist、測試與安全規範）
 
 ### Phase 2 — 體質改善（2~3 個月）
 
