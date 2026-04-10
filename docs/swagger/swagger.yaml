@@ -1,0 +1,1892 @@
+basePath: /api/v1
+definitions:
+  gin.H:
+    additionalProperties: {}
+    type: object
+  handlers.AuthStatusResponse:
+    properties:
+      ldap_enabled:
+        type: boolean
+    type: object
+  handlers.ChangePasswordRequest:
+    properties:
+      new_password:
+        minLength: 6
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  handlers.LoginRequest:
+    properties:
+      auth_type:
+        description: 認證型別：local, ldap，預設local
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.UpdateStatusRequest:
+    properties:
+      status:
+        type: string
+    required:
+    - status
+    type: object
+  models.ArgoCDApplication:
+    properties:
+      created_at:
+        description: 時間
+        type: string
+      destination:
+        allOf:
+        - $ref: '#/definitions/models.ArgoCDDestination'
+        description: 目標配置
+      health_status:
+        description: Healthy, Degraded, Progressing, Suspended, Missing, Unknown
+        type: string
+      history:
+        description: 同步歷史
+        items:
+          $ref: '#/definitions/models.ArgoCDSyncHistory'
+        type: array
+      name:
+        type: string
+      namespace:
+        type: string
+      project:
+        type: string
+      reconciled_at:
+        type: string
+      resources:
+        description: 資源樹
+        items:
+          $ref: '#/definitions/models.ArgoCDResource'
+        type: array
+      source:
+        allOf:
+        - $ref: '#/definitions/models.ArgoCDSource'
+        description: 源配置
+      sync_status:
+        description: 狀態
+        type: string
+      synced_revision:
+        description: 同步資訊
+        type: string
+      target_revision:
+        type: string
+    type: object
+  models.ArgoCDConfig:
+    properties:
+      argocd_cluster_name:
+        description: ArgoCD 中的叢集名稱
+        type: string
+      argocd_project:
+        description: ArgoCD 專案名稱
+        type: string
+      auth_type:
+        description: token, username
+        type: string
+      cluster:
+        $ref: '#/definitions/models.Cluster'
+      cluster_id:
+        description: 關聯的 Synapse 叢集
+        type: integer
+      connection_status:
+        description: 狀態
+        type: string
+      created_at:
+        type: string
+      enabled:
+        description: ArgoCD 連線配置
+        type: boolean
+      error_message:
+        type: string
+      git_auth_type:
+        description: ssh, https, token
+        type: string
+      git_branch:
+        description: 預設分支
+        type: string
+      git_path:
+        description: 應用配置路徑，如 /apps
+        type: string
+      git_repo_url:
+        description: Git 倉庫配置
+        type: string
+      git_username:
+        type: string
+      id:
+        type: integer
+      insecure:
+        description: 是否跳過 TLS 驗證
+        type: boolean
+      last_test_at:
+        type: string
+      server_url:
+        description: ArgoCD 伺服器地址，如 https://argocd.example.com
+        type: string
+      updated_at:
+        type: string
+      username:
+        description: ArgoCD 使用者名稱
+        type: string
+    type: object
+  models.ArgoCDDestination:
+    properties:
+      name:
+        description: ArgoCD 叢集名稱
+        type: string
+      namespace:
+        type: string
+      server:
+        type: string
+    type: object
+  models.ArgoCDHelmParam:
+    properties:
+      name:
+        type: string
+      value:
+        type: string
+    type: object
+  models.ArgoCDHelmSource:
+    properties:
+      parameters:
+        items:
+          $ref: '#/definitions/models.ArgoCDHelmParam'
+        type: array
+      value_files:
+        items:
+          type: string
+        type: array
+      values:
+        type: string
+    type: object
+  models.ArgoCDKustomize:
+    properties:
+      images:
+        items:
+          type: string
+        type: array
+    type: object
+  models.ArgoCDResource:
+    properties:
+      group:
+        type: string
+      health:
+        type: string
+      kind:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      namespace:
+        type: string
+      status:
+        type: string
+    type: object
+  models.ArgoCDSource:
+    properties:
+      helm:
+        $ref: '#/definitions/models.ArgoCDHelmSource'
+      kustomize:
+        $ref: '#/definitions/models.ArgoCDKustomize'
+      path:
+        type: string
+      repo_url:
+        type: string
+      target_revision:
+        type: string
+    type: object
+  models.ArgoCDSyncHistory:
+    properties:
+      deployed_at:
+        type: string
+      id:
+        type: integer
+      revision:
+        type: string
+      source:
+        $ref: '#/definitions/models.ArgoCDSource'
+    type: object
+  models.Cluster:
+    properties:
+      alertmanager_config:
+        description: Alertmanager 配置
+        type: string
+      api_server:
+        type: string
+      cert_expire_at:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: integer
+      creator:
+        allOf:
+        - $ref: '#/definitions/models.User'
+        description: 關聯關係
+      id:
+        type: integer
+      labels:
+        description: JSON 格式儲存標籤
+        type: string
+      last_heartbeat:
+        type: string
+      monitoring_config:
+        description: 監控配置
+        type: string
+      name:
+        type: string
+      status:
+        description: healthy, unhealthy, unknown
+        type: string
+      terminal_sessions:
+        items:
+          $ref: '#/definitions/models.TerminalSession'
+        type: array
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  models.ClusterStats:
+    properties:
+      healthy_clusters:
+        type: integer
+      ready_nodes:
+        type: integer
+      running_pods:
+        type: integer
+      total_clusters:
+        type: integer
+      total_nodes:
+        type: integer
+      total_pods:
+        type: integer
+      unhealthy_clusters:
+        type: integer
+    type: object
+  models.ComponentInstance:
+    properties:
+      ip:
+        description: IP地址
+        type: string
+      name:
+        description: 例項名稱/Pod名稱
+        type: string
+      node:
+        description: 所在節點
+        type: string
+      start_time:
+        description: 啟動時間
+        type: integer
+      status:
+        description: 狀態
+        type: string
+    type: object
+  models.ComponentMetrics:
+    properties:
+      db_size:
+        description: 資料庫大小 (bytes，etcd用)
+        type: number
+      error_rate:
+        description: 錯誤率 (%)
+        type: number
+      latency:
+        description: 延遲 (ms)
+        type: number
+      leader_status:
+        description: Leader狀態（etcd/scheduler）
+        type: boolean
+      member_count:
+        description: 成員數量（etcd用）
+        type: integer
+      queue_length:
+        description: 佇列長度
+        type: integer
+      request_rate:
+        description: 請求速率 (req/s)
+        type: number
+    type: object
+  models.ControlPlaneComponent:
+    properties:
+      instances:
+        description: 例項列表（高可用場景）
+        items:
+          $ref: '#/definitions/models.ComponentInstance'
+        type: array
+      last_check_time:
+        description: 最後檢查時間
+        type: integer
+      message:
+        description: 狀態訊息
+        type: string
+      metrics:
+        allOf:
+        - $ref: '#/definitions/models.ComponentMetrics'
+        description: 元件指標
+      name:
+        description: 元件名稱
+        type: string
+      status:
+        description: '狀態: healthy, unhealthy, unknown'
+        type: string
+      type:
+        description: '元件型別: apiserver, scheduler, controller-manager, etcd'
+        type: string
+    type: object
+  models.ControlPlaneStatusResponse:
+    properties:
+      check_time:
+        description: 檢查時間戳
+        type: integer
+      components:
+        description: 元件列表
+        items:
+          $ref: '#/definitions/models.ControlPlaneComponent'
+        type: array
+      overall:
+        description: '整體狀態: healthy, degraded, unhealthy'
+        type: string
+    type: object
+  models.CreateApplicationRequest:
+    properties:
+      auto_sync:
+        description: 同步策略
+        type: boolean
+      dest_namespace:
+        description: 目標配置（使用叢集配置的 ArgoCD 叢集名）
+        type: string
+      helm_parameters:
+        additionalProperties:
+          type: string
+        type: object
+      helm_values:
+        description: Helm 配置（可選）
+        type: string
+      name:
+        type: string
+      namespace:
+        type: string
+      path:
+        description: 源配置（使用叢集配置的 Git 倉庫）
+        type: string
+      project:
+        type: string
+      prune:
+        type: boolean
+      self_heal:
+        type: boolean
+      target_revision:
+        description: 分支/Tag/Commit
+        type: string
+    required:
+    - dest_namespace
+    - name
+    - path
+    type: object
+  models.HealthDiagnosisResponse:
+    properties:
+      category_scores:
+        additionalProperties:
+          type: integer
+        description: 各分類評分
+        type: object
+      diagnosis_time:
+        description: 診斷時間戳
+        type: integer
+      health_score:
+        description: 健康評分 (0-100)
+        type: integer
+      risk_items:
+        description: 風險項列表
+        items:
+          $ref: '#/definitions/models.RiskItem'
+        type: array
+      status:
+        description: '健康狀態: healthy, warning, critical'
+        type: string
+      suggestions:
+        description: 診斷建議
+        items:
+          type: string
+        type: array
+    type: object
+  models.MyPermissionsResponse:
+    properties:
+      allowed_actions:
+        items:
+          type: string
+        type: array
+      cluster_id:
+        type: integer
+      cluster_name:
+        type: string
+      custom_role_ref:
+        type: string
+      namespaces:
+        items:
+          type: string
+        type: array
+      permission_name:
+        type: string
+      permission_type:
+        type: string
+    type: object
+  models.ResourceTopItem:
+    properties:
+      limit:
+        description: 限制值
+        type: number
+      name:
+        description: 名稱
+        type: string
+      namespace:
+        description: 命名空間（workload/pod級別時有值）
+        type: string
+      rank:
+        description: 排名
+        type: integer
+      request:
+        description: 請求值
+        type: number
+      unit:
+        description: 單位
+        type: string
+      usage:
+        description: 使用量
+        type: number
+      usage_rate:
+        description: 使用率 (%)
+        type: number
+    type: object
+  models.ResourceTopResponse:
+    properties:
+      items:
+        description: Top N 列表
+        items:
+          $ref: '#/definitions/models.ResourceTopItem'
+        type: array
+      level:
+        description: 統計級別
+        type: string
+      query_time:
+        description: 查詢時間戳
+        type: integer
+      type:
+        description: 資源型別
+        type: string
+    type: object
+  models.RiskItem:
+    properties:
+      category:
+        description: '分類: node, workload, resource, network, storage'
+        type: string
+      description:
+        description: 描述
+        type: string
+      id:
+        description: 唯一標識
+        type: string
+      namespace:
+        description: 命名空間（如果適用）
+        type: string
+      resource:
+        description: 相關資源名稱
+        type: string
+      severity:
+        description: '嚴重程度: critical, warning, info'
+        type: string
+      solution:
+        description: 解決方案
+        type: string
+      title:
+        description: 標題
+        type: string
+    type: object
+  models.RollbackApplicationRequest:
+    properties:
+      revision_id:
+        type: integer
+    required:
+    - revision_id
+    type: object
+  models.SyncApplicationRequest:
+    properties:
+      dry_run:
+        type: boolean
+      prune:
+        type: boolean
+      resources:
+        description: 指定同步的資源
+        items:
+          type: string
+        type: array
+      revision:
+        type: string
+    type: object
+  models.TerminalCommand:
+    properties:
+      created_at:
+        type: string
+      exit_code:
+        description: 命令退出碼
+        type: integer
+      id:
+        type: integer
+      parsed_cmd:
+        description: 解析後的命令
+        type: string
+      raw_input:
+        description: 原始輸入
+        type: string
+      session:
+        allOf:
+        - $ref: '#/definitions/models.TerminalSession'
+        description: 關聯關係
+      session_id:
+        type: integer
+      timestamp:
+        type: string
+    type: object
+  models.TerminalSession:
+    properties:
+      cluster:
+        $ref: '#/definitions/models.Cluster'
+      cluster_id:
+        type: integer
+      commands:
+        items:
+          $ref: '#/definitions/models.TerminalCommand'
+        type: array
+      container:
+        type: string
+      created_at:
+        type: string
+      end_at:
+        type: string
+      id:
+        type: integer
+      input_size:
+        description: 輸入流大小（位元組）
+        type: integer
+      namespace:
+        type: string
+      node:
+        type: string
+      pod:
+        type: string
+      start_at:
+        type: string
+      status:
+        description: active, closed, error
+        type: string
+      target_ref:
+        description: JSON格式儲存目標引用資訊
+        type: string
+      target_type:
+        description: pod, node, cluster
+        type: string
+      updated_at:
+        type: string
+      user:
+        allOf:
+        - $ref: '#/definitions/models.User'
+        description: 關聯關係
+      user_id:
+        type: integer
+    type: object
+  models.User:
+    properties:
+      auth_type:
+        description: local, ldap
+        type: string
+      created_at:
+        type: string
+      display_name:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      last_login_at:
+        type: string
+      last_login_ip:
+        type: string
+      phone:
+        type: string
+      status:
+        description: active, inactive, locked
+        type: string
+      system_role:
+        description: user, platform_admin, system_admin
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  response.ErrorBody:
+    properties:
+      error:
+        $ref: '#/definitions/response.ErrorDetail'
+    type: object
+  response.ErrorDetail:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  response.PagedListResult:
+    properties:
+      items: {}
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  runbooks.Runbook:
+    properties:
+      id:
+        type: string
+      keywords:
+        items:
+          type: string
+        type: array
+      reasons:
+        items:
+          type: string
+        type: array
+      steps:
+        items:
+          type: string
+        type: array
+      summary:
+        type: string
+      title:
+        type: string
+    type: object
+  services.AbnormalWorkload:
+    properties:
+      clusterId:
+        type: integer
+      clusterName:
+        type: string
+      duration:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      namespace:
+        type: string
+      reason:
+        type: string
+      severity:
+        type: string
+      type:
+        type: string
+    type: object
+  services.ClusterAlertCount:
+    properties:
+      clusterId:
+        type: integer
+      clusterName:
+        type: string
+      firing:
+        type: integer
+      total:
+        type: integer
+    type: object
+  services.ClusterResourceCount:
+    properties:
+      clusterId:
+        type: integer
+      clusterName:
+        type: string
+      value:
+        type: number
+    type: object
+  services.ClusterStatsData:
+    properties:
+      healthy:
+        type: integer
+      total:
+        type: integer
+      unhealthy:
+        type: integer
+      unknown:
+        type: integer
+    type: object
+  services.ClusterTrendSeries:
+    properties:
+      clusterId:
+        type: integer
+      clusterName:
+        type: string
+      dataPoints:
+        items:
+          $ref: '#/definitions/services.TrendDataPoint'
+        type: array
+    type: object
+  services.CreateUserRequest:
+    properties:
+      display_name:
+        type: string
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      phone:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  services.GlobalAlertStats:
+    properties:
+      byCluster:
+        description: 按叢集統計
+        items:
+          $ref: '#/definitions/services.ClusterAlertCount'
+        type: array
+      bySeverity:
+        additionalProperties:
+          type: integer
+        description: 按嚴重程度統計
+        type: object
+      enabledCount:
+        description: 已啟用告警的叢集數
+        type: integer
+      firing:
+        description: 觸發中
+        type: integer
+      pending:
+        description: 等待中
+        type: integer
+      resolved:
+        description: 已解決
+        type: integer
+      suppressed:
+        description: 已抑制
+        type: integer
+      total:
+        description: 告警總數
+        type: integer
+    type: object
+  services.LoginResult:
+    properties:
+      expires_at:
+        type: integer
+      permissions:
+        items:
+          $ref: '#/definitions/models.MyPermissionsResponse'
+        type: array
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  services.NodeStatsData:
+    properties:
+      notReady:
+        type: integer
+      ready:
+        type: integer
+      total:
+        type: integer
+    type: object
+  services.OverviewStatsResponse:
+    properties:
+      clusterStats:
+        $ref: '#/definitions/services.ClusterStatsData'
+      nodeStats:
+        $ref: '#/definitions/services.NodeStatsData'
+      podStats:
+        $ref: '#/definitions/services.PodStatsData'
+      versionDistribution:
+        items:
+          $ref: '#/definitions/services.VersionDistribution'
+        type: array
+    type: object
+  services.PodStatsData:
+    properties:
+      failed:
+        type: integer
+      pending:
+        type: integer
+      running:
+        type: integer
+      succeeded:
+        type: integer
+      total:
+        type: integer
+    type: object
+  services.ResourceDistributionResponse:
+    properties:
+      cpuDistribution:
+        items:
+          $ref: '#/definitions/services.ClusterResourceCount'
+        type: array
+      memoryDistribution:
+        items:
+          $ref: '#/definitions/services.ClusterResourceCount'
+        type: array
+      nodeDistribution:
+        items:
+          $ref: '#/definitions/services.ClusterResourceCount'
+        type: array
+      podDistribution:
+        items:
+          $ref: '#/definitions/services.ClusterResourceCount'
+        type: array
+    type: object
+  services.ResourceUsageData:
+    properties:
+      total:
+        type: number
+      unit:
+        type: string
+      usagePercent:
+        type: number
+      used:
+        type: number
+    type: object
+  services.ResourceUsageResponse:
+    properties:
+      cpu:
+        $ref: '#/definitions/services.ResourceUsageData'
+      memory:
+        $ref: '#/definitions/services.ResourceUsageData'
+      storage:
+        $ref: '#/definitions/services.ResourceUsageData'
+    type: object
+  services.TrendDataPoint:
+    properties:
+      timestamp:
+        type: integer
+      value:
+        type: number
+    type: object
+  services.TrendResponse:
+    properties:
+      nodeTrends:
+        items:
+          $ref: '#/definitions/services.ClusterTrendSeries'
+        type: array
+      podTrends:
+        items:
+          $ref: '#/definitions/services.ClusterTrendSeries'
+        type: array
+    type: object
+  services.UpdateUserRequest:
+    properties:
+      display_name:
+        type: string
+      email:
+        type: string
+      phone:
+        type: string
+    type: object
+  services.VersionDistribution:
+    properties:
+      clusters:
+        items:
+          type: string
+        type: array
+      count:
+        type: integer
+      version:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Synapse Team
+  description: Synapse — Kubernetes 多叢集管理平台 REST API
+  license:
+    name: MIT
+  title: Synapse API
+  version: "1.0"
+paths:
+  /ai/runbooks:
+    get:
+      description: Returns runbooks matching the given reason (e.g. OOMKilled) or
+        keyword.
+      parameters:
+      - description: K8s event reason or keyword
+        in: query
+        name: reason
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/runbooks.Runbook'
+            type: array
+      summary: Search runbooks by reason or keyword
+      tags:
+      - AI
+  /api/v1/clusters/{clusterID}/argocd/applications:
+    get:
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.ArgoCDApplication'
+            type: array
+      summary: 獲取 ArgoCD 應用列表
+      tags:
+      - ArgoCD/GitOps
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 建立請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ArgoCDApplication'
+      summary: 建立 ArgoCD 應用
+      tags:
+      - ArgoCD/GitOps
+  /api/v1/clusters/{clusterID}/argocd/applications/{appName}:
+    delete:
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 應用名稱
+        in: path
+        name: appName
+        required: true
+        type: string
+      - default: true
+        description: 是否級聯刪除資源
+        in: query
+        name: cascade
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: 刪除 ArgoCD 應用
+      tags:
+      - ArgoCD/GitOps
+    get:
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 應用名稱
+        in: path
+        name: appName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ArgoCDApplication'
+      summary: 獲取 ArgoCD 應用詳情
+      tags:
+      - ArgoCD/GitOps
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 應用名稱
+        in: path
+        name: appName
+        required: true
+        type: string
+      - description: 更新請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ArgoCDApplication'
+      summary: 更新 ArgoCD 應用
+      tags:
+      - ArgoCD/GitOps
+  /api/v1/clusters/{clusterID}/argocd/applications/{appName}/resources:
+    get:
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 應用名稱
+        in: path
+        name: appName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.ArgoCDResource'
+            type: array
+      summary: 獲取 ArgoCD 應用資源樹
+      tags:
+      - ArgoCD/GitOps
+  /api/v1/clusters/{clusterID}/argocd/applications/{appName}/rollback:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 應用名稱
+        in: path
+        name: appName
+        required: true
+        type: string
+      - description: 回滾請求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.RollbackApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: 回滾 ArgoCD 應用
+      tags:
+      - ArgoCD/GitOps
+  /api/v1/clusters/{clusterID}/argocd/applications/{appName}/sync:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 應用名稱
+        in: path
+        name: appName
+        required: true
+        type: string
+      - description: 同步請求
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/models.SyncApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: 同步 ArgoCD 應用
+      tags:
+      - ArgoCD/GitOps
+  /api/v1/clusters/{clusterID}/argocd/config:
+    get:
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ArgoCDConfig'
+      summary: 獲取 ArgoCD 配置
+      tags:
+      - ArgoCD/GitOps
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 配置資訊
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/models.ArgoCDConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: 儲存 ArgoCD 配置
+      tags:
+      - ArgoCD/GitOps
+  /api/v1/clusters/{clusterID}/argocd/test-connection:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 配置資訊
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/models.ArgoCDConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: 測試 ArgoCD 連線
+      tags:
+      - ArgoCD/GitOps
+  /api/v1/clusters/{clusterID}/om/control-plane-status:
+    get:
+      consumes:
+      - application/json
+      description: 獲取叢集控制面元件（apiserver, scheduler, controller-manager, etcd）的狀態
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ControlPlaneStatusResponse'
+      summary: 獲取控制面元件狀態
+      tags:
+      - O&M
+  /api/v1/clusters/{clusterID}/om/health-diagnosis:
+    get:
+      consumes:
+      - application/json
+      description: 對叢集進行全面健康診斷，返回健康評分、風險項和診斷建議
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HealthDiagnosisResponse'
+      summary: 獲取叢集健康診斷
+      tags:
+      - O&M
+  /api/v1/clusters/{clusterID}/om/resource-top:
+    get:
+      consumes:
+      - application/json
+      description: 獲取指定資源型別的消耗排行榜
+      parameters:
+      - description: 叢集ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      - description: 資源型別
+        enum:
+        - cpu
+        - memory
+        - disk
+        - network
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: 統計級別
+        enum:
+        - namespace
+        - workload
+        - pod
+        in: query
+        name: level
+        required: true
+        type: string
+      - default: 10
+        description: 返回數量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ResourceTopResponse'
+      summary: 獲取資源消耗 Top N
+      tags:
+      - O&M
+  /api/v1/overview/abnormal-workloads:
+    get:
+      consumes:
+      - application/json
+      description: 返回異常的 Pod、Deployment、StatefulSet 列表
+      parameters:
+      - default: 20
+        description: 返回數量限制
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/services.AbnormalWorkload'
+            type: array
+      summary: 獲取異常工作負載
+      tags:
+      - Overview
+  /api/v1/overview/alert-stats:
+    get:
+      consumes:
+      - application/json
+      description: 返回所有叢集的告警彙總統計
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.GlobalAlertStats'
+      summary: 獲取全域性告警統計
+      tags:
+      - Overview
+  /api/v1/overview/distribution:
+    get:
+      consumes:
+      - application/json
+      description: 返回各叢集的 Pod、Node、CPU、記憶體分佈
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.ResourceDistributionResponse'
+      summary: 獲取資源分佈
+      tags:
+      - Overview
+  /api/v1/overview/resource-usage:
+    get:
+      consumes:
+      - application/json
+      description: 返回 CPU、記憶體、儲存的使用率
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.ResourceUsageResponse'
+      summary: 獲取資源使用率
+      tags:
+      - Overview
+  /api/v1/overview/stats:
+    get:
+      consumes:
+      - application/json
+      description: 返回叢集、節點、Pod 的統計資料以及版本分佈
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.OverviewStatsResponse'
+      summary: 獲取總覽統計資料
+      tags:
+      - Overview
+  /api/v1/overview/trends:
+    get:
+      consumes:
+      - application/json
+      description: 返回 Pod 和 Node 的歷史趨勢資料
+      parameters:
+      - default: 7d
+        description: '時間範圍: 7d, 30d'
+        in: query
+        name: timeRange
+        type: string
+      - default: 1h
+        description: '步長: 1h, 6h, 1d'
+        in: query
+        name: step
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.TrendResponse'
+      summary: 獲取趨勢資料
+      tags:
+      - Overview
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 新舊密碼
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 修改密碼
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 支援 local / ldap 兩種認證方式，成功後回傳 access token
+      parameters:
+      - description: 登入資訊
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.LoginResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: 使用者登入
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: 撤銷當前 access token（加入黑名單），清除 refresh token cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 使用者登出
+      tags:
+      - auth
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 取得目前登入使用者資訊
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      description: 使用 httpOnly cookie 中的 refresh token 無聲換取新 access token（頁面重新整理使用）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.LoginResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Refresh access token
+      tags:
+      - auth
+  /auth/status:
+    get:
+      description: 回傳 LDAP 是否已啟用（供登入頁判斷顯示選項）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AuthStatusResponse'
+      summary: 取得認證系統狀態
+      tags:
+      - auth
+  /clusters:
+    get:
+      parameters:
+      - description: 頁碼
+        in: query
+        name: page
+        type: integer
+      - description: 每頁筆數（最大 200）
+        in: query
+        name: pageSize
+        type: integer
+      - description: 叢集名稱搜尋
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.PagedListResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 取得叢集列表
+      tags:
+      - clusters
+  /clusters/{clusterID}:
+    delete:
+      parameters:
+      - description: 叢集 ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 刪除叢集（平台管理員）
+      tags:
+      - clusters
+    get:
+      parameters:
+      - description: 叢集 ID
+        in: path
+        name: clusterID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Cluster'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 取得叢集詳情
+      tags:
+      - clusters
+  /clusters/import:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Cluster'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 匯入叢集（平台管理員）
+      tags:
+      - clusters
+  /clusters/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ClusterStats'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 取得叢集統計摘要（總叢集數、節點數、Pod 數等）
+      tags:
+      - clusters
+  /clusters/test-connection:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 測試叢集 API Server 連線
+      tags:
+      - clusters
+  /users:
+    get:
+      parameters:
+      - description: 頁碼（預設 1）
+        in: query
+        name: page
+        type: integer
+      - description: 每頁筆數（預設 20，最大 100）
+        in: query
+        name: pageSize
+        type: integer
+      - description: 搜尋使用者名稱 / Email
+        in: query
+        name: search
+        type: string
+      - description: 狀態篩選（active / inactive）
+        in: query
+        name: status
+        type: string
+      - description: 認證類型篩選（local / ldap）
+        in: query
+        name: auth_type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.PagedListResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 取得使用者列表
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 使用者資訊
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 建立使用者（平台管理員）
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      parameters:
+      - description: 使用者 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 刪除使用者（平台管理員）
+      tags:
+      - users
+    get:
+      parameters:
+      - description: 使用者 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 取得單一使用者
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 使用者 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新資訊
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/services.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 更新使用者資訊
+      tags:
+      - users
+  /users/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 使用者 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 狀態（active / inactive）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 啟用 / 停用使用者
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 輸入 "Bearer {token}" 進行認證
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

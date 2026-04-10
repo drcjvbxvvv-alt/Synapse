@@ -42,6 +42,17 @@ type LoginRequest struct {
 }
 
 // Login 使用者登入 - 支援本地密碼和LDAP兩種認證方式
+//
+// @Summary     使用者登入
+// @Description 支援 local / ldap 兩種認證方式，成功後回傳 access token
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body LoginRequest true "登入資訊"
+// @Success     200 {object} services.LoginResult
+// @Failure     400 {object} response.ErrorBody
+// @Failure     401 {object} response.ErrorBody
+// @Router      /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -121,6 +132,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // RefreshToken 用 httpOnly cookie 中的 refresh token 換取新的 access token
+//
+// @Summary     Refresh access token
+// @Description 使用 httpOnly cookie 中的 refresh token 無聲換取新 access token（頁面重新整理使用）
+// @Tags        auth
+// @Produce     json
+// @Success     200 {object} services.LoginResult
+// @Failure     401 {object} response.ErrorBody
+// @Router      /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	refreshToken, err := c.Cookie(services.RefreshTokenCookieName)
 	if err != nil || refreshToken == "" {
@@ -147,6 +166,14 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 //  3. 記錄審計日誌
 //
 // 若 blacklistSvc 尚未啟用（測試場景），僅略過撤銷步驟，其餘流程正常進行。
+// @Summary     使用者登出
+// @Description 撤銷當前 access token（加入黑名單），清除 refresh token cookie
+// @Tags        auth
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200
+// @Failure     401 {object} response.ErrorBody
+// @Router      /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	var userIDPtr *uint
 	var userID uint
@@ -211,6 +238,14 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 }
 
 // GetProfile 獲取使用者資訊
+//
+// @Summary     取得目前登入使用者資訊
+// @Tags        auth
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {object} models.User
+// @Failure     401 {object} response.ErrorBody
+// @Router      /auth/me [get]
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	if userID == 0 {
@@ -233,6 +268,13 @@ type AuthStatusResponse struct {
 }
 
 // GetAuthStatus 獲取認證狀態（無需登入即可訪問）
+//
+// @Summary     取得認證系統狀態
+// @Description 回傳 LDAP 是否已啟用（供登入頁判斷顯示選項）
+// @Tags        auth
+// @Produce     json
+// @Success     200 {object} AuthStatusResponse
+// @Router      /auth/status [get]
 func (h *AuthHandler) GetAuthStatus(c *gin.Context) {
 	ldapEnabled, _ := h.authService.GetAuthStatus()
 
@@ -248,6 +290,17 @@ type ChangePasswordRequest struct {
 }
 
 // ChangePassword 修改密碼（僅限本地使用者）
+//
+// @Summary     修改密碼
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body ChangePasswordRequest true "新舊密碼"
+// @Success     200
+// @Failure     400 {object} response.ErrorBody
+// @Failure     401 {object} response.ErrorBody
+// @Router      /auth/change-password [post]
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	if userID == 0 {

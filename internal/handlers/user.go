@@ -21,6 +21,20 @@ func NewUserHandler(userService *services.UserService) *UserHandler {
 }
 
 // ListUsers 獲取使用者列表
+//
+// @Summary     取得使用者列表
+// @Tags        users
+// @Produce     json
+// @Security    BearerAuth
+// @Param       page      query int    false "頁碼（預設 1）"
+// @Param       pageSize  query int    false "每頁筆數（預設 20，最大 100）"
+// @Param       search    query string false "搜尋使用者名稱 / Email"
+// @Param       status    query string false "狀態篩選（active / inactive）"
+// @Param       auth_type query string false "認證類型篩選（local / ldap）"
+// @Success     200 {object} response.PagedListResult
+// @Failure     401 {object} response.ErrorBody
+// @Failure     403 {object} response.ErrorBody
+// @Router      /users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	page := parsePage(c)
 	pageSize := parsePageSize(c, 20)
@@ -49,6 +63,16 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 }
 
 // GetUser 獲取使用者詳情
+//
+// @Summary     取得單一使用者
+// @Tags        users
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id path int true "使用者 ID"
+// @Success     200 {object} models.User
+// @Failure     401 {object} response.ErrorBody
+// @Failure     404 {object} response.ErrorBody
+// @Router      /users/{id} [get]
 func (h *UserHandler) GetUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -66,6 +90,18 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 }
 
 // CreateUser 建立使用者
+//
+// @Summary     建立使用者（平台管理員）
+// @Tags        users
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body services.CreateUserRequest true "使用者資訊"
+// @Success     200 {object} models.User
+// @Failure     400 {object} response.ErrorBody
+// @Failure     401 {object} response.ErrorBody
+// @Failure     403 {object} response.ErrorBody
+// @Router      /users [post]
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req services.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -84,6 +120,18 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 }
 
 // UpdateUser 更新使用者
+//
+// @Summary     更新使用者資訊
+// @Tags        users
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path int                       true "使用者 ID"
+// @Param       body body services.UpdateUserRequest true "更新資訊"
+// @Success     200 {object} models.User
+// @Failure     400 {object} response.ErrorBody
+// @Failure     404 {object} response.ErrorBody
+// @Router      /users/{id} [put]
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -107,6 +155,16 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 }
 
 // DeleteUser 刪除使用者
+//
+// @Summary     刪除使用者（平台管理員）
+// @Tags        users
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id path int true "使用者 ID"
+// @Success     200
+// @Failure     400 {object} response.ErrorBody
+// @Failure     404 {object} response.ErrorBody
+// @Router      /users/{id} [delete]
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -135,6 +193,17 @@ type UpdateStatusRequest struct {
 }
 
 // UpdateUserStatus 更新使用者狀態
+//
+// @Summary     啟用 / 停用使用者
+// @Tags        users
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path int                 true "使用者 ID"
+// @Param       body body UpdateStatusRequest true "狀態（active / inactive）"
+// @Success     200
+// @Failure     400 {object} response.ErrorBody
+// @Router      /users/{id}/status [put]
 func (h *UserHandler) UpdateUserStatus(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

@@ -917,7 +917,7 @@ type CreateDeploymentRequest struct {
 - [x] **P0-4c** Repository pattern 推廣 ✅（40/40 完成，2026-04-10）
 - [x] **P1-2** 路由拆分 ✅（14 個 routes_*.go 檔，router.go 293 行，2026-04-10）
 - [x] **P1-3** Service Interface 化 ✅（PrometheusQuerier / OMQuerier / MeshQuerier，compile-time guard，2026-04-10）
-- [ ] **P1-4** 導入 swaggo/swag 產生 OpenAPI
+- [x] **P1-4** 導入 swaggo/swag 產生 OpenAPI ✅（docs/swagger/swagger.json，18 routes，2026-04-10）
 - [x] **P1-6** Axios timeout 分層 ✅（GET 60s / POST·PUT·DELETE 45s，2026-04-10）
 - [x] **P1-7** 套用全域 ErrorBoundary ✅（2026-04-10；handleReload + retryLabel）
 - [ ] **P1-9** 測試覆蓋率：service ≥ 30%、handler ≥ 20%
@@ -990,11 +990,11 @@ type CreateDeploymentRequest struct {
 ### Phase 1 — 止血（4–6 週）
 
 **結構性 Criteria：**
-- [ ] Cluster / User / Permission 三個 domain 已走 Repository pattern，`internal/repositories/` 目錄存在
-- [ ] `grep -l '\*gorm.DB' internal/handlers/{cluster,user,permission}*.go` 無結果（DB 不再直接注入 handler）
+- [x] Cluster / User / Permission 三個 domain 已走 Repository pattern，`internal/repositories/` 目錄存在 ✅
+- [x] `grep -l '\*gorm.DB' internal/handlers/{cluster,user,permission}*.go` 無結果（DB 不再直接注入 handler）✅
 - [x] `internal/router/routes_*.go` 檔案數 ≥ 10，`router.go` < 300 行 ✅（14 檔 / 293 行）
 - [x] 前 3 大 service（prometheus / om / mesh）定義 interface 且 handler 持有 interface 而非 struct ✅
-- [ ] `make swag` 產生 `docs/swagger.json`，至少覆蓋 `auth/*` `cluster/*` `user/*`
+- [x] `make swag` 產生 `docs/swagger/swagger.json`，覆蓋 auth(6) / clusters(6) / users(6) ✅
 
 **品質 Criteria：**
 - [ ] Service 測試覆蓋率 ≥ 30%（`go test -cover ./internal/services/...`）

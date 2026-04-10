@@ -2,7 +2,7 @@
 # Synapse Makefile
 # ==========================================
 
-.PHONY: help dev dev-backend dev-frontend dev-air build build-backend build-frontend test test-backend test-frontend test-e2e test-e2e-ui lint lint-backend lint-frontend check docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs swagger clean version
+.PHONY: help dev dev-backend dev-frontend dev-air build build-backend build-frontend test test-backend test-frontend test-e2e test-e2e-ui lint lint-backend lint-frontend check swag swagger docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs clean version
 
 # 变量
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -269,12 +269,20 @@ docs:
 	@echo "$(BLUE)生成文档...$(NC)"
 	@echo "$(YELLOW)文档生成功能待实现$(NC)"
 
-## swagger: 生成 Swagger 文档
-swagger:
-	@echo "$(BLUE)生成 Swagger 文档...$(NC)"
-	@which swag > /dev/null || (echo "$(YELLOW)请安装 swag: go install github.com/swaggo/swag/cmd/swag@latest$(NC)" && exit 1)
-	swag init -g cmd/main.go -o docs/api
-	@echo "$(GREEN)Swagger 文档生成完成: docs/api/$(NC)"
+## swagger: 產生 OpenAPI / Swagger 文件（同 make swag）
+swagger: swag
+
+## swag: 產生 docs/swagger/swagger.json（覆蓋 auth / cluster / user）
+swag:
+	@echo "$(BLUE)產生 Swagger 文件...$(NC)"
+	@which ~/go/bin/swag > /dev/null || (echo "$(YELLOW)請安裝 swag: GOTOOLCHAIN=local go install github.com/swaggo/swag/cmd/swag@v1.16.3$(NC)" && exit 1)
+	~/go/bin/swag init \
+		--generalInfo main.go \
+		--output docs/swagger \
+		--outputTypes json,yaml \
+		--parseDependency \
+		--parseInternal
+	@echo "$(GREEN)Swagger 文件已產生: docs/swagger/swagger.json$(NC)"
 
 ## clean: 清理构建产物
 clean:

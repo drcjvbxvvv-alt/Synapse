@@ -1,3 +1,18 @@
+// @title           Synapse API
+// @version         1.0
+// @description     Synapse — Kubernetes 多叢集管理平台 REST API
+//
+// @contact.name    Synapse Team
+//
+// @license.name    MIT
+//
+// @host            localhost:8080
+// @BasePath        /api/v1
+//
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description 輸入 "Bearer {token}" 進行認證
 package main
 
 import (

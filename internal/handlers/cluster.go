@@ -74,6 +74,17 @@ func maskURL(raw string) string {
 }
 
 // GetClusters 獲取叢集列表（按使用者權限過濾，支援分頁 page/pageSize）
+//
+// @Summary     取得叢集列表
+// @Tags        clusters
+// @Produce     json
+// @Security    BearerAuth
+// @Param       page     query int    false "頁碼"
+// @Param       pageSize query int    false "每頁筆數（最大 200）"
+// @Param       search   query string false "叢集名稱搜尋"
+// @Success     200 {object} response.PagedListResult
+// @Failure     401 {object} response.ErrorBody
+// @Router      /clusters [get]
 func (h *ClusterHandler) GetClusters(c *gin.Context) {
 	page := parsePage(c)
 	pageSize := parsePageSize(c, 20)
@@ -141,6 +152,16 @@ func (h *ClusterHandler) GetClusters(c *gin.Context) {
 }
 
 // ImportCluster 匯入叢集
+//
+// @Summary     匯入叢集（平台管理員）
+// @Tags        clusters
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {object} models.Cluster
+// @Failure     400 {object} response.ErrorBody
+// @Failure     403 {object} response.ErrorBody
+// @Router      /clusters/import [post]
 func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 	logger.Info("匯入叢集")
 
@@ -261,6 +282,16 @@ func (h *ClusterHandler) ImportCluster(c *gin.Context) {
 }
 
 // GetCluster 獲取叢集詳情
+//
+// @Summary     取得叢集詳情
+// @Tags        clusters
+// @Produce     json
+// @Security    BearerAuth
+// @Param       clusterID path int true "叢集 ID"
+// @Success     200 {object} models.Cluster
+// @Failure     401 {object} response.ErrorBody
+// @Failure     404 {object} response.ErrorBody
+// @Router      /clusters/{clusterID} [get]
 func (h *ClusterHandler) GetCluster(c *gin.Context) {
 	idStr := c.Param("clusterID")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -293,6 +324,16 @@ func (h *ClusterHandler) GetCluster(c *gin.Context) {
 }
 
 // DeleteCluster 刪除叢集
+//
+// @Summary     刪除叢集（平台管理員）
+// @Tags        clusters
+// @Produce     json
+// @Security    BearerAuth
+// @Param       clusterID path int true "叢集 ID"
+// @Success     200
+// @Failure     403 {object} response.ErrorBody
+// @Failure     404 {object} response.ErrorBody
+// @Router      /clusters/{clusterID} [delete]
 func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 	idStr := c.Param("clusterID")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -323,6 +364,14 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 }
 
 // GetClusterStats 獲取叢集統計
+//
+// @Summary     取得叢集統計摘要（總叢集數、節點數、Pod 數等）
+// @Tags        clusters
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {object} models.ClusterStats
+// @Failure     401 {object} response.ErrorBody
+// @Router      /clusters/stats [get]
 func (h *ClusterHandler) GetClusterStats(c *gin.Context) {
 	logger.Info("獲取叢集統計")
 
@@ -584,6 +633,15 @@ func (h *ClusterHandler) GetClusterMetrics(c *gin.Context) {
 }
 
 // TestConnection 測試叢集連線
+//
+// @Summary     測試叢集 API Server 連線
+// @Tags        clusters
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200
+// @Failure     400 {object} response.ErrorBody
+// @Router      /clusters/test-connection [post]
 func (h *ClusterHandler) TestConnection(c *gin.Context) {
 	logger.Info("測試叢集連線")
 
