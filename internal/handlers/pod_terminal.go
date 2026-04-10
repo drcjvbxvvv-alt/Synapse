@@ -128,6 +128,10 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		return
 	}
 	defer func() {
+		// 送出 WS close frame，讓前端收到正常關閉訊號，避免代理端 ECONNRESET
+		_ = conn.WriteMessage(websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "session ended"))
+		time.Sleep(200 * time.Millisecond) // 等待 close frame 傳遞後再關閉底層 TCP
 		_ = conn.Close()
 	}()
 
@@ -192,6 +196,7 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
 	if err != nil {
 		h.sendMessage(conn, "error", fmt.Sprintf("獲取K8s客戶端失敗: %v", err))
+		time.Sleep(300 * time.Millisecond)
 		return
 	}
 	client := k8sClient.GetClientset()
@@ -199,12 +204,14 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 
 	shell, err := h.findAvailableShell(client, k8sConfig, session)
 	if err != nil {
-		h.sendMessage(conn, "error", fmt.Sprintf("未找到可用的shell: %v", err))
+		h.sendMessage(conn, "error", "此容器為 distroless 映像或不含標準 shell（/bin/sh, /bin/bash 等），無法開啟互動終端。")
+		time.Sleep(300 * time.Millisecond)
 		return
 	}
 
 	if err := h.startPodTerminal(client, k8sConfig, session, shell); err != nil {
 		h.sendMessage(conn, "error", fmt.Sprintf("啟動Pod終端失敗: %v", err))
+		time.Sleep(300 * time.Millisecond)
 		return
 	}
 
