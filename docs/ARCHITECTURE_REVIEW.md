@@ -765,7 +765,7 @@ type CreateDeploymentRequest struct {
 >
 > | 子題 | 主力模型 | 簡要原因 |
 > |------|---------|---------|
-> | 6.1 GitOps 整合深化 | **Opus** | Flux CD 整合、PR preview dry-run，與 CICD §25.2 M16 邏輯高度重疊 |
+> | 6.1 GitOps 整合深化 | **Opus** | 原生 GitOps / ArgoCD 邊界、外部控制器整合、PR preview dry-run，與 CICD §25.2 M16 邏輯高度重疊 |
 > | 6.2 AI 能力深化 | **Opus** | prompt 設計、context 組裝、AI 審批的邊界條件 |
 > | 6.3 多叢集拓撲進化 | Opus（設計）+ **Sonnet**（實作） | 拓撲演算法 Opus 定調，視覺化與頁面 Sonnet |
 > | 6.4 安全治理加強 | **Opus** 全程 | cosign/SBOM/OPA 均為安全關鍵，不可降級 |
@@ -778,7 +778,8 @@ type CreateDeploymentRequest struct {
 
 ### 6.1 GitOps 整合深化
 
-- Flux CD 整合（目前只有 ArgoCD）
+- 先落地原生 GitOps 與 ArgoCD 代理的清楚邊界（參見 `docs/CICD_ARCHITECTURE.md §12.1`）
+- Flux CD 整合可作為後續外部控制器 adapter，但不得與同一個 GitOpsApp 混用
 - Git repo 關聯視圖：從 Deployment 反查最後修改的 commit
 - Pull Request preview：對 PR 裡的 YAML 做 dry-run diff
 
@@ -1348,6 +1349,8 @@ kubectl set image deployment/synapse synapse=synapse:v1.17.0 -n synapse-system
 
 > **Cross-reference：** 本文件外，`docs/CICD_ARCHITECTURE.md §21` 已收錄 9 條 CI/CD 專屬 ADR（編號 `ADR-001 ~ ADR-009`，獨立 namespace）。核心架構 ADR 走 `docs/adr/NNNN-*.md` 0000 系列，CI/CD ADR 保留在 CICD_ARCHITECTURE.md §21。兩者編號 namespace 不衝突，跨域引用時以全名 `ADR-0003` vs `CICD ADR-003` 區分。
 
+> **補充：** 若評審議題直接涉及 Pipeline 執行模型，應以 `docs/CICD_ARCHITECTURE.md §7 / §17 / §21` 為準；該文件目前已收斂 Step=Job、PVC workspace、Step-scoped secret、chunked pipeline logs 與 M13a single-active controller 等 CI/CD 專屬決策。
+
 ### 12.6 ADR-0001 — 已落地（Repository 層導入）
 
 ADR-0001 已於 **2026-04-09** 進入 `Accepted` 狀態，完整內容見：
@@ -1455,9 +1458,9 @@ ADR-0001 已於 **2026-04-09** 進入 `Accepted` 狀態，完整內容見：
 
 **場景（Phase 3 GA）：**
 - 100 concurrent users 登入 + 查詢 cluster overview
-- 50 concurrent users 開啟 log SSE 連線
+- 50 concurrent users 開啟 log SSE 連線（含 CI/CD Pipeline log follow 路徑）
 - 5000 pods 在 1 個 cluster 時的 pod list 分頁 API P95 < 1s
-- Webhook 洪水：50 QPS 打 5 分鐘，驗證 replay protection + rate limit 正常
+- Webhook 洪水：50 QPS 打 5 分鐘，驗證 replay protection + rate limit 正常，且不產生重複 PipelineRun
 
 **報告：** 存於 `docs/performance/YYYY-MM-benchmark.md`，可比較不同 release 的效能 regression。
 
@@ -1532,7 +1535,9 @@ logger.Info("operation completed",
 1. HTTP request → Handler → Service → Repository → DB
 2. HTTP request → Handler → Service → K8s API → Informer cache
 3. Background worker → Service → DB / K8s API
-4. Webhook → Pipeline Executor → Job Create → Job Watch
+4. Webhook → ReplayProtection / RateLimit → Pipeline Executor / Scheduler → Job Create → Job Watch → pipeline_logs append
+
+> CI/CD 補充：M13a 階段的 Scheduler / Recover / GC Worker 為 single-active controller；若未導入 leader election，trace 與壓測都應只驗證單一 active worker 的正確性，不應假設多活背景調度已成立。
 
 **採樣策略：**
 - Head-based：1% random sample
