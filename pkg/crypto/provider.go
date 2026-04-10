@@ -126,9 +126,8 @@ func (p *VaultKeyProvider) GetKey(ctx context.Context) (string, error) {
 
 	url := p.addr + "/v1/" + p.secretPath
 
-	//nolint:gosec
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: p.skipVerify},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: p.skipVerify}, // #nosec G402 -- user-controlled via VaultKeyProvider.skipVerify config field
 	}
 	client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
 

@@ -15,12 +15,12 @@ import (
 // OMHandler 運維中心處理器
 type OMHandler struct {
 	clusterSvc *services.ClusterService
-	omSvc      *services.OMService
+	omSvc      services.OMQuerier
 	k8sMgr     *k8s.ClusterInformerManager
 }
 
 // NewOMHandler 建立運維中心處理器
-func NewOMHandler(clusterSvc *services.ClusterService, omSvc *services.OMService, k8sMgr *k8s.ClusterInformerManager) *OMHandler {
+func NewOMHandler(clusterSvc *services.ClusterService, omSvc services.OMQuerier, k8sMgr *k8s.ClusterInformerManager) *OMHandler {
 	return &OMHandler{
 		clusterSvc: clusterSvc,
 		omSvc:      omSvc,

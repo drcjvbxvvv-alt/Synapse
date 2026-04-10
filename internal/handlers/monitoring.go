@@ -14,11 +14,11 @@ import (
 // MonitoringHandler 監控處理器
 type MonitoringHandler struct {
 	monitoringConfigService *services.MonitoringConfigService
-	prometheusService       *services.PrometheusService
+	prometheusService       services.PrometheusQuerier
 }
 
 // NewMonitoringHandler 建立監控處理器
-func NewMonitoringHandler(monitoringConfigService *services.MonitoringConfigService, prometheusService *services.PrometheusService) *MonitoringHandler {
+func NewMonitoringHandler(monitoringConfigService *services.MonitoringConfigService, prometheusService services.PrometheusQuerier) *MonitoringHandler {
 	return &MonitoringHandler{
 		monitoringConfigService: monitoringConfigService,
 		prometheusService:       prometheusService,

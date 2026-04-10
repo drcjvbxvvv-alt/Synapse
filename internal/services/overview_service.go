@@ -75,13 +75,9 @@ func (s *OverviewService) getClusters(ctx context.Context) ([]*models.Cluster, e
 		if len(filterIDs) == 0 {
 			return []*models.Cluster{}, nil
 		}
-		var clusters []*models.Cluster
-		if err := s.db.Where("id IN ?", filterIDs).Find(&clusters).Error; err != nil {
-			return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
-		}
-		return clusters, nil
+		return s.clusterService.GetClustersByIDs(ctx, filterIDs)
 	}
-	return s.clusterService.GetAllClusters()
+	return s.clusterService.GetAllClusters(ctx)
 }
 
 // ========== 響應結構體 ==========

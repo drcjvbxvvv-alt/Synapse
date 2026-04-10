@@ -463,8 +463,7 @@ func (c *K8sClient) GetAPIServerCertExpiry() (*time.Time, error) {
 		addr += ":443"
 	}
 
-	//nolint:gosec // 僅用於取得憑證到期日，非信任連線
-	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
+	conn, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true}) // #nosec G402 -- read cert expiry only; connection is not trusted
 	if err != nil {
 		return nil, fmt.Errorf("TLS 連線 API Server 失敗: %w", err)
 	}

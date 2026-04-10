@@ -225,6 +225,7 @@ func autoMigrate(db *gorm.DB) error {
 		&models.SIEMWebhookConfig{},    // SIEM Webhook 設定表
 		&models.APIToken{},             // 個人 API Token 表
 		&models.NotifyChannel{},        // 通知渠道設定表
+		&models.TokenBlacklist{},       // JWT Token 黑名單表（P0-5：支援登出撤銷）
 	)
 
 	// 根據資料庫驅動型別重新啟用外來鍵約束檢查
@@ -236,6 +237,7 @@ func autoMigrate(db *gorm.DB) error {
 
 	// 建立預設管理員使用者和系統設定（如果不存在）
 	if err == nil {
+		backfillSystemRole(db)
 		createDefaultUser(db)
 		createTestClusters(db)
 		createDefaultSystemSettings(db)
@@ -243,6 +245,22 @@ func autoMigrate(db *gorm.DB) error {
 	}
 
 	return err
+}
+
+// backfillSystemRole 將既有的 username=admin 使用者升級為 platform_admin
+// 此為 P0-2 遷移邏輯：為移除硬編碼 "username == admin" 判斷做準備
+// 一次性操作，後續啟動會是 no-op（因為 SystemRole 已非預設值）
+func backfillSystemRole(db *gorm.DB) {
+	result := db.Model(&models.User{}).
+		Where("username = ? AND (system_role = ? OR system_role = ?)", "admin", "", models.RoleUser).
+		Update("system_role", models.RolePlatformAdmin)
+	if result.Error != nil {
+		logger.Warn("回填 admin SystemRole 失敗", "error", result.Error)
+		return
+	}
+	if result.RowsAffected > 0 {
+		logger.Info("已將既有 admin 使用者升級為 platform_admin", "rows", result.RowsAffected)
+	}
 }
 
 // createDefaultPermissions 建立預設權限配置
@@ -324,7 +342,7 @@ func createDefaultUser(db *gorm.DB) {
 	// 優先從環境變數讀取初始密碼，未設定則使用內建預設值並警告
 	initPassword := os.Getenv("SYNAPSE_ADMIN_PASSWORD")
 	if initPassword == "" {
-		initPassword = "Synapse@2026"
+		initPassword = "Synapse@2026" // #nosec G101 -- intentional fallback default; set SYNAPSE_ADMIN_PASSWORD env var in production
 		logger.Warn("⚠  SYNAPSE_ADMIN_PASSWORD 未設定，使用內建預設密碼（生產環境請設定此環境變數）")
 	}
 
@@ -342,6 +360,7 @@ func createDefaultUser(db *gorm.DB) {
 		DisplayName:  "管理員",
 		AuthType:     "local",
 		Status:       "active",
+		SystemRole:   models.RolePlatformAdmin,
 	}
 	if err := db.Create(&user).Error; err != nil {
 		logger.Error("建立預設使用者失敗: %v", err)

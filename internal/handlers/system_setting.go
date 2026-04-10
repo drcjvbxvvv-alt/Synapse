@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/internal/response"
@@ -9,13 +9,11 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // SystemSettingHandler 系統設定處理器
-// P0-4c: db retained only for getMonitoringClusters; pending Wave 3 extraction.
 type SystemSettingHandler struct {
-	db                    *gorm.DB
+	clusterService        *services.ClusterService
 	ldapService           *services.LDAPService
 	sshSettingService     *services.SSHSettingService
 	grafanaSettingService *services.GrafanaSettingService
@@ -24,14 +22,14 @@ type SystemSettingHandler struct {
 
 // NewSystemSettingHandler 建立系統設定處理器
 func NewSystemSettingHandler(
-	db *gorm.DB,
+	clusterSvc *services.ClusterService,
 	ldapSvc *services.LDAPService,
 	sshSvc *services.SSHSettingService,
 	grafanaSettingSvc *services.GrafanaSettingService,
 	grafanaSvc *services.GrafanaService,
 ) *SystemSettingHandler {
 	return &SystemSettingHandler{
-		db:                    db,
+		clusterService:        clusterSvc,
 		ldapService:           ldapSvc,
 		sshSettingService:     sshSvc,
 		grafanaSettingService: grafanaSettingSvc,
@@ -538,27 +536,7 @@ func (h *SystemSettingHandler) SyncGrafanaDataSources(c *gin.Context) {
 
 // getMonitoringClusters 獲取所有啟用了監控的叢集資訊
 func (h *SystemSettingHandler) getMonitoringClusters() []services.DataSourceClusterInfo {
-	var clusters []models.Cluster
-	if err := h.db.Select("name, monitoring_config").Where("monitoring_config != '' AND monitoring_config IS NOT NULL").Find(&clusters).Error; err != nil {
-		logger.Error("查詢叢集監控配置失敗", "error", err)
-		return nil
-	}
-
-	var result []services.DataSourceClusterInfo
-	for _, cluster := range clusters {
-		var config models.MonitoringConfig
-		if err := json.Unmarshal([]byte(cluster.MonitoringConfig), &config); err != nil {
-			continue
-		}
-		if config.Type == "disabled" || config.Endpoint == "" {
-			continue
-		}
-		result = append(result, services.DataSourceClusterInfo{
-			ClusterName:   cluster.Name,
-			PrometheusURL: config.Endpoint,
-		})
-	}
-	return result
+	return h.clusterService.ListMonitoringClusters(context.Background())
 }
 
 // SyncGrafanaDashboards 同步 Dashboard 到 Grafana

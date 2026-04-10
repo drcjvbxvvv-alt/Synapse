@@ -3,10 +3,7 @@ package router
 import (
 	"context"
 	"embed"
-	"fmt"
-	"io/fs"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -256,6 +253,13 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		monitoringCfgSvc: monitoringConfigSvc,
 		tokenBlacklist:   tokenBlacklistSvc,
 		permMiddleware:   permMiddleware,
+		logSourceSvc:     services.NewLogSourceService(db),
+		portForwardSvc:   services.NewPortForwardService(db),
+		helmSvc:          services.NewHelmService(db),
+		approvalSvc:      services.NewApprovalService(db),
+		cfgVerSvc:        services.NewConfigVersionService(db),
+		imageIndexSvc:    services.NewImageIndexService(db),
+		syncPolicySvc:    services.NewSyncPolicyService(db),
 	}
 
 	protected := api.Group("")
@@ -287,52 +291,3 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	return r, k8sMgr
 }
 
-// setupStatic 配置嵌入的前端靜態檔案服務
-func setupStatic(r *gin.Engine) {
-	assetsFS, err := fs.Sub(staticFS, "ui/dist/assets")
-	if err != nil {
-		logger.Error("載入前端靜態資源失敗", "error", err)
-		return
-	}
-
-	assetsGroup := r.Group("/assets")
-	assetsGroup.Use(func(c *gin.Context) {
-		c.Header("Cache-Control", "public, max-age=31536000, immutable")
-		c.Next()
-	})
-	assetsGroup.StaticFS("/", http.FS(assetsFS))
-
-	r.NoRoute(func(c *gin.Context) {
-		path := c.Request.URL.Path
-
-		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/ws/") {
-			response.NotFound(c, "not found")
-			return
-		}
-
-		filePath := strings.TrimPrefix(path, "/")
-		if filePath != "" {
-			if f, err := staticFS.Open("ui/dist/" + filePath); err == nil {
-				_ = f.Close()
-				fileServer := http.FileServer(http.FS(mustSub(staticFS, "ui/dist")))
-				fileServer.ServeHTTP(c.Writer, c.Request)
-				return
-			}
-		}
-
-		content, err := staticFS.ReadFile("ui/dist/index.html")
-		if err != nil {
-			response.InternalError(c, "frontend not available")
-			return
-		}
-		c.Data(200, "text/html; charset=utf-8", content)
-	})
-}
-
-func mustSub(fsys fs.FS, dir string) fs.FS {
-	sub, err := fs.Sub(fsys, dir)
-	if err != nil {
-		panic(fmt.Sprintf("fs.Sub(%q): %v", dir, err))
-	}
-	return sub
-}

@@ -2,7 +2,7 @@
 # Synapse Makefile
 # ==========================================
 
-.PHONY: help dev dev-backend dev-frontend build build-backend build-frontend test test-backend test-frontend test-e2e test-e2e-ui lint lint-backend lint-frontend docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs swagger clean version
+.PHONY: help dev dev-backend dev-frontend build build-backend build-frontend test test-backend test-frontend test-e2e test-e2e-ui lint lint-backend lint-frontend check docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs swagger clean version
 
 # 变量
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -47,6 +47,7 @@ help:
 	@echo "  make test-e2e-ui    - 运行 E2E 测试（Playwright UI 模式）"
 	@echo ""
 	@echo "$(GREEN)代码检查:$(NC)"
+	@echo "  make check          - Phase 0 Exit Criteria 全量驗證（test + vet + gosec + grep）"
 	@echo "  make lint           - 运行代码检查"
 	@echo "  make lint-backend   - 检查后端代码"
 	@echo "  make lint-frontend  - 检查前端代码"
@@ -158,6 +159,31 @@ test-e2e-ui:
 # ==========================================
 # 代码检查
 # ==========================================
+
+## check: Phase 0 Exit Criteria — 安全與品質全量驗證
+check:
+	@echo "$(BLUE)═══ Phase 0 Exit Criteria Check ═══$(NC)"
+	@echo ""
+	@echo "$(BLUE)[1/5] go test ./...$(NC)"
+	go test ./...
+	@echo "$(GREEN)✓ go test 通過$(NC)"
+	@echo ""
+	@echo "$(BLUE)[2/5] go vet ./...$(NC)"
+	go vet ./...
+	@echo "$(GREEN)✓ go vet 通過$(NC)"
+	@echo ""
+	@echo "$(BLUE)[3/5] gosec 安全掃描$(NC)"
+	@which gosec > /dev/null || (echo "$(YELLOW)請安裝 gosec: go install github.com/securego/gosec/v2/cmd/gosec@latest$(NC)" && exit 1)
+	gosec -exclude-dir=vendor -severity high ./...
+	@echo "$(GREEN)✓ gosec 無 HIGH/CRITICAL issue$(NC)"
+	@echo ""
+	@echo "$(BLUE)[4/5] 檢查 Printf.*salt 日誌洩漏（P0-1）$(NC)"
+	@! grep -rn 'Printf.*salt' internal/ 2>/dev/null | grep -v '_test.go' | grep . && echo "$(GREEN)✓ 無 Printf.*salt$(NC)"
+	@echo ""
+	@echo "$(BLUE)[5/5] 檢查 username == \"admin\" 硬編碼（P0-2）$(NC)"
+	@! grep -rn 'username == "admin"' internal/ 2>/dev/null | grep . && echo "$(GREEN)✓ 無 username == \"admin\"$(NC)"
+	@echo ""
+	@echo "$(GREEN)═══ Phase 0 check 全部通過 ═══$(NC)"
 
 ## lint: 运行所有代码检查
 lint: lint-backend lint-frontend

@@ -17,6 +17,7 @@ type User struct {
 	Phone        string         `json:"phone" gorm:"size:20"`
 	AuthType     string         `json:"auth_type" gorm:"default:local;size:20"` // local, ldap
 	Status       string         `json:"status" gorm:"default:active;size:20"`   // active, inactive, locked
+	SystemRole   string         `json:"system_role" gorm:"size:32;default:user;index"` // user, platform_admin, system_admin
 	LastLoginAt  *time.Time     `json:"last_login_at"`
 	LastLoginIP  string         `json:"last_login_ip" gorm:"size:50"`
 	CreatedAt    time.Time      `json:"created_at"`

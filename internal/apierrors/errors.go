@@ -30,12 +30,12 @@ func As(err error) (*AppError, bool) {
 // ---- Error code constants ----
 
 const (
-	// Auth
-	CodeAuthInvalidCredentials = "AUTH_INVALID_CREDENTIALS"
+	// Auth — machine-readable error codes sent to the frontend; not credentials.
+	CodeAuthInvalidCredentials = "AUTH_INVALID_CREDENTIALS" // #nosec G101 -- error code string, not a secret
 	CodeAuthAccountDisabled    = "AUTH_ACCOUNT_DISABLED"
 	CodeAuthUnsupportedType    = "AUTH_UNSUPPORTED_TYPE"
-	CodeAuthTokenFailed        = "AUTH_TOKEN_FAILED"
-	CodeAuthWrongPassword      = "AUTH_WRONG_PASSWORD"
+	CodeAuthTokenFailed        = "AUTH_TOKEN_FAILED"        // #nosec G101 -- error code string
+	CodeAuthWrongPassword      = "AUTH_WRONG_PASSWORD"      // #nosec G101 -- error code string
 	CodeAuthLDAPReadonly       = "AUTH_LDAP_READONLY"
 	CodeAuthLDAPNotEnabled     = "AUTH_LDAP_NOT_ENABLED"
 	CodeAuthLDAPFailed         = "AUTH_LDAP_FAILED"
@@ -112,7 +112,7 @@ func ErrUserDuplicateUsername() *AppError {
 }
 
 func ErrUserAdminProtected() *AppError {
-	return &AppError{Code: CodeUserAdminProtected, HTTPStatus: http.StatusForbidden, Message: "不能刪除 admin 使用者"}
+	return &AppError{Code: CodeUserAdminProtected, HTTPStatus: http.StatusForbidden, Message: "不能刪除或停用平台管理員"}
 }
 
 func ErrUserInvalidStatus() *AppError {

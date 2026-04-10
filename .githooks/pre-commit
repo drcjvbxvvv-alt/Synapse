@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Synapse pre-commit hook
+# Phase 0 Exit Criteria — 攔截已知安全違規
+#
+# 啟用方式：
+#   git config core.hooksPath .githooks
+#   chmod +x .githooks/pre-commit
+
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+FAIL=0
+
+# ── 1. Printf.*salt 日誌洩漏（P0-1） ──────────────────────────────────────
+SALT_HITS=$(git diff --cached --name-only | grep '\.go$' | xargs -I{} grep -n 'Printf.*salt' {} 2>/dev/null || true)
+if [ -n "$SALT_HITS" ]; then
+  echo -e "${RED}[pre-commit] ❌ P0-1 violation: Printf.*salt 洩漏密碼 salt 到日誌${NC}"
+  echo "$SALT_HITS"
+  FAIL=1
+fi
+
+# ── 2. 硬編碼 admin 超級用戶（P0-2） ─────────────────────────────────────
+ADMIN_HITS=$(git diff --cached --name-only | grep '\.go$' | xargs -I{} grep -n 'username == "admin"' {} 2>/dev/null || true)
+if [ -n "$ADMIN_HITS" ]; then
+  echo -e "${RED}[pre-commit] ❌ P0-2 violation: 硬編碼 username == \"admin\" 超級用戶判斷${NC}"
+  echo "$ADMIN_HITS"
+  FAIL=1
+fi
+
+# ── 3. 敏感欄位出現在 JSON tag（P0-3） ──────────────────────────────────
+SENSITIVE_HITS=$(git diff --cached --name-only | grep 'models/.*\.go$' | \
+  xargs -I{} grep -n 'KubeconfigEnc\|SATokenEnc\|PasswordHash\|CAEnc' {} 2>/dev/null | \
+  grep -v 'json:"-"' | grep 'json:"' || true)
+if [ -n "$SENSITIVE_HITS" ]; then
+  echo -e "${RED}[pre-commit] ❌ P0-3 violation: 敏感欄位缺少 json:\"-\" tag${NC}"
+  echo "$SENSITIVE_HITS"
+  FAIL=1
+fi
+
+# ── 4. InsecureSkipVerify 未加 nolint 注釋 ───────────────────────────────
+TLS_HITS=$(git diff --cached --name-only | grep '\.go$' | \
+  xargs -I{} sh -c 'grep -n "InsecureSkipVerify: true" "$1" 2>/dev/null | grep -v "nolint:gosec" || true' _ {} || true)
+if [ -n "$TLS_HITS" ]; then
+  echo -e "${RED}[pre-commit] ❌ Security violation: InsecureSkipVerify: true 缺少 //nolint:gosec 注釋${NC}"
+  echo "$TLS_HITS"
+  FAIL=1
+fi
+
+# ── 5. go vet（僅對已暫存的 Go 套件） ───────────────────────────────────
+STAGED_PKG=$(git diff --cached --name-only | grep '\.go$' | \
+  sed 's|/[^/]*$||' | sort -u | sed "s|^|./|" || true)
+if [ -n "$STAGED_PKG" ]; then
+  if ! go vet $STAGED_PKG 2>&1; then
+    echo -e "${RED}[pre-commit] ❌ go vet 失敗${NC}"
+    FAIL=1
+  fi
+fi
+
+if [ "$FAIL" -eq 1 ]; then
+  echo -e "${RED}[pre-commit] commit 被攔截，請修正以上問題後重新 commit${NC}"
+  exit 1
+fi
+
+echo -e "${GREEN}[pre-commit] ✓ 所有安全檢查通過${NC}"
+exit 0

@@ -6,7 +6,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"helm.sh/helm/v3/pkg/release"
 )
 
@@ -26,15 +25,13 @@ type ReleaseResponse struct {
 type HelmHandler struct {
 	clusterService *services.ClusterService
 	helmService    *services.HelmService
-	db             *gorm.DB
 }
 
 // NewHelmHandler 建立 Helm 處理器
-func NewHelmHandler(clusterService *services.ClusterService, db *gorm.DB) *HelmHandler {
+func NewHelmHandler(clusterService *services.ClusterService, helmSvc *services.HelmService) *HelmHandler {
 	return &HelmHandler{
 		clusterService: clusterService,
-		helmService:    services.NewHelmService(),
-		db:             db,
+		helmService:    helmSvc,
 	}
 }
 
@@ -259,7 +256,7 @@ func (h *HelmHandler) InstallRelease(c *gin.Context) {
 		return
 	}
 
-	rel, err := h.helmService.InstallRelease(cluster, h.db, req)
+	rel, err := h.helmService.InstallRelease(cluster, req)
 	if err != nil {
 		logger.Error("安裝 Helm Release 失敗", "cluster", cluster.Name, "release", req.ReleaseName, "error", err)
 		response.InternalError(c, "安裝失敗: "+err.Error())
@@ -294,7 +291,7 @@ func (h *HelmHandler) UpgradeRelease(c *gin.Context) {
 		return
 	}
 
-	rel, err := h.helmService.UpgradeRelease(cluster, h.db, namespace, name, req)
+	rel, err := h.helmService.UpgradeRelease(cluster, namespace, name, req)
 	if err != nil {
 		logger.Error("升級 Helm Release 失敗", "cluster", cluster.Name, "release", name, "error", err)
 		response.InternalError(c, "升級失敗: "+err.Error())
@@ -371,7 +368,7 @@ func (h *HelmHandler) UninstallRelease(c *gin.Context) {
 // ListRepos 列出所有 Helm Repository
 // GET /helm/repos
 func (h *HelmHandler) ListRepos(c *gin.Context) {
-	repos, err := h.helmService.ListRepos(h.db)
+	repos, err := h.helmService.ListRepos()
 	if err != nil {
 		logger.Error("列出 Helm Repos 失敗", "error", err)
 		response.InternalError(c, "列出 Repos 失敗: "+err.Error())
@@ -395,7 +392,7 @@ func (h *HelmHandler) AddRepo(c *gin.Context) {
 		return
 	}
 
-	helmRepo, err := h.helmService.AddRepo(h.db, body.Name, body.URL, body.Username, body.Password)
+	helmRepo, err := h.helmService.AddRepo(body.Name, body.URL, body.Username, body.Password)
 	if err != nil {
 		logger.Error("新增 Helm Repo 失敗", "name", body.Name, "error", err)
 		response.InternalError(c, "新增 Repo 失敗: "+err.Error())
@@ -410,7 +407,7 @@ func (h *HelmHandler) AddRepo(c *gin.Context) {
 func (h *HelmHandler) RemoveRepo(c *gin.Context) {
 	name := c.Param("name")
 
-	if err := h.helmService.RemoveRepo(h.db, name); err != nil {
+	if err := h.helmService.RemoveRepo(name); err != nil {
 		logger.Error("刪除 Helm Repo 失敗", "name", name, "error", err)
 		response.NotFound(c, "刪除 Repo 失敗: "+err.Error())
 		return
@@ -424,7 +421,7 @@ func (h *HelmHandler) RemoveRepo(c *gin.Context) {
 func (h *HelmHandler) SearchCharts(c *gin.Context) {
 	keyword := c.Query("keyword")
 
-	charts, err := h.helmService.SearchCharts(h.db, keyword)
+	charts, err := h.helmService.SearchCharts(keyword)
 	if err != nil {
 		logger.Error("搜尋 Helm Charts 失敗", "keyword", keyword, "error", err)
 		response.InternalError(c, "搜尋 Charts 失敗: "+err.Error())

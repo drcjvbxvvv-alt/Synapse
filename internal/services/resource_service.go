@@ -270,8 +270,8 @@ func (s *ResourceService) GetNamespaceOccupancy(cluster *models.Cluster) ([]Name
 }
 
 // GetGlobalOverview 取得跨叢集全平台資源彙總
-func (s *ResourceService) GetGlobalOverview() (*GlobalResourceOverview, error) {
-	clusters, err := s.clusterSvc.GetAllClusters()
+func (s *ResourceService) GetGlobalOverview(ctx context.Context) (*GlobalResourceOverview, error) {
+	clusters, err := s.clusterSvc.GetAllClusters(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -9,17 +10,16 @@ import (
 	"github.com/shaia/Synapse/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // LogSourceHandler manages external log source configs and external log search.
 type LogSourceHandler struct {
-	db *gorm.DB
+	logSourceSvc *services.LogSourceService
 }
 
 // NewLogSourceHandler creates a LogSourceHandler.
-func NewLogSourceHandler(db *gorm.DB) *LogSourceHandler {
-	return &LogSourceHandler{db: db}
+func NewLogSourceHandler(logSourceSvc *services.LogSourceService) *LogSourceHandler {
+	return &LogSourceHandler{logSourceSvc: logSourceSvc}
 }
 
 // ListLogSources GET /clusters/:id/log-sources
@@ -30,15 +30,13 @@ func (h *LogSourceHandler) ListLogSources(c *gin.Context) {
 		return
 	}
 
-	var sources []models.LogSourceConfig
-	if err := h.db.Where("cluster_id = ?", clusterID).Find(&sources).Error; err != nil {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	sources, err := h.logSourceSvc.ListLogSources(ctx, clusterID)
+	if err != nil {
 		response.InternalError(c, "查詢日誌源失敗")
 		return
-	}
-	// Mask credentials before returning
-	for i := range sources {
-		sources[i].Password = ""
-		sources[i].APIKey = ""
 	}
 	response.OK(c, sources)
 }
@@ -54,7 +52,7 @@ func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
 	var req struct {
 		Type     string `json:"type" binding:"required"`
 		Name     string `json:"name" binding:"required"`
-		URL      string `json:"url" binding:"required"`
+		URL      string `json:"url"  binding:"required"`
 		Username string `json:"username"`
 		Password string `json:"password"`
 		APIKey   string `json:"apiKey"`
@@ -70,7 +68,7 @@ func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
 	}
 
 	src := &models.LogSourceConfig{
-		ClusterID: uint(clusterID),
+		ClusterID: clusterID,
 		Type:      req.Type,
 		Name:      req.Name,
 		URL:       req.URL,
@@ -79,12 +77,14 @@ func (h *LogSourceHandler) CreateLogSource(c *gin.Context) {
 		APIKey:    req.APIKey,
 		Enabled:   req.Enabled,
 	}
-	if err := h.db.Create(src).Error; err != nil {
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := h.logSourceSvc.CreateLogSource(ctx, src); err != nil {
 		response.InternalError(c, "建立日誌源失敗")
 		return
 	}
-	src.Password = ""
-	src.APIKey = ""
 	response.OK(c, src)
 }
 
@@ -96,13 +96,16 @@ func (h *LogSourceHandler) UpdateLogSource(c *gin.Context) {
 		return
 	}
 	srcID, err := strconv.Atoi(c.Param("sourceId"))
-	if err != nil {
+	if err != nil || srcID <= 0 {
 		response.BadRequest(c, "無效的日誌源ID")
 		return
 	}
 
-	var src models.LogSourceConfig
-	if err := h.db.Where("id = ? AND cluster_id = ?", srcID, clusterID).First(&src).Error; err != nil {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	src, err := h.logSourceSvc.GetLogSource(ctx, uint(srcID), clusterID) //nolint:gosec // srcID > 0 verified
+	if err != nil {
 		response.NotFound(c, "日誌源不存在")
 		return
 	}
@@ -140,7 +143,7 @@ func (h *LogSourceHandler) UpdateLogSource(c *gin.Context) {
 		updates["enabled"] = *req.Enabled
 	}
 
-	if err := h.db.Model(&src).Updates(updates).Error; err != nil {
+	if err := h.logSourceSvc.UpdateLogSource(ctx, src, updates); err != nil {
 		response.InternalError(c, "更新日誌源失敗")
 		return
 	}
@@ -155,12 +158,15 @@ func (h *LogSourceHandler) DeleteLogSource(c *gin.Context) {
 		return
 	}
 	srcID, err := strconv.Atoi(c.Param("sourceId"))
-	if err != nil {
+	if err != nil || srcID <= 0 {
 		response.BadRequest(c, "無效的日誌源ID")
 		return
 	}
 
-	if err := h.db.Where("id = ? AND cluster_id = ?", srcID, clusterID).Delete(&models.LogSourceConfig{}).Error; err != nil {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := h.logSourceSvc.DeleteLogSource(ctx, uint(srcID), clusterID); err != nil { //nolint:gosec // srcID > 0 verified
 		response.InternalError(c, "刪除日誌源失敗")
 		return
 	}
@@ -175,22 +181,25 @@ func (h *LogSourceHandler) SearchExternalLogs(c *gin.Context) {
 		return
 	}
 	srcID, err := strconv.Atoi(c.Param("sourceId"))
-	if err != nil {
+	if err != nil || srcID <= 0 {
 		response.BadRequest(c, "無效的日誌源ID")
 		return
 	}
 
-	var src models.LogSourceConfig
-	if err := h.db.Where("id = ? AND cluster_id = ? AND enabled = ?", srcID, clusterID, true).First(&src).Error; err != nil {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	src, err := h.logSourceSvc.GetEnabledLogSource(ctx, uint(srcID), clusterID) //nolint:gosec // srcID > 0 verified
+	if err != nil {
 		response.NotFound(c, "日誌源不存在或已禁用")
 		return
 	}
 
 	var req struct {
-		Query     string `json:"query"`     // LogQL (Loki) or Lucene (ES)
-		Index     string `json:"index"`     // ES only
-		StartTime string `json:"startTime"` // RFC3339
-		EndTime   string `json:"endTime"`   // RFC3339
+		Query     string `json:"query"`
+		Index     string `json:"index"`
+		StartTime string `json:"startTime"`
+		EndTime   string `json:"endTime"`
 		Limit     int    `json:"limit"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -215,10 +224,10 @@ func (h *LogSourceHandler) SearchExternalLogs(c *gin.Context) {
 	var entries []models.LogEntry
 	switch src.Type {
 	case "loki":
-		svc := services.NewLokiService(&src)
+		svc := services.NewLokiService(src)
 		entries, err = svc.QueryRange(req.Query, startTime, endTime, req.Limit)
 	case "elasticsearch":
-		svc := services.NewElasticsearchService(&src)
+		svc := services.NewElasticsearchService(src)
 		entries, err = svc.Search(req.Index, req.Query, startTime, endTime, req.Limit)
 	default:
 		response.BadRequest(c, "不支援的日誌源型別")

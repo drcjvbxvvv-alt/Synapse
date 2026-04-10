@@ -38,6 +38,10 @@ class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, errorRef: null });
   };
 
+  handleReload = () => {
+    window.location.reload();
+  };
+
   render() {
     if (this.state.hasError) {
       // Section fallback：行內卡片式錯誤（用於 Terminal、LogCenter 等局部元件）
@@ -101,12 +105,15 @@ class ErrorBoundary extends Component<Props, State> {
         );
       }
 
-      // Page fallback：全頁錯誤 → 使用自製 ErrorPage
+      // Page fallback：全頁錯誤 → 使用自製 ErrorPage，顯示通用錯誤訊息，不暴露內部細節
       return (
         <ErrorPage
           status={500}
+          title="頁面發生錯誤"
+          subTitle="頁面遇到了非預期的錯誤，請重新整理後再試。若問題持續發生，請聯繫管理員。"
           errorRef={this.state.errorRef ?? undefined}
-          onRetry={this.handleReset}
+          onRetry={this.handleReload}
+          retryLabel="重新整理"
           showHome
           showBack={false}
         />

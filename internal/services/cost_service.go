@@ -552,7 +552,10 @@ func (w *CostWorker) snapshot() {
 		run = w.metrics.Start("cost")
 	}
 
-	clusters, err := w.clusterSvc.GetAllClusters()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	clusters, err := w.clusterSvc.GetAllClusters(ctx)
 	if err != nil {
 		logger.Error("成本快照：取得叢集列表失敗", "error", err)
 		if run != nil {

@@ -2,38 +2,35 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
-	"encoding/json"
-
 	"github.com/shaia/Synapse/internal/config"
 	"github.com/shaia/Synapse/internal/k8s"
 	"github.com/shaia/Synapse/internal/middleware"
-	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
 	"github.com/shaia/Synapse/pkg/logger"
 )
 
 type ConfigMapHandler struct {
-	db         *gorm.DB
+	cfgVerSvc  *services.ConfigVersionService
 	cfg        *config.Config
 	clusterSvc *services.ClusterService
 	k8sMgr     *k8s.ClusterInformerManager
 }
 
-func NewConfigMapHandler(db *gorm.DB, cfg *config.Config, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *ConfigMapHandler {
+func NewConfigMapHandler(cfgVerSvc *services.ConfigVersionService, cfg *config.Config, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *ConfigMapHandler {
 	return &ConfigMapHandler{
-		db:         db,
+		cfgVerSvc:  cfgVerSvc,
 		cfg:        cfg,
 		clusterSvc: clusterSvc,
 		k8sMgr:     k8sMgr,
@@ -486,32 +483,12 @@ func formatAge(d time.Duration) string {
 // ─── 版本歷史 ─────────────────────────────────────────────────────────────────
 
 // saveConfigVersion 儲存 ConfigMap 版本快照（非同步，不影響主流程）
-func (h *ConfigMapHandler) saveConfigVersion(clusterID uint, rType, namespace, name string, data map[string]string, c *gin.Context) {
-	contentBytes, _ := json.Marshal(data)
-	var nextVer int
-	h.db.Model(&models.ConfigVersion{}).
-		Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?", clusterID, rType, namespace, name).
-		Select("COALESCE(MAX(version),0) + 1").Scan(&nextVer)
-	if nextVer == 0 {
-		nextVer = 1
-	}
+func (h *ConfigMapHandler) saveConfigVersion(clusterID uint, _, namespace, name string, data map[string]string, c *gin.Context) {
 	changedBy := ""
 	if u, ok := c.Get("username"); ok {
 		changedBy, _ = u.(string)
 	}
-	ver := &models.ConfigVersion{
-		ClusterID:    clusterID,
-		ResourceType: rType,
-		Namespace:    namespace,
-		Name:         name,
-		Version:      nextVer,
-		ContentJSON:  string(contentBytes),
-		ChangedBy:    changedBy,
-		ChangedAt:    time.Now(),
-	}
-	if err := h.db.Create(ver).Error; err != nil {
-		logger.Warn("儲存 ConfigMap 版本快照失敗", "error", err)
-	}
+	h.cfgVerSvc.SaveConfigMapVersion(c.Request.Context(), clusterID, namespace, name, changedBy, data)
 }
 
 // GetConfigMapVersions 取得 ConfigMap 版本列表
@@ -524,11 +501,13 @@ func (h *ConfigMapHandler) GetConfigMapVersions(c *gin.Context) {
 		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
-	var versions []models.ConfigVersion
-	h.db.Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?",
-		uint(id), "configmap", namespace, name).
-		Order("version DESC").
-		Find(&versions)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	versions, err := h.cfgVerSvc.ListVersions(ctx, uint(id), "configmap", namespace, name) //nolint:gosec
+	if err != nil {
+		response.InternalError(c, "查詢版本失敗")
+		return
+	}
 	response.OK(c, gin.H{"items": versions, "total": len(versions)})
 }
 
@@ -545,9 +524,10 @@ func (h *ConfigMapHandler) RollbackConfigMap(c *gin.Context) {
 	}
 	version, _ := strconv.Atoi(versionStr)
 
-	var ver models.ConfigVersion
-	if err := h.db.Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ? AND version = ?",
-		uint(id), "configmap", namespace, name, version).First(&ver).Error; err != nil {
+	ctxDB, cancelDB := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancelDB()
+	ver, err := h.cfgVerSvc.GetVersion(ctxDB, uint(id), "configmap", namespace, name, version) //nolint:gosec
+	if err != nil {
 		response.NotFound(c, "版本不存在")
 		return
 	}

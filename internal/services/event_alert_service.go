@@ -154,8 +154,11 @@ func (w *EventAlertWorker) scan() {
 		run = w.metrics.Start("event_alert")
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
 	svc := NewEventAlertService(w.db)
-	clusters, err := w.clusterSvc.GetAllClusters()
+	clusters, err := w.clusterSvc.GetAllClusters(ctx)
 	if err != nil {
 		logger.Error("Event 告警：取得叢集列表失敗", "error", err)
 		if run != nil {

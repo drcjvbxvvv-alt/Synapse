@@ -76,7 +76,10 @@ func (w *ImageIndexWorker) sync() {
 		run = w.metrics.Start("image_index")
 	}
 
-	clusters, err := w.clusterSvc.GetAllClusters()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	clusters, err := w.clusterSvc.GetAllClusters(ctx)
 	if err != nil {
 		logger.Warn("映像索引 Worker：取得叢集列表失敗", "err", err)
 		if run != nil {

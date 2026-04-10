@@ -24,12 +24,12 @@ type NodeHandler struct {
 	cfg              *config.Config
 	clusterService   *services.ClusterService
 	k8sMgr           *k8s.ClusterInformerManager
-	promService      *services.PrometheusService
+	promService      services.PrometheusQuerier
 	monitoringCfgSvc *services.MonitoringConfigService
 }
 
 // NewNodeHandler 建立節點處理器
-func NewNodeHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, promService *services.PrometheusService, monitoringCfgSvc *services.MonitoringConfigService) *NodeHandler {
+func NewNodeHandler(cfg *config.Config, clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, promService services.PrometheusQuerier, monitoringCfgSvc *services.MonitoringConfigService) *NodeHandler {
 	return &NodeHandler{
 		cfg:              cfg,
 		clusterService:   clusterService,

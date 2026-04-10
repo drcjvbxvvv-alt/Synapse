@@ -21,11 +21,11 @@ import (
 type MeshHandler struct {
 	clusterService *services.ClusterService
 	k8sMgr         *k8s.ClusterInformerManager
-	meshSvc        *services.MeshService
+	meshSvc        services.MeshQuerier
 }
 
 // NewMeshHandler 建立 MeshHandler
-func NewMeshHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, meshSvc *services.MeshService) *MeshHandler {
+func NewMeshHandler(clusterService *services.ClusterService, k8sMgr *k8s.ClusterInformerManager, meshSvc services.MeshQuerier) *MeshHandler {
 	return &MeshHandler{
 		clusterService: clusterService,
 		k8sMgr:         k8sMgr,

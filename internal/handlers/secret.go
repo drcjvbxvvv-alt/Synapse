@@ -8,33 +8,29 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
-	"encoding/json"
-
 	"github.com/shaia/Synapse/internal/config"
 	"github.com/shaia/Synapse/internal/k8s"
 	"github.com/shaia/Synapse/internal/middleware"
-	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
 	"github.com/shaia/Synapse/pkg/logger"
 )
 
 type SecretHandler struct {
-	db         *gorm.DB
+	cfgVerSvc  *services.ConfigVersionService
 	cfg        *config.Config
 	clusterSvc *services.ClusterService
 	k8sMgr     *k8s.ClusterInformerManager
 }
 
-func NewSecretHandler(db *gorm.DB, cfg *config.Config, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *SecretHandler {
+func NewSecretHandler(cfgVerSvc *services.ConfigVersionService, cfg *config.Config, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *SecretHandler {
 	return &SecretHandler{
-		db:         db,
+		cfgVerSvc:  cfgVerSvc,
 		cfg:        cfg,
 		clusterSvc: clusterSvc,
 		k8sMgr:     k8sMgr,
@@ -514,35 +510,11 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 
 // saveSecretVersion 儲存 Secret 版本快照（只記錄 key 列表，不儲存明文 value）
 func (h *SecretHandler) saveSecretVersion(clusterID uint, namespace, name string, data map[string][]byte, c *gin.Context) {
-	keys := make([]string, 0, len(data))
-	for k := range data {
-		keys = append(keys, k)
-	}
-	contentBytes, _ := json.Marshal(map[string]interface{}{"keys": keys, "note": "Secret value not stored for security"})
-	var nextVer int
-	h.db.Model(&models.ConfigVersion{}).
-		Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?", clusterID, "secret", namespace, name).
-		Select("COALESCE(MAX(version),0) + 1").Scan(&nextVer)
-	if nextVer == 0 {
-		nextVer = 1
-	}
 	changedBy := ""
 	if u, ok := c.Get("username"); ok {
 		changedBy, _ = u.(string)
 	}
-	ver := &models.ConfigVersion{
-		ClusterID:    clusterID,
-		ResourceType: "secret",
-		Namespace:    namespace,
-		Name:         name,
-		Version:      nextVer,
-		ContentJSON:  string(contentBytes),
-		ChangedBy:    changedBy,
-		ChangedAt:    time.Now(),
-	}
-	if err := h.db.Create(ver).Error; err != nil {
-		logger.Warn("儲存 Secret 版本快照失敗", "error", err)
-	}
+	h.cfgVerSvc.SaveSecretVersion(c.Request.Context(), clusterID, namespace, name, changedBy, data)
 }
 
 // GetSecretVersions 取得 Secret 版本列表
@@ -555,11 +527,13 @@ func (h *SecretHandler) GetSecretVersions(c *gin.Context) {
 		response.BadRequest(c, "無效的叢集 ID")
 		return
 	}
-	var versions []models.ConfigVersion
-	h.db.Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?",
-		uint(id), "secret", namespace, name).
-		Order("version DESC").
-		Find(&versions)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	versions, err := h.cfgVerSvc.ListVersions(ctx, uint(id), "secret", namespace, name) //nolint:gosec
+	if err != nil {
+		response.InternalError(c, "查詢版本失敗")
+		return
+	}
 	// 隱藏 contentJSON（安全考量）
 	items := make([]map[string]interface{}, 0, len(versions))
 	for _, v := range versions {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -16,7 +17,6 @@ import (
 	"github.com/shaia/Synapse/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 )
@@ -29,13 +29,13 @@ var (
 
 // PortForwardHandler Port-Forward 處理器
 type PortForwardHandler struct {
-	db         *gorm.DB
+	pfSvc      *services.PortForwardService
 	clusterSvc *services.ClusterService
 	k8sMgr     *k8s.ClusterInformerManager
 }
 
-func NewPortForwardHandler(db *gorm.DB, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *PortForwardHandler {
-	return &PortForwardHandler{db: db, clusterSvc: clusterSvc, k8sMgr: k8sMgr}
+func NewPortForwardHandler(pfSvc *services.PortForwardService, clusterSvc *services.ClusterService, k8sMgr *k8s.ClusterInformerManager) *PortForwardHandler {
+	return &PortForwardHandler{pfSvc: pfSvc, clusterSvc: clusterSvc, k8sMgr: k8sMgr}
 }
 
 // pickFreePort 分配一個空閒的本地連接埠（12000-13000 範圍）
@@ -151,7 +151,11 @@ func (h *PortForwardHandler) StartPortForward(c *gin.Context) {
 		Username:    username.(string),
 		Status:      "active",
 	}
-	if err := h.db.Create(session).Error; err != nil {
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := h.pfSvc.CreateSession(ctx, session); err != nil {
 		close(stopCh)
 		response.InternalError(c, "儲存會話失敗: "+err.Error())
 		return
@@ -167,8 +171,7 @@ func (h *PortForwardHandler) StartPortForward(c *gin.Context) {
 		case <-pfErrCh:
 		case <-stopCh:
 		}
-		now := time.Now()
-		h.db.Model(session).Updates(map[string]interface{}{"status": "stopped", "stopped_at": &now})
+		h.pfSvc.MarkStopped(session.ID)
 		pfMu.Lock()
 		delete(pfStopMap, session.ID)
 		pfMu.Unlock()
@@ -194,17 +197,19 @@ func (h *PortForwardHandler) StopPortForward(c *gin.Context) {
 	}
 
 	pfMu.Lock()
-	stopCh, ok := pfStopMap[uint(id)]
+	stopCh, ok := pfStopMap[uint(id)] //nolint:gosec // id from ParseUint with bitSize=64; fits uint on 64-bit
 	if ok {
 		close(stopCh)
 	}
 	pfMu.Unlock()
 
-	now := time.Now()
-	h.db.Model(&models.PortForwardSession{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"status": "stopped", "stopped_at": &now,
-	})
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
 
+	if err := h.pfSvc.StopSession(ctx, uint(id)); err != nil { //nolint:gosec // same as above
+		response.InternalError(c, "更新會話狀態失敗")
+		return
+	}
 	response.OK(c, gin.H{"message": "Port-Forward 已停止"})
 }
 
@@ -214,12 +219,11 @@ func (h *PortForwardHandler) ListPortForwards(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	status := c.DefaultQuery("status", "active")
 
-	var sessions []models.PortForwardSession
-	db := h.db.Where("user_id = ?", userID)
-	if status != "" {
-		db = db.Where("status = ?", status)
-	}
-	if err := db.Order("created_at desc").Find(&sessions).Error; err != nil {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	sessions, err := h.pfSvc.ListSessions(ctx, userID, status)
+	if err != nil {
 		response.InternalError(c, "查詢失敗: "+err.Error())
 		return
 	}

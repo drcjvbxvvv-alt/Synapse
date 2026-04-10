@@ -16,7 +16,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	protected.GET("/resources/global/overview", globalResourceHandler.GetGlobalOverview)
 
 	// 審批工作流（全域）（§8.3 Phase C）
-	globalApprovalHandler := handlers.NewApprovalHandler(d.db, d.clusterSvc)
+	globalApprovalHandler := handlers.NewApprovalHandler(d.approvalSvc, d.clusterSvc)
 	approvals := protected.Group("/approvals")
 	{
 		approvals.GET("", globalApprovalHandler.ListApprovalRequests)
@@ -34,7 +34,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// 映像索引與搜尋（§8.3 Phase C）
-	imageHandler := handlers.NewImageHandler(d.db, d.clusterSvc, d.permissionSvc, d.k8sMgr)
+	imageHandler := handlers.NewImageHandler(d.imageIndexSvc, d.clusterSvc, d.permissionSvc, d.k8sMgr)
 	images := protected.Group("/images")
 	{
 		images.GET("/search", imageHandler.SearchImages)
@@ -43,7 +43,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// 多叢集工作流程
-	mcHandler := handlers.NewMultiClusterHandler(d.db, d.clusterSvc, d.k8sMgr)
+	mcHandler := handlers.NewMultiClusterHandler(d.syncPolicySvc, d.clusterSvc, d.k8sMgr)
 	mc := protected.Group("/multicluster")
 	{
 		mc.POST("/migrate/check", mcHandler.MigrateCheck)
@@ -58,7 +58,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// Helm Repository 管理（global）
-	helmGlobalHandler := handlers.NewHelmHandler(d.clusterSvc, d.db)
+	helmGlobalHandler := handlers.NewHelmHandler(d.clusterSvc, d.helmSvc)
 	helmGroup := protected.Group("/helm")
 	{
 		helmGroup.GET("/repos", helmGlobalHandler.ListRepos)
@@ -121,7 +121,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		ldapSvc := services.NewLDAPService(d.db)
 		sshSvc := services.NewSSHSettingService(d.db)
 		grafanaSettingSvc := services.NewGrafanaSettingService(d.db)
-		systemSettingHandler := handlers.NewSystemSettingHandler(d.db, ldapSvc, sshSvc, grafanaSettingSvc, d.grafanaSvc)
+		systemSettingHandler := handlers.NewSystemSettingHandler(d.clusterSvc, ldapSvc, sshSvc, grafanaSettingSvc, d.grafanaSvc)
 		// LDAP 配置
 		systemSettings.GET("/ldap/config", systemSettingHandler.GetLDAPConfig)
 		systemSettings.PUT("/ldap/config", systemSettingHandler.UpdateLDAPConfig)
@@ -182,7 +182,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	}
 
 	// Port-Forward 會話管理（全域，§8.3 Phase D）
-	pfGlobalHandler := handlers.NewPortForwardHandler(d.db, d.clusterSvc, d.k8sMgr)
+	pfGlobalHandler := handlers.NewPortForwardHandler(d.portForwardSvc, d.clusterSvc, d.k8sMgr)
 	portforwards := protected.Group("/portforwards")
 	{
 		portforwards.GET("", pfGlobalHandler.ListPortForwards)
@@ -241,48 +241,5 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 	// 叢集級權限查詢
 	protected.GET("/clusters/:clusterID/my-permissions", permissionHandler.GetMyClusterPermission)
 
-	// AI 配置管理（僅平臺管理員）
-	aiConfigSvc := services.NewAIConfigService(d.db)
-	aiConfigHandler := handlers.NewAIConfigHandler(aiConfigSvc)
-	aiGroup := protected.Group("/ai")
-	{
-		aiAdminGroup := aiGroup.Group("")
-		aiAdminGroup.Use(middleware.PlatformAdminRequired(d.db))
-		aiAdminGroup.GET("/config", aiConfigHandler.GetConfig)
-		aiAdminGroup.PUT("/config", aiConfigHandler.UpdateConfig)
-		aiAdminGroup.POST("/test-connection", aiConfigHandler.TestConnection)
-
-		// Runbook 知識庫（所有已登入使用者）
-		aiRunbookHandler := handlers.NewAIRunbookHandler()
-		aiGroup.GET("/runbooks", aiRunbookHandler.GetRunbooks)
-	}
-
-	// AI Chat + NL Query（叢集級）
-	aiChatHandler := handlers.NewAIChatHandler(d.clusterSvc, aiConfigSvc, d.k8sMgr)
-	aiNLQueryHandler := handlers.NewAINLQueryHandler(d.clusterSvc, aiConfigSvc, d.k8sMgr)
-	aiChat := clusters.Group("/:clusterID/ai")
-	aiChat.Use(d.permMiddleware.ClusterAccessRequired())
-	{
-		aiChat.POST("/chat", aiChatHandler.Chat)
-		aiChat.POST("/nl-query", aiNLQueryHandler.NLQuery)
-	}
-
-	// Security Scanning（叢集級）
-	trivySvc := services.NewTrivyService(d.db)
-	benchSvc := services.NewBenchService(d.db, d.k8sMgr)
-	securityHandler := handlers.NewSecurityHandler(trivySvc, benchSvc, d.k8sMgr)
-	securityGroup := clusters.Group("/:clusterID/security")
-	securityGroup.Use(d.permMiddleware.ClusterAccessRequired())
-	{
-		// Trivy image scanning
-		securityGroup.POST("/scans", securityHandler.TriggerScan)
-		securityGroup.GET("/scans", securityHandler.GetScanResults)
-		securityGroup.GET("/scans/:scanID", securityHandler.GetScanDetail)
-		// CIS kube-bench
-		securityGroup.POST("/bench", securityHandler.TriggerBenchmark)
-		securityGroup.GET("/bench", securityHandler.GetBenchResults)
-		securityGroup.GET("/bench/:benchID", securityHandler.GetBenchDetail)
-		// Gatekeeper / OPA violations
-		securityGroup.GET("/gatekeeper", securityHandler.GetGatekeeperViolations)
-	}
+	registerSystemAIRoutes(protected, clusters, d)
 }

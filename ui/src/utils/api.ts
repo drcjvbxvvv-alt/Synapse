@@ -1,20 +1,40 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { tokenManager } from '../services/authService';
+
+// P1-6：Tiered timeouts
+// GET  → 60 000 ms (handles both list and detail)
+// POST / PUT / DELETE / PATCH → 45 000 ms
+const TIMEOUT_GET      = 60_000;
+const TIMEOUT_MUTATION = 45_000;
 
 const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
-  timeout: 10000,
+  timeout: TIMEOUT_GET,   // default; overridden per-method below
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// P0-6：Access Token 從記憶體中讀取（不再觸碰 localStorage）
+// P1-6：Apply tiered timeout based on HTTP method
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Override timeout only when the caller has not already set one explicitly
+    if (config.timeout === undefined || config.timeout === TIMEOUT_GET) {
+      const method = (config.method ?? 'get').toLowerCase();
+      if (method !== 'get' && method !== 'head') {
+        config.timeout = TIMEOUT_MUTATION;
+      } else {
+        config.timeout = TIMEOUT_GET;
+      }
+    }
+
     return config;
   },
   (error) => {
@@ -35,9 +55,7 @@ api.interceptors.response.use(
       ];
       const shouldRedirect = !noRedirectUrls.some(url => requestUrl.includes(url));
       if (shouldRedirect) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('token_expires_at');
+        tokenManager.clear();
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }

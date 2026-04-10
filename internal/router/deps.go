@@ -24,4 +24,11 @@ type routeDeps struct {
 	monitoringCfgSvc *services.MonitoringConfigService
 	tokenBlacklist   *services.TokenBlacklistService
 	permMiddleware   *middleware.PermissionMiddleware
+	logSourceSvc     *services.LogSourceService
+	portForwardSvc   *services.PortForwardService
+	helmSvc          *services.HelmService
+	approvalSvc      *services.ApprovalService
+	cfgVerSvc        *services.ConfigVersionService
+	imageIndexSvc    *services.ImageIndexService
+	syncPolicySvc    *services.SyncPolicyService
 }

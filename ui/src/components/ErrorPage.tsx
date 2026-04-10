@@ -13,6 +13,7 @@ interface ErrorPageProps {
   title?: string;
   subTitle?: string;
   onRetry?: () => void;
+  retryLabel?: string;
   showHome?: boolean;
   showBack?: boolean;
   errorRef?: string;
@@ -87,6 +88,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
   title,
   subTitle,
   onRetry,
+  retryLabel = '重試',
   showHome = true,
   showBack = false,
   errorRef,
@@ -271,7 +273,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               size="large"
               style={{ borderRadius: 10, fontWeight: 600 }}
             >
-              重試
+              {retryLabel}
             </Button>
           )}
           {showBack && (

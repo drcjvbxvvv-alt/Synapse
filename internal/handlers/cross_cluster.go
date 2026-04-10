@@ -85,8 +85,12 @@ func (h *CrossClusterHandler) ListCrossClusterWorkloads(c *gin.Context) {
 
 	for _, cluster := range clusters {
 		if filterCluster != "" {
-			cid, _ := parseInt(filterCluster)
-			if cluster.ID != uint(cid) {
+			cid, err := parseInt(filterCluster)
+			if err != nil || cid <= 0 {
+				response.BadRequest(c, "無效的 clusterID 篩選參數")
+				return
+			}
+			if cluster.ID != uint(cid) { //nolint:gosec // cid > 0 verified above
 				continue
 			}
 		}

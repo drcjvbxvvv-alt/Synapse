@@ -196,22 +196,32 @@ func (m *PermissionMiddleware) AutoWriteCheck() gin.HandlerFunc {
 }
 
 // PlatformAdminRequired 平臺管理員權限檢查
-// 判定邏輯：使用者名稱為 admin，或使用者（直接/透過使用者組）在任意叢集擁有 admin 權限型別
+// 判定邏輯（按優先順序）：
+//  1. users.system_role IN (platform_admin, system_admin)
+//  2. 使用者（直接/透過使用者組）在任意叢集擁有 admin 權限型別
+//
+// 為避免硬編碼 username 判斷被繞過（DB manipulation / LDAP 同名攻擊），
+// 一律從 DB 讀取 SystemRole，不再依賴 JWT claim 中的 username 字串。
 func PlatformAdminRequired(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.GetUint("user_id")
-		username := c.GetString("username")
 		if userID == 0 {
 			response.Unauthorized(c, "未登入")
 			return
 		}
 
-		if username == "admin" {
+		// 1. 檢查 SystemRole（主判定入口）
+		var user models.User
+		if err := db.Select("id, system_role").First(&user, userID).Error; err != nil {
+			response.InternalError(c, "使用者查詢失敗")
+			return
+		}
+		if user.IsPlatformAdmin() {
 			c.Next()
 			return
 		}
 
-		// 檢查使用者是否直接擁有 admin 權限
+		// 2. 檢查使用者是否直接擁有 admin 權限
 		var count int64
 		if err := db.Model(&models.ClusterPermission{}).
 			Where("user_id = ? AND permission_type = ?", userID, models.PermissionTypeAdmin).
@@ -224,7 +234,7 @@ func PlatformAdminRequired(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 檢查使用者所在使用者組是否擁有 admin 權限
+		// 3. 檢查使用者所在使用者組是否擁有 admin 權限
 		var groupIDs []uint
 		if err := db.Model(&models.UserGroupMember{}).
 			Where("user_id = ?", userID).

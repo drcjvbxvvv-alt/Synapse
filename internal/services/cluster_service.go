@@ -594,3 +594,32 @@ func (s *ClusterService) ConvertFromStoredCluster(stored *StoredCluster) *models
 
 	return cluster
 }
+
+// ListMonitoringClusters returns all clusters that have monitoring enabled,
+// converted to the DataSourceClusterInfo shape used by GrafanaService.
+func (s *ClusterService) ListMonitoringClusters(ctx context.Context) []DataSourceClusterInfo {
+	var clusters []models.Cluster
+	if err := s.db.WithContext(ctx).
+		Select("name, monitoring_config").
+		Where("monitoring_config != '' AND monitoring_config IS NOT NULL").
+		Find(&clusters).Error; err != nil {
+		logger.Error("查詢叢集監控配置失敗", "error", err)
+		return nil
+	}
+
+	result := make([]DataSourceClusterInfo, 0, len(clusters))
+	for _, cluster := range clusters {
+		var config models.MonitoringConfig
+		if err := json.Unmarshal([]byte(cluster.MonitoringConfig), &config); err != nil {
+			continue
+		}
+		if config.Type == "disabled" || config.Endpoint == "" {
+			continue
+		}
+		result = append(result, DataSourceClusterInfo{
+			ClusterName:   cluster.Name,
+			PrometheusURL: config.Endpoint,
+		})
+	}
+	return result
+}

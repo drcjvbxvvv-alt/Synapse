@@ -107,11 +107,13 @@ type ChartInfo struct {
 }
 
 // HelmService Helm 操作服務
-type HelmService struct{}
+type HelmService struct {
+	db *gorm.DB
+}
 
 // NewHelmService 建立 HelmService 例項
-func NewHelmService() *HelmService {
-	return &HelmService{}
+func NewHelmService(db *gorm.DB) *HelmService {
+	return &HelmService{db: db}
 }
 
 // newActionConfig 建立 Helm action.Configuration（核心函式）
@@ -185,14 +187,14 @@ func (s *HelmService) GetValues(cluster *models.Cluster, namespace, name string,
 }
 
 // InstallRelease 安裝 Helm Release
-func (s *HelmService) InstallRelease(cluster *models.Cluster, db *gorm.DB, req InstallRequest) (*release.Release, error) {
+func (s *HelmService) InstallRelease(cluster *models.Cluster, req InstallRequest) (*release.Release, error) {
 	cfg, err := s.newActionConfig(cluster, req.Namespace)
 	if err != nil {
 		return nil, err
 	}
 
 	// 下載 chart
-	chartPath, err := s.downloadChart(db, req.RepoName, req.ChartName, req.Version)
+	chartPath, err := s.downloadChart(req.RepoName, req.ChartName, req.Version)
 	if err != nil {
 		return nil, fmt.Errorf("下載 Chart 失敗: %w", err)
 	}
@@ -221,7 +223,7 @@ func (s *HelmService) InstallRelease(cluster *models.Cluster, db *gorm.DB, req I
 }
 
 // UpgradeRelease 升級 Helm Release
-func (s *HelmService) UpgradeRelease(cluster *models.Cluster, db *gorm.DB, namespace, name string, req UpgradeRequest) (*release.Release, error) {
+func (s *HelmService) UpgradeRelease(cluster *models.Cluster, namespace, name string, req UpgradeRequest) (*release.Release, error) {
 	cfg, err := s.newActionConfig(cluster, namespace)
 	if err != nil {
 		return nil, err
@@ -243,13 +245,11 @@ func (s *HelmService) UpgradeRelease(cluster *models.Cluster, db *gorm.DB, names
 	// 嘗試找 repo（從現有 repos 中搜尋 chart 名稱）
 	repoName := ""
 	var repos []models.HelmRepository
-	if db != nil {
-		db.Find(&repos)
-		for _, r := range repos {
-			if s.chartExistsInRepo(&r, chartName) {
-				repoName = r.Name
-				break
-			}
+	s.db.Find(&repos)
+	for _, r := range repos {
+		if s.chartExistsInRepo(&r, chartName) {
+			repoName = r.Name
+			break
 		}
 	}
 
@@ -262,7 +262,7 @@ func (s *HelmService) UpgradeRelease(cluster *models.Cluster, db *gorm.DB, names
 		version = currentRelease.Chart.Metadata.Version
 	}
 
-	chartPath, err := s.downloadChart(db, repoName, chartName, version)
+	chartPath, err := s.downloadChart(repoName, chartName, version)
 	if err != nil {
 		return nil, fmt.Errorf("下載 Chart 失敗: %w", err)
 	}
@@ -313,31 +313,31 @@ func (s *HelmService) UninstallRelease(cluster *models.Cluster, namespace, name 
 }
 
 // ListRepos 列出所有 Helm Repository
-func (s *HelmService) ListRepos(db *gorm.DB) ([]models.HelmRepository, error) {
+func (s *HelmService) ListRepos() ([]models.HelmRepository, error) {
 	var repos []models.HelmRepository
-	if err := db.Find(&repos).Error; err != nil {
+	if err := s.db.Find(&repos).Error; err != nil {
 		return nil, err
 	}
 	return repos, nil
 }
 
 // AddRepo 新增 Helm Repository
-func (s *HelmService) AddRepo(db *gorm.DB, name, url, username, password string) (*models.HelmRepository, error) {
+func (s *HelmService) AddRepo(name, url, username, password string) (*models.HelmRepository, error) {
 	helmRepo := &models.HelmRepository{
 		Name:     name,
 		URL:      url,
 		Username: username,
 		Password: password,
 	}
-	if err := db.Create(helmRepo).Error; err != nil {
+	if err := s.db.Create(helmRepo).Error; err != nil {
 		return nil, fmt.Errorf("新增 Repository 失敗: %w", err)
 	}
 	return helmRepo, nil
 }
 
 // RemoveRepo 刪除 Helm Repository
-func (s *HelmService) RemoveRepo(db *gorm.DB, name string) error {
-	result := db.Where("name = ?", name).Delete(&models.HelmRepository{})
+func (s *HelmService) RemoveRepo(name string) error {
+	result := s.db.Where("name = ?", name).Delete(&models.HelmRepository{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -348,9 +348,9 @@ func (s *HelmService) RemoveRepo(db *gorm.DB, name string) error {
 }
 
 // SearchCharts 搜尋 Chart
-func (s *HelmService) SearchCharts(db *gorm.DB, keyword string) ([]ChartInfo, error) {
+func (s *HelmService) SearchCharts(keyword string) ([]ChartInfo, error) {
 	var repos []models.HelmRepository
-	if err := db.Find(&repos).Error; err != nil {
+	if err := s.db.Find(&repos).Error; err != nil {
 		return nil, err
 	}
 
@@ -441,9 +441,9 @@ func (s *HelmService) chartExistsInRepo(r *models.HelmRepository, chartName stri
 }
 
 // downloadChart 從 repo 下載 chart 到暫存檔
-func (s *HelmService) downloadChart(db *gorm.DB, repoName, chartName, version string) (string, error) {
+func (s *HelmService) downloadChart(repoName, chartName, version string) (string, error) {
 	var helmRepo models.HelmRepository
-	if err := db.Where("name = ?", repoName).First(&helmRepo).Error; err != nil {
+	if err := s.db.Where("name = ?", repoName).First(&helmRepo).Error; err != nil {
 		return "", fmt.Errorf("找不到 Repository '%s': %w", repoName, err)
 	}
 
