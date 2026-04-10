@@ -497,7 +497,7 @@ const NetworkPolicyForm: React.FC<NetworkPolicyFormProps> = ({
       onCancel={onClose}
       footer={footer}
       width={860}
-      destroyOnHide
+      destroyOnHidden
     >
       {dryRunResult && (
         <Alert

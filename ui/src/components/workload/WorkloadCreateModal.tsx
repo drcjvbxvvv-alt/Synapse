@@ -331,7 +331,7 @@ const WorkloadCreateModal: React.FC<WorkloadCreateModalProps> = ({
       width="90%"
       style={{ top: 20, maxWidth: 1400 }}
       footer={footer}
-      destroyOnHide
+      destroyOnHidden
     >
       {/* Rollout CRD 未安裝警告 */}
       {workloadType === 'Rollout' && rolloutCRDEnabled === false && (
