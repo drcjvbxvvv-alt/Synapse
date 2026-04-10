@@ -2,7 +2,7 @@
 # Synapse Makefile
 # ==========================================
 
-.PHONY: help dev dev-backend dev-frontend build build-backend build-frontend test test-backend test-frontend test-e2e test-e2e-ui lint lint-backend lint-frontend check docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs swagger clean version
+.PHONY: help dev dev-backend dev-frontend dev-air build build-backend build-frontend test test-backend test-frontend test-e2e test-e2e-ui lint lint-backend lint-frontend check docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs swagger clean version
 
 # 变量
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -29,6 +29,7 @@ help:
 	@echo "$(GREEN)開發命令:$(NC)"
 	@echo "  make dev            - 啟動完整開發環境（MySQL + 後端 + 前端）"
 	@echo "  make dev-backend    - 啟動 MySQL + 後端（不含前端）"
+	@echo "  make dev-air        - 後端熱重載（修改 .go 自動重新編譯，推薦開發時使用）"
 	@echo "  make dev-frontend   - 啟動前端開發伺服器"
 	@echo "  make dev-mysql      - 僅啟動 MySQL + Adminer"
 	@echo "  make dev-stop       - 停止所有開發服務"
@@ -81,6 +82,12 @@ dev:
 ## dev-backend: 啟動 MySQL + 後端（不含前端）
 dev-backend:
 	@bash scripts/dev.sh --backend-only
+
+## dev-air: 後端熱重載（修改 .go 檔自動重新編譯）
+dev-air:
+	@which ~/go/bin/air > /dev/null 2>&1 || (echo "請先安裝 air: go install github.com/air-verse/air@latest" && exit 1)
+	@echo "$(BLUE)啟動後端熱重載（air）...$(NC)"
+	@~/go/bin/air -c .air.toml
 
 ## dev-frontend: 啟動前端開發伺服器
 dev-frontend:

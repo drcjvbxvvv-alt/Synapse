@@ -236,3 +236,6 @@ brain_hook.py
 # Build output
 /Synapse
 /convert_go_s2tw.py
+
+# air hot reload
+tmp/

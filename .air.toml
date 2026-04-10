@@ -1,0 +1,44 @@
+# Air — Go hot reload 設定
+# https://github.com/air-verse/air
+
+root = "."
+testdata_dir = "testdata"
+tmp_dir = "tmp"
+
+[build]
+  # 編譯指令（與 make build-backend 一致，但輸出到 tmp/）
+  cmd = "go build -o ./tmp/synapse ."
+  bin = "./tmp/synapse"
+  # 編譯失敗時不執行
+  stop_on_error = true
+  # 有變更時延遲 500ms 再重建（debounce）
+  delay = 500
+
+  # 監聽這些副檔名的變更
+  include_ext = ["go", "toml", "yaml", "yml"]
+
+  # 排除這些目錄（避免重複觸發）
+  exclude_dir  = ["tmp", "vendor", "ui", "docs", ".git", "testdata"]
+  exclude_file = []
+  exclude_regex = ["_test\\.go$"]
+
+  # 監聽這些目錄（預設監聽整個專案）
+  include_dir  = ["internal", "pkg", "cmd", "main.go"]
+
+  # Kill 舊 process 的訊號
+  kill_delay = "2s"
+  send_interrupt = true
+
+[log]
+  time = true
+  main_only = false
+
+[color]
+  main    = "magenta"
+  watcher = "cyan"
+  build   = "yellow"
+  runner  = "green"
+
+[misc]
+  # 退出時清理 tmp 目錄
+  clean_on_exit = true
