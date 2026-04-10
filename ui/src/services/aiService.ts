@@ -1,4 +1,5 @@
 import { request } from '../utils/api';
+import { tokenManager } from './authService';
 import type { AIConfig, ChatMessage, Runbook, NLQueryResult } from '../types/ai';
 
 export const aiService = {
@@ -34,7 +35,7 @@ export const aiService = {
     onError: (error: string) => void,
     signal?: AbortSignal,
   ) => {
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getToken();
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
     fetch(`${baseURL}/clusters/${clusterId}/ai/chat`, {

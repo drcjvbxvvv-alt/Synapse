@@ -20,6 +20,7 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 import { ClipboardAddon } from '@xterm/addon-clipboard';
 import 'xterm/css/xterm.css';
 import { buildWebSocketUrl } from '../../utils/wsUrl';
+import { tokenManager } from '../../services/authService';
 import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
@@ -251,7 +252,7 @@ const { id: clusterId } = useParams<{ id: string }>();
     }
     
     // 獲取認證 token
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getToken();
     if (!token) {
       message.error(t('messages.notLoggedIn'));
       return;

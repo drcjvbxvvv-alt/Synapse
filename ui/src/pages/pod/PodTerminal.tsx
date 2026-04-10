@@ -26,6 +26,7 @@ import 'xterm/css/xterm.css';
 import { buildWebSocketUrl } from '../../utils/wsUrl';
 import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
+import { tokenManager } from '../../services/authService';
 import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
@@ -218,7 +219,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     }
     
     // 獲取認證 token
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getToken();
     if (!token) {
       message.error(t('pod:terminal.notLoggedIn'));
       return;

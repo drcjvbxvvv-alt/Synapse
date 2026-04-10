@@ -1,5 +1,6 @@
 import { request } from '../utils/api';
 import { buildWebSocketUrl } from '../utils/wsUrl';
+import { tokenManager } from './authService';
 
 // 日誌條目型別
 export interface LogEntry {
@@ -184,7 +185,7 @@ export const logService = {
     clusterId: string,
     config: LogStreamConfig
   ): { ws: WebSocket; config: LogStreamConfig } => {
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getToken();
     const url = buildWebSocketUrl(`/ws/clusters/${clusterId}/logs/stream?token=${token}`);
     
     const ws = new WebSocket(url);
@@ -205,7 +206,7 @@ export const logService = {
       sinceSeconds?: number;
     }
   ): WebSocket => {
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getToken();
 
     const query = new URLSearchParams();
     query.set('token', token || '');

@@ -13,6 +13,7 @@ import {
   FullscreenOutlined,
 } from '@ant-design/icons';
 import { buildWebSocketUrl } from '../utils/wsUrl';
+import { tokenManager } from '../services/authService';
 
 interface KubectlTerminalProps {
   clusterId: string;
@@ -159,7 +160,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
 
   // 連線到後端 WebSocket
   const connectWebSocket = () => {
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getToken();
     if (!token) {
       message.error(t('kubectlTerminal.notLoggedIn'));
       return;

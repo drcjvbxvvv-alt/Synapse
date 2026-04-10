@@ -9,7 +9,7 @@ import {
   DisconnectOutlined,
   LinkOutlined
 } from '@ant-design/icons';
-import { systemSettingService } from '../services/authService';
+import { systemSettingService, tokenManager } from '../services/authService';
 import { buildWebSocketUrl } from '../utils/wsUrl';
 import 'xterm/css/xterm.css';
 
@@ -117,7 +117,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
   const connectSSH = async (connection: SSHConnection) => {
     if (!terminal.current) return;
 
-    const token = localStorage.getItem('token');
+    const token = tokenManager.getToken();
     if (!token) {
       message.error(t('sshTerminal.notLoggedIn'));
       return;
