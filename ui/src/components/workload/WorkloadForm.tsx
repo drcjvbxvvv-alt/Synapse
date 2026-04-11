@@ -21,7 +21,7 @@ const { Panel } = Collapse;
 const { Text } = Typography;
 
 interface WorkloadFormProps {
-  workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob';
+  workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'ArgoRollout' | 'Job' | 'CronJob';
   initialData?: Partial<WorkloadFormData>;
   namespaces: string[];
   imagePullSecretsList?: string[];

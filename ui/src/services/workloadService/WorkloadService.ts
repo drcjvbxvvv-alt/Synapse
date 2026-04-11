@@ -341,7 +341,7 @@ export class WorkloadService {
 
   // 表單資料轉YAML — delegates to standalone function
   static formDataToYAML(
-    workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob',
+    workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'ArgoRollout' | 'Job' | 'CronJob',
     formData: Record<string, unknown>
   ): string {
     return formDataToYAML(workloadType, formData);

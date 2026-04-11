@@ -13,7 +13,7 @@ import { buildJobSpec, buildCronJobSpec, parseJobFields, parseCronJobFields } fr
 
 // 主轉換函式：表單資料 -> YAML
 export const formDataToYAML = (
-  workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob',
+  workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'ArgoRollout' | 'Job' | 'CronJob',
   formData: WorkloadFormData,
 ): string => {
   const commonParts = buildCommonParts(formData);

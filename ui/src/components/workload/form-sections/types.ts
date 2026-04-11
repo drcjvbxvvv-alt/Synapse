@@ -2,7 +2,7 @@ import type { FormInstance } from 'antd';
 import type { TFunction } from 'i18next';
 import type { WorkloadFormData } from '../../../types/workload';
 
-export type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob';
+export type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'ArgoRollout' | 'Job' | 'CronJob';
 
 export interface FormSectionProps {
   form: FormInstance<WorkloadFormData>;

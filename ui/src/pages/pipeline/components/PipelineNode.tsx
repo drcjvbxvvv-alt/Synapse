@@ -27,7 +27,7 @@ export const STATUS_STYLES: Record<StepStatus, {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-export interface PipelineNodeData {
+export interface PipelineNodeData extends Record<string, unknown> {
   step: StepDef;
   status: StepStatus;
   elapsed?: string;

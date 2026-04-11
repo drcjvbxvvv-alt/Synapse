@@ -30,7 +30,7 @@ import type { WorkloadFormData } from '../../types/workload';
 
 const { Text } = Typography;
 
-type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob';
+type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'ArgoRollout' | 'Job' | 'CronJob';
 
 interface WorkloadCreateModalProps {
   open: boolean;

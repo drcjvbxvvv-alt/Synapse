@@ -13,7 +13,7 @@ interface VolumeItem {
 
 // 表單資料轉YAML
 export function formDataToYAML(
-  workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob',
+  workloadType: 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'ArgoRollout' | 'Job' | 'CronJob',
   formData: Record<string, unknown>
 ): string {
   // 解析labels和annotations

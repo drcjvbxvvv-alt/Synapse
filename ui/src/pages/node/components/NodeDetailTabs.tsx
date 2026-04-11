@@ -27,7 +27,7 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Node, NodeCondition, Pod } from '../../../types';
+import type { Node, NodeCondition, NodeTaint, Pod } from '../../../types';
 import type { TFunction } from 'i18next';
 import SSHTerminal from '../../../components/SSHTerminal';
 import MonitoringCharts from '../../../components/MonitoringCharts';
@@ -45,7 +45,7 @@ interface NodeDetailTabsProps {
   navigate: (path: string) => void;
   handleExportPods: () => void;
   handleRemoveLabel: (key: string) => void;
-  handleRemoveTaint: (taint: { key: string; value?: string; effect: string }) => void;
+  handleRemoveTaint: (taint: NodeTaint) => void | Promise<void>;
   setLabelModalVisible: (visible: boolean) => void;
   setTaintModalVisible: (visible: boolean) => void;
 }
