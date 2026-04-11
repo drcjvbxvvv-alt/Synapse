@@ -5,7 +5,7 @@
 SET NAMES utf8mb4;
 SET foreign_key_checks = 0;
 
--- ── users ─────────────────────────────────────────────────────────────────
+-- -- users ----------------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `users` (
   `id`            bigint unsigned NOT NULL AUTO_INCREMENT,
   `username`      varchar(50)     NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   KEY `idx_users_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── user_groups ───────────────────────────────────────────────────────────
+-- -- user_groups ----------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `user_groups` (
   `id`          bigint unsigned NOT NULL AUTO_INCREMENT,
   `name`        varchar(50)     NOT NULL,
@@ -41,14 +41,14 @@ CREATE TABLE IF NOT EXISTS `user_groups` (
   KEY `idx_user_groups_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── user_group_members (many2many join table) ─────────────────────────────
+-- -- user_group_members (many2many join table) ----------------------------─
 CREATE TABLE IF NOT EXISTS `user_group_members` (
   `user_id`       bigint unsigned NOT NULL,
   `user_group_id` bigint unsigned NOT NULL,
   PRIMARY KEY (`user_id`, `user_group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── clusters ──────────────────────────────────────────────────────────────
+-- -- clusters --------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `clusters` (
   `id`                   bigint unsigned NOT NULL AUTO_INCREMENT,
   `name`                 varchar(100)    NOT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS `clusters` (
   KEY `idx_clusters_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── cluster_metrics ───────────────────────────────────────────────────────
+-- -- cluster_metrics ------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `cluster_metrics` (
   `cluster_id`    bigint unsigned NOT NULL,
   `node_count`    bigint          NOT NULL DEFAULT 0,
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `cluster_metrics` (
   PRIMARY KEY (`cluster_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── cluster_permissions ───────────────────────────────────────────────────
+-- -- cluster_permissions --------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `cluster_permissions` (
   `id`              bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`      bigint unsigned NOT NULL,
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS `cluster_permissions` (
   KEY `idx_cluster_permissions_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── terminal_sessions ─────────────────────────────────────────────────────
+-- -- terminal_sessions ----------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `terminal_sessions` (
   `id`          bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id`     bigint unsigned NOT NULL,
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS `terminal_sessions` (
   KEY `idx_terminal_sessions_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── terminal_commands ─────────────────────────────────────────────────────
+-- -- terminal_commands ----------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `terminal_commands` (
   `id`         bigint unsigned NOT NULL AUTO_INCREMENT,
   `session_id` bigint unsigned NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS `terminal_commands` (
   KEY `idx_terminal_commands_session_id` (`session_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── audit_logs ────────────────────────────────────────────────────────────
+-- -- audit_logs ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `audit_logs` (
   `id`            bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id`       bigint unsigned NOT NULL,
@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
   KEY `idx_audit_logs_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── operation_logs ────────────────────────────────────────────────────────
+-- -- operation_logs --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `operation_logs` (
   `id`            bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id`       bigint unsigned NULL,
@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS `operation_logs` (
   KEY `idx_operation_logs_success` (`success`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── system_settings ───────────────────────────────────────────────────────
+-- -- system_settings ------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `system_settings` (
   `id`         bigint unsigned NOT NULL AUTO_INCREMENT,
   `config_key` varchar(100)    NOT NULL,
@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS `system_settings` (
   KEY `idx_system_settings_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── argocd_configs ────────────────────────────────────────────────────────
+-- -- argocd_configs --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `argocd_configs` (
   `id`                    bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`            bigint unsigned NOT NULL,
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS `argocd_configs` (
   KEY `idx_argocd_configs_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── ai_configs ────────────────────────────────────────────────────────────
+-- -- ai_configs ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `ai_configs` (
   `id`          bigint unsigned NOT NULL AUTO_INCREMENT,
   `provider`    varchar(50)     NOT NULL DEFAULT 'openai',
@@ -250,7 +250,7 @@ CREATE TABLE IF NOT EXISTS `ai_configs` (
   KEY `idx_ai_configs_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── helm_repositories ─────────────────────────────────────────────────────
+-- -- helm_repositories ----------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `helm_repositories` (
   `id`         bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3)     NOT NULL,
@@ -265,7 +265,7 @@ CREATE TABLE IF NOT EXISTS `helm_repositories` (
   KEY `idx_helm_repositories_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── event_alert_rules ─────────────────────────────────────────────────────
+-- -- event_alert_rules ----------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `event_alert_rules` (
   `id`           bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`   bigint unsigned NOT NULL,
@@ -286,7 +286,7 @@ CREATE TABLE IF NOT EXISTS `event_alert_rules` (
   KEY `idx_event_alert_rules_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── event_alert_histories ─────────────────────────────────────────────────
+-- -- event_alert_histories ------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `event_alert_histories` (
   `id`            bigint unsigned NOT NULL AUTO_INCREMENT,
   `rule_id`       bigint unsigned NOT NULL,
@@ -307,7 +307,7 @@ CREATE TABLE IF NOT EXISTS `event_alert_histories` (
   KEY `idx_event_alert_histories_triggered_at` (`triggered_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── cost_configs ──────────────────────────────────────────────────────────
+-- -- cost_configs ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `cost_configs` (
   `id`                 bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`         bigint unsigned NOT NULL,
@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS `cost_configs` (
   UNIQUE KEY `idx_cost_configs_cluster_id` (`cluster_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── resource_snapshots ────────────────────────────────────────────────────
+-- -- resource_snapshots ----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `resource_snapshots` (
   `id`          bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`  bigint unsigned NOT NULL,
@@ -336,7 +336,7 @@ CREATE TABLE IF NOT EXISTS `resource_snapshots` (
   KEY `idx_resource_snapshots_date` (`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── cluster_occupancy_snapshots ───────────────────────────────────────────
+-- -- cluster_occupancy_snapshots ------------------------------------------─
 CREATE TABLE IF NOT EXISTS `cluster_occupancy_snapshots` (
   `id`                 bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`         bigint unsigned NOT NULL,
@@ -351,7 +351,7 @@ CREATE TABLE IF NOT EXISTS `cluster_occupancy_snapshots` (
   UNIQUE KEY `idx_cluster_date` (`cluster_id`, `date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── cloud_billing_configs ─────────────────────────────────────────────────
+-- -- cloud_billing_configs ------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `cloud_billing_configs` (
   `id`                       bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`               bigint unsigned NOT NULL,
@@ -371,7 +371,7 @@ CREATE TABLE IF NOT EXISTS `cloud_billing_configs` (
   UNIQUE KEY `idx_cloud_billing_configs_cluster_id` (`cluster_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── cloud_billing_records ─────────────────────────────────────────────────
+-- -- cloud_billing_records ------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `cloud_billing_records` (
   `id`         bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id` bigint unsigned NOT NULL,
@@ -387,7 +387,7 @@ CREATE TABLE IF NOT EXISTS `cloud_billing_records` (
   KEY `idx_cloud_billing_records_month` (`month`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── image_scan_results ────────────────────────────────────────────────────
+-- -- image_scan_results ----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `image_scan_results` (
   `id`             bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`     bigint unsigned NOT NULL,
@@ -410,7 +410,7 @@ CREATE TABLE IF NOT EXISTS `image_scan_results` (
   KEY `idx_image_scan_results_cluster_id` (`cluster_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── bench_results ─────────────────────────────────────────────────────────
+-- -- bench_results --------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `bench_results` (
   `id`          bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`  bigint unsigned NOT NULL,
@@ -430,7 +430,7 @@ CREATE TABLE IF NOT EXISTS `bench_results` (
   KEY `idx_bench_results_cluster_id` (`cluster_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── sync_policies ─────────────────────────────────────────────────────────
+-- -- sync_policies --------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `sync_policies` (
   `id`                bigint unsigned NOT NULL AUTO_INCREMENT,
   `name`              varchar(128)    NOT NULL,
@@ -451,7 +451,7 @@ CREATE TABLE IF NOT EXISTS `sync_policies` (
   KEY `idx_sync_policies_source_cluster_id` (`source_cluster_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── sync_histories ────────────────────────────────────────────────────────
+-- -- sync_histories --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `sync_histories` (
   `id`           bigint unsigned NOT NULL AUTO_INCREMENT,
   `policy_id`    bigint unsigned NOT NULL,
@@ -465,7 +465,7 @@ CREATE TABLE IF NOT EXISTS `sync_histories` (
   KEY `idx_sync_histories_policy_id` (`policy_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── config_versions ───────────────────────────────────────────────────────
+-- -- config_versions ------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `config_versions` (
   `id`            bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id`    bigint unsigned NOT NULL,
@@ -480,7 +480,7 @@ CREATE TABLE IF NOT EXISTS `config_versions` (
   KEY `idx_config_ver` (`cluster_id`, `resource_type`, `namespace`, `name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── namespace_protections ─────────────────────────────────────────────────
+-- -- namespace_protections ------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `namespace_protections` (
   `id`               bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at`       datetime(3)     NOT NULL,
@@ -495,7 +495,7 @@ CREATE TABLE IF NOT EXISTS `namespace_protections` (
   KEY `idx_namespace_protections_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── approval_requests ─────────────────────────────────────────────────────
+-- -- approval_requests ----------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `approval_requests` (
   `id`             bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at`     datetime(3)     NOT NULL,
@@ -523,7 +523,7 @@ CREATE TABLE IF NOT EXISTS `approval_requests` (
   KEY `idx_approval_requests_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── port_forward_sessions ─────────────────────────────────────────────────
+-- -- port_forward_sessions ------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `port_forward_sessions` (
   `id`           bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at`   datetime(3)     NOT NULL,
@@ -544,7 +544,7 @@ CREATE TABLE IF NOT EXISTS `port_forward_sessions` (
   KEY `idx_port_forward_sessions_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── siem_webhook_configs ──────────────────────────────────────────────────
+-- -- siem_webhook_configs --------------------------------------------------
 CREATE TABLE IF NOT EXISTS `siem_webhook_configs` (
   `id`            bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at`    datetime(3)     NOT NULL,
@@ -559,7 +559,7 @@ CREATE TABLE IF NOT EXISTS `siem_webhook_configs` (
   KEY `idx_siem_webhook_configs_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── api_tokens ────────────────────────────────────────────────────────────
+-- -- api_tokens ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `api_tokens` (
   `id`           bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id`      bigint unsigned NOT NULL,
@@ -574,7 +574,7 @@ CREATE TABLE IF NOT EXISTS `api_tokens` (
   KEY `idx_api_tokens_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── notify_channels ───────────────────────────────────────────────────────
+-- -- notify_channels ------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `notify_channels` (
   `id`               bigint unsigned NOT NULL AUTO_INCREMENT,
   `name`             varchar(100)    NOT NULL,
@@ -591,7 +591,7 @@ CREATE TABLE IF NOT EXISTS `notify_channels` (
   KEY `idx_notify_channels_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── log_source_configs ────────────────────────────────────────────────────
+-- -- log_source_configs ----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `log_source_configs` (
   `id`         bigint unsigned NOT NULL AUTO_INCREMENT,
   `cluster_id` bigint unsigned NOT NULL,
@@ -610,7 +610,7 @@ CREATE TABLE IF NOT EXISTS `log_source_configs` (
   KEY `idx_log_source_configs_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── image_indices ─────────────────────────────────────────────────────────
+-- -- image_indices --------------------------------------------------------─
 CREATE TABLE IF NOT EXISTS `image_indices` (
   `id`             bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at`     datetime(3)     NOT NULL,
@@ -634,7 +634,7 @@ CREATE TABLE IF NOT EXISTS `image_indices` (
   KEY `idx_image_indices_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── token_blacklists ──────────────────────────────────────────────────────
+-- -- token_blacklists ------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `token_blacklists` (
   `id`         bigint unsigned NOT NULL AUTO_INCREMENT,
   `jti`        varchar(64)     NOT NULL,
