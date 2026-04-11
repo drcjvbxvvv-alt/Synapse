@@ -19,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import EmptyState from '@/components/EmptyState';
 import ConfigMapForm from './ConfigMapForm';
 import { useConfigMapList } from './hooks/useConfigMapList';
 import { getConfigMapColumns } from './configMapColumns';
@@ -150,6 +151,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
           },
           pageSizeOptions: ['10', '20', '50', '100'],
         }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
 
       <ConfigMapForm

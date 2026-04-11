@@ -51,9 +51,9 @@
     "pasteFailed": "粘贴失败，请检查浏览器权限",
     "connectedToCluster": "已连接到集群 {{clusterId}} (kubectl模式)",
     "helpHint": "提示：输入 <code>help</code> 或 <code>?</code> 查看帮助信息",
-    "welcomeLine1": "Welcome to Kubectl Terminal",
-    "welcomeLine2": "Execute kubectl commands",
-    "welcomeLine3": "Enter kubectl commands below or use the quick command input."
+    "welcomeLine1": "欢迎使用 Kubectl 终端",
+    "welcomeLine2": "执行 kubectl 命令",
+    "welcomeLine3": "在下方输入 kubectl 命令，或使用快速命令输入栏。"
   },
   "sshTerminal": {
     "welcome": "欢迎使用 SSH 终端",

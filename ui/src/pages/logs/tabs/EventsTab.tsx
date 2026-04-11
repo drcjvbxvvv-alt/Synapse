@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Space, Select, Table } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import EmptyState from '../../../components/EmptyState';
 import type { EventLogEntry } from '../../../services/logService';
 import { getEventColumns } from '../columns';
 import { eventTypeOptions } from '../constants';
@@ -71,6 +72,7 @@ export const EventsTab: React.FC<EventsTabProps> = ({
         }}
         size="small"
         scroll={{ y: 'calc(100vh - 500px)' }}
+        locale={{ emptyText: <EmptyState description={t('logs:center.noEvents')} /> }}
       />
     </div>
   );

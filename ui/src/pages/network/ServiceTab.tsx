@@ -10,6 +10,7 @@ import {
   Modal,
   App,
 } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import {
   ReloadOutlined,
   SearchOutlined,
@@ -465,6 +466,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
           },
           pageSizeOptions: ['10', '20', '50', '100'],
         }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
 
       <YAMLViewModal

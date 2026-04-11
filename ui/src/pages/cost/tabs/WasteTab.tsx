@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Space, Table, Alert, Empty } from 'antd';
+import { Button, Space, Table, Alert} from 'antd';
+import EmptyState from '@/components/EmptyState';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { WasteItem } from '../../../services/costService';
@@ -27,7 +28,7 @@ export const WasteTab: React.FC<WasteTabProps> = ({
       </Space>
 
       {waste.length === 0 && !wasteLoading ? (
-        <Empty description={t('cost:waste.empty')} />
+        <EmptyState description={t('cost:waste.empty')} />
       ) : (
         <>
           <Alert

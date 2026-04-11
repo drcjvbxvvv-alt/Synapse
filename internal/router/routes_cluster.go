@@ -101,6 +101,9 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			registerClusterOpsRoutes(cluster, d)
 			registerClusterGovernanceRoutes(cluster, d)
 			registerClusterResilienceRoutes(cluster, d)
+			registerClusterSLORoutes(cluster, d)
+		registerClusterChaosRoutes(cluster, d)
+		registerClusterComplianceRoutes(cluster, d)
 		}
 	}
 }

@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import NotInstalledCard from '../../components/NotInstalledCard';
 import { useTranslation } from 'react-i18next';
+import EmptyState from '../../components/EmptyState';
 import {
   snapshotService, backupPhaseColor, restorePhaseColor,
   type VeleroBackupInfo, type VeleroRestoreInfo, type VeleroScheduleInfo,
@@ -20,7 +21,7 @@ interface VeleroTabProps { clusterId: string }
 // ─── Backup sub-panel ───────────────────────────────────────────────────────
 
 const BackupPanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clusterId, veleroNS }) => {
-  const { t } = useTranslation('storage');
+  const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [backups, setBackups] = useState<VeleroBackupInfo[]>([]);
@@ -129,6 +130,7 @@ const BackupPanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ cluste
       <Table
         rowKey="name" columns={columns} dataSource={backups} loading={loading}
         size="small" scroll={{ x: 1000 }}
+        locale={{ emptyText: <EmptyState /> }}
         pagination={{ pageSize: 20, showSizeChanger: true, showTotal: tot => t('velero.total', { total: tot }) }}
       />
       <Modal
@@ -156,7 +158,7 @@ const BackupPanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ cluste
 // ─── Restore sub-panel ──────────────────────────────────────────────────────
 
 const RestorePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clusterId, veleroNS }) => {
-  const { t } = useTranslation('storage');
+  const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [restores, setRestores] = useState<VeleroRestoreInfo[]>([]);
@@ -210,6 +212,7 @@ const RestorePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clust
       <Table
         rowKey="name" columns={columns} dataSource={restores} loading={loading}
         size="small" scroll={{ x: 800 }}
+        locale={{ emptyText: <EmptyState /> }}
         pagination={{ pageSize: 20, showSizeChanger: true }}
       />
     </>
@@ -219,7 +222,7 @@ const RestorePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clust
 // ─── Schedule sub-panel ─────────────────────────────────────────────────────
 
 const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clusterId, veleroNS }) => {
-  const { t } = useTranslation('storage');
+  const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [schedules, setSchedules] = useState<VeleroScheduleInfo[]>([]);
@@ -336,6 +339,7 @@ const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clus
       <Table
         rowKey="name" columns={columns} dataSource={schedules} loading={loading}
         size="small" scroll={{ x: 900 }}
+        locale={{ emptyText: <EmptyState /> }}
         pagination={{ pageSize: 20, showSizeChanger: true }}
       />
       <Modal

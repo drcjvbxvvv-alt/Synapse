@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Space, Select, Card, Table, Input, DatePicker } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import EmptyState from '../../../components/EmptyState';
 import type { Dayjs } from 'dayjs';
 import type { LogEntry } from '../../../services/logService';
 import { getSearchColumns } from '../columns';
@@ -102,6 +103,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           }}
           size="small"
           scroll={{ y: 'calc(100vh - 550px)' }}
+          locale={{ emptyText: <EmptyState description={t('logs:center.noSearchResults')} /> }}
         />
       </Card>
     </div>

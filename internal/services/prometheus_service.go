@@ -1713,3 +1713,80 @@ func (s *PrometheusService) queryWorkloadDiskThroughput(ctx context.Context, con
 		Write: writeSeries,
 	}, nil
 }
+
+// ── Instant query helper ────────────────────────────────────────────────────
+
+// instantResult is the minimal shape of a Prometheus /api/v1/query response.
+type instantResult struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Value []interface{} `json:"value"` // [unixtime, "value_string"]
+		} `json:"result"`
+	} `json:"data"`
+}
+
+// QueryInstantScalar executes a PromQL instant query and returns the first scalar result.
+// Returns (math.NaN(), nil) when the result set is empty (metric absent / no data).
+func (s *PrometheusService) QueryInstantScalar(ctx context.Context, config *models.MonitoringConfig, expr string) (float64, error) {
+	if config == nil || config.Type == "disabled" {
+		return math.NaN(), fmt.Errorf("monitoring disabled or config nil")
+	}
+
+	base, err := url.Parse(config.Endpoint)
+	if err != nil {
+		return math.NaN(), fmt.Errorf("parse endpoint: %w", err)
+	}
+	base.Path = "/api/v1/query"
+	q := base.Query()
+	q.Set("query", expr)
+	base.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", base.String(), nil)
+	if err != nil {
+		return math.NaN(), fmt.Errorf("build request: %w", err)
+	}
+	if err := s.setAuth(req, config.Auth); err != nil {
+		return math.NaN(), fmt.Errorf("set auth: %w", err)
+	}
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return math.NaN(), fmt.Errorf("execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return math.NaN(), fmt.Errorf("read response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return math.NaN(), fmt.Errorf("prometheus returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result instantResult
+	if err := json.Unmarshal(body, &result); err != nil {
+		return math.NaN(), fmt.Errorf("parse response: %w", err)
+	}
+	if result.Status != "success" {
+		return math.NaN(), fmt.Errorf("prometheus status: %s", result.Status)
+	}
+	if len(result.Data.Result) == 0 {
+		return math.NaN(), nil // no data — caller decides what to do
+	}
+
+	vals := result.Data.Result[0].Value
+	if len(vals) < 2 {
+		return math.NaN(), fmt.Errorf("unexpected value array length %d", len(vals))
+	}
+	raw, ok := vals[1].(string)
+	if !ok {
+		return math.NaN(), fmt.Errorf("value is not a string")
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return math.NaN(), fmt.Errorf("parse float %q: %w", raw, err)
+	}
+	return v, nil
+}

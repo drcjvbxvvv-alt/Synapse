@@ -26,6 +26,7 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
 import { ActionButtons } from '../../components/ActionButtons';
+import EmptyState from '../../components/EmptyState';
 
 const { Link } = Typography;
 
@@ -602,6 +603,7 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
         scroll={{ x: 'max-content', y: 600 }}
         size="middle"
         onChange={handleTableChange}
+        locale={{ emptyText: <EmptyState /> }}
         pagination={{
           current: currentPage,
           pageSize: pageSize,

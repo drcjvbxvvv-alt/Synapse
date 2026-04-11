@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Statistic, Segmented, Button, Empty, Alert, Spin } from 'antd';
+import { Card, Row, Col, Statistic, Segmented, Button, Alert, Spin } from 'antd';
 import { Line } from '@ant-design/plots';
 import { ReloadOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
+import EmptyState from './EmptyState';
 import api from '../utils/api';
 
 interface DataPoint {
@@ -67,6 +69,7 @@ const lineConfig = (data: ReturnType<typeof buildChartData>, color: string, yFor
 });
 
 const WorkloadMetricsChart: React.FC<Props> = ({ clusterId, namespace, name, workloadKind }) => {
+  const { t } = useTranslation(['common']);
   const [metrics, setMetrics] = useState<WorkloadMetricsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [range, setRange] = useState('1h');
@@ -155,7 +158,7 @@ const WorkloadMetricsChart: React.FC<Props> = ({ clusterId, namespace, name, wor
           {cpuData.length > 0 ? (
             <Line {...lineConfig(cpuData, '#1677ff', v => `${v.toFixed(2)}%`)} />
           ) : (
-            <Empty description="暫無資料" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ height: 200, display: 'flex', flexDirection: 'column', justifyContent: 'center' }} />
+            <EmptyState style={{ height: 200, display: 'flex', flexDirection: 'column', justifyContent: 'center' }} />
           )}
         </div>
 
@@ -165,7 +168,7 @@ const WorkloadMetricsChart: React.FC<Props> = ({ clusterId, namespace, name, wor
           {memData.length > 0 ? (
             <Line {...lineConfig(memData, '#52c41a', v => `${v.toFixed(2)}%`)} />
           ) : (
-            <Empty description="暫無資料" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ height: 200, display: 'flex', flexDirection: 'column', justifyContent: 'center' }} />
+            <EmptyState style={{ height: 200, display: 'flex', flexDirection: 'column', justifyContent: 'center' }} />
           )}
         </div>
       </Spin>

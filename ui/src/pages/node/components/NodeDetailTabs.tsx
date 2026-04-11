@@ -1,3 +1,4 @@
+import EmptyState from '@/components/EmptyState';
 import React from 'react';
 import {
   Card,
@@ -340,7 +341,7 @@ export function createNodeDetailTabItems(props: NodeDetailTabsProps) {
               </Card>
             ))
           ) : (
-            <Empty description={t('detail.noTaints')} />
+            <EmptyState description={t('detail.noTaints')} />
           )}
 
           <Button

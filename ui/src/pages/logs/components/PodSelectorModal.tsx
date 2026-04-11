@@ -1,6 +1,7 @@
+import EmptyState from '@/components/EmptyState';
 import React from 'react';
 import {
-  Modal, Space, Select, Input, Spin, Empty, Checkbox, Tag, Alert, Typography,
+  Modal, Space, Select, Input, Spin, Checkbox, Tag, Alert, Typography,
 } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { List as VirtualList } from 'react-window';
@@ -114,9 +115,9 @@ export const PodSelectorModal: React.FC<PodSelectorModalProps> = ({
 
         <Spin spinning={podsLoading}>
           {pods.length === 0 ? (
-            <Empty description={t('logs:center.selectNamespaceFirst')} />
+            <EmptyState description={t('logs:center.selectNamespaceFirst')} />
           ) : filteredPods.length === 0 ? (
-            <Empty description={t('logs:center.noMatchingPods')} />
+            <EmptyState description={t('logs:center.noMatchingPods')} />
           ) : (
             <>
               <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

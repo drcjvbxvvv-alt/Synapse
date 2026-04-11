@@ -11,6 +11,7 @@ import {
   App,
   Typography,
 } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -155,6 +156,7 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
         size="middle"
         pagination={{ pageSize: 20 }}
         scroll={{ x: 700 }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
 
       {/* YAML Viewer */}

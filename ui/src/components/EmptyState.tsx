@@ -95,11 +95,11 @@ const EmptyState: React.FC<EmptyStateProps> = ({
     <Empty
       style={{ padding: '32px 0', ...style }}
       image={displayIcon}
-      imageStyle={typeof displayIcon !== 'string' ? { height: 'auto' } : undefined}
+      imageStyle={typeof displayIcon !== 'string' ? { width: 124, height: 92, margin: '0 auto' } : undefined}
       description={
         <Space direction="vertical" size={4}>
-          <Text strong style={{ fontSize: 15 }}>{displayTitle}</Text>
-          {displayDescription && <Text type="secondary">{displayDescription}</Text>}
+          <Text strong style={{ fontSize: 15, color: '#8a94b0' }}>{displayTitle}</Text>
+          {displayDescription && <Text style={{ color: '#8a94b0' }}>{displayDescription}</Text>}
         </Space>
       }
     >

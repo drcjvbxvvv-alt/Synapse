@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS slos (
+    id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    cluster_id          BIGINT UNSIGNED NOT NULL,
+    name                VARCHAR(255)    NOT NULL,
+    description         VARCHAR(1024)   NOT NULL DEFAULT '',
+    namespace           VARCHAR(128)    NOT NULL DEFAULT '',
+    sli_type            VARCHAR(32)     NOT NULL,
+    prom_query          TEXT            NOT NULL,
+    total_query         TEXT,
+    target              DOUBLE          NOT NULL,
+    `window`            VARCHAR(16)     NOT NULL,
+    burn_rate_warning   DOUBLE          NOT NULL DEFAULT 2,
+    burn_rate_critical  DOUBLE          NOT NULL DEFAULT 10,
+    enabled             BOOLEAN         NOT NULL DEFAULT TRUE,
+    created_at          DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at          DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at          DATETIME(3),
+    INDEX idx_slos_cluster_id (cluster_id),
+    INDEX idx_slos_namespace (namespace),
+    INDEX idx_slos_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -7,6 +7,7 @@ import {
   ReloadOutlined, ThunderboltOutlined, NodeIndexOutlined,
   ClusterOutlined, RocketOutlined,
 } from '@ant-design/icons';
+import EmptyState from '@/components/EmptyState';
 import NotInstalledCard from '../../components/NotInstalledCard';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -179,6 +180,7 @@ const KEDATab: React.FC<PanelProps> = ({ clusterId }) => {
         size="small"
         scroll={{ x: 800 }}
         pagination={{ pageSize: 20, showSizeChanger: true }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
       <Title level={5} style={{ marginBottom: 8 }}>{t('autoscaling.keda.scaledJobs')} ({scaledJobs.length})</Title>
       <Table
@@ -188,6 +190,7 @@ const KEDATab: React.FC<PanelProps> = ({ clusterId }) => {
         size="small"
         scroll={{ x: 600 }}
         pagination={{ pageSize: 20, showSizeChanger: true }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
     </Space>
   );
@@ -276,9 +279,9 @@ const KarpenterTab: React.FC<PanelProps> = ({ clusterId }) => {
     <Space direction="vertical" style={{ width: '100%' }} size={16}>
       <Button icon={<ReloadOutlined />} onClick={load}>{t('common.refresh')}</Button>
       <Title level={5} style={{ marginBottom: 8 }}>{t('autoscaling.karpenter.nodePools')} ({nodePools.length})</Title>
-      <Table rowKey="name" columns={npColumns} dataSource={nodePools} size="small" pagination={{ pageSize: 20 }} />
+      <Table rowKey="name" columns={npColumns} dataSource={nodePools} size="small" pagination={{ pageSize: 20 }} locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }} />
       <Title level={5} style={{ marginBottom: 8 }}>{t('autoscaling.karpenter.nodeClaims')} ({nodeClaims.length})</Title>
-      <Table rowKey="name" columns={ncColumns} dataSource={nodeClaims} size="small" pagination={{ pageSize: 20 }} />
+      <Table rowKey="name" columns={ncColumns} dataSource={nodeClaims} size="small" pagination={{ pageSize: 20 }} locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }} />
     </Space>
   );
 };

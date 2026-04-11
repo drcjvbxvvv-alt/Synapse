@@ -3,13 +3,15 @@
   "menu": "Cost Analysis",
   "tabs": {
     "overview": "Overview",
+    "occupancy": "Occupancy",
+    "efficiency": "Efficiency",
+    "wlEfficiency": "Workload Efficiency",
+    "capacityTrend": "Capacity Trend",
+    "wasteResources": "Waste Resources",
     "namespaces": "Namespaces",
     "workloads": "Workloads",
     "trend": "Monthly Trend",
     "waste": "Waste Detection",
-    "efficiency": "Efficiency",
-    "wlEfficiency": "Workload Efficiency",
-    "capacityTrend": "Capacity Trend",
     "cloudBilling": "Cloud Billing"
   },
   "banner": {
@@ -54,6 +56,9 @@
     "months": "Last {{n}} months",
     "totalLabel": "Total Cost"
   },
+  "capacityTrend": {
+    "noData": "No historical snapshot data yet. CostWorker captures daily at 00:05 UTC. After connection, trends will be visible the next day."
+  },
   "waste": {
     "title": "Underutilized Workloads (CPU < 10% for 7 days)",
     "empty": "No underutilized workloads detected",
@@ -62,6 +67,24 @@
   "export": {
     "button": "Export CSV",
     "filename": "cost-{{month}}.csv"
+  },
+  "wasteResources": {
+    "alertMessage": "The following workloads have CPU efficiency below 20%, indicating that requested resources far exceed actual usage. Consider reducing CPU requests.",
+    "emptyNoMetrics": "Efficiency analysis requires Prometheus monitoring data to identify underutilized workloads",
+    "emptyNoWaste": "Currently no underutilized workloads",
+    "table": {
+      "namespace": "Namespace",
+      "workload": "Workload",
+      "type": "Type",
+      "replicas": "Replicas",
+      "cpuEfficiency": "CPU Efficiency",
+      "cpuRequest": "CPU Request (m)",
+      "cpuUsage": "CPU Usage (m)",
+      "memEfficiency": "Memory Efficiency",
+      "wasteScore": "Waste Score",
+      "recommendedCPU": "Recommended CPU (m)",
+      "recommendedMem": "Recommended Memory (MiB)"
+    }
   },
   "monthPicker": "Select Month",
   "prometheusRequired": "Prometheus is required for actual usage data. Without it, only resource requests are estimated.",

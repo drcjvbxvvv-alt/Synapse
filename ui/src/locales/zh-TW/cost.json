@@ -3,13 +3,15 @@
   "menu": "成本分析",
   "tabs": {
     "overview": "總覽",
+    "occupancy": "佔用率分析",
+    "efficiency": "效率分析",
+    "wlEfficiency": "工作負載效率",
+    "capacityTrend": "容量趨勢",
+    "wasteResources": "浪費資源",
     "namespaces": "命名空間",
     "workloads": "工作負載",
     "trend": "月度趨勢",
     "waste": "浪費識別",
-    "efficiency": "效率分析",
-    "wlEfficiency": "工作負載效率",
-    "capacityTrend": "容量趨勢",
     "cloudBilling": "雲端帳單"
   },
   "banner": {
@@ -54,6 +56,9 @@
     "months": "最近 {{n}} 個月",
     "totalLabel": "總費用"
   },
+  "capacityTrend": {
+    "noData": "尚無歷史快照資料，CostWorker 每日 00:05 UTC 拍攝，連線後隔日可見趨勢。"
+  },
   "waste": {
     "title": "低利用率工作負載（CPU 使用率 < 10%，連續 7 天）",
     "empty": "目前沒有識別到浪費的工作負載",
@@ -62,6 +67,24 @@
   "export": {
     "button": "匯出 CSV",
     "filename": "cost-{{month}}.csv"
+  },
+  "wasteResources": {
+    "alertMessage": "以下工作負載的 CPU 效率低於 20%，代表申請的資源遠超實際使用量，建議降低 CPU requests。",
+    "emptyNoMetrics": "需要 Prometheus 監控資料才能識別低效工作負載",
+    "emptyNoWaste": "目前無低效工作負載",
+    "table": {
+      "namespace": "命名空間",
+      "workload": "工作負載",
+      "type": "類型",
+      "replicas": "副本",
+      "cpuEfficiency": "CPU 效率",
+      "cpuRequest": "CPU 申請 (m)",
+      "cpuUsage": "CPU 使用 (m)",
+      "memEfficiency": "記憶體效率",
+      "wasteScore": "浪費分數",
+      "recommendedCPU": "建議 CPU (m)",
+      "recommendedMem": "建議記憶體 (MiB)"
+    }
   },
   "monthPicker": "選擇月份",
   "prometheusRequired": "需要設定 Prometheus 才能顯示實際用量；若無 Prometheus，僅顯示 Request 估算",

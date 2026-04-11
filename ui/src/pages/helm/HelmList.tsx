@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import EmptyState from '../../components/EmptyState';
 import {
   Card,
   Table,
@@ -399,6 +400,7 @@ const HelmList: React.FC = () => {
           loading={loading}
           pagination={{ pageSize: 20, showSizeChanger: true }}
           scroll={{ x: 'max-content' }}
+          locale={{ emptyText: <EmptyState description={t('noReleases')} /> }}
         />
       </Card>
 
@@ -533,6 +535,7 @@ const HelmList: React.FC = () => {
           dataSource={historyItems}
           pagination={false}
           size="small"
+          locale={{ emptyText: <EmptyState description={t('noHistory')} /> }}
         />
       </Drawer>
     </>

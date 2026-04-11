@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Button, Select, Input, Spin, Empty, Tag, App, Space, Tooltip, Switch } from 'antd';
+import EmptyState from '@/components/EmptyState';
+import { Button, Input, Spin, Tag, App, Space, Tooltip, Switch } from 'antd';
 import { ReloadOutlined, ApiOutlined, SyncOutlined, SearchOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { networkTopologyService } from '../../services/networkTopologyService';
 import type { NetworkNode, NetworkEdge, TopologyIntegrationStatus } from '../../services/networkTopologyService';
 import ClusterTopologyGraph, { HEALTH_LEGEND, WORKLOAD_KIND_COLOR } from './ClusterTopologyGraph';
 import NodeDetailPanel from './NodeDetailPanel';
-import { namespaceService } from '../../services/namespaceService';
 
 interface ClusterTopologyTabProps {
   clusterId: string;
@@ -19,8 +20,6 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [loading, setLoading] = useState(false);
   const [nodes, setNodes] = useState<NetworkNode[]>([]);
   const [edges, setEdges] = useState<NetworkEdge[]>([]);
-  const [allNamespaces, setAllNamespaces] = useState<string[]>([]);
-  const [selectedNs, setSelectedNs] = useState<string[]>([]);
   const [integrations, setIntegrations] = useState<TopologyIntegrationStatus | null>(null);
   const [enrich, setEnrich] = useState(false);
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
@@ -32,15 +31,8 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isInteractingRef = useRef(false);
 
-  // Load namespace list + integration status
+  // Load integration status
   useEffect(() => {
-    namespaceService.getNamespaces(clusterId)
-      .then((res) => {
-        const list = (res as { items?: { name: string }[] }).items?.map((n) => n.name) ?? [];
-        setAllNamespaces(list);
-      })
-      .catch(() => {});
-
     networkTopologyService.getIntegrations(clusterId)
       .then(setIntegrations)
       .catch(() => setIntegrations({ cilium: false, istio: false, hubbleMetrics: false }));
@@ -51,7 +43,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     try {
       const data = await networkTopologyService.getTopology(
         clusterId,
-        selectedNs.length > 0 ? selectedNs : undefined,
+        undefined,
         enrich,
         showPolicy,
         showHubble,
@@ -63,7 +55,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     } finally {
       setLoading(false);
     }
-  }, [clusterId, selectedNs, enrich, showPolicy, showHubble, message, t]);
+  }, [clusterId, enrich, showPolicy, showHubble, message, t]);
 
   useEffect(() => {
     loadTopology();
@@ -104,16 +96,6 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     <div>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-        <Select
-          mode="multiple"
-          allowClear
-          placeholder={t('clusterTopology.namespaceFilter')}
-          value={selectedNs}
-          onChange={setSelectedNs}
-          style={{ minWidth: 240, maxWidth: 480 }}
-          options={allNamespaces.map((ns) => ({ value: ns, label: ns }))}
-          maxTagCount="responsive"
-        />
         <Input
           allowClear
           prefix={<SearchOutlined />}
@@ -247,7 +229,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
           <Spin tip={t('clusterTopology.loading')} />
         </div>
       ) : nodes.length === 0 ? (
-        <Empty description={t('clusterTopology.empty')} style={{ padding: 60 }} />
+        <EmptyState description={t('clusterTopology.empty')} style={{ padding: 60 }} />
       ) : (
         <ClusterTopologyGraph
           topoNodes={filteredNodes}

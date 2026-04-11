@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Descriptions, Empty } from 'antd';
+import { Card, Descriptions } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import type { TFunction } from 'i18next';
 import type { ContainerInfo } from '../containerTypes';
 
@@ -15,7 +16,7 @@ export const ContainerLifecycleSection: React.FC<ContainerLifecycleSectionProps>
   if (!hasLifecycleConfig) {
     return (
       <Card title={t('container.lifecycle.title')} size="small">
-        <Empty description={t('container.lifecycle.noConfig')} />
+        <EmptyState description={t('container.lifecycle.noConfig')} />
       </Card>
     );
   }
@@ -66,7 +67,7 @@ export const ContainerLifecycleSection: React.FC<ContainerLifecycleSectionProps>
             )}
           </Descriptions>
         ) : (
-          <Empty description={t('container.lifecycle.noPostStart')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description={t('container.lifecycle.noPostStart')} />
         )}
       </Card>
 
@@ -92,7 +93,7 @@ export const ContainerLifecycleSection: React.FC<ContainerLifecycleSectionProps>
             )}
           </Descriptions>
         ) : (
-          <Empty description={t('container.lifecycle.noPreStop')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description={t('container.lifecycle.noPreStop')} />
         )}
       </Card>
     </div>

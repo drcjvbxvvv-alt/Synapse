@@ -60,6 +60,8 @@
     "silenceDeleteFailed": "Failed to delete silence rule",
     "loadFailed": "Failed to load alerts"
   },
+  "noRules": "No alert rules found",
+  "noHistory": "No alert history found",
   "global": {
     "title": "Global Alert Center",
     "clustersConfigured": "{{count}} clusters configured",

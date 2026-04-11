@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  Card, Table, Tag, Space, Button, Alert, Tabs, Tooltip, Badge, Empty, Spin,
+  Card, Table, Tag, Space, Button, Alert, Tabs, Tooltip, Badge, Spin,
 } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import {
   ReloadOutlined, SafetyCertificateOutlined, ExclamationCircleOutlined,
   CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined,
@@ -260,7 +261,7 @@ const CertificateList: React.FC = () => {
           rowKey={r => `${r.namespace}/${r.name}`}
           size="middle"
           loading={loading}
-          locale={{ emptyText: <Empty description={t('cert.emptyCerts')} /> }}
+          locale={{ emptyText: <EmptyState description={t('cert.emptyCerts')} /> }}
           pagination={{ pageSize: 20, showSizeChanger: true }}
         />
       ),
@@ -275,7 +276,7 @@ const CertificateList: React.FC = () => {
           rowKey={r => `${r.kind}/${r.namespace ?? 'cluster'}/${r.name}`}
           size="middle"
           loading={loading}
-          locale={{ emptyText: <Empty description={t('cert.emptyIssuers')} /> }}
+          locale={{ emptyText: <EmptyState description={t('cert.emptyIssuers')} /> }}
           pagination={false}
         />
       ),

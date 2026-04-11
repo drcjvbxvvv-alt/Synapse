@@ -19,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import EmptyState from '@/components/EmptyState';
 import SecretForm from './SecretForm';
 import { useSecretList } from './hooks/useSecretList';
 import { getSecretColumns } from './secretColumns';
@@ -151,6 +152,7 @@ const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => 
           },
           pageSizeOptions: ['10', '20', '50', '100'],
         }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
 
       <SecretForm

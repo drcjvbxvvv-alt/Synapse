@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Card, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Spin, Empty, Select, Space, Tag, Alert } from 'antd';
+import EmptyState from '@/components/EmptyState';
+import { App, Button, Card, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Spin, Select, Space, Tag, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { WorkloadService } from '../../../services/workloadService';
 import { vpaService, type VPAInfo, type VPARequest } from '../../../services/vpaService';
@@ -239,13 +241,14 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
   return (
     <div>
       {!hpa ? (
-        <Empty description={t('scaling.noHpa')} style={{ padding: '50px 0' }}>
+        <div style={{ textAlign: 'center' }}>
+          <EmptyState description={t('scaling.noHpa')} style={{ padding: '50px 0' }} />
           {isHPASupported && (
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
               建立 HPA
             </Button>
           )}
-        </Empty>
+        </div>
       ) : (
         <>
           <Card
@@ -366,11 +369,12 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
           ) : (
             <>
               {!vpa ? (
-                <Empty description="尚未設定 VPA" style={{ padding: '32px 0' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <EmptyState description="尚未設定 VPA" style={{ padding: '32px 0' }} />
                   <Button type="default" icon={<PlusOutlined />} onClick={openVPACreate}>
                     建立 VPA
                   </Button>
-                </Empty>
+                </div>
               ) : (
                 <Card
                   title="VPA（Vertical Pod Autoscaler）"

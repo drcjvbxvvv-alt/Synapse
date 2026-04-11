@@ -159,6 +159,9 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: i18n hardcoded Chinese lint
+        run: MAX_VIOLATIONS=1470 npm run i18n-lint
+
   frontend-typecheck:
     name: Frontend TypeCheck
     runs-on: ubuntu-latest

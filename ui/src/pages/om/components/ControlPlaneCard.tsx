@@ -9,8 +9,8 @@ import {
   Badge,
   Statistic,
   Typography,
-  Empty,
 } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import {
   SyncOutlined,
   CheckCircleOutlined,
@@ -72,7 +72,7 @@ const ControlPlaneCard: React.FC<ControlPlaneCardProps> = ({
   if (!controlPlaneStatus) {
     return (
       <Card title={t('om:controlPlane.title')}>
-        <Empty description={t('common:messages.noData')} />
+        <EmptyState description={t('common:messages.noData')} />
       </Card>
     );
   }

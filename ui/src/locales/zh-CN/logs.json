@@ -97,6 +97,10 @@
     "downloadSuccess": "日志下载成功",
     "fetchEventsFailed": "获取事件日志失败",
     "searchFailed": "日志搜索失败",
-    "level": "级别"
+    "level": "级别",
+    "noEvents": "暂无K8s事件",
+    "noSearchResults": "暂无搜索结果",
+    "noLogSources": "暂无日志源，点击「添加日志源」配置 Loki 或 Elasticsearch",
+    "noExternalLogResults": "暂无查询结果"
   }
 }

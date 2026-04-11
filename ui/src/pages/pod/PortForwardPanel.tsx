@@ -6,6 +6,7 @@ import {
   ApiOutlined, CopyOutlined, DeleteOutlined, PlusOutlined, ReloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import EmptyState from '@/components/EmptyState';
 import { portforwardService, type PortForwardSession } from '../../services/portforwardService';
 
 const { Text } = Typography;
@@ -161,7 +162,7 @@ const PortForwardPanel: React.FC<PortForwardPanelProps> = ({
         loading={loading}
         pagination={false}
         size="small"
-        locale={{ emptyText: '目前無活躍的 Port-Forward' }}
+        locale={{ emptyText: <EmptyState description="目前無活躍的 Port-Forward" /> }}
       />
 
       <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 8 }}>

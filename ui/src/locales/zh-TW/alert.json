@@ -60,6 +60,8 @@
     "silenceDeleteFailed": "刪除靜默規則失敗",
     "loadFailed": "載入警報失敗"
   },
+  "noRules": "暫無告警規則",
+  "noHistory": "暫無告警歷史",
   "global": {
     "title": "全域警報中心",
     "clustersConfigured": "{{count}} 個叢集已設定",

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Descriptions, Tag, Empty } from 'antd';
+import { Card, Descriptions, Tag } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import type { TFunction } from 'i18next';
 import type { ContainerInfo } from '../containerTypes';
 
@@ -61,7 +62,7 @@ export const ContainerEnvSection: React.FC<ContainerEnvSectionProps> = ({ contai
   const hasEnvFrom = container.envFrom && container.envFrom.length > 0;
 
   if (!hasEnv && !hasEnvFrom) {
-    return <Empty description={t('container.env.noEnv')} />;
+    return <EmptyState description={t('container.env.noEnv')} />;
   }
 
   return (

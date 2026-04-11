@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import EmptyState from '@/components/EmptyState';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   App,
@@ -175,7 +176,7 @@ const NamespaceDetail: React.FC = () => {
   if (!namespaceDetail) {
     return (
       <div style={{ padding: 24 }}>
-        <Empty description={t("detail.notFound")} />
+        <EmptyState description={t("detail.notFound")} />
       </div>
     );
   }

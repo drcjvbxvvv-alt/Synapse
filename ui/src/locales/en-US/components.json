@@ -685,7 +685,7 @@
     "actualUsage": "Actual Usage",
     "memUsage": "Memory Usage",
     "containerRestarts": "Container Restarts",
-    "times": "",
+    "times": " times",
     "oomKills": "OOM Kills",
     "probeFailures": "Probe Failures",
     "timesPerMin": "/min",

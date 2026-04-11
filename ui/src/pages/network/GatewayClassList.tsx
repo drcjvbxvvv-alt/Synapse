@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, App } from 'antd';
 import { CheckCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import EmptyState from '@/components/EmptyState';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import type { GatewayClassItem, GatewayTabProps } from './gatewayTypes';
@@ -81,6 +82,7 @@ const GatewayClassList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange 
         showTotal: (total) => t('network:gatewayapi.pagination.gatewayClassTotal', { total }),
       }}
       size="middle"
+      locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
     />
   );
 };

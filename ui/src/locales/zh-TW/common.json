@@ -133,6 +133,7 @@
     "createError": "建立失敗",
     "fetchError": "取得資料失敗",
     "noExportData": "沒有資料可匯出",
+    "noNetworkResources": "所有叢集均無網路資源（無 Service 或 Workload）",
     "columnSettingsSaved": "欄位設定已儲存",
     "connectionTestSuccess": "連線測試成功！",
     "connectionTestFailed": "連線測試失敗",

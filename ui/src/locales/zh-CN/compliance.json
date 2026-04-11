@@ -1,0 +1,90 @@
+{
+  "title": "合规管理",
+  "tabs": {
+    "reports": "合规报告",
+    "violations": "违规时间线",
+    "evidence": "证据收集"
+  },
+  "framework": {
+    "SOC2": "SOC 2",
+    "ISO27001": "ISO 27001",
+    "CIS_K8S": "CIS Kubernetes Benchmark"
+  },
+  "report": {
+    "generate": "生成报告",
+    "generating": "报告生成中…",
+    "selectFramework": "选择合规框架",
+    "score": "合规分数",
+    "pass": "通过",
+    "fail": "失败",
+    "warn": "警告",
+    "na": "不适用",
+    "status": "状态",
+    "generatedAt": "生成时间",
+    "generatedBy": "生成者",
+    "viewDetail": "查看详情",
+    "export": "导出报告",
+    "delete": "删除报告",
+    "deleteConfirm": "确认删除此合规报告？",
+    "noReports": "暂无合规报告，请点击「生成报告」开始评估。",
+    "controlId": "控制项 ID",
+    "controlTitle": "控制项名称",
+    "controlCategory": "类别",
+    "controlStatus": "评估结果",
+    "controlDesc": "说明",
+    "completed": "已完成",
+    "pending": "排队中",
+    "failed": "失败"
+  },
+  "violation": {
+    "title": "违规事件",
+    "source": "来源",
+    "severity": "严重程度",
+    "resourceType": "资源类型",
+    "resourceRef": "资源引用",
+    "createdAt": "发现时间",
+    "resolvedAt": "解决时间",
+    "resolvedBy": "解决者",
+    "resolve": "标记已解决",
+    "resolveConfirm": "确认标记此违规为已解决？",
+    "open": "未解决",
+    "resolved": "已解决",
+    "all": "全部",
+    "noViolations": "暂无违规事件。",
+    "stats": {
+      "totalOpen": "未解决违规",
+      "totalResolved": "已解决",
+      "bySource": "按来源",
+      "bySeverity": "按严重程度"
+    },
+    "sources": {
+      "gatekeeper": "Gatekeeper",
+      "trivy": "Trivy 扫描",
+      "bench": "CIS 基准",
+      "audit": "审计异常"
+    },
+    "severities": {
+      "critical": "严重",
+      "high": "高",
+      "medium": "中",
+      "low": "低",
+      "info": "信息"
+    }
+  },
+  "evidence": {
+    "title": "合规证据",
+    "capture": "采集证据",
+    "framework": "框架",
+    "controlId": "控制项 ID",
+    "controlTitle": "控制项名称",
+    "evidenceType": "证据类型",
+    "capturedAt": "采集时间",
+    "viewData": "查看数据",
+    "noEvidence": "暂无证据记录。",
+    "types": {
+      "api_snapshot": "API 快照",
+      "log_export": "日志导出",
+      "config_dump": "配置导出"
+    }
+  }
+}

@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Space, Card, Table, Input, DatePicker, Tag, Tooltip } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import EmptyState from '../../../components/EmptyState';
 import type { Dayjs } from 'dayjs';
 import type { FormInstance } from 'antd';
 import type { LogEntry, LogSource } from '../../../services/logService';
@@ -72,7 +73,7 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
           rowKey="id"
           size="small"
           pagination={false}
-          locale={{ emptyText: '暫無日誌源，點選「新增日誌源」配置 Loki 或 Elasticsearch' }}
+          locale={{ emptyText: <EmptyState description={t('logs:center.noLogSources')} /> }}
           rowSelection={{
             type: 'radio',
             selectedRowKeys: selectedSrcId ? [selectedSrcId] : [],
@@ -173,6 +174,7 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
           pagination={{ pageSize: 50, showSizeChanger: true }}
           scroll={{ y: 'calc(100vh - 600px)' }}
           columns={getExternalLogColumns(t)}
+          locale={{ emptyText: <EmptyState description={t('logs:center.noExternalLogResults')} /> }}
         />
       </Card>
     </div>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Button, Tabs, Typography } from 'antd';
-import { SwapOutlined, SyncOutlined } from '@ant-design/icons';
+import { SwapOutlined, SyncOutlined, ApartmentOutlined } from '@ant-design/icons';
 import MigrationWizard from './MigrationWizard';
 import SyncPolicyList from './SyncPolicyList';
+import MultiClusterTopologyPage from './MultiClusterTopologyPage';
 
 const { Title } = Typography;
 
@@ -10,6 +11,11 @@ const MultiClusterPage: React.FC = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   const items = [
+    {
+      key: 'topology',
+      label: <span><ApartmentOutlined /> 聯邦拓樸</span>,
+      children: <MultiClusterTopologyPage />,
+    },
     {
       key: 'sync',
       label: <span><SyncOutlined /> 配置同步策略</span>,

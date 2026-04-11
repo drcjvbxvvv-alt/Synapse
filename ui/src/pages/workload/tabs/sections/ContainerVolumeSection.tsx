@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Descriptions, Tag, Empty } from 'antd';
+import { Card, Descriptions, Tag } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import type { TFunction } from 'i18next';
 import type { ContainerInfo, VolumeConfig } from '../containerTypes';
 
@@ -24,7 +25,7 @@ function renderVolumeType(volume: VolumeConfig | null | undefined, t: TFunction)
 
 export const ContainerVolumeSection: React.FC<ContainerVolumeSectionProps> = ({ container, volumes, t }) => {
   if (!container.volumeMounts || container.volumeMounts.length === 0) {
-    return <Empty description={t('container.volume.noMounts')} />;
+    return <EmptyState description={t('container.volume.noMounts')} />;
   }
 
   const getVolumeInfo = (volumeName: string): VolumeConfig | undefined => {

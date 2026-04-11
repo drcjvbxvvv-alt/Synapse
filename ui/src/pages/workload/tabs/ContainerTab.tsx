@@ -1,5 +1,7 @@
+
 import React from 'react';
-import { Spin, Menu, Row, Col, Tag, Divider, Empty } from 'antd';
+import EmptyState from '@/components/EmptyState';
+import { Spin, Menu, Row, Col, Tag, Divider} from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { ContainerTabProps } from './containerTypes';
 import { useContainerTab } from './hooks/useContainerTab';
@@ -29,7 +31,7 @@ const ContainerTab: React.FC<ContainerTabProps> = (props) => {
   }
 
   if (!spec || !spec.template?.spec?.containers || spec.template.spec.containers.length === 0) {
-    return <Empty description={t('container.noContainers')} />;
+    return <EmptyState description={t('container.noContainers')} />;
   }
 
   const containers = spec.template.spec.containers;

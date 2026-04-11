@@ -30,6 +30,7 @@ import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
 import { StatusTag } from '../../components/StatusTag';
 import { ActionButtons } from '../../components/ActionButtons';
+import EmptyState from '../../components/EmptyState';
 
 const { Link } = Typography;
 
@@ -568,6 +569,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
         scroll={{ x: 'max-content', y: 600 }}
         size="middle"
         onChange={handleTableChange}
+        locale={{ emptyText: <EmptyState /> }}
         pagination={{
           current: currentPage,
           pageSize: pageSize,

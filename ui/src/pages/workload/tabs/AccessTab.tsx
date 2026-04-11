@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Tag, Button, Space, message, Spin, Tabs, Empty } from 'antd';
+import EmptyState from '@/components/EmptyState';
+import { Table, Tag, Button, Space, message, Spin, Tabs} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { WorkloadService } from '../../../services/workloadService';
 import { useTranslation } from 'react-i18next';
@@ -283,7 +285,7 @@ const [loading, setLoading] = useState(false);
               }}
             />
           ) : (
-            <Empty description={t("access.noService")} />
+            <EmptyState description={t("access.noService")} />
           )}
         </div>
       ),
@@ -312,7 +314,7 @@ const [loading, setLoading] = useState(false);
               }}
             />
           ) : (
-            <Empty description={t("access.noIngress")} />
+            <EmptyState description={t("access.noIngress")} />
           )}
         </div>
       ),

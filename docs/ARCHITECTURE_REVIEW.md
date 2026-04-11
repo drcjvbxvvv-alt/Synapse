@@ -2,7 +2,7 @@
 
 > 「任何號稱『完美無缺』的系統都是在實驗室裡的玩具，承認缺陷，正是走向偉大的開始。」
 
-**文件版本**：v1.9 — 2026-04-11
+**文件版本**：v2.2 — 2026-04-12
 **審視範圍**：`internal/`、`pkg/`、`cmd/`、`ui/src/`
 **文件目的**：
 
@@ -631,15 +631,25 @@ timeout: 10000,
 
 快取策略：`DBStore.IsEnabled()` 優先讀記憶體（< 30s）；管理員 `PUT` 觸發 `Invalidate()` 使下一次請求立即回源。
 
-### P2-7 前端 i18n 僅一種語言
+### P2-7 前端 i18n 僅一種語言 ✅ 2026-04-12
 
 目前 locales 有建構但實際多為中文硬編碼或只支援一種語系。
 
-**修正**
+**修正 — 已完成**
 
-1. 建立 `scripts/i18n-lint.ts` 掃描 `.tsx` 中硬編碼中文
-2. CI pipeline 在硬編碼中文超標時 fail
-3. 補齊英文翻譯
+1. ✅ 建立 `ui/scripts/i18n-lint.mjs` — 掃描 `src/**/*.tsx/.ts` 中硬編碼中文字元，支援 `// i18n-ignore` 行內豁免、跳過 block comment / import / console 語句
+2. ✅ CI `frontend-lint` job 新增 `MAX_VIOLATIONS=1470 npm run i18n-lint` 步驟；基線 1470 條，新增硬編碼中文即 fail
+3. ✅ 補齊 en-US 漏譯：`common.language.zhTW`、`common.units.count`、`components.monitoringCharts.times`
+4. ✅ 補齊 zh-TW / zh-CN 未翻譯：`components.kubectlTerminal.welcomeLine1/2/3`（原為英文原文）
+
+**使用方式**
+
+```bash
+npm run i18n-lint                      # 基線檢查（MAX_VIOLATIONS=0，適合新功能開發後驗證）
+MAX_VIOLATIONS=1470 npm run i18n-lint  # CI 模式（允許既有負債）
+```
+
+**降低負債說明**：現有 1470 條違規均為既有技術債（元件硬編碼中文）。後續每次重構相關頁面時同步提取到 i18n，並調降 `MAX_VIOLATIONS`，直到歸零。
 
 ### P2-8 K8s Informer 無健康檢查 ✅ 2026-04-11
 
@@ -906,11 +916,44 @@ type CreateDeploymentRequest struct {
 - **AI 生成 YAML**：對話式建立 Deployment/HPA/NetworkPolicy
 - **AI 審批助手**：PR review by LLM（整合 cert-manager 等敏感資源變更）
 
-### 6.3 多叢集拓撲進化
+### 6.3 多叢集拓撲進化 ✅ 2026-04-11
 
-- Cluster Federation 視角：把多個叢集當作邏輯一體展示
-- 跨叢集 traffic flow 視覺化
-- 多叢集 failover drill 模擬
+> **已完成（2026-04-11）**：聯邦拓樸視角與跨叢集連線視覺化。
+
+**本次交付**
+
+| 檔案 | 內容 |
+|------|------|
+| `internal/services/multicluster_topology.go` | `GetMultiClusterTopology(ctx, []ClusterTopoInput)` — 並行抓取各叢集拓樸，globalise node/edge ID（前綴 `{clusterID}:`），偵測 `synapse.io/cross-cluster` annotation 產生 `CrossEdge` |
+| `internal/handlers/multicluster_topology.go` | `MultiClusterTopologyHandler.GetMultiClusterTopology` — 解析 `clusterIDs` query param，最多 10 個；無法連線的叢集 graceful skip（空 section），不中斷整體回應 |
+| `internal/router/router.go` | `GET /api/v1/network/multi-cluster-topology?clusterIDs=1,2,3`（全域路由，不在 `/clusters/:clusterID/` 下） |
+| `ui/src/services/networkTopologyService.ts` | 新增 `ClusterSection` / `CrossEdge` / `MultiClusterTopology` 型別；`getMultiClusterTopology(clusterIDs[])` API call |
+| `ui/src/pages/multicluster/MultiClusterTopologyGraph.tsx` | React Flow 聯邦圖：`ClusterGroupNode`（彩色 header group）+ Dagre 各叢集子佈局；跨叢集邊以紫色虛線 + ArrowClosed marker 呈現 |
+| `ui/src/pages/multicluster/MultiClusterTopologyPage.tsx` | 叢集多選器（最多 10）+ 「查看拓樸」觸發查詢；顯示節點數 / 跨叢集連線數統計；無跨叢集連線時提示 annotation 使用方式 |
+| `ui/src/pages/multicluster/index.tsx` | 新增「聯邦拓樸」Tab（置於第一位） |
+
+**跨叢集連線宣告方式**
+
+```yaml
+# 在 Service 加入 annotation 宣告依賴另一個叢集的 service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: production
+  annotations:
+    synapse.io/cross-cluster: "42/production/payment-service"
+    #                          ^^ targetClusterID / namespace / service-name
+```
+
+**設計決策**
+- Node ID 全域化：`{clusterID}:workload/ns/kind/name` — 避免多叢集 ID 衝突，React Flow 可直接使用
+- 空叢集 graceful degradation：K8s 連線失敗的叢集仍顯示空方塊，不隱藏
+- 跨叢集 failover drill 模擬 — 留待 Phase 4（需接 Chaos Mesh / LitmusChaos）
+
+- ✅ Cluster Federation 視角：把多個叢集當作邏輯一體展示
+- ✅ 跨叢集 traffic flow 視覺化（annotation-based）
+- ⏳ 多叢集 failover drill 模擬（Phase 4）
 
 ### 6.4 安全治理加強 ✅（部分，2026-04-11）
 
@@ -943,24 +986,114 @@ type CreateDeploymentRequest struct {
 - FinOps 報告自動生成（月報 / 季報 PDF）
 - Reserved Instance / Savings Plan 模擬
 
-### 6.7 SLO / SLI 管理
+### 6.7 SLO / SLI 管理 ✅ 2026-04-12
 
-- 建立 SLO 定義與追蹤介面（整合 Prometheus）
-- Error Budget 燃燒率告警
+#### 交付內容
+
+| 層         | 檔案                                                              | 說明                                                   |
+| ---------- | ----------------------------------------------------------------- | ------------------------------------------------------ |
+| 模型       | `internal/models/slo.go`                                         | SLO GORM 模型；`$window` 佔位符說明                    |
+| 服務       | `internal/services/slo_service.go`                               | CRUD + `GetSLOStatus`（多視窗 SLI / burn rate 計算）   |
+| Prometheus | `internal/services/prometheus_service.go` （末尾新增）           | `QueryInstantScalar`（`/api/v1/query` instant 查詢）   |
+| Handler    | `internal/handlers/slo_handler.go`                               | List / Get / Create / Update / Delete / GetStatus      |
+| 路由       | `internal/router/routes_cluster_slo.go`                          | `GET/POST /slos`, `GET/PUT/DELETE/GET /slos/:id/status` |
+| 遷移       | `internal/database/migrations/mysql/006_slos.{up,down}.sql`      | `slos` 表建立 / 刪除                                   |
+| 前端服務   | `ui/src/services/sloService.ts`                                  | TypeScript API 呼叫封裝                                |
+| 前端頁面   | `ui/src/pages/slo/index.tsx`                                     | SLO 列表頁（搜尋、啟停、刪除）                          |
+| 前端表單   | `ui/src/pages/slo/SLOFormModal.tsx`                              | 新增 / 編輯 Modal（Target、PromQL、BurnRate）           |
+| 狀態抽屜   | `ui/src/pages/slo/SLOStatusDrawer.tsx`                           | 即時 SLI + Error Budget + 四視窗燃燒率 Drawer           |
+
+#### 設計決策
+
+- **SLI 計算兩模式**：`TotalQuery` 留空 → PromQL 直接回傳 0-1 比率；填入 → `SLI = good / total`
+- **`$window` 佔位符**：PromQL 中 `$window` 在服務層替換為目前計算視窗（1h / 6h / 24h / SLO window）
+- **燃燒率公式**：`(1 − SLI) / (1 − target)`；≥ critical → "critical"；≥ warning → "warning"；其餘 → "ok"
+- **Prometheus 不可用時**：`GetSLOStatus` 回傳 `{status: "unknown", has_data: false}`，不影響頁面載入
+- **MySQL Migration 006**：獨立 `slos` 表；`window` 為 MySQL 保留字，以反引號包裹
+- **SQLite AutoMigrate**：`&models.SLO{}` 已加入 `database.go`
+
+#### 後續擴充（Phase 4）
+
+- 與 AlertManager 整合：燃燒率超閾值自動推送告警
 - 與 PagerDuty / Opsgenie 整合
-- 事後檢討範本自動生成
+- 事後檢討範本自動生成（AI 根因分析輔助）
 
-### 6.8 混沌工程 (Chaos Engineering)
+### 6.8 混沌工程 (Chaos Engineering) ✅ 2026-04-12
 
-- 整合 Chaos Mesh / LitmusChaos
-- 實驗排程與結果視覺化
-- 與 AI 根因分析結合評分
+**交付清單**
 
-### 6.9 Audit + Compliance
+| 層次        | 檔案                                                    | 說明                                            |
+| ----------- | ------------------------------------------------------- | ----------------------------------------------- |
+| Service     | `internal/services/chaos_service.go`                    | Chaos Mesh 偵測、實驗 CRUD、排程列表            |
+| Handler     | `internal/handlers/chaos_handler.go`                    | REST 薄層，`resolveDyn` 取得動態 client         |
+| Router      | `internal/router/routes_cluster_chaos.go`               | `/chaos/status`、`/chaos/experiments`、`/chaos/schedules` |
+| Frontend    | `ui/src/services/chaosService.ts`                       | API client，所有 Chaos Mesh DTO 型別             |
+| Frontend    | `ui/src/pages/chaos/index.tsx`                          | 實驗列表頁：狀態 Alert、搜尋篩選、刪除確認      |
+| Frontend    | `ui/src/pages/chaos/ChaosFormModal.tsx`                 | 建立實驗 Modal（PodChaos / NetworkChaos / StressChaos） |
+| Frontend    | `ui/src/pages/chaos/ChaosDetailDrawer.tsx`              | 實驗詳情 Drawer（Spec JSON 展示）               |
+| Menu        | `ui/src/layouts/AppSider.tsx`                           | 新增「混沌工程」選單項，路徑 `/chaos`           |
+| Route       | `ui/src/App.tsx`                                        | `clusters/:clusterId/chaos` lazy route          |
+
+**架構決策**
+
+- **動態 client 而非 typed client**：Chaos Mesh 所有資源均為 CRD，統一使用 `dynamic.NewForConfig(k8sClient.GetRestConfig())` — 與 `mesh_handler.go`、`volume_snapshot_handler.go` 一致
+- **Observer pattern**：`IsChaosMeshInstalled` 透過 Discovery API 檢查 `chaos-mesh.org/v1alpha1`，未安裝時前端顯示 Alert 而非錯誤頁
+- **並發 GVR 列表**：`ListExperiments` 對 5 種 CRD（PodChaos/NetworkChaos/StressChaos/HTTPChaos/IOChaos）並發 goroutine 查詢，單個 GVR 缺失不中斷整體結果
+- **isChaosNotFound**：區分「CRD 不存在」（graceful）與「真正 API 錯誤」（回傳 500）
+
+**第二輪擴展（2026-04-12）✅**
+
+| 層次    | 檔案                                                | 說明                                                              |
+| ------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| Service | `chaos_service.go`                                  | `CreateSchedule`、`DeleteSchedule`、`HasActiveExperiments` 方法    |
+| Handler | `chaos_handler.go`                                  | `CreateSchedule`、`DeleteSchedule` 端點                           |
+| Router  | `routes_cluster_chaos.go`                           | `POST /schedules`、`DELETE /schedules/:namespace/:name`           |
+| Service | `slo_service.go`                                    | `SLOStatus.ChaosActive bool` 欄位                                 |
+| Handler | `slo_handler.go`                                    | `GetSLOStatus` 後注入混沌檢查，需注入 `k8sMgr` + `ChaosService`   |
+| Router  | `routes_cluster_slo.go`                             | `NewSLOHandler` 傳入 `k8sMgr` 與 `chaosSvc`                      |
+| FE svc  | `chaosService.ts`                                   | `CreateScheduleRequest`、`createSchedule`、`deleteSchedule`       |
+| FE page | `chaos/index.tsx`                                   | 改為 Tabs：「實驗」+ 「排程」；注入中顯示 SLO 暫停 Alert Banner  |
+| FE page | `chaos/ScheduleFormModal.tsx`                       | 建立 Schedule Modal（Cron 預設 + PodChaos/NetworkChaos/StressChaos）|
+| FE page | `slo/SLOStatusDrawer.tsx`                           | `chaos_active=true` 時顯示「混沌暫停」Banner 與 Badge             |
+| FE svc  | `sloService.ts`                                     | `SLOStatus.chaos_active: boolean`                                 |
+
+**架構決策（第二輪）**
+
+- **Schedule 複用 `buildChaosSpec`**：Schedule 的內層 spec 與 Experiment spec 結構相同，重構 `buildChaosObject` 使其委派到 `buildChaosSpec`，Schedule 創建函數直接呼叫 `buildChaosSpec` 避免重複
+- **混沌連動為 best-effort**：`HasActiveExperiments` 失敗（Chaos Mesh 未安裝或 API 逾時）不影響 SLO 狀態回傳；僅有 `has_data=true` 時才觸發混沌檢查，減少不必要的 K8s API 呼叫
+- **動態 client 在 handler 層創建**：`SLOHandler.GetSLOStatus` 需要 dynamic client 做混沌檢查，依照專案模式使用 `dynamic.NewForConfig(k8sClient.GetRestConfig())`；`k8sMgr` 和 `chaosSvc` 透過建構子注入，nil-safe
+
+**未來擴展**
+
+- AI 根因分析結合評分（Phase 4）
+
+### 6.9 Audit + Compliance ✅ 2026-04-12
 
 - SOC2 / ISO27001 / CIS Kubernetes Benchmark 對應報告生成
 - 合規證據收集器（自動截圖+匯出）
 - 違規事件時間線
+
+**已完成交付**
+
+| 層 | 檔案 | 說明 |
+|----|------|------|
+| Model | `internal/models/compliance.go` | `ComplianceReport`、`ComplianceEvidence`、`ViolationEvent` 三個模型；ViolationEvent 使用 `fingerprint` 唯一索引避免重複匯入 |
+| Service | `internal/services/compliance_service.go` | 合規報告生成（背景 goroutine）、框架控制項評估（SOC2 10 項 / ISO27001 10 項 / CIS 13 項）、違規時間線 CRUD、證據收集 |
+| Handler | `internal/handlers/compliance.go` | 11 個端點：報告 CRUD + 匯出、違規時間線 + 統計 + 解決、證據擷取 + 列表 |
+| Router | `internal/router/routes_cluster_compliance.go` | `/clusters/:clusterID/compliance/{reports,violations,evidence}` |
+| DB | `internal/database/database.go` | AutoMigrate 新增三個模型 |
+| Frontend Service | `ui/src/services/complianceService.ts` | API client，完整型別定義 |
+| Frontend Page | `ui/src/pages/compliance/index.tsx` | 三 Tabs：合規報告（產生 + 分數 + Drawer 詳情 + JSON 匯出）、違規時間線（篩選 + 統計卡片 + 標記解決）、證據收集（列表 + JSON 檢視） |
+| i18n | `locales/{zh-TW,zh-CN,en-US}/compliance.json` | 完整三語翻譯 |
+| Menu | `AppSider.tsx` | 「合規管理」選單項，位於「雲原生觀測」子選單 |
+| Route | `App.tsx` | `/clusters/:clusterId/compliance` lazy-loaded |
+
+**設計決策**
+
+1. **違規事件持久化**：ViolationEvent 寫入 DB 而非即時查詢，可快速回溯歷史並追蹤解決狀態
+2. **框架控制項硬編碼**：SOC2/ISO27001/CIS 控制項為靜態 Go map，不需 DB 管理；版本隨 release 更新
+3. **報告產生背景執行**：`GenerateReport` 建立 pending 記錄後 go routine 評估，避免 HTTP timeout
+4. **指紋去重**：ViolationEvent.Fingerprint (SHA-256) 唯一索引，SyncViolationsFromScan/Bench 使用 FirstOrCreate 避免重複
 
 ### 6.10 使用者自助化
 
@@ -1070,7 +1203,7 @@ type CreateDeploymentRequest struct {
 - [x] **P2-3** 全面欄位加密 ✅（ArgoCDConfig/AIConfig/LogSourceConfig/CloudBillingConfig/HelmRepository/SIEMWebhookConfig/NotifyChannel 加 BeforeSave/AfterFind hooks；SystemSetting 敏感 blob 整體加密；encryptFields/decryptFields 共用 helper，2026-04-11）
 - [x] **P2-5** Zustand 狀態管理 ✅（安裝 zustand ^5.0.12；建立 useSessionStore/useClusterStore/useUIStore；useSessionStore 接入 App.tsx useAuthInit；useClusterStore 接入 ClusterSelector.tsx；useUIStore 以 persist 儲存 sidebarCollapsed，2026-04-11）
 - [x] **P2-6** Feature Flag DB-backed ✅（FeatureFlag model；features.DBStore 30s TTL + Invalidate；FeatureFlagService CRUD；GET/PUT /system/feature-flags；migration 003 預填 6 個已知 flag；startup features.SetStore() 替換 env store，2026-04-11）
-- [ ] **P2-7** i18n 英文完整化
+- [x] **P2-7** i18n 英文完整化 ✅ 2026-04-12
 - [x] **P2-8** K8s Informer 健康檢查 ✅（HealthCheck()+StartedAt；/readyz 整合；StartHealthWatcher 5分鐘自動重啟卡住 informer；4 個 unit test，2026-04-11）
 - [x] **P2-9** Bundle size monitoring + lazy loading ✅（rollup-plugin-visualizer；check-bundle-size.mjs 12MB/3MB 預算；React.lazy 14 頁面；CI 步驟，2026-04-11）
 - [x] 6.x 深化功能選擇 3 項實作 ✅（6.2 AI 根因分析 + 6.4 Secret 蔓延掃描 + 6.6 命名空間預算，2026-04-11）

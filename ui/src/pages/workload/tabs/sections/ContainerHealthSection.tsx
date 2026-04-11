@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Descriptions, Tag, Empty } from 'antd';
+import { Card, Descriptions, Tag } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import type { TFunction } from 'i18next';
 import type { ContainerInfo, ProbeConfig } from '../containerTypes';
 
@@ -12,7 +13,7 @@ function ProbeDetail({ probe, title, t }: { probe: ProbeConfig | undefined; titl
   if (!probe) {
     return (
       <Card title={title} size="small" style={{ marginBottom: 16 }}>
-        <Empty description={t('container.probe.notConfigured', { name: title })} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <EmptyState description={t('container.probe.notConfigured', { name: title })} />
       </Card>
     );
   }

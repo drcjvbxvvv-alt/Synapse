@@ -97,6 +97,10 @@
     "downloadSuccess": "Logs downloaded successfully",
     "fetchEventsFailed": "Failed to fetch event logs",
     "searchFailed": "Log search failed",
-    "level": "Level"
+    "level": "Level",
+    "noEvents": "No K8s events found",
+    "noSearchResults": "No search results found",
+    "noLogSources": "No log sources configured. Click \"Add Log Source\" to configure Loki or Elasticsearch",
+    "noExternalLogResults": "No query results found"
   }
 }

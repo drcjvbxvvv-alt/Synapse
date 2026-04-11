@@ -1,3 +1,4 @@
+import EmptyState from '@/components/EmptyState';
 import React, { useState } from 'react';
 import {
   Drawer,
@@ -155,7 +156,7 @@ const GatewayDrawer: React.FC<GatewayDrawerProps> = ({ open, clusterId, item, on
             size="small"
           />
         ) : (
-          <Empty description={t('network:gatewayapi.drawer.noListeners')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description={t('network:gatewayapi.drawer.noListeners')} />
         )}
       </Drawer>
 

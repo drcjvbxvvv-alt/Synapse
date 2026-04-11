@@ -24,6 +24,7 @@ import components from './components.json';
 import helm from './helm.json';
 import cost from './cost.json';
 import security from './security.json';
+import compliance from './compliance.json';
 export default {
   common,
   cluster,
@@ -51,4 +52,5 @@ export default {
   helm,
   cost,
   security,
+  compliance,
 };

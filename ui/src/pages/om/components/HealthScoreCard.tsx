@@ -1,3 +1,4 @@
+import EmptyState from '@/components/EmptyState';
 import React from 'react';
 import {
   Card,
@@ -96,7 +97,7 @@ const HealthScoreCard: React.FC<HealthScoreCardProps> = ({
   if (!healthDiagnosis) {
     return (
       <Card title={t('om:health.title')}>
-        <Empty description={t('om:health.noDiagnosisData')} />
+        <EmptyState description={t('om:health.noDiagnosisData')} />
       </Card>
     );
   }

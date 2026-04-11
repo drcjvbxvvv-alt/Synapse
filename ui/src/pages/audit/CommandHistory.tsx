@@ -1,3 +1,4 @@
+import EmptyState from '@/components/EmptyState';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
@@ -555,7 +556,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
                   />
                 </div>
               ) : (
-                <Empty description={t('audit:commands.noCommands')} />
+                <EmptyState description={t('audit:commands.noCommands')} />
               )}
             </>
           )}

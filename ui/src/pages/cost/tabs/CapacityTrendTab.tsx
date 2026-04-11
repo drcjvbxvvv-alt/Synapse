@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Space, Row, Col, Card, Statistic, Tag, Empty, Typography } from 'antd';
+import EmptyState from '@/components/EmptyState';
+import { Button, Space, Row, Col, Card, Statistic, Tag, Typography } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
@@ -34,7 +35,7 @@ export const CapacityTrendTab: React.FC<CapacityTrendTabProps> = ({
       </Space>
 
       {capacityTrend.length === 0 && !capacityTrendLoading ? (
-        <Empty description="尚無歷史快照資料，CostWorker 每日 00:05 UTC 拍攝，連線後隔日可見趨勢。" />
+        <EmptyState description={t('cost:capacityTrend.noData')} />
       ) : (
         <>
           <Card title="CPU & 記憶體佔用率月度趨勢" size="small" style={{ marginBottom: 16 }} loading={capacityTrendLoading}>

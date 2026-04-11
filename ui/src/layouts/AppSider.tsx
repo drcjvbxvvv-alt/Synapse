@@ -25,6 +25,7 @@ import {
   SafetyOutlined,
   SafetyCertificateOutlined,
   ThunderboltOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { MenuProps as AntMenuProps } from 'antd';
@@ -52,20 +53,30 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
   const { t } = useTranslation();
 
   // ─── 選單展開 / 選取狀態 ────────────────────────────────────────────
-  const getDefaultOpenKeys = useCallback(() => {
+  const getInitialOpenKeys = (): string[] => {
     if (isClusterDetail) {
       return ['kubernetes-resources', 'cluster', 'cloud-native-observability'];
     }
     if (location.pathname.startsWith('/access')) return ['access-control'];
     if (location.pathname.startsWith('/audit')) return ['audit-management'];
     return [];
-  }, [isClusterDetail, location.pathname]);
+  };
 
-  const [openKeys, setOpenKeys] = useState<string[]>(getDefaultOpenKeys());
+  const [openKeys, setOpenKeys] = useState<string[]>(getInitialOpenKeys);
 
+  // 只在「進入/離開叢集詳情」這個大情境切換時才重置，
+  // 不跟蹤 pathname，保留使用者在同一情境下的折疊狀態。
   useEffect(() => {
-    setOpenKeys(getDefaultOpenKeys());
-  }, [getDefaultOpenKeys]);
+    if (isClusterDetail) {
+      setOpenKeys(['kubernetes-resources', 'cluster', 'cloud-native-observability']);
+    } else {
+      const path = location.pathname;
+      if (path.startsWith('/access')) setOpenKeys(['access-control']);
+      else if (path.startsWith('/audit')) setOpenKeys(['audit-management']);
+      else setOpenKeys([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClusterDetail]);
 
   const getSelectedKeys = useCallback((): string[] => {
     const path = location.pathname;
@@ -89,6 +100,9 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     if (path.match(/\/clusters\/[^/]+\/cost-insights/)) return ['cluster-cost'];
     if (path.match(/\/clusters\/[^/]+\/security/)) return ['cluster-security'];
     if (path.match(/\/clusters\/[^/]+\/certificates/)) return ['cluster-certificates'];
+    if (path.match(/\/clusters\/[^/]+\/slos/)) return ['cluster-slos'];
+    if (path.match(/\/clusters\/[^/]+\/chaos/)) return ['cluster-chaos'];
+    if (path.match(/\/clusters\/[^/]+\/compliance/)) return ['cluster-compliance'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
@@ -173,6 +187,9 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
         { key: 'cluster-cost', icon: <DollarOutlined />, label: t('menu.costAnalysis', '成本分析'), onClick: () => clusterNav('cost-insights') },
         { key: 'cluster-security', icon: <SafetyOutlined />, label: t('menu.securityScan', '安全掃描'), onClick: () => clusterNav('security') },
         { key: 'cluster-certificates', icon: <SafetyCertificateOutlined />, label: t('menu.certificates', '憑證管理'), onClick: () => clusterNav('certificates') },
+        { key: 'cluster-slos', icon: <LineChartOutlined />, label: t('menu.slos', 'SLO 管理'), onClick: () => clusterNav('slos') },
+        { key: 'cluster-chaos', icon: <ThunderboltOutlined />, label: t('menu.chaos', '混沌工程'), onClick: () => clusterNav('chaos') },
+        { key: 'cluster-compliance', icon: <SafetyCertificateOutlined />, label: t('menu.compliance', '合規管理'), onClick: () => clusterNav('compliance') },
       ],
     },
   ], [t, clusterNav]);

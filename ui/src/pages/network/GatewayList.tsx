@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Space, Button, Select, App, Popconfirm } from 'antd';
 import { ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import EmptyState from '@/components/EmptyState';
 import { gatewayService } from '../../services/gatewayService';
 import { parseApiError } from '@/utils/api';
 import type { GatewayItem, GatewayListener, GatewayTabProps } from './gatewayTypes';
@@ -185,6 +186,7 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
           showTotal: (total) => t('network:gatewayapi.pagination.gatewayTotal', { total }),
         }}
         size="middle"
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
 
       <GatewayDrawer

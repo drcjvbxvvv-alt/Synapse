@@ -44,5 +44,7 @@
   "uninstallConfirmContent": "确定要卸载 \"{{name}}\" 吗？",
   "uninstallSuccess": "Release 卸载成功",
   "uninstallError": "卸载 Release 失败",
-  "fetchError": "获取 Release 列表失败"
+  "fetchError": "获取 Release 列表失败",
+  "noReleases": "暂无 Helm 应用",
+  "noHistory": "暂无版本历史"
 }

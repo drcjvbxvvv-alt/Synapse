@@ -1,8 +1,9 @@
 import React from 'react';
-import { Card, Table, Button, Select, Space, Badge, Progress, Tooltip, Empty, Typography } from 'antd';
+import { Card, Table, Button, Select, Space, Badge, Progress, Tooltip, Typography } from 'antd';
 import { SyncOutlined, BarChartOutlined } from '@ant-design/icons';
 import type { TFunction } from 'i18next';
 import type { ResourceTopResponse, ResourceTopItem } from '../../../services/omService';
+import EmptyState from '@/components/EmptyState';
 import { formatBytes, formatCPU, formatTime } from './omUtils';
 
 const { Text } = Typography;
@@ -130,7 +131,7 @@ const ResourceTopCard: React.FC<ResourceTopCardProps> = ({
         rowKey="rank"
         pagination={false}
         size="small"
-        locale={{ emptyText: <Empty description={t('common:messages.noData')} /> }}
+        locale={{ emptyText: <EmptyState /> }}
       />
       {resourceTop && (
         <div style={{ marginTop: 12, textAlign: 'right' }}>

@@ -44,5 +44,7 @@
   "uninstallConfirmContent": "Are you sure you want to uninstall \"{{name}}\"?",
   "uninstallSuccess": "Release uninstalled successfully",
   "uninstallError": "Failed to uninstall release",
-  "fetchError": "Failed to fetch releases"
+  "fetchError": "Failed to fetch releases",
+  "noReleases": "No Helm releases found",
+  "noHistory": "No release history found"
 }

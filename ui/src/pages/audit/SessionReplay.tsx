@@ -1,6 +1,7 @@
+import EmptyState from '@/components/EmptyState';
 import React, { useState, useEffect } from 'react';
 import {
-  Badge, Button, Card, Descriptions, Empty, Space, Steps, Tag, Timeline, Typography,
+  Badge, Button, Card, Descriptions, Space, Steps, Tag, Timeline, Typography,
 } from 'antd';
 import { CodeOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
@@ -71,7 +72,7 @@ const SessionReplay: React.FC<SessionReplayProps> = ({ sessionId }) => {
   };
 
   if (loading) return <Card loading />;
-  if (!session) return <Empty description="找不到此 Terminal 會話" />;
+  if (!session) return <EmptyState description="找不到此 Terminal 會話" />;
 
   const displayCommands = playIndex >= 0 ? commands.slice(0, playIndex + 1) : commands;
 
@@ -127,7 +128,7 @@ const SessionReplay: React.FC<SessionReplayProps> = ({ sessionId }) => {
 
       {/* 指令時間軸 */}
       {displayCommands.length === 0 ? (
-        <Empty description="此會話無記錄指令" />
+        <EmptyState description="此會話無記錄指令" />
       ) : (
         <div
           style={{

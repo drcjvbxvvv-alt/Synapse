@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Space, Row, Col, Card, Statistic, Progress, Table } from 'antd';
+import { Button, Space, Row, Col, Card, Statistic, Progress, Table, theme } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
@@ -26,6 +26,7 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({
   onRefresh,
 }) => {
   const { t } = useTranslation(['cost', 'common']);
+  const { token } = theme.useToken();
 
   const barData = nsOccupancy.slice(0, 15).map(n => ({
     name: n.namespace,
@@ -34,13 +35,13 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({
 
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
+      <Space style={{ marginBottom: token.marginMD }}>
         <Button icon={<ReloadOutlined />} onClick={onRefresh}>
           {t('common:actions.refresh')}
         </Button>
       </Space>
 
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      <Row gutter={token.marginMD} style={{ marginBottom: token.marginLG }}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
@@ -95,7 +96,7 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({
         </Col>
       </Row>
 
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      <Row gutter={token.marginMD} style={{ marginBottom: token.marginLG }}>
         <Col xs={24} lg={14}>
           <Card title={t('cost:occupancy.nsBreakdown')} size="small">
             <ResponsiveContainer width="100%" height={280}>
@@ -120,7 +121,7 @@ export const OccupancyTab: React.FC<OccupancyTabProps> = ({
               title={t('cost:occupancy.memHeadroom')}
               value={+(snapshot?.headroom.memory_mib ?? 0).toFixed(0)}
               loading={snapshotLoading}
-              style={{ marginTop: 16 }}
+              style={{ marginTop: token.marginMD }}
             />
           </Card>
         </Col>

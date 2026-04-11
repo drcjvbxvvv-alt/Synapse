@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "build:analyze": "VISUALIZE=true npm run build",
-    "bundle-size": "node scripts/check-bundle-size.mjs"
+    "bundle-size": "node scripts/check-bundle-size.mjs",
+    "i18n-lint": "node scripts/i18n-lint.mjs"
   },
   "dependencies": {
     "@ant-design/charts": "^2.6.7",

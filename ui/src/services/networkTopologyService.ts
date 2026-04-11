@@ -50,7 +50,35 @@ export interface TopologyIntegrationStatus {
   istioVersion?: string;
 }
 
+// ── Multi-cluster topology (§6.3) ─────────────────────────────────────────
+
+export interface ClusterSection {
+  clusterId: number;
+  clusterName: string;
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+}
+
+export interface CrossEdge {
+  sourceClusterId: number;
+  targetClusterId: number;
+  source: string;
+  target: string;
+  kind: 'annotation';
+  label?: string;
+}
+
+export interface MultiClusterTopology {
+  clusters: ClusterSection[];
+  crossEdges: CrossEdge[];
+}
+
 export const networkTopologyService = {
+  getMultiClusterTopology: (clusterIDs: number[]): Promise<MultiClusterTopology> =>
+    request.get('/network/multi-cluster-topology', {
+      params: { clusterIDs: clusterIDs.join(',') },
+    }),
+
   getTopology: (
     clusterId: string,
     namespaces?: string[],

@@ -12,6 +12,7 @@ import {
   Tooltip,
   Segmented,
 } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import {
   ReloadOutlined,
   SearchOutlined,
@@ -335,6 +336,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
           showTotal: (tot) => t('network:networkpolicy.pagination.total', { total: tot }),
         }}
         onChange={handleTableChange}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
 
       {/* YAML Drawer */}

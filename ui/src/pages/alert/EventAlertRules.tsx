@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import EmptyState from '../../components/EmptyState';
 import {
   Card,
   Table,
@@ -41,7 +42,7 @@ const COMMON_REASONS = [
 
 const EventAlertRules: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
-  const { t } = useTranslation(['common']);
+  const { t } = useTranslation(['alert', 'common']);
   const { message, modal } = App.useApp();
 
   const [activeTab, setActiveTab] = useState('rules');
@@ -224,6 +225,7 @@ const EventAlertRules: React.FC = () => {
               pageSize: 20,
               onChange: (p) => { setRulesPage(p); fetchRules(p); },
             }}
+            locale={{ emptyText: <EmptyState description={t('noRules')} /> }}
           />
         </div>
       ),
@@ -248,6 +250,7 @@ const EventAlertRules: React.FC = () => {
               pageSize: 20,
               onChange: (p) => { setHistoryPage(p); fetchHistory(p); },
             }}
+            locale={{ emptyText: <EmptyState description={t('noHistory')} /> }}
           />
         </div>
       ),

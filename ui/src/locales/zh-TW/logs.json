@@ -97,6 +97,10 @@
     "downloadSuccess": "日誌下載成功",
     "fetchEventsFailed": "取得事件日誌失敗",
     "searchFailed": "日誌搜尋失敗",
-    "level": "等級"
+    "level": "等級",
+    "noEvents": "暫無 K8s 事件",
+    "noSearchResults": "暫無搜尋結果",
+    "noLogSources": "暫無日誌源，點選「新增日誌源」配置 Loki 或 Elasticsearch",
+    "noExternalLogResults": "暫無查詢結果"
   }
 }

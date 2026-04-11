@@ -336,6 +336,11 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		}
 
 		registerClusterRoutes(protected, &deps)
+
+		// §6.3 多叢集拓樸 — global route (not under /clusters/:clusterID)
+		mcTopoHandler := handlers.NewMultiClusterTopologyHandler(deps.clusterSvc, deps.k8sMgr)
+		protected.GET("/network/multi-cluster-topology", mcTopoHandler.GetMultiClusterTopology)
+
 		clusters := protected.Group("/clusters")
 		registerSystemRoutes(protected, clusters, &deps)
 	}

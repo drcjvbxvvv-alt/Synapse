@@ -8,6 +8,7 @@ import {
   EditOutlined,
   DeleteOutlined,
 } from '@ant-design/icons';
+import EmptyState from '@/components/EmptyState';
 import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
@@ -179,6 +180,7 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
           showTotal: (total) => t('gatewayapi.pagination.grpcrouteTotal', { total }),
         }}
         size="middle"
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
         scroll={{ x: 'max-content' }}
       />
 

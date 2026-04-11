@@ -1,0 +1,90 @@
+{
+  "title": "合規管理",
+  "tabs": {
+    "reports": "合規報告",
+    "violations": "違規時間線",
+    "evidence": "證據收集"
+  },
+  "framework": {
+    "SOC2": "SOC 2",
+    "ISO27001": "ISO 27001",
+    "CIS_K8S": "CIS Kubernetes Benchmark"
+  },
+  "report": {
+    "generate": "產生報告",
+    "generating": "報告產生中…",
+    "selectFramework": "選擇合規框架",
+    "score": "合規分數",
+    "pass": "通過",
+    "fail": "失敗",
+    "warn": "警告",
+    "na": "不適用",
+    "status": "狀態",
+    "generatedAt": "產生時間",
+    "generatedBy": "產生者",
+    "viewDetail": "查看詳情",
+    "export": "匯出報告",
+    "delete": "刪除報告",
+    "deleteConfirm": "確認刪除此合規報告？",
+    "noReports": "尚無合規報告，請點擊「產生報告」開始評估。",
+    "controlId": "控制項 ID",
+    "controlTitle": "控制項名稱",
+    "controlCategory": "類別",
+    "controlStatus": "評估結果",
+    "controlDesc": "說明",
+    "completed": "已完成",
+    "pending": "排隊中",
+    "failed": "失敗"
+  },
+  "violation": {
+    "title": "違規事件",
+    "source": "來源",
+    "severity": "嚴重程度",
+    "resourceType": "資源類型",
+    "resourceRef": "資源參考",
+    "createdAt": "發現時間",
+    "resolvedAt": "解決時間",
+    "resolvedBy": "解決者",
+    "resolve": "標記已解決",
+    "resolveConfirm": "確認標記此違規為已解決？",
+    "open": "未解決",
+    "resolved": "已解決",
+    "all": "全部",
+    "noViolations": "暫無違規事件。",
+    "stats": {
+      "totalOpen": "未解決違規",
+      "totalResolved": "已解決",
+      "bySource": "依來源",
+      "bySeverity": "依嚴重程度"
+    },
+    "sources": {
+      "gatekeeper": "Gatekeeper",
+      "trivy": "Trivy 掃描",
+      "bench": "CIS 基準",
+      "audit": "稽核異常"
+    },
+    "severities": {
+      "critical": "嚴重",
+      "high": "高",
+      "medium": "中",
+      "low": "低",
+      "info": "資訊"
+    }
+  },
+  "evidence": {
+    "title": "合規證據",
+    "capture": "擷取證據",
+    "framework": "框架",
+    "controlId": "控制項 ID",
+    "controlTitle": "控制項名稱",
+    "evidenceType": "證據類型",
+    "capturedAt": "擷取時間",
+    "viewData": "查看資料",
+    "noEvidence": "尚無證據紀錄。",
+    "types": {
+      "api_snapshot": "API 快照",
+      "log_export": "日誌匯出",
+      "config_dump": "組態匯出"
+    }
+  }
+}

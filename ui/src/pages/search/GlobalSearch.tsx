@@ -9,13 +9,14 @@ import {
   Tag,
   Space,
   Button,
-  Empty,
   Spin,
   message,
   Row,
   Col,
   Statistic,
+  Empty,
 } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import {
   SearchOutlined,
   ClusterOutlined,
@@ -166,7 +167,7 @@ const [searchParams, setSearchParams] = useSearchParams();
         <List
           dataSource={getFilteredResults('all')}
           loading={loading}
-          locale={{ emptyText: <Empty description={t("noResultsFor.all")} /> }}
+          locale={{ emptyText: <EmptyState description={t("noResultsFor.all")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -220,7 +221,7 @@ const [searchParams, setSearchParams] = useSearchParams();
         <List
           dataSource={getFilteredResults('cluster')}
           loading={loading}
-          locale={{ emptyText: <Empty description={t("noResultsFor.cluster")} /> }}
+          locale={{ emptyText: <EmptyState description={t("noResultsFor.cluster")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -262,7 +263,7 @@ const [searchParams, setSearchParams] = useSearchParams();
         <List
           dataSource={getFilteredResults('node')}
           loading={loading}
-          locale={{ emptyText: <Empty description={t("noResultsFor.node")} /> }}
+          locale={{ emptyText: <EmptyState description={t("noResultsFor.node")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -307,7 +308,7 @@ const [searchParams, setSearchParams] = useSearchParams();
         <List
           dataSource={getFilteredResults('pod')}
           loading={loading}
-          locale={{ emptyText: <Empty description={t("noResultsFor.pod")} /> }}
+          locale={{ emptyText: <EmptyState description={t("noResultsFor.pod")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[
@@ -353,7 +354,7 @@ const [searchParams, setSearchParams] = useSearchParams();
         <List
           dataSource={getFilteredResults('workload')}
           loading={loading}
-          locale={{ emptyText: <Empty description={t("noResultsFor.workload")} /> }}
+          locale={{ emptyText: <EmptyState description={t("noResultsFor.workload")} /> }}
           renderItem={(item: SearchResult) => (
             <List.Item
               actions={[

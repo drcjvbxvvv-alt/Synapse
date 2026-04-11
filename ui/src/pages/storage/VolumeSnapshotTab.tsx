@@ -7,6 +7,7 @@ import { PlusOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons'
 import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import NotInstalledCard from '../../components/NotInstalledCard';
+import EmptyState from '../../components/EmptyState';
 import {
   snapshotService,
   type VolumeSnapshotInfo, type VolumeSnapshotClassInfo,
@@ -19,7 +20,7 @@ interface VolumeSnapshotTabProps {
 }
 
 const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
-  const { t } = useTranslation('storage');
+  const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
 
   const [loading, setLoading] = useState(true);
@@ -185,6 +186,7 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
         loading={loading}
         size="small"
         scroll={{ x: 'max-content' }}
+        locale={{ emptyText: <EmptyState /> }}
         pagination={{ pageSize: 20, showSizeChanger: true, showTotal: tot => t('snapshot.total', { total: tot }) }}
       />
 

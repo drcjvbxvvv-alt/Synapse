@@ -533,6 +533,26 @@ function GatekeeperTab({ clusterId }: { clusterId: number }) {
     },
   ];
 
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: token.paddingXL }}><Spin /></div>
+    );
+  }
+
+  if (error || data?.installed === false) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%', paddingTop: 48 }}>
+        <Alert
+          type="info"
+          showIcon
+          message={t('gatekeeper.notDetectedMsg')}
+          description={t('gatekeeper.notDetectedDesc')}
+          style={{ width: '100%', maxWidth: 600 }}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -551,48 +571,32 @@ function GatekeeperTab({ clusterId }: { clusterId: number }) {
         </Button>
       </div>
 
-      {error && <Alert type="warning" message={error} style={{ marginBottom: 16 }} />}
-
-      {data && !data.installed && (
-        <Alert
-          type="info"
-          showIcon
-          message={t('gatekeeper.notDetectedMsg')}
-          description={t('gatekeeper.notDetectedDesc')}
-          style={{ marginBottom: 16 }}
-        />
-      )}
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: token.paddingXL }}><Spin /></div>
-      ) : data?.installed === false ? null : (
-        <Table
-          scroll={{ x: 'max-content' }}
-          dataSource={data?.constraints ?? []}
-          columns={columns}
-          rowKey={(r) => r.kind + r.name}
-          size="small"
-          locale={{ emptyText: t('gatekeeper.noData') }}
-          pagination={false}
-          expandable={{
-            expandedRowRender: (record) => (
-              <Table
-                scroll={{ x: 'max-content' }}
-                dataSource={record.violations}
-                columns={[
-                  { title: t('gatekeeper.namespace'), dataIndex: 'namespace', key: 'ns', width: 140, render: (v) => v || '-' },
-                  { title: t('gatekeeper.resource'), dataIndex: 'resource', key: 'res', width: 200 },
-                  { title: t('gatekeeper.message'), dataIndex: 'message', key: 'msg' },
-                ]}
-                rowKey={(v) => v.resource + v.namespace + v.message}
-                size="small"
-                pagination={false}
-              />
-            ),
-            rowExpandable: (record) => record.violation_count > 0,
-          }}
-        />
-      )}
+      <Table
+        scroll={{ x: 'max-content' }}
+        dataSource={data?.constraints ?? []}
+        columns={columns}
+        rowKey={(r) => r.kind + r.name}
+        size="small"
+        locale={{ emptyText: t('gatekeeper.noData') }}
+        pagination={false}
+        expandable={{
+          expandedRowRender: (record) => (
+            <Table
+              scroll={{ x: 'max-content' }}
+              dataSource={record.violations}
+              columns={[
+                { title: t('gatekeeper.namespace'), dataIndex: 'namespace', key: 'ns', width: 140, render: (v) => v || '-' },
+                { title: t('gatekeeper.resource'), dataIndex: 'resource', key: 'res', width: 200 },
+                { title: t('gatekeeper.message'), dataIndex: 'message', key: 'msg' },
+              ]}
+              rowKey={(v) => v.resource + v.namespace + v.message}
+              size="small"
+              pagination={false}
+            />
+          ),
+          rowExpandable: (record) => record.violation_count > 0,
+        }}
+      />
     </>
   );
 }

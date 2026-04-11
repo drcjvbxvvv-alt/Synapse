@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Button, Spin, Tag, Empty, App, Badge, Tooltip } from 'antd';
+import EmptyState from '@/components/EmptyState';
+import { Button, Spin, Tag, App, Badge, Tooltip } from 'antd';
 import { ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import { toPng } from 'html-to-image';
 import { useTranslation } from 'react-i18next';
@@ -330,7 +332,7 @@ const GatewayTopology: React.FC<GatewayTabProps> = ({ clusterId }) => {
           <Spin tip={t('gatewayapi.topology.loading')} />
         </div>
       ) : nodes.length === 0 ? (
-        <Empty description={t('gatewayapi.topology.empty')} style={{ padding: 60 }} />
+        <EmptyState description={t('gatewayapi.topology.empty')} style={{ padding: 60 }} />
       ) : (
         <div ref={containerRef} style={{ height: 560, border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'hidden' }}>
           <ReactFlow

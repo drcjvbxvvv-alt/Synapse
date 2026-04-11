@@ -1,3 +1,4 @@
+import EmptyState from '@/components/EmptyState';
 import React, { useState } from 'react';
 import {
   Drawer,
@@ -182,7 +183,7 @@ const HTTPRouteDrawer: React.FC<HTTPRouteDrawerProps> = ({ open, clusterId, item
             size="small"
           />
         ) : (
-          <Empty description={t('network:gatewayapi.drawer.noParentRefs')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description={t('network:gatewayapi.drawer.noParentRefs')} />
         )}
 
         {/* 路由規則 */}
@@ -240,7 +241,7 @@ const HTTPRouteDrawer: React.FC<HTTPRouteDrawerProps> = ({ open, clusterId, item
             }))}
           />
         ) : (
-          <Empty description={t('network:gatewayapi.drawer.noRules')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          <EmptyState description={t('network:gatewayapi.drawer.noRules')} />
         )}
       </Drawer>
 

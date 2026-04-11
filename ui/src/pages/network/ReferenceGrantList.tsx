@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Space, Button, Select, App, Modal, Popconfirm } from 'antd';
 import { ReloadOutlined, PlusOutlined } from '@ant-design/icons';
+import EmptyState from '@/components/EmptyState';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import { parseApiError } from '@/utils/api';
@@ -150,6 +151,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
           showTotal: (total) => t('gatewayapi.pagination.referencegrantTotal', { total }),
         }}
         size="middle"
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
 
       <ReferenceGrantForm

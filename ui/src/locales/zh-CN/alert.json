@@ -60,6 +60,8 @@
     "silenceDeleteFailed": "删除静默规则失败",
     "loadFailed": "加载告警失败"
   },
+  "noRules": "暂无告警规则",
+  "noHistory": "暂无告警历史",
   "global": {
     "title": "全局告警中心",
     "clustersConfigured": "{{count}} 个集群已配置",

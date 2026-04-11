@@ -3,9 +3,10 @@
  * 相比多 Panel 分別嵌入，整體嵌入載入更快
  */
 import React, { useState, useMemo, useCallback } from 'react';
-import { Card, Space, Button, Switch, Spin, DatePicker, Popover, Divider, Typography, Empty, Alert } from 'antd';
+import { Card, Space, Button, Switch, Spin, DatePicker, Popover, Divider, Typography, Alert } from 'antd';
 import { ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
+import EmptyState from '@/components/EmptyState';
 import { generateDataSourceUID } from '../../../config/grafana.config';
 import { useTranslation } from 'react-i18next';
 import { useGrafanaUrl } from '../../../hooks/useGrafanaUrl';
@@ -150,9 +151,8 @@ const [timeRange, setTimeRange] = useState('1h');
   // 檢查必要的參數
   if (!clusterName) {
     return (
-      <Empty
+      <EmptyState
         description={t('pod:terminal.cannotGetCluster')}
-        style={{ padding: '60px 0' }}
       />
     );
   }

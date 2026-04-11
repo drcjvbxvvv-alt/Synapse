@@ -11,6 +11,7 @@ import {
   App,
   Form,
 } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import {
   ReloadOutlined,
   SearchOutlined,
@@ -441,6 +442,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
           onChange: (page, size) => { setCurrentPage(page); setPageSize(size || 20); },
           pageSizeOptions: ['10', '20', '50', '100'],
         }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
 
       {/* YAML檢視Modal */}

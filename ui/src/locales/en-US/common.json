@@ -133,6 +133,7 @@
     "createError": "Failed to create",
     "fetchError": "Failed to fetch data",
     "noExportData": "No data to export",
+    "noNetworkResources": "No network resources in any cluster (no Services or Workloads)",
     "columnSettingsSaved": "Column settings saved",
     "connectionTestSuccess": "Connection test successful!",
     "connectionTestFailed": "Connection test failed",
@@ -177,6 +178,7 @@
   },
   "language": {
     "switch": "Switch Language",
+    "zhTW": "繁體中文",
     "zhCN": "简体中文",
     "enUS": "English"
   },
@@ -235,7 +237,7 @@
     "quota": "Quota"
   },
   "units": {
-    "count": "",
+    "count": " items",
     "cores": " cores",
     "items": " items",
     "second30": "30s",

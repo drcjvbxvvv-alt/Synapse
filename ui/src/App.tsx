@@ -58,6 +58,9 @@ const GlobalCostInsights = lazy(() => import('./pages/cost/GlobalCostInsights'))
 const SecurityDashboard  = lazy(() => import('./pages/security/SecurityDashboard'));
 const CertificateList    = lazy(() => import('./pages/security/CertificateList'));
 const MultiClusterPage   = lazy(() => import('./pages/multicluster'));
+const SLOListPage        = lazy(() => import('./pages/slo'));
+const ChaosPage          = lazy(() => import('./pages/chaos'));
+const CompliancePage     = lazy(() => import('./pages/compliance'));
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager, silentRefresh } from './services/authService';
 import { useSessionStore } from './store';
@@ -269,6 +272,12 @@ const AppContent: React.FC = () => {
               <Route path="clusters/:id/security" element={<SecurityDashboard />} />
               {/* cert-manager 憑證管理 */}
               <Route path="clusters/:id/certificates" element={<CertificateList />} />
+              {/* SLO 管理 */}
+              <Route path="clusters/:clusterId/slos" element={<Suspense fallback={<Spin />}><SLOListPage /></Suspense>} />
+              {/* 混沌工程 */}
+              <Route path="clusters/:clusterId/chaos" element={<Suspense fallback={<Spin />}><ChaosPage /></Suspense>} />
+              {/* 合規管理 */}
+              <Route path="clusters/:clusterId/compliance" element={<Suspense fallback={<Spin />}><CompliancePage /></Suspense>} />
               {/* 成本洞察 - 跨叢集全局視角 */}
               <Route path="cost-insights" element={<GlobalCostInsights />} />
               {/* 多叢集工作流程 */}

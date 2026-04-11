@@ -1,7 +1,8 @@
+import EmptyState from '@/components/EmptyState';
 import React from 'react';
 import {
   Button, Space, Row, Col, Card, Statistic, Form, Input, Radio,
-  Divider, Table, Spin, Empty, Alert, DatePicker, Typography,
+  Divider, Table, Spin, Alert, DatePicker, Typography,
 } from 'antd';
 import { SaveOutlined, SyncOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -183,7 +184,7 @@ export const CloudBillingTab: React.FC<CloudBillingTabProps> = ({
         >
           <Spin spinning={billingOverviewLoading}>
             {!billingOverview ? (
-              <Empty description={t('cost:billing.emptyData')} />
+              <EmptyState description={t('cost:billing.emptyData')} />
             ) : (
               <>
                 <Row gutter={16} style={{ marginBottom: 20 }}>

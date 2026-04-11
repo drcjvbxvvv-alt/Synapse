@@ -51,9 +51,9 @@
     "pasteFailed": "貼上失敗，請檢查瀏覽器權限",
     "connectedToCluster": "已連線到叢集 {{clusterId}}（kubectl 模式）",
     "helpHint": "提示：輸入 <code>help</code> 或 <code>?</code> 查看說明資訊",
-    "welcomeLine1": "Welcome to Kubectl Terminal",
-    "welcomeLine2": "Execute kubectl commands",
-    "welcomeLine3": "Enter kubectl commands below or use the quick command input."
+    "welcomeLine1": "歡迎使用 Kubectl 終端機",
+    "welcomeLine2": "執行 kubectl 指令",
+    "welcomeLine3": "在下方輸入 kubectl 指令，或使用快速指令輸入列。"
   },
   "sshTerminal": {
     "welcome": "歡迎使用 SSH 終端機",

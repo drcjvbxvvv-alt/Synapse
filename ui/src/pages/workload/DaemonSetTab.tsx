@@ -4,7 +4,7 @@ import { PlusOutlined, ReloadOutlined, SettingOutlined, SearchOutlined } from '@
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { WorkloadInfo } from '../../services/workloadService';
-
+import EmptyState from '@/components/EmptyState';
 import { useWorkloadTab } from './hooks/useWorkloadTab';
 import { createWorkloadColumns } from './columns';
 import { ScaleModal, WorkloadColumnSettingsDrawer } from './components';
@@ -136,7 +136,7 @@ const DaemonSetTab: React.FC<DaemonSetTabProps> = ({ clusterId, onCountChange })
         <Table
           columns={columns}
           dataSource={state.workloads}
-          locale={{ emptyText: state.t('common:messages.noData') }}
+          locale={{ emptyText: <EmptyState description={state.t('common:messages.noData')} /> }}
           rowKey={(record) => `${record.namespace}-${record.name}-${record.type}`}
           rowSelection={state.rowSelection}
           loading={state.loading}
