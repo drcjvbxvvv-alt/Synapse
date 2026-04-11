@@ -1,0 +1,11 @@
+export { OccupancyTab } from './OccupancyTab';
+export { EfficiencyTab } from './EfficiencyTab';
+export { WorkloadEfficiencyTab } from './WorkloadEfficiencyTab';
+export { CapacityTrendTab } from './CapacityTrendTab';
+export { WasteResourcesTab } from './WasteResourcesTab';
+export { OverviewTab } from './OverviewTab';
+export { NamespaceCostTab } from './NamespaceCostTab';
+export { WorkloadCostTab } from './WorkloadCostTab';
+export { TrendTab } from './TrendTab';
+export { WasteTab } from './WasteTab';
+export { CloudBillingTab } from './CloudBillingTab';

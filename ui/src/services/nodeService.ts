@@ -62,7 +62,7 @@ export const nodeService = {
   patchNodeTaints: async (
     clusterId: string,
     name: string,
-    taints: Array<{ key: string; value: string; effect: 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute' }>
+    taints: Array<{ key: string; value?: string; effect: 'NoSchedule' | 'PreferNoSchedule' | 'NoExecute' }>
   ): Promise<void> => {
     await request.patch(`/clusters/${clusterId}/nodes/${name}/taints`, { taints });
   },
