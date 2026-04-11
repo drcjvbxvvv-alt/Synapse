@@ -24,6 +24,7 @@ import {
   message,
   theme,
 } from 'antd';
+import EmptyState from '@/components/EmptyState';
 import {
   SafetyOutlined,
   ScanOutlined,
@@ -234,7 +235,7 @@ function ImageScanTab({ clusterId }: { clusterId: number }) {
         rowKey="id"
         loading={loading}
         size="small"
-        locale={{ emptyText: t('scan.noData') }}
+        locale={{ emptyText: <EmptyState description={t('scan.noData')} /> }}
         pagination={{ pageSize: 20 }}
       />
 
@@ -427,7 +428,7 @@ function BenchTab({ clusterId }: { clusterId: number }) {
         rowKey="id"
         loading={loading}
         size="small"
-        locale={{ emptyText: t('bench.noData') }}
+        locale={{ emptyText: <EmptyState description={t('bench.noData')} /> }}
         pagination={{ pageSize: 10 }}
       />
 
@@ -577,7 +578,7 @@ function GatekeeperTab({ clusterId }: { clusterId: number }) {
         columns={columns}
         rowKey={(r) => r.kind + r.name}
         size="small"
-        locale={{ emptyText: t('gatekeeper.noData') }}
+        locale={{ emptyText: <EmptyState description={t('gatekeeper.noData')} /> }}
         pagination={false}
         expandable={{
           expandedRowRender: (record) => (
