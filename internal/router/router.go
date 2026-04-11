@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/config"
@@ -225,11 +226,14 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	// ── API routes ─────────────────────────────────────────────────────────
 	api := r.Group("/api/v1")
 
+	// ── Rate limiter (memory or Redis) ─────────────────────────────────────
+	loginLimiter := buildRateLimiter(cfg)
+
 	auth := api.Group("/auth")
 	{
 		authSvc := services.NewAuthService(db, cfg.JWT.Secret, cfg.JWT.ExpireTime, permissionRepo)
 		authHandler := handlers.NewAuthHandler(authSvc, opLogSvc, tokenBlacklistSvc)
-		auth.POST("/login", middleware.LoginRateLimit(), authHandler.Login)
+		auth.POST("/login", middleware.LoginRateLimit(loginLimiter), authHandler.Login)
 		auth.POST("/refresh", authHandler.RefreshToken) // silent refresh with httpOnly cookie
 		// Logout 需要認證才能取得 jti 並加入黑名單
 		auth.POST("/logout", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.Logout)
@@ -290,5 +294,35 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	setupStatic(r)
 
 	return r, k8sMgr
+}
+
+// buildRateLimiter constructs the appropriate RateLimiter backend based on
+// cfg.RateLimiter.Backend. When backend is "redis", a Redis client is created
+// using cfg.Redis; if the ping fails, it falls back to in-memory with a warning.
+// All other values use the in-memory implementation.
+func buildRateLimiter(cfg *config.Config) middleware.RateLimiter {
+	if cfg.RateLimiter.Backend != "redis" {
+		logger.Info("rate limiter: using in-memory backend (single-pod only)")
+		return middleware.NewMemoryRateLimiter()
+	}
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	if err := client.Ping(ctx).Err(); err != nil {
+		logger.Warn("rate limiter: Redis ping failed, falling back to in-memory",
+			"addr", cfg.Redis.Addr, "error", err)
+		_ = client.Close()
+		return middleware.NewMemoryRateLimiter()
+	}
+
+	logger.Info("rate limiter: using Redis backend", "addr", cfg.Redis.Addr)
+	return middleware.NewRedisRateLimiter(client)
 }
 

@@ -16,6 +16,22 @@ type Config struct {
 	K8s             K8sConfig             `mapstructure:"k8s"`
 	Security        SecurityConfig        `mapstructure:"security"`
 	Observability   ObservabilityConfig   `mapstructure:"observability"`
+	Redis           RedisConfig           `mapstructure:"redis"`
+	RateLimiter     RateLimiterConfig     `mapstructure:"rate_limiter"`
+}
+
+// RedisConfig holds connection settings for the optional Redis backend.
+type RedisConfig struct {
+	Addr     string `mapstructure:"addr"`     // host:port, e.g. "localhost:6379"
+	Password string `mapstructure:"password"` // empty = no auth
+	DB       int    `mapstructure:"db"`       // Redis logical DB index (0–15)
+}
+
+// RateLimiterConfig selects the rate-limiter backend.
+type RateLimiterConfig struct {
+	// Backend selects the implementation: "memory" (default) or "redis".
+	// Set RATE_LIMITER_BACKEND=redis to enable cross-pod rate limiting.
+	Backend string `mapstructure:"backend"`
 }
 
 // AppConfig 應用執行環境配置
@@ -165,6 +181,14 @@ func Load() *Config {
 	_ = viper.BindEnv("observability.health_path", "HEALTH_PATH")
 	_ = viper.BindEnv("observability.ready_path", "READY_PATH")
 
+	// 繫結 Redis 環境變數
+	_ = viper.BindEnv("redis.addr", "REDIS_ADDR")
+	_ = viper.BindEnv("redis.password", "REDIS_PASSWORD")
+	_ = viper.BindEnv("redis.db", "REDIS_DB")
+
+	// 繫結 Rate Limiter 環境變數
+	_ = viper.BindEnv("rate_limiter.backend", "RATE_LIMITER_BACKEND")
+
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		logger.Fatal("配置解析失敗: %v", err)
@@ -231,4 +255,12 @@ func setDefaults() {
 	viper.SetDefault("observability.metrics_token", "")
 	viper.SetDefault("observability.health_path", "/healthz")
 	viper.SetDefault("observability.ready_path", "/readyz")
+
+	// Redis 預設配置
+	viper.SetDefault("redis.addr", "localhost:6379")
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
+
+	// Rate Limiter 預設配置（memory = 單機模式，無需 Redis）
+	viper.SetDefault("rate_limiter.backend", "memory")
 }
