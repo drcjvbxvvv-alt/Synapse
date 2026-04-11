@@ -30,6 +30,11 @@ func registerSystemAIRoutes(protected *gin.RouterGroup, clusters *gin.RouterGrou
 	{
 		aiChat.POST("/chat", aiChatHandler.Chat)
 		aiChat.POST("/nl-query", aiNLQueryHandler.NLQuery)
+
+		// AI Root Cause Analysis (6.2)
+		aiRCASvc := services.NewRCAService(aiConfigSvc)
+		aiRCAHandler := handlers.NewAIRCAHandler(d.clusterSvc, d.k8sMgr, aiRCASvc)
+		aiChat.POST("/rca", aiRCAHandler.AnalyzePod)
 	}
 
 	trivySvc := services.NewTrivyService(d.db)
@@ -45,5 +50,10 @@ func registerSystemAIRoutes(protected *gin.RouterGroup, clusters *gin.RouterGrou
 		securityGroup.GET("/bench", securityHandler.GetBenchResults)
 		securityGroup.GET("/bench/:benchID", securityHandler.GetBenchDetail)
 		securityGroup.GET("/gatekeeper", securityHandler.GetGatekeeperViolations)
+
+		// Secret Sprawl Scanner (6.4)
+		secAuditSvc := services.NewSecurityAuditService()
+		secAuditHandler := handlers.NewSecurityAuditHandler(d.clusterSvc, d.k8sMgr, secAuditSvc)
+		securityGroup.GET("/secret-sprawl", secAuditHandler.ScanSecretSprawl)
 	}
 }

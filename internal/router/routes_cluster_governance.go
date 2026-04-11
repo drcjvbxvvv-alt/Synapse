@@ -49,6 +49,17 @@ func registerClusterGovernanceRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 		cost.GET("/export", costHandler.ExportCSV)
 	}
 
+	// namespace budgets (6.6)
+	budgetSvc := services.NewCostBudgetService(d.db)
+	budgetHandler := handlers.NewCostBudgetHandler(d.clusterSvc, d.k8sMgr, budgetSvc, costSvc)
+	budgets := cluster.Group("/cost/budgets")
+	{
+		budgets.GET("", budgetHandler.ListBudgets)
+		budgets.PUT("/:namespace", budgetHandler.UpsertBudget)
+		budgets.DELETE("/:namespace", budgetHandler.DeleteBudget)
+		budgets.GET("/check", budgetHandler.CheckBudgets)
+	}
+
 	// VPA
 	vpaHandler := handlers.NewVPAHandler(d.clusterSvc, d.k8sMgr)
 	vpaGroup := cluster.Group("/vpa")

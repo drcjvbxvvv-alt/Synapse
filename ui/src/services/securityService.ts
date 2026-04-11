@@ -101,6 +101,32 @@ export interface GatekeeperSummary {
   constraints: ConstraintSummary[];
 }
 
+export interface SecretConsumer {
+  kind: string;
+  name: string;
+  namespace: string;
+  mount_type: string;
+}
+
+export interface SecretSprawlItem {
+  name: string;
+  namespace: string;
+  type: string;
+  keys: string[];
+  age: string;
+  mounted_by: SecretConsumer[];
+  mount_count: number;
+  status: 'active' | 'orphaned' | 'over_exposed';
+}
+
+export interface SecretSprawlReport {
+  namespace: string;
+  total_secrets: number;
+  orphaned_count: number;
+  over_exposed_count: number;
+  items: SecretSprawlItem[];
+}
+
 const securityService = {
   // Image scanning
   triggerScan: (clusterId: number, image: string, namespace?: string, podName?: string, containerName?: string) =>
@@ -132,6 +158,12 @@ const securityService = {
   // Gatekeeper
   getGatekeeperViolations: (clusterId: number) =>
     request.get<GatekeeperSummary>(`/clusters/${clusterId}/security/gatekeeper`),
+
+  // Secret Sprawl Scanner
+  scanSecretSprawl: (clusterId: number, namespace?: string) =>
+    request.get<SecretSprawlReport>(`/clusters/${clusterId}/security/secret-sprawl`, {
+      params: namespace ? { namespace } : {},
+    }),
 };
 
 export default securityService;

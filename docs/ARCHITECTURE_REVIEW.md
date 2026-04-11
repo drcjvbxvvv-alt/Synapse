@@ -2,7 +2,7 @@
 
 > 「任何號稱『完美無缺』的系統都是在實驗室裡的玩具，承認缺陷，正是走向偉大的開始。」
 
-**文件版本**：v1.8 — 2026-04-11
+**文件版本**：v1.9 — 2026-04-11
 **審視範圍**：`internal/`、`pkg/`、`cmd/`、`ui/src/`
 **文件目的**：
 
@@ -894,11 +894,14 @@ type CreateDeploymentRequest struct {
 - Git repo 關聯視圖：從 Deployment 反查最後修改的 commit
 - Pull Request preview：對 PR 裡的 YAML 做 dry-run diff
 
-### 6.2 AI 能力深化
+### 6.2 AI 能力深化 ✅（部分，2026-04-11）
 
 目前有 `ai_chat`、`ai_nlquery`、`ai_runbook`。可再加：
 
-- **AI 根因分析**：Pod 崩潰時自動抓 events + logs + metrics 生成分析報告
+- ✅ **AI 根因分析**：Pod 崩潰時自動抓 events + logs + metrics 生成分析報告
+  - `internal/services/ai_rca.go` — `RCAService.AnalyzePod()` 收集 Pod events/logs/container statuses/owner refs，送 AI 分析
+  - `internal/handlers/ai_rca.go` — `POST /clusters/:clusterID/ai/rca`（60s timeout）
+  - `ui/src/services/aiService.ts` — `analyzeRootCause(clusterId, namespace, podName)`
 - **容量規劃助手**：基於 Prometheus 歷史資料預測未來 1/3/6 個月資源需求
 - **AI 生成 YAML**：對話式建立 Deployment/HPA/NetworkPolicy
 - **AI 審批助手**：PR review by LLM（整合 cert-manager 等敏感資源變更）
@@ -909,12 +912,15 @@ type CreateDeploymentRequest struct {
 - 跨叢集 traffic flow 視覺化
 - 多叢集 failover drill 模擬
 
-### 6.4 安全治理加強
+### 6.4 安全治理加強 ✅（部分，2026-04-11）
 
 - 映像簽章驗證（cosign）
 - SBOM 比對：上線版本 vs 最新掃描結果
 - OPA/Gatekeeper 政策編輯器 + dry-run
-- Secrets sprawl 掃描：追蹤 Secret 被掛載到哪些 Pod
+- ✅ **Secrets sprawl 掃描**：追蹤 Secret 被掛載到哪些 Pod，識別孤立/過度暴露的 Secret
+  - `internal/services/security_audit_service.go` — `SecurityAuditService.ScanSecretSprawl()` 列出 Secret、追蹤 Pod volume/env/envFrom 掛載、分類 orphaned/over_exposed/active
+  - `internal/handlers/security_audit.go` — `GET /clusters/:clusterID/security/secret-sprawl?namespace=`
+  - `ui/src/services/securityService.ts` — `scanSecretSprawl(clusterId, namespace?)`
 - SSL 憑證到期提醒（已有 worker，可加 Email/Slack 通知深化）
 
 ### 6.5 開發者體驗 (DevEx)
@@ -923,11 +929,16 @@ type CreateDeploymentRequest struct {
 - `synapse-vscode`：VSCode extension 整合 context switch + log tail
 - 一鍵 `kubectl` context 同步到 kubeconfig 檔案
 
-### 6.6 成本分析深化
+### 6.6 成本分析深化 ✅（部分，2026-04-11）
 
 目前已有 cost dashboard + 浪費識別 + 雲帳單整合。可再加：
 
-- 每個 Namespace 的預算設定與超支告警
+- ✅ **每個 Namespace 的預算設定與超支告警**
+  - `internal/models/namespace_budget.go` — `NamespaceBudget` model（CPU/Memory/Cost 上限 + 告警閾值）
+  - `internal/services/cost_budget_service.go` — `CostBudgetService` CRUD + `CheckBudgets()` 比對 informer 實際用量
+  - `internal/handlers/cost_budget.go` — `GET/PUT/DELETE /clusters/:clusterID/cost/budgets` + `GET /check`
+  - `internal/database/migrations/mysql/004_namespace_budgets.up.sql` — 建表遷移
+  - `ui/src/services/costService.ts` — `listBudgets/upsertBudget/deleteBudget/checkBudgets`
 - Rightsizing 自動建議（基於 VPA + Prometheus 歷史）
 - FinOps 報告自動生成（月報 / 季報 PDF）
 - Reserved Instance / Savings Plan 模擬
@@ -1062,7 +1073,7 @@ type CreateDeploymentRequest struct {
 - [ ] **P2-7** i18n 英文完整化
 - [x] **P2-8** K8s Informer 健康檢查 ✅（HealthCheck()+StartedAt；/readyz 整合；StartHealthWatcher 5分鐘自動重啟卡住 informer；4 個 unit test，2026-04-11）
 - [x] **P2-9** Bundle size monitoring + lazy loading ✅（rollup-plugin-visualizer；check-bundle-size.mjs 12MB/3MB 預算；React.lazy 14 頁面；CI 步驟，2026-04-11）
-- [ ] 6.x 深化功能選擇 2~3 項實作
+- [x] 6.x 深化功能選擇 3 項實作 ✅（6.2 AI 根因分析 + 6.4 Secret 蔓延掃描 + 6.6 命名空間預算，2026-04-11）
 
 ### Phase 4 — 平台化（6~12 個月）
 

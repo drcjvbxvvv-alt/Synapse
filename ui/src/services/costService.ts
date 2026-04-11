@@ -209,6 +209,36 @@ export const ResourceService = {
     `/api/v1/clusters/${clusterId}/resources/waste/export?cpu_threshold=${cpuThreshold}`,
 };
 
+// ---- Namespace Budget (6.6) 型別 ----
+
+export interface NamespaceBudget {
+  id?: number;
+  cluster_id: number;
+  namespace: string;
+  cpu_cores_limit: number;
+  memory_gib_limit: number;
+  monthly_cost_limit: number;
+  alert_threshold: number;
+  enabled: boolean;
+}
+
+export interface BudgetAlert {
+  namespace: string;
+  resource: string;
+  limit: number;
+  current: number;
+  usage_percent: number;
+  alert_threshold: number;
+  exceeded: boolean;
+  alert: boolean;
+}
+
+export interface BudgetStatus {
+  budget: NamespaceBudget;
+  alerts: BudgetAlert[];
+  status: string;
+}
+
 export const CostService = {
   getConfig: (clusterId: string): Promise<CostConfig> =>
     request.get(`/clusters/${clusterId}/cost/config`),
@@ -245,4 +275,18 @@ export const CostService = {
     const m = month ?? new Date().toISOString().slice(0, 7);
     return `/api/v1/clusters/${clusterId}/cost/export?month=${m}`;
   },
+
+  // ---- Namespace Budgets (6.6) ----
+
+  listBudgets: (clusterId: string): Promise<NamespaceBudget[]> =>
+    request.get(`/clusters/${clusterId}/cost/budgets`),
+
+  upsertBudget: (clusterId: string, namespace: string, budget: Partial<NamespaceBudget>): Promise<NamespaceBudget> =>
+    request.put(`/clusters/${clusterId}/cost/budgets/${namespace}`, budget),
+
+  deleteBudget: (clusterId: string, namespace: string): Promise<void> =>
+    request.delete(`/clusters/${clusterId}/cost/budgets/${namespace}`),
+
+  checkBudgets: (clusterId: string): Promise<BudgetStatus[]> =>
+    request.get(`/clusters/${clusterId}/cost/budgets/check`),
 };

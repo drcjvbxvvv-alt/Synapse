@@ -236,6 +236,7 @@ func autoMigrate(db *gorm.DB) error {
 		&models.NotifyChannel{},
 		&models.TokenBlacklist{},
 		&models.FeatureFlag{},
+		&models.NamespaceBudget{},
 	)
 
 	db.Exec("PRAGMA foreign_keys = ON")

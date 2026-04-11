@@ -74,3 +74,24 @@ export interface NLQueryResult {
   result: unknown;
   summary: string;
 }
+
+export interface RCAContext {
+  pod_phase: string;
+  container_errors: string[];
+  recent_events: number;
+  log_lines: number;
+  owner_kind: string;
+  owner_name: string;
+}
+
+export interface RCAResult {
+  pod_name: string;
+  namespace: string;
+  status: string;
+  analysis: string;
+  summary: string;
+  suggestions: string[];
+  severity: 'critical' | 'warning' | 'info';
+  collected_at: string;
+  context: RCAContext;
+}

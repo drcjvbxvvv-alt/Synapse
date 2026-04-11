@@ -1,6 +1,6 @@
 import { request } from '../utils/api';
 import { tokenManager } from './authService';
-import type { AIConfig, ChatMessage, Runbook, NLQueryResult } from '../types/ai';
+import type { AIConfig, ChatMessage, Runbook, NLQueryResult, RCAResult } from '../types/ai';
 
 export const aiService = {
   getConfig: () => {
@@ -24,6 +24,13 @@ export const aiService = {
     return request.post<NLQueryResult>(`/clusters/${clusterId}/ai/nl-query`, {
       question,
       namespace: namespace || '',
+    });
+  },
+
+  analyzeRootCause: (clusterId: string, namespace: string, podName: string) => {
+    return request.post<RCAResult>(`/clusters/${clusterId}/ai/rca`, {
+      namespace,
+      pod_name: podName,
     });
   },
 
