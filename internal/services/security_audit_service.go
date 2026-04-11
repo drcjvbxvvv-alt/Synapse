@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/shaia/Synapse/pkg/logger"
 
@@ -238,16 +237,4 @@ func deduplicateConsumers(consumers []SecretConsumer) []SecretConsumer {
 		}
 	}
 	return result
-}
-
-func formatAge(t time.Time) string {
-	d := time.Since(t)
-	if d.Hours() < 24 {
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	}
-	days := int(d.Hours() / 24)
-	if days < 30 {
-		return fmt.Sprintf("%dd", days)
-	}
-	return fmt.Sprintf("%dm", days/30)
 }
