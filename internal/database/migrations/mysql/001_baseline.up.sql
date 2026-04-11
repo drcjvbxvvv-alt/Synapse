@@ -2,8 +2,6 @@
 -- Every statement uses CREATE TABLE IF NOT EXISTS so this is safe to run on
 -- databases already bootstrapped by GORM AutoMigrate (existing rows are kept).
 
-SET NAMES utf8mb4;
-SET foreign_key_checks = 0;
 
 -- -- users -----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `users` (
@@ -63,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `clusters` (
   `last_heartbeat`       datetime(3)     NULL,
   `created_by`           bigint unsigned NOT NULL DEFAULT 0,
   `monitoring_config`    json            DEFAULT NULL,
-  `alertmanager_config`  json            DEFAULT NULL,
+  `alert_manager_config` json            DEFAULT NULL,
   `created_at`           datetime(3)     NOT NULL,
   `updated_at`           datetime(3)     NOT NULL,
   `deleted_at`           datetime(3)     NULL,
@@ -151,9 +149,12 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
   `ip`            varchar(45)     NOT NULL DEFAULT '',
   `user_agent`    varchar(500)    NOT NULL DEFAULT '',
   `details`       text,
+  `prev_hash`     varchar(64)     NOT NULL DEFAULT '',
+  `hash`          varchar(64)     NOT NULL DEFAULT '',
   `created_at`    datetime(3)     NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_audit_logs_user_id` (`user_id`)
+  KEY `idx_audit_logs_user_id` (`user_id`),
+  KEY `idx_audit_logs_hash` (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -- operation_logs --------------------------------------------------------
@@ -648,4 +649,3 @@ CREATE TABLE IF NOT EXISTS `token_blacklists` (
   KEY `idx_token_blacklists_expires_at` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-SET foreign_key_checks = 1;
