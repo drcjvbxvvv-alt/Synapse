@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/shaia/Synapse/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -114,6 +115,23 @@ type LogSourceConfig struct {
 // TableName 指定日誌源配置表名
 func (LogSourceConfig) TableName() string {
 	return "log_source_configs"
+}
+
+// ---------------------------------------------------------------------------
+// GORM hooks — AES-256-GCM encryption for log source credentials (P2-3).
+// ---------------------------------------------------------------------------
+
+func (l *LogSourceConfig) BeforeSave(_ *gorm.DB) error {
+	return encryptFields(&l.Password, &l.APIKey)
+}
+
+func (l *LogSourceConfig) AfterCreate(_ *gorm.DB) error { return decryptFields(&l.Password, &l.APIKey) }
+func (l *LogSourceConfig) AfterUpdate(_ *gorm.DB) error { return decryptFields(&l.Password, &l.APIKey) }
+func (l *LogSourceConfig) AfterFind(_ *gorm.DB) error {
+	if !crypto.IsEnabled() {
+		return nil
+	}
+	return decryptFields(&l.Password, &l.APIKey)
 }
 
 // EventLogEntry K8s事件日誌條目

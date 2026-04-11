@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/shaia/Synapse/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -48,6 +49,27 @@ type ArgoCDConfig struct {
 // TableName 指定表名
 func (ArgoCDConfig) TableName() string {
 	return "argocd_configs"
+}
+
+// ---------------------------------------------------------------------------
+// GORM hooks — AES-256-GCM encryption for ArgoCD credential fields (P2-3).
+// ---------------------------------------------------------------------------
+
+func (a *ArgoCDConfig) BeforeSave(_ *gorm.DB) error {
+	return encryptFields(&a.Token, &a.Password, &a.GitPassword, &a.GitSSHKey)
+}
+
+func (a *ArgoCDConfig) afterDecrypt() error {
+	return decryptFields(&a.Token, &a.Password, &a.GitPassword, &a.GitSSHKey)
+}
+
+func (a *ArgoCDConfig) AfterCreate(_ *gorm.DB) error { return a.afterDecrypt() }
+func (a *ArgoCDConfig) AfterUpdate(_ *gorm.DB) error { return a.afterDecrypt() }
+func (a *ArgoCDConfig) AfterFind(_ *gorm.DB) error {
+	if !crypto.IsEnabled() {
+		return nil
+	}
+	return a.afterDecrypt()
 }
 
 // ArgoCDConfigRequest 用於接收前端請求（包含敏感欄位）

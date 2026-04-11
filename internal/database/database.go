@@ -77,9 +77,22 @@ func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 		sqlDB.SetConnMaxLifetime(time.Hour)
 	}
 
-	// 自動遷移資料庫表
-	if err := autoMigrate(db); err != nil {
-		return nil, fmt.Errorf("資料庫遷移失敗: %w", err)
+	// 執行資料庫遷移
+	// MySQL（生產環境）：使用 golang-migrate 執行版本化 SQL 遷移檔案。
+	// SQLite（開發環境）：使用 GORM AutoMigrate（無生產風險）。
+	if driver == "mysql" {
+		if err := RunMigrations(db, driver); err != nil {
+			return nil, fmt.Errorf("資料庫遷移失敗: %w", err)
+		}
+	} else {
+		if err := autoMigrate(db); err != nil {
+			return nil, fmt.Errorf("資料庫遷移失敗: %w", err)
+		}
+	}
+
+	// 初始化種子資料（兩種驅動都需要執行）
+	if driver == "mysql" {
+		runSeeds(db)
 	}
 
 	logger.Info("資料庫連線成功 (驅動: %s)", driver)
@@ -180,14 +193,10 @@ func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, er
 	return db, nil
 }
 
-// autoMigrate 自動遷移資料庫表
+// autoMigrate 使用 GORM AutoMigrate 建立/更新資料庫表。
+// 僅用於 SQLite 開發環境。MySQL 生產環境改用 RunMigrations（golang-migrate）。
 func autoMigrate(db *gorm.DB) error {
-	// 根據資料庫驅動型別禁用外來鍵約束檢查
-	if currentDriver == "mysql" {
-		db.Exec("SET FOREIGN_KEY_CHECKS = 0")
-	} else if currentDriver == "sqlite" {
-		db.Exec("PRAGMA foreign_keys = OFF")
-	}
+	db.Exec("PRAGMA foreign_keys = OFF")
 
 	// 按依賴順序遷移表
 	err := db.AutoMigrate(
@@ -197,54 +206,54 @@ func autoMigrate(db *gorm.DB) error {
 		&models.TerminalSession{},
 		&models.TerminalCommand{},
 		&models.AuditLog{},
-		&models.OperationLog{},      // 操作審計日誌表（新增）
-		&models.SystemSetting{},     // 系統設定表
-		&models.ArgoCDConfig{},      // ArgoCD 配置表
-		&models.UserGroup{},         // 使用者組表
-		&models.UserGroupMember{},   // 使用者組成員關聯表
-		&models.ClusterPermission{}, // 叢集權限表
-		&models.AIConfig{},           // AI 配置表
-		&models.HelmRepository{},     // Helm Chart 倉庫配置表
-		&models.EventAlertRule{},     // K8s Event 告警規則表
-		&models.EventAlertHistory{},  // Event 告警歷史紀錄表
-		&models.CostConfig{},         // 成本定價設定表
-		&models.ResourceSnapshot{},          // 資源每日快照表
-		&models.ClusterOccupancySnapshot{},  // 叢集級別佔用快照表（Phase 1）
-		&models.CloudBillingConfig{},         // 雲端帳單設定（Phase 4）
-		&models.CloudBillingRecord{},         // 雲端帳單記錄（Phase 4）
-		&models.ImageScanResult{},    // Trivy 映像掃描結果表
-		&models.BenchResult{},        // CIS kube-bench 評分表
-		&models.SyncPolicy{},         // 多叢集配置同步策略表
-		&models.SyncHistory{},        // 同步歷史紀錄表
-		&models.ConfigVersion{},        // ConfigMap/Secret 版本歷史快照表
-		&models.LogSourceConfig{},      // 外部日誌源設定表（Loki / Elasticsearch）
-		&models.NamespaceProtection{},  // 命名空間保護設定表（審批工作流）
-		&models.ApprovalRequest{},      // 部署審批請求表
-		&models.ImageIndex{},           // 映像索引表（跨叢集 Image Tag 搜尋）
-		&models.PortForwardSession{},   // Port-Forward 會話記錄表
-		&models.SIEMWebhookConfig{},    // SIEM Webhook 設定表
-		&models.APIToken{},             // 個人 API Token 表
-		&models.NotifyChannel{},        // 通知渠道設定表
-		&models.TokenBlacklist{},       // JWT Token 黑名單表（P0-5：支援登出撤銷）
+		&models.OperationLog{},
+		&models.SystemSetting{},
+		&models.ArgoCDConfig{},
+		&models.UserGroup{},
+		&models.UserGroupMember{},
+		&models.ClusterPermission{},
+		&models.AIConfig{},
+		&models.HelmRepository{},
+		&models.EventAlertRule{},
+		&models.EventAlertHistory{},
+		&models.CostConfig{},
+		&models.ResourceSnapshot{},
+		&models.ClusterOccupancySnapshot{},
+		&models.CloudBillingConfig{},
+		&models.CloudBillingRecord{},
+		&models.ImageScanResult{},
+		&models.BenchResult{},
+		&models.SyncPolicy{},
+		&models.SyncHistory{},
+		&models.ConfigVersion{},
+		&models.LogSourceConfig{},
+		&models.NamespaceProtection{},
+		&models.ApprovalRequest{},
+		&models.ImageIndex{},
+		&models.PortForwardSession{},
+		&models.SIEMWebhookConfig{},
+		&models.APIToken{},
+		&models.NotifyChannel{},
+		&models.TokenBlacklist{},
+		&models.FeatureFlag{},
 	)
 
-	// 根據資料庫驅動型別重新啟用外來鍵約束檢查
-	if currentDriver == "mysql" {
-		db.Exec("SET FOREIGN_KEY_CHECKS = 1")
-	} else if currentDriver == "sqlite" {
-		db.Exec("PRAGMA foreign_keys = ON")
-	}
+	db.Exec("PRAGMA foreign_keys = ON")
 
-	// 建立預設管理員使用者和系統設定（如果不存在）
 	if err == nil {
-		backfillSystemRole(db)
-		createDefaultUser(db)
-		createTestClusters(db)
-		createDefaultSystemSettings(db)
-		createDefaultPermissions(db)
+		runSeeds(db)
 	}
-
 	return err
+}
+
+// runSeeds 建立預設管理員、系統設定等初始資料（idempotent — 已存在則跳過）。
+// 在 autoMigrate（SQLite）和 RunMigrations（MySQL）之後都需呼叫。
+func runSeeds(db *gorm.DB) {
+	backfillSystemRole(db)
+	createDefaultUser(db)
+	createTestClusters(db)
+	createDefaultSystemSettings(db)
+	createDefaultPermissions(db)
 }
 
 // backfillSystemRole 將既有的 username=admin 使用者升級為 platform_admin

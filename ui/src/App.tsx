@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, App as AntdApp, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -23,9 +23,10 @@ import WorkloadDetail from './pages/workload/WorkloadDetail';
 import DeploymentCreate from './pages/workload/DeploymentCreate';
 import DeploymentDetail from './pages/workload/DeploymentDetail';
 import RolloutDetail from './pages/workload/RolloutDetail';
-import YAMLEditor from './pages/yaml/YAMLEditor';
+// P2-9: Heavy pages lazy-loaded to reduce initial bundle size
+const YAMLEditor         = lazy(() => import('./pages/yaml/YAMLEditor'));
+const KubectlTerminalPage = lazy(() => import('./pages/terminal/kubectlTerminal'));
 import GlobalSearch from './pages/search/GlobalSearch';
-import KubectlTerminalPage from './pages/terminal/kubectlTerminal';
 import { ConfigSecretManagement, ConfigMapDetail, SecretDetail } from './pages/config';
 import ConfigMapEdit from './pages/config/ConfigMapEdit';
 import SecretEdit from './pages/config/SecretEdit';
@@ -43,26 +44,27 @@ import Overview from './pages/overview/Overview';
 import { AlertCenter, GlobalAlertCenter } from './pages/alert';
 import { CommandHistory, OperationLogs } from './pages/audit';
 import { LogCenter, EventLogs } from './pages/logs';
-import ArgoCDConfigPage from './pages/plugins/ArgoCDConfigPage';
-import ArgoCDApplicationsPage from './pages/plugins/ArgoCDApplicationsPage';
+const ArgoCDConfigPage       = lazy(() => import('./pages/plugins/ArgoCDConfigPage'));
+const ArgoCDApplicationsPage = lazy(() => import('./pages/plugins/ArgoCDApplicationsPage'));
 import { PermissionManagement } from './pages/permission';
 import { UserManagement, UserGroupManagement } from './pages/access';
-import { MonitoringCenter } from './pages/om';
-import HelmList from './pages/helm/HelmList';
-import CRDList from './pages/crd/CRDList';
-import CRDResources from './pages/crd/CRDResources';
+const MonitoringCenter = lazy(() => import('./pages/om').then(m => ({ default: m.MonitoringCenter })));
+const HelmList    = lazy(() => import('./pages/helm/HelmList'));
+const CRDList     = lazy(() => import('./pages/crd/CRDList'));
+const CRDResources = lazy(() => import('./pages/crd/CRDResources'));
 import EventAlertRules from './pages/alert/EventAlertRules';
-import CostDashboard from './pages/cost/CostDashboard';
-import GlobalCostInsights from './pages/cost/GlobalCostInsights';
-import SecurityDashboard from './pages/security/SecurityDashboard';
-import CertificateList from './pages/security/CertificateList';
-import MultiClusterPage from './pages/multicluster';
+const CostDashboard      = lazy(() => import('./pages/cost/CostDashboard'));
+const GlobalCostInsights = lazy(() => import('./pages/cost/GlobalCostInsights'));
+const SecurityDashboard  = lazy(() => import('./pages/security/SecurityDashboard'));
+const CertificateList    = lazy(() => import('./pages/security/CertificateList'));
+const MultiClusterPage   = lazy(() => import('./pages/multicluster'));
 import { PermissionProvider } from './contexts/PermissionContext.tsx';
 import { tokenManager, silentRefresh } from './services/authService';
+import { useSessionStore } from './store';
 import { PermissionGuard } from './components/PermissionGuard';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage'
-import PipelineRunDemo from './pages/pipeline/PipelineRunDemo';
+const PipelineRunDemo = lazy(() => import('./pages/pipeline/PipelineRunDemo'));
 import AutoscalingPage from './pages/workload/AutoscalingPage';
 import './App.css';
 
@@ -74,14 +76,30 @@ import './App.css';
 const useAuthInit = () => {
   const hasStoredSession = !!localStorage.getItem('user');
   const alreadyHasToken  = tokenManager.isLoggedIn();
+  const setSession = useSessionStore((s) => s.setSession);
 
   // 若 memory 已有 token，或 localStorage 無 session 記錄，不需要 refresh
   const [authReady, setAuthReady] = useState(alreadyHasToken || !hasStoredSession);
 
+  // Hydrate session store from tokenManager on first render when token already exists
+  useEffect(() => {
+    if (alreadyHasToken) {
+      const user = tokenManager.getUser();
+      const expiresAt = tokenManager.getExpiresAt();
+      if (user) setSession(user, expiresAt ?? 0);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (authReady) return;
 
-    silentRefresh().finally(() => {
+    silentRefresh().then((ok) => {
+      if (ok) {
+        const user = tokenManager.getUser();
+        const expiresAt = tokenManager.getExpiresAt();
+        if (user) setSession(user, expiresAt ?? 0);
+      }
+    }).finally(() => {
       setAuthReady(true);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

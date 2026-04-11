@@ -46,6 +46,14 @@ type TerminalCommand struct {
 }
 
 // AuditLog 審計日誌模型
+//
+// Hash chain integrity (P2-2):
+//   - PrevHash = Hash of the previous record (zeroHash for the first record).
+//   - Hash     = SHA-256 of (PrevHash, UserID, Action, ResourceType,
+//                ResourceRef, Result, IP, CreatedAt.UnixNano).
+//
+// Records written before the hash chain feature was enabled have empty Hash /
+// PrevHash fields; VerifyChain skips them automatically.
 type AuditLog struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	UserID       uint      `json:"user_id" gorm:"not null;index"`
@@ -56,6 +64,8 @@ type AuditLog struct {
 	IP           string    `json:"ip" gorm:"size:45"`                     // 客戶端IP
 	UserAgent    string    `json:"user_agent" gorm:"size:500"`            // 使用者代理
 	Details      string    `json:"details" gorm:"type:text"`              // 詳細資訊
+	PrevHash     string    `json:"prev_hash" gorm:"size:64;not null;default:''"` // P2-2 hash chain
+	Hash         string    `json:"hash"      gorm:"size:64;not null;default:'';index"` // P2-2 hash chain
 	CreatedAt    time.Time `json:"created_at"`
 
 	// 關聯關係

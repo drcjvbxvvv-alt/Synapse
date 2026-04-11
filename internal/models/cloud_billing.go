@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/shaia/Synapse/pkg/crypto"
+	"gorm.io/gorm"
+)
 
 // CloudBillingConfig 雲端帳單整合設定（每叢集）
 type CloudBillingConfig struct {
@@ -26,6 +31,27 @@ type CloudBillingConfig struct {
 }
 
 func (CloudBillingConfig) TableName() string { return "cloud_billing_configs" }
+
+// ---------------------------------------------------------------------------
+// GORM hooks — AES-256-GCM encryption for cloud billing credentials (P2-3).
+// ---------------------------------------------------------------------------
+
+func (c *CloudBillingConfig) BeforeSave(_ *gorm.DB) error {
+	return encryptFields(&c.AWSSecretAccessKey, &c.GCPServiceAccountJSON)
+}
+
+func (c *CloudBillingConfig) AfterCreate(_ *gorm.DB) error {
+	return decryptFields(&c.AWSSecretAccessKey, &c.GCPServiceAccountJSON)
+}
+func (c *CloudBillingConfig) AfterUpdate(_ *gorm.DB) error {
+	return decryptFields(&c.AWSSecretAccessKey, &c.GCPServiceAccountJSON)
+}
+func (c *CloudBillingConfig) AfterFind(_ *gorm.DB) error {
+	if !crypto.IsEnabled() {
+		return nil
+	}
+	return decryptFields(&c.AWSSecretAccessKey, &c.GCPServiceAccountJSON)
+}
 
 // CloudBillingRecord 已同步的帳單記錄（按服務分類，每月一筆）
 type CloudBillingRecord struct {

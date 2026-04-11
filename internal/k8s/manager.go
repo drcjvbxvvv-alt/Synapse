@@ -28,9 +28,11 @@ import (
 
 type ClusterRuntime struct {
 	clusterID    uint                // 所屬叢集 ID
+	cluster      *models.Cluster     // 原始叢集 model（用於自動重啟）
 	k8sClient    *services.K8sClient // 快取的 K8sClient（包含 clientset 和 rest.Config）
 	clientset    *kubernetes.Clientset
 	factory      informers.SharedInformerFactory
+	startedAt    time.Time // informer 啟動時間（偵測卡住用）
 	lastAccessAt time.Time // 最後存取時間，用於閒置 GC
 
 	startOnce sync.Once
@@ -99,10 +101,12 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 
 	rt := &ClusterRuntime{
 		clusterID:    cluster.ID,
+		cluster:      cluster,
 		k8sClient:    kc,
 		clientset:    clientset,
 		factory:      factory,
 		stopCh:       make(chan struct{}),
+		startedAt:    time.Now(),
 		lastAccessAt: time.Now(),
 	}
 
@@ -487,6 +491,89 @@ func (m *ClusterInformerManager) StopForCluster(clusterID uint) {
 			close(rt.stopCh)
 		})
 		logger.Info("叢集 informer 已停止", "clusterID", clusterID)
+	}
+}
+
+// HealthCheck 回傳所有已登錄叢集的 Informer 健康快照。
+// 純記憶體讀取，無網路呼叫，適合在 /readyz 端點中呼叫。
+func (m *ClusterInformerManager) HealthCheck() map[uint]InformerHealth {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	result := make(map[uint]InformerHealth, len(m.clusters))
+	for id, rt := range m.clusters {
+		result[id] = InformerHealth{
+			ClusterID:  id,
+			Started:    rt.started,
+			Synced:     rt.synced,
+			StartedAt:  rt.startedAt,
+			LastAccess: rt.lastAccessAt,
+		}
+	}
+	return result
+}
+
+// StartHealthWatcher 啟動背景 goroutine，週期性偵測已啟動但長期未同步的 informer，
+// 並自動重啟它們。
+//
+//   - interval: 檢查週期（建議 1 分鐘）
+//   - stuckThreshold: informer 啟動後允許的最長未同步時間（建議 5 分鐘）
+//
+// 此方法應在 StartGC 之後呼叫，只呼叫一次。
+func (m *ClusterInformerManager) StartHealthWatcher(interval, stuckThreshold time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for range ticker.C {
+			m.restartStuckInformers(stuckThreshold)
+		}
+	}()
+}
+
+// restartStuckInformers finds clusters whose informer has been started but not
+// synced for longer than stuckThreshold, stops them, and re-initialises.
+// Called by StartHealthWatcher; exported for testability.
+func (m *ClusterInformerManager) restartStuckInformers(stuckThreshold time.Duration) {
+	// Collect candidates under read lock — avoid holding write lock during network ops.
+	type candidate struct {
+		id      uint
+		cluster *models.Cluster
+	}
+
+	m.mu.RLock()
+	var stuck []candidate
+	now := time.Now()
+	for id, rt := range m.clusters {
+		if rt.started && !rt.synced && now.Sub(rt.startedAt) > stuckThreshold {
+			stuck = append(stuck, candidate{id: id, cluster: rt.cluster})
+		}
+	}
+	m.mu.RUnlock()
+
+	for _, c := range stuck {
+		logger.Warn("informer 卡住，嘗試自動重啟",
+			"clusterID", c.id,
+			"stuckDuration", now.Sub(func() time.Time {
+				m.mu.RLock()
+				defer m.mu.RUnlock()
+				if rt, ok := m.clusters[c.id]; ok {
+					return rt.startedAt
+				}
+				return now
+			}()).Round(time.Second),
+		)
+
+		m.StopForCluster(c.id)
+
+		if c.cluster == nil {
+			logger.Warn("跳過重啟：叢集 model 不可用", "clusterID", c.id)
+			continue
+		}
+
+		if _, err := m.EnsureForCluster(c.cluster); err != nil {
+			logger.Error("自動重啟 informer 失敗", "clusterID", c.id, "error", err)
+		} else {
+			logger.Info("informer 已自動重啟", "clusterID", c.id)
+		}
 	}
 }
 

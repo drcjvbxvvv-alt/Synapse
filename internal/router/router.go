@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/features"
 	"github.com/shaia/Synapse/internal/tracing"
 	"github.com/shaia/Synapse/internal/handlers"
 	"github.com/shaia/Synapse/internal/k8s"
@@ -33,6 +34,11 @@ var staticFS embed.FS
 func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *k8s.ClusterInformerManager) {
 	staticFS = frontendFS
 	r := gin.New()
+
+	// Declare k8sMgr early so the /readyz closure can capture it by reference.
+	// It is assigned below after the K8s section; by the time any HTTP request
+	// arrives (after Setup returns and the server starts) the value is set.
+	var k8sMgr *k8s.ClusterInformerManager
 
 	// ── Distributed tracing (OTel) ─────────────────────────────────────────
 	if _, err := tracing.Setup(context.Background(), cfg.Tracing); err != nil {
@@ -95,11 +101,12 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		})
 	})
 
-	// /readyz — checks DB connectivity; returns 503 if degraded
+	// /readyz — checks DB connectivity and K8s informer state; returns 503 if degraded
 	r.GET(readyPath, func(c *gin.Context) {
 		checks := gin.H{}
 		overallOK := true
 
+		// ── Database ──────────────────────────────────────────────────────
 		sqlDB, err := db.DB()
 		if err != nil {
 			checks["database"] = gin.H{"status": "error", "message": err.Error()}
@@ -109,6 +116,24 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 			overallOK = false
 		} else {
 			checks["database"] = gin.H{"status": "ok"}
+		}
+
+		// ── K8s Informers ─────────────────────────────────────────────────
+		// Informer sync failures are informational — cluster connectivity is
+		// external and should not block pod readiness. Only DB failure → 503.
+		if k8sMgr != nil {
+			health := k8sMgr.HealthCheck()
+			total, synced := len(health), 0
+			for _, h := range health {
+				if h.Synced {
+					synced++
+				}
+			}
+			checks["k8s_informers"] = gin.H{
+				"status": "ok",
+				"total":  total,
+				"synced": synced,
+			}
 		}
 
 		status := "ok"
@@ -184,7 +209,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	monitoringConfigSvc := services.NewMonitoringConfigServiceWithGrafana(db, grafanaSvc)
 
 	// ── K8s Informer manager ───────────────────────────────────────────────
-	k8sMgr := k8s.NewClusterInformerManager()
+	k8sMgr = k8s.NewClusterInformerManager()
 	if cfg.K8s.InformerSyncTimeout > 0 {
 		k8sMgr.SetSyncTimeout(time.Duration(cfg.K8s.InformerSyncTimeout) * time.Second)
 	}
@@ -237,6 +262,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	imageIndexWorker.Start()
 
 	k8sMgr.StartGC(30*time.Minute, 2*time.Hour)
+	// P2-8: restart informers stuck in un-synced state for > 5 minutes
+	k8sMgr.StartHealthWatcher(1*time.Minute, 5*time.Minute)
 
 	// ── API routes ─────────────────────────────────────────────────────────
 	api := r.Group("/api/v1")
@@ -259,6 +286,13 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 
 	permMiddleware := middleware.NewPermissionMiddleware(permissionSvc)
 
+	// ── Feature Flags (P2-6) ───────────────────────────────────────────────
+	featureFlagSvc := services.NewFeatureFlagService(db)
+	featureDBStore := features.NewDBStore(db, 30*time.Second)
+	// Replace the default env-var store with the DB-backed store so that
+	// features.IsEnabled() reflects admin-managed flags at runtime.
+	features.SetStore(featureDBStore)
+
 	deps := routeDeps{
 		db:               db,
 		cfg:              cfg,
@@ -280,6 +314,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		cfgVerSvc:        services.NewConfigVersionService(db),
 		imageIndexSvc:    services.NewImageIndexService(db),
 		syncPolicySvc:    services.NewSyncPolicyService(db),
+		featureFlagSvc:   featureFlagSvc,
+		featureDBStore:   featureDBStore,
 	}
 
 	protected := api.Group("")

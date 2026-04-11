@@ -11,6 +11,7 @@ import type { Cluster } from '../types';
 import { clusterService } from '../services/clusterService';
 import { usePermission } from '../hooks/usePermission';
 import { getPermissionTypeName, getPermissionTypeColor } from '../services/permissionService';
+import { useClusterStore } from '../store';
 
 const { Option } = Select;
 
@@ -21,6 +22,7 @@ const ClusterSelector: React.FC = () => {
   const { t } = useTranslation();
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const { getPermissionType, setCurrentClusterId, canWrite } = usePermission();
+  const { setActiveClusterId, setClusters: setStoreClusters } = useClusterStore();
 
   const currentClusterId = clusterId || id;
 
@@ -30,8 +32,9 @@ const ClusterSelector: React.FC = () => {
   useEffect(() => {
     if (currentClusterId) {
       setCurrentClusterId(currentClusterId);
+      setActiveClusterId(currentClusterId);
     }
-  }, [currentClusterId, setCurrentClusterId]);
+  }, [currentClusterId, setCurrentClusterId, setActiveClusterId]);
 
   const openTerminal = () => {
     if (currentClusterId) {
@@ -44,11 +47,13 @@ const ClusterSelector: React.FC = () => {
   const fetchClusters = useCallback(async () => {
     try {
       const response = await clusterService.getClusters();
-      setClusters(response.items || []);
+      const items = response.items || [];
+      setClusters(items);
+      setStoreClusters(items);
     } catch (error) {
       console.error('Failed to fetch clusters:', error);
     }
-  }, []);
+  }, [setStoreClusters]);
 
   useEffect(() => {
     fetchClusters();

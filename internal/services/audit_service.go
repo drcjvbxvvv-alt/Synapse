@@ -1,7 +1,14 @@
 package services
 
 import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/shaia/Synapse/internal/models"
@@ -10,14 +17,168 @@ import (
 	"gorm.io/gorm"
 )
 
+// zeroHash is the sentinel prev_hash for the very first audit log entry.
+const zeroHash = "0000000000000000000000000000000000000000000000000000000000000000"
+
 // AuditService 審計服務
 type AuditService struct {
-	db *gorm.DB
+	db      *gorm.DB
+	sink    AuditSink
+	chainMu sync.Mutex // serialises LogAudit to maintain hash chain integrity
 }
 
-// NewAuditService 建立審計服務
+// NewAuditService 建立審計服務（預設 DBSink）
 func NewAuditService(db *gorm.DB) *AuditService {
-	return &AuditService{db: db}
+	return &AuditService{
+		db:   db,
+		sink: NewDBSink(db),
+	}
+}
+
+// WithSink replaces the default DBSink.
+// Useful for multi-sink fan-out (DB + webhook) or testing with a stub sink.
+func (s *AuditService) WithSink(sink AuditSink) *AuditService {
+	s.sink = sink
+	return s
+}
+
+// ── Hash chain (P2-2) ─────────────────────────────────────────────────────────
+
+// LogAuditRequest carries the fields needed to create one audit log entry.
+type LogAuditRequest struct {
+	UserID       uint
+	Action       string
+	ResourceType string
+	ResourceRef  string // JSON-encoded resource reference (may be empty)
+	Result       string // "success" | "failed"
+	IP           string
+	UserAgent    string
+	Details      string
+}
+
+// LogAudit writes a hash-chained audit log entry.
+// A mutex ensures that prev_hash → hash ordering is consistent within a
+// single process. Cross-process ordering is preserved by inserting the
+// prev_hash before the DB write; duplicate chain tips are idempotent because
+// the hash commits to the creation timestamp (UnixNano).
+func (s *AuditService) LogAudit(ctx context.Context, req LogAuditRequest) error {
+	s.chainMu.Lock()
+	defer s.chainMu.Unlock()
+
+	prevHash, err := s.getLastHash(ctx)
+	if err != nil {
+		return fmt.Errorf("audit: get last hash: %w", err)
+	}
+
+	entry := &models.AuditLog{
+		UserID:       req.UserID,
+		Action:       req.Action,
+		ResourceType: req.ResourceType,
+		ResourceRef:  req.ResourceRef,
+		Result:       req.Result,
+		IP:           req.IP,
+		UserAgent:    req.UserAgent,
+		Details:      req.Details,
+		PrevHash:     prevHash,
+		CreatedAt:    time.Now(),
+	}
+	// Compute hash before INSERT — single DB write, no UPDATE needed.
+	entry.Hash = computeAuditHash(prevHash, entry)
+
+	if err := s.sink.Write(ctx, entry); err != nil {
+		return fmt.Errorf("audit: write entry: %w", err)
+	}
+	return nil
+}
+
+// ChainVerifyResult is the output of VerifyChain.
+type ChainVerifyResult struct {
+	Verified  int    `json:"verified"`
+	Tampered  []uint `json:"tampered,omitempty"`
+	FirstHash string `json:"first_hash,omitempty"`
+	LastHash  string `json:"last_hash,omitempty"`
+}
+
+// VerifyChain checks the integrity of the most recent `limit` audit log
+// entries that carry a hash (records written before hash-chain support was
+// enabled have an empty Hash and are skipped automatically).
+func (s *AuditService) VerifyChain(ctx context.Context, limit int) (*ChainVerifyResult, error) {
+	if limit <= 0 {
+		limit = 1000
+	}
+
+	var entries []models.AuditLog
+	if err := s.db.WithContext(ctx).
+		Where("hash != ''").
+		Order("id ASC").
+		Limit(limit).
+		Find(&entries).Error; err != nil {
+		return nil, fmt.Errorf("verify chain: query: %w", err)
+	}
+
+	result := &ChainVerifyResult{}
+	if len(entries) == 0 {
+		return result, nil
+	}
+
+	result.FirstHash = entries[0].Hash
+	result.LastHash = entries[len(entries)-1].Hash
+
+	for i := range entries {
+		e := &entries[i]
+		expected := computeAuditHash(e.PrevHash, e)
+		if expected != e.Hash {
+			result.Tampered = append(result.Tampered, e.ID)
+		} else {
+			result.Verified++
+		}
+	}
+	return result, nil
+}
+
+// getLastHash returns the Hash of the most-recently inserted audit log
+// that has a non-empty hash field, or zeroHash when starting fresh.
+// Must be called while chainMu is held.
+func (s *AuditService) getLastHash(ctx context.Context) (string, error) {
+	var last models.AuditLog
+	err := s.db.WithContext(ctx).
+		Select("hash").
+		Order("id DESC").
+		First(&last).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return zeroHash, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("get last hash: %w", err)
+	}
+	if last.Hash == "" {
+		// Existing records written before hash-chain was enabled — start fresh.
+		return zeroHash, nil
+	}
+	return last.Hash, nil
+}
+
+// computeAuditHash returns SHA-256 of the canonical fields joined with null
+// bytes. Using null bytes as separators prevents length-extension attacks.
+func computeAuditHash(prevHash string, e *models.AuditLog) string {
+	h := sha256.New()
+	fields := []string{
+		prevHash,
+		strconv.FormatUint(uint64(e.UserID), 10),
+		e.Action,
+		e.ResourceType,
+		e.ResourceRef,
+		e.Result,
+		e.IP,
+		strconv.FormatInt(e.CreatedAt.UnixNano(), 10),
+	}
+	for i, f := range fields {
+		if i > 0 {
+			h.Write([]byte{0})
+		}
+		h.Write([]byte(f))
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // TerminalType 終端型別

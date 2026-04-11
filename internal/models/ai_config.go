@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/shaia/Synapse/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -23,6 +24,23 @@ type AIConfig struct {
 // TableName 指定表名
 func (AIConfig) TableName() string {
 	return "ai_configs"
+}
+
+// ---------------------------------------------------------------------------
+// GORM hooks — AES-256-GCM encryption for AI API key (P2-3).
+// ---------------------------------------------------------------------------
+
+func (a *AIConfig) BeforeSave(_ *gorm.DB) error {
+	return encryptFields(&a.APIKey)
+}
+
+func (a *AIConfig) AfterCreate(_ *gorm.DB) error { return decryptFields(&a.APIKey) }
+func (a *AIConfig) AfterUpdate(_ *gorm.DB) error { return decryptFields(&a.APIKey) }
+func (a *AIConfig) AfterFind(_ *gorm.DB) error {
+	if !crypto.IsEnabled() {
+		return nil
+	}
+	return decryptFields(&a.APIKey)
 }
 
 // GetDefaultAIConfig 獲取預設 AI 配置

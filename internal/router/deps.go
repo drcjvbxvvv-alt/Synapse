@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/features"
 	"github.com/shaia/Synapse/internal/k8s"
 	smetrics "github.com/shaia/Synapse/internal/metrics"
 	"github.com/shaia/Synapse/internal/middleware"
@@ -31,4 +32,6 @@ type routeDeps struct {
 	cfgVerSvc        *services.ConfigVersionService
 	imageIndexSvc    *services.ImageIndexService
 	syncPolicySvc    *services.SyncPolicyService
+	featureFlagSvc   *services.FeatureFlagService
+	featureDBStore   *features.DBStore
 }

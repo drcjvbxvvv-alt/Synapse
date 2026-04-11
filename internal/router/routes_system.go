@@ -158,6 +158,10 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		systemSettings.PUT("/notify-channels/:id", notifyChannelHandler.UpdateNotifyChannel)
 		systemSettings.DELETE("/notify-channels/:id", notifyChannelHandler.DeleteNotifyChannel)
 		systemSettings.POST("/notify-channels/:id/test", notifyChannelHandler.TestNotifyChannel)
+		// Feature Flag 管理（P2-6）
+		ffHandler := handlers.NewFeatureFlagHandler(d.featureFlagSvc, d.featureDBStore)
+		systemSettings.GET("/feature-flags", ffHandler.List)
+		systemSettings.PUT("/feature-flags/:key", ffHandler.Update)
 	}
 
 	// 消息通知（全域，跨叢集 Event Alert History）
