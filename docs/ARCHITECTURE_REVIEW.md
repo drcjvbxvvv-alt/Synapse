@@ -410,6 +410,11 @@ REST API 超過 300 個 endpoint，卻沒有任何機讀規格。前後端協作
 
 ### P1-5 前端頁面肥胖症
 
+> **狀態：✅ 已完成（2026-04-11）**
+> 所有 > 700 行的頁面與 service 檔案已全數拆分，目前 ui/src 無任何檔案超過 700 行。
+> 拆分清單（部分）：CostDashboard(1417→205)、LogCenter(1385→248)、NodeList(1156→228)、全部 6 個 Workload Tab(~980→~200)、PodList(928→239)、ContainerTab(979→103)、NodeOperations(957→158)、PermissionManagement(856→273)、AlertCenter(827→219)、Overview(811→124)、SecretList(786→198)、ConfigMapList(738→197)、NamespaceList(729→192)、MonitoringCenter(701→77)、PipelineRunDemo(767→258)、SecretCreate(725→233)。
+> Service 拆分：workloadService.ts(1094→13 barrel)、yamlCommonService.ts(1030→36 barrel)。
+
 | 檔案 | 行數 |
 | --- | ---: |
 | `CostDashboard.tsx` | 1,398 |
@@ -453,6 +458,15 @@ timeout: 10000,
 在 `App.tsx` 最外層包 `<ErrorBoundary fallback={<ErrorPage />}>`，並依 Project Brain 中記錄的 pitfall：**不要直接暴露 `error.message`**，用通用文案 + 參考編號（request ID）。
 
 ### P1-8 In-Memory Rate Limiter 不跨實例
+
+> **狀態：✅ 已完成（2026-04-11）**
+> - 抽象 `RateLimiter` interface（`IsLocked` / `RecordFailure` / `Reset`）
+> - `MemoryRateLimiter`：重構既有 in-memory 邏輯為 struct，移除 package-level global state
+> - `RedisRateLimiter`：使用 `go-redis/v9`，key schema 為 `rl:fail:{key}` + `rl:lock:{key}`；Redis 不可用時 fail-open（允許請求並記錄 Warn）
+> - `LoginRateLimit(limiter RateLimiter)` 接受注入 backend，不再依賴 global state
+> - `config`：新增 `RedisConfig`（`REDIS_ADDR` / `REDIS_PASSWORD` / `REDIS_DB`）與 `RateLimiterConfig`（`RATE_LIMITER_BACKEND=redis` 啟用）
+> - `router`：`buildRateLimiter()` 依設定選擇後端，Redis ping 失敗自動 fallback in-memory
+> - 測試：8 個單元測試，覆蓋鎖定、過期、重設、middleware 整合
 
 `middleware/rate_limit.go` 把登入失敗次數存在 Go 內的 `map[string]*loginAttempt`。多實例部署下，每個 pod 各自計數，攻擊者輪著 pod 打就能繞開。
 
@@ -962,8 +976,8 @@ type CreateDeploymentRequest struct {
 
 - [ ] **P0-4c** Repository 層覆蓋到所有 40 個 handler（Batch 1/2/3 推廣，見 `docs/REFACTOR_HANDLER_GUIDE.md` §11）
 - [x] **P1-1** Handler 拆分至 < 500 行/檔 ✅ (2026-04-10)
-- [ ] **P1-5** 前端頁面肥胖症 Top 10 頁面拆分
-- [ ] **P1-8** Redis RateLimiter 實作
+- [x] **P1-5** 前端頁面肥胖症 Top 10 頁面拆分 ✅（所有 > 700 行頁面與 service 已拆分，2026-04-11）
+- [x] **P1-8** Redis RateLimiter 實作 ✅（RateLimiter interface + Memory/Redis 雙後端，2026-04-11）
 - [ ] **P1-9** 測試覆蓋率：service ≥ 60%、handler ≥ 40%
 - [ ] **P1-10** OpenTelemetry 導入
 - [ ] **P2-4** golang-migrate 遷移取代 AutoMigrate
