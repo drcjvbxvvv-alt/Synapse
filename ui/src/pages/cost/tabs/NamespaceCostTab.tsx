@@ -7,6 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartTooltip, ResponsiveContainer,
 } from 'recharts';
+import EmptyState from '../../../components/EmptyState';
 import type { CostItem } from '../../../services/costService';
 import { getNamespaceCostColumns } from '../columns';
 import { BAR_PROPS, GRID_STYLE, TOOLTIP_STYLE } from '../constants';
@@ -73,6 +74,7 @@ export const NamespaceCostTab: React.FC<NamespaceCostTabProps> = ({
         size="small"
         scroll={{ x: 800 }}
         pagination={false}
+        locale={{ emptyText: <EmptyState description={t('cost:noNamespaces')} /> }}
       />
     </div>
   );

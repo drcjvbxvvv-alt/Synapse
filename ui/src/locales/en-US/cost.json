@@ -89,6 +89,8 @@
   "monthPicker": "Select Month",
   "prometheusRequired": "Prometheus is required for actual usage data. Without it, only resource requests are estimated.",
   "loading": "Loading cost data...",
+  "noNamespaces": "No namespace cost data available",
+  "noWorkloads": "No workload cost data available",
   "occupancy": {
     "podCount": "Pods",
     "nsBreakdown": "Namespace CPU Occupancy",

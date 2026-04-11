@@ -3,6 +3,7 @@ import { Button, Space, Table, DatePicker, Tooltip } from 'antd';
 import { ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
+import EmptyState from '../../../components/EmptyState';
 import type { CostItem } from '../../../services/costService';
 import { CostService } from '../../../services/costService';
 import { getWorkloadCostColumns } from '../columns';
@@ -68,6 +69,7 @@ export const WorkloadCostTab: React.FC<WorkloadCostTabProps> = ({
           pageSize: 20,
           onChange: onPageChange,
         }}
+        locale={{ emptyText: <EmptyState description={t('cost:noWorkloads')} /> }}
       />
     </div>
   );

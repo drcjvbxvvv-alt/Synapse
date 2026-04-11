@@ -89,6 +89,8 @@
   "monthPicker": "选择月份",
   "prometheusRequired": "需要配置 Prometheus 才能显示实际用量；若无 Prometheus，仅显示 Request 估算",
   "loading": "加载成本数据中...",
+  "noNamespaces": "暂无命名空间成本数据",
+  "noWorkloads": "暂无工作负载成本数据",
   "occupancy": {
     "podCount": "Pod 数",
     "nsBreakdown": "命名空间 CPU 占用",
