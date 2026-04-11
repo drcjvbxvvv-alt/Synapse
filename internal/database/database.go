@@ -38,6 +38,7 @@ func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 
 	var db *gorm.DB
 	var err error
+	var mysqlDSN string
 
 	// 根據配置的驅動型別選擇資料庫
 	driver := cfg.Driver
@@ -50,7 +51,7 @@ func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	case "sqlite":
 		db, err = initSQLite(cfg, gormConfig)
 	case "mysql":
-		db, err = initMySQL(cfg, gormConfig)
+		db, mysqlDSN, err = initMySQL(cfg, gormConfig)
 	default:
 		return nil, fmt.Errorf("不支援的資料庫驅動: %s，請使用 'sqlite' 或 'mysql'", driver)
 	}
@@ -81,7 +82,7 @@ func Init(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	// MySQL（生產環境）：使用 golang-migrate 執行版本化 SQL 遷移檔案。
 	// SQLite（開發環境）：使用 GORM AutoMigrate（無生產風險）。
 	if driver == "mysql" {
-		if err := RunMigrations(db, driver); err != nil {
+		if err := RunMigrations(driver, mysqlDSN); err != nil {
 			return nil, fmt.Errorf("資料庫遷移失敗: %w", err)
 		}
 	} else {
@@ -136,7 +137,7 @@ func initSQLite(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, e
 }
 
 // initMySQL 初始化 MySQL 資料庫連線（支援 TLS）
-func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, error) {
+func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, string, error) {
 	// 若啟用 TLS，向 go-sql-driver 註冊自訂 TLS 設定
 	tlsParam := ""
 	if cfg.TLSEnabled {
@@ -144,11 +145,11 @@ func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, er
 		if cfg.TLSCACert != "" {
 			caCert, err := os.ReadFile(cfg.TLSCACert)
 			if err != nil {
-				return nil, fmt.Errorf("讀取 MySQL TLS CA 憑證失敗 (%s): %w", cfg.TLSCACert, err)
+				return nil, "", fmt.Errorf("讀取 MySQL TLS CA 憑證失敗 (%s): %w", cfg.TLSCACert, err)
 			}
 			pool := x509.NewCertPool()
 			if !pool.AppendCertsFromPEM(caCert) {
-				return nil, fmt.Errorf("MySQL TLS CA 憑證格式無效: %s", cfg.TLSCACert)
+				return nil, "", fmt.Errorf("MySQL TLS CA 憑證格式無效: %s", cfg.TLSCACert)
 			}
 			tlsCfg.RootCAs = pool
 		} else {
@@ -157,7 +158,7 @@ func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, er
 			tlsCfg.InsecureSkipVerify = true //nolint:gosec
 		}
 		if err := gomysql.RegisterTLSConfig("synapse", tlsCfg); err != nil {
-			return nil, fmt.Errorf("註冊 MySQL TLS 設定失敗: %w", err)
+			return nil, "", fmt.Errorf("註冊 MySQL TLS 設定失敗: %w", err)
 		}
 		tlsParam = "&tls=synapse"
 		logger.Info("MySQL TLS 已啟用", "host", cfg.Host)
@@ -170,13 +171,13 @@ func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, er
 	logger.Info("連線MySQL伺服器: %s@%s:%d", cfg.Username, cfg.Host, cfg.Port)
 	tempDB, err := gorm.Open(mysql.Open(dsnWithoutDB), gormConfig)
 	if err != nil {
-		return nil, fmt.Errorf("連線MySQL伺服器失敗: %w", err)
+		return nil, "", fmt.Errorf("連線MySQL伺服器失敗: %w", err)
 	}
 
 	// 建立資料庫（如果不存在）
 	createDBSQL := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", cfg.Database)
 	if err := tempDB.Exec(createDBSQL).Error; err != nil {
-		return nil, fmt.Errorf("建立資料庫失敗: %w", err)
+		return nil, "", fmt.Errorf("建立資料庫失敗: %w", err)
 	}
 	logger.Info("資料庫 %s 建立成功或已存在", cfg.Database)
 
@@ -187,10 +188,10 @@ func initMySQL(cfg config.DatabaseConfig, gormConfig *gorm.Config) (*gorm.DB, er
 	logger.Info("連線MySQL資料庫: %s@%s:%d/%s", cfg.Username, cfg.Host, cfg.Port, cfg.Database)
 	db, err := gorm.Open(mysql.Open(dsn), gormConfig)
 	if err != nil {
-		return nil, fmt.Errorf("連線資料庫失敗: %w", err)
+		return nil, "", fmt.Errorf("連線資料庫失敗: %w", err)
 	}
 
-	return db, nil
+	return db, dsn, nil
 }
 
 // autoMigrate 使用 GORM AutoMigrate 建立/更新資料庫表。

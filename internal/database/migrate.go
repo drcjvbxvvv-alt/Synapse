@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
@@ -9,7 +10,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	migmysql "github.com/golang-migrate/migrate/v4/database/mysql"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"gorm.io/gorm"
+	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/shaia/Synapse/pkg/logger"
 )
@@ -26,15 +27,22 @@ var mysqlMigrationsFS embed.FS
 //     makes it safe to run against databases previously managed by GORM
 //     AutoMigrate — existing tables and rows are untouched.
 //   - SQLite (development): no-op; the caller falls back to GORM AutoMigrate.
-func RunMigrations(db *gorm.DB, driver string) error {
+//
+// dsn must be the full MySQL DSN including database name.
+// multiStatements=true is appended automatically so multi-statement SQL files work.
+func RunMigrations(driver, dsn string) error {
 	if driver != "mysql" {
 		return nil // SQLite uses AutoMigrate — nothing to do here.
 	}
 
-	sqlDB, err := db.DB()
+	// Open a dedicated connection with multiStatements=true so the migration
+	// files (which contain multiple CREATE TABLE statements) execute correctly.
+	migDSN := dsn + "&multiStatements=true"
+	sqlDB, err := sql.Open("mysql", migDSN)
 	if err != nil {
-		return fmt.Errorf("migrations: get sql.DB: %w", err)
+		return fmt.Errorf("migrations: open db: %w", err)
 	}
+	defer sqlDB.Close()
 
 	// Sub-FS rooted at migrations/mysql so the iofs driver sees *.sql directly.
 	sub, err := fs.Sub(mysqlMigrationsFS, "migrations/mysql")
