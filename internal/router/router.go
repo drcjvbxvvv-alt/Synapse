@@ -10,9 +10,12 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
+	otelgin "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/config"
+	"github.com/shaia/Synapse/internal/tracing"
 	"github.com/shaia/Synapse/internal/handlers"
 	"github.com/shaia/Synapse/internal/k8s"
 	smetrics "github.com/shaia/Synapse/internal/metrics"
@@ -31,11 +34,22 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	staticFS = frontendFS
 	r := gin.New()
 
-	// ── Observability registry ─────────────────────────────────────────────
+	// ── Distributed tracing (OTel) ─────────────────────────────────────────
+	if _, err := tracing.Setup(context.Background(), cfg.Tracing); err != nil {
+		logger.Warn("tracing: setup failed, continuing without tracing", "error", err)
+	}
+	// Register GORM OTel plugin so every DB query gets a span.
+	if cfg.Tracing.Enabled {
+		if pluginErr := db.Use(otelgorm.NewPlugin()); pluginErr != nil {
+			logger.Warn("tracing: failed to attach otelgorm plugin", "error", pluginErr)
+		}
+	}
+
+	// ── Observability registry (Prometheus) ───────────────────────────────
 	var reg *smetrics.Registry
 	if cfg.Observability.Enabled {
 		reg = smetrics.New()
-		// Attach GORM callbacks
+		// Attach GORM Prometheus callbacks
 		reg.DB.Register(db)
 	}
 
@@ -49,6 +63,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		gin.Recovery(),
 		gin.Logger(),
 		middleware.CORS(),
+		otelgin.Middleware(cfg.Tracing.ServiceName),
 	)
 
 	// Build opLogSvc early so OperationAudit middleware can be set up

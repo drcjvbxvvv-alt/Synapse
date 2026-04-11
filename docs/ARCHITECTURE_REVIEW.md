@@ -489,6 +489,15 @@ timeout: 10000,
 
 ### P1-10 無分散式追蹤
 
+> **狀態：✅ 已完成（2026-04-11）**
+> - `internal/tracing/tracing.go`：`Setup(ctx, cfg)` 建立 OTel TracerProvider + W3C propagator；`Shutdown(ctx)` 供 main.go 呼叫
+> - OTLP gRPC exporter 連線至 `OTEL_EXPORTER_OTLP_ENDPOINT`（Jaeger / Tempo）；連線失敗時 fail-open（noop provider）
+> - Gin middleware：`otelgin.Middleware(serviceName)` 自動為每個 HTTP 請求建立 span
+> - GORM plugin：`otelgorm.NewPlugin()` 為每次 DB 查詢注入 span（僅在 `OTEL_ENABLED=true` 時掛載）
+> - `internal/tracing/http.go`：`NewHTTPClient(timeout)` — 所有外部 HTTP 呼叫（Prometheus、Grafana、ArgoCD）使用此 client 自動注入 traceparent header
+> - Config：`TracingConfig`（`OTEL_ENABLED` / `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_SERVICE_NAME` / `OTEL_SAMPLING_RATE`）；預設 disabled
+> - 測試：7 個單元測試覆蓋 disabled/empty endpoint/fail-open/sampler/shutdown/HTTP client
+
 目前 observability 只有 Prometheus metrics。K8s API 聚合 + DB 查詢 + Prometheus 查詢交織，單一請求 latency 難以定位。
 
 **修正**
@@ -979,7 +988,7 @@ type CreateDeploymentRequest struct {
 - [x] **P1-5** 前端頁面肥胖症 Top 10 頁面拆分 ✅（所有 > 700 行頁面與 service 已拆分，2026-04-11）
 - [x] **P1-8** Redis RateLimiter 實作 ✅（RateLimiter interface + Memory/Redis 雙後端，2026-04-11）
 - [ ] **P1-9** 測試覆蓋率：service ≥ 60%、handler ≥ 40%
-- [ ] **P1-10** OpenTelemetry 導入
+- [x] **P1-10** OpenTelemetry 導入 ✅（otelgin + otelgorm + OTLP gRPC exporter，fail-open，2026-04-11）
 - [ ] **P2-4** golang-migrate 遷移取代 AutoMigrate
 - [ ] **P2-8** Informer 健康檢查
 

@@ -18,6 +18,31 @@ type Config struct {
 	Observability   ObservabilityConfig   `mapstructure:"observability"`
 	Redis           RedisConfig           `mapstructure:"redis"`
 	RateLimiter     RateLimiterConfig     `mapstructure:"rate_limiter"`
+	Tracing         TracingConfig         `mapstructure:"tracing"`
+}
+
+// TracingConfig holds OpenTelemetry distributed tracing settings.
+type TracingConfig struct {
+	// Enabled toggles tracing. Set OTEL_ENABLED=true to activate.
+	// Defaults to false — no spans are emitted until explicitly enabled.
+	Enabled bool `mapstructure:"enabled"`
+
+	// Endpoint is the OTLP gRPC receiver address (host:port).
+	// Examples: "jaeger:4317", "otel-collector:4317"
+	// Set via OTEL_EXPORTER_OTLP_ENDPOINT.
+	Endpoint string `mapstructure:"endpoint"`
+
+	// ServiceName identifies this service in traces.
+	// Set via OTEL_SERVICE_NAME (default: "synapse").
+	ServiceName string `mapstructure:"service_name"`
+
+	// ServiceVersion is embedded in the OTel resource.
+	// Set via OTEL_SERVICE_VERSION (default: "dev").
+	ServiceVersion string `mapstructure:"service_version"`
+
+	// SamplingRate controls trace sampling (0.0 = never, 1.0 = always).
+	// Set via OTEL_SAMPLING_RATE (default: 1.0 when tracing is enabled).
+	SamplingRate float64 `mapstructure:"sampling_rate"`
 }
 
 // RedisConfig holds connection settings for the optional Redis backend.
@@ -189,6 +214,13 @@ func Load() *Config {
 	// 繫結 Rate Limiter 環境變數
 	_ = viper.BindEnv("rate_limiter.backend", "RATE_LIMITER_BACKEND")
 
+	// 繫結 Tracing 環境變數
+	_ = viper.BindEnv("tracing.enabled", "OTEL_ENABLED")
+	_ = viper.BindEnv("tracing.endpoint", "OTEL_EXPORTER_OTLP_ENDPOINT")
+	_ = viper.BindEnv("tracing.service_name", "OTEL_SERVICE_NAME")
+	_ = viper.BindEnv("tracing.service_version", "OTEL_SERVICE_VERSION")
+	_ = viper.BindEnv("tracing.sampling_rate", "OTEL_SAMPLING_RATE")
+
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		logger.Fatal("配置解析失敗: %v", err)
@@ -263,4 +295,11 @@ func setDefaults() {
 
 	// Rate Limiter 預設配置（memory = 單機模式，無需 Redis）
 	viper.SetDefault("rate_limiter.backend", "memory")
+
+	// Tracing 預設配置（預設關閉，需明確設 OTEL_ENABLED=true）
+	viper.SetDefault("tracing.enabled", false)
+	viper.SetDefault("tracing.endpoint", "")
+	viper.SetDefault("tracing.service_name", "synapse")
+	viper.SetDefault("tracing.service_version", "dev")
+	viper.SetDefault("tracing.sampling_rate", 1.0)
 }

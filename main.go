@@ -33,6 +33,7 @@ import (
 	"github.com/shaia/Synapse/internal/database"
 	"github.com/shaia/Synapse/internal/router"
 	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/internal/tracing"
 	"github.com/shaia/Synapse/pkg/crypto"
 	"github.com/shaia/Synapse/pkg/logger"
 )
@@ -156,6 +157,11 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Fatal("伺服器強制關閉: %v", err)
+	}
+
+	// 刷新 OTel span 並關閉 OTLP 連線
+	if err := tracing.Shutdown(ctx); err != nil {
+		logger.Warn("tracing: shutdown error", "error", err)
 	}
 
 	// 關閉 K8s Informer 管理器
