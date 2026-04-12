@@ -168,5 +168,17 @@
       "notConfigured": "Not configured"
     },
     "noData": "No cross-cluster cost data yet. Configure pricing in each cluster's Cost Analysis page."
+  },
+  "global": {
+    "clusterName": "Cluster",
+    "clusterCount": "Total Clusters",
+    "readyCount": "Informer Ready",
+    "avgCpuOccupancy": "Average CPU Occupancy",
+    "avgMemOccupancy": "Average Memory Occupancy",
+    "occupancyChart": "Cluster Resource Occupancy",
+    "clusterList": "Cluster List",
+    "clusterDetail": "Cluster Resource Details",
+    "viewDetail": "View",
+    "notReady": "Not Ready"
   }
 }

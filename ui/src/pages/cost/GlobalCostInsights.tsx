@@ -12,6 +12,7 @@ import {
   Progress,
   Breadcrumb,
   Typography,
+  theme,
 } from 'antd';
 import {
   ClusterOutlined,
@@ -60,6 +61,7 @@ const GRID_STYLE = { stroke: '#f0f0f0', strokeDasharray: '4 4' };
 
 const GlobalCostInsights: React.FC = () => {
   const { t } = useTranslation(['cost', 'common']);
+  const { token } = theme.useToken();
   const navigate = useNavigate();
   const [overview, setOverview] = useState<GlobalResourceOverview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -87,7 +89,7 @@ const GlobalCostInsights: React.FC = () => {
   // ── Table columns ───────────────────────────────────────────────────
   const columns = [
     {
-      title: t('cost:global.clusterName', '叢集'),
+      title: t('cost:global.clusterName'),
       dataIndex: 'cluster_name',
       key: 'cluster_name',
       render: (name: string, row: ClusterResourceSummary) => (
@@ -95,7 +97,7 @@ const GlobalCostInsights: React.FC = () => {
       ),
     },
     {
-      title: t('cost:occupancy.cpuOccupancy', 'CPU 佔用率'),
+      title: t('cost:occupancy.cpuOccupancy'),
       key: 'cpu_occupancy_percent',
       render: (_: unknown, row: ClusterResourceSummary) => row.informer_ready ? (
         <Progress
@@ -107,7 +109,7 @@ const GlobalCostInsights: React.FC = () => {
       ) : <Tag color="default">N/A</Tag>,
     },
     {
-      title: t('cost:occupancy.memOccupancy', '記憶體佔用率'),
+      title: t('cost:occupancy.memOccupancy'),
       key: 'memory_occupancy_percent',
       render: (_: unknown, row: ClusterResourceSummary) => row.informer_ready ? (
         <Progress
@@ -119,17 +121,17 @@ const GlobalCostInsights: React.FC = () => {
       ) : <Tag color="default">N/A</Tag>,
     },
     {
-      title: t('cost:occupancy.nodeCount', '節點數'),
+      title: t('cost:occupancy.nodeCount'),
       dataIndex: 'node_count',
       key: 'node_count',
     },
     {
-      title: t('cost:occupancy.podCount', 'Pod 數'),
+      title: t('cost:occupancy.podCount'),
       dataIndex: 'pod_count',
       key: 'pod_count',
     },
     {
-      title: t('common:actions.detail', '詳情'),
+      title: t('common:actions.detail'),
       key: 'action',
       render: (_: unknown, row: ClusterResourceSummary) => (
         <Button
@@ -138,37 +140,37 @@ const GlobalCostInsights: React.FC = () => {
           icon={<RightOutlined />}
           onClick={() => navigate(`/clusters/${row.cluster_id}/cost-insights`)}
         >
-          {t('cost:global.viewDetail', '查看')}
+          {t('cost:global.viewDetail')}
         </Button>
       ),
     },
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: token.paddingLG }}>
       <Breadcrumb
         items={[
-          { title: t('common:menu.home', '首頁') },
-          { title: t('common:menu.costInsights', '成本洞察') },
+          { title: t('common:menu.home') },
+          { title: t('common:menu.costInsights') },
         ]}
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: token.marginMD }}
       />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: token.marginLG }}>
         <Title level={4} style={{ margin: 0 }}>
-          <ClusterOutlined style={{ marginRight: 8 }} />
-          {t('common:menu.costInsights', '成本洞察')}
+          <ClusterOutlined style={{ marginRight: token.marginXS }} />
+          {t('common:menu.costInsights')}
         </Title>
         <Button icon={<ReloadOutlined />} onClick={loadOverview} loading={loading}>
-          {t('common:actions.refresh', '重新整理')}
+          {t('common:actions.refresh')}
         </Button>
       </div>
 
       {/* Summary stats */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      <Row gutter={token.marginMD} style={{ marginBottom: token.marginLG }}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title={t('cost:global.clusterCount', '叢集總數')}
+              title={t('cost:global.clusterCount')}
               value={overview?.cluster_count ?? 0}
               loading={loading}
               prefix={<ClusterOutlined />}
@@ -178,60 +180,60 @@ const GlobalCostInsights: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title={t('cost:global.readyCount', 'Informer 就緒')}
+              title={t('cost:global.readyCount')}
               value={overview?.ready_count ?? 0}
               loading={loading}
-              valueStyle={{ color: '#3f8600' }}
+              valueStyle={{ color: token.colorSuccess }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title={t('cost:global.avgCpuOccupancy', '平均 CPU 佔用率')}
+              title={t('cost:global.avgCpuOccupancy')}
               value={overview?.avg_cpu_occupancy_percent ?? 0}
               precision={1}
               suffix="%"
               loading={loading}
-              valueStyle={{ color: (overview?.avg_cpu_occupancy_percent ?? 0) > 80 ? '#cf1322' : '#3f8600' }}
+              valueStyle={{ color: (overview?.avg_cpu_occupancy_percent ?? 0) > 80 ? token.colorError : token.colorSuccess }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title={t('cost:global.avgMemOccupancy', '平均記憶體佔用率')}
+              title={t('cost:global.avgMemOccupancy')}
               value={overview?.avg_memory_occupancy_percent ?? 0}
               precision={1}
               suffix="%"
               loading={loading}
-              valueStyle={{ color: (overview?.avg_memory_occupancy_percent ?? 0) > 80 ? '#cf1322' : '#3f8600' }}
+              valueStyle={{ color: (overview?.avg_memory_occupancy_percent ?? 0) > 80 ? token.colorError : token.colorSuccess }}
             />
           </Card>
         </Col>
       </Row>
 
       {/* Bar chart: cluster occupancy comparison */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      <Row gutter={token.marginMD} style={{ marginBottom: token.marginLG }}>
         <Col xs={24} lg={14}>
-          <Card title={t('cost:global.occupancyChart', '各叢集資源佔用率')} size="small">
+          <Card title={t('cost:global.occupancyChart')} size="small">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={barData} margin={{ top: 5, right: 20, left: 10, bottom: 40 }}>
                 <CartesianGrid {...GRID_STYLE} />
                 <XAxis dataKey="name" angle={-20} textAnchor="end" interval={0} tick={{ fontSize: 11 }} />
                 <YAxis unit="%" />
                 <RechartTooltip {...TOOLTIP_STYLE} formatter={(v) => [`${v}%`]} />
-                <Bar dataKey="cpu" name="CPU 佔用率" fill="#5B8FF9" {...BAR_PROPS} />
-                <Bar dataKey="memory" name="記憶體佔用率" fill="#5AD8A6" {...BAR_PROPS} animationBegin={100} />
+                <Bar dataKey="cpu" name={t('cost:occupancy.cpuOccupancy')} fill="#5B8FF9" {...BAR_PROPS} />
+                <Bar dataKey="memory" name={t('cost:occupancy.memOccupancy')} fill="#5AD8A6" {...BAR_PROPS} animationBegin={100} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
         </Col>
         <Col xs={24} lg={10}>
-          <Card title={t('cost:global.clusterList', '叢集列表')} size="small" style={{ height: '100%' }}>
+          <Card title={t('cost:global.clusterList')} size="small" style={{ height: '100%' }}>
             <div style={{ maxHeight: 260, overflowY: 'auto' }}>
               {(overview?.clusters ?? []).map(c => (
-                <div key={c.cluster_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
+                <div key={c.cluster_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${token.paddingXS}px 0`, borderBottom: `1px solid ${token.colorBorder}` }}>
                   <Link to={`/clusters/${c.cluster_id}/cost-insights`} style={{ fontWeight: 500 }}>
                     {c.cluster_name}
                   </Link>
@@ -240,7 +242,7 @@ const GlobalCostInsights: React.FC = () => {
                       CPU {c.cpu_occupancy_percent.toFixed(1)}%
                     </Tag>
                   ) : (
-                    <Tag color="default">未就緒</Tag>
+                    <Tag color="default">{t('cost:global.notReady')}</Tag>
                   )}
                 </div>
               ))}
@@ -250,7 +252,7 @@ const GlobalCostInsights: React.FC = () => {
       </Row>
 
       {/* Detail table */}
-      <Card title={t('cost:global.clusterDetail', '叢集資源明細')}>
+      <Card title={t('cost:global.clusterDetail')}>
         <Table
           rowKey="cluster_id"
           columns={columns}

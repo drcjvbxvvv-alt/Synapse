@@ -168,5 +168,17 @@
       "notConfigured": "未設定"
     },
     "noData": "尚無跨叢集成本資料，請至各叢集「成本分析」設定定價"
+  },
+  "global": {
+    "clusterName": "叢集",
+    "clusterCount": "叢集總數",
+    "readyCount": "Informer 就緒",
+    "avgCpuOccupancy": "平均 CPU 佔用率",
+    "avgMemOccupancy": "平均記憶體佔用率",
+    "occupancyChart": "各叢集資源佔用率",
+    "clusterList": "叢集列表",
+    "clusterDetail": "叢集資源明細",
+    "viewDetail": "查看",
+    "notReady": "未就緒"
   }
 }

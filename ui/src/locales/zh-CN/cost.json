@@ -168,5 +168,17 @@
       "notConfigured": "未配置"
     },
     "noData": "暂无跨集群成本数据，请至各集群「成本分析」配置定价"
+  },
+  "global": {
+    "clusterName": "集群",
+    "clusterCount": "集群总数",
+    "readyCount": "Informer 就绪",
+    "avgCpuOccupancy": "平均 CPU 占用率",
+    "avgMemOccupancy": "平均内存占用率",
+    "occupancyChart": "各集群资源占用率",
+    "clusterList": "集群列表",
+    "clusterDetail": "集群资源明细",
+    "viewDetail": "查看",
+    "notReady": "未就绪"
   }
 }
