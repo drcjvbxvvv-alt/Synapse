@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import EmptyState from '@/components/EmptyState';
-import { Button, Input, Spin, Tag, App, Space, Tooltip, Switch } from 'antd';
-import { ReloadOutlined, ApiOutlined, SyncOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Select, Spin, Tag, App, Space, Tooltip, Switch } from 'antd';
+import { ReloadOutlined, ApiOutlined, SyncOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { networkTopologyService } from '../../services/networkTopologyService';
 import type { NetworkNode, NetworkEdge, TopologyIntegrationStatus } from '../../services/networkTopologyService';
@@ -27,7 +27,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [showIstioFlows, setShowIstioFlows] = useState(true);
   const [showPolicy, setShowPolicy] = useState(false);
   const [showHubble, setShowHubble] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isInteractingRef = useRef(false);
 
@@ -79,30 +79,55 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     };
   }, [autoRefresh, loadTopology]);
 
-  // Filter nodes by search text
+  // Dropdown options derived from loaded nodes
+  const filterOptions = useMemo(() => [
+    {
+      label: t('clusterTopology.filterGroupNamespace'),
+      options: [...new Set(nodes.map((n) => n.namespace))].sort().map((ns) => ({
+        label: ns,
+        value: `ns:${ns}`,
+      })),
+    },
+    {
+      label: t('clusterTopology.filterGroupName'),
+      options: [...new Set(nodes.map((n) => n.name))].sort().map((name) => ({
+        label: name,
+        value: `name:${name}`,
+      })),
+    },
+  ], [nodes, t]);
+
+  // Filter nodes by selected dropdown values
   const filteredNodes = useMemo(() => {
-    if (!searchText.trim()) return nodes;
-    const lower = searchText.toLowerCase();
-    return nodes.filter((n) => n.name.toLowerCase().includes(lower) || n.namespace.toLowerCase().includes(lower));
-  }, [nodes, searchText]);
+    if (selectedFilters.length === 0) return nodes;
+    return nodes.filter((n) =>
+      selectedFilters.some((f) =>
+        (f.startsWith('ns:') && n.namespace === f.slice(3)) ||
+        (f.startsWith('name:') && n.name === f.slice(5)),
+      ),
+    );
+  }, [nodes, selectedFilters]);
 
   const filteredEdges = useMemo(() => {
-    if (!searchText.trim()) return edges;
+    if (selectedFilters.length === 0) return edges;
     const nodeIds = new Set(filteredNodes.map((n) => n.id));
     return edges.filter((e) => nodeIds.has(e.source) || nodeIds.has(e.target));
-  }, [edges, filteredNodes, searchText]);
+  }, [edges, filteredNodes, selectedFilters]);
 
   return (
     <div>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-        <Input
+        <Select
+          mode="multiple"
           allowClear
-          prefix={<SearchOutlined />}
-          placeholder={t('clusterTopology.searchPlaceholder')}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 180 }}
+          showSearch
+          placeholder={t('clusterTopology.filterPlaceholder')}
+          value={selectedFilters}
+          onChange={setSelectedFilters}
+          options={filterOptions}
+          style={{ minWidth: 220, maxWidth: 320 }}
+          maxTagCount={2}
         />
         <Button icon={<ReloadOutlined />} loading={loading} onClick={loadTopology}>
           {t('clusterTopology.refresh')}

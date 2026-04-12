@@ -41,7 +41,10 @@
     "policyDeny": "Blocked",
     "hubbleLabel": "Hubble Flows",
     "hubbleTooltip": "Enrich edges with Cilium Hubble real flow data (flow rate / drop rate)",
-    "searchPlaceholder": "Search name or namespace"
+    "searchPlaceholder": "Search name or namespace",
+    "filterPlaceholder": "Filter by name or namespace",
+    "filterGroupName": "Name",
+    "filterGroupNamespace": "Namespace"
   },
   "gatewayapi": {
     "notInstalled": "Gateway API is Not Installed",

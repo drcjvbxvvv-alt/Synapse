@@ -42,7 +42,10 @@
     "policyDeny": "封锁",
     "hubbleLabel": "Hubble 流量",
     "hubbleTooltip": "以 Cilium Hubble 实时封包流量数据强化边（流量速率 / 封包丢弃率）",
-    "searchPlaceholder": "搜索名称或命名空间"
+    "searchPlaceholder": "搜索名称或命名空间",
+    "filterPlaceholder": "按名称或命名空间筛选",
+    "filterGroupName": "名称",
+    "filterGroupNamespace": "命名空间"
   },
   "gatewayapi": {
     "notInstalled": "此集群尚未安装 Gateway API",

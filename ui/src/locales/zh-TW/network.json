@@ -41,7 +41,10 @@
     "policyDeny": "封鎖",
     "hubbleLabel": "Hubble 流量",
     "hubbleTooltip": "以 Cilium Hubble 即時封包流量資料強化邊（流量速率 / 封包丟棄率）",
-    "searchPlaceholder": "搜尋名稱或命名空間"
+    "searchPlaceholder": "搜尋名稱或命名空間",
+    "filterPlaceholder": "依名稱或命名空間篩選",
+    "filterGroupName": "名稱",
+    "filterGroupNamespace": "命名空間"
   },
   "gatewayapi": {
     "notInstalled": "此叢集尚未安裝 Gateway API",

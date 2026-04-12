@@ -5,7 +5,6 @@ import {
   Space,
   Alert,
   Spin,
-  Modal,
   Typography,
   Tooltip,
   App,
@@ -15,14 +14,14 @@ import {
   SaveOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  DiffOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
+import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { ResourceService } from '../../services/resourceService';
 import type { ResourceKind } from '../../services/resourceService';
+import { YAMLDiffModal } from '../YAMLDiffModal';
 
 const { Text } = Typography;
 
@@ -270,49 +269,14 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
       </Card>
 
       {/* Diff 對比彈窗 */}
-      <Modal
-        title={
-          <Space>
-            <DiffOutlined />
-            <span>{t('resourceYAMLEditor.diffTitle')}</span>
-          </Space>
-        }
+      <YAMLDiffModal
         open={diffModalVisible}
+        original={originalYaml}
+        modified={pendingYaml}
+        onConfirm={handleConfirmDiff}
         onCancel={() => setDiffModalVisible(false)}
-        onOk={handleConfirmDiff}
-        width="90%"
-        style={{ top: 20 }}
-        okText={t('resourceYAMLEditor.confirmUpdate')}
-        cancelText={t('resourceYAMLEditor.cancel')}
-        destroyOnHidden
-      >
-        <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Text type="secondary">
-              {t('resourceYAMLEditor.diffHint')}
-            </Text>
-          </Space>
-        </div>
-        <div style={{ border: '1px solid #d9d9d9', borderRadius: 4 }}>
-          <DiffEditor
-            height="60vh"
-            language="yaml"
-            original={originalYaml}
-            modified={pendingYaml}
-            options={{
-              readOnly: true,
-              minimap: { enabled: false },
-              fontSize: 13,
-              lineNumbers: 'on',
-              wordWrap: 'on',
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-              renderSideBySide: true,
-              diffWordWrap: 'on',
-            }}
-          />
-        </div>
-      </Modal>
+        confirmLoading={submitting}
+      />
     </div>
   );
 };

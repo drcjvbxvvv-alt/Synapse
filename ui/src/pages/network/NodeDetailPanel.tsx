@@ -53,7 +53,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, edges, onClose 
       styles={{ body: { padding: '16px 20px' } }}
     >
       {/* Basic info */}
-      <Descriptions column={1} size="small" bordered={false}>
+      <Descriptions column={1} size="small">
         <Descriptions.Item label={t('clusterTopology.detail.namespace')}>
           <Text code>{node.namespace}</Text>
         </Descriptions.Item>
