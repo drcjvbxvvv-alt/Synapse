@@ -4,8 +4,6 @@ import {
   Button,
   Space,
   Tag,
-  Input,
-  Select,
   Typography,
   Tooltip,
   Modal,
@@ -15,11 +13,12 @@ import {
 } from 'antd';
 import {
   ReloadOutlined,
-  SearchOutlined,
   SettingOutlined,
   DeleteOutlined,
   CodeOutlined,
 } from '@ant-design/icons';
+import { useMultiSearch, applyMultiSearch } from '../../hooks/useMultiSearch';
+import { MultiSearchBar } from '../../components/MultiSearchBar';
 import { StorageService } from '../../services/storageService';
 import type { PV } from '../../types';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
@@ -53,13 +52,16 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   
   // 多條件搜尋狀態
-  interface SearchCondition {
-    field: 'name' | 'status' | 'storageClassName' | 'persistentVolumeSource' | 'reclaimPolicy';
-    value: string;
-  }
-  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
-  const [currentSearchField, setCurrentSearchField] = useState<'name' | 'status' | 'storageClassName' | 'persistentVolumeSource' | 'reclaimPolicy'>('name');
-  const [currentSearchValue, setCurrentSearchValue] = useState('');
+  const {
+    conditions: searchConditions,
+    currentField: currentSearchField,
+    currentValue: currentSearchValue,
+    setCurrentField: setCurrentSearchField,
+    setCurrentValue: setCurrentSearchValue,
+    addCondition: addSearchCondition,
+    removeCondition: removeSearchCondition,
+    clearAll: clearAllConditions,
+  } = useMultiSearch('name');
 
   // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
@@ -76,30 +78,6 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
   const [currentYaml, setCurrentYaml] = useState('');
   const [yamlLoading, setYamlLoading] = useState(false);
 
-  // 新增搜尋條件
-  const addSearchCondition = () => {
-    if (!currentSearchValue.trim()) return;
-    
-    const newCondition: SearchCondition = {
-      field: currentSearchField,
-      value: currentSearchValue.trim(),
-    };
-    
-    setSearchConditions([...searchConditions, newCondition]);
-    setCurrentSearchValue('');
-  };
-
-  // 刪除搜尋條件
-  const removeSearchCondition = (index: number) => {
-    setSearchConditions(searchConditions.filter((_, i) => i !== index));
-  };
-
-  // 清空所有搜尋條件
-  const clearAllConditions = () => {
-    setSearchConditions([]);
-    setCurrentSearchValue('');
-  };
-
   // 獲取搜尋欄位的顯示名稱
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
@@ -113,25 +91,11 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
   };
 
   // 客戶端過濾PV列表
-  const filterPVs = useCallback((items: PV[]): PV[] => {
-    if (searchConditions.length === 0) return items;
-
-    return items.filter(pv => {
-      const conditionsByField = searchConditions.reduce((acc, condition) => {
-        if (!acc[condition.field]) {
-          acc[condition.field] = [];
-        }
-        acc[condition.field].push(condition.value.toLowerCase());
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      return Object.entries(conditionsByField).every(([field, values]) => {
-        const pvValue = pv[field as keyof PV];
-        const itemStr = String(pvValue || '').toLowerCase();
-        return values.some(searchValue => itemStr.includes(searchValue));
-      });
-    });
-  }, [searchConditions]);
+  const filterPVs = useCallback((items: PV[]): PV[] =>
+    applyMultiSearch(items, searchConditions, (pv, field) =>
+      String(pv[field as keyof PV] ?? '')
+    ),
+  [searchConditions]);
 
   // 獲取PV列表
   const loadPVs = useCallback(async () => {
@@ -518,65 +482,31 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
         </Space>
       </div>
 
-      {/* 多條件搜尋欄 */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
-          <Input
-            prefix={<SearchOutlined />}
-            placeholder={t('common:search.placeholder')}
-            style={{ flex: 1 }}
-            value={currentSearchValue}
-            onChange={(e) => setCurrentSearchValue(e.target.value)}
-            onPressEnter={addSearchCondition}
-            allowClear
-            addonBefore={
-              <Select 
-                value={currentSearchField} 
-                onChange={setCurrentSearchField} 
-                style={{ width: 130 }}
-              >
-                <Select.Option value="name">{t('storage:search.fieldPVName')}</Select.Option>
-                <Select.Option value="status">{t('storage:search.fieldStatus')}</Select.Option>
-                <Select.Option value="storageClassName">{t('storage:search.fieldStorageClassName')}</Select.Option>
-                <Select.Option value="persistentVolumeSource">{t('storage:search.fieldPersistentVolumeSource')}</Select.Option>
-                <Select.Option value="reclaimPolicy">{t('storage:search.fieldReclaimPolicy')}</Select.Option>
-              </Select>
-            }
-          />
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => loadPVs()}
-          >
-          </Button>
-          <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
-        </div>
-
-        {/* 搜尋條件標籤 */}
-        {searchConditions.length > 0 && (
-          <div>
-            <Space size="small" wrap>
-              {searchConditions.map((condition, index) => (
-                <Tag
-                  key={index}
-                  closable
-                  onClose={() => removeSearchCondition(index)}
-                  color="blue"
-                >
-                  {getFieldLabel(condition.field)}: {condition.value}
-                </Tag>
-              ))}
-              <Button
-                size="small"
-                type="link"
-                onClick={clearAllConditions}
-                style={{ padding: 0 }}
-              >
-                {t('common:actions.clearAll')}
-              </Button>
-            </Space>
-          </div>
-        )}
-      </div>
+      <MultiSearchBar
+        fieldOptions={[
+          { value: 'name', label: t('storage:search.fieldPVName') },
+          { value: 'status', label: t('storage:search.fieldStatus') },
+          { value: 'storageClassName', label: t('storage:search.fieldStorageClassName') },
+          { value: 'persistentVolumeSource', label: t('storage:search.fieldPersistentVolumeSource') },
+          { value: 'reclaimPolicy', label: t('storage:search.fieldReclaimPolicy') },
+        ]}
+        conditions={searchConditions}
+        currentField={currentSearchField}
+        currentValue={currentSearchValue}
+        onFieldChange={setCurrentSearchField}
+        onValueChange={setCurrentSearchValue}
+        onAdd={addSearchCondition}
+        onRemove={removeSearchCondition}
+        onClear={clearAllConditions}
+        getFieldLabel={getFieldLabel}
+        fieldSelectWidth={130}
+        extra={
+          <>
+            <Button icon={<ReloadOutlined />} onClick={() => loadPVs()} />
+            <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
+          </>
+        }
+      />
 
       <Table
         columns={columns}

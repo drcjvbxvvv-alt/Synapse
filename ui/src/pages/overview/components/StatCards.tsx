@@ -35,7 +35,7 @@ export const StatCards: React.FC<StatCardsProps> = ({
   return (
     <Row gutter={16} style={{ marginBottom: 16 }}>
       <Col span={4}>
-        <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
+        <Card variant="borderless" style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
           <Statistic
             title={<span style={{ color: '#6b7280' }}><ClusterOutlined /> {t('stats.clusterTotal')}</span>}
             value={clusterStats.total}
@@ -45,7 +45,7 @@ export const StatCards: React.FC<StatCardsProps> = ({
       </Col>
       <Col span={4}>
         <Card
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 140, cursor: 'pointer' }}
           styles={{ body: { padding: '20px 16px' } }}
           onClick={() => onNavigate('/clusters')}
@@ -60,7 +60,7 @@ export const StatCards: React.FC<StatCardsProps> = ({
       </Col>
       <Col span={4}>
         <Card
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 140, cursor: clusterStats.unhealthy > 0 ? 'pointer' : 'default' }}
           styles={{ body: { padding: '20px 16px' } }}
           onClick={() => clusterStats.unhealthy > 0 && onNavigate('/clusters')}
@@ -75,7 +75,7 @@ export const StatCards: React.FC<StatCardsProps> = ({
         </Card>
       </Col>
       <Col span={4}>
-        <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
+        <Card variant="borderless" style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
           <Statistic
             title={<span style={{ color: '#6b7280' }}><DesktopOutlined /> {t('stats.nodeStatus')}</span>}
             value={nodeStats.ready}
@@ -90,7 +90,7 @@ export const StatCards: React.FC<StatCardsProps> = ({
         </Card>
       </Col>
       <Col span={4}>
-        <Card bordered={false} style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
+        <Card variant="borderless" style={{ ...cardStyle, height: 140 }} styles={{ body: { padding: '20px 16px' } }}>
           <Statistic
             title={<span style={{ color: '#6b7280' }}><CloudServerOutlined /> {t('stats.podRunning')}</span>}
             value={podStats.running}
@@ -107,7 +107,7 @@ export const StatCards: React.FC<StatCardsProps> = ({
       </Col>
       <Col span={4}>
         <Card
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 140, cursor: (alertStats?.firing || 0) > 0 ? 'pointer' : 'default' }}
           styles={{ body: { padding: '20px 16px' } }}
           onClick={() => (alertStats?.firing || 0) > 0 && onNavigate('/alerts')}

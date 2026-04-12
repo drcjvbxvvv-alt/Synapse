@@ -4,11 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { configMapService, type ConfigMapListItem, type NamespaceItem } from '../../../services/configService';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
-
-export interface SearchCondition {
-  field: 'name' | 'namespace' | 'label';
-  value: string;
-}
+import { useMultiSearch, applyMultiSearch } from '../../../hooks/useMultiSearch';
 
 export function useConfigMapList(clusterId: string, onCountChange?: (count: number) => void) {
   const { message, modal } = App.useApp();
@@ -24,9 +20,16 @@ export function useConfigMapList(clusterId: string, onCountChange?: (count: numb
   const [pageSize, setPageSize] = useState(20);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
-  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
-  const [currentSearchField, setCurrentSearchField] = useState<SearchCondition['field']>('name');
-  const [currentSearchValue, setCurrentSearchValue] = useState('');
+  const {
+    conditions: searchConditions,
+    currentField: currentSearchField,
+    currentValue: currentSearchValue,
+    setCurrentField: setCurrentSearchField,
+    setCurrentValue: setCurrentSearchValue,
+    addCondition: addSearchCondition,
+    removeCondition: removeSearchCondition,
+    clearAll: clearAllConditions,
+  } = useMultiSearch('name');
 
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
@@ -40,47 +43,14 @@ export function useConfigMapList(clusterId: string, onCountChange?: (count: numb
 
   // ── Filtering ────────────────────────────────────────────────────────────
 
-  const filterConfigMaps = useCallback((items: ConfigMapListItem[]): ConfigMapListItem[] => {
-    if (searchConditions.length === 0) return items;
-
-    return items.filter(item => {
-      const conditionsByField = searchConditions.reduce((acc, condition) => {
-        if (!acc[condition.field]) acc[condition.field] = [];
-        acc[condition.field].push(condition.value.toLowerCase());
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      return Object.entries(conditionsByField).every(([field, values]) => {
-        if (field === 'label') {
-          const labelsStr = Object.entries(item.labels || {})
-            .map(([k, v]) => `${k}=${v}`)
-            .join(' ')
-            .toLowerCase();
-          return values.some(searchValue => labelsStr.includes(searchValue));
-        }
-        const itemValue = item[field as keyof ConfigMapListItem];
-        const itemStr = String(itemValue || '').toLowerCase();
-        return values.some(searchValue => itemStr.includes(searchValue));
-      });
-    });
-  }, [searchConditions]);
-
-  // ── Search condition handlers ─────────────────────────────────────────────
-
-  const addSearchCondition = () => {
-    if (!currentSearchValue.trim()) return;
-    setSearchConditions(prev => [...prev, { field: currentSearchField, value: currentSearchValue.trim() }]);
-    setCurrentSearchValue('');
-  };
-
-  const removeSearchCondition = (index: number) => {
-    setSearchConditions(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const clearAllConditions = () => {
-    setSearchConditions([]);
-    setCurrentSearchValue('');
-  };
+  const filterConfigMaps = useCallback((items: ConfigMapListItem[]): ConfigMapListItem[] =>
+    applyMultiSearch(items, searchConditions, (item, field) => {
+      if (field === 'label') {
+        return Object.entries(item.labels || {}).map(([k, v]) => `${k}=${v}`).join(' ');
+      }
+      return String(item[field as keyof ConfigMapListItem] ?? '');
+    }),
+  [searchConditions]);
 
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {

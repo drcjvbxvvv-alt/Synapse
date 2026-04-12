@@ -4,16 +4,12 @@ import {
   Table,
   Button,
   Space,
-  Tag,
-  Input,
-  Select,
   Modal,
   App,
 } from 'antd';
 import EmptyState from '@/components/EmptyState';
 import {
   ReloadOutlined,
-  SearchOutlined,
   PlusOutlined,
   SettingOutlined,
   DeleteOutlined,
@@ -26,8 +22,10 @@ import ServiceCreateModal from './ServiceCreateModal';
 import ServiceForm from './ServiceForm';
 import { YAMLViewModal, EndpointsViewModal, ColumnSettingsDrawer } from './ServiceDrawer';
 import { getServiceColumns } from './serviceColumns';
-import type { ServiceTabProps, SearchCondition, EndpointsData } from './serviceTypes';
+import type { ServiceTabProps, EndpointsData } from './serviceTypes';
 import { useTranslation } from 'react-i18next';
+import { useMultiSearch, applyMultiSearch } from '../../hooks/useMultiSearch';
+import { MultiSearchBar } from '../../components/MultiSearchBar';
 
 const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
@@ -48,9 +46,16 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   // 多條件搜尋狀態
-  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
-  const [currentSearchField, setCurrentSearchField] = useState<SearchCondition['field']>('name');
-  const [currentSearchValue, setCurrentSearchValue] = useState('');
+  const {
+    conditions: searchConditions,
+    currentField: currentSearchField,
+    currentValue: currentSearchValue,
+    setCurrentField: setCurrentSearchField,
+    setCurrentValue: setCurrentSearchValue,
+    addCondition: addSearchCondition,
+    removeCondition: removeSearchCondition,
+    clearAll: clearAllConditions,
+  } = useMultiSearch('name');
 
   // 列設定狀態
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
@@ -83,25 +88,6 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   // 命名空間列表
   const [namespaces, setNamespaces] = useState<{ name: string; count: number }[]>([]);
 
-  // 新增搜尋條件
-  const addSearchCondition = () => {
-    if (!currentSearchValue.trim()) return;
-    setSearchConditions([...searchConditions, {
-      field: currentSearchField,
-      value: currentSearchValue.trim(),
-    }]);
-    setCurrentSearchValue('');
-  };
-
-  const removeSearchCondition = (index: number) => {
-    setSearchConditions(searchConditions.filter((_, i) => i !== index));
-  };
-
-  const clearAllConditions = () => {
-    setSearchConditions([]);
-    setCurrentSearchValue('');
-  };
-
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('network:service.search.name'),
@@ -114,33 +100,15 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   };
 
   // 客戶端過濾
-  const filterServices = useCallback((items: Service[]): Service[] => {
-    if (searchConditions.length === 0) return items;
-
-    return items.filter(service => {
-      const conditionsByField = searchConditions.reduce((acc, condition) => {
-        if (!acc[condition.field]) acc[condition.field] = [];
-        acc[condition.field].push(condition.value.toLowerCase());
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      return Object.entries(conditionsByField).every(([field, values]) => {
-        let serviceValue: string | number | boolean | undefined;
-
-        if (field === 'selector') {
-          serviceValue = ServiceService.formatSelector(service.selector);
-        } else {
-          const value = service[field as keyof Service];
-          serviceValue = typeof value === 'object' && value !== null
-            ? JSON.stringify(value)
-            : value as string | number | boolean | undefined;
-        }
-
-        const itemStr = String(serviceValue || '').toLowerCase();
-        return values.some(searchValue => itemStr.includes(searchValue));
-      });
-    });
-  }, [searchConditions]);
+  const filterServices = useCallback((items: Service[]): Service[] =>
+    applyMultiSearch(items, searchConditions, (service, field) => {
+      if (field === 'selector') return ServiceService.formatSelector(service.selector);
+      const value = service[field as keyof Service];
+      return typeof value === 'object' && value !== null
+        ? JSON.stringify(value)
+        : String(value ?? '');
+    }),
+  [searchConditions]);
 
   // 載入命名空間列表
   useEffect(() => {
@@ -403,45 +371,30 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       </div>
 
       {/* 多條件搜尋欄 */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
-          <Input
-            prefix={<SearchOutlined />}
-            placeholder={t('common:search.placeholder')}
-            style={{ flex: 1 }}
-            value={currentSearchValue}
-            onChange={(e) => setCurrentSearchValue(e.target.value)}
-            onPressEnter={addSearchCondition}
-            allowClear
-            addonBefore={
-              <Select value={currentSearchField} onChange={setCurrentSearchField} style={{ width: 120 }}>
-                <Select.Option value="name">{t('network:service.search.name')}</Select.Option>
-                <Select.Option value="namespace">{t('network:service.search.namespace')}</Select.Option>
-                <Select.Option value="type">{t('network:service.search.type')}</Select.Option>
-                <Select.Option value="clusterIP">{t('network:service.search.clusterIP')}</Select.Option>
-                <Select.Option value="selector">{t('network:service.search.selector')}</Select.Option>
-              </Select>
-            }
-          />
-          <Button icon={<ReloadOutlined />} onClick={() => loadServices()} />
-          <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
-        </div>
-
-        {searchConditions.length > 0 && (
-          <div>
-            <Space size="small" wrap>
-              {searchConditions.map((condition, index) => (
-                <Tag key={index} closable onClose={() => removeSearchCondition(index)} color="blue">
-                  {getFieldLabel(condition.field)}: {condition.value}
-                </Tag>
-              ))}
-              <Button size="small" type="link" onClick={clearAllConditions} style={{ padding: 0 }}>
-                {t('common:actions.clearAll')}
-              </Button>
-            </Space>
-          </div>
-        )}
-      </div>
+      <MultiSearchBar
+        fieldOptions={[
+          { value: 'name', label: t('network:service.search.name') },
+          { value: 'namespace', label: t('network:service.search.namespace') },
+          { value: 'type', label: t('network:service.search.type') },
+          { value: 'clusterIP', label: t('network:service.search.clusterIP') },
+          { value: 'selector', label: t('network:service.search.selector') },
+        ]}
+        conditions={searchConditions}
+        currentField={currentSearchField}
+        currentValue={currentSearchValue}
+        onFieldChange={setCurrentSearchField}
+        onValueChange={setCurrentSearchValue}
+        onAdd={addSearchCondition}
+        onRemove={removeSearchCondition}
+        onClear={clearAllConditions}
+        getFieldLabel={getFieldLabel}
+        extra={
+          <>
+            <Button icon={<ReloadOutlined />} onClick={() => loadServices()} />
+            <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
+          </>
+        }
+      />
 
       <Table
         columns={columns}
@@ -451,7 +404,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
         loading={loading}
         virtual
         scroll={{ x: 1200, y: 600 }}
-        size="middle"
+        size="small"
         onChange={handleTableChange}
         pagination={{
           current: currentPage,

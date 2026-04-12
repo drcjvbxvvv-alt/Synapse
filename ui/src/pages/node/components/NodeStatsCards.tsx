@@ -59,7 +59,7 @@ export const NodeStatsCards: React.FC<NodeStatsCardsProps> = ({
       {stats.map((item) => (
         <Col key={item.label} xs={24} sm={12} lg={6}>
           <Card
-            bordered={false}
+            variant="borderless"
             style={{ borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
             styles={{ body: { padding: '20px 24px' } }}
           >

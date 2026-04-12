@@ -332,11 +332,11 @@ const OperationLogs: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
+    <div>
       {/* 統計卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('audit:operations.totalOperations')}
               value={stats?.total_count || 0}
@@ -345,7 +345,7 @@ const OperationLogs: React.FC = () => {
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('audit:operations.todayOperations')}
               value={stats?.today_count || 0}
@@ -355,7 +355,7 @@ const OperationLogs: React.FC = () => {
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('audit:operations.success')}
               value={stats?.success_count || 0}
@@ -365,7 +365,7 @@ const OperationLogs: React.FC = () => {
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('audit:operations.failed')}
               value={stats?.failed_count || 0}
@@ -375,7 +375,7 @@ const OperationLogs: React.FC = () => {
           </Card>
         </Col>
         <Col span={8}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <div style={{ marginBottom: 8 }}>
               <Text type="secondary">{t('audit:operations.operationDistribution')}</Text>
             </div>
@@ -403,7 +403,7 @@ const OperationLogs: React.FC = () => {
             {t('common:actions.refresh')}
           </Button>
         }
-        bordered={false}
+        variant="borderless"
       >
         {/* 篩選區域 */}
         <Space wrap style={{ marginBottom: 16 }}>

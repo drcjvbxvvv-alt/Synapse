@@ -195,7 +195,7 @@ const CostDashboard: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Card bordered={false} title={t('cost:title')}>
+      <Card variant="borderless" title={t('cost:title')}>
         <Tabs activeKey={state.activeTab} onChange={state.setActiveTab} items={tabItems} />
       </Card>
     </div>

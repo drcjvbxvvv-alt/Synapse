@@ -5,11 +5,7 @@ import { App, Form, message } from 'antd';
 import type { Node } from '../../../types';
 import { nodeService, type NodeListParams, type NodeOverview } from '../../../services/nodeService';
 import { POLL_INTERVALS } from '../../../config/queryConfig';
-
-export interface SearchCondition {
-  field: 'name' | 'status' | 'version' | 'roles';
-  value: string;
-}
+import { useMultiSearch, applyMultiSearch } from '../../../hooks/useMultiSearch';
 
 export function useNodeList() {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
@@ -32,9 +28,16 @@ export function useNodeList() {
   const [selectedNodes, setSelectedNodes] = useState<React.Key[]>([]);
 
   // Search states
-  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
-  const [currentSearchField, setCurrentSearchField] = useState<'name' | 'status' | 'version' | 'roles'>('name');
-  const [currentSearchValue, setCurrentSearchValue] = useState('');
+  const {
+    conditions: searchConditions,
+    currentField: currentSearchField,
+    currentValue: currentSearchValue,
+    setCurrentField: setCurrentSearchField,
+    setCurrentValue: setCurrentSearchValue,
+    addCondition: addSearchCondition,
+    removeCondition: removeSearchCondition,
+    clearAll: clearAllConditions,
+  } = useMultiSearch('name');
 
   // Label modal states
   const [labelModalOpen, setLabelModalOpen] = useState(false);
@@ -240,26 +243,6 @@ export function useNodeList() {
     });
   }, [selectedClusterId, t, tc, modal, handleRefresh]);
 
-  // Search condition handlers
-  const addSearchCondition = useCallback(() => {
-    if (!currentSearchValue.trim()) return;
-    const newCondition: SearchCondition = {
-      field: currentSearchField,
-      value: currentSearchValue.trim(),
-    };
-    setSearchConditions(prev => [...prev, newCondition]);
-    setCurrentSearchValue('');
-  }, [currentSearchField, currentSearchValue]);
-
-  const removeSearchCondition = useCallback((index: number) => {
-    setSearchConditions(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const clearAllConditions = useCallback(() => {
-    setSearchConditions([]);
-    setCurrentSearchValue('');
-  }, []);
-
   const getFieldLabel = useCallback((field: string): string => {
     const labels: Record<string, string> = {
       name: t('columns.name'),
@@ -271,30 +254,12 @@ export function useNodeList() {
   }, [t]);
 
   // Client-side filtering
-  const filterNodes = useCallback((items: Node[]): Node[] => {
-    if (searchConditions.length === 0) return items;
-
-    return items.filter(node => {
-      const conditionsByField = searchConditions.reduce((acc, condition) => {
-        if (!acc[condition.field]) {
-          acc[condition.field] = [];
-        }
-        acc[condition.field].push(condition.value.toLowerCase());
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      return Object.entries(conditionsByField).every(([field, values]) => {
-        if (field === 'roles') {
-          return values.some(searchValue =>
-            node.roles.some(role => role.toLowerCase().includes(searchValue))
-          );
-        }
-        const nodeValue = node[field as keyof Node];
-        const itemStr = String(nodeValue || '').toLowerCase();
-        return values.some(searchValue => itemStr.includes(searchValue));
-      });
-    });
-  }, [searchConditions]);
+  const filterNodes = useCallback((items: Node[]): Node[] =>
+    applyMultiSearch(items, searchConditions, (node, field) => {
+      if (field === 'roles') return node.roles?.join(' ') ?? '';
+      return String(node[field as keyof Node] ?? '');
+    }),
+  [searchConditions]);
 
   // Export function
   const handleExport = useCallback(() => {
@@ -354,10 +319,9 @@ export function useNodeList() {
     if (routeClusterId && routeClusterId !== selectedClusterId) {
       setSelectedClusterId(routeClusterId);
       setCurrentPage(1);
-      setSearchConditions([]);
-      setCurrentSearchValue('');
+      clearAllConditions();
     }
-  }, [routeClusterId, selectedClusterId]);
+  }, [routeClusterId, selectedClusterId, clearAllConditions]);
 
   // Reset page on search change
   useEffect(() => {

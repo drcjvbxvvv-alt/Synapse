@@ -43,7 +43,7 @@ const [searchParams, setSearchParams] = useSearchParams();
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Spin spinning={loading}>
           <Tabs
             activeKey={activeTab}

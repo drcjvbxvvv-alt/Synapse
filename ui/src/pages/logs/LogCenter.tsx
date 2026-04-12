@@ -149,7 +149,7 @@ const LogCenter: React.FC = () => {
       <Spin spinning={state.statsLoading}>
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={4}>
-            <Card size="small" bordered={false}>
+            <Card size="small" variant="borderless">
               <Statistic
                 title={t('logs:center.totalCount1h')}
                 value={state.stats?.total_count || 0}
@@ -158,7 +158,7 @@ const LogCenter: React.FC = () => {
             </Card>
           </Col>
           <Col span={4}>
-            <Card size="small" bordered={false}>
+            <Card size="small" variant="borderless">
               <Statistic
                 title={t('logs:center.errorEvents')}
                 value={state.stats?.error_count || 0}
@@ -168,7 +168,7 @@ const LogCenter: React.FC = () => {
             </Card>
           </Col>
           <Col span={4}>
-            <Card size="small" bordered={false}>
+            <Card size="small" variant="borderless">
               <Statistic
                 title={t('logs:center.warningEvents')}
                 value={state.stats?.warn_count || 0}
@@ -178,7 +178,7 @@ const LogCenter: React.FC = () => {
             </Card>
           </Col>
           <Col span={12}>
-            <Card size="small" bordered={false}>
+            <Card size="small" variant="borderless">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 500 }}>{t('logs:center.namespaceDistribution')}</span>
                 <Space wrap size="small">
@@ -195,7 +195,7 @@ const LogCenter: React.FC = () => {
       </Spin>
 
       {/* Main content */}
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Tabs
           activeKey={state.activeTab}
           onChange={state.setActiveTab}

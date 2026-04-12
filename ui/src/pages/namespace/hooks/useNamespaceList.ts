@@ -9,11 +9,7 @@ import {
   type NamespaceData,
   type CreateNamespaceRequest,
 } from '../../../services/namespaceService';
-
-export interface SearchCondition {
-  field: 'name' | 'status' | 'label';
-  value: string;
-}
+import { useMultiSearch, applyMultiSearch } from '../../../hooks/useMultiSearch';
 
 const SYSTEM_NAMESPACES = ['default', 'kube-system', 'kube-public', 'kube-node-lease', 'cert-manager'];
 
@@ -39,9 +35,16 @@ export function useNamespaceList() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   // Search states
-  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
-  const [currentSearchField, setCurrentSearchField] = useState<'name' | 'status' | 'label'>('name');
-  const [currentSearchValue, setCurrentSearchValue] = useState('');
+  const {
+    conditions: searchConditions,
+    currentField: currentSearchField,
+    currentValue: currentSearchValue,
+    setCurrentField: setCurrentSearchField,
+    setCurrentValue: setCurrentSearchValue,
+    addCondition: addSearchCondition,
+    removeCondition: removeSearchCondition,
+    clearAll: clearAllConditions,
+  } = useMultiSearch('name');
 
   // Column settings
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
@@ -53,25 +56,6 @@ export function useNamespaceList() {
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
-  const addSearchCondition = () => {
-    if (!currentSearchValue.trim()) return;
-    const newCondition: SearchCondition = {
-      field: currentSearchField,
-      value: currentSearchValue.trim(),
-    };
-    setSearchConditions(prev => [...prev, newCondition]);
-    setCurrentSearchValue('');
-  };
-
-  const removeSearchCondition = (index: number) => {
-    setSearchConditions(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const clearAllConditions = () => {
-    setSearchConditions([]);
-    setCurrentSearchValue('');
-  };
-
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('list.fieldName'),
@@ -81,33 +65,14 @@ export function useNamespaceList() {
     return labels[field] || field;
   };
 
-  const filterNamespaces = useCallback((items: NamespaceData[]): NamespaceData[] => {
-    if (searchConditions.length === 0) return items;
-
-    return items.filter(namespace => {
-      const conditionsByField = searchConditions.reduce((acc, condition) => {
-        if (!acc[condition.field]) {
-          acc[condition.field] = [];
-        }
-        acc[condition.field].push(condition.value.toLowerCase());
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      return Object.entries(conditionsByField).every(([field, values]) => {
-        if (field === 'label') {
-          const labels = namespace.labels || {};
-          const labelStr = Object.entries(labels)
-            .map(([k, v]) => `${k}:${v}`)
-            .join(' ')
-            .toLowerCase();
-          return values.some(searchValue => labelStr.includes(searchValue));
-        }
-        const namespaceValue = namespace[field as keyof NamespaceData];
-        const itemStr = String(namespaceValue || '').toLowerCase();
-        return values.some(searchValue => itemStr.includes(searchValue));
-      });
-    });
-  }, [searchConditions]);
+  const filterNamespaces = useCallback((items: NamespaceData[]): NamespaceData[] =>
+    applyMultiSearch(items, searchConditions, (namespace, field) => {
+      if (field === 'label') {
+        return Object.entries(namespace.labels || {}).map(([k, v]) => `${k}:${v}`).join(' ');
+      }
+      return String(namespace[field as keyof NamespaceData] ?? '');
+    }),
+  [searchConditions]);
 
   const loadNamespaces = useCallback(async () => {
     if (!clusterId) return;

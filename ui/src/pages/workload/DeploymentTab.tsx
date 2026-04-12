@@ -1,16 +1,15 @@
 import React, { useMemo } from 'react';
-import { Table, Button, Space, Tag, Select, Input, App } from 'antd';
-import { PlusOutlined, ReloadOutlined, SettingOutlined, SearchOutlined } from '@ant-design/icons';
+import { Table, Button, Space, App } from 'antd';
+import { PlusOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { WorkloadInfo } from '../../services/workloadService';
 import EmptyState from '@/components/EmptyState';
+import { MultiSearchBar } from '@/components/MultiSearchBar';
 import { useWorkloadTab } from './hooks/useWorkloadTab';
 import { createWorkloadColumns } from './columns';
 import { ScaleModal, WorkloadColumnSettingsDrawer } from './components';
 import WorkloadCreateModal from '../../components/workload/WorkloadCreateModal';
-
-const { Option } = Select;
 
 interface DeploymentTabProps {
   clusterId: string;
@@ -95,63 +94,34 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
         </div>
 
         {/* Search Bar */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
-            <Input
-              prefix={<SearchOutlined />}
-              placeholder={state.t('search.placeholder')}
-              style={{ flex: 1 }}
-              value={state.currentSearchValue}
-              onChange={(e) => state.setCurrentSearchValue(e.target.value)}
-              onPressEnter={state.addSearchCondition}
-              allowClear
-              addonBefore={
-                <Select
-                  value={state.currentSearchField}
-                  onChange={state.setCurrentSearchField}
-                  style={{ width: 140 }}
-                >
-                  <Option value="name">{state.t('search.workloadName')}</Option>
-                  <Option value="namespace">{state.t('search.namespace')}</Option>
-                  <Option value="image">{state.t('search.image')}</Option>
-                  <Option value="status">{state.t('search.status')}</Option>
-                  <Option value="cpuLimit">{state.t('search.cpuLimit')}</Option>
-                  <Option value="cpuRequest">{state.t('search.cpuRequest')}</Option>
-                  <Option value="memoryLimit">{state.t('search.memoryLimit')}</Option>
-                  <Option value="memoryRequest">{state.t('search.memoryRequest')}</Option>
-                </Select>
-              }
-            />
-            <Button icon={<ReloadOutlined />} onClick={state.loadWorkloads} />
-            <Button icon={<SettingOutlined />} onClick={() => state.setColumnSettingsVisible(true)} />
-          </div>
-
-          {/* Search Condition Tags */}
-          {state.searchConditions.length > 0 && (
-            <div>
-              <Space size="small" wrap>
-                {state.searchConditions.map((condition, index) => (
-                  <Tag
-                    key={index}
-                    closable
-                    onClose={() => state.removeSearchCondition(index)}
-                    color="blue"
-                  >
-                    {state.getFieldLabel(condition.field)}: {condition.value}
-                  </Tag>
-                ))}
-                <Button
-                  size="small"
-                  type="link"
-                  onClick={state.clearAllConditions}
-                  style={{ padding: 0 }}
-                >
-                  {state.t('common:actions.clearAll')}
-                </Button>
-              </Space>
-            </div>
-          )}
-        </div>
+        <MultiSearchBar
+          fieldOptions={[
+            { value: 'name', label: state.t('search.workloadName') },
+            { value: 'namespace', label: state.t('search.namespace') },
+            { value: 'image', label: state.t('search.image') },
+            { value: 'status', label: state.t('search.status') },
+            { value: 'cpuLimit', label: state.t('search.cpuLimit') },
+            { value: 'cpuRequest', label: state.t('search.cpuRequest') },
+            { value: 'memoryLimit', label: state.t('search.memoryLimit') },
+            { value: 'memoryRequest', label: state.t('search.memoryRequest') },
+          ]}
+          conditions={state.searchConditions}
+          currentField={state.currentSearchField}
+          currentValue={state.currentSearchValue}
+          onFieldChange={state.setCurrentSearchField}
+          onValueChange={state.setCurrentSearchValue}
+          onAdd={state.addSearchCondition}
+          onRemove={state.removeSearchCondition}
+          onClear={state.clearAllConditions}
+          getFieldLabel={state.getFieldLabel}
+          fieldSelectWidth={140}
+          extra={
+            <>
+              <Button icon={<ReloadOutlined />} onClick={state.loadWorkloads} />
+              <Button icon={<SettingOutlined />} onClick={() => state.setColumnSettingsVisible(true)} />
+            </>
+          }
+        />
 
         {/* Table */}
         <Table
@@ -163,7 +133,7 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
           loading={state.loading}
           virtual
           scroll={{ x: 1400, y: 600 }}
-          size="middle"
+          size="small"
           onChange={handleTableChange}
           pagination={{
             current: state.currentPage,

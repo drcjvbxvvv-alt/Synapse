@@ -59,7 +59,7 @@ export const DistributionCharts: React.FC<DistributionChartsProps> = ({
                 </span>
               </div>
             }
-            bordered={false}
+            variant="borderless"
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
             styles={{ body: chartBodyStyle }}
@@ -81,7 +81,7 @@ export const DistributionCharts: React.FC<DistributionChartsProps> = ({
                 </span>
               </div>
             }
-            bordered={false}
+            variant="borderless"
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
             styles={{ body: chartBodyStyle }}
@@ -107,7 +107,7 @@ export const DistributionCharts: React.FC<DistributionChartsProps> = ({
                 </span>
               </div>
             }
-            bordered={false}
+            variant="borderless"
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
             styles={{ body: chartBodyStyle }}
@@ -129,7 +129,7 @@ export const DistributionCharts: React.FC<DistributionChartsProps> = ({
                 </span>
               </div>
             }
-            bordered={false}
+            variant="borderless"
             style={{ ...cardStyle, height: 400 }}
             headStyle={cardHeadStyle}
             styles={{ body: chartBodyStyle }}

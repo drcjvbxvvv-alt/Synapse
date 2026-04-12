@@ -129,7 +129,7 @@ export const VersionAndAbnormal: React.FC<VersionAndAbnormalProps> = ({
       <Col span={6}>
         <Card
           title={t('distribution.clusterVersion')}
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 320 }}
           headStyle={cardHeadStyle}
           styles={{ body: { padding: '12px 16px' } }}
@@ -154,7 +154,7 @@ export const VersionAndAbnormal: React.FC<VersionAndAbnormalProps> = ({
               </Button>
             </div>
           }
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 320 }}
           headStyle={cardHeadStyle}
           styles={{ body: { padding: '12px 16px' } }}

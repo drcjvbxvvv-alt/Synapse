@@ -276,7 +276,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
       {/* 統計卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('logs:events.totalEvents')}
               value={stats.total}
@@ -285,7 +285,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('logs:events.normalEvents')}
               value={stats.normal}
@@ -295,7 +295,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('logs:events.warningEvents')}
               value={stats.warning}
@@ -305,7 +305,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
           </Card>
         </Col>
         <Col span={6}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('logs:events.warningRatio')}
               value={stats.total > 0 ? ((stats.warning / stats.total) * 100).toFixed(1) : 0}
@@ -329,7 +329,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
             {t('common:actions.refresh')}
           </Button>
         }
-        bordered={false}
+        variant="borderless"
       >
         {/* 篩選區域 */}
         <Space wrap style={{ marginBottom: 16 }}>

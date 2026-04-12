@@ -4,9 +4,6 @@ import {
   Table,
   Button,
   Space,
-  Input,
-  Select,
-  Tag,
   Checkbox,
   Drawer,
   Tabs,
@@ -16,13 +13,12 @@ import EmptyState from '@/components/EmptyState';
 import {
   ReloadOutlined,
   SettingOutlined,
-  SearchOutlined,
   DeleteOutlined,
 } from '@ant-design/icons';
+import { MultiSearchBar } from '@/components/MultiSearchBar';
 import { usePodList } from './hooks/usePodList';
 import { createPodColumns } from './columns';
 
-const { Option } = Select;
 
 const PodList: React.FC = () => {
   const {
@@ -96,7 +92,7 @@ const PodList: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Spin spinning={loading && pods.length === 0}>
           <Tabs
             activeKey="pod"
@@ -126,47 +122,35 @@ const PodList: React.FC = () => {
                     </Space>
                   </div>
 
-                  {/* 多條件搜尋欄 */}
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
-                      <Input
-                        prefix={<SearchOutlined />}
-                        placeholder={t('list.searchPlaceholder')}
-                        style={{ flex: 1 }}
-                        value={currentSearchValue}
-                        onChange={(e) => setCurrentSearchValue(e.target.value)}
-                        onPressEnter={addSearchCondition}
-                        allowClear
-                        addonBefore={
-                          <Select value={currentSearchField} onChange={setCurrentSearchField} style={{ width: 130 }}>
-                            <Option value="name">{t('columns.name')}</Option>
-                            <Option value="namespace">{tc('table.namespace')}</Option>
-                            <Option value="status">{tc('table.status')}</Option>
-                            <Option value="podIP">{t('columns.podIP')}</Option>
-                            <Option value="nodeName">{t('columns.nodeName')}</Option>
-                            <Option value="cpuRequest">CPU Request</Option>
-                            <Option value="cpuLimit">CPU Limit</Option>
-                            <Option value="memoryRequest">MEM Request</Option>
-                            <Option value="memoryLimit">MEM Limit</Option>
-                          </Select>
-                        }
-                      />
-                      <Button icon={<ReloadOutlined />} onClick={loadPods} />
-                      <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
-                    </div>
-                    {searchConditions.length > 0 && (
-                      <Space size="small" wrap>
-                        {searchConditions.map((condition, index) => (
-                          <Tag key={index} closable onClose={() => removeSearchCondition(index)} color="blue">
-                            {getFieldLabel(condition.field)}: {condition.value}
-                          </Tag>
-                        ))}
-                        <Button size="small" type="link" onClick={clearAllConditions} style={{ padding: 0 }}>
-                          {tc('actions.clearAll')}
-                        </Button>
-                      </Space>
-                    )}
-                  </div>
+                  <MultiSearchBar
+                    fieldOptions={[
+                      { value: 'name', label: t('columns.name') },
+                      { value: 'namespace', label: tc('table.namespace') },
+                      { value: 'status', label: tc('table.status') },
+                      { value: 'podIP', label: t('columns.podIP') },
+                      { value: 'nodeName', label: t('columns.nodeName') },
+                      { value: 'cpuRequest', label: 'CPU Request' },
+                      { value: 'cpuLimit', label: 'CPU Limit' },
+                      { value: 'memoryRequest', label: 'MEM Request' },
+                      { value: 'memoryLimit', label: 'MEM Limit' },
+                    ]}
+                    conditions={searchConditions}
+                    currentField={currentSearchField}
+                    currentValue={currentSearchValue}
+                    onFieldChange={setCurrentSearchField}
+                    onValueChange={setCurrentSearchValue}
+                    onAdd={addSearchCondition}
+                    onRemove={removeSearchCondition}
+                    onClear={clearAllConditions}
+                    getFieldLabel={getFieldLabel}
+                    fieldSelectWidth={130}
+                    extra={
+                      <>
+                        <Button icon={<ReloadOutlined />} onClick={loadPods} />
+                        <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
+                      </>
+                    }
+                  />
 
                   <Table
                     columns={columns}

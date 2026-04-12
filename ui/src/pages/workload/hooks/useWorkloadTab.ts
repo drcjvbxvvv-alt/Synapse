@@ -4,13 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { App } from 'antd';
 import { WorkloadService, type WorkloadInfo } from '../../../services/workloadService';
 import { POLL_INTERVALS } from '../../../config/queryConfig';
+import { useMultiSearch, applyMultiSearch } from '../../../hooks/useMultiSearch';
 
 export type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob' | 'ArgoRollout';
-
-export interface SearchCondition {
-  field: 'name' | 'namespace' | 'image' | 'status' | 'cpuLimit' | 'cpuRequest' | 'memoryLimit' | 'memoryRequest';
-  value: string;
-}
 
 export interface UseWorkloadTabOptions {
   clusterId: string;
@@ -45,9 +41,16 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
   const [createModalVisible, setCreateModalVisible] = useState(false);
 
   // Search states
-  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
-  const [currentSearchField, setCurrentSearchField] = useState<SearchCondition['field']>('name');
-  const [currentSearchValue, setCurrentSearchValue] = useState('');
+  const {
+    conditions: searchConditions,
+    currentField: currentSearchField,
+    currentValue: currentSearchValue,
+    setCurrentField: setCurrentSearchField,
+    setCurrentValue: setCurrentSearchValue,
+    addCondition: addSearchCondition,
+    removeCondition: removeSearchCondition,
+    clearAll: clearAllConditions,
+  } = useMultiSearch('name');
 
   // Column settings states
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
@@ -257,26 +260,6 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
     }
   }, [allWorkloads, selectedRowKeys, workloadType, message, t]);
 
-  // Search condition handlers
-  const addSearchCondition = useCallback(() => {
-    if (!currentSearchValue.trim()) return;
-    const newCondition: SearchCondition = {
-      field: currentSearchField,
-      value: currentSearchValue.trim(),
-    };
-    setSearchConditions(prev => [...prev, newCondition]);
-    setCurrentSearchValue('');
-  }, [currentSearchField, currentSearchValue]);
-
-  const removeSearchCondition = useCallback((index: number) => {
-    setSearchConditions(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const clearAllConditions = useCallback(() => {
-    setSearchConditions([]);
-    setCurrentSearchValue('');
-  }, []);
-
   const getFieldLabel = useCallback((field: string): string => {
     const labels: Record<string, string> = {
       name: t('search.workloadName'),
@@ -292,40 +275,13 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
   }, [t]);
 
   // Client-side filtering
-  const filterWorkloads = useCallback((items: WorkloadInfo[]): WorkloadInfo[] => {
-    if (searchConditions.length === 0) return items;
-
-    return items.filter(workload => {
-      const conditionsByField = searchConditions.reduce((acc, condition) => {
-        if (!acc[condition.field]) {
-          acc[condition.field] = [];
-        }
-        acc[condition.field].push(condition.value.toLowerCase());
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      return Object.entries(conditionsByField).every(([field, values]) => {
-        const workloadValue = workload[field as keyof WorkloadInfo];
-
-        const resourceFields = ['cpuLimit', 'cpuRequest', 'memoryLimit', 'memoryRequest'];
-        if (resourceFields.includes(field)) {
-          const itemStr = String(workloadValue || '-').toLowerCase();
-          return values.some(searchValue => itemStr === searchValue);
-        }
-
-        if (Array.isArray(workloadValue)) {
-          return values.some(searchValue =>
-            workloadValue.some(item =>
-              String(item).toLowerCase().includes(searchValue)
-            )
-          );
-        }
-
-        const itemStr = String(workloadValue || '').toLowerCase();
-        return values.some(searchValue => itemStr.includes(searchValue));
-      });
-    });
-  }, [searchConditions]);
+  const filterWorkloads = useCallback((items: WorkloadInfo[]): WorkloadInfo[] =>
+    applyMultiSearch(items, searchConditions, (workload, field) => {
+      const workloadValue = workload[field as keyof WorkloadInfo];
+      if (Array.isArray(workloadValue)) return workloadValue.join(' ');
+      return String(workloadValue ?? '');
+    }),
+  [searchConditions]);
 
   // Column settings save
   const handleColumnSettingsSave = useCallback(() => {

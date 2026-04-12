@@ -284,11 +284,11 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
   ];
 
   return (
-    <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
+    <div>
       {/* 統計卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('audit:commands.totalSessions')}
               value={stats?.total_sessions || 0}
@@ -297,7 +297,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('audit:commands.activeSessions')}
               value={stats?.active_sessions || 0}
@@ -307,7 +307,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title={t('audit:commands.totalCommands')}
               value={stats?.total_commands || 0}
@@ -316,7 +316,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title="Kubectl"
               value={stats?.kubectl_sessions || 0}
@@ -325,7 +325,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title="Pod"
               value={stats?.pod_sessions || 0}
@@ -334,7 +334,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" bordered={false}>
+          <Card size="small" variant="borderless">
             <Statistic
               title="Node SSH"
               value={stats?.node_sessions || 0}
@@ -357,7 +357,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
             {t('common:actions.refresh')}
           </Button>
         }
-        bordered={false}
+        variant="borderless"
       >
         {/* 篩選區域 */}
         <Space wrap style={{ marginBottom: 16 }}>

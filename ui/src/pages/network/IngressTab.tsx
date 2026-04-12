@@ -4,9 +4,6 @@ import {
   Table,
   Button,
   Space,
-  Tag,
-  Input,
-  Select,
   Modal,
   App,
   Form,
@@ -14,7 +11,6 @@ import {
 import EmptyState from '@/components/EmptyState';
 import {
   ReloadOutlined,
-  SearchOutlined,
   PlusOutlined,
   SettingOutlined,
   DeleteOutlined,
@@ -28,8 +24,10 @@ import IngressForm from './IngressForm';
 import { buildIngressYaml } from './ingressUtils';
 import IngressDrawer from './IngressDrawer';
 import { getIngressColumns } from './ingressColumns';
-import type { IngressTabProps, SearchCondition } from './ingressTypes';
+import type { IngressTabProps } from './ingressTypes';
 import { useTranslation } from 'react-i18next';
+import { useMultiSearch, applyMultiSearch } from '../../hooks/useMultiSearch';
+import { MultiSearchBar } from '../../components/MultiSearchBar';
 
 const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => {
   const navigate = useNavigate();
@@ -46,9 +44,16 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
-  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
-  const [currentSearchField, setCurrentSearchField] = useState<SearchCondition['field']>('name');
-  const [currentSearchValue, setCurrentSearchValue] = useState('');
+  const {
+    conditions: searchConditions,
+    currentField: currentSearchField,
+    currentValue: currentSearchValue,
+    setCurrentField: setCurrentSearchField,
+    setCurrentValue: setCurrentSearchValue,
+    addCondition: addSearchCondition,
+    removeCondition: removeSearchCondition,
+    clearAll: clearAllConditions,
+  } = useMultiSearch('name');
 
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
@@ -76,21 +81,6 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
 
   // --- Search helpers ---
 
-  const addSearchCondition = () => {
-    if (!currentSearchValue.trim()) return;
-    setSearchConditions([...searchConditions, { field: currentSearchField, value: currentSearchValue.trim() }]);
-    setCurrentSearchValue('');
-  };
-
-  const removeSearchCondition = (index: number) => {
-    setSearchConditions(searchConditions.filter((_, i) => i !== index));
-  };
-
-  const clearAllConditions = () => {
-    setSearchConditions([]);
-    setCurrentSearchValue('');
-  };
-
   const getFieldLabel = (field: string): string => {
     const labels: Record<string, string> = {
       name: t('network:ingress.search.name'),
@@ -103,30 +93,13 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
 
   // --- Filtering ---
 
-  const filterIngresses = useCallback((items: Ingress[]): Ingress[] => {
-    if (searchConditions.length === 0) return items;
-
-    return items.filter(ingress => {
-      const conditionsByField = searchConditions.reduce((acc, condition) => {
-        if (!acc[condition.field]) acc[condition.field] = [];
-        acc[condition.field].push(condition.value.toLowerCase());
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      return Object.entries(conditionsByField).every(([field, values]) => {
-        if (field === 'host') {
-          const hostsStr = IngressService.getHosts(ingress).join(' ').toLowerCase();
-          return values.some(v => hostsStr.includes(v));
-        }
-
-        const raw = ingress[field as keyof Ingress];
-        const itemStr = String(
-          typeof raw === 'object' && raw !== null ? JSON.stringify(raw) : (raw ?? '')
-        ).toLowerCase();
-        return values.some(v => itemStr.includes(v));
-      });
-    });
-  }, [searchConditions]);
+  const filterIngresses = useCallback((items: Ingress[]): Ingress[] =>
+    applyMultiSearch(items, searchConditions, (ingress, field) => {
+      if (field === 'host') return IngressService.getHosts(ingress).join(' ');
+      const raw = ingress[field as keyof Ingress];
+      return String(typeof raw === 'object' && raw !== null ? JSON.stringify(raw) : (raw ?? ''));
+    }),
+  [searchConditions]);
 
   // --- Data loading ---
 
@@ -383,44 +356,30 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       </div>
 
       {/* 多條件搜尋欄 */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
-          <Input
-            prefix={<SearchOutlined />}
-            placeholder={t('common:search.placeholder')}
-            style={{ flex: 1 }}
-            value={currentSearchValue}
-            onChange={(e) => setCurrentSearchValue(e.target.value)}
-            onPressEnter={addSearchCondition}
-            allowClear
-            addonBefore={
-              <Select value={currentSearchField} onChange={setCurrentSearchField} style={{ width: 130 }}>
-                <Select.Option value="name">{t('network:ingress.search.name')}</Select.Option>
-                <Select.Option value="namespace">{t('network:ingress.search.namespace')}</Select.Option>
-                <Select.Option value="ingressClassName">{t('network:ingress.search.ingressClassName')}</Select.Option>
-                <Select.Option value="host">{t('network:ingress.search.host')}</Select.Option>
-              </Select>
-            }
-          />
-          <Button icon={<ReloadOutlined />} onClick={() => loadIngresses()} />
-          <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
-        </div>
-
-        {searchConditions.length > 0 && (
-          <div>
-            <Space size="small" wrap>
-              {searchConditions.map((condition, index) => (
-                <Tag key={index} closable onClose={() => removeSearchCondition(index)} color="blue">
-                  {getFieldLabel(condition.field)}: {condition.value}
-                </Tag>
-              ))}
-              <Button size="small" type="link" onClick={clearAllConditions} style={{ padding: 0 }}>
-                {t('common:actions.clearAll')}
-              </Button>
-            </Space>
-          </div>
-        )}
-      </div>
+      <MultiSearchBar
+        fieldOptions={[
+          { value: 'name', label: t('network:ingress.search.name') },
+          { value: 'namespace', label: t('network:ingress.search.namespace') },
+          { value: 'ingressClassName', label: t('network:ingress.search.ingressClassName') },
+          { value: 'host', label: t('network:ingress.search.host') },
+        ]}
+        conditions={searchConditions}
+        currentField={currentSearchField}
+        currentValue={currentSearchValue}
+        onFieldChange={setCurrentSearchField}
+        onValueChange={setCurrentSearchValue}
+        onAdd={addSearchCondition}
+        onRemove={removeSearchCondition}
+        onClear={clearAllConditions}
+        getFieldLabel={getFieldLabel}
+        fieldSelectWidth={130}
+        extra={
+          <>
+            <Button icon={<ReloadOutlined />} onClick={() => loadIngresses()} />
+            <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsVisible(true)} />
+          </>
+        }
+      />
 
       <Table
         columns={columns}
@@ -430,7 +389,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
         loading={loading}
         virtual
         scroll={{ x: 1400, y: 600 }}
-        size="middle"
+        size="small"
         onChange={handleTableChange}
         pagination={{
           current: currentPage,

@@ -259,7 +259,7 @@ const EventAlertRules: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Card bordered={false} title="Event 告警規則引擎">
+      <Card variant="borderless" title="Event 告警規則引擎">
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
 

@@ -33,7 +33,7 @@ export const ResourceUsageCards: React.FC<ResourceUsageCardsProps> = ({
       <Col span={8}>
         <Card
           title={<span><ThunderboltOutlined style={{ color: '#3b82f6' }} /> {t('resource.cpuUsage')}</span>}
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 160 }}
           headStyle={cardHeadStyle}
           styles={{ body: { padding: '16px' } }}
@@ -54,7 +54,7 @@ export const ResourceUsageCards: React.FC<ResourceUsageCardsProps> = ({
       <Col span={8}>
         <Card
           title={<span><DatabaseOutlined style={{ color: '#10b981' }} /> {t('resource.memoryUsage')}</span>}
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 160 }}
           headStyle={cardHeadStyle}
           styles={{ body: { padding: '16px' } }}
@@ -75,7 +75,7 @@ export const ResourceUsageCards: React.FC<ResourceUsageCardsProps> = ({
       <Col span={8}>
         <Card
           title={<span><DatabaseOutlined style={{ color: '#8b5cf6' }} /> {t('resource.storageUsage')}</span>}
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 160 }}
           headStyle={cardHeadStyle}
           styles={{ body: { padding: '16px' } }}

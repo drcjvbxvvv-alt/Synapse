@@ -9,7 +9,7 @@ import type { PodInfo } from '../../../services/podService';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { getPodResources } from '../podUtils';
-import type { SearchCondition } from '../podUtils';
+import { useMultiSearch, applyMultiSearch } from '../../../hooks/useMultiSearch';
 
 export function usePodList() {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
@@ -26,37 +26,22 @@ export function usePodList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>([]);
-  const [currentSearchField, setCurrentSearchField] = useState<SearchCondition['field']>('name');
-  const [currentSearchValue, setCurrentSearchValue] = useState('');
+  const {
+    conditions: searchConditions,
+    currentField: currentSearchField,
+    currentValue: currentSearchValue,
+    setCurrentField: setCurrentSearchField,
+    setCurrentValue: setCurrentSearchValue,
+    addCondition: addSearchCondition,
+    removeCondition: removeSearchCondition,
+    clearAll: clearAllConditions,
+  } = useMultiSearch('name');
   const [columnSettingsVisible, setColumnSettingsVisible] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'status', 'namespace', 'podIP', 'nodeName', 'restartCount', 'createdAt', 'age',
   ]);
   const [sortField, setSortField] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
-
-  // 新增搜尋條件
-  const addSearchCondition = () => {
-    if (!currentSearchValue.trim()) return;
-    const newCondition: SearchCondition = {
-      field: currentSearchField,
-      value: currentSearchValue.trim(),
-    };
-    setSearchConditions(prev => [...prev, newCondition]);
-    setCurrentSearchValue('');
-  };
-
-  // 刪除搜尋條件
-  const removeSearchCondition = (index: number) => {
-    setSearchConditions(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // 清空所有搜尋條件
-  const clearAllConditions = () => {
-    setSearchConditions([]);
-    setCurrentSearchValue('');
-  };
 
   // 獲取搜尋欄位的顯示名稱
   const getFieldLabel = useCallback((field: string): string => {
@@ -75,48 +60,16 @@ export function usePodList() {
   }, [t, tc]);
 
   // 客戶端過濾Pod列表
-  const filterPods = useCallback((items: PodInfo[]): PodInfo[] => {
-    if (searchConditions.length === 0) return items;
-
-    return items.filter(pod => {
-      const resources = getPodResources(pod);
-
-      const conditionsByField = searchConditions.reduce((acc, condition) => {
-        if (!acc[condition.field]) {
-          acc[condition.field] = [];
-        }
-        acc[condition.field].push(condition.value.toLowerCase());
-        return acc;
-      }, {} as Record<string, string[]>);
-
-      return Object.entries(conditionsByField).every(([field, values]) => {
-        let podValue: string;
-
-        switch (field) {
-          case 'cpuRequest':
-            podValue = resources.cpuRequest;
-            break;
-          case 'cpuLimit':
-            podValue = resources.cpuLimit;
-            break;
-          case 'memoryRequest':
-            podValue = resources.memoryRequest;
-            break;
-          case 'memoryLimit':
-            podValue = resources.memoryLimit;
-            break;
-          default:
-            podValue = String(pod[field as keyof PodInfo] || '');
-        }
-
-        const resourceFields = ['cpuRequest', 'cpuLimit', 'memoryRequest', 'memoryLimit'];
-        if (resourceFields.includes(field)) {
-          return values.some(searchValue => podValue.toLowerCase() === searchValue);
-        }
-        return values.some(searchValue => podValue.toLowerCase().includes(searchValue));
-      });
-    });
-  }, [searchConditions]);
+  const filterPods = useCallback((items: PodInfo[]): PodInfo[] =>
+    applyMultiSearch(items, searchConditions, (pod, field) => {
+      const resourceFields = ['cpuRequest', 'cpuLimit', 'memoryRequest', 'memoryLimit'];
+      if (resourceFields.includes(field)) {
+        const resources = getPodResources(pod);
+        return String(resources[field as keyof ReturnType<typeof getPodResources>] ?? '');
+      }
+      return String(pod[field as keyof PodInfo] ?? '');
+    }),
+  [searchConditions]);
 
   // React Query：載入所有 Pod
   const {
@@ -338,11 +291,11 @@ export function usePodList() {
   useEffect(() => {
     if (routeClusterId) {
       setCurrentPage(1);
-      setSearchConditions([]);
+      clearAllConditions();
       setSelectedRowKeys([]);
       loadPods();
     }
-  }, [routeClusterId, loadPods]);
+  }, [routeClusterId, loadPods, clearAllConditions]);
 
   const rowSelection = useMemo(() => ({
     columnWidth: 48,

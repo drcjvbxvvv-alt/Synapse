@@ -408,7 +408,7 @@ const [loading, setLoading] = useState(false);
       <Card 
         title={t('detailPage.basicInfo')} 
         style={{ marginBottom: 16 }}
-        bordered={false}
+        variant="borderless"
       >
         <Row gutter={[48, 16]}>
           <Col span={12}>
@@ -455,7 +455,7 @@ const [loading, setLoading] = useState(false);
       </Card>
 
       {/* Tab頁內容 */}
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}

@@ -2,21 +2,18 @@ import React from 'react';
 import {
   Table,
   Button,
-  Input,
   Space,
-  Tag,
-  Select,
   Drawer,
   Checkbox,
   theme,
 } from 'antd';
 import {
   PlusOutlined,
-  SearchOutlined,
   ReloadOutlined,
   DeleteOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
+import { MultiSearchBar } from '@/components/MultiSearchBar';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import EmptyState from '@/components/EmptyState';
@@ -24,7 +21,6 @@ import ConfigMapForm from './ConfigMapForm';
 import { useConfigMapList } from './hooks/useConfigMapList';
 import { getConfigMapColumns } from './configMapColumns';
 
-const { Option } = Select;
 
 interface ConfigMapListProps {
   clusterId: string;
@@ -91,42 +87,28 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
         </Button>
       </div>
 
-      {/* Search bar */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
-          <Input
-            prefix={<SearchOutlined />}
-            placeholder={t('common:search.placeholder')}
-            style={{ flex: 1 }}
-            value={hook.currentSearchValue}
-            onChange={(e) => hook.setCurrentSearchValue(e.target.value)}
-            onPressEnter={hook.addSearchCondition}
-            allowClear
-            addonBefore={
-              <Select value={hook.currentSearchField} onChange={hook.setCurrentSearchField} style={{ width: 120 }}>
-                <Option value="name">{t('config:list.searchFields.name')}</Option>
-                <Option value="namespace">{t('config:list.searchFields.namespace')}</Option>
-                <Option value="label">{t('config:list.searchFields.label')}</Option>
-              </Select>
-            }
-          />
-          <Button icon={<ReloadOutlined />} onClick={hook.loadConfigMaps} />
-          <Button icon={<SettingOutlined />} onClick={() => hook.setColumnSettingsVisible(true)} />
-        </div>
-
-        {hook.searchConditions.length > 0 && (
-          <Space size="small" wrap>
-            {hook.searchConditions.map((condition, index) => (
-              <Tag key={index} closable onClose={() => hook.removeSearchCondition(index)} color="blue">
-                {hook.getFieldLabel(condition.field)}: {condition.value}
-              </Tag>
-            ))}
-            <Button size="small" type="link" onClick={hook.clearAllConditions} style={{ padding: 0 }}>
-              {t('common:actions.clearAll')}
-            </Button>
-          </Space>
-        )}
-      </div>
+      <MultiSearchBar
+        fieldOptions={[
+          { value: 'name', label: t('config:list.searchFields.name') },
+          { value: 'namespace', label: t('config:list.searchFields.namespace') },
+          { value: 'label', label: t('config:list.searchFields.label') },
+        ]}
+        conditions={hook.searchConditions}
+        currentField={hook.currentSearchField}
+        currentValue={hook.currentSearchValue}
+        onFieldChange={hook.setCurrentSearchField}
+        onValueChange={hook.setCurrentSearchValue}
+        onAdd={hook.addSearchCondition}
+        onRemove={hook.removeSearchCondition}
+        onClear={hook.clearAllConditions}
+        getFieldLabel={hook.getFieldLabel}
+        extra={
+          <>
+            <Button icon={<ReloadOutlined />} onClick={hook.loadConfigMaps} />
+            <Button icon={<SettingOutlined />} onClick={() => hook.setColumnSettingsVisible(true)} />
+          </>
+        }
+      />
 
       <Table
         columns={columns}

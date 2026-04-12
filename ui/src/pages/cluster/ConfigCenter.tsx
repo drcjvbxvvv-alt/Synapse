@@ -72,7 +72,7 @@ const handleTabChange = (key: string) => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Tabs
           activeKey={activeTab}
           onChange={handleTabChange}

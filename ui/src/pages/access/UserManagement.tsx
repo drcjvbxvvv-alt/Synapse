@@ -1,20 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Card,
-  Table,
   Button,
   Space,
-  Modal,
   Form,
   Input,
   Select,
   Tag,
   App,
+  Tooltip,
 } from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
-  ReloadOutlined,
   EditOutlined,
   DeleteOutlined,
   LockOutlined,
@@ -26,6 +23,8 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import userService from '../../services/userService';
 import type { User, CreateUserRequest, UpdateUserRequest } from '../../types';
+import { TableListLayout } from '../../components/TableListLayout';
+import { FormModal } from '../../components/FormModal';
 
 const UserManagement: React.FC = () => {
   const { t } = useTranslation('permission');
@@ -48,7 +47,6 @@ const UserManagement: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [resetModalVisible, setResetModalVisible] = useState(false);
   const [resetUserId, setResetUserId] = useState<number | null>(null);
-  const [submitLoading, setSubmitLoading] = useState(false);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -90,39 +88,6 @@ const UserManagement: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      setSubmitLoading(true);
-
-      if (editingUser) {
-        const data: UpdateUserRequest = {
-          display_name: values.display_name,
-          email: values.email,
-        };
-        await userService.updateUser(editingUser.id, data);
-        message.success(t('user.messages.updateSuccess'));
-        setModalVisible(false);
-        loadUsers();
-      } else {
-        const data: CreateUserRequest = {
-          username: values.username,
-          password: values.password,
-          display_name: values.display_name,
-          email: values.email,
-        };
-        await userService.createUser(data);
-        message.success(t('user.messages.createSuccess'));
-        setModalVisible(false);
-        loadUsers();
-      }
-    } catch (err) {
-      console.error('Submit error:', err);
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
-
   const handleToggleStatus = async (record: User) => {
     if (record.username === 'admin') {
       message.warning(t('user.messages.adminCannotDisable'));
@@ -152,22 +117,6 @@ const UserManagement: React.FC = () => {
     setResetUserId(record.id);
     resetForm.resetFields();
     setResetModalVisible(true);
-  };
-
-  const handleResetSubmit = async () => {
-    if (resetUserId === null) return;
-    try {
-      const values = await resetForm.validateFields();
-      setSubmitLoading(true);
-      await userService.resetPassword(resetUserId, values.new_password);
-      message.success(t('user.messages.passwordResetSuccess'));
-      setResetModalVisible(false);
-      setResetUserId(null);
-    } catch (err) {
-      console.error('Reset password error:', err);
-    } finally {
-      setSubmitLoading(false);
-    }
   };
 
   const handleDelete = (record: User) => {
@@ -250,9 +199,11 @@ const UserManagement: React.FC = () => {
       fixed: 'right',
       render: (_, record) => (
         <Space wrap>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            {t('user.actions.edit')}
-          </Button>
+          <Tooltip title={t('user.actions.edit')}>
+            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+              {t('user.actions.edit')}
+            </Button>
+          </Tooltip>
           {!isAdmin(record) && (
             <Button
               type="link"
@@ -291,76 +242,58 @@ const UserManagement: React.FC = () => {
 
   return (
     <div style={{ padding: 0 }}>
-      <div
-        style={{
-          marginBottom: 24,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>{t('user.title')}</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          {t('user.createUser')}
-        </Button>
-      </div>
-
-      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
-        <Space size="middle" wrap>
-          <Input.Search
-            placeholder={t('user.searchPlaceholder')}
-            allowClear
-            style={{ width: 260 }}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onSearch={(v) => {
-              setSearch(v);
-              setPage(1);
-            }}
-            enterButton={<SearchOutlined />}
-          />
-          <Select
-            placeholder={t('user.statusFilter')}
-            allowClear
-            style={{ width: 120 }}
-            value={filterStatus || undefined}
-            onChange={(v) => {
-              setFilterStatus(v ?? '');
-              setPage(1);
-            }}
-          >
-            <Select.Option value="">{t('user.status.all')}</Select.Option>
-            <Select.Option value="active">{t('user.status.active')}</Select.Option>
-            <Select.Option value="inactive">{t('user.status.inactive')}</Select.Option>
-          </Select>
-          <Select
-            placeholder={t('user.authTypeFilter')}
-            allowClear
-            style={{ width: 120 }}
-            value={filterAuthType || undefined}
-            onChange={(v) => {
-              setFilterAuthType(v ?? '');
-              setPage(1);
-            }}
-          >
-            <Select.Option value="">{t('user.authType.all')}</Select.Option>
-            <Select.Option value="local">{t('user.authType.local')}</Select.Option>
-            <Select.Option value="ldap">{t('user.authType.ldap')}</Select.Option>
-          </Select>
-          <Button icon={<ReloadOutlined />} onClick={loadUsers}>
-            {t('user.refresh')}
+      <TableListLayout<User>
+        filters={
+          <>
+            <Input.Search
+              placeholder={t('user.searchPlaceholder')}
+              allowClear
+              style={{ width: 260 }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onSearch={(v) => {
+                setSearch(v);
+                setPage(1);
+              }}
+              enterButton={<SearchOutlined />}
+            />
+            <Select
+              placeholder={t('user.statusFilter')}
+              allowClear
+              style={{ width: 120 }}
+              value={filterStatus || undefined}
+              onChange={(v) => { setFilterStatus(v ?? ''); setPage(1); }}
+            >
+              <Select.Option value="">{t('user.status.all')}</Select.Option>
+              <Select.Option value="active">{t('user.status.active')}</Select.Option>
+              <Select.Option value="inactive">{t('user.status.inactive')}</Select.Option>
+            </Select>
+            <Select
+              placeholder={t('user.authTypeFilter')}
+              allowClear
+              style={{ width: 120 }}
+              value={filterAuthType || undefined}
+              onChange={(v) => { setFilterAuthType(v ?? ''); setPage(1); }}
+            >
+              <Select.Option value="">{t('user.authType.all')}</Select.Option>
+              <Select.Option value="local">{t('user.authType.local')}</Select.Option>
+              <Select.Option value="ldap">{t('user.authType.ldap')}</Select.Option>
+            </Select>
+          </>
+        }
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            {t('user.createUser')}
           </Button>
-        </Space>
-      </Card>
-
-      <Card styles={{ body: { padding: 0 } }}>
-        <Table
-          scroll={{ x: 'max-content' }}
-          rowKey="id"
-          columns={columns}
-          dataSource={users}
-          loading={loading}
-          pagination={{
+        }
+        onRefresh={loadUsers}
+        refreshing={loading}
+        tableProps={{
+          columns,
+          dataSource: users,
+          rowKey: 'id',
+          loading,
+          pagination: {
             current: page,
             pageSize,
             total,
@@ -371,75 +304,98 @@ const UserManagement: React.FC = () => {
               setPage(p);
               setPageSize(ps || 20);
             },
-          }}
-        />
-      </Card>
+          },
+        }}
+      />
 
-      <Modal
-        title={editingUser ? t('user.editUser') : t('user.createUser')}
+      {/* 新增 / 編輯使用者 */}
+      <FormModal
         open={modalVisible}
-        onOk={handleSubmit}
-        onCancel={() => setModalVisible(false)}
-        confirmLoading={submitLoading}
-        destroyOnHidden
+        onClose={() => setModalVisible(false)}
+        onSubmit={async () => {
+          const values = await form.validateFields();
+          if (editingUser) {
+            const data: UpdateUserRequest = {
+              display_name: values.display_name,
+              email: values.email,
+            };
+            await userService.updateUser(editingUser.id, data);
+            message.success(t('user.messages.updateSuccess'));
+          } else {
+            const data: CreateUserRequest = {
+              username: values.username,
+              password: values.password,
+              display_name: values.display_name,
+              email: values.email,
+            };
+            await userService.createUser(data);
+            message.success(t('user.messages.createSuccess'));
+          }
+          setModalVisible(false);
+          loadUsers();
+        }}
+        form={form}
+        isEdit={!!editingUser}
+        createTitle={t('user.createUser')}
+        editTitle={t('user.editUser')}
         width={520}
       >
-        <Form form={form} layout="vertical">
-          {!editingUser && (
-            <>
-              <Form.Item
-                name="username"
-                label={t('user.form.username')}
-                rules={[{ required: true, message: t('user.form.usernameRequired') }]}
-              >
-                <Input placeholder={t('user.form.usernamePlaceholder')} />
-              </Form.Item>
-              <Form.Item
-                name="password"
-                label={t('user.form.password')}
-                rules={[
-                  { required: true, message: t('user.form.passwordRequired') },
-                  { min: 6, message: t('user.form.passwordMinLength') },
-                ]}
-              >
-                <Input.Password placeholder={t('user.form.passwordPlaceholder')} />
-              </Form.Item>
-            </>
-          )}
-          <Form.Item name="display_name" label={t('user.form.displayName')}>
-            <Input placeholder={t('user.form.displayNamePlaceholder')} />
-          </Form.Item>
-          <Form.Item name="email" label={t('user.form.email')}>
-            <Input placeholder={t('user.form.emailPlaceholder')} />
-          </Form.Item>
-        </Form>
-      </Modal>
+        {!editingUser && (
+          <>
+            <Form.Item
+              name="username"
+              label={t('user.form.username')}
+              rules={[{ required: true, message: t('user.form.usernameRequired') }]}
+            >
+              <Input placeholder={t('user.form.usernamePlaceholder')} />
+            </Form.Item>
+            <Form.Item
+              name="password"
+              label={t('user.form.password')}
+              rules={[
+                { required: true, message: t('user.form.passwordRequired') },
+                { min: 6, message: t('user.form.passwordMinLength') },
+              ]}
+            >
+              <Input.Password placeholder={t('user.form.passwordPlaceholder')} />
+            </Form.Item>
+          </>
+        )}
+        <Form.Item name="display_name" label={t('user.form.displayName')}>
+          <Input placeholder={t('user.form.displayNamePlaceholder')} />
+        </Form.Item>
+        <Form.Item name="email" label={t('user.form.email')}>
+          <Input placeholder={t('user.form.emailPlaceholder')} />
+        </Form.Item>
+      </FormModal>
 
-      <Modal
-        title={t('user.resetPassword.title')}
+      {/* 重設密碼 */}
+      <FormModal
         open={resetModalVisible}
-        onOk={handleResetSubmit}
-        onCancel={() => {
+        onClose={() => { setResetModalVisible(false); setResetUserId(null); }}
+        onSubmit={async () => {
+          if (resetUserId === null) return;
+          const values = await resetForm.validateFields();
+          await userService.resetPassword(resetUserId, values.new_password);
+          message.success(t('user.messages.passwordResetSuccess'));
           setResetModalVisible(false);
           setResetUserId(null);
         }}
-        confirmLoading={submitLoading}
-        destroyOnHidden
+        form={resetForm}
+        title={t('user.resetPassword.title')}
         width={400}
       >
-        <Form form={resetForm} layout="vertical">
-          <Form.Item
-            name="new_password"
-            label={t('user.resetPassword.newPassword')}
-            rules={[
-              { required: true, message: t('user.resetPassword.newPasswordRequired') },
-              { min: 6, message: t('user.form.passwordMinLength') },
-            ]}
-          >
-            <Input.Password placeholder={t('user.resetPassword.newPasswordPlaceholder')} />
-          </Form.Item>
-        </Form>
-      </Modal>
+        <Form.Item
+          name="new_password"
+          label={t('user.resetPassword.newPassword')}
+          rules={[
+            { required: true, message: t('user.resetPassword.newPasswordRequired') },
+            { min: 6, message: t('user.form.passwordMinLength') },
+          ]}
+        >
+          <Input.Password placeholder={t('user.resetPassword.newPasswordPlaceholder')} />
+        </Form.Item>
+      </FormModal>
     </div>
   );
 };

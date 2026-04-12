@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { Card, Table, Button, Space, Tag, Input, Select, App } from 'antd';
-import { ReloadOutlined, SearchOutlined, SettingOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Space, App } from 'antd';
+import { ReloadOutlined, SettingOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { MultiSearchBar } from '@/components/MultiSearchBar';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { Node } from '../../types';
@@ -9,7 +10,6 @@ import { useNodeList } from './hooks/useNodeList';
 import { createNodeColumns } from './columns';
 import { NodeStatsCards, NodeLabelModal, ColumnSettingsDrawer } from './components';
 
-const { Option } = Select;
 
 const NodeList: React.FC = () => {
   const state = useNodeList();
@@ -66,7 +66,7 @@ const NodeList: React.FC = () => {
         />
 
         {/* Node List Card */}
-        <Card bordered={false}>
+        <Card variant="borderless">
           {/* Action Buttons */}
           <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Space>
@@ -103,60 +103,30 @@ const NodeList: React.FC = () => {
             </Space>
           </div>
 
-          {/* Search Bar */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 8 }}>
-              <Input
-                prefix={<SearchOutlined />}
-                placeholder={state.t('list.searchPlaceholder')}
-                style={{ flex: 1 }}
-                value={state.currentSearchValue}
-                onChange={(e) => state.setCurrentSearchValue(e.target.value)}
-                onPressEnter={state.addSearchCondition}
-                allowClear
-                addonBefore={
-                  <Select
-                    value={state.currentSearchField}
-                    onChange={state.setCurrentSearchField}
-                    style={{ width: 120 }}
-                  >
-                    <Option value="name">{state.t('columns.name')}</Option>
-                    <Option value="status">{state.t('columns.status')}</Option>
-                    <Option value="version">{state.t('columns.version')}</Option>
-                    <Option value="roles">{state.t('columns.roles')}</Option>
-                  </Select>
-                }
-              />
-              <Button icon={<ReloadOutlined />} onClick={state.handleRefresh} />
-              <Button icon={<SettingOutlined />} onClick={() => state.setColumnSettingsVisible(true)} />
-            </div>
-
-            {/* Search Condition Tags */}
-            {state.searchConditions.length > 0 && (
-              <div>
-                <Space size="small" wrap>
-                  {state.searchConditions.map((condition, index) => (
-                    <Tag
-                      key={index}
-                      closable
-                      onClose={() => state.removeSearchCondition(index)}
-                      color="blue"
-                    >
-                      {state.getFieldLabel(condition.field)}: {condition.value}
-                    </Tag>
-                  ))}
-                  <Button
-                    size="small"
-                    type="link"
-                    onClick={state.clearAllConditions}
-                    style={{ padding: 0 }}
-                  >
-                    {state.tc('actions.clearAll')}
-                  </Button>
-                </Space>
-              </div>
-            )}
-          </div>
+          <MultiSearchBar
+            fieldOptions={[
+              { value: 'name', label: state.t('columns.name') },
+              { value: 'status', label: state.t('columns.status') },
+              { value: 'version', label: state.t('columns.version') },
+              { value: 'roles', label: state.t('columns.roles') },
+            ]}
+            conditions={state.searchConditions}
+            currentField={state.currentSearchField}
+            currentValue={state.currentSearchValue}
+            onFieldChange={state.setCurrentSearchField}
+            onValueChange={state.setCurrentSearchValue}
+            onAdd={state.addSearchCondition}
+            onRemove={state.removeSearchCondition}
+            onClear={state.clearAllConditions}
+            getFieldLabel={state.getFieldLabel}
+            fieldSelectWidth={120}
+            extra={
+              <>
+                <Button icon={<ReloadOutlined />} onClick={state.handleRefresh} />
+                <Button icon={<SettingOutlined />} onClick={() => state.setColumnSettingsVisible(true)} />
+              </>
+            }
+          />
 
           {/* Table */}
           <Table

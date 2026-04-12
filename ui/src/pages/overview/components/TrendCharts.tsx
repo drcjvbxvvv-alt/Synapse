@@ -51,7 +51,7 @@ export const TrendCharts: React.FC<TrendChartsProps> = ({
       <Col span={12}>
         <Card
           title={t('trend.podTrend')}
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 400 }}
           headStyle={cardHeadStyle}
           styles={{ body: chartBodyStyle }}
@@ -67,7 +67,7 @@ export const TrendCharts: React.FC<TrendChartsProps> = ({
       <Col span={12}>
         <Card
           title={t('trend.nodeTrend')}
-          bordered={false}
+          variant="borderless"
           style={{ ...cardStyle, height: 400 }}
           headStyle={cardHeadStyle}
           styles={{ body: chartBodyStyle }}

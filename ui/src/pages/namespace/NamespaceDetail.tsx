@@ -200,7 +200,7 @@ const NamespaceDetail: React.FC = () => {
         </Card>
 
         {/* 資源統計卡片 */}
-        <Card title={t("detail.resourceStats")} bordered={false}>
+        <Card title={t("detail.resourceStats")} variant="borderless">
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={6}>
               <Card>
