@@ -209,6 +209,11 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 - **GCP Cloud Billing**：Service Account oauth2 對接 Budget API
 - **資源單位成本**：換算 USD/core-hr、USD/GiB-hr，讓帳單費用對應到 K8s 資源使用
 
+#### 多語言支援（i18n）
+- 成本分析頁面完全國際化：繁體中文（zh-TW）/ 簡體中文（zh-CN）/ 英文（en-US）
+- **後端中立設計**：API 返回英文或代碼，前端負責完整翻譯
+- 全球化團隊協作無障礙
+
 ---
 
 ### 🤖 AI 智慧運維
@@ -327,15 +332,21 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 ### 🔒 稽核與合規
 
-#### 操作日誌
+#### 操作日誌（Operation Logs）
 
 - 所有 API 操作自動記錄（使用者 / 操作類型 / 資源 / 執行結果）
 - 支援按時間範圍、操作類型、使用者篩選
+- **多語言操作分類**：15+ 模組 × 17+ 動作類型，全面國際化支援
+- 操作分佈圖表：清晰視覺化各模組操作量（支援三種語言）
+- 敏感字段自動脫敏：password、token、kubeconfig 等欄位自動遮蔽
 
-#### Terminal 會話稽核
+#### 命令歷史（Command History）
 
 - 記錄 kubectl / Pod Exec / SSH 三種 Terminal 的所有指令
 - 會話列表 + 指令詳情逐筆查詢
+- 會話狀態追蹤：進行中 / 已結束 / 異常
+- **終端機類型識別**：Kubectl / Pod / Node SSH 三種終端完全區分
+- 多語言支援：所有會話元數據、狀態標籤完全國際化
 
 #### 部署審批工作流
 
