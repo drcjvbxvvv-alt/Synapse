@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"strings"
 	"time"
 
@@ -39,7 +38,7 @@ func (h *NodeHandler) GetNodes(c *gin.Context) {
 		response.ServiceUnavailable(c, "K8s informer 管理器未初始化")
 		return
 	}
-	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
+	if _, err := h.k8sMgr.EnsureAndWait(c.Request.Context(), cluster, 5*time.Second); err != nil {
 		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return
 	}
@@ -180,7 +179,7 @@ func (h *NodeHandler) GetNodeOverview(c *gin.Context) {
 	}
 
 	// 使用 informer+lister 讀取節點並統計
-	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
+	if _, err := h.k8sMgr.EnsureAndWait(c.Request.Context(), cluster, 5*time.Second); err != nil {
 		logger.Error("informer 未就緒", "error", err)
 		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
 		return

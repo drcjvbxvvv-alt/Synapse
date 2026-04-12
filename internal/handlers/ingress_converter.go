@@ -11,14 +11,14 @@ import (
 )
 
 // getIngresses 獲取Ingresses
-func (h *IngressHandler) getIngresses(clientset kubernetes.Interface, namespace string) ([]IngressInfo, error) {
+func (h *IngressHandler) getIngresses(ctx context.Context, clientset kubernetes.Interface, namespace string) ([]IngressInfo, error) {
 	var ingressList *networkingv1.IngressList
 	var err error
 
 	if namespace == "" || namespace == "_all_" {
-		ingressList, err = clientset.NetworkingV1().Ingresses("").List(context.Background(), metav1.ListOptions{})
+		ingressList, err = clientset.NetworkingV1().Ingresses("").List(ctx, metav1.ListOptions{})
 	} else {
-		ingressList, err = clientset.NetworkingV1().Ingresses(namespace).List(context.Background(), metav1.ListOptions{})
+		ingressList, err = clientset.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
 	}
 
 	if err != nil {

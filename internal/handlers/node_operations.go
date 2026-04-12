@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -159,8 +160,11 @@ func (h *NodeHandler) PatchNodeLabels(c *gin.Context) {
 	}
 	patchBytes, _ := json.Marshal(patch)
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	_, err = k8sClient.GetClientset().CoreV1().Nodes().Patch(
-		context.Background(), name, types.MergePatchType, patchBytes, metav1.PatchOptions{},
+		ctx, name, types.MergePatchType, patchBytes, metav1.PatchOptions{},
 	)
 	if err != nil {
 		response.InternalError(c, "更新標籤失敗: "+err.Error())
@@ -224,8 +228,11 @@ func (h *NodeHandler) PatchNodeTaints(c *gin.Context) {
 		"spec": map[string]interface{}{"taints": taints},
 	})
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	_, err = k8sClient.GetClientset().CoreV1().Nodes().Patch(
-		context.Background(), name, types.MergePatchType, patchBytes, metav1.PatchOptions{},
+		ctx, name, types.MergePatchType, patchBytes, metav1.PatchOptions{},
 	)
 	if err != nil {
 		response.InternalError(c, "更新污點失敗: "+err.Error())

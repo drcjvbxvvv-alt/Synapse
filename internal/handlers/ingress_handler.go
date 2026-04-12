@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/shaia/Synapse/internal/config"
 	"github.com/shaia/Synapse/internal/k8s"
@@ -75,8 +76,11 @@ func (h *IngressHandler) ListIngresses(c *gin.Context) {
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取Ingresses
-	ingresses, err := h.getIngresses(clientset, namespace)
+	ingresses, err := h.getIngresses(ctx, clientset, namespace)
 	if err != nil {
 		logger.Error("獲取Ingresses失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("獲取Ingresses失敗: %v", err))
@@ -143,8 +147,11 @@ func (h *IngressHandler) GetIngress(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取Ingress
-	ingress, err := clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	ingress, err := clientset.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取Ingress失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取Ingress失敗: %v", err))
@@ -186,8 +193,11 @@ func (h *IngressHandler) GetIngressYAML(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取Ingress
-	ingress, err := clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	ingress, err := clientset.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取Ingress失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取Ingress失敗: %v", err))
@@ -241,8 +251,11 @@ func (h *IngressHandler) DeleteIngress(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 刪除Ingress
-	err = clientset.NetworkingV1().Ingresses(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	err = clientset.NetworkingV1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error("刪除Ingress失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("刪除Ingress失敗: %v", err))
@@ -278,8 +291,11 @@ func (h *IngressHandler) GetIngressNamespaces(c *gin.Context) {
 	}
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取所有Ingresses
-	ingressList, err := clientset.NetworkingV1().Ingresses("").List(context.Background(), metav1.ListOptions{})
+	ingressList, err := clientset.NetworkingV1().Ingresses("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logger.Error("獲取Ingress列表失敗", "cluster", cluster.Name, "error", err)
 		response.InternalError(c, fmt.Sprintf("獲取Ingress列表失敗: %v", err))

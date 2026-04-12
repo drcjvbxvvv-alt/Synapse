@@ -75,8 +75,11 @@ func (h *StorageHandler) ListPVCs(c *gin.Context) {
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取PVCs
-	pvcs, err := h.getPVCs(clientset, namespace)
+	pvcs, err := h.getPVCs(ctx, clientset, namespace)
 	if err != nil {
 		logger.Error("獲取PVCs失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("獲取PVCs失敗: %v", err))
@@ -143,8 +146,11 @@ func (h *StorageHandler) GetPVC(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取PVC
-	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取PVC失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取PVC失敗: %v", err))
@@ -186,8 +192,11 @@ func (h *StorageHandler) GetPVCYAML(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取PVC
-	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取PVC失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取PVC失敗: %v", err))
@@ -235,8 +244,11 @@ func (h *StorageHandler) DeletePVC(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 刪除PVC
-	err = clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	err = clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error("刪除PVC失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("刪除PVC失敗: %v", err))
@@ -272,8 +284,11 @@ func (h *StorageHandler) GetPVCNamespaces(c *gin.Context) {
 	}
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取所有PVCs
-	pvcList, err := clientset.CoreV1().PersistentVolumeClaims("").List(context.Background(), metav1.ListOptions{})
+	pvcList, err := clientset.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logger.Error("獲取PVC列表失敗", "cluster", cluster.Name, "error", err)
 		response.InternalError(c, fmt.Sprintf("獲取PVC列表失敗: %v", err))
@@ -308,14 +323,14 @@ func (h *StorageHandler) GetPVCNamespaces(c *gin.Context) {
 }
 
 // getPVCs 獲取PVCs
-func (h *StorageHandler) getPVCs(clientset kubernetes.Interface, namespace string) ([]PVCInfo, error) {
+func (h *StorageHandler) getPVCs(ctx context.Context, clientset kubernetes.Interface, namespace string) ([]PVCInfo, error) {
 	var pvcList *corev1.PersistentVolumeClaimList
 	var err error
 
 	if namespace == "" || namespace == "_all_" {
-		pvcList, err = clientset.CoreV1().PersistentVolumeClaims("").List(context.Background(), metav1.ListOptions{})
+		pvcList, err = clientset.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
 	} else {
-		pvcList, err = clientset.CoreV1().PersistentVolumeClaims(namespace).List(context.Background(), metav1.ListOptions{})
+		pvcList, err = clientset.CoreV1().PersistentVolumeClaims(namespace).List(ctx, metav1.ListOptions{})
 	}
 
 	if err != nil {

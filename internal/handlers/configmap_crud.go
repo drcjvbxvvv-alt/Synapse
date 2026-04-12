@@ -43,8 +43,11 @@ func (h *ConfigMapHandler) DeleteConfigMap(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 刪除ConfigMap
-	err = clientset.CoreV1().ConfigMaps(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	err = clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error("刪除ConfigMap失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.InternalError(c, fmt.Sprintf("刪除ConfigMap失敗: %v", err))
@@ -94,6 +97,9 @@ func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 建立ConfigMap
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -110,7 +116,7 @@ func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 		createOpts.DryRun = []string{metav1.DryRunAll}
 	}
 
-	created, err := clientset.CoreV1().ConfigMaps(req.Namespace).Create(context.Background(), configMap, createOpts)
+	created, err := clientset.CoreV1().ConfigMaps(req.Namespace).Create(ctx, configMap, createOpts)
 	if err != nil {
 		logger.Error("建立ConfigMap失敗", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
 		response.InternalError(c, fmt.Sprintf("建立ConfigMap失敗: %v", err))
@@ -166,8 +172,11 @@ func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取現有ConfigMap
-	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取ConfigMap失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.NotFound(c, fmt.Sprintf("ConfigMap不存在: %v", err))
@@ -182,7 +191,7 @@ func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
 	configMap.Annotations = req.Annotations
 	configMap.Data = req.Data
 
-	updated, err := clientset.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metav1.UpdateOptions{})
+	updated, err := clientset.CoreV1().ConfigMaps(namespace).Update(ctx, configMap, metav1.UpdateOptions{})
 	if err != nil {
 		logger.Error("更新ConfigMap失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.InternalError(c, fmt.Sprintf("更新ConfigMap失敗: %v", err))
@@ -265,7 +274,11 @@ func (h *ConfigMapHandler) RollbackConfigMap(c *gin.Context) {
 		return
 	}
 	clientset := k8sClient.GetClientset()
-	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		response.NotFound(c, "ConfigMap 不存在")
 		return
@@ -273,7 +286,7 @@ func (h *ConfigMapHandler) RollbackConfigMap(c *gin.Context) {
 	// 回滾前先存快照
 	h.saveConfigVersion(uint(id), "configmap", namespace, name, cm.Data, c)
 	cm.Data = data
-	if _, err := clientset.CoreV1().ConfigMaps(namespace).Update(context.Background(), cm, metav1.UpdateOptions{}); err != nil {
+	if _, err := clientset.CoreV1().ConfigMaps(namespace).Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
 		response.InternalError(c, "回滾失敗: "+err.Error())
 		return
 	}

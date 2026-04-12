@@ -119,7 +119,7 @@ func (h *ClusterHandler) GetClusters(c *gin.Context) {
 
 		// 獲取實時節點資訊和指標
 		if h.k8sMgr != nil {
-			nodeCount, readyNodes := h.getClusterNodeInfo(cluster)
+			nodeCount, readyNodes := h.getClusterNodeInfo(c.Request.Context(), cluster)
 			clusterData["nodeCount"] = nodeCount
 			clusterData["readyNodes"] = readyNodes
 		} else {
@@ -267,7 +267,7 @@ func (h *ClusterHandler) GetClusterStatus(c *gin.Context) {
 	}
 
 	// 獲取實時節點資訊
-	nodeCount, readyNodes := h.getClusterNodeInfo(cluster)
+	nodeCount, readyNodes := h.getClusterNodeInfo(c.Request.Context(), cluster)
 
 	statusData := gin.H{
 		"id":         cluster.ID,

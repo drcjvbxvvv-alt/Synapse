@@ -142,7 +142,7 @@ func (h *SystemSettingHandler) GetGrafanaDataSourceStatus(c *gin.Context) {
 		return
 	}
 
-	clusters := h.getMonitoringClusters()
+	clusters := h.getMonitoringClusters(c.Request.Context())
 	status, err := h.grafanaService.GetDataSourceSyncStatus(clusters)
 	if err != nil {
 		response.InternalError(c, "獲取資料來源同步狀態失敗: "+err.Error())
@@ -159,7 +159,7 @@ func (h *SystemSettingHandler) SyncGrafanaDataSources(c *gin.Context) {
 		return
 	}
 
-	clusters := h.getMonitoringClusters()
+	clusters := h.getMonitoringClusters(c.Request.Context())
 	if len(clusters) == 0 {
 		response.OK(c, gin.H{
 			"datasources": []interface{}{},
@@ -178,8 +178,8 @@ func (h *SystemSettingHandler) SyncGrafanaDataSources(c *gin.Context) {
 }
 
 // getMonitoringClusters 獲取所有啟用了監控的叢集資訊
-func (h *SystemSettingHandler) getMonitoringClusters() []services.DataSourceClusterInfo {
-	return h.clusterService.ListMonitoringClusters(context.Background())
+func (h *SystemSettingHandler) getMonitoringClusters(ctx context.Context) []services.DataSourceClusterInfo {
+	return h.clusterService.ListMonitoringClusters(ctx)
 }
 
 // SyncGrafanaDashboards 同步 Dashboard 到 Grafana

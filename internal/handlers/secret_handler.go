@@ -214,8 +214,11 @@ func (h *SecretHandler) GetSecret(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取Secret
-	secret, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取Secret失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.NotFound(c, fmt.Sprintf("Secret不存在: %v", err))
@@ -269,8 +272,11 @@ func (h *SecretHandler) GetSecretNamespaces(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取所有Secrets
-	secrets, err := clientset.CoreV1().Secrets("").List(context.Background(), metav1.ListOptions{})
+	secrets, err := clientset.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logger.Error("獲取Secret列表失敗", "cluster", cluster.Name, "error", err)
 		response.InternalError(c, fmt.Sprintf("獲取Secret列表失敗: %v", err))

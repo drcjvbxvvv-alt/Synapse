@@ -189,7 +189,7 @@ func (h *CostBudgetHandler) CheckBudgets(c *gin.Context) {
 	}
 
 	// Ensure informer is synced
-	if err := h.k8sMgr.EnsureSync(context.Background(), cluster, 5*time.Second); err != nil {
+	if err := h.k8sMgr.EnsureSync(c.Request.Context(), cluster, 5*time.Second); err != nil {
 		response.InternalError(c, "informer 同步失敗: "+err.Error())
 		return
 	}

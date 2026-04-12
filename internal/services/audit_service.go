@@ -239,7 +239,7 @@ func (s *AuditService) CreateSession(req *CreateSessionRequest) (*models.Termina
 
 	if err := s.db.Create(session).Error; err != nil {
 		logger.Error("建立終端會話失敗", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("create terminal session: %w", err)
 	}
 
 	logger.Info("終端會話已建立", "sessionID", session.ID, "userID", req.UserID, "type", req.TargetType)
@@ -258,7 +258,7 @@ func (s *AuditService) CloseSession(sessionID uint, status string) error {
 
 	if err != nil {
 		logger.Error("關閉終端會話失敗", "error", err, "sessionID", sessionID)
-		return err
+		return fmt.Errorf("close terminal session %d: %w", sessionID, err)
 	}
 
 	logger.Info("終端會話已關閉", "sessionID", sessionID, "status", status)
@@ -277,7 +277,7 @@ func (s *AuditService) RecordCommand(sessionID uint, rawInput, parsedCmd string,
 
 	if err := s.db.Create(command).Error; err != nil {
 		logger.Error("記錄命令失敗", "error", err, "sessionID", sessionID)
-		return err
+		return fmt.Errorf("record command for session %d: %w", sessionID, err)
 	}
 
 	// 更新會話的輸入大小

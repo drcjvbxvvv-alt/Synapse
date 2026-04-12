@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"time"
 
 	"github.com/shaia/Synapse/internal/response"
 
@@ -42,7 +43,8 @@ func (h *NetworkPolicyHandler) SimulateNetworkPolicy(c *gin.Context) {
 		req.Protocol = "TCP"
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
 	nps, err := clientset.NetworkingV1().NetworkPolicies(req.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		response.InternalError(c, "取得 NetworkPolicy 失敗: "+err.Error())

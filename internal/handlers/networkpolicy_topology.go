@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -54,7 +55,10 @@ func (h *NetworkPolicyHandler) GetTopology(c *gin.Context) {
 		ns = ""
 	}
 
-	policies, err := clientset.NetworkingV1().NetworkPolicies(ns).List(context.Background(), metav1.ListOptions{})
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
+	policies, err := clientset.NetworkingV1().NetworkPolicies(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logger.Error("取得 NetworkPolicy 列表失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("取得 NetworkPolicy 列表失敗: %v", err))

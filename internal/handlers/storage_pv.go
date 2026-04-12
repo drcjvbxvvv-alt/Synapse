@@ -73,8 +73,11 @@ func (h *StorageHandler) ListPVs(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取PVs
-	pvList, err := clientset.CoreV1().PersistentVolumes().List(context.Background(), metav1.ListOptions{})
+	pvList, err := clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logger.Error("獲取PVs失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("獲取PVs失敗: %v", err))
@@ -138,8 +141,11 @@ func (h *StorageHandler) GetPV(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取PV
-	pv, err := clientset.CoreV1().PersistentVolumes().Get(context.Background(), name, metav1.GetOptions{})
+	pv, err := clientset.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取PV失敗", "error", err, "clusterId", clusterID, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取PV失敗: %v", err))
@@ -180,8 +186,11 @@ func (h *StorageHandler) GetPVYAML(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取PV
-	pv, err := clientset.CoreV1().PersistentVolumes().Get(context.Background(), name, metav1.GetOptions{})
+	pv, err := clientset.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取PV失敗", "error", err, "clusterId", clusterID, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取PV失敗: %v", err))
@@ -228,8 +237,11 @@ func (h *StorageHandler) DeletePV(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 刪除PV
-	err = clientset.CoreV1().PersistentVolumes().Delete(context.Background(), name, metav1.DeleteOptions{})
+	err = clientset.CoreV1().PersistentVolumes().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error("刪除PV失敗", "error", err, "clusterId", clusterID, "name", name)
 		response.InternalError(c, fmt.Sprintf("刪除PV失敗: %v", err))

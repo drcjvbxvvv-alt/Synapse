@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/shaia/Synapse/internal/config"
 	"github.com/shaia/Synapse/internal/k8s"
@@ -75,8 +76,11 @@ func (h *ServiceHandler) ListServices(c *gin.Context) {
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取Services
-	svcList, err := h.getServices(clientset, namespace)
+	svcList, err := h.getServices(ctx, clientset, namespace)
 	if err != nil {
 		logger.Error("獲取Services失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("獲取Services失敗: %v", err))
@@ -143,8 +147,11 @@ func (h *ServiceHandler) GetService(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取Service
-	service, err := clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	service, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取Service失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取Service失敗: %v", err))
@@ -186,8 +193,11 @@ func (h *ServiceHandler) GetServiceYAML(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取Service
-	service, err := clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	service, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取Service失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取Service失敗: %v", err))
@@ -241,8 +251,11 @@ func (h *ServiceHandler) DeleteService(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 刪除Service
-	err = clientset.CoreV1().Services(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	err = clientset.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error("刪除Service失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("刪除Service失敗: %v", err))
@@ -283,8 +296,11 @@ func (h *ServiceHandler) GetServiceEndpoints(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取Endpoints
-	endpoints, err := clientset.CoreV1().Endpoints(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	endpoints, err := clientset.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取Endpoints失敗", "error", err, "clusterId", clusterID, "namespace", namespace, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取Endpoints失敗: %v", err))
@@ -322,8 +338,11 @@ func (h *ServiceHandler) GetServiceNamespaces(c *gin.Context) {
 	}
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取所有Services
-	serviceList, err := clientset.CoreV1().Services("").List(context.Background(), metav1.ListOptions{})
+	serviceList, err := clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logger.Error("獲取Service列表失敗", "cluster", cluster.Name, "error", err)
 		response.InternalError(c, fmt.Sprintf("獲取Service列表失敗: %v", err))

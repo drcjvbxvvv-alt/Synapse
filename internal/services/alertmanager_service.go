@@ -470,7 +470,7 @@ func (s *AlertManagerService) GetReceivers(ctx context.Context, config *models.A
 func (s *AlertManagerService) GetAlertStats(ctx context.Context, config *models.AlertManagerConfig) (*models.AlertStats, error) {
 	alerts, err := s.GetAlerts(ctx, config, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get alert stats: %w", err)
 	}
 
 	stats := &models.AlertStats{
@@ -523,7 +523,7 @@ func (s *AlertManagerService) GetFullReceivers(ctx context.Context, config *mode
 	}
 	raw, err := s.getRawConfig(ctx, config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get full receivers: %w", err)
 	}
 	var fullCfg models.AlertmanagerFullConfig
 	if err := yaml.Unmarshal([]byte(raw), &fullCfg); err != nil {
@@ -590,7 +590,7 @@ func (s *AlertManagerService) CreateReceiver(
 	}
 	raw, err := s.getRawConfig(ctx, config)
 	if err != nil {
-		return err
+		return fmt.Errorf("create receiver: %w", err)
 	}
 
 	var fullCfg models.AlertmanagerFullConfig
@@ -624,7 +624,7 @@ func (s *AlertManagerService) UpdateReceiver(
 	}
 	raw, err := s.getRawConfig(ctx, config)
 	if err != nil {
-		return err
+		return fmt.Errorf("update receiver: %w", err)
 	}
 
 	var fullCfg models.AlertmanagerFullConfig
@@ -662,7 +662,7 @@ func (s *AlertManagerService) DeleteReceiver(
 	}
 	raw, err := s.getRawConfig(ctx, config)
 	if err != nil {
-		return err
+		return fmt.Errorf("delete receiver: %w", err)
 	}
 
 	var fullCfg models.AlertmanagerFullConfig

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"k8s.io/client-go/kubernetes"
@@ -58,7 +59,8 @@ func (h *MultiClusterHandler) MigrateCheck(c *gin.Context) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
 	result := MigrateCheckResult{}
 
 	// 1. 取得工作負載資源請求量
@@ -115,7 +117,8 @@ func (h *MultiClusterHandler) Migrate(c *gin.Context) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
+	defer cancel()
 	result := MigrateResult{}
 
 	// 1. 確保目標命名空間存在

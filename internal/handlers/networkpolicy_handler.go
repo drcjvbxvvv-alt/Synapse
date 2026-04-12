@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/shaia/Synapse/internal/k8s"
 	"github.com/shaia/Synapse/internal/middleware"
@@ -78,7 +79,10 @@ func (h *NetworkPolicyHandler) ListNetworkPolicies(c *gin.Context) {
 		return
 	}
 
-	policies, err := h.listPolicies(clientset, namespace)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
+	policies, err := h.listPolicies(ctx, clientset, namespace)
 	if err != nil {
 		logger.Error("取得 NetworkPolicy 列表失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("取得 NetworkPolicy 列表失敗: %v", err))
@@ -134,7 +138,10 @@ func (h *NetworkPolicyHandler) GetNetworkPolicy(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	np, err := clientset.NetworkingV1().NetworkPolicies(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	np, err := clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("取得 NetworkPolicy 失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("取得 NetworkPolicy 失敗: %v", err))
@@ -154,7 +161,10 @@ func (h *NetworkPolicyHandler) GetNetworkPolicyYAML(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	np, err := clientset.NetworkingV1().NetworkPolicies(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	np, err := clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("取得 NetworkPolicy 失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("取得 NetworkPolicy 失敗: %v", err))
@@ -206,7 +216,10 @@ func (h *NetworkPolicyHandler) CreateNetworkPolicy(c *gin.Context) {
 		dryRunOpt = []string{metav1.DryRunAll}
 	}
 
-	created, err := clientset.NetworkingV1().NetworkPolicies(np.Namespace).Create(context.Background(), &np, metav1.CreateOptions{DryRun: dryRunOpt})
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	created, err := clientset.NetworkingV1().NetworkPolicies(np.Namespace).Create(ctx, &np, metav1.CreateOptions{DryRun: dryRunOpt})
 	if err != nil {
 		logger.Error("建立 NetworkPolicy 失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("建立 NetworkPolicy 失敗: %v", err))
@@ -243,7 +256,10 @@ func (h *NetworkPolicyHandler) UpdateNetworkPolicy(c *gin.Context) {
 		return
 	}
 
-	existing, err := clientset.NetworkingV1().NetworkPolicies(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	existing, err := clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		response.InternalError(c, fmt.Sprintf("取得現有 NetworkPolicy 失敗: %v", err))
 		return
@@ -253,7 +269,7 @@ func (h *NetworkPolicyHandler) UpdateNetworkPolicy(c *gin.Context) {
 	np.Namespace = namespace
 	np.Name = name
 
-	updated, err := clientset.NetworkingV1().NetworkPolicies(namespace).Update(context.Background(), &np, metav1.UpdateOptions{})
+	updated, err := clientset.NetworkingV1().NetworkPolicies(namespace).Update(ctx, &np, metav1.UpdateOptions{})
 	if err != nil {
 		logger.Error("更新 NetworkPolicy 失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("更新 NetworkPolicy 失敗: %v", err))
@@ -274,7 +290,10 @@ func (h *NetworkPolicyHandler) DeleteNetworkPolicy(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
-	err := clientset.NetworkingV1().NetworkPolicies(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	err := clientset.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error("刪除 NetworkPolicy 失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("刪除 NetworkPolicy 失敗: %v", err))
@@ -287,12 +306,12 @@ func (h *NetworkPolicyHandler) DeleteNetworkPolicy(c *gin.Context) {
 
 // ---- helpers ----
 
-func (h *NetworkPolicyHandler) listPolicies(clientset kubernetes.Interface, namespace string) ([]NetworkPolicyInfo, error) {
+func (h *NetworkPolicyHandler) listPolicies(ctx context.Context, clientset kubernetes.Interface, namespace string) ([]NetworkPolicyInfo, error) {
 	ns := namespace
 	if ns == "_all_" {
 		ns = ""
 	}
-	list, err := clientset.NetworkingV1().NetworkPolicies(ns).List(context.Background(), metav1.ListOptions{})
+	list, err := clientset.NetworkingV1().NetworkPolicies(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -118,9 +118,9 @@ func (h *ClusterHandler) GetClusterMetrics(c *gin.Context) {
 }
 
 // getClusterNodeInfo 獲取叢集節點資訊
-func (h *ClusterHandler) getClusterNodeInfo(cluster *models.Cluster) (int, int) {
+func (h *ClusterHandler) getClusterNodeInfo(ctx context.Context, cluster *models.Cluster) (int, int) {
 	// 使用 informer+lister 讀取節點並統計（不直連 API）
-	if _, err := h.k8sMgr.EnsureAndWait(context.Background(), cluster, 5*time.Second); err != nil {
+	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
 		logger.Error("informer 未就緒", "error", err)
 		return 0, 0
 	}

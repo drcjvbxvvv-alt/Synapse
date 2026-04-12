@@ -63,8 +63,11 @@ func (h *StorageHandler) ListStorageClasses(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取StorageClasses
-	scList, err := clientset.StorageV1().StorageClasses().List(context.Background(), metav1.ListOptions{})
+	scList, err := clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logger.Error("獲取StorageClasses失敗", "error", err, "clusterId", clusterID)
 		response.InternalError(c, fmt.Sprintf("獲取StorageClasses失敗: %v", err))
@@ -128,8 +131,11 @@ func (h *StorageHandler) GetStorageClass(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取StorageClass
-	sc, err := clientset.StorageV1().StorageClasses().Get(context.Background(), name, metav1.GetOptions{})
+	sc, err := clientset.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取StorageClass失敗", "error", err, "clusterId", clusterID, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取StorageClass失敗: %v", err))
@@ -170,8 +176,11 @@ func (h *StorageHandler) GetStorageClassYAML(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取StorageClass
-	sc, err := clientset.StorageV1().StorageClasses().Get(context.Background(), name, metav1.GetOptions{})
+	sc, err := clientset.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取StorageClass失敗", "error", err, "clusterId", clusterID, "name", name)
 		response.InternalError(c, fmt.Sprintf("獲取StorageClass失敗: %v", err))
@@ -218,8 +227,11 @@ func (h *StorageHandler) DeleteStorageClass(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 刪除StorageClass
-	err = clientset.StorageV1().StorageClasses().Delete(context.Background(), name, metav1.DeleteOptions{})
+	err = clientset.StorageV1().StorageClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error("刪除StorageClass失敗", "error", err, "clusterId", clusterID, "name", name)
 		response.InternalError(c, fmt.Sprintf("刪除StorageClass失敗: %v", err))

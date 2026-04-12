@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -49,15 +50,18 @@ func (h *ServiceHandler) CreateService(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	var service *corev1.Service
 
 	// 根據建立方式選擇處理邏輯
 	if req.YAML != "" {
 		// YAML方式建立
-		service, err = h.createServiceFromYAML(clientset, req.Namespace, req.YAML)
+		service, err = h.createServiceFromYAML(ctx, clientset, req.Namespace, req.YAML)
 	} else if req.FormData != nil {
 		// 表單方式建立
-		service, err = h.createServiceFromForm(clientset, req.Namespace, req.FormData)
+		service, err = h.createServiceFromForm(ctx, clientset, req.Namespace, req.FormData)
 	} else {
 		response.BadRequest(c, "必須提供YAML或表單資料")
 		return
@@ -108,15 +112,18 @@ func (h *ServiceHandler) UpdateService(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	var service *corev1.Service
 
 	// 根據更新方式選擇處理邏輯
 	if req.YAML != "" {
 		// YAML方式更新
-		service, err = h.updateServiceFromYAML(clientset, namespace, name, req.YAML)
+		service, err = h.updateServiceFromYAML(ctx, clientset, namespace, name, req.YAML)
 	} else if req.FormData != nil {
 		// 表單方式更新
-		service, err = h.updateServiceFromForm(clientset, namespace, name, req.FormData)
+		service, err = h.updateServiceFromForm(ctx, clientset, namespace, name, req.FormData)
 	} else {
 		response.BadRequest(c, "必須提供YAML或表單資料")
 		return
@@ -133,7 +140,7 @@ func (h *ServiceHandler) UpdateService(c *gin.Context) {
 }
 
 // createServiceFromYAML 從YAML建立Service
-func (h *ServiceHandler) createServiceFromYAML(clientset kubernetes.Interface, namespace, yamlContent string) (*corev1.Service, error) {
+func (h *ServiceHandler) createServiceFromYAML(ctx context.Context, clientset kubernetes.Interface, namespace, yamlContent string) (*corev1.Service, error) {
 	var service corev1.Service
 	if err := yaml.Unmarshal([]byte(yamlContent), &service); err != nil {
 		return nil, fmt.Errorf("解析YAML失敗: %w", err)
@@ -144,7 +151,7 @@ func (h *ServiceHandler) createServiceFromYAML(clientset kubernetes.Interface, n
 		service.Namespace = namespace
 	}
 
-	createdService, err := clientset.CoreV1().Services(service.Namespace).Create(context.Background(), &service, metav1.CreateOptions{})
+	createdService, err := clientset.CoreV1().Services(service.Namespace).Create(ctx, &service, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +160,7 @@ func (h *ServiceHandler) createServiceFromYAML(clientset kubernetes.Interface, n
 }
 
 // createServiceFromForm 從表單建立Service
-func (h *ServiceHandler) createServiceFromForm(clientset kubernetes.Interface, namespace string, formData *ServiceFormData) (*corev1.Service, error) {
+func (h *ServiceHandler) createServiceFromForm(ctx context.Context, clientset kubernetes.Interface, namespace string, formData *ServiceFormData) (*corev1.Service, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        formData.Name,
@@ -204,7 +211,7 @@ func (h *ServiceHandler) createServiceFromForm(clientset kubernetes.Interface, n
 		service.Spec.ExternalName = formData.ExternalName
 	}
 
-	createdService, err := clientset.CoreV1().Services(namespace).Create(context.Background(), service, metav1.CreateOptions{})
+	createdService, err := clientset.CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -213,14 +220,14 @@ func (h *ServiceHandler) createServiceFromForm(clientset kubernetes.Interface, n
 }
 
 // updateServiceFromYAML 從YAML更新Service
-func (h *ServiceHandler) updateServiceFromYAML(clientset kubernetes.Interface, namespace, name, yamlContent string) (*corev1.Service, error) {
+func (h *ServiceHandler) updateServiceFromYAML(ctx context.Context, clientset kubernetes.Interface, namespace, name, yamlContent string) (*corev1.Service, error) {
 	var service corev1.Service
 	if err := yaml.Unmarshal([]byte(yamlContent), &service); err != nil {
 		return nil, fmt.Errorf("解析YAML失敗: %w", err)
 	}
 
 	// 獲取現有Service
-	existingService, err := clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	existingService, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +237,7 @@ func (h *ServiceHandler) updateServiceFromYAML(clientset kubernetes.Interface, n
 	service.Namespace = namespace
 	service.Name = name
 
-	updatedService, err := clientset.CoreV1().Services(namespace).Update(context.Background(), &service, metav1.UpdateOptions{})
+	updatedService, err := clientset.CoreV1().Services(namespace).Update(ctx, &service, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -239,9 +246,9 @@ func (h *ServiceHandler) updateServiceFromYAML(clientset kubernetes.Interface, n
 }
 
 // updateServiceFromForm 從表單更新Service
-func (h *ServiceHandler) updateServiceFromForm(clientset kubernetes.Interface, namespace, name string, formData *ServiceFormData) (*corev1.Service, error) {
+func (h *ServiceHandler) updateServiceFromForm(ctx context.Context, clientset kubernetes.Interface, namespace, name string, formData *ServiceFormData) (*corev1.Service, error) {
 	// 獲取現有Service
-	existingService, err := clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	existingService, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +296,7 @@ func (h *ServiceHandler) updateServiceFromForm(clientset kubernetes.Interface, n
 		existingService.Annotations = formData.Annotations
 	}
 
-	updatedService, err := clientset.CoreV1().Services(namespace).Update(context.Background(), existingService, metav1.UpdateOptions{})
+	updatedService, err := clientset.CoreV1().Services(namespace).Update(ctx, existingService, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}

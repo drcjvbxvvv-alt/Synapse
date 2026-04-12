@@ -13,14 +13,14 @@ import (
 )
 
 // getServices 獲取Services
-func (h *ServiceHandler) getServices(clientset kubernetes.Interface, namespace string) ([]ServiceInfo, error) {
+func (h *ServiceHandler) getServices(ctx context.Context, clientset kubernetes.Interface, namespace string) ([]ServiceInfo, error) {
 	var serviceList *corev1.ServiceList
 	var err error
 
 	if namespace == "" || namespace == "_all_" {
-		serviceList, err = clientset.CoreV1().Services("").List(context.Background(), metav1.ListOptions{})
+		serviceList, err = clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	} else {
-		serviceList, err = clientset.CoreV1().Services(namespace).List(context.Background(), metav1.ListOptions{})
+		serviceList, err = clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
 	}
 
 	if err != nil {

@@ -206,8 +206,11 @@ func (h *ConfigMapHandler) GetConfigMap(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取ConfigMap
-	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取ConfigMap失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.NotFound(c, fmt.Sprintf("ConfigMap不存在: %v", err))
@@ -255,8 +258,11 @@ func (h *ConfigMapHandler) GetConfigMapNamespaces(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
+
 	// 獲取所有ConfigMaps
-	configMaps, err := clientset.CoreV1().ConfigMaps("").List(context.Background(), metav1.ListOptions{})
+	configMaps, err := clientset.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logger.Error("獲取ConfigMap列表失敗", "cluster", cluster.Name, "error", err)
 		response.InternalError(c, fmt.Sprintf("獲取ConfigMap列表失敗: %v", err))

@@ -45,7 +45,7 @@ func (s *ArgoCDService) GetConfig(ctx context.Context, clusterID uint) (*models.
 				ArgoCDProject: "default",
 			}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("query argocd config for cluster %d: %w", clusterID, err)
 	}
 	return &config, nil
 }
@@ -57,10 +57,16 @@ func (s *ArgoCDService) SaveConfig(ctx context.Context, config *models.ArgoCDCon
 		// 更新
 		config.ID = existing.ID
 		config.CreatedAt = existing.CreatedAt
-		return s.db.Save(config).Error
+		if err := s.db.Save(config).Error; err != nil {
+			return fmt.Errorf("save argocd config for cluster %d: %w", config.ClusterID, err)
+		}
+		return nil
 	}
 	// 新建
-	return s.db.Create(config).Error
+	if err := s.db.Create(config).Error; err != nil {
+		return fmt.Errorf("create argocd config for cluster %d: %w", config.ClusterID, err)
+	}
+	return nil
 }
 
 // TestConnection 測試 ArgoCD 連線
@@ -119,7 +125,7 @@ func (s *ArgoCDService) TestConnection(ctx context.Context, config *models.ArgoC
 func (s *ArgoCDService) ListApplications(ctx context.Context, clusterID uint) ([]models.ArgoCDApplication, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list applications: %w", err)
 	}
 	if !config.Enabled {
 		return nil, fmt.Errorf("ArgoCD 整合未啟用，請先在外掛中心配置")
@@ -135,7 +141,7 @@ func (s *ArgoCDService) ListApplications(ctx context.Context, clusterID uint) ([
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build list applications request: %w", err)
 	}
 	s.setAuthHeader(req, config)
 
@@ -178,7 +184,7 @@ func (s *ArgoCDService) ListApplications(ctx context.Context, clusterID uint) ([
 func (s *ArgoCDService) GetApplication(ctx context.Context, clusterID uint, appName string) (*models.ArgoCDApplication, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get application: %w", err)
 	}
 	if !config.Enabled {
 		return nil, fmt.Errorf("ArgoCD 整合未啟用")
@@ -189,7 +195,7 @@ func (s *ArgoCDService) GetApplication(ctx context.Context, clusterID uint, appN
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build get application request: %w", err)
 	}
 	s.setAuthHeader(req, config)
 
@@ -212,7 +218,7 @@ func (s *ArgoCDService) GetApplication(ctx context.Context, clusterID uint, appN
 
 	var item argoCDAppResponse
 	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode application response: %w", err)
 	}
 
 	app := s.convertApplication(item)
@@ -223,7 +229,7 @@ func (s *ArgoCDService) GetApplication(ctx context.Context, clusterID uint, appN
 func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, req *models.CreateApplicationRequest) (*models.ArgoCDApplication, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create application: %w", err)
 	}
 	if !config.Enabled {
 		return nil, fmt.Errorf("ArgoCD 整合未啟用")
@@ -302,7 +308,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 
 	body, err := json.Marshal(appSpec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal create application request: %w", err)
 	}
 
 	client := s.createHTTPClient(config.Insecure)
@@ -310,7 +316,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 		fmt.Sprintf("%s/api/v1/applications", config.ServerURL),
 		bytes.NewReader(body))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build create application request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	s.setAuthHeader(httpReq, config)
@@ -330,7 +336,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 
 	var item argoCDAppResponse
 	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode create application response: %w", err)
 	}
 
 	logger.Info("建立 ArgoCD 應用成功", "cluster_id", clusterID, "app_name", req.Name)
@@ -342,7 +348,7 @@ func (s *ArgoCDService) CreateApplication(ctx context.Context, clusterID uint, r
 func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, appName string, req *models.CreateApplicationRequest) (*models.ArgoCDApplication, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update application: %w", err)
 	}
 	if !config.Enabled {
 		return nil, fmt.Errorf("ArgoCD 整合未啟用")
@@ -412,7 +418,7 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 
 	body, err := json.Marshal(appSpec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal update application request: %w", err)
 	}
 
 	client := s.createHTTPClient(config.Insecure)
@@ -420,7 +426,7 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 		fmt.Sprintf("%s/api/v1/applications/%s", config.ServerURL, appName),
 		bytes.NewReader(body))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build update application request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	s.setAuthHeader(httpReq, config)
@@ -440,7 +446,7 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 
 	var item argoCDAppResponse
 	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode update application response: %w", err)
 	}
 
 	logger.Info("更新 ArgoCD 應用成功", "cluster_id", clusterID, "app_name", appName)
@@ -452,7 +458,7 @@ func (s *ArgoCDService) UpdateApplication(ctx context.Context, clusterID uint, a
 func (s *ArgoCDService) SyncApplication(ctx context.Context, clusterID uint, appName string, revision string) error {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
-		return err
+		return fmt.Errorf("sync application: %w", err)
 	}
 	if !config.Enabled {
 		return fmt.Errorf("ArgoCD 整合未啟用")
@@ -472,7 +478,7 @@ func (s *ArgoCDService) SyncApplication(ctx context.Context, clusterID uint, app
 		fmt.Sprintf("%s/api/v1/applications/%s/sync", config.ServerURL, appName),
 		bytes.NewReader(body))
 	if err != nil {
-		return err
+		return fmt.Errorf("build sync application request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	s.setAuthHeader(req, config)
@@ -498,7 +504,7 @@ func (s *ArgoCDService) SyncApplication(ctx context.Context, clusterID uint, app
 func (s *ArgoCDService) DeleteApplication(ctx context.Context, clusterID uint, appName string, cascade bool) error {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
-		return err
+		return fmt.Errorf("delete application: %w", err)
 	}
 	if !config.Enabled {
 		return fmt.Errorf("ArgoCD 整合未啟用")
@@ -509,7 +515,7 @@ func (s *ArgoCDService) DeleteApplication(ctx context.Context, clusterID uint, a
 
 	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("build delete application request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	s.setAuthHeader(req, config)
@@ -535,7 +541,7 @@ func (s *ArgoCDService) DeleteApplication(ctx context.Context, clusterID uint, a
 func (s *ArgoCDService) RollbackApplication(ctx context.Context, clusterID uint, appName string, revisionID int64) error {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
-		return err
+		return fmt.Errorf("rollback application: %w", err)
 	}
 	if !config.Enabled {
 		return fmt.Errorf("ArgoCD 整合未啟用")
@@ -551,7 +557,7 @@ func (s *ArgoCDService) RollbackApplication(ctx context.Context, clusterID uint,
 		fmt.Sprintf("%s/api/v1/applications/%s/rollback", config.ServerURL, appName),
 		bytes.NewReader(body))
 	if err != nil {
-		return err
+		return fmt.Errorf("build rollback application request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	s.setAuthHeader(req, config)
@@ -577,7 +583,7 @@ func (s *ArgoCDService) RollbackApplication(ctx context.Context, clusterID uint,
 func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID uint, appName string) ([]models.ArgoCDResource, error) {
 	config, err := s.GetConfig(ctx, clusterID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get application resources: %w", err)
 	}
 	if !config.Enabled {
 		return nil, fmt.Errorf("ArgoCD 整合未啟用")
@@ -588,7 +594,7 @@ func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID u
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build get resources request: %w", err)
 	}
 	s.setAuthHeader(req, config)
 
@@ -619,7 +625,7 @@ func (s *ArgoCDService) GetApplicationResources(ctx context.Context, clusterID u
 		} `json:"nodes"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode resources response: %w", err)
 	}
 
 	resources := make([]models.ArgoCDResource, 0, len(result.Nodes))
@@ -680,7 +686,7 @@ func (s *ArgoCDService) getSessionToken(config *models.ArgoCDConfig) (string, er
 	}
 	body, err := json.Marshal(loginReq)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshal login request: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/v1/session", config.ServerURL), bytes.NewReader(body))

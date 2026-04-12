@@ -43,8 +43,11 @@ func (h *SecretHandler) DeleteSecret(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 刪除Secret
-	err = clientset.CoreV1().Secrets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	err = clientset.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		logger.Error("刪除Secret失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.InternalError(c, fmt.Sprintf("刪除Secret失敗: %v", err))
@@ -95,6 +98,9 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 將字串資料轉換為位元組陣列
 	dataBytes := make(map[string][]byte)
 	for k, v := range req.Data {
@@ -124,7 +130,7 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 		createOpts.DryRun = []string{metav1.DryRunAll}
 	}
 
-	created, err := clientset.CoreV1().Secrets(req.Namespace).Create(context.Background(), secret, createOpts)
+	created, err := clientset.CoreV1().Secrets(req.Namespace).Create(ctx, secret, createOpts)
 	if err != nil {
 		logger.Error("建立Secret失敗", "cluster", cluster.Name, "namespace", req.Namespace, "name", req.Name, "error", err)
 		if k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
@@ -184,8 +190,11 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	// 獲取現有Secret
-	secret, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error("獲取Secret失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.NotFound(c, fmt.Sprintf("Secret不存在: %v", err))
@@ -206,7 +215,7 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 	secret.Annotations = req.Annotations
 	secret.Data = dataBytes
 
-	updated, err := clientset.CoreV1().Secrets(namespace).Update(context.Background(), secret, metav1.UpdateOptions{})
+	updated, err := clientset.CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{})
 	if err != nil {
 		logger.Error("更新Secret失敗", "cluster", cluster.Name, "namespace", namespace, "name", name, "error", err)
 		response.InternalError(c, fmt.Sprintf("更新Secret失敗: %v", err))

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -48,15 +49,18 @@ func (h *IngressHandler) CreateIngress(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	var ingress *networkingv1.Ingress
 
 	// 根據建立方式選擇處理邏輯
 	if req.YAML != "" {
 		// YAML方式建立
-		ingress, err = h.createIngressFromYAML(clientset, req.Namespace, req.YAML)
+		ingress, err = h.createIngressFromYAML(ctx, clientset, req.Namespace, req.YAML)
 	} else if req.FormData != nil {
 		// 表單方式建立
-		ingress, err = h.createIngressFromForm(clientset, req.Namespace, req.FormData)
+		ingress, err = h.createIngressFromForm(ctx, clientset, req.Namespace, req.FormData)
 	} else {
 		response.BadRequest(c, "必須提供YAML或表單資料")
 		return
@@ -111,15 +115,18 @@ func (h *IngressHandler) UpdateIngress(c *gin.Context) {
 
 	clientset := k8sClient.GetClientset()
 
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	var ingress *networkingv1.Ingress
 
 	// 根據更新方式選擇處理邏輯
 	if req.YAML != "" {
 		// YAML方式更新
-		ingress, err = h.updateIngressFromYAML(clientset, namespace, name, req.YAML)
+		ingress, err = h.updateIngressFromYAML(ctx, clientset, namespace, name, req.YAML)
 	} else if req.FormData != nil {
 		// 表單方式更新
-		ingress, err = h.updateIngressFromForm(clientset, namespace, name, req.FormData)
+		ingress, err = h.updateIngressFromForm(ctx, clientset, namespace, name, req.FormData)
 	} else {
 		response.BadRequest(c, "必須提供YAML或表單資料")
 		return
@@ -136,7 +143,7 @@ func (h *IngressHandler) UpdateIngress(c *gin.Context) {
 }
 
 // createIngressFromYAML 從YAML建立Ingress
-func (h *IngressHandler) createIngressFromYAML(clientset kubernetes.Interface, namespace, yamlContent string) (*networkingv1.Ingress, error) {
+func (h *IngressHandler) createIngressFromYAML(ctx context.Context, clientset kubernetes.Interface, namespace, yamlContent string) (*networkingv1.Ingress, error) {
 	var ingress networkingv1.Ingress
 	if err := yaml.Unmarshal([]byte(yamlContent), &ingress); err != nil {
 		return nil, fmt.Errorf("解析YAML失敗: %w", err)
@@ -147,7 +154,7 @@ func (h *IngressHandler) createIngressFromYAML(clientset kubernetes.Interface, n
 		ingress.Namespace = namespace
 	}
 
-	createdIngress, err := clientset.NetworkingV1().Ingresses(ingress.Namespace).Create(context.Background(), &ingress, metav1.CreateOptions{})
+	createdIngress, err := clientset.NetworkingV1().Ingresses(ingress.Namespace).Create(ctx, &ingress, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +163,7 @@ func (h *IngressHandler) createIngressFromYAML(clientset kubernetes.Interface, n
 }
 
 // createIngressFromForm 從表單建立Ingress
-func (h *IngressHandler) createIngressFromForm(clientset kubernetes.Interface, namespace string, formData *IngressFormData) (*networkingv1.Ingress, error) {
+func (h *IngressHandler) createIngressFromForm(ctx context.Context, clientset kubernetes.Interface, namespace string, formData *IngressFormData) (*networkingv1.Ingress, error) {
 	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        formData.Name,
@@ -212,7 +219,7 @@ func (h *IngressHandler) createIngressFromForm(clientset kubernetes.Interface, n
 		ingress.Spec.TLS = tls
 	}
 
-	createdIngress, err := clientset.NetworkingV1().Ingresses(namespace).Create(context.Background(), ingress, metav1.CreateOptions{})
+	createdIngress, err := clientset.NetworkingV1().Ingresses(namespace).Create(ctx, ingress, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -221,14 +228,14 @@ func (h *IngressHandler) createIngressFromForm(clientset kubernetes.Interface, n
 }
 
 // updateIngressFromYAML 從YAML更新Ingress
-func (h *IngressHandler) updateIngressFromYAML(clientset kubernetes.Interface, namespace, name, yamlContent string) (*networkingv1.Ingress, error) {
+func (h *IngressHandler) updateIngressFromYAML(ctx context.Context, clientset kubernetes.Interface, namespace, name, yamlContent string) (*networkingv1.Ingress, error) {
 	var ingress networkingv1.Ingress
 	if err := yaml.Unmarshal([]byte(yamlContent), &ingress); err != nil {
 		return nil, fmt.Errorf("解析YAML失敗: %w", err)
 	}
 
 	// 獲取現有Ingress
-	existingIngress, err := clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	existingIngress, err := clientset.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +245,7 @@ func (h *IngressHandler) updateIngressFromYAML(clientset kubernetes.Interface, n
 	ingress.Namespace = namespace
 	ingress.Name = name
 
-	updatedIngress, err := clientset.NetworkingV1().Ingresses(namespace).Update(context.Background(), &ingress, metav1.UpdateOptions{})
+	updatedIngress, err := clientset.NetworkingV1().Ingresses(namespace).Update(ctx, &ingress, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -247,9 +254,9 @@ func (h *IngressHandler) updateIngressFromYAML(clientset kubernetes.Interface, n
 }
 
 // updateIngressFromForm 從表單更新Ingress
-func (h *IngressHandler) updateIngressFromForm(clientset kubernetes.Interface, namespace, name string, formData *IngressFormData) (*networkingv1.Ingress, error) {
+func (h *IngressHandler) updateIngressFromForm(ctx context.Context, clientset kubernetes.Interface, namespace, name string, formData *IngressFormData) (*networkingv1.Ingress, error) {
 	// 獲取現有Ingress
-	existingIngress, err := clientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	existingIngress, err := clientset.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +317,7 @@ func (h *IngressHandler) updateIngressFromForm(clientset kubernetes.Interface, n
 		existingIngress.Annotations = formData.Annotations
 	}
 
-	updatedIngress, err := clientset.NetworkingV1().Ingresses(namespace).Update(context.Background(), existingIngress, metav1.UpdateOptions{})
+	updatedIngress, err := clientset.NetworkingV1().Ingresses(namespace).Update(ctx, existingIngress, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
