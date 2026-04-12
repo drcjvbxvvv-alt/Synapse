@@ -12,17 +12,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// OperationLogService 操作審計日誌服務
+// OperationLogService manages operation audit logging
 type OperationLogService struct {
 	db *gorm.DB
 }
 
-// NewOperationLogService 建立操作審計日誌服務
+// NewOperationLogService creates a new operation log service
 func NewOperationLogService(db *gorm.DB) *OperationLogService {
 	return &OperationLogService{db: db}
 }
 
-// LogEntry 日誌條目（用於記錄）
+// LogEntry is a log entry structure for recording operations
 type LogEntry struct {
 	UserID       *uint
 	Username     string
@@ -45,7 +45,7 @@ type LogEntry struct {
 	Duration     int64
 }
 
-// Record 記錄操作日誌
+// Record records an operation log entry
 func (s *OperationLogService) Record(entry *LogEntry) error {
 	log := &models.OperationLog{
 		UserID:       entry.UserID,
@@ -70,23 +70,23 @@ func (s *OperationLogService) Record(entry *LogEntry) error {
 	}
 
 	if err := s.db.Create(log).Error; err != nil {
-		logger.Error("記錄操作日誌失敗", "error", err)
+		logger.Error("failed to record operation log", "error", err)
 		return err
 	}
 
 	return nil
 }
 
-// RecordAsync 非同步記錄操作日誌（不阻塞請求）
+// RecordAsync asynchronously records an operation log without blocking the request
 func (s *OperationLogService) RecordAsync(entry *LogEntry) {
 	go func() {
 		if err := s.Record(entry); err != nil {
-			logger.Error("非同步記錄操作日誌失敗", "error", err, "path", entry.Path, "action", entry.Action)
+			logger.Error("failed to record operation log asynchronously", "error", err, "path", entry.Path, "action", entry.Action)
 		}
 	}()
 }
 
-// sensitiveKeys 敏感欄位列表
+// sensitiveKeys is a list of sensitive field names that should be redacted
 var sensitiveKeys = map[string]bool{
 	"password":      true,
 	"token":         true,
@@ -104,13 +104,13 @@ var sensitiveKeys = map[string]bool{
 	"salt":          true,
 }
 
-// sanitizeAndMarshal 脫敏並序列化請求體
+// sanitizeAndMarshal sanitizes sensitive fields and marshals the request body
 func sanitizeAndMarshal(body interface{}) string {
 	if body == nil {
 		return ""
 	}
 
-	// 如果是字串，嘗試解析為JSON再脫敏
+	// If string, try to parse as JSON and then sanitize
 	if str, ok := body.(string); ok {
 		if str == "" {
 			return ""
@@ -119,12 +119,12 @@ func sanitizeAndMarshal(body interface{}) string {
 		if err := json.Unmarshal([]byte(str), &data); err == nil {
 			body = data
 		} else {
-			// 不是有效JSON，直接返回
+			// Not valid JSON, return as-is
 			return str
 		}
 	}
 
-	// 深度脫敏
+	// Deep sanitization of sensitive values
 	sanitized := sanitizeValue(body)
 
 	result, err := json.Marshal(sanitized)
@@ -132,7 +132,7 @@ func sanitizeAndMarshal(body interface{}) string {
 		return ""
 	}
 
-	// 限制長度，避免儲存過大
+	// Limit length to avoid storing oversized values
 	if len(result) > 4000 {
 		return string(result[:4000]) + "...(truncated)"
 	}
@@ -140,7 +140,7 @@ func sanitizeAndMarshal(body interface{}) string {
 	return string(result)
 }
 
-// sanitizeValue 遞迴脫敏值
+// sanitizeValue recursively sanitizes sensitive values
 func sanitizeValue(v interface{}) interface{} {
 	if v == nil {
 		return nil
@@ -164,7 +164,7 @@ func sanitizeValue(v interface{}) interface{} {
 		}
 		return result
 	default:
-		// 使用反射處理struct和map
+		// Use reflection to handle structs and maps
 		rv := reflect.ValueOf(v)
 		if rv.Kind() == reflect.Ptr {
 			if rv.IsNil() {
@@ -186,7 +186,7 @@ func sanitizeValue(v interface{}) interface{} {
 				if fieldName == "" || fieldName == "-" {
 					fieldName = field.Name
 				}
-				// 移除omitempty等標籤
+				// Strip tags like omitempty
 				if idx := strings.Index(fieldName, ","); idx != -1 {
 					fieldName = fieldName[:idx]
 				}
@@ -213,13 +213,13 @@ func sanitizeValue(v interface{}) interface{} {
 	}
 }
 
-// isSensitiveKey 判斷是否是敏感欄位
+// isSensitiveKey checks if a field name is sensitive and should be redacted
 func isSensitiveKey(key string) bool {
 	lowerKey := strings.ToLower(key)
 	if sensitiveKeys[lowerKey] {
 		return true
 	}
-	// 檢查是否包含敏感詞
+	// Check if the key contains any sensitive words
 	for sensitiveWord := range sensitiveKeys {
 		if strings.Contains(lowerKey, sensitiveWord) {
 			return true
@@ -228,7 +228,7 @@ func isSensitiveKey(key string) bool {
 	return false
 }
 
-// OperationLogListRequest 操作日誌列表請求
+// OperationLogListRequest is the request for listing operation logs
 type OperationLogListRequest struct {
 	Page         int
 	PageSize     int
@@ -244,7 +244,7 @@ type OperationLogListRequest struct {
 	Keyword      string
 }
 
-// OperationLogListResponse 操作日誌列表響應
+// OperationLogListResponse is the response for listing operation logs
 type OperationLogListResponse struct {
 	Items    []OperationLogItem `json:"items"`
 	Total    int64              `json:"total"`
@@ -252,7 +252,7 @@ type OperationLogListResponse struct {
 	PageSize int                `json:"pageSize"`
 }
 
-// OperationLogItem 操作日誌列表項
+// OperationLogItem is a single operation log item in the list
 type OperationLogItem struct {
 	ID           uint      `json:"id"`
 	UserID       *uint     `json:"user_id"`
@@ -276,11 +276,11 @@ type OperationLogItem struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// List 獲取操作日誌列表
+// List retrieves a list of operation logs
 func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogListResponse, error) {
 	query := s.db.Model(&models.OperationLog{})
 
-	// 應用過濾條件
+	// Apply filters
 	if req.UserID != nil {
 		query = query.Where("user_id = ?", *req.UserID)
 	}
@@ -314,13 +314,13 @@ func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogL
 			keyword, keyword, keyword, keyword)
 	}
 
-	// 計算總數
+	// Count total records
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// 分頁
+	// Pagination
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -329,13 +329,13 @@ func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogL
 	}
 	offset := (req.Page - 1) * req.PageSize
 
-	// 查詢資料
+	// Query data
 	var logs []models.OperationLog
 	if err := query.Order("created_at DESC").Offset(offset).Limit(req.PageSize).Find(&logs).Error; err != nil {
 		return nil, err
 	}
 
-	// 轉換為響應格式
+	// Convert to response format
 	items := make([]OperationLogItem, len(logs))
 	for i, log := range logs {
 		items[i] = OperationLogItem{
@@ -345,9 +345,9 @@ func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogL
 			Method:       log.Method,
 			Path:         log.Path,
 			Module:       log.Module,
-			ModuleName:   getModuleName(log.Module),
+			ModuleName:   log.Module, // Backend returns code, frontend translates via i18n
 			Action:       log.Action,
-			ActionName:   getActionName(log.Action),
+			ActionName:   log.Action, // Backend returns code, frontend translates via i18n
 			ClusterID:    log.ClusterID,
 			ClusterName:  log.ClusterName,
 			Namespace:    log.Namespace,
@@ -370,7 +370,7 @@ func (s *OperationLogService) List(req *OperationLogListRequest) (*OperationLogL
 	}, nil
 }
 
-// GetDetail 獲取操作日誌詳情
+// GetDetail retrieves the details of an operation log by ID
 func (s *OperationLogService) GetDetail(id uint) (*models.OperationLog, error) {
 	var log models.OperationLog
 	if err := s.db.First(&log, id).Error; err != nil {
@@ -379,7 +379,7 @@ func (s *OperationLogService) GetDetail(id uint) (*models.OperationLog, error) {
 	return &log, nil
 }
 
-// OperationLogStats 操作日誌統計
+// OperationLogStats contains statistics for operation logs
 type OperationLogStats struct {
 	TotalCount     int64               `json:"total_count"`
 	TodayCount     int64               `json:"today_count"`
@@ -391,28 +391,28 @@ type OperationLogStats struct {
 	UserStats      []UserOperationStat `json:"user_stats"`
 }
 
-// ModuleStat 模組統計
+// ModuleStat contains statistics for a module
 type ModuleStat struct {
 	Module     string `json:"module"`
 	ModuleName string `json:"module_name"`
 	Count      int64  `json:"count"`
 }
 
-// ActionStat 操作統計
+// ActionStat contains statistics for an action
 type ActionStat struct {
 	Action     string `json:"action"`
 	ActionName string `json:"action_name"`
 	Count      int64  `json:"count"`
 }
 
-// UserOperationStat 使用者操作統計
+// UserOperationStat contains operation statistics for a user
 type UserOperationStat struct {
 	UserID   uint   `json:"user_id"`
 	Username string `json:"username"`
 	Count    int64  `json:"count"`
 }
 
-// GetStats 獲取操作日誌統計
+// GetStats retrieves statistics for operation logs within a time range
 func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*OperationLogStats, error) {
 	stats := &OperationLogStats{}
 
@@ -424,18 +424,18 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		baseQuery = baseQuery.Where("created_at <= ?", endTime)
 	}
 
-	// 總數
+	// Total count
 	baseQuery.Count(&stats.TotalCount)
 
-	// 今日數量
+	// Count for today
 	today := time.Now().Truncate(24 * time.Hour)
 	s.db.Model(&models.OperationLog{}).Where("created_at >= ?", today).Count(&stats.TodayCount)
 
-	// 成功/失敗數量
+	// Success/failed counts
 	baseQuery.Where("success = ?", true).Count(&stats.SuccessCount)
 	s.db.Model(&models.OperationLog{}).Where("success = ?", false).Count(&stats.FailedCount)
 
-	// 模組統計
+	// Module statistics
 	var moduleStats []struct {
 		Module string
 		Count  int64
@@ -451,12 +451,12 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 	for i, ms := range moduleStats {
 		stats.ModuleStats[i] = ModuleStat{
 			Module:     ms.Module,
-			ModuleName: getModuleName(ms.Module),
+			ModuleName: ms.Module, // Backend returns code, frontend translates via i18n
 			Count:      ms.Count,
 		}
 	}
 
-	// 操作統計
+	// Action statistics
 	var actionStats []struct {
 		Action string
 		Count  int64
@@ -472,12 +472,12 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 	for i, as := range actionStats {
 		stats.ActionStats[i] = ActionStat{
 			Action:     as.Action,
-			ActionName: getActionName(as.Action),
+			ActionName: as.Action, // Backend returns code, frontend translates via i18n
 			Count:      as.Count,
 		}
 	}
 
-	// 最近失敗的操作
+	// Recent failed operations
 	var recentFailures []models.OperationLog
 	s.db.Model(&models.OperationLog{}).
 		Where("success = ?", false).
@@ -494,9 +494,9 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 			Method:       log.Method,
 			Path:         log.Path,
 			Module:       log.Module,
-			ModuleName:   getModuleName(log.Module),
+			ModuleName:   log.Module, // Backend returns code, frontend translates via i18n
 			Action:       log.Action,
-			ActionName:   getActionName(log.Action),
+			ActionName:   log.Action, // Backend returns code, frontend translates via i18n
 			ClusterName:  log.ClusterName,
 			ResourceType: log.ResourceType,
 			ResourceName: log.ResourceName,
@@ -507,7 +507,7 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 		}
 	}
 
-	// 使用者操作統計
+	// User operation statistics
 	var userStats []struct {
 		UserID   uint
 		Username string
@@ -533,54 +533,6 @@ func (s *OperationLogService) GetStats(startTime, endTime *time.Time) (*Operatio
 	return stats, nil
 }
 
-// getModuleName 獲取模組中文名稱
-func getModuleName(module string) string {
-	names := map[string]string{
-		"auth":       "認證管理",
-		"cluster":    "叢集管理",
-		"node":       "節點管理",
-		"pod":        "Pod管理",
-		"workload":   "工作負載",
-		"config":     "配置管理",
-		"network":    "網路管理",
-		"storage":    "儲存管理",
-		"namespace":  "命名空間",
-		"permission": "權限管理",
-		"system":     "系統設定",
-		"monitoring": "監控配置",
-		"alert":      "告警管理",
-		"argocd":     "GitOps",
-		"unknown":    "未知",
-	}
-	if name, ok := names[module]; ok {
-		return name
-	}
-	return module
-}
-
-// getActionName 獲取操作中文名稱
-func getActionName(action string) string {
-	names := map[string]string{ // #nosec G101 -- 操作名稱對映，非憑據
-		"login":           "登入",
-		"logout":          "登出",
-		"login_failed":    "登入失敗",
-		"change_password": "修改密碼",
-		"create":          "建立",
-		"update":          "更新",
-		"delete":          "刪除",
-		"apply":           "應用YAML",
-		"scale":           "擴縮容",
-		"rollback":        "回滾",
-		"restart":         "重啟",
-		"cordon":          "禁止排程",
-		"uncordon":        "允許排程",
-		"drain":           "驅逐節點",
-		"sync":            "同步",
-		"test":            "測試",
-		"import":          "匯入",
-	}
-	if name, ok := names[action]; ok {
-		return name
-	}
-	return action
-}
+// NOTE: getModuleName and getActionName have been removed.
+// Backend now returns module and action codes; frontend handles all translations via i18n.
+// This ensures a single source of truth for translations and prevents hardcoded strings.
