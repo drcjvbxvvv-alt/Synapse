@@ -1,0 +1,101 @@
+{
+  "pageTitle": "SLO 管理",
+  "table": {
+    "name": "名稱",
+    "namespace": "命名空間",
+    "clusterLevel": "叢集層級",
+    "type": "類型",
+    "target": "目標",
+    "window": "計算視窗",
+    "burnRate": "燃燒率閾值",
+    "enabled": "啟用",
+    "createdAt": "建立時間",
+    "actions": "操作"
+  },
+  "tooltips": {
+    "viewStatus": "查看狀態",
+    "warningThreshold": "警告閾值",
+    "criticalThreshold": "嚴重閾值"
+  },
+  "status": {
+    "ok": "正常",
+    "warning": "警告",
+    "critical": "嚴重",
+    "unknown": "未知"
+  },
+  "messages": {
+    "searchPlaceholder": "搜尋 SLO 名稱或命名空間",
+    "createButton": "新增 SLO",
+    "deleteSuccess": "SLO 已刪除",
+    "deleteFailed": "刪除失敗",
+    "updateFailed": "更新失敗",
+    "deleteConfirmTitle": "確認刪除",
+    "deleteConfirmContent": "此操作將永久刪除「{{name}}」，無法復原。",
+    "total": "共 {{total}} 筆"
+  },
+  "form": {
+    "newTitle": "新增 SLO",
+    "editTitle": "編輯 SLO",
+    "sloName": "SLO 名稱",
+    "sloNamePlaceholder": "例如：api-availability-99.9",
+    "namespace": "命名空間",
+    "namespacePlaceholder": "留空 = 叢集層級",
+    "namespaceTooltip": "空白表示叢集層級",
+    "description": "描述",
+    "descriptionPlaceholder": "可選說明",
+    "sliType": "SLI 類型",
+    "window": "計算視窗",
+    "promQuery": "PromQL 好事件（或直接比率）",
+    "promQueryTooltip": "若 TotalQuery 留空，此式須直接回傳 0.0-1.0 的比率。可用 $window 佔位符。",
+    "promQueryPlaceholder": "例：sum(rate(http_requests_total{status!~'5..'}[$window])) 或 avg_over_time(up[$window])",
+    "totalQuery": "TotalQuery（選填）",
+    "totalQueryTooltip": "填入後：SLI = PromQuery / TotalQuery。可用 $window 佔位符。",
+    "totalQueryPlaceholder": "例：sum(rate(http_requests_total[$window]))",
+    "target": "SLO 目標 (%)",
+    "targetTooltip": "例如 99.9 表示 99.9%",
+    "targetValidation": "請輸入 0.001 – 99.99",
+    "burnRateWarning": "燃燒率警告倍數",
+    "burnRateCritical": "燃燒率嚴重倍數",
+    "enabled": "啟用",
+    "save": "儲存",
+    "cancel": "取消",
+    "create": "建立",
+    "required": "此欄位為必填",
+    "success": "SLO 已更新",
+    "successCreate": "SLO 已建立",
+    "errorPrefix": "操作失敗："
+  },
+  "windows": {
+    "7d": "7 天",
+    "28d": "28 天",
+    "30d": "30 天"
+  },
+  "sliTypes": {
+    "availability": "可用性（Availability）",
+    "latency": "延遲（Latency）",
+    "error_rate": "錯誤率（Error Rate）",
+    "custom": "自定義（Custom）"
+  },
+  "drawer": {
+    "title": "SLO 狀態：{{name}}",
+    "loading": "計算中...",
+    "errorLoadingStatus": "無法載入 SLO 狀態，請確認 Prometheus 連線正常。",
+    "chaosActive": "混沌實驗進行中",
+    "chaosActiveDesc": "此 Namespace 目前有 Chaos Mesh 實驗正在注入故障，SLO 告警已自動暫停，評估數據可能受影響。",
+    "chaosPaused": "混沌暫停",
+    "noData": "Prometheus 尚無資料",
+    "noDataDesc": "SLO 已設定但 Prometheus 查詢未回傳數值，請確認 PromQL 正確且指標已存在。",
+    "sliAndErrorBudget": "SLI 與錯誤預算",
+    "sliTitle": "SLI（{{window}}）",
+    "target": "目標",
+    "remainingErrorBudget": "剩餘誤差預算",
+    "remaining": "{{percent}}% 剩餘",
+    "burnRates": "燃燒率",
+    "threshold": "閾值：≥{{warning}}x 警告 ／ ≥{{critical}}x 嚴重",
+    "configTitle": "SLO 設定",
+    "sliType": "SLI 類型",
+    "promql": "PromQL",
+    "totalQuery": "TotalQuery",
+    "description": "描述"
+  }
+}

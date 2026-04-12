@@ -26,7 +26,7 @@ const LogCenter: React.FC = () => {
       key: 'stream',
       label: (
         <span>
-          <ThunderboltOutlined /> {t('logs:tabs.realtime', '實時日誌')}
+          <ThunderboltOutlined /> {t('logs:center.realTimeLogs')}
         </span>
       ),
       children: (
@@ -58,7 +58,7 @@ const LogCenter: React.FC = () => {
       key: 'events',
       label: (
         <span>
-          <WarningOutlined /> {t('logs:tabs.events', 'K8s事件')}
+          <WarningOutlined /> {t('logs:center.k8sEvents')}
         </span>
       ),
       children: (
@@ -78,7 +78,7 @@ const LogCenter: React.FC = () => {
       key: 'search',
       label: (
         <span>
-          <SearchOutlined /> {t('logs:tabs.search', '日誌搜尋')}
+          <SearchOutlined /> {t('logs:center.logSearch')}
         </span>
       ),
       children: (
@@ -102,7 +102,7 @@ const LogCenter: React.FC = () => {
       key: 'external',
       label: (
         <span>
-          <DatabaseOutlined /> {t('logs:tabs.external', '外部日誌')}
+          <DatabaseOutlined /> {t('logs:center.externalLogs')}
         </span>
       ),
       children: (

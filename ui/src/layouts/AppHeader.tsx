@@ -48,18 +48,18 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onSearch }) => {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: t('menu.profile'),
+      label: t('common:menu.profile'),
     },
     {
       key: 'settings',
       icon: <SettingOutlined />,
-      label: t('menu.settings'),
+      label: t('common:menu.settings'),
     },
     { type: 'divider' },
     {
       key: 'language',
       icon: <GlobalOutlined />,
-      label: t('menu.language', '語言'),
+      label: t('common:menu.language', '語言'),
       children: supportedLanguages.map(lang => ({
         key: lang.code,
         label: lang.name,

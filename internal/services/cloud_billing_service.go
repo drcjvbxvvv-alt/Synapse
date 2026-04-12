@@ -84,6 +84,34 @@ func (s *CloudBillingService) UpdateConfig(clusterID uint, req *UpdateBillingCon
 		return nil, err
 	}
 
+	// ── 驗證：AWS 或 GCP 模式下的必填欄位 ────────────────────────────────────
+	if req.Provider == "aws" {
+		if req.AWSAccessKeyID == "" {
+			return nil, fmt.Errorf("AWS Access Key ID 為必填")
+		}
+		if req.AWSSecretAccessKey == "" {
+			return nil, fmt.Errorf("AWS Secret Access Key 為必填")
+		}
+		if req.AWSRegion == "" {
+			return nil, fmt.Errorf("AWS Region 為必填")
+		}
+		if req.AWSLinkedAccountID == "" {
+			return nil, fmt.Errorf("AWS Linked Account ID 為必填")
+		}
+	}
+
+	if req.Provider == "gcp" {
+		if req.GCPProjectID == "" {
+			return nil, fmt.Errorf("GCP Project ID 為必填")
+		}
+		if req.GCPBillingAccountID == "" {
+			return nil, fmt.Errorf("GCP Billing Account ID 為必填")
+		}
+		if req.GCPServiceAccountJSON == "" {
+			return nil, fmt.Errorf("GCP Service Account JSON 為必填")
+		}
+	}
+
 	cfg.Provider = req.Provider
 	cfg.AWSAccessKeyID = req.AWSAccessKeyID
 	cfg.AWSRegion = req.AWSRegion

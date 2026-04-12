@@ -83,7 +83,11 @@ export function usePermissionManagement() {
       ]);
 
       setPermissions(permissionsRes || []);
-      setPermissionTypes(typesRes || []);
+      setPermissionTypes((typesRes || []).map(pt => ({
+        ...pt,
+        name: t(`permission:types.${pt.type}.name`),
+        description: t(`permission:types.${pt.type}.description`),
+      })));
       setClusters(clustersRes?.items || []);
       setUsers(usersRes || []);
       setUserGroups(groupsRes || []);

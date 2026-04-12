@@ -1,0 +1,185 @@
+{
+  "pageTitle": "Multi-Cluster Workflows",
+  "title": "Cross-Cluster Workloads",
+  "tabs": {
+    "topology": "Federation Topology",
+    "syncPolicy": "Configure Sync Policy"
+  },
+  "migrationWizard": {
+    "title": "Workload Migration Wizard",
+    "buttonLabel": "Workload Migration Wizard",
+    "precheck": "Pre-check Failed: {{error}}",
+    "steps": {
+      "source": "Source",
+      "target": "Target",
+      "options": "Options",
+      "confirm": "Confirm",
+      "complete": "Complete"
+    },
+    "step0": {
+      "title": "Select Source Workload",
+      "sourceCluster": "Source Cluster",
+      "selectCluster": "Select Cluster",
+      "namespace": "Namespace",
+      "selectNamespace": "Select Namespace",
+      "workloadType": "Workload Type",
+      "workloadName": "Workload Name",
+      "selectWorkload": "Select Workload",
+      "replicas": "Replicas"
+    },
+    "step1": {
+      "title": "Select Target Cluster",
+      "migratingSummary": "Will migrate: {{kind}} / {{namespace}} / {{name}}",
+      "targetCluster": "Target Cluster",
+      "selectTargetCluster": "Select Target Cluster",
+      "targetNamespace": "Target Namespace",
+      "selectExisting": "Select existing namespace (or create new below)",
+      "createNewNamespace": "Or create new namespace",
+      "enterNamespaceName": "Enter new namespace name"
+    },
+    "step2": {
+      "title": "Sync Options & Resource Pre-check",
+      "syncConfigMaps": "Sync dependent ConfigMaps",
+      "syncSecrets": "Sync dependent Secrets",
+      "runPrecheck": "Run Resource Pre-check",
+      "workloadRequirements": "Workload requirements: CPU {{cpu}}m / MEM {{mem}} MiB",
+      "targetAvailable": "Target cluster available: CPU {{cpu}}m / MEM {{mem}} MiB",
+      "detectedDependencies": "Detected dependencies: {{configMaps}} ConfigMaps, {{secrets}} Secrets"
+    },
+    "step3": {
+      "title": "Confirm Migration",
+      "sourceCluster": "Source Cluster",
+      "sourceNamespace": "Source Namespace",
+      "workload": "Workload",
+      "targetCluster": "Target Cluster",
+      "targetNamespace": "Target Namespace",
+      "syncConfigMaps": "Sync ConfigMap",
+      "syncSecrets": "Sync Secrets",
+      "yes": "Yes",
+      "no": "No",
+      "warning": "Please confirm the above information is correct. The migration will create the workload in the target cluster (existing workloads will be overwritten)."
+    },
+    "step4": {
+      "success": "Migration Successful",
+      "failed": "Migration Failed"
+    },
+    "buttons": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "previous": "Previous",
+      "next": "Next",
+      "confirm": "Confirm & Execute Migration"
+    }
+  },
+  "stats": {
+    "clusters": "Clusters",
+    "totalWorkloads": "Total Workloads",
+    "degradedWorkloads": "Degraded Workloads",
+    "searchResults": "Search Results"
+  },
+  "table": {
+    "cluster": "Cluster",
+    "namespace": "Namespace",
+    "type": "Type",
+    "name": "Name",
+    "replicas": "Replicas",
+    "status": "Status",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "images": "Images",
+    "createdAt": "Created At"
+  },
+  "filters": {
+    "type": "Type",
+    "nameFilter": "Name (Fuzzy Match)",
+    "namespaceFilter": "Namespace",
+    "search": "Search"
+  },
+  "messages": {
+    "refresh": "Refresh",
+    "loadError": "Failed to load cross-cluster workloads",
+    "syncPolicyListError": "Failed to load sync policy list",
+    "syncFailed": "Sync Failed",
+    "syncTriggered": "Sync triggered, please check history later",
+    "triggerFailed": "Failed to trigger sync",
+    "historyLoadError": "Failed to load sync history",
+    "saveFailed": "Failed to save",
+    "deleteConfirmTitle": "Confirm Delete",
+    "deleteConfirmContent": "Are you sure you want to delete sync policy \"{{name}}\"?",
+    "deleteSuccess": "Deleted",
+    "total": "Total: {{count}} items"
+  },
+  "topology": {
+    "selectPlaceholder": "Select clusters to compare (max 10)",
+    "viewButton": "View Topology",
+    "refreshTooltip": "Refresh",
+    "clusterCount": "{{count}} Cluster",
+    "clusterCountPlural": "{{count}} Clusters",
+    "nodeCount": "{{count}} Node",
+    "nodeCountPlural": "{{count}} Nodes",
+    "crossEdgeCount": "{{count}} Cross-cluster Link",
+    "crossEdgeCountPlural": "{{count}} Cross-cluster Links",
+    "noCrossEdgeDetected": "No cross-cluster links detected",
+    "noCrossEdgeHint": "To display cross-cluster dependencies, add annotation to Service:",
+    "emptyDescription": "Select 2 or more clusters and click \"View Topology\" to display federation view",
+    "loading": "Loading multi-cluster topology...",
+    "loadError": "Failed to load topology",
+    "loadErrorDescription": "Please confirm all selected clusters are connected and refresh.",
+    "crossEdgeLegend": "Cross-cluster Link",
+    "crossEdgeLegendDescription": "(Defined by <code>synapse.io/cross-cluster</code> annotation)"
+  },
+  "syncPolicy": {
+    "table": {
+      "policyName": "Policy Name",
+      "source": "Source",
+      "targetCluster": "Target Cluster",
+      "conflictPolicy": "Conflict Policy",
+      "schedule": "Schedule",
+      "status": "Status",
+      "lastSync": "Last Sync",
+      "actions": "Actions",
+      "manual": "Manual"
+    },
+    "form": {
+      "policyName": "Policy Name",
+      "policyNamePlaceholder": "e.g. sync-app-config",
+      "description": "Description",
+      "sourceCluster": "Source Cluster",
+      "selectCluster": "Select Cluster",
+      "sourceNamespace": "Source Namespace",
+      "selectNamespace": "Select Namespace",
+      "resourceType": "Resource Type",
+      "resourceNames": "Resource Names (Leave empty = sync all)",
+      "selectResources": "Select resources to sync (Leave empty = all)",
+      "targetClusters": "Target Cluster",
+      "selectTargetCluster": "Select Target Cluster",
+      "conflictPolicy": "Conflict Policy",
+      "conflictPolicySkip": "Skip (Keep existing resources in target)",
+      "conflictPolicyOverwrite": "Overwrite (Force update target resources)",
+      "schedule": "Auto Schedule (Cron, Leave empty = manual only)",
+      "schedulePlaceholder": "e.g. 0 2 * * * (every day at 2 AM)",
+      "enabled": "Enabled"
+    },
+    "buttons": {
+      "refresh": "Refresh",
+      "newPolicy": "New Policy",
+      "save": "Save",
+      "immediateSync": "Immediate Sync",
+      "history": "History",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "drawer": {
+      "editTitle": "Edit Policy: {{name}}",
+      "createTitle": "Create Sync Policy",
+      "historyTitle": "Sync History: {{name}}"
+    },
+    "historyTable": {
+      "triggeredBy": "Triggered By",
+      "status": "Status",
+      "message": "Message",
+      "startedAt": "Started At",
+      "duration": "Duration"
+    }
+  }
+}

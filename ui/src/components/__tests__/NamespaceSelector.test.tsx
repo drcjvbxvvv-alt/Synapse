@@ -25,7 +25,6 @@ vi.mock('../../hooks/usePermission', () => ({
 const createPermissionMock = (): PermissionContextType => ({
   clusterPermissions: new Map(),
   currentClusterPermission: null,
-  loading: false,
   hasClusterAccess: () => true,
   hasNamespaceAccess: () => true,
   canPerformAction: () => true,

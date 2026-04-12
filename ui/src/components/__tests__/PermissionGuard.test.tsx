@@ -36,7 +36,6 @@ describe('PermissionGuard', () => {
     vi.mocked(usePermission).mockReturnValue({
       currentClusterPermission: { permission_type: 'readonly' },
       clusterPermissions: new Map(),
-      loading: false,
     } as ReturnType<typeof usePermission>)
   })
 
@@ -44,7 +43,6 @@ describe('PermissionGuard', () => {
     vi.mocked(usePermission).mockReturnValue({
       currentClusterPermission: { permission_type: 'admin' },
       clusterPermissions: new Map(),
-      loading: false,
     } as ReturnType<typeof usePermission>)
 
     render(
@@ -104,7 +102,6 @@ describe('PermissionGuard', () => {
     vi.mocked(usePermission).mockReturnValue({
       currentClusterPermission: { permission_type: 'dev' },
       clusterPermissions: new Map(),
-      loading: false,
     } as ReturnType<typeof usePermission>)
 
     render(

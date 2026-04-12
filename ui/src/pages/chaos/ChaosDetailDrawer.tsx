@@ -1,5 +1,6 @@
 import React from 'react';
 import { Drawer, Descriptions, Tag, Spin, Typography, theme } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { chaosService, type ChaosExperiment, type ChaosKind } from '../../services/chaosService';
@@ -30,6 +31,7 @@ const PHASE_COLOR: Record<string, string> = {
 };
 
 const ChaosDetailDrawer: React.FC<Props> = ({ open, experiment, clusterId, onClose }) => {
+  const { t } = useTranslation(['chaos']);
   const { token } = theme.useToken();
 
   const { data: detail, isLoading } = useQuery({
@@ -51,7 +53,7 @@ const ChaosDetailDrawer: React.FC<Props> = ({ open, experiment, clusterId, onClo
 
   return (
     <Drawer
-      title={experiment?.name ?? '實驗詳情'}
+      title={experiment?.name ?? t('chaos:detail.title')}
       open={open}
       onClose={onClose}
       width={640}
@@ -61,26 +63,26 @@ const ChaosDetailDrawer: React.FC<Props> = ({ open, experiment, clusterId, onClo
       ) : (
         <>
           <Descriptions column={2} bordered size="small" style={{ marginBottom: token.marginLG }}>
-            <Descriptions.Item label="名稱" span={2}>
+            <Descriptions.Item label={t('chaos:table.name')} span={2}>
               {experiment?.name}
             </Descriptions.Item>
             <Descriptions.Item label="Namespace">
               {experiment?.namespace}
             </Descriptions.Item>
-            <Descriptions.Item label="類型">
+            <Descriptions.Item label={t('chaos:table.kind')}>
               <Tag color={KIND_COLOR[experiment?.kind as ChaosKind] ?? 'default'}>
                 {experiment?.kind}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="狀態">
+            <Descriptions.Item label={t('chaos:table.phase')}>
               <Tag color={PHASE_COLOR[experiment?.phase ?? ''] ?? 'default'}>
                 {experiment?.phase || '—'}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="持續時間">
+            <Descriptions.Item label={t('chaos:table.duration')}>
               {experiment?.duration || '—'}
             </Descriptions.Item>
-            <Descriptions.Item label="建立時間" span={2}>
+            <Descriptions.Item label={t('chaos:table.createdAt')} span={2}>
               {experiment?.created_at
                 ? dayjs(experiment.created_at).format('YYYY-MM-DD HH:mm:ss')
                 : '—'}

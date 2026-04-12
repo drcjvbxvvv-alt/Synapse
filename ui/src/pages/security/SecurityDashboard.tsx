@@ -25,6 +25,7 @@ import {
   theme,
 } from 'antd';
 import EmptyState from '@/components/EmptyState';
+import NotInstalledCard from '@/components/NotInstalledCard';
 import {
   SafetyOutlined,
   ScanOutlined,
@@ -542,15 +543,14 @@ function GatekeeperTab({ clusterId }: { clusterId: number }) {
 
   if (error || data?.installed === false) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', width: '100%', paddingTop: 48 }}>
-        <Alert
-          type="info"
-          showIcon
-          message={t('gatekeeper.notDetectedMsg')}
-          description={t('gatekeeper.notDetectedDesc')}
-          style={{ width: '100%', maxWidth: 600 }}
-        />
-      </div>
+      <NotInstalledCard
+        title={t('gatekeeper.notDetectedMsg')}
+        description={t('gatekeeper.notDetectedDesc')}
+        command="kubectl apply -f https://raw.githubusercontent.com/open-policy-agent/gatekeeper/v3.22.0/deploy/gatekeeper.yaml"
+        docsUrl="https://open-policy-agent.github.io/gatekeeper/website/docs/install/"
+        onRecheck={fetchData}
+        recheckLoading={loading}
+      />
     );
   }
 

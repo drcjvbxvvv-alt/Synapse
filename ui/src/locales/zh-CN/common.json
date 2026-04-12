@@ -51,7 +51,12 @@
     "readonlyNoTerminal": "只读权限无法使用终端",
     "kubectlTerminal": "kubectl终端",
     "cannotGetClusterId": "无法获取集群ID",
-    "pods": "容器组"
+    "pods": "容器组",
+    "autoscaling": "弹性伸缩",
+    "certificates": "证书管理",
+    "slos": "SLO 管理",
+    "chaos": "混沌工程",
+    "compliance": "合规管理"
   },
   "actions": {
     "create": "创建",

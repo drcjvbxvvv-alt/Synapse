@@ -215,7 +215,7 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
                     showSearch
                     optionFilterProp="label"
                     options={userGroups.map((g) => ({
-                      label: `${g.name} (${g.users?.length || 0} 成員)`,
+                      label: `${g.name} (${t('permission:form.memberCount', { count: g.users?.length || 0 })})`,
                       value: g.id,
                     }))}
                   />

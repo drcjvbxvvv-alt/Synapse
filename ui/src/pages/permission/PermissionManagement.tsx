@@ -21,9 +21,7 @@ import {
   SyncOutlined,
 } from '@ant-design/icons';
 import {
-  getPermissionTypeName,
   getPermissionTypeColor,
-  formatNamespaces,
 } from '../../services/permissionService';
 import CustomRoleEditor from '../../components/CustomRoleEditor';
 import { useTranslation } from 'react-i18next';
@@ -91,8 +89,6 @@ const PermissionManagement: React.FC = () => {
   const columns = createPermissionColumns({
     t,
     clusters,
-    formatNamespaces,
-    getPermissionTypeName,
     getPermissionTypeColor,
     onEdit: handleEdit,
     onDelete: (record) => handleDelete(record.id),

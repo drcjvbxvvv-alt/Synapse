@@ -1,0 +1,101 @@
+{
+  "pageTitle": "SLO Management",
+  "table": {
+    "name": "Name",
+    "namespace": "Namespace",
+    "clusterLevel": "Cluster Level",
+    "type": "Type",
+    "target": "Target",
+    "window": "Window",
+    "burnRate": "Burn Rate Threshold",
+    "enabled": "Enabled",
+    "createdAt": "Created At",
+    "actions": "Actions"
+  },
+  "tooltips": {
+    "viewStatus": "View Status",
+    "warningThreshold": "Warning Threshold",
+    "criticalThreshold": "Critical Threshold"
+  },
+  "status": {
+    "ok": "Healthy",
+    "warning": "Warning",
+    "critical": "Critical",
+    "unknown": "Unknown"
+  },
+  "messages": {
+    "searchPlaceholder": "Search SLO name or namespace",
+    "createButton": "New SLO",
+    "deleteSuccess": "SLO deleted",
+    "deleteFailed": "Failed to delete",
+    "updateFailed": "Failed to update",
+    "deleteConfirmTitle": "Confirm Delete",
+    "deleteConfirmContent": "This will permanently delete \"{{name}}\", and cannot be recovered.",
+    "total": "Total: {{total}} items"
+  },
+  "form": {
+    "newTitle": "Create SLO",
+    "editTitle": "Edit SLO",
+    "sloName": "SLO Name",
+    "sloNamePlaceholder": "e.g.: api-availability-99.9",
+    "namespace": "Namespace",
+    "namespacePlaceholder": "Leave empty = Cluster level",
+    "namespaceTooltip": "Empty means cluster level",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description",
+    "sliType": "SLI Type",
+    "window": "Window",
+    "promQuery": "PromQL Good Events (or direct ratio)",
+    "promQueryTooltip": "If TotalQuery is empty, this must return a 0.0-1.0 ratio. Can use $window placeholder.",
+    "promQueryPlaceholder": "e.g.: sum(rate(http_requests_total{status!~'5..'}[$window])) or avg_over_time(up[$window])",
+    "totalQuery": "TotalQuery (Optional)",
+    "totalQueryTooltip": "When filled: SLI = PromQuery / TotalQuery. Can use $window placeholder.",
+    "totalQueryPlaceholder": "e.g.: sum(rate(http_requests_total[$window]))",
+    "target": "SLO Target (%)",
+    "targetTooltip": "e.g. 99.9 means 99.9%",
+    "targetValidation": "Please enter 0.001 – 99.99",
+    "burnRateWarning": "Warning Burn Rate Multiplier",
+    "burnRateCritical": "Critical Burn Rate Multiplier",
+    "enabled": "Enabled",
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "required": "This field is required",
+    "success": "SLO saved successfully",
+    "successCreate": "SLO created successfully",
+    "errorPrefix": "Operation failed:"
+  },
+  "windows": {
+    "7d": "7 days",
+    "28d": "28 days",
+    "30d": "30 days"
+  },
+  "sliTypes": {
+    "availability": "Availability",
+    "latency": "Latency",
+    "error_rate": "Error Rate",
+    "custom": "Custom"
+  },
+  "drawer": {
+    "title": "SLO Status: {{name}}",
+    "loading": "Calculating...",
+    "errorLoadingStatus": "Failed to load SLO status. Please verify Prometheus connection.",
+    "chaosActive": "Chaos Experiment in Progress",
+    "chaosActiveDesc": "Chaos Mesh experiment is injecting faults in this namespace. SLO alarms have been paused automatically. Data may be affected.",
+    "chaosPaused": "Chaos Paused",
+    "noData": "No Data from Prometheus",
+    "noDataDesc": "SLO is configured but Prometheus query returned no values. Verify PromQL is correct and metrics exist.",
+    "sliAndErrorBudget": "SLI and Error Budget",
+    "sliTitle": "SLI ({{window}})",
+    "target": "Target",
+    "remainingErrorBudget": "Remaining Error Budget",
+    "remaining": "{{percent}}% remaining",
+    "burnRates": "Burn Rates",
+    "threshold": "Threshold: ≥{{warning}}x warning / ≥{{critical}}x critical",
+    "configTitle": "SLO Configuration",
+    "sliType": "SLI Type",
+    "promql": "PromQL",
+    "totalQuery": "TotalQuery",
+    "description": "Description"
+  }
+}

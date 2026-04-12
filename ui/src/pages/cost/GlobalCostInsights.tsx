@@ -148,15 +148,15 @@ const GlobalCostInsights: React.FC = () => {
     <div style={{ padding: 24 }}>
       <Breadcrumb
         items={[
-          { title: t('menu.home', '首頁') },
-          { title: t('menu.costInsights', '成本洞察') },
+          { title: t('common:menu.home', '首頁') },
+          { title: t('common:menu.costInsights', '成本洞察') },
         ]}
         style={{ marginBottom: 16 }}
       />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <Title level={4} style={{ margin: 0 }}>
           <ClusterOutlined style={{ marginRight: 8 }} />
-          {t('menu.costInsights', '成本洞察')}
+          {t('common:menu.costInsights', '成本洞察')}
         </Title>
         <Button icon={<ReloadOutlined />} onClick={loadOverview} loading={loading}>
           {t('common:actions.refresh', '重新整理')}

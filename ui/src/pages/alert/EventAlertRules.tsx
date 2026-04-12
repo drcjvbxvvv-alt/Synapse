@@ -18,6 +18,7 @@ import {
   Typography,
   Tooltip,
   Badge,
+  Popover,
 } from 'antd';
 import {
   PlusOutlined,
@@ -25,6 +26,7 @@ import {
   EditOutlined,
   ReloadOutlined,
   HistoryOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { TablePaginationConfig } from 'antd/es/table';
@@ -32,6 +34,30 @@ import { EventAlertService, type EventAlertRule, type EventAlertHistory } from '
 
 const { Text } = Typography;
 const { Option } = Select;
+
+// 長文本懸停卡片
+const TextPopover: React.FC<{ content: string; t: ReturnType<typeof useTranslation>[0] }> = ({ content, t }) => (
+  <Popover
+    content={
+      <div style={{ maxWidth: 500, wordBreak: 'break-all', maxHeight: 300, overflow: 'auto' }}>
+        <div style={{ marginBottom: 8 }}>{content}</div>
+        <Button
+          type="primary"
+          size="small"
+          icon={<CopyOutlined />}
+          onClick={() => navigator.clipboard.writeText(content)}
+        >
+          {t('common:actions.copy')}
+        </Button>
+      </div>
+    }
+    title={t('alert:center.preview') || 'Preview'}
+  >
+    <Text ellipsis style={{ cursor: 'pointer', color: '#1890ff' }}>
+      {content}
+    </Text>
+  </Popover>
+);
 
 // Common K8s event reasons for quick selection
 const COMMON_REASONS = [
@@ -111,10 +137,10 @@ const EventAlertRules: React.FC = () => {
       setSaving(true);
       if (editingRule) {
         await EventAlertService.updateRule(clusterId!, editingRule.id, { ...values, clusterId: Number(clusterId) });
-        message.success(t('messages.saveSuccess'));
+        message.success(t('alert:eventAlert.messages.saveSuccess'));
       } else {
         await EventAlertService.createRule(clusterId!, { ...values, clusterId: Number(clusterId) });
-        message.success(t('messages.createSuccess'));
+        message.success(t('alert:eventAlert.messages.createSuccess'));
       }
       setFormOpen(false);
       fetchRules(1);
@@ -128,12 +154,12 @@ const EventAlertRules: React.FC = () => {
 
   const handleDelete = (rule: EventAlertRule) => {
     modal.confirm({
-      title: t('messages.confirmDelete'),
+      title: t('alert:eventAlert.messages.confirmDelete'),
       content: rule.name,
       okType: 'danger',
       onOk: async () => {
         await EventAlertService.deleteRule(clusterId!, rule.id);
-        message.success(t('messages.deleteSuccess'));
+        message.success(t('alert:eventAlert.messages.deleteSuccess'));
         fetchRules(1);
         setRulesPage(1);
       },
@@ -145,37 +171,43 @@ const EventAlertRules: React.FC = () => {
       await EventAlertService.toggleRule(clusterId!, rule.id, enabled);
       setRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled } : r));
     } catch {
-      message.error(t('messages.error'));
+      message.error(t('alert:eventAlert.messages.error'));
     }
   };
 
   const ruleColumns = [
-    { title: t('table.name'), dataIndex: 'name', key: 'name', render: (v: string) => <Text strong>{v}</Text> },
     {
-      title: '事件型別', dataIndex: 'eventType', key: 'eventType',
-      render: (v: string) => v ? <Tag color={v === 'Warning' ? 'orange' : 'green'}>{v}</Tag> : <Tag>全部</Tag>,
+      title: t('alert:eventAlert.table.name'),
+      dataIndex: 'name',
+      key: 'name',
+      width: 180,
+      render: (v: string) => <TextPopover content={v} t={t} />
     },
     {
-      title: '觸發原因', dataIndex: 'eventReason', key: 'eventReason',
-      render: (v: string) => v ? v.split(',').map(r => <Tag key={r}>{r.trim()}</Tag>) : <Tag>全部</Tag>,
+      title: t('alert:eventAlert.table.eventType'), dataIndex: 'eventType', key: 'eventType',
+      render: (v: string) => v ? <Tag color={v === 'Warning' ? 'orange' : 'green'}>{v}</Tag> : <Tag>{t('alert:eventAlert.tags.all')}</Tag>,
     },
-    { title: '命名空間', dataIndex: 'namespace', key: 'namespace', render: (v: string) => v || '全叢集' },
-    { title: '最小次數', dataIndex: 'minCount', key: 'minCount' },
-    { title: '通知方式', dataIndex: 'notifyType', key: 'notifyType', render: (v: string) => <Tag>{v}</Tag> },
     {
-      title: '狀態', dataIndex: 'enabled', key: 'enabled',
+      title: t('alert:eventAlert.table.eventReason'), dataIndex: 'eventReason', key: 'eventReason',
+      render: (v: string) => v ? v.split(',').map(r => <Tag key={r}>{r.trim()}</Tag>) : <Tag>{t('alert:eventAlert.tags.all')}</Tag>,
+    },
+    { title: t('alert:eventAlert.table.namespace'), dataIndex: 'namespace', key: 'namespace', render: (v: string) => v || t('alert:eventAlert.form.allNamespaces') },
+    { title: t('alert:eventAlert.table.minCount'), dataIndex: 'minCount', key: 'minCount' },
+    { title: t('alert:eventAlert.table.notifyType'), dataIndex: 'notifyType', key: 'notifyType', render: (v: string) => <Tag>{v}</Tag> },
+    {
+      title: t('alert:eventAlert.table.status'), dataIndex: 'enabled', key: 'enabled',
       render: (enabled: boolean, record: EventAlertRule) => (
         <Switch checked={enabled} onChange={(v) => handleToggle(record, v)} size="small" />
       ),
     },
     {
-      title: t('table.actions'), key: 'actions', fixed: 'right' as const, width: 100,
+      title: t('alert:eventAlert.table.actions'), key: 'actions', fixed: 'right' as const, width: 100,
       render: (_: unknown, record: EventAlertRule) => (
         <Space>
-          <Tooltip title={t('actions.edit')}>
+          <Tooltip title={t('common:actions.edit')}>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
           </Tooltip>
-          <Tooltip title={t('actions.delete')}>
+          <Tooltip title={t('common:actions.delete')}>
             <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
           </Tooltip>
         </Space>
@@ -184,34 +216,58 @@ const EventAlertRules: React.FC = () => {
   ];
 
   const historyColumns = [
-    { title: '規則名稱', dataIndex: 'ruleName', key: 'ruleName' },
-    { title: t('table.namespace'), dataIndex: 'namespace', key: 'namespace', render: (v: string) => <Tag color="blue">{v}</Tag> },
-    { title: '相關物件', dataIndex: 'involvedObj', key: 'involvedObj' },
     {
-      title: '事件型別', dataIndex: 'eventType', key: 'eventType',
+      title: t('alert:eventAlert.history.ruleName'),
+      dataIndex: 'ruleName',
+      key: 'ruleName',
+      width: 150,
+      render: (v: string) => <TextPopover content={v} t={t} />
+    },
+    { title: t('alert:eventAlert.history.namespace'), dataIndex: 'namespace', key: 'namespace', render: (v: string) => <Tag color="blue">{v}</Tag> },
+    {
+      title: t('alert:eventAlert.history.involvedObject'),
+      dataIndex: 'involvedObj',
+      key: 'involvedObj',
+      width: 200,
+      render: (v: string) => <TextPopover content={v} t={t} />
+    },
+    {
+      title: t('alert:eventAlert.history.eventType'), dataIndex: 'eventType', key: 'eventType',
       render: (v: string) => <Tag color={v === 'Warning' ? 'orange' : 'green'}>{v}</Tag>,
     },
-    { title: '原因', dataIndex: 'eventReason', key: 'eventReason' },
-    { title: '訊息', dataIndex: 'message', key: 'message', ellipsis: true },
     {
-      title: '通知結果', dataIndex: 'notifyResult', key: 'notifyResult',
+      title: t('alert:eventAlert.history.reason'),
+      dataIndex: 'eventReason',
+      key: 'eventReason',
+      width: 120,
+      render: (v: string) => <TextPopover content={v} t={t} />
+    },
+    {
+      title: t('alert:eventAlert.history.message'),
+      dataIndex: 'message',
+      key: 'message',
+      width: 200,
+      render: (v: string) => <TextPopover content={v} t={t} />
+    },
+    {
+      title: t('alert:eventAlert.history.notifyResult'), dataIndex: 'notifyResult', key: 'notifyResult',
       render: (v: string) => {
         const color = v === 'sent' ? 'green' : v === 'failed' ? 'red' : 'default';
         return <Badge color={color} text={v} />;
       },
     },
-    { title: '觸發時間', dataIndex: 'triggeredAt', key: 'triggeredAt', render: (v: string) => new Date(v).toLocaleString() },
+    { title: t('alert:eventAlert.history.triggeredAt'), dataIndex: 'triggeredAt', key: 'triggeredAt', render: (v: string) => new Date(v).toLocaleString() },
   ];
 
   const tabItems = [
     {
       key: 'rules',
-      label: '告警規則',
+      label: t('alert:eventAlert.tabRules'),
       children: (
         <div>
           <Space style={{ marginBottom: 16 }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>新增規則</Button>
-            <Button icon={<ReloadOutlined />} onClick={() => fetchRules(1)}>重新整理</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>{t('alert:eventAlert.createRule')}</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => fetchRules(1)}>{t('alert:eventAlert.refresh')}</Button>
           </Space>
           <Table
             rowKey="id"
@@ -225,18 +281,18 @@ const EventAlertRules: React.FC = () => {
               pageSize: 20,
               onChange: (p) => { setRulesPage(p); fetchRules(p); },
             }}
-            locale={{ emptyText: <EmptyState description={t('noRules')} /> }}
+            locale={{ emptyText: <EmptyState description={t('alert:noRules')} /> }}
           />
         </div>
       ),
     },
     {
       key: 'history',
-      label: <><HistoryOutlined /> 告警歷史</>,
+      label: <><HistoryOutlined /> {t('alert:eventAlert.tabHistory')}</>,
       children: (
         <div>
           <Space style={{ marginBottom: 16 }}>
-            <Button icon={<ReloadOutlined />} onClick={() => fetchHistory(1)}>重新整理</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => fetchHistory(1)}>{t('alert:eventAlert.refresh')}</Button>
           </Space>
           <Table
             rowKey="id"
@@ -250,7 +306,7 @@ const EventAlertRules: React.FC = () => {
               pageSize: 20,
               onChange: (p) => { setHistoryPage(p); fetchHistory(p); },
             }}
-            locale={{ emptyText: <EmptyState description={t('noHistory')} /> }}
+            locale={{ emptyText: <EmptyState description={t('alert:noHistory')} /> }}
           />
         </div>
       ),
@@ -259,12 +315,12 @@ const EventAlertRules: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Card variant="borderless" title="Event 告警規則引擎">
+      <Card variant="borderless" title={t('alert:eventAlert.title')}>
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
 
       <Modal
-        title={editingRule ? '編輯規則' : '新增告警規則'}
+        title={editingRule ? t('alert:eventAlert.editRule') : t('alert:eventAlert.addAlertRule')}
         open={formOpen}
         onOk={handleSave}
         onCancel={() => setFormOpen(false)}
@@ -273,44 +329,44 @@ const EventAlertRules: React.FC = () => {
         destroyOnClose
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="規則名稱" rules={[{ required: true }]}>
-            <Input placeholder="例如：OOMKill 告警" />
+          <Form.Item name="name" label={t('alert:eventAlert.form.ruleName')} rules={[{ required: true }]}>
+            <Input placeholder={t('alert:eventAlert.form.rulePlaceholder')} />
           </Form.Item>
-          <Form.Item name="description" label="描述">
+          <Form.Item name="description" label={t('alert:eventAlert.form.description')}>
             <Input.TextArea rows={2} />
           </Form.Item>
-          <Form.Item name="namespace" label="命名空間">
-            <Input placeholder="留空表示監控全叢集" />
+          <Form.Item name="namespace" label={t('alert:eventAlert.form.namespace')}>
+            <Input placeholder={t('alert:eventAlert.form.namespacePlaceholder')} />
           </Form.Item>
-          <Form.Item name="eventType" label="事件型別">
-            <Select allowClear placeholder="全部">
+          <Form.Item name="eventType" label={t('alert:eventAlert.form.eventType')}>
+            <Select allowClear placeholder={t('alert:eventAlert.form.eventTypeAll')}>
               <Option value="Warning">Warning</Option>
               <Option value="Normal">Normal</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="eventReason" label="觸發原因" tooltip="多個原因用逗號分隔，留空匹配全部">
+          <Form.Item name="eventReason" label={t('alert:eventAlert.form.eventReason')} tooltip={t('alert:eventAlert.form.eventReasonTooltip')}>
             <Select
               mode="tags"
-              placeholder="選擇或輸入原因，例如 OOMKilling"
+              placeholder={t('alert:eventAlert.form.eventReasonPlaceholder')}
               tokenSeparators={[',']}
               options={COMMON_REASONS.map(r => ({ label: r, value: r }))}
             />
           </Form.Item>
-          <Form.Item name="minCount" label="最小觸發次數" rules={[{ required: true }]}>
+          <Form.Item name="minCount" label={t('alert:eventAlert.form.minTriggerCount')} rules={[{ required: true }]}>
             <InputNumber min={1} style={{ width: 120 }} />
           </Form.Item>
-          <Form.Item name="notifyType" label="通知方式" rules={[{ required: true }]}>
+          <Form.Item name="notifyType" label={t('alert:eventAlert.form.notifyType')} rules={[{ required: true }]}>
             <Select>
-              <Option value="webhook">Webhook</Option>
-              <Option value="telegram">Telegram</Option>
-              <Option value="slack">Slack</Option>
-              <Option value="teams">Microsoft Teams</Option>
+              <Option value="webhook">{t('alert:eventAlert.tags.webhook')}</Option>
+              <Option value="telegram">{t('alert:eventAlert.tags.telegram')}</Option>
+              <Option value="slack">{t('alert:eventAlert.tags.slack')}</Option>
+              <Option value="teams">{t('alert:eventAlert.tags.teams')}</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="notifyUrl" label="通知 URL" tooltip="Webhook / Telegram Bot API / Slack / Teams Incoming Webhook URL">
+          <Form.Item name="notifyUrl" label={t('alert:eventAlert.form.notifyUrl')} tooltip={t('alert:eventAlert.form.notifyUrlTooltip')}>
             <Input placeholder="https://..." />
           </Form.Item>
-          <Form.Item name="enabled" label="啟用" valuePropName="checked">
+          <Form.Item name="enabled" label={t('alert:eventAlert.form.enabled')} valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>

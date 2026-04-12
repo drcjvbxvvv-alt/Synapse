@@ -45,32 +45,32 @@ export const WorkloadEfficiencyTab: React.FC<WorkloadEfficiencyTabProps> = ({
           onChange: onPageChange,
         }}
         columns={[
-          { title: '命名空間', dataIndex: 'namespace', key: 'namespace', width: 130, fixed: 'left' },
-          { title: '工作負載', dataIndex: 'name', key: 'name', width: 160, ellipsis: true },
-          { title: '類型', dataIndex: 'kind', key: 'kind', width: 100,
+          { title: t('cost:table.namespace'), dataIndex: 'namespace', key: 'namespace', width: 130, fixed: 'left' },
+          { title: t('cost:table.workload'), dataIndex: 'name', key: 'name', width: 160, ellipsis: true },
+          { title: t('cost:table.type'), dataIndex: 'kind', key: 'kind', width: 100,
             render: (k: string) => <Tag color={{ Deployment: 'blue', StatefulSet: 'purple', DaemonSet: 'cyan' }[k] ?? 'default'}>{k}</Tag> },
-          { title: '副本', dataIndex: 'replicas', key: 'replicas', width: 60 },
-          { title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_req', width: 110, render: (v: number) => v.toFixed(0) },
+          { title: t('cost:table.replicas'), dataIndex: 'replicas', key: 'replicas', width: 60 },
+          { title: t('cost:table.cpuRequest'), dataIndex: 'cpu_request_millicores', key: 'cpu_req', width: 110, render: (v: number) => v.toFixed(0) },
           {
-            title: 'CPU 效率', dataIndex: 'cpu_efficiency', key: 'cpu_eff', width: 160,
+            title: t('cost:occupancy.cpuEfficiency'), dataIndex: 'cpu_efficiency', key: 'cpu_eff', width: 160,
             render: (v: number, r: WorkloadEfficiency) => r.has_metrics ? (
               <Progress percent={+(v * 100).toFixed(1)} size="small"
                 status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
                 format={p => `${p}%`} style={{ width: 120 }} />
-            ) : <Tag>需要 Prometheus</Tag>,
+            ) : <Tag>{t('cost:occupancy.needsPrometheus')}</Tag>,
             sorter: (a: WorkloadEfficiency, b: WorkloadEfficiency) => a.cpu_efficiency - b.cpu_efficiency,
           },
-          { title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'mem_req', width: 130, render: (v: number) => v.toFixed(0) },
+          { title: t('cost:table.memRequest'), dataIndex: 'memory_request_mib', key: 'mem_req', width: 130, render: (v: number) => v.toFixed(0) },
           {
-            title: '記憶體效率', dataIndex: 'memory_efficiency', key: 'mem_eff', width: 160,
+            title: t('cost:occupancy.memEfficiency'), dataIndex: 'memory_efficiency', key: 'mem_eff', width: 160,
             render: (v: number, r: WorkloadEfficiency) => r.has_metrics ? (
               <Progress percent={+(v * 100).toFixed(1)} size="small"
                 status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
                 format={p => `${p}%`} style={{ width: 120 }} />
-            ) : <Tag>需要 Prometheus</Tag>,
+            ) : <Tag>{t('cost:occupancy.needsPrometheus')}</Tag>,
           },
           {
-            title: '廢棄分數',
+            title: t('cost:wasteResources.table.wasteScore'),
             dataIndex: 'waste_score',
             key: 'waste',
             width: 90,
@@ -83,7 +83,7 @@ export const WorkloadEfficiencyTab: React.FC<WorkloadEfficiencyTabProps> = ({
             defaultSortOrder: 'ascend' as const,
           },
           {
-            title: '建議 CPU (m)',
+            title: t('cost:wasteResources.table.recommendedCPU'),
             key: 'rec_cpu',
             width: 110,
             render: (_: unknown, r: WorkloadEfficiency) => r.rightsizing
@@ -91,7 +91,7 @@ export const WorkloadEfficiencyTab: React.FC<WorkloadEfficiencyTabProps> = ({
               : '—',
           },
           {
-            title: '建議記憶體 (MiB)',
+            title: t('cost:wasteResources.table.recommendedMem'),
             key: 'rec_mem',
             width: 130,
             render: (_: unknown, r: WorkloadEfficiency) => r.rightsizing

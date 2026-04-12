@@ -16,6 +16,7 @@ import {
   Badge,
 } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { sloService, type SLO, type SLOStatus, type SLOStatusValue } from '../../services/sloService';
 
@@ -26,13 +27,6 @@ const STATUS_COLOR: Record<SLOStatusValue, string> = {
   warning:  'warning',
   critical: 'error',
   unknown:  'default',
-};
-
-const STATUS_LABEL: Record<SLOStatusValue, string> = {
-  ok:       '正常',
-  warning:  '警告',
-  critical: '嚴重',
-  unknown:  '無資料',
 };
 
 interface Props {
@@ -77,6 +71,17 @@ const BurnRateCell: React.FC<{ label: string; value: number | null; warning: num
 
 const SLOStatusDrawer: React.FC<Props> = ({ open, clusterId, slo, onClose }) => {
   const { token } = theme.useToken();
+  const { t } = useTranslation(['slo', 'common']);
+
+  const getStatusLabel = (status: SLOStatusValue) => {
+    const statusMap: Record<SLOStatusValue, string> = {
+      ok: t('slo:status.ok'),
+      warning: t('slo:status.warning'),
+      critical: t('slo:status.critical'),
+      unknown: t('slo:status.unknown'),
+    };
+    return statusMap[status] || status;
+  };
 
   const { data: status, isLoading, isError } = useQuery<SLOStatus>({
     queryKey: ['slo-status', clusterId, slo.id],
@@ -92,19 +97,19 @@ const SLOStatusDrawer: React.FC<Props> = ({ open, clusterId, slo, onClose }) => 
 
   return (
     <Drawer
-      title={`SLO 狀態：${slo.name}`}
+      title={t('slo:drawer.title', { name: slo.name })}
       open={open}
       onClose={onClose}
       width={560}
     >
       {isLoading && (
         <div style={{ textAlign: 'center', padding: token.paddingLG * 2 }}>
-          <Spin tip="計算中..." size="large" />
+          <Spin tip={t('slo:drawer.loading')} size="large" />
         </div>
       )}
 
       {isError && (
-        <Alert type="error" showIcon message="無法載入 SLO 狀態，請確認 Prometheus 連線正常。" />
+        <Alert type="error" showIcon message={t('slo:drawer.errorLoadingStatus')} />
       )}
 
       {status && !isLoading && (
@@ -116,19 +121,19 @@ const SLOStatusDrawer: React.FC<Props> = ({ open, clusterId, slo, onClose }) => 
               type="warning"
               showIcon
               icon={<ThunderboltOutlined />}
-              message="混沌實驗進行中"
-              description="此 Namespace 目前有 Chaos Mesh 實驗正在注入故障，SLO 告警已自動暫停，評估數據可能受影響。"
+              message={t('slo:drawer.chaosActive')}
+              description={t('slo:drawer.chaosActiveDesc')}
             />
           )}
 
           {/* Overall status */}
           <div style={{ textAlign: 'center', padding: `${token.paddingMD}px 0` }}>
             <Tag color={STATUS_COLOR[status.status]} style={{ fontSize: 14, padding: '4px 16px' }}>
-              {STATUS_LABEL[status.status]}
+              {getStatusLabel(status.status)}
             </Tag>
             {status.chaos_active && (
               <Badge
-                count="混沌暫停"
+                count={t('slo:drawer.chaosPaused')}
                 style={{ backgroundColor: '#faad14', marginLeft: 8 }}
               />
             )}
@@ -138,20 +143,20 @@ const SLOStatusDrawer: React.FC<Props> = ({ open, clusterId, slo, onClose }) => 
             <Alert
               type="info"
               showIcon
-              message="Prometheus 尚無資料"
-              description="SLO 已設定但 Prometheus 查詢未回傳數值，請確認 PromQL 正確且指標已存在。"
+              message={t('slo:drawer.noData')}
+              description={t('slo:drawer.noDataDesc')}
             />
           )}
 
           {status.has_data && (
             <>
               {/* SLI + Error Budget */}
-              <Card size="small" title="SLI 與錯誤預算" variant="borderless"
+              <Card size="small" title={t('slo:drawer.sliAndErrorBudget')} variant="borderless"
                 style={{ background: token.colorBgLayout }}>
                 <Row gutter={token.marginMD}>
                   <Col span={12}>
                     <Statistic
-                      title={`SLI（${slo.window}）`}
+                      title={t('slo:drawer.sliTitle', { window: slo.window })}
                       value={status.sli_percent ?? 0}
                       precision={4}
                       suffix="%"
@@ -162,13 +167,13 @@ const SLOStatusDrawer: React.FC<Props> = ({ open, clusterId, slo, onClose }) => 
                       }}
                     />
                     <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                      目標：{(slo.target * 100).toFixed(3)}%
+                      {t('slo:drawer.target')}：{(slo.target * 100).toFixed(3)}%
                     </Text>
                   </Col>
                   <Col span={12}>
                     <div style={{ marginBottom: token.marginXS }}>
                       <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                        剩餘誤差預算
+                        {t('slo:drawer.remainingErrorBudget')}
                       </Text>
                     </div>
                     <Progress
@@ -181,14 +186,14 @@ const SLOStatusDrawer: React.FC<Props> = ({ open, clusterId, slo, onClose }) => 
                       }
                     />
                     <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                      {ebPct}% 剩餘
+                      {t('slo:drawer.remaining', { percent: ebPct ?? 0 })}
                     </Text>
                   </Col>
                 </Row>
               </Card>
 
               {/* Burn rates */}
-              <Card size="small" title="燃燒率" variant="borderless"
+              <Card size="small" title={t('slo:drawer.burnRates')} variant="borderless"
                 style={{ background: token.colorBgLayout }}>
                 <Row gutter={token.marginMD}>
                   <Col span={6}>
@@ -225,7 +230,7 @@ const SLOStatusDrawer: React.FC<Props> = ({ open, clusterId, slo, onClose }) => 
                   </Col>
                 </Row>
                 <div style={{ marginTop: token.marginSM, fontSize: token.fontSizeSM, color: token.colorTextSecondary }}>
-                  閾值：≥{slo.burn_rate_warning}x 警告 ／ ≥{slo.burn_rate_critical}x 嚴重
+                  {t('slo:drawer.threshold', { warning: slo.burn_rate_warning, critical: slo.burn_rate_critical })}
                 </div>
               </Card>
             </>
@@ -236,23 +241,23 @@ const SLOStatusDrawer: React.FC<Props> = ({ open, clusterId, slo, onClose }) => 
             size="small"
             column={1}
             bordered
-            title="SLO 設定"
+            title={t('slo:drawer.configTitle')}
             labelStyle={{ width: 120 }}
           >
-            <Descriptions.Item label="SLI 類型">{slo.sli_type}</Descriptions.Item>
-            <Descriptions.Item label="PromQL">
+            <Descriptions.Item label={t('slo:drawer.sliType')}>{slo.sli_type}</Descriptions.Item>
+            <Descriptions.Item label={t('slo:drawer.promql')}>
               <Text code style={{ fontSize: token.fontSizeSM, wordBreak: 'break-all' }}>
                 {slo.prom_query}
               </Text>
             </Descriptions.Item>
             {slo.total_query && (
-              <Descriptions.Item label="TotalQuery">
+              <Descriptions.Item label={t('slo:drawer.totalQuery')}>
                 <Text code style={{ fontSize: token.fontSizeSM, wordBreak: 'break-all' }}>
                   {slo.total_query}
                 </Text>
               </Descriptions.Item>
             )}
-            <Descriptions.Item label="描述">
+            <Descriptions.Item label={t('slo:drawer.description')}>
               {slo.description || <Text type="secondary">—</Text>}
             </Descriptions.Item>
           </Descriptions>

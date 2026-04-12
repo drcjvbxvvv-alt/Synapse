@@ -1,0 +1,108 @@
+{
+  "page": {
+    "title": "Chaos Engineering",
+    "subtitle": "Inject faults via Chaos Mesh to validate system resilience"
+  },
+  "tabs": {
+    "experiments": "Experiments",
+    "schedules": "Schedules"
+  },
+  "notInstalled": {
+    "title": "Chaos Mesh Not Installed",
+    "desc": "Chaos Mesh is not installed on this cluster. Please install it before creating chaos experiments.",
+    "emptyExperiments": "Chaos Mesh is not installed, cannot list experiments",
+    "emptySchedules": "Chaos Mesh is not installed"
+  },
+  "injectingAlert": {
+    "message": "{{count}} experiment(s) injecting",
+    "desc": "Chaos experiments are currently injecting faults. SLO alerts for affected namespaces have been automatically paused."
+  },
+  "table": {
+    "name": "Name",
+    "kind": "Type",
+    "phase": "Status",
+    "duration": "Duration",
+    "createdAt": "Created At",
+    "lastRun": "Last Run",
+    "suspended": "Suspended",
+    "active": "Active"
+  },
+  "actions": {
+    "viewDetail": "View Details",
+    "createExperiment": "Create Experiment",
+    "createSchedule": "Create Schedule"
+  },
+  "search": {
+    "experimentPlaceholder": "Search experiment name",
+    "schedulePlaceholder": "Search schedule name",
+    "kindPlaceholder": "Type"
+  },
+  "detail": {
+    "title": "Experiment Details"
+  },
+  "form": {
+    "createExperiment": "Create Chaos Experiment",
+    "createSchedule": "Create Chaos Schedule",
+    "kind": "Experiment Type",
+    "name": "Experiment Name",
+    "scheduleName": "Schedule Name",
+    "action": "Fault Action",
+    "targetNs": "Target Namespace",
+    "targetNsSame": "Leave blank to use experiment's namespace",
+    "targetNsSameShort": "Target Namespace (blank = same as above)",
+    "mode": "Selection Mode",
+    "duration": "Duration",
+    "durationTooltip": "e.g. 30s, 5m, 1h",
+    "cronExpr": "Cron Expression",
+    "cronTooltip": "Supports standard cron (0 * * * *) or @every shorthand (@every 1h)",
+    "experimentDuration": "Single Experiment Duration",
+    "experimentDurationTooltip": "e.g. 30s, 5m; leave blank to inject until schedule expires",
+    "cronPlaceholder": "Select a preset or type your own",
+    "selectKindFirst": "Please select an experiment type first",
+    "unsupportedHint": "For advanced {{kind}} settings, use kubectl apply or the Chaos Mesh Dashboard.",
+    "podConfig": "PodChaos Settings",
+    "networkConfig": "NetworkChaos Settings",
+    "stressConfig": "StressChaos Settings",
+    "cpuWorkers": "CPU Stress Workers",
+    "cpuLoad": "CPU Load %",
+    "cpuLoadTooltip": "0–100, 100 means 100%",
+    "memWorkers": "Memory Stress Workers",
+    "memSize": "Memory Size",
+    "memSizeTooltip": "e.g. 256MB, 1GB",
+    "netLatency": "Latency",
+    "netLatencyTooltip": "e.g. 100ms, 1s",
+    "netLoss": "Packet Loss Rate",
+    "netLossTooltip": "e.g. 50%"
+  },
+  "kinds": {
+    "PodChaos": "PodChaos — Pod Failure",
+    "NetworkChaos": "NetworkChaos — Network Failure",
+    "StressChaos": "StressChaos — Resource Stress",
+    "HTTPChaos": "HTTPChaos — HTTP Failure",
+    "IOChaos": "IOChaos — I/O Failure"
+  },
+  "podActions": {
+    "podKill": "pod-kill — Kill Pod",
+    "podFailure": "pod-failure — Pod Failure",
+    "containerKill": "container-kill — Kill Container"
+  },
+  "modes": {
+    "one": "one — Random One",
+    "all": "all — All",
+    "fixed": "fixed — Fixed Count"
+  },
+  "netActions": {
+    "delay": "delay — Latency",
+    "loss": "loss — Packet Loss",
+    "duplicate": "duplicate — Duplicate Packets",
+    "corrupt": "corrupt — Corrupt Packets",
+    "partition": "partition — Network Partition"
+  },
+  "cronPresets": {
+    "everyHour": "Every hour",
+    "every6Hours": "Every 6 hours",
+    "midnightDaily": "Every day at midnight",
+    "mondayMorning": "Every Monday",
+    "every30Min": "Every 30 minutes"
+  }
+}

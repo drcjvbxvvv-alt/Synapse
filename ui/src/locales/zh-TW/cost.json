@@ -40,6 +40,8 @@
   "table": {
     "namespace": "命名空間",
     "workload": "工作負載",
+    "type": "類型",
+    "replicas": "副本",
     "cpuRequest": "CPU 申請（m）",
     "cpuUsage": "CPU 用量（m）",
     "cpuUtil": "CPU 使用率",
@@ -92,6 +94,9 @@
   "noNamespaces": "暫無命名空間成本資料",
   "noWorkloads": "暫無工作負載成本資料",
   "occupancy": {
+    "cpuOccupancy": "CPU 佔用",
+    "memOccupancy": "記憶體佔用",
+    "nodeCount": "節點數",
     "podCount": "Pod 數",
     "nsBreakdown": "命名空間 CPU 佔用",
     "headroom": "可用空間",
@@ -113,11 +118,11 @@
     "bubbleDesc": "泡泡大小 = CPU 佔用率（越大表示佔用越多叢集容量）",
     "cpuEfficiency": "CPU 效率",
     "memEfficiency": "記憶體效率",
-    "cpuOccupancy": "CPU 佔用",
     "tooltipCpuEff": "CPU 效率：",
     "tooltipMemEff": "記憶體效率：",
     "tooltipCpuOcc": "CPU 佔用：",
-    "namespace": "命名空間"
+    "namespace": "命名空間",
+    "needsPrometheus": "需要 Prometheus"
   },
   "billing": {
     "saveSuccess": "帳單設定已儲存",

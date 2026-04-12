@@ -101,6 +101,36 @@
     "noEvents": "暂无K8s事件",
     "noSearchResults": "暂无搜索结果",
     "noLogSources": "暂无日志源，点击「添加日志源」配置 Loki 或 Elasticsearch",
-    "noExternalLogResults": "暂无查询结果"
+    "noExternalLogResults": "暂无查询结果",
+    "logSourceManagement": "日志源管理",
+    "addLogSource": "添加日志源",
+    "name": "名称",
+    "type": "类型",
+    "url": "URL",
+    "status": "状态",
+    "enabled": "启用",
+    "disabled": "停用",
+    "actions": "操作",
+    "delete": "删除",
+    "queryLogs": "查询日志",
+    "logQLQuery": "LogQL 查询，如 {namespace=\"default\"}",
+    "luceneQuery": "Lucene 查询，如 error AND namespace:default",
+    "selectLogSourceFirst": "请先在上方选择日志源",
+    "esIndex": "ES Index（如 k8s-logs-*）",
+    "queryResults": "查询结果（{{count}} 条）",
+    "externalLogs": "外部日志",
+    "preview": "预览"
+  },
+  "form": {
+    "type": "类型",
+    "name": "名称",
+    "url": "URL",
+    "username": "用户名（可选）",
+    "password": "密码（可选）",
+    "apiKey": "API Key（可选）",
+    "editLogSource": "编辑日志源",
+    "addLogSource": "新增日志源",
+    "save": "保存",
+    "cancel": "取消"
   }
 }

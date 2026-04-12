@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, type ReactNode } from
 import type { MyPermissionsResponse, PermissionType } from '../types';
 import permissionService from '../services/permissionService';
 import { tokenManager } from '../services/authService';
-import { PermissionContext, type PermissionContextType } from './PermissionContext';
+import { PermissionContext, PermissionLoadingContext, type PermissionContextType } from './PermissionContext';
 
 // 權限Provider元件
 export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -224,10 +224,12 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     refreshPermissions();
   }, [refreshPermissions]);
 
+  // loading is excluded from the main context value so that loading state
+  // changes (true→false) don't trigger re-renders in the many components
+  // that only need permission-check methods.
   const value = useMemo<PermissionContextType>(() => ({
     clusterPermissions,
     currentClusterPermission,
-    loading,
     hasClusterAccess,
     hasNamespaceAccess,
     canPerformAction,
@@ -243,7 +245,6 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
   }), [
     clusterPermissions,
     currentClusterPermission,
-    loading,
     hasClusterAccess,
     hasNamespaceAccess,
     canPerformAction,
@@ -259,9 +260,11 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
   ]);
 
   return (
-    <PermissionContext.Provider value={value}>
-      {children}
-    </PermissionContext.Provider>
+    <PermissionLoadingContext.Provider value={loading}>
+      <PermissionContext.Provider value={value}>
+        {children}
+      </PermissionContext.Provider>
+    </PermissionLoadingContext.Provider>
   );
 };
 

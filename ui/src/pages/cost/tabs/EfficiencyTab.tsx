@@ -55,21 +55,21 @@ export const EfficiencyTab: React.FC<EfficiencyTabProps> = ({
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="cpu_efficiency_pct"
-                  name="CPU 效率"
+                  name={t('cost:occupancy.cpuEfficiency')}
                   type="number"
                   domain={[0, 100]}
                   unit="%"
-                  label={{ value: 'CPU 效率 %', position: 'insideBottom', offset: -10 }}
+                  label={{ value: `${t('cost:occupancy.cpuEfficiency')} %`, position: 'insideBottom', offset: -10 }}
                 />
                 <YAxis
                   dataKey="mem_efficiency_pct"
-                  name="記憶體效率"
+                  name={t('cost:occupancy.memEfficiency')}
                   type="number"
                   domain={[0, 100]}
                   unit="%"
-                  label={{ value: '記憶體效率 %', angle: -90, position: 'insideLeft' }}
+                  label={{ value: `${t('cost:occupancy.memEfficiency')} %`, angle: -90, position: 'insideLeft' }}
                 />
-                <ZAxis dataKey="cpu_occupancy_percent" range={[40, 400]} name="CPU 佔用" unit="%" />
+                <ZAxis dataKey="cpu_occupancy_percent" range={[40, 400]} name={t('cost:occupancy.cpuOccupancy')} unit="%" />
                 <RechartTooltip
                   cursor={{ strokeDasharray: '3 3' }}
                   formatter={(value, name) => [`${Number(value).toFixed(1)}%`, name]}
@@ -79,9 +79,9 @@ export const EfficiencyTab: React.FC<EfficiencyTabProps> = ({
                     return (
                       <div style={{ background: '#fff', border: '1px solid #d9d9d9', padding: '8px 12px', borderRadius: 4 }}>
                         <p style={{ margin: 0, fontWeight: 600 }}>{d.namespace}</p>
-                        <p style={{ margin: 0 }}>CPU 效率：{(d.cpu_efficiency_pct ?? 0).toFixed(1)}%</p>
-                        <p style={{ margin: 0 }}>記憶體效率：{(d.mem_efficiency_pct ?? 0).toFixed(1)}%</p>
-                        <p style={{ margin: 0 }}>CPU 佔用：{(d.cpu_occupancy_percent ?? 0).toFixed(1)}%</p>
+                        <p style={{ margin: 0 }}>{t('cost:occupancy.tooltipCpuEff')}{(d.cpu_efficiency_pct ?? 0).toFixed(1)}%</p>
+                        <p style={{ margin: 0 }}>{t('cost:occupancy.tooltipMemEff')}{(d.mem_efficiency_pct ?? 0).toFixed(1)}%</p>
+                        <p style={{ margin: 0 }}>{t('cost:occupancy.tooltipCpuOcc')}{(d.cpu_occupancy_percent ?? 0).toFixed(1)}%</p>
                       </div>
                     );
                   }}
@@ -118,41 +118,41 @@ export const EfficiencyTab: React.FC<EfficiencyTabProps> = ({
         scroll={{ x: 1100 }}
         pagination={{ pageSize: 20 }}
         columns={[
-          { title: '命名空間', dataIndex: 'namespace', key: 'namespace', fixed: 'left', width: 140 },
+          { title: t('cost:table.namespace'), dataIndex: 'namespace', key: 'namespace', fixed: 'left', width: 140 },
           {
-            title: 'CPU 申請 (m)', dataIndex: 'cpu_request_millicores', key: 'cpu_request', width: 110,
+            title: t('cost:table.cpuRequest'), dataIndex: 'cpu_request_millicores', key: 'cpu_request', width: 110,
             render: (v: number) => v.toFixed(0), sorter: (a, b) => a.cpu_request_millicores - b.cpu_request_millicores,
           },
           {
-            title: 'CPU 使用 (m)', dataIndex: 'cpu_usage_millicores', key: 'cpu_usage', width: 110,
+            title: t('cost:table.cpuUsage'), dataIndex: 'cpu_usage_millicores', key: 'cpu_usage', width: 110,
             render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? v.toFixed(0) : <Tag>N/A</Tag>,
           },
           {
-            title: 'CPU 效率', dataIndex: 'cpu_efficiency', key: 'cpu_eff', width: 170,
+            title: t('cost:occupancy.cpuEfficiency'), dataIndex: 'cpu_efficiency', key: 'cpu_eff', width: 170,
             render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? (
               <Progress percent={+(v * 100).toFixed(1)} size="small"
                 status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
                 format={p => `${p}%`} style={{ width: 130 }} />
-            ) : <Tag>需要 Prometheus</Tag>,
+            ) : <Tag>{t('cost:occupancy.needsPrometheus')}</Tag>,
             sorter: (a, b) => a.cpu_efficiency - b.cpu_efficiency,
           },
           {
-            title: '記憶體申請 (MiB)', dataIndex: 'memory_request_mib', key: 'mem_request', width: 130,
+            title: t('cost:table.memRequest'), dataIndex: 'memory_request_mib', key: 'mem_request', width: 130,
             render: (v: number) => v.toFixed(0),
           },
           {
-            title: '記憶體使用 (MiB)', dataIndex: 'memory_usage_mib', key: 'mem_usage', width: 130,
+            title: t('cost:table.memUsage'), dataIndex: 'memory_usage_mib', key: 'mem_usage', width: 130,
             render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? v.toFixed(0) : <Tag>N/A</Tag>,
           },
           {
-            title: '記憶體效率', dataIndex: 'memory_efficiency', key: 'mem_eff', width: 170,
+            title: t('cost:occupancy.memEfficiency'), dataIndex: 'memory_efficiency', key: 'mem_eff', width: 170,
             render: (v: number, r: NamespaceEfficiency) => r.has_metrics ? (
               <Progress percent={+(v * 100).toFixed(1)} size="small"
                 status={v < 0.2 ? 'exception' : v < 0.5 ? 'active' : 'normal'}
                 format={p => `${p}%`} style={{ width: 130 }} />
-            ) : <Tag>需要 Prometheus</Tag>,
+            ) : <Tag>{t('cost:occupancy.needsPrometheus')}</Tag>,
           },
-          { title: 'Pod 數', dataIndex: 'pod_count', key: 'pod_count', width: 80 },
+          { title: t('cost:table.podCount'), dataIndex: 'pod_count', key: 'pod_count', width: 80 },
         ]}
       />
     </div>

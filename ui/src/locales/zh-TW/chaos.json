@@ -1,0 +1,108 @@
+{
+  "page": {
+    "title": "混沌工程",
+    "subtitle": "透過 Chaos Mesh 注入故障，驗證系統韌性"
+  },
+  "tabs": {
+    "experiments": "實驗",
+    "schedules": "排程"
+  },
+  "notInstalled": {
+    "title": "Chaos Mesh 未安裝",
+    "desc": "此叢集尚未安裝 Chaos Mesh。請先安裝才能建立混沌實驗。",
+    "emptyExperiments": "Chaos Mesh 未安裝，無法列出實驗",
+    "emptySchedules": "Chaos Mesh 未安裝"
+  },
+  "injectingAlert": {
+    "message": "{{count}} 個實驗注入中",
+    "desc": "目前有混沌實驗正在注入故障，相關 Namespace 的 SLO 告警已自動暫停。"
+  },
+  "table": {
+    "name": "名稱",
+    "kind": "類型",
+    "phase": "狀態",
+    "duration": "持續時間",
+    "createdAt": "建立時間",
+    "lastRun": "上次執行",
+    "suspended": "已暫停",
+    "active": "啟用"
+  },
+  "actions": {
+    "viewDetail": "查看詳情",
+    "createExperiment": "建立實驗",
+    "createSchedule": "建立排程"
+  },
+  "search": {
+    "experimentPlaceholder": "搜尋實驗名稱",
+    "schedulePlaceholder": "搜尋排程名稱",
+    "kindPlaceholder": "類型"
+  },
+  "detail": {
+    "title": "實驗詳情"
+  },
+  "form": {
+    "createExperiment": "建立混沌實驗",
+    "createSchedule": "建立混沌排程",
+    "kind": "實驗類型",
+    "name": "實驗名稱",
+    "scheduleName": "排程名稱",
+    "action": "故障動作",
+    "targetNs": "目標 Namespace",
+    "targetNsSame": "留空表示與實驗相同",
+    "targetNsSameShort": "目標 Namespace（留空同上）",
+    "mode": "選取模式",
+    "duration": "持續時間",
+    "durationTooltip": "例如 30s、5m、1h",
+    "cronExpr": "Cron 表達式",
+    "cronTooltip": "支援標準 cron（0 * * * *）或 @every 縮寫（@every 1h）",
+    "experimentDuration": "單次實驗持續時間",
+    "experimentDurationTooltip": "例如 30s、5m；留空表示一直注入到到期",
+    "cronPlaceholder": "選擇預設或自行輸入",
+    "selectKindFirst": "請先選擇實驗類型",
+    "unsupportedHint": "{{kind}} 的進階設定請直接透過 kubectl apply 或 Chaos Mesh Dashboard 建立。",
+    "podConfig": "PodChaos 設定",
+    "networkConfig": "NetworkChaos 設定",
+    "stressConfig": "StressChaos 設定",
+    "cpuWorkers": "CPU 壓力 Workers",
+    "cpuLoad": "CPU 負載 %",
+    "cpuLoadTooltip": "0–100，100 表示 100%",
+    "memWorkers": "Memory 壓力 Workers",
+    "memSize": "Memory 大小",
+    "memSizeTooltip": "例如 256MB、1GB",
+    "netLatency": "延遲（latency）",
+    "netLatencyTooltip": "例如 100ms、1s",
+    "netLoss": "丟包率（loss）",
+    "netLossTooltip": "例如 50%"
+  },
+  "kinds": {
+    "PodChaos": "PodChaos — Pod 故障",
+    "NetworkChaos": "NetworkChaos — 網路故障",
+    "StressChaos": "StressChaos — 資源壓力",
+    "HTTPChaos": "HTTPChaos — HTTP 故障",
+    "IOChaos": "IOChaos — I/O 故障"
+  },
+  "podActions": {
+    "podKill": "pod-kill — 殺掉 Pod",
+    "podFailure": "pod-failure — Pod 故障",
+    "containerKill": "container-kill — 殺掉容器"
+  },
+  "modes": {
+    "one": "one — 隨機一個",
+    "all": "all — 全部",
+    "fixed": "fixed — 固定數量"
+  },
+  "netActions": {
+    "delay": "delay — 延遲",
+    "loss": "loss — 丟包",
+    "duplicate": "duplicate — 重複包",
+    "corrupt": "corrupt — 損壞包",
+    "partition": "partition — 分區"
+  },
+  "cronPresets": {
+    "everyHour": "每小時",
+    "every6Hours": "每 6 小時",
+    "midnightDaily": "每天午夜",
+    "mondayMorning": "每週一",
+    "every30Min": "每 30 分鐘"
+  }
+}

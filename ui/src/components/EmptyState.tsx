@@ -73,14 +73,14 @@ const TYPE_CONFIG: Record<EmptyStateType, TypeConfig> = {
   },
 };
 
-const EmptyState: React.FC<EmptyStateProps> = ({
+const EmptyState: React.FC<EmptyStateProps> = React.memo(function EmptyState({
   type = 'no-data',
   title,
   description,
   icon,
   actions,
   style,
-}) => {
+}: EmptyStateProps) {
   const config = TYPE_CONFIG[type];
   const displayIcon = icon ?? config.icon;
 
@@ -119,6 +119,6 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       )}
     </Empty>
   );
-};
+});
 
 export default EmptyState;

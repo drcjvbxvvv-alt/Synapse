@@ -24,6 +24,7 @@ import {
   HistoryOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { multiclusterService, type SyncPolicy, type SyncHistory } from '../../services/multiclusterService';
 import { clusterService } from '../../services/clusterService';
 import { namespaceService } from '../../services/namespaceService';
@@ -44,6 +45,7 @@ const statusColor: Record<string, string> = {
 };
 
 const SyncPolicyList: React.FC = () => {
+  const { t } = useTranslation(['multicluster', 'common']);
   const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [policies, setPolicies] = useState<SyncPolicy[]>([]);
@@ -70,7 +72,7 @@ const SyncPolicyList: React.FC = () => {
       const res = await multiclusterService.listSyncPolicies();
       setPolicies((res as any)?.items ?? []);
     } catch {
-      message.error('取得同步策略列表失敗');
+      message.error(t('multicluster:messages.syncPolicyListError'));
     } finally {
       setLoading(false);
     }
@@ -132,15 +134,15 @@ const SyncPolicyList: React.FC = () => {
       values.target_clusters = JSON.stringify((values.target_clusters ?? []).map(Number));
       if (editing?.id) {
         await multiclusterService.updateSyncPolicy(editing.id, values);
-        message.success('更新成功');
+        message.success(t('common:messages.success'));
       } else {
         await multiclusterService.createSyncPolicy(values);
-        message.success('建立成功');
+        message.success(t('common:messages.success'));
       }
       setDrawerOpen(false);
       fetchPolicies();
     } catch {
-      message.error('儲存失敗');
+      message.error(t('multicluster:messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -148,12 +150,12 @@ const SyncPolicyList: React.FC = () => {
 
   const handleDelete = (policy: SyncPolicy) => {
     modal.confirm({
-      title: '確認刪除',
-      content: `確定要刪除同步策略「${policy.name}」嗎？`,
+      title: t('multicluster:messages.deleteConfirmTitle'),
+      content: t('multicluster:messages.deleteConfirmContent', { name: policy.name }),
       okType: 'danger',
       onOk: async () => {
         await multiclusterService.deleteSyncPolicy(policy.id!);
-        message.success('已刪除');
+        message.success(t('multicluster:messages.deleteSuccess'));
         fetchPolicies();
       },
     });
@@ -162,10 +164,10 @@ const SyncPolicyList: React.FC = () => {
   const handleTrigger = async (policy: SyncPolicy) => {
     try {
       await multiclusterService.triggerSync(policy.id!);
-      message.success('同步已觸發，請稍後檢視歷史紀錄');
+      message.success(t('multicluster:messages.syncTriggered'));
       fetchPolicies();
     } catch {
-      message.error('觸發失敗');
+      message.error(t('multicluster:messages.triggerFailed'));
     }
   };
 
@@ -177,7 +179,7 @@ const SyncPolicyList: React.FC = () => {
       const res = await multiclusterService.getSyncHistory(policy.id!) as any;
       setHistory(res?.items ?? []);
     } catch {
-      message.error('取得歷史失敗');
+      message.error(t('multicluster:messages.historyLoadError'));
     } finally {
       setHistoryLoading(false);
     }
@@ -190,13 +192,13 @@ const SyncPolicyList: React.FC = () => {
 
   const columns = [
     {
-      title: '策略名稱',
+      title: t('multicluster:syncPolicy.table.policyName'),
       dataIndex: 'name',
       key: 'name',
       render: (v: string) => <Text strong>{v}</Text>,
     },
     {
-      title: '來源',
+      title: t('multicluster:syncPolicy.table.source'),
       key: 'source',
       render: (_: any, r: SyncPolicy) => (
         <Space size={4} wrap>
@@ -207,7 +209,7 @@ const SyncPolicyList: React.FC = () => {
       ),
     },
     {
-      title: '目標叢集',
+      title: t('multicluster:syncPolicy.table.targetCluster'),
       dataIndex: 'target_clusters',
       render: (v: string) => (
         <Space wrap>
@@ -218,17 +220,17 @@ const SyncPolicyList: React.FC = () => {
       ),
     },
     {
-      title: '衝突策略',
+      title: t('multicluster:syncPolicy.table.conflictPolicy'),
       dataIndex: 'conflict_policy',
       render: (v: string) => <Tag>{v}</Tag>,
     },
     {
-      title: '排程',
+      title: t('multicluster:syncPolicy.table.schedule'),
       dataIndex: 'schedule',
-      render: (v: string) => v ? <Tag color="geekblue">{v}</Tag> : <Text type="secondary">手動</Text>,
+      render: (v: string) => v ? <Tag color="geekblue">{v}</Tag> : <Text type="secondary">{t('multicluster:syncPolicy.table.manual')}</Text>,
     },
     {
-      title: '狀態',
+      title: t('multicluster:syncPolicy.table.status'),
       key: 'status',
       render: (_: any, r: SyncPolicy) => (
         <Space>
@@ -247,27 +249,27 @@ const SyncPolicyList: React.FC = () => {
       ),
     },
     {
-      title: '最後同步',
+      title: t('multicluster:syncPolicy.table.lastSync'),
       dataIndex: 'last_sync_at',
       render: (v: string) => v ? new Date(v).toLocaleString() : '—',
     },
     {
-      title: '操作',
+      title: t('multicluster:syncPolicy.table.actions'),
       key: 'actions',
       fixed: 'right' as const,
       width: 160,
       render: (_: any, r: SyncPolicy) => (
         <Space>
-          <Tooltip title="立即同步">
+          <Tooltip title={t('multicluster:syncPolicy.buttons.immediateSync')}>
             <Button size="small" icon={<PlayCircleOutlined />} onClick={() => handleTrigger(r)} />
           </Tooltip>
-          <Tooltip title="歷史紀錄">
+          <Tooltip title={t('multicluster:syncPolicy.buttons.history')}>
             <Button size="small" icon={<HistoryOutlined />} onClick={() => handleHistory(r)} />
           </Tooltip>
-          <Tooltip title="編輯">
+          <Tooltip title={t('multicluster:syncPolicy.buttons.edit')}>
             <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
           </Tooltip>
-          <Tooltip title="刪除">
+          <Tooltip title={t('multicluster:syncPolicy.buttons.delete')}>
             <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r)} />
           </Tooltip>
         </Space>
@@ -276,12 +278,12 @@ const SyncPolicyList: React.FC = () => {
   ];
 
   const historyColumns = [
-    { title: '觸發方式', dataIndex: 'triggered_by', key: 'triggered_by', render: (v: string) => <Tag>{v}</Tag> },
-    { title: '狀態', dataIndex: 'status', key: 'status', render: (v: string) => <Badge status={statusColor[v] as any} text={v} /> },
-    { title: '訊息', dataIndex: 'message', key: 'message', ellipsis: true },
-    { title: '開始時間', dataIndex: 'started_at', key: 'started_at', render: (v: string) => new Date(v).toLocaleString() },
+    { title: t('multicluster:syncPolicy.historyTable.triggeredBy'), dataIndex: 'triggered_by', key: 'triggered_by', render: (v: string) => <Tag>{v}</Tag> },
+    { title: t('multicluster:syncPolicy.historyTable.status'), dataIndex: 'status', key: 'status', render: (v: string) => <Badge status={statusColor[v] as any} text={v} /> },
+    { title: t('multicluster:syncPolicy.historyTable.message'), dataIndex: 'message', key: 'message', ellipsis: true },
+    { title: t('multicluster:syncPolicy.historyTable.startedAt'), dataIndex: 'started_at', key: 'started_at', render: (v: string) => new Date(v).toLocaleString() },
     {
-      title: '耗時',
+      title: t('multicluster:syncPolicy.historyTable.duration'),
       key: 'duration',
       render: (_: any, r: SyncHistory) => {
         if (!r.finished_at) return '—';
@@ -299,8 +301,8 @@ const SyncPolicyList: React.FC = () => {
   return (
     <div>
       <Space style={{ marginBottom: 16 }} wrap>
-        <Button icon={<ReloadOutlined />} onClick={fetchPolicies}>重新整理</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => handleEdit()}>新增策略</Button>
+        <Button icon={<ReloadOutlined />} onClick={fetchPolicies}>{t('multicluster:syncPolicy.buttons.refresh')}</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => handleEdit()}>{t('multicluster:syncPolicy.buttons.newPolicy')}</Button>
       </Space>
 
       <Table
@@ -314,24 +316,24 @@ const SyncPolicyList: React.FC = () => {
 
       {/* 編輯 Drawer */}
       <Drawer
-        title={editing ? `編輯策略：${editing.name}` : '新增同步策略'}
+        title={editing ? t('multicluster:syncPolicy.drawer.editTitle', { name: editing.name }) : t('multicluster:syncPolicy.drawer.createTitle')}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         width={520}
         extra={
-          <Button type="primary" loading={saving} onClick={handleSave}>儲存</Button>
+          <Button type="primary" loading={saving} onClick={handleSave}>{t('multicluster:syncPolicy.buttons.save')}</Button>
         }
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="策略名稱" rules={[{ required: true }]}>
-            <Input placeholder="例如: sync-app-config" />
+          <Form.Item name="name" label={t('multicluster:syncPolicy.form.policyName')} rules={[{ required: true }]}>
+            <Input placeholder={t('multicluster:syncPolicy.form.policyNamePlaceholder')} />
           </Form.Item>
-          <Form.Item name="description" label="描述">
+          <Form.Item name="description" label={t('multicluster:syncPolicy.form.description')}>
             <Input.TextArea rows={2} />
           </Form.Item>
-          <Form.Item name="source_cluster_id" label="來源叢集" rules={[{ required: true }]}>
+          <Form.Item name="source_cluster_id" label={t('multicluster:syncPolicy.form.sourceCluster')} rules={[{ required: true }]}>
             <Select
-              placeholder="選擇叢集"
+              placeholder={t('multicluster:syncPolicy.form.selectCluster')}
               options={clusters.map(c => ({ value: c.id, label: c.name }))}
               showSearch
               optionFilterProp="label"
@@ -342,9 +344,9 @@ const SyncPolicyList: React.FC = () => {
               }}
             />
           </Form.Item>
-          <Form.Item name="source_namespace" label="來源命名空間" rules={[{ required: true }]}>
+          <Form.Item name="source_namespace" label={t('multicluster:syncPolicy.form.sourceNamespace')} rules={[{ required: true }]}>
             <Select
-              placeholder="選擇命名空間"
+              placeholder={t('multicluster:syncPolicy.form.selectNamespace')}
               options={namespaces.map(n => ({ value: n, label: n }))}
               disabled={!watchedClusterId}
               showSearch
@@ -354,7 +356,7 @@ const SyncPolicyList: React.FC = () => {
               }}
             />
           </Form.Item>
-          <Form.Item name="resource_type" label="資源型別" rules={[{ required: true }]}>
+          <Form.Item name="resource_type" label={t('multicluster:syncPolicy.form.resourceType')} rules={[{ required: true }]}>
             <Select
               options={resourceTypeOptions}
               onChange={(type) => {
@@ -363,30 +365,30 @@ const SyncPolicyList: React.FC = () => {
               }}
             />
           </Form.Item>
-          <Form.Item name="resource_names" label="資源名稱（留空 = 同步全部）">
+          <Form.Item name="resource_names" label={t('multicluster:syncPolicy.form.resourceNames')}>
             <Select
               mode="multiple"
-              placeholder="選擇要同步的資源（留空 = 全部）"
+              placeholder={t('multicluster:syncPolicy.form.selectResources')}
               options={(watchedType === 'ConfigMap' ? configmapNames : secretNames).map(n => ({ value: n, label: n }))}
               disabled={!watchedNS}
             />
           </Form.Item>
-          <Form.Item name="target_clusters" label="目標叢集" rules={[{ required: true }]}>
+          <Form.Item name="target_clusters" label={t('multicluster:syncPolicy.form.targetClusters')} rules={[{ required: true }]}>
             <Select
               mode="multiple"
-              placeholder="選擇目標叢集"
+              placeholder={t('multicluster:syncPolicy.form.selectTargetCluster')}
               options={clusters.filter(c => Number(c.id) !== watchedClusterId).map(c => ({ value: Number(c.id), label: c.name }))}
               showSearch
               optionFilterProp="label"
             />
           </Form.Item>
-          <Form.Item name="conflict_policy" label="衝突策略" initialValue="skip">
-            <Select options={[{ value: 'skip', label: '跳過（保留目標現有資源）' }, { value: 'overwrite', label: '覆蓋（強制更新目標資源）' }]} />
+          <Form.Item name="conflict_policy" label={t('multicluster:syncPolicy.form.conflictPolicy')} initialValue="skip">
+            <Select options={[{ value: 'skip', label: t('multicluster:syncPolicy.form.conflictPolicySkip') }, { value: 'overwrite', label: t('multicluster:syncPolicy.form.conflictPolicyOverwrite') }]} />
           </Form.Item>
-          <Form.Item name="schedule" label="自動排程（Cron，留空 = 僅手動）">
-            <Input placeholder="例如: 0 2 * * * （每天凌晨 2 點）" />
+          <Form.Item name="schedule" label={t('multicluster:syncPolicy.form.schedule')}>
+            <Input placeholder={t('multicluster:syncPolicy.form.schedulePlaceholder')} />
           </Form.Item>
-          <Form.Item name="enabled" label="啟用" valuePropName="checked" initialValue={true}>
+          <Form.Item name="enabled" label={t('multicluster:syncPolicy.form.enabled')} valuePropName="checked" initialValue={true}>
             <Switch />
           </Form.Item>
         </Form>
@@ -394,7 +396,7 @@ const SyncPolicyList: React.FC = () => {
 
       {/* 歷史紀錄 Drawer */}
       <Drawer
-        title={`同步歷史：${historyPolicy?.name}`}
+        title={t('multicluster:syncPolicy.drawer.historyTitle', { name: historyPolicy?.name ?? '' })}
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         width={700}

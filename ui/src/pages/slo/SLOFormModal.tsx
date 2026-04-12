@@ -11,6 +11,7 @@ import {
   Row,
   Col,
 } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { sloService, type SLO, type CreateSLOPayload, type SLIType, type SLOWindow } from '../../services/sloService';
 
@@ -22,23 +23,25 @@ interface Props {
   onSuccess: () => void;
 }
 
-const SLO_WINDOW_OPTIONS: { label: string; value: SLOWindow }[] = [
-  { label: '7 天', value: '7d' },
-  { label: '28 天', value: '28d' },
-  { label: '30 天', value: '30d' },
-];
-
-const SLI_TYPE_OPTIONS: { label: string; value: SLIType }[] = [
-  { label: '可用性（Availability）', value: 'availability' },
-  { label: '延遲（Latency）', value: 'latency' },
-  { label: '錯誤率（Error Rate）', value: 'error_rate' },
-  { label: '自定義（Custom）', value: 'custom' },
-];
-
 const SLOFormModal: React.FC<Props> = ({ open, clusterId, slo, onClose, onSuccess }) => {
   const { message } = App.useApp();
+  const { t } = useTranslation(['slo', 'common']);
   const [form] = Form.useForm();
   const isEdit = !!slo;
+
+  // Build options dynamically with i18n
+  const windowOptions: { label: string; value: SLOWindow }[] = [
+    { label: t('slo:windows.7d'), value: '7d' },
+    { label: t('slo:windows.28d'), value: '28d' },
+    { label: t('slo:windows.30d'), value: '30d' },
+  ];
+
+  const sliTypeOptions: { label: string; value: SLIType }[] = [
+    { label: t('slo:sliTypes.availability'), value: 'availability' },
+    { label: t('slo:sliTypes.latency'), value: 'latency' },
+    { label: t('slo:sliTypes.error_rate'), value: 'error_rate' },
+    { label: t('slo:sliTypes.custom'), value: 'custom' },
+  ];
 
   // Reset form when modal opens
   useEffect(() => {
@@ -67,10 +70,10 @@ const SLOFormModal: React.FC<Props> = ({ open, clusterId, slo, onClose, onSucces
         ? sloService.update(clusterId, slo!.id, payload)
         : sloService.create(clusterId, payload),
     onSuccess: () => {
-      message.success(isEdit ? 'SLO 已更新' : 'SLO 已建立');
+      message.success(isEdit ? t('slo:form.success') : t('slo:form.successCreate'));
       onSuccess();
     },
-    onError: (err: Error) => message.error(`操作失敗: ${err.message}`),
+    onError: (err: Error) => message.error(`${t('slo:form.errorPrefix')}${err.message}`),
   });
 
   const handleSubmit = async () => {
@@ -97,16 +100,16 @@ const SLOFormModal: React.FC<Props> = ({ open, clusterId, slo, onClose, onSucces
 
   return (
     <Modal
-      title={isEdit ? '編輯 SLO' : '新增 SLO'}
+      title={isEdit ? t('slo:form.editTitle') : t('slo:form.newTitle')}
       open={open}
       onCancel={onClose}
       width={680}
       footer={[
         <Button key="cancel" onClick={onClose}>
-          取消
+          {t('common:actions.cancel')}
         </Button>,
         <Button key="submit" type="primary" loading={mutation.isPending} onClick={handleSubmit}>
-          {isEdit ? '儲存' : '建立'}
+          {isEdit ? t('common:actions.save') : t('common:actions.create')}
         </Button>,
       ]}
       destroyOnHidden
@@ -116,65 +119,65 @@ const SLOFormModal: React.FC<Props> = ({ open, clusterId, slo, onClose, onSucces
           <Col span={16}>
             <Form.Item
               name="name"
-              label="SLO 名稱"
-              rules={[{ required: true, message: '此欄位為必填' }, { max: 255 }]}
+              label={t('slo:form.sloName')}
+              rules={[{ required: true, message: t('slo:form.required') }, { max: 255 }]}
             >
-              <Input placeholder="例如：api-availability-99.9" />
+              <Input placeholder={t('slo:form.sloNamePlaceholder')} />
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="namespace" label="命名空間" tooltip="空白表示叢集層級">
-              <Input placeholder="留空 = 叢集層級" />
+            <Form.Item name="namespace" label={t('slo:form.namespace')} tooltip={t('slo:form.namespaceTooltip')}>
+              <Input placeholder={t('slo:form.namespacePlaceholder')} />
             </Form.Item>
           </Col>
         </Row>
 
-        <Form.Item name="description" label="描述">
-          <Input.TextArea rows={2} placeholder="可選說明" />
+        <Form.Item name="description" label={t('slo:form.description')}>
+          <Input.TextArea rows={2} placeholder={t('slo:form.descriptionPlaceholder')} />
         </Form.Item>
 
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="sli_type"
-              label="SLI 類型"
-              rules={[{ required: true, message: '此欄位為必填' }]}
+              label={t('slo:form.sliType')}
+              rules={[{ required: true, message: t('slo:form.required') }]}
             >
-              <Select options={SLI_TYPE_OPTIONS} />
+              <Select options={sliTypeOptions} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="window"
-              label="計算視窗"
-              rules={[{ required: true, message: '此欄位為必填' }]}
+              label={t('slo:form.window')}
+              rules={[{ required: true, message: t('slo:form.required') }]}
             >
-              <Select options={SLO_WINDOW_OPTIONS} />
+              <Select options={windowOptions} />
             </Form.Item>
           </Col>
         </Row>
 
         <Form.Item
           name="prom_query"
-          label="PromQL 好事件（或直接比率）"
-          tooltip="若 TotalQuery 留空，此式須直接回傳 0.0-1.0 的比率。可用 $window 佔位符。"
-          rules={[{ required: true, message: '此欄位為必填' }]}
+          label={t('slo:form.promQuery')}
+          tooltip={t('slo:form.promQueryTooltip')}
+          rules={[{ required: true, message: t('slo:form.required') }]}
         >
           <Input.TextArea
             rows={2}
-            placeholder="例：sum(rate(http_requests_total{status!~'5..'}[$window])) 或 avg_over_time(up[$window])"
+            placeholder={t('slo:form.promQueryPlaceholder')}
             style={{ fontFamily: 'monospace', fontSize: 12 }}
           />
         </Form.Item>
 
         <Form.Item
           name="total_query"
-          label="TotalQuery（選填）"
-          tooltip="填入後：SLI = PromQuery / TotalQuery。可用 $window 佔位符。"
+          label={t('slo:form.totalQuery')}
+          tooltip={t('slo:form.totalQueryTooltip')}
         >
           <Input.TextArea
             rows={2}
-            placeholder="例：sum(rate(http_requests_total[$window]))"
+            placeholder={t('slo:form.totalQueryPlaceholder')}
             style={{ fontFamily: 'monospace', fontSize: 12 }}
           />
         </Form.Item>
@@ -183,11 +186,11 @@ const SLOFormModal: React.FC<Props> = ({ open, clusterId, slo, onClose, onSucces
           <Col span={8}>
             <Form.Item
               name="target"
-              label="SLO 目標 (%)"
-              tooltip="例如 99.9 表示 99.9%"
+              label={t('slo:form.target')}
+              tooltip={t('slo:form.targetTooltip')}
               rules={[
-                { required: true, message: '此欄位為必填' },
-                { type: 'number', min: 0.001, max: 99.99, message: '請輸入 0.001 – 99.99' },
+                { required: true, message: t('slo:form.required') },
+                { type: 'number', min: 0.001, max: 99.99, message: t('slo:form.targetValidation') },
               ]}
             >
               <InputNumber
@@ -202,8 +205,8 @@ const SLOFormModal: React.FC<Props> = ({ open, clusterId, slo, onClose, onSucces
           <Col span={8}>
             <Form.Item
               name="burn_rate_warning"
-              label="燃燒率警告倍數"
-              rules={[{ required: true, message: '此欄位為必填' }]}
+              label={t('slo:form.burnRateWarning')}
+              rules={[{ required: true, message: t('slo:form.required') }]}
             >
               <InputNumber style={{ width: '100%' }} min={1} precision={1} addonAfter="x" />
             </Form.Item>
@@ -211,15 +214,15 @@ const SLOFormModal: React.FC<Props> = ({ open, clusterId, slo, onClose, onSucces
           <Col span={8}>
             <Form.Item
               name="burn_rate_critical"
-              label="燃燒率嚴重倍數"
-              rules={[{ required: true, message: '此欄位為必填' }]}
+              label={t('slo:form.burnRateCritical')}
+              rules={[{ required: true, message: t('slo:form.required') }]}
             >
               <InputNumber style={{ width: '100%' }} min={1} precision={1} addonAfter="x" />
             </Form.Item>
           </Col>
         </Row>
 
-        <Form.Item name="enabled" label="啟用" valuePropName="checked">
+        <Form.Item name="enabled" label={t('slo:form.enabled')} valuePropName="checked">
           <Switch />
         </Form.Item>
       </Form>

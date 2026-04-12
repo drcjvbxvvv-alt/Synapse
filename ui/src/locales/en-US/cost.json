@@ -40,6 +40,8 @@
   "table": {
     "namespace": "Namespace",
     "workload": "Workload",
+    "type": "Type",
+    "replicas": "Replicas",
     "cpuRequest": "CPU Request (m)",
     "cpuUsage": "CPU Usage (m)",
     "cpuUtil": "CPU Util%",
@@ -92,6 +94,9 @@
   "noNamespaces": "No namespace cost data available",
   "noWorkloads": "No workload cost data available",
   "occupancy": {
+    "cpuOccupancy": "CPU Occupancy",
+    "memOccupancy": "Memory Occupancy",
+    "nodeCount": "Nodes",
     "podCount": "Pods",
     "nsBreakdown": "Namespace CPU Occupancy",
     "headroom": "Available Headroom",
@@ -113,11 +118,11 @@
     "bubbleDesc": "Bubble size = CPU Occupancy % (larger = more cluster capacity used)",
     "cpuEfficiency": "CPU Efficiency",
     "memEfficiency": "Memory Efficiency",
-    "cpuOccupancy": "CPU Occupancy",
     "tooltipCpuEff": "CPU Eff: ",
     "tooltipMemEff": "Mem Eff: ",
     "tooltipCpuOcc": "CPU Occ: ",
-    "namespace": "Namespace"
+    "namespace": "Namespace",
+    "needsPrometheus": "Requires Prometheus"
   },
   "billing": {
     "saveSuccess": "Billing configuration saved",

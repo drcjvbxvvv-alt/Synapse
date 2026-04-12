@@ -87,22 +87,22 @@ export const CloudBillingTab: React.FC<CloudBillingTabProps> = ({
               <Divider orientation="left" plain style={{ fontSize: 13 }}>AWS Cost Explorer</Divider>
               <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item name="aws_access_key_id" label={t('cost:billing.accessKeyId')}>
+                  <Form.Item name="aws_access_key_id" label={t('cost:billing.accessKeyId')} rules={[{ required: true, message: t('common:validation.required') }]}>
                     <Input placeholder="AKIA..." />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="aws_secret_access_key" label={`${t('cost:billing.secretAccessKey')}${billingConfig?.aws_secret_set ? ` (${t('cost:billing.secretSet')})` : ''}`}>
+                  <Form.Item name="aws_secret_access_key" label={`${t('cost:billing.secretAccessKey')}${billingConfig?.aws_secret_set ? ` (${t('cost:billing.secretSet')})` : ''}`} rules={[{ required: true, message: t('common:validation.required') }]}>
                     <Input.Password placeholder={billingConfig?.aws_secret_set ? `******** (${t('cost:billing.keepOriginal')})` : t('cost:billing.inputSecret')} />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="aws_region" label={t('cost:billing.region')} initialValue="us-east-1">
+                  <Form.Item name="aws_region" label={t('cost:billing.region')} initialValue="us-east-1" rules={[{ required: true, message: t('common:validation.required') }]}>
                     <Input placeholder="us-east-1" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="aws_linked_account_id" label={t('cost:billing.linkedAccountId')}>
+                  <Form.Item name="aws_linked_account_id" label={t('cost:billing.linkedAccountId')} rules={[{ required: true, message: t('common:validation.required') }]}>
                     <Input placeholder="123456789012" />
                   </Form.Item>
                 </Col>
@@ -115,12 +115,12 @@ export const CloudBillingTab: React.FC<CloudBillingTabProps> = ({
               <Divider orientation="left" plain style={{ fontSize: 13 }}>GCP Cloud Billing</Divider>
               <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item name="gcp_project_id" label="Project ID">
+                  <Form.Item name="gcp_project_id" label="Project ID" rules={[{ required: true, message: t('common:validation.required') }]}>
                     <Input placeholder="my-project-id" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="gcp_billing_account_id" label="Billing Account ID">
+                  <Form.Item name="gcp_billing_account_id" label="Billing Account ID" rules={[{ required: true, message: t('common:validation.required') }]}>
                     <Input placeholder="XXXXXX-XXXXXX-XXXXXX" />
                   </Form.Item>
                 </Col>
@@ -128,6 +128,7 @@ export const CloudBillingTab: React.FC<CloudBillingTabProps> = ({
                   <Form.Item
                     name="gcp_service_account_json"
                     label={`${t('cost:billing.serviceAccountJson')}${billingConfig?.gcp_service_account_set ? ` (${t('cost:billing.secretSet')})` : ''}`}
+                    rules={[{ required: true, message: t('common:validation.required') }]}
                   >
                     <Input.TextArea
                       rows={5}

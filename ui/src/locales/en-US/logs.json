@@ -101,6 +101,36 @@
     "noEvents": "No K8s events found",
     "noSearchResults": "No search results found",
     "noLogSources": "No log sources configured. Click \"Add Log Source\" to configure Loki or Elasticsearch",
-    "noExternalLogResults": "No query results found"
+    "noExternalLogResults": "No query results found",
+    "logSourceManagement": "Log Source Management",
+    "addLogSource": "Add Log Source",
+    "name": "Name",
+    "type": "Type",
+    "url": "URL",
+    "status": "Status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "actions": "Actions",
+    "delete": "Delete",
+    "queryLogs": "Query Logs",
+    "logQLQuery": "LogQL query, e.g. {namespace=\"default\"}",
+    "luceneQuery": "Lucene query, e.g. error AND namespace:default",
+    "selectLogSourceFirst": "Please select a log source above",
+    "esIndex": "ES Index (e.g. k8s-logs-*)",
+    "queryResults": "Query Results ({{count}} items)",
+    "externalLogs": "External Logs",
+    "preview": "Preview"
+  },
+  "form": {
+    "type": "Type",
+    "name": "Name",
+    "url": "URL",
+    "username": "Username (Optional)",
+    "password": "Password (Optional)",
+    "apiKey": "API Key (Optional)",
+    "editLogSource": "Edit Log Source",
+    "addLogSource": "Add Log Source",
+    "save": "Save",
+    "cancel": "Cancel"
   }
 }

@@ -19,7 +19,7 @@ interface ClusterListResponse {
 }
 
 const MultiClusterTopologyPage: React.FC = () => {
-  const { t } = useTranslation(['common']);
+  const { t } = useTranslation(['multicluster', 'common']);
   const { token } = theme.useToken();
   const [selectedIDs, setSelectedIDs] = useState<number[]>([]);
   const [queryIDs, setQueryIDs] = useState<number[]>([]);
@@ -64,7 +64,7 @@ const MultiClusterTopologyPage: React.FC = () => {
         <Select
           mode="multiple"
           allowClear
-          placeholder="選擇要比較的叢集（最多 10 個）"
+          placeholder={t('multicluster:topology.selectPlaceholder')}
           style={{ minWidth: 320, maxWidth: 600 }}
           options={clusterOptions}
           value={selectedIDs}
@@ -78,10 +78,10 @@ const MultiClusterTopologyPage: React.FC = () => {
           onClick={handleFetch}
           disabled={selectedIDs.length < 2}
         >
-          查看拓樸
+          {t('multicluster:topology.viewButton')}
         </Button>
         {queryIDs.length > 0 && (
-          <Tooltip title="重新整理">
+          <Tooltip title={t('multicluster:topology.refreshTooltip')}>
             <Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()} />
           </Tooltip>
         )}
@@ -89,10 +89,10 @@ const MultiClusterTopologyPage: React.FC = () => {
         {/* Stats */}
         {topo && (
           <Space size={4} style={{ marginLeft: token.marginSM }}>
-            <Tag color="blue">{topo.clusters.length} 個叢集</Tag>
-            <Tag color="green">{totalNodes} 個節點</Tag>
+            <Tag color="blue">{t('multicluster:topology.clusterCount', { count: topo.clusters.length })}</Tag>
+            <Tag color="green">{t('multicluster:topology.nodeCount', { count: totalNodes })}</Tag>
             {crossCount > 0 && (
-              <Tag color="purple">{crossCount} 條跨叢集連線</Tag>
+              <Tag color="purple">{t('multicluster:topology.crossEdgeCount', { count: crossCount })}</Tag>
             )}
           </Space>
         )}
@@ -103,10 +103,10 @@ const MultiClusterTopologyPage: React.FC = () => {
         <Alert
           type="info"
           showIcon
-          message="未偵測到跨叢集連線"
+          message={t('multicluster:topology.noCrossEdgeDetected')}
           description={
             <>
-              如需顯示跨叢集依賴，請在 Service 上加入 annotation：
+              {t('multicluster:topology.noCrossEdgeHint')}
               <code style={{ marginLeft: 8 }}>synapse.io/cross-cluster: &quot;&lt;targetClusterID&gt;/&lt;namespace&gt;/&lt;service&gt;&quot;</code>
             </>
           }
@@ -119,19 +119,19 @@ const MultiClusterTopologyPage: React.FC = () => {
       {queryIDs.length === 0 ? (
         <Empty
           image={<ApartmentOutlined style={{ fontSize: 64, color: token.colorTextTertiary }} />}
-          description="選擇兩個以上的叢集，點擊「查看拓樸」顯示聯邦視圖"
+          description={t('multicluster:topology.emptyDescription')}
           style={{ paddingTop: 80 }}
         />
       ) : isFetching ? (
         <div style={{ textAlign: 'center', paddingTop: 80 }}>
-          <Spin tip="正在載入多叢集拓樸..." size="large" />
+          <Spin tip={t('multicluster:topology.loading')} size="large" />
         </div>
       ) : isError ? (
         <Alert
           type="error"
           showIcon
-          message="拓樸載入失敗"
-          description="請確認選取的叢集均處於連線狀態，並重新整理。"
+          message={t('multicluster:topology.loadError')}
+          description={t('multicluster:topology.loadErrorDescription')}
           style={{ marginTop: token.marginMD }}
         />
       ) : topo && topo.clusters.every((c) => c.nodes.length === 0) ? (
@@ -155,8 +155,8 @@ const MultiClusterTopologyPage: React.FC = () => {
               verticalAlign: 'middle',
             }}
           />
-          <span style={{ color: '#722ed1', fontWeight: 600 }}>跨叢集連線</span>
-          <span>（由 <code>synapse.io/cross-cluster</code> annotation 定義）</span>
+          <span style={{ color: '#722ed1', fontWeight: 600 }}>{t('multicluster:topology.crossEdgeLegend')}</span>
+          <span dangerouslySetInnerHTML={{ __html: t('multicluster:topology.crossEdgeLegendDescription') }} />
         </div>
       )}
     </div>

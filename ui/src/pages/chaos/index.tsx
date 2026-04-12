@@ -37,6 +37,7 @@ import {
   type ChaosKind,
 } from '../../services/chaosService';
 import EmptyState from '../../components/EmptyState';
+import NotInstalledCard from '../../components/NotInstalledCard';
 import ChaosFormModal from './ChaosFormModal';
 import ChaosDetailDrawer from './ChaosDetailDrawer';
 import ScheduleFormModal from './ScheduleFormModal';
@@ -74,7 +75,7 @@ interface ExperimentsTabProps {
 const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, onCreateClick }) => {
   const { token } = theme.useToken();
   const { message } = App.useApp();
-  const { t } = useTranslation(['common']);
+  const { t } = useTranslation(['chaos', 'common']);
   const queryClient = useQueryClient();
 
   const [searchText, setSearchText] = useState('');
@@ -123,7 +124,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
 
   const columns: TableColumnsType<ChaosExperiment> = [
     {
-      title: '名稱',
+      title: t('chaos:table.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
@@ -140,7 +141,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
       width: 150,
     },
     {
-      title: '類型',
+      title: t('chaos:table.kind'),
       dataIndex: 'kind',
       key: 'kind',
       width: 130,
@@ -149,7 +150,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
       ),
     },
     {
-      title: '狀態',
+      title: t('chaos:table.phase'),
       dataIndex: 'phase',
       key: 'phase',
       width: 120,
@@ -158,7 +159,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
       ),
     },
     {
-      title: '持續時間',
+      title: t('chaos:table.duration'),
       dataIndex: 'duration',
       key: 'duration',
       width: 110,
@@ -167,7 +168,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
       ),
     },
     {
-      title: '建立時間',
+      title: t('chaos:table.createdAt'),
       dataIndex: 'created_at',
       key: 'created_at',
       width: 160,
@@ -184,7 +185,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
       fixed: 'right',
       render: (_, record) => (
         <Space size={0}>
-          <Tooltip title="查看詳情">
+          <Tooltip title={t('chaos:actions.viewDetail')}>
             <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           </Tooltip>
           <Popconfirm
@@ -211,8 +212,8 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
           type="warning"
           showIcon
           icon={<ThunderboltOutlined />}
-          message={`${activeCount} 個實驗注入中`}
-          description="目前有混沌實驗正在注入故障，相關 Namespace 的 SLO 告警已自動暫停。"
+          message={t('chaos:injectingAlert.message', { count: activeCount })}
+          description={t('chaos:injectingAlert.desc')}
           style={{ marginBottom: token.marginMD }}
         />
       )}
@@ -221,7 +222,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
         <Space>
           <Input
             prefix={<SearchOutlined />}
-            placeholder="搜尋實驗名稱"
+            placeholder={t('chaos:search.experimentPlaceholder')}
             allowClear
             style={{ width: 220 }}
             onChange={(e) => setSearchText(e.target.value)}
@@ -234,7 +235,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
             onChange={(v: string | undefined) => setNsFilter(v ?? '')}
           />
           <Select
-            placeholder="類型"
+            placeholder={t('chaos:search.kindPlaceholder')}
             allowClear
             style={{ width: 150 }}
             options={[
@@ -257,7 +258,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
             onClick={onCreateClick}
             disabled={!installed}
           >
-            建立實驗
+            {t('chaos:actions.createExperiment')}
           </Button>
         </Space>
       </Flex>
@@ -279,7 +280,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
             <EmptyState
               description={
                 !installed
-                  ? 'Chaos Mesh 未安裝，無法列出實驗'
+                  ? t('chaos:notInstalled.emptyExperiments')
                   : t('common:messages.noData')
               }
             />
@@ -308,7 +309,7 @@ interface SchedulesTabProps {
 const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCreateClick }) => {
   const { token } = theme.useToken();
   const { message } = App.useApp();
-  const { t } = useTranslation(['common']);
+  const { t } = useTranslation(['chaos', 'common']);
   const queryClient = useQueryClient();
 
   const [searchText, setSearchText] = useState('');
@@ -338,7 +339,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
 
   const columns: TableColumnsType<ChaosSchedule> = [
     {
-      title: '名稱',
+      title: t('chaos:table.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
@@ -357,7 +358,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
       render: (v: string) => <Text code style={{ fontSize: token.fontSizeSM }}>{v || '—'}</Text>,
     },
     {
-      title: '類型',
+      title: t('chaos:table.kind'),
       dataIndex: 'type',
       key: 'type',
       width: 130,
@@ -366,15 +367,17 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
       ),
     },
     {
-      title: '狀態',
+      title: t('chaos:table.phase'),
       dataIndex: 'suspended',
       key: 'suspended',
       width: 80,
       render: (v: boolean) =>
-        v ? <Tag color="warning">已暫停</Tag> : <Tag color="success">啟用</Tag>,
+        v
+          ? <Tag color="warning">{t('chaos:table.suspended')}</Tag>
+          : <Tag color="success">{t('chaos:table.active')}</Tag>,
     },
     {
-      title: '上次執行',
+      title: t('chaos:table.lastRun'),
       dataIndex: 'last_run_time',
       key: 'last_run_time',
       width: 160,
@@ -411,7 +414,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
       <Flex justify="space-between" align="center" style={{ marginBottom: token.marginMD }}>
         <Input
           prefix={<SearchOutlined />}
-          placeholder="搜尋排程名稱"
+          placeholder={t('chaos:search.schedulePlaceholder')}
           allowClear
           style={{ width: 240 }}
           onChange={(e) => setSearchText(e.target.value)}
@@ -426,7 +429,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
             onClick={onCreateClick}
             disabled={!installed}
           >
-            建立排程
+            {t('chaos:actions.createSchedule')}
           </Button>
         </Space>
       </Flex>
@@ -446,7 +449,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
         locale={{
           emptyText: (
             <EmptyState
-              description={!installed ? 'Chaos Mesh 未安裝' : t('common:messages.noData')}
+              description={!installed ? t('chaos:notInstalled.emptySchedules') : t('common:messages.noData')}
             />
           ),
         }}
@@ -460,6 +463,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
 const ChaosPage: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const { token } = theme.useToken();
+  const { t } = useTranslation(['chaos', 'common']);
   const queryClient = useQueryClient();
 
   const [expFormOpen, setExpFormOpen]     = useState(false);
@@ -480,7 +484,7 @@ const ChaosPage: React.FC = () => {
       label: (
         <span>
           <ThunderboltOutlined />
-          {' '}實驗
+          {' '}{t('chaos:tabs.experiments')}
         </span>
       ),
       children: (
@@ -496,7 +500,7 @@ const ChaosPage: React.FC = () => {
       label: (
         <span>
           <ScheduleOutlined />
-          {' '}排程
+          {' '}{t('chaos:tabs.schedules')}
         </span>
       ),
       children: (
@@ -513,27 +517,25 @@ const ChaosPage: React.FC = () => {
     <div style={{ padding: token.paddingLG }}>
       <div style={{ marginBottom: token.marginLG }}>
         <div style={{ fontSize: token.fontSizeLG, fontWeight: 600, color: token.colorText }}>
-          混沌工程
+          {t('chaos:page.title')}
         </div>
         <div style={{ color: token.colorTextSecondary, fontSize: token.fontSizeSM, marginTop: 4 }}>
-          透過 Chaos Mesh 注入故障，驗證系統韌性
+          {t('chaos:page.subtitle')}
         </div>
       </div>
 
-      {status && !status.installed && (
-        <Alert
-          type="warning"
-          showIcon
-          icon={<ThunderboltOutlined />}
-          message="Chaos Mesh 未安裝"
-          description="此叢集尚未安裝 Chaos Mesh。請先安裝才能建立混沌實驗。"
-          style={{ marginBottom: token.marginMD }}
+      {status && !status.installed ? (
+        <NotInstalledCard
+          title={t('chaos:notInstalled.title')}
+          description={t('chaos:notInstalled.desc')}
+          command="helm install chaos-mesh chaos-mesh/chaos-mesh --namespace=chaos-mesh --create-namespace"
+          docsUrl="https://chaos-mesh.org/docs/production-installation-using-helm/"
         />
+      ) : (
+        <Card variant="borderless">
+          <Tabs items={tabs} />
+        </Card>
       )}
-
-      <Card variant="borderless">
-        <Tabs items={tabs} />
-      </Card>
 
       <ChaosFormModal
         open={expFormOpen}

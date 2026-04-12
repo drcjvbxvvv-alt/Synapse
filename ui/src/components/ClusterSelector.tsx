@@ -10,7 +10,7 @@ import {
 import type { Cluster } from '../types';
 import { clusterService } from '../services/clusterService';
 import { usePermission } from '../hooks/usePermission';
-import { getPermissionTypeName, getPermissionTypeColor } from '../services/permissionService';
+import { getPermissionTypeColor } from '../services/permissionService';
 import { useClusterStore } from '../store';
 
 const { Option } = Select;
@@ -19,7 +19,7 @@ const ClusterSelector: React.FC = () => {
   const { id, clusterId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
+  const { t } = useTranslation(['permission', 'common']);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const { getPermissionType, setCurrentClusterId, canWrite } = usePermission();
   const { setActiveClusterId, setClusters: setStoreClusters } = useClusterStore();
@@ -40,7 +40,7 @@ const ClusterSelector: React.FC = () => {
     if (currentClusterId) {
       window.open(`/clusters/${currentClusterId}/terminal`);
     } else {
-      message.error(t('menu.cannotGetClusterId'));
+      message.error(t('common:menu.cannotGetClusterId'));
     }
   };
 
@@ -68,10 +68,10 @@ const ClusterSelector: React.FC = () => {
           onClick={() => navigate('/clusters')}
           style={{ marginRight: 16 }}
         >
-          {t('menu.backToClusterList')}
+          {t('common:menu.backToClusterList')}
         </Button>
         <ClusterOutlined style={{ color: '#1890ff' }} />
-        <span>{t('menu.currentCluster')}</span>
+        <span>{t('common:menu.currentCluster')}</span>
 
         <Select
           value={currentClusterId}
@@ -90,12 +90,12 @@ const ClusterSelector: React.FC = () => {
         </Select>
         {permissionType && (
           <Tag color={getPermissionTypeColor(permissionType)} style={{ marginLeft: 8 }}>
-            {getPermissionTypeName(permissionType)}
+            {t(`permission:types.${permissionType}.name`)}
           </Tag>
         )}
         {!hasWritePermission && permissionType && (
           <span style={{ color: '#ff4d4f', fontSize: '12px' }}>
-            {t('menu.readonlyMode')}
+            {t('common:menu.readonlyMode')}
           </span>
         )}
       </div>
@@ -105,9 +105,9 @@ const ClusterSelector: React.FC = () => {
           icon={<CodeOutlined />}
           onClick={() => openTerminal()}
           disabled={!hasWritePermission}
-          title={!hasWritePermission ? t('menu.readonlyNoTerminal') : undefined}
+          title={!hasWritePermission ? t('common:menu.readonlyNoTerminal') : undefined}
         >
-          {t('menu.kubectlTerminal')}
+          {t('common:menu.kubectlTerminal')}
         </Button>
       </Space>
     </div>

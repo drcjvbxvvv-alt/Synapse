@@ -1,0 +1,185 @@
+{
+  "pageTitle": "多叢集工作流程",
+  "title": "跨叢集工作負載",
+  "tabs": {
+    "topology": "聯邦拓樸",
+    "syncPolicy": "配置同步策略"
+  },
+  "migrationWizard": {
+    "title": "跨叢集工作負載遷移精靈",
+    "buttonLabel": "工作負載遷移精靈",
+    "precheck": "預檢失敗：{{error}}",
+    "steps": {
+      "source": "來源",
+      "target": "目標",
+      "options": "選項",
+      "confirm": "確認",
+      "complete": "完成"
+    },
+    "step0": {
+      "title": "選擇來源工作負載",
+      "sourceCluster": "來源叢集",
+      "selectCluster": "選擇叢集",
+      "namespace": "命名空間",
+      "selectNamespace": "選擇命名空間",
+      "workloadType": "工作負載型別",
+      "workloadName": "工作負載名稱",
+      "selectWorkload": "選擇工作負載",
+      "replicas": "副本"
+    },
+    "step1": {
+      "title": "選擇目標叢集",
+      "migratingSummary": "將遷移：{{kind}} / {{namespace}} / {{name}}",
+      "targetCluster": "目標叢集",
+      "selectTargetCluster": "選擇目標叢集",
+      "targetNamespace": "目標命名空間",
+      "selectExisting": "選擇現有命名空間（或在下方建立新的）",
+      "createNewNamespace": "或建立新命名空間",
+      "enterNamespaceName": "輸入新命名空間名稱"
+    },
+    "step2": {
+      "title": "同步選項與資源預檢",
+      "syncConfigMaps": "同步相依 ConfigMap",
+      "syncSecrets": "同步相依 Secret",
+      "runPrecheck": "執行資源預檢",
+      "workloadRequirements": "工作負載需求：CPU {{cpu}}m / MEM {{mem}} MiB",
+      "targetAvailable": "目標叢集可用：CPU {{cpu}}m / MEM {{mem}} MiB",
+      "detectedDependencies": "偵測到相依：{{configMaps}} 個 ConfigMap，{{secrets}} 個 Secret"
+    },
+    "step3": {
+      "title": "確認遷移",
+      "sourceCluster": "來源叢集",
+      "sourceNamespace": "來源命名空間",
+      "workload": "工作負載",
+      "targetCluster": "目標叢集",
+      "targetNamespace": "目標命名空間",
+      "syncConfigMaps": "同步 ConfigMap",
+      "syncSecrets": "同步 Secret",
+      "yes": "是",
+      "no": "否",
+      "warning": "請確認以上資訊無誤，遷移操作將在目標叢集建立工作負載（若已存在則覆蓋）。"
+    },
+    "step4": {
+      "success": "遷移成功",
+      "failed": "遷移失敗"
+    },
+    "buttons": {
+      "close": "關閉",
+      "cancel": "取消",
+      "previous": "上一步",
+      "next": "下一步",
+      "confirm": "確認執行遷移"
+    }
+  },
+  "stats": {
+    "clusters": "叢集數",
+    "totalWorkloads": "工作負載總數",
+    "degradedWorkloads": "異常工作負載",
+    "searchResults": "搜尋結果"
+  },
+  "table": {
+    "cluster": "叢集",
+    "namespace": "命名空間",
+    "type": "型別",
+    "name": "名稱",
+    "replicas": "副本",
+    "status": "狀態",
+    "healthy": "正常",
+    "degraded": "異常",
+    "images": "映像",
+    "createdAt": "建立時間"
+  },
+  "filters": {
+    "type": "型別",
+    "nameFilter": "名稱（模糊）",
+    "namespaceFilter": "命名空間",
+    "search": "搜尋"
+  },
+  "messages": {
+    "refresh": "重新整理",
+    "loadError": "載入跨叢集工作負載失敗",
+    "syncPolicyListError": "取得同步策略列表失敗",
+    "syncFailed": "同步失敗",
+    "syncTriggered": "同步已觸發，請稍後檢視歷史紀錄",
+    "triggerFailed": "觸發失敗",
+    "historyLoadError": "取得歷史失敗",
+    "saveFailed": "儲存失敗",
+    "deleteConfirmTitle": "確認刪除",
+    "deleteConfirmContent": "確定要刪除同步策略「{{name}}」嗎？",
+    "deleteSuccess": "已刪除",
+    "total": "共 {{count}} 筆"
+  },
+  "topology": {
+    "selectPlaceholder": "選擇要比較的叢集（最多 10 個）",
+    "viewButton": "查看拓樸",
+    "refreshTooltip": "重新整理",
+    "clusterCount": "{{count}} 個叢集",
+    "clusterCountPlural": "{{count}} 個叢集",
+    "nodeCount": "{{count}} 個節點",
+    "nodeCountPlural": "{{count}} 個節點",
+    "crossEdgeCount": "{{count}} 條跨叢集連線",
+    "crossEdgeCountPlural": "{{count}} 條跨叢集連線",
+    "noCrossEdgeDetected": "未偵測到跨叢集連線",
+    "noCrossEdgeHint": "如需顯示跨叢集依賴，請在 Service 上加入 annotation：",
+    "emptyDescription": "選擇兩個以上的叢集，點擊「查看拓樸」顯示聯邦視圖",
+    "loading": "正在載入多叢集拓樸...",
+    "loadError": "拓樸載入失敗",
+    "loadErrorDescription": "請確認選取的叢集均處於連線狀態，並重新整理。",
+    "crossEdgeLegend": "跨叢集連線",
+    "crossEdgeLegendDescription": "（由 <code>synapse.io/cross-cluster</code> annotation 定義）"
+  },
+  "syncPolicy": {
+    "table": {
+      "policyName": "策略名稱",
+      "source": "來源",
+      "targetCluster": "目標叢集",
+      "conflictPolicy": "衝突策略",
+      "schedule": "排程",
+      "status": "狀態",
+      "lastSync": "最後同步",
+      "actions": "操作",
+      "manual": "手動"
+    },
+    "form": {
+      "policyName": "策略名稱",
+      "policyNamePlaceholder": "例如：sync-app-config",
+      "description": "描述",
+      "sourceCluster": "來源叢集",
+      "selectCluster": "選擇叢集",
+      "sourceNamespace": "來源命名空間",
+      "selectNamespace": "選擇命名空間",
+      "resourceType": "資源型別",
+      "resourceNames": "資源名稱（留空 = 同步全部）",
+      "selectResources": "選擇要同步的資源（留空 = 全部）",
+      "targetClusters": "目標叢集",
+      "selectTargetCluster": "選擇目標叢集",
+      "conflictPolicy": "衝突策略",
+      "conflictPolicySkip": "跳過（保留目標現有資源）",
+      "conflictPolicyOverwrite": "覆蓋（強制更新目標資源）",
+      "schedule": "自動排程（Cron，留空 = 僅手動）",
+      "schedulePlaceholder": "例如：0 2 * * *（每天凌晨 2 點）",
+      "enabled": "啟用"
+    },
+    "buttons": {
+      "refresh": "重新整理",
+      "newPolicy": "新增策略",
+      "save": "儲存",
+      "immediateSync": "立即同步",
+      "history": "歷史紀錄",
+      "edit": "編輯",
+      "delete": "刪除"
+    },
+    "drawer": {
+      "editTitle": "編輯策略：{{name}}",
+      "createTitle": "新增同步策略",
+      "historyTitle": "同步歷史：{{name}}"
+    },
+    "historyTable": {
+      "triggeredBy": "觸發方式",
+      "status": "狀態",
+      "message": "訊息",
+      "startedAt": "開始時間",
+      "duration": "耗時"
+    }
+  }
+}

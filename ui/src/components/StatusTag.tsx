@@ -1,3 +1,4 @@
+import React from "react";
 import { Tag, Badge } from "antd";
 
 const STATUS_CONFIG: Record<string, { color: string; text?: string }> = {
@@ -47,7 +48,7 @@ interface StatusTagProps {
   showDot?: boolean; // 用 Badge dot 模式
 }
 
-export function StatusTag({ status, showDot = false }: StatusTagProps) {
+export const StatusTag = React.memo(function StatusTag({ status, showDot = false }: StatusTagProps) {
   const config = STATUS_CONFIG[status] ?? { color: "default" };
   const label = config.text ?? status;
 
@@ -65,4 +66,4 @@ export function StatusTag({ status, showDot = false }: StatusTagProps) {
   }
 
   return <Tag color={config.color}>{label}</Tag>;
-}
+});

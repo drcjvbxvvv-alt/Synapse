@@ -6,6 +6,8 @@ import {
   ReloadOutlined, SearchOutlined, WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
 import { crossClusterService, type CrossClusterWorkload } from '../../services/imageService';
 
 const { Text } = Typography;
@@ -21,6 +23,7 @@ type ClusterStat = {
 };
 
 const CrossClusterWorkloads: React.FC = () => {
+  const { t } = useTranslation(['multicluster', 'common']);
   const { message } = App.useApp();
   const [items, setItems] = useState<CrossClusterWorkload[]>([]);
   const [stats, setStats] = useState<ClusterStat[]>([]);
@@ -48,7 +51,7 @@ const CrossClusterWorkloads: React.FC = () => {
       });
       setItems(res.data.items || []);
     } catch {
-      message.error('載入跨叢集工作負載失敗');
+      message.error(t('multicluster:messages.loadError'));
     } finally {
       setLoading(false);
     }
@@ -64,17 +67,17 @@ const CrossClusterWorkloads: React.FC = () => {
 
   const columns: ColumnsType<CrossClusterWorkload> = [
     {
-      title: '叢集',
+      title: t('multicluster:table.cluster'),
       dataIndex: 'clusterName',
       width: 130,
     },
     {
-      title: '命名空間',
+      title: t('multicluster:table.namespace'),
       dataIndex: 'namespace',
       width: 140,
     },
     {
-      title: '型別',
+      title: t('multicluster:table.type'),
       dataIndex: 'kind',
       width: 110,
       render: (kind: string) => {
@@ -83,26 +86,26 @@ const CrossClusterWorkloads: React.FC = () => {
       },
     },
     {
-      title: '名稱',
+      title: t('multicluster:table.name'),
       dataIndex: 'name',
       ellipsis: true,
     },
     {
-      title: '副本',
+      title: t('multicluster:table.replicas'),
       width: 90,
       render: (_, r) => `${r.ready} / ${r.replicas}`,
     },
     {
-      title: '狀態',
+      title: t('multicluster:table.status'),
       dataIndex: 'status',
       width: 90,
       render: (s: string) =>
         s === 'healthy'
-          ? <Badge status="success" text="正常" />
-          : <Badge status="error" text="異常" />,
+          ? <Badge status="success" text={t('multicluster:table.healthy')} />
+          : <Badge status="error" text={t('multicluster:table.degraded')} />,
     },
     {
-      title: '映像',
+      title: t('multicluster:table.images'),
       dataIndex: 'images',
       render: (imgs: string[]) => (
         <Space direction="vertical" size={0}>
@@ -117,10 +120,10 @@ const CrossClusterWorkloads: React.FC = () => {
       ),
     },
     {
-      title: '建立時間',
+      title: t('multicluster:table.createdAt'),
       dataIndex: 'createdAt',
       width: 160,
-      render: (v: string) => new Date(v).toLocaleString('zh-TW'),
+      render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm'),
     },
   ];
 
@@ -130,18 +133,18 @@ const CrossClusterWorkloads: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card size="small">
-            <Statistic title="叢集數" value={stats.length} />
+            <Statistic title={t('multicluster:stats.clusters')} value={stats.length} />
           </Card>
         </Col>
         <Col span={6}>
           <Card size="small">
-            <Statistic title="工作負載總數" value={totalWorkloads} />
+            <Statistic title={t('multicluster:stats.totalWorkloads')} value={totalWorkloads} />
           </Card>
         </Col>
         <Col span={6}>
           <Card size="small">
             <Statistic
-              title="異常工作負載"
+              title={t('multicluster:stats.degradedWorkloads')}
               value={totalDegraded}
               valueStyle={{ color: totalDegraded > 0 ? '#ff4d4f' : '#52c41a' }}
               prefix={totalDegraded > 0 ? <WarningOutlined /> : undefined}
@@ -150,23 +153,23 @@ const CrossClusterWorkloads: React.FC = () => {
         </Col>
         <Col span={6}>
           <Card size="small">
-            <Statistic title="搜尋結果" value={items.length} suffix="筆" />
+            <Statistic title={t('multicluster:stats.searchResults')} value={items.length} />
           </Card>
         </Col>
       </Row>
 
       {/* 工作負載列表 */}
       <Card
-        title="跨叢集工作負載"
+        title={t('multicluster:title')}
         extra={
           <Button icon={<ReloadOutlined />} onClick={loadWorkloads} loading={loading}>
-            重新整理
+            {t('multicluster:messages.refresh')}
           </Button>
         }
       >
         <Space style={{ marginBottom: 16 }} wrap>
           <Select
-            placeholder="型別"
+            placeholder={t('multicluster:filters.type')}
             value={filterKind}
             onChange={setFilterKind}
             style={{ width: 130 }}
@@ -177,7 +180,7 @@ const CrossClusterWorkloads: React.FC = () => {
             <Option value="DaemonSet">DaemonSet</Option>
           </Select>
           <Input
-            placeholder="名稱（模糊）"
+            placeholder={t('multicluster:filters.nameFilter')}
             value={filterName}
             onChange={(e) => setFilterName(e.target.value)}
             style={{ width: 180 }}
@@ -185,14 +188,14 @@ const CrossClusterWorkloads: React.FC = () => {
             allowClear
           />
           <Input
-            placeholder="命名空間"
+            placeholder={t('multicluster:filters.namespaceFilter')}
             value={filterNS}
             onChange={(e) => setFilterNS(e.target.value)}
             style={{ width: 160 }}
             allowClear
           />
           <Button type="primary" icon={<SearchOutlined />} onClick={loadWorkloads}>
-            搜尋
+            {t('multicluster:filters.search')}
           </Button>
         </Space>
 
@@ -202,7 +205,7 @@ const CrossClusterWorkloads: React.FC = () => {
           dataSource={items}
           loading={loading}
           scroll={{ x: 1200 }}
-          pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 筆` }}
+          pagination={{ pageSize: 20, showTotal: (total) => t('multicluster:messages.total', { count: total }) }}
         />
       </Card>
     </div>

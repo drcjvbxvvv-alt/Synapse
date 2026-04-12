@@ -62,6 +62,69 @@
   },
   "noRules": "No alert rules found",
   "noHistory": "No alert history found",
+  "eventAlert": {
+    "title": "Event Alert Rules Engine",
+    "tabRules": "Alert Rules",
+    "tabHistory": "Alert History",
+    "createRule": "Add Rule",
+    "refresh": "Refresh",
+    "editRule": "Edit Rule",
+    "addAlertRule": "Add Alert Rule",
+    "table": {
+      "name": "Name",
+      "eventType": "Event Type",
+      "eventReason": "Trigger Reason",
+      "namespace": "Namespace",
+      "minCount": "Min Count",
+      "notifyType": "Notify Type",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "history": {
+      "ruleName": "Rule Name",
+      "namespace": "Namespace",
+      "involvedObject": "Involved Object",
+      "eventType": "Event Type",
+      "reason": "Reason",
+      "message": "Message",
+      "notifyResult": "Notify Result",
+      "triggeredAt": "Triggered At"
+    },
+    "form": {
+      "ruleName": "Rule Name",
+      "rulePlaceholder": "e.g.: OOMKill Alert",
+      "description": "Description",
+      "namespace": "Namespace",
+      "namespacePlaceholder": "Leave empty to monitor entire cluster",
+      "eventType": "Event Type",
+      "eventTypeAll": "All",
+      "eventReason": "Trigger Reason",
+      "eventReasonPlaceholder": "Select or enter reason, e.g. OOMKilling",
+      "eventReasonTooltip": "Multiple reasons separated by commas, leave empty to match all",
+      "minTriggerCount": "Min Trigger Count",
+      "notifyType": "Notify Type",
+      "notifyUrl": "Notify URL",
+      "notifyUrlTooltip": "Webhook / Telegram Bot API / Slack / Teams Incoming Webhook URL",
+      "enabled": "Enabled",
+      "allNamespaces": "Entire Cluster"
+    },
+    "tags": {
+      "all": "All",
+      "warning": "Warning",
+      "normal": "Normal",
+      "webhook": "Webhook",
+      "telegram": "Telegram",
+      "slack": "Slack",
+      "teams": "Microsoft Teams"
+    },
+    "messages": {
+      "saveSuccess": "Alert rule saved successfully",
+      "createSuccess": "Alert rule created successfully",
+      "deleteSuccess": "Alert rule deleted successfully",
+      "confirmDelete": "Confirm Delete",
+      "error": "Operation failed"
+    }
+  },
   "global": {
     "title": "Global Alert Center",
     "clustersConfigured": "{{count}} clusters configured",

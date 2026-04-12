@@ -4,7 +4,7 @@
  */
 
 import { useContext } from 'react';
-import { PermissionContext, type PermissionContextType } from '../contexts/PermissionContext';
+import { PermissionContext, PermissionLoadingContext, type PermissionContextType } from '../contexts/PermissionContext';
 
 export const usePermission = (): PermissionContextType => {
   const context = useContext(PermissionContext);
@@ -12,5 +12,13 @@ export const usePermission = (): PermissionContextType => {
     throw new Error('usePermission must be used within a PermissionProvider');
   }
   return context;
+};
+
+/**
+ * 僅訂閱 loading 狀態的 Hook。
+ * 與 usePermission() 分開，避免 loading 切換時觸發不關心載入狀態的元件重渲染。
+ */
+export const usePermissionLoading = (): boolean => {
+  return useContext(PermissionLoadingContext);
 };
 

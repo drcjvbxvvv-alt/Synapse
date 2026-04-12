@@ -8,7 +8,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { tokenManager } from '../services/authService';
-import { usePermission } from '../hooks/usePermission';
+import { usePermission, usePermissionLoading } from '../hooks/usePermission';
 import {
   isPlatformAdmin,
   hasPermission,
@@ -37,7 +37,8 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
 }) => {
   const { t } = useTranslation('components');
   const currentUser = tokenManager.getUser();
-  const { currentClusterPermission, clusterPermissions, loading } = usePermission();
+  const { currentClusterPermission, clusterPermissions } = usePermission();
+  const loading = usePermissionLoading();
 
   if (loading) {
     return (
@@ -108,7 +109,8 @@ export const PlatformAdminGuard: React.FC<{ children: React.ReactNode }> = ({ ch
 export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation('components');
   const location = useLocation();
-  const { currentClusterPermission, loading } = usePermission();
+  const { currentClusterPermission } = usePermission();
+  const loading = usePermissionLoading();
 
   if (loading) {
     return (
@@ -142,8 +144,7 @@ export const ClusterPermissionGuard: React.FC<{ children: React.ReactNode }> = (
   return <>{children}</>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getPermissionLabel = (type: PermissionType, t: any): string => {
+const getPermissionLabel = (type: PermissionType, t: (key: string) => string): string => {
   const labels: Record<PermissionType, string> = {
     admin: t('permissionGuard.adminPermission'),
     ops: t('permissionGuard.opsPermission'),

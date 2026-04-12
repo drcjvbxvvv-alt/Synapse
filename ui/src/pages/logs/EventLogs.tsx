@@ -15,6 +15,7 @@ import {
   Badge,
   Drawer,
   Descriptions,
+  Popover,
   message,
 } from 'antd';
 import {
@@ -25,6 +26,7 @@ import {
   ClockCircleOutlined,
   InfoCircleOutlined,
   ExclamationCircleOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -88,7 +90,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
       const res = await logService.getNamespaces(clusterId);
       setNamespaces(res || []);
     } catch (error) {
-      console.error('獲取命名空間失敗', error);
+      console.error('Failed to fetch namespaces', error);
     }
   }, [clusterId]);
 
@@ -455,7 +457,30 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
                 <Tag color="cyan">{selectedEvent.involved_kind}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label={t('logs:events.resourceName')}>
-                <Text copyable>{selectedEvent.involved_name}</Text>
+                <Popover
+                  content={
+                    <div style={{ maxWidth: 400 }}>
+                      <div style={{ marginBottom: 8, wordBreak: 'break-all' }}>
+                        {selectedEvent.involved_name}
+                      </div>
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<CopyOutlined />}
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedEvent.involved_name);
+                        }}
+                      >
+                        {t('common:actions.copy')}
+                      </Button>
+                    </div>
+                  }
+                  title={t('logs:center.preview')}
+                >
+                  <Typography.Text style={{ cursor: 'pointer', color: '#1890ff' }} ellipsis>
+                    {selectedEvent.involved_name}
+                  </Typography.Text>
+                </Popover>
               </Descriptions.Item>
             </Descriptions>
 
@@ -477,17 +502,44 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
 
             {/* 事件訊息 */}
             <Card title={t('logs:events.eventMessage')} size="small">
-              <Paragraph
-                style={{
-                  background: '#fafafa',
-                  padding: 12,
-                  borderRadius: 4,
-                  fontFamily: 'monospace',
-                  margin: 0,
-                }}
+              <Popover
+                content={
+                  <div style={{ maxWidth: 600, wordBreak: 'break-all', maxHeight: 400, overflow: 'auto' }}>
+                    <div style={{ marginBottom: 8, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      {selectedEvent.message}
+                    </div>
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedEvent.message);
+                      }}
+                    >
+                      {t('common:actions.copy')}
+                    </Button>
+                  </div>
+                }
+                title={t('logs:center.preview')}
               >
-                {selectedEvent.message}
-              </Paragraph>
+                <Paragraph
+                  style={{
+                    background: '#fafafa',
+                    padding: 12,
+                    borderRadius: 4,
+                    fontFamily: 'monospace',
+                    margin: 0,
+                    wordBreak: 'break-all',
+                    maxHeight: 200,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    cursor: 'pointer',
+                    color: '#1890ff',
+                  }}
+                >
+                  {selectedEvent.message}
+                </Paragraph>
+              </Popover>
             </Card>
           </>
         )}

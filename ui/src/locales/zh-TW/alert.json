@@ -62,6 +62,69 @@
   },
   "noRules": "暫無告警規則",
   "noHistory": "暫無告警歷史",
+  "eventAlert": {
+    "title": "Event 告警規則引擎",
+    "tabRules": "告警規則",
+    "tabHistory": "告警歷史",
+    "createRule": "新增規則",
+    "refresh": "重新整理",
+    "editRule": "編輯規則",
+    "addAlertRule": "新增告警規則",
+    "table": {
+      "name": "名稱",
+      "eventType": "事件型別",
+      "eventReason": "觸發原因",
+      "namespace": "命名空間",
+      "minCount": "最小次數",
+      "notifyType": "通知方式",
+      "status": "狀態",
+      "actions": "操作"
+    },
+    "history": {
+      "ruleName": "規則名稱",
+      "namespace": "命名空間",
+      "involvedObject": "相關物件",
+      "eventType": "事件型別",
+      "reason": "原因",
+      "message": "訊息",
+      "notifyResult": "通知結果",
+      "triggeredAt": "觸發時間"
+    },
+    "form": {
+      "ruleName": "規則名稱",
+      "rulePlaceholder": "例如：OOMKill 告警",
+      "description": "描述",
+      "namespace": "命名空間",
+      "namespacePlaceholder": "留空表示監控全叢集",
+      "eventType": "事件型別",
+      "eventTypeAll": "全部",
+      "eventReason": "觸發原因",
+      "eventReasonPlaceholder": "選擇或輸入原因，例如 OOMKilling",
+      "eventReasonTooltip": "多個原因用逗號分隔，留空匹配全部",
+      "minTriggerCount": "最小觸發次數",
+      "notifyType": "通知方式",
+      "notifyUrl": "通知 URL",
+      "notifyUrlTooltip": "Webhook / Telegram Bot API / Slack / Teams Incoming Webhook URL",
+      "enabled": "啟用",
+      "allNamespaces": "全叢集"
+    },
+    "tags": {
+      "all": "全部",
+      "warning": "Warning",
+      "normal": "Normal",
+      "webhook": "Webhook",
+      "telegram": "Telegram",
+      "slack": "Slack",
+      "teams": "Microsoft Teams"
+    },
+    "messages": {
+      "saveSuccess": "告警規則已保存",
+      "createSuccess": "告警規則已建立",
+      "deleteSuccess": "告警規則已刪除",
+      "confirmDelete": "確認刪除",
+      "error": "操作失敗"
+    }
+  },
   "global": {
     "title": "全域警報中心",
     "clustersConfigured": "{{count}} 個叢集已設定",

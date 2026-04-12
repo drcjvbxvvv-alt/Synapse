@@ -101,6 +101,36 @@
     "noEvents": "暫無 K8s 事件",
     "noSearchResults": "暫無搜尋結果",
     "noLogSources": "暫無日誌源，點選「新增日誌源」配置 Loki 或 Elasticsearch",
-    "noExternalLogResults": "暫無查詢結果"
+    "noExternalLogResults": "暫無查詢結果",
+    "logSourceManagement": "日誌源管理",
+    "addLogSource": "新增日誌源",
+    "name": "名稱",
+    "type": "型別",
+    "url": "URL",
+    "status": "狀態",
+    "enabled": "啟用",
+    "disabled": "停用",
+    "actions": "操作",
+    "delete": "刪除",
+    "queryLogs": "查詢日誌",
+    "logQLQuery": "LogQL 查詢，如 {namespace=\"default\"}",
+    "luceneQuery": "Lucene 查詢，如 error AND namespace:default",
+    "selectLogSourceFirst": "請先在上方選擇日誌源",
+    "esIndex": "ES Index（如 k8s-logs-*）",
+    "queryResults": "查詢結果（{{count}} 筆）",
+    "externalLogs": "外部日誌",
+    "preview": "預覽"
+  },
+  "form": {
+    "type": "型別",
+    "name": "名稱",
+    "url": "URL",
+    "username": "使用者名稱（可選）",
+    "password": "密碼（可選）",
+    "apiKey": "API Key（可選）",
+    "editLogSource": "編輯日誌源",
+    "addLogSource": "新增日誌源",
+    "save": "保存",
+    "cancel": "取消"
   }
 }

@@ -96,7 +96,7 @@ function ReportsTab({ clusterId }: { clusterId: string }) {
       message.success(t('common:messages.success'));
       queryClient.invalidateQueries({ queryKey: ['compliance-reports', clusterId] });
     },
-    onError: () => message.error(t('common:messages.failed')),
+    onError: () => message.error(t('common:messages.error')),
   });
 
   const deleteMut = useMutation({
@@ -115,7 +115,7 @@ function ReportsTab({ clusterId }: { clusterId: string }) {
         setControls(JSON.parse(full.result_json) as ControlResult[]);
       }
     } catch {
-      message.error(t('common:messages.failed'));
+      message.error(t('common:messages.error'));
     }
   }, [clusterId, message, t]);
 
@@ -130,7 +130,7 @@ function ReportsTab({ clusterId }: { clusterId: string }) {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      message.error(t('common:messages.failed'));
+      message.error(t('common:messages.error'));
     }
   }, [clusterId, message, t]);
 

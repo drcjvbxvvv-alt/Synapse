@@ -58,11 +58,11 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
       {/* Log source management */}
       <Card
         size="small"
-        title="日誌源管理"
+        title={t('logs:center.logSourceManagement')}
         style={{ marginBottom: 16 }}
         extra={
           <Button type="primary" size="small" icon={<PlusOutlined />} onClick={onAddSource}>
-            新增日誌源
+            {t('logs:center.addLogSource')}
           </Button>
         }
       >
@@ -80,24 +80,24 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
             onChange: (keys) => setSelectedSrcId(keys[0] as number),
           }}
           columns={[
-            { title: '名稱', dataIndex: 'name' },
+            { title: t('logs:center.name'), dataIndex: 'name', ellipsis: true },
             {
-              title: '型別',
+              title: t('logs:center.type'),
               dataIndex: 'type',
               width: 130,
               render: (type: string) => (
                 <Tag color={type === 'loki' ? 'blue' : 'orange'}>{type.toUpperCase()}</Tag>
               ),
             },
-            { title: 'URL', dataIndex: 'url', ellipsis: true },
+            { title: t('logs:center.url'), dataIndex: 'url', ellipsis: true, width: 200 },
             {
-              title: '狀態',
+              title: t('logs:center.status'),
               dataIndex: 'enabled',
               width: 80,
-              render: (v: boolean) => <Tag color={v ? 'green' : 'red'}>{v ? '啟用' : '停用'}</Tag>,
+              render: (v: boolean) => <Tag color={v ? 'green' : 'red'}>{v ? t('logs:center.enabled') : t('logs:center.disabled')}</Tag>,
             },
             {
-              title: '操作',
+              title: t('logs:center.actions'),
               width: 110,
               render: (_: unknown, record: LogSource) => (
                 <Space>
@@ -107,7 +107,7 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
                     type="link"
                     onClick={() => onEditSource(record, srcForm)}
                   />
-                  <Tooltip title="刪除">
+                  <Tooltip title={t('logs:center.delete')}>
                     <Button
                       size="small"
                       icon={<DeleteOutlined />}
@@ -124,15 +124,15 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
       </Card>
 
       {/* Query interface */}
-      <Card size="small" title="查詢日誌" style={{ marginBottom: 16 }}>
+      <Card size="small" title={t('logs:center.queryLogs')} style={{ marginBottom: 16 }}>
         <Space wrap style={{ width: '100%' }}>
           <Input
             placeholder={
               selectedSrcId
                 ? selectedSource?.type === 'loki'
-                  ? 'LogQL 查詢，如 {namespace="default"}'
-                  : 'Lucene 查詢，如 error AND namespace:default'
-                : '請先在上方選擇日誌源'
+                  ? t('logs:center.logQLQuery')
+                  : t('logs:center.luceneQuery')
+                : t('logs:center.selectLogSourceFirst')
             }
             style={{ width: 420 }}
             value={extQuery}
@@ -141,7 +141,7 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
           />
           {selectedSrcId && selectedSource?.type === 'elasticsearch' && (
             <Input
-              placeholder="ES Index（如 k8s-logs-*）"
+              placeholder={t('logs:center.esIndex')}
               style={{ width: 180 }}
               value={extIndex}
               onChange={(e) => setExtIndex(e.target.value)}
@@ -151,7 +151,7 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
             showTime
             value={extDateRange}
             onChange={(dates) => setExtDateRange(dates as [Dayjs, Dayjs] | null)}
-            placeholder={['開始時間', '結束時間']}
+            placeholder={[t('logs:center.startTime'), t('logs:center.endTime')]}
           />
           <Button
             type="primary"
@@ -159,13 +159,13 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
             loading={extSearchLoading}
             onClick={handleExtSearch}
           >
-            查詢
+            {t('logs:center.query')}
           </Button>
         </Space>
       </Card>
 
       {/* Query results */}
-      <Card size="small" title={`查詢結果（${extResults.length} 筆）`}>
+      <Card size="small" title={t('logs:center.queryResults', { count: extResults.length })}>
         <Table<LogEntry>
           dataSource={extResults}
           rowKey={(r, i) => r.id || String(i)}

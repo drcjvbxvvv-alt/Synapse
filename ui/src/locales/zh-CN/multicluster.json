@@ -1,0 +1,185 @@
+{
+  "pageTitle": "多集群工作流程",
+  "title": "跨集群工作负载",
+  "tabs": {
+    "topology": "联邦拓扑",
+    "syncPolicy": "配置同步策略"
+  },
+  "migrationWizard": {
+    "title": "跨集群工作负载迁移向导",
+    "buttonLabel": "工作负载迁移向导",
+    "precheck": "预检失败：{{error}}",
+    "steps": {
+      "source": "源",
+      "target": "目标",
+      "options": "选项",
+      "confirm": "确认",
+      "complete": "完成"
+    },
+    "step0": {
+      "title": "选择源工作负载",
+      "sourceCluster": "源集群",
+      "selectCluster": "选择集群",
+      "namespace": "命名空间",
+      "selectNamespace": "选择命名空间",
+      "workloadType": "工作负载类型",
+      "workloadName": "工作负载名称",
+      "selectWorkload": "选择工作负载",
+      "replicas": "副本"
+    },
+    "step1": {
+      "title": "选择目标集群",
+      "migratingSummary": "将迁移：{{kind}} / {{namespace}} / {{name}}",
+      "targetCluster": "目标集群",
+      "selectTargetCluster": "选择目标集群",
+      "targetNamespace": "目标命名空间",
+      "selectExisting": "选择现有命名空间（或在下方创建新的）",
+      "createNewNamespace": "或创建新命名空间",
+      "enterNamespaceName": "输入新命名空间名称"
+    },
+    "step2": {
+      "title": "同步选项与资源预检",
+      "syncConfigMaps": "同步相关 ConfigMap",
+      "syncSecrets": "同步相关 Secret",
+      "runPrecheck": "执行资源预检",
+      "workloadRequirements": "工作负载需求：CPU {{cpu}}m / MEM {{mem}} MiB",
+      "targetAvailable": "目标集群可用：CPU {{cpu}}m / MEM {{mem}} MiB",
+      "detectedDependencies": "检测到依赖：{{configMaps}} 个 ConfigMap，{{secrets}} 个 Secret"
+    },
+    "step3": {
+      "title": "确认迁移",
+      "sourceCluster": "源集群",
+      "sourceNamespace": "源命名空间",
+      "workload": "工作负载",
+      "targetCluster": "目标集群",
+      "targetNamespace": "目标命名空间",
+      "syncConfigMaps": "同步 ConfigMap",
+      "syncSecrets": "同步 Secret",
+      "yes": "是",
+      "no": "否",
+      "warning": "请确认以上信息无误，迁移操作将在目标集群创建工作负载（如果已存在则覆盖）。"
+    },
+    "step4": {
+      "success": "迁移成功",
+      "failed": "迁移失败"
+    },
+    "buttons": {
+      "close": "关闭",
+      "cancel": "取消",
+      "previous": "上一步",
+      "next": "下一步",
+      "confirm": "确认执行迁移"
+    }
+  },
+  "stats": {
+    "clusters": "集群数",
+    "totalWorkloads": "工作负载总数",
+    "degradedWorkloads": "异常工作负载",
+    "searchResults": "搜索结果"
+  },
+  "table": {
+    "cluster": "集群",
+    "namespace": "命名空间",
+    "type": "类型",
+    "name": "名称",
+    "replicas": "副本",
+    "status": "状态",
+    "healthy": "正常",
+    "degraded": "异常",
+    "images": "镜像",
+    "createdAt": "创建时间"
+  },
+  "filters": {
+    "type": "类型",
+    "nameFilter": "名称（模糊）",
+    "namespaceFilter": "命名空间",
+    "search": "搜索"
+  },
+  "messages": {
+    "refresh": "刷新",
+    "loadError": "加载跨集群工作负载失败",
+    "syncPolicyListError": "获取同步策略列表失败",
+    "syncFailed": "同步失败",
+    "syncTriggered": "同步已触发，请稍后查看历史记录",
+    "triggerFailed": "触发失败",
+    "historyLoadError": "获取历史失败",
+    "saveFailed": "保存失败",
+    "deleteConfirmTitle": "确认删除",
+    "deleteConfirmContent": "确定要删除同步策略「{{name}}」吗？",
+    "deleteSuccess": "已删除",
+    "total": "共 {{count}} 条"
+  },
+  "topology": {
+    "selectPlaceholder": "选择要比较的集群（最多 10 个）",
+    "viewButton": "查看拓扑",
+    "refreshTooltip": "刷新",
+    "clusterCount": "{{count}} 个集群",
+    "clusterCountPlural": "{{count}} 个集群",
+    "nodeCount": "{{count}} 个节点",
+    "nodeCountPlural": "{{count}} 个节点",
+    "crossEdgeCount": "{{count}} 条跨集群连线",
+    "crossEdgeCountPlural": "{{count}} 条跨集群连线",
+    "noCrossEdgeDetected": "未检测到跨集群连线",
+    "noCrossEdgeHint": "如需显示跨集群依赖，请在 Service 上添加 annotation：",
+    "emptyDescription": "选择两个或以上的集群，点击「查看拓扑」显示联邦视图",
+    "loading": "正在加载多集群拓扑...",
+    "loadError": "拓扑加载失败",
+    "loadErrorDescription": "请确认选取的集群均处于连接状态，并刷新。",
+    "crossEdgeLegend": "跨集群连线",
+    "crossEdgeLegendDescription": "（由 <code>synapse.io/cross-cluster</code> annotation 定义）"
+  },
+  "syncPolicy": {
+    "table": {
+      "policyName": "策略名称",
+      "source": "源",
+      "targetCluster": "目标集群",
+      "conflictPolicy": "冲突策略",
+      "schedule": "调度",
+      "status": "状态",
+      "lastSync": "最后同步",
+      "actions": "操作",
+      "manual": "手动"
+    },
+    "form": {
+      "policyName": "策略名称",
+      "policyNamePlaceholder": "例如：sync-app-config",
+      "description": "描述",
+      "sourceCluster": "源集群",
+      "selectCluster": "选择集群",
+      "sourceNamespace": "源命名空间",
+      "selectNamespace": "选择命名空间",
+      "resourceType": "资源类型",
+      "resourceNames": "资源名称（留空 = 同步全部）",
+      "selectResources": "选择要同步的资源（留空 = 全部）",
+      "targetClusters": "目标集群",
+      "selectTargetCluster": "选择目标集群",
+      "conflictPolicy": "冲突策略",
+      "conflictPolicySkip": "跳过（保留目标现有资源）",
+      "conflictPolicyOverwrite": "覆盖（强制更新目标资源）",
+      "schedule": "自动调度（Cron，留空 = 仅手动）",
+      "schedulePlaceholder": "例如：0 2 * * *（每天凌晨 2 点）",
+      "enabled": "启用"
+    },
+    "buttons": {
+      "refresh": "刷新",
+      "newPolicy": "新增策略",
+      "save": "保存",
+      "immediateSync": "立即同步",
+      "history": "历史记录",
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "drawer": {
+      "editTitle": "编辑策略：{{name}}",
+      "createTitle": "新增同步策略",
+      "historyTitle": "同步历史：{{name}}"
+    },
+    "historyTable": {
+      "triggeredBy": "触发方式",
+      "status": "状态",
+      "message": "消息",
+      "startedAt": "开始时间",
+      "duration": "耗时"
+    }
+  }
+}

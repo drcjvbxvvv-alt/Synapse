@@ -11,8 +11,6 @@ const { Text } = Typography;
 interface CreatePermissionColumnsParams {
   t: TFunction;
   clusters: Cluster[];
-  formatNamespaces: (namespaces: string[]) => string;
-  getPermissionTypeName: (type: string) => string;
   getPermissionTypeColor: (type: string) => string;
   onEdit: (record: ClusterPermission) => void;
   onDelete: (record: ClusterPermission) => void;
@@ -21,8 +19,6 @@ interface CreatePermissionColumnsParams {
 export function createPermissionColumns({
   t,
   clusters,
-  formatNamespaces,
-  getPermissionTypeName,
   getPermissionTypeColor,
   onEdit,
   onDelete,
@@ -65,7 +61,7 @@ export function createPermissionColumns({
       width: 150,
       render: (type: string) => (
         <Tag color={getPermissionTypeColor(type)}>
-          {getPermissionTypeName(type)}
+          {t(`permission:types.${type}.name`)}
         </Tag>
       ),
     },
@@ -76,7 +72,7 @@ export function createPermissionColumns({
       width: 200,
       render: (namespaces: string[]) => (
         <Text type={namespaces.includes('*') ? 'success' : undefined}>
-          {formatNamespaces(namespaces)}
+          {namespaces.includes('*') ? t('permission:form.allNamespaces') : namespaces.join(', ')}
         </Text>
       ),
     },

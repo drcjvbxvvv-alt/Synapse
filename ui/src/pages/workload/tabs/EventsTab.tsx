@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Table, Tag, Button, Space, message, Spin, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SearchOutlined } from '@ant-design/icons';
@@ -47,7 +47,6 @@ const EventsTab: React.FC<EventsTabProps> = ({
 const { t } = useTranslation(['workload', 'common']);
 const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<EventInfo[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<EventInfo[]>([]);
   const [searchText, setSearchText] = useState('');
 
   // 獲取工作負載名稱和型別
@@ -74,7 +73,6 @@ const [loading, setLoading] = useState(false);
 
       const eventList = ((response as unknown as { items?: unknown[] }).items || []) as EventInfo[];
       setEvents(eventList);
-      setFilteredEvents(eventList);
     } catch (error) {
       console.error('獲取事件列表失敗:', error);
       message.error(t('messages.fetchEventsError'));
@@ -87,21 +85,20 @@ const [loading, setLoading] = useState(false);
     loadEvents();
   }, [loadEvents]);
 
-  // 搜尋事件
-  const handleSearch = (value: string) => {
-    setSearchText(value);
-    if (!value.trim()) {
-      setFilteredEvents(events);
-      return;
-    }
-
-    const filtered = events.filter(event =>
-      event.reason?.toLowerCase().includes(value.toLowerCase()) ||
-      event.message?.toLowerCase().includes(value.toLowerCase()) ||
-      event.type?.toLowerCase().includes(value.toLowerCase())
+  // 搜尋事件 — 用 useMemo 取代 useEffect+setState 派生狀態
+  const filteredEvents = useMemo(() => {
+    if (!searchText.trim()) return events;
+    const lower = searchText.toLowerCase();
+    return events.filter(event =>
+      event.reason?.toLowerCase().includes(lower) ||
+      event.message?.toLowerCase().includes(lower) ||
+      event.type?.toLowerCase().includes(lower)
     );
-    setFilteredEvents(filtered);
-  };
+  }, [events, searchText]);
+
+  const handleSearch = useCallback((value: string) => {
+    setSearchText(value);
+  }, []);
 
   // 格式化時間
   const formatTime = (timeStr: string) => {

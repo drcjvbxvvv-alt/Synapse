@@ -25,6 +25,9 @@ import helm from './helm.json';
 import cost from './cost.json';
 import security from './security.json';
 import compliance from './compliance.json';
+import chaos from './chaos.json';
+import multicluster from './multicluster.json';
+import slo from './slo.json';
 export default {
   common,
   cluster,
@@ -53,4 +56,7 @@ export default {
   cost,
   security,
   compliance,
+  chaos,
+  multicluster,
+  slo,
 };

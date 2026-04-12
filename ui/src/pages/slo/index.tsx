@@ -44,12 +44,7 @@ const STATUS_COLOR: Record<string, string> = {
   unknown:  'default',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  ok:       '正常',
-  warning:  '警告',
-  critical: '嚴重',
-  unknown:  '未知',
-};
+// Status labels will be loaded from i18n
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -57,8 +52,18 @@ const SLOListPage: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const { token } = theme.useToken();
   const { message } = App.useApp();
-  const { t } = useTranslation(['common']);
+  const { t } = useTranslation(['slo', 'common']);
   const queryClient = useQueryClient();
+
+  const getStatusLabel = (status: string) => {
+    const statusMap: Record<string, string> = {
+      ok: t('slo:status.ok'),
+      warning: t('slo:status.warning'),
+      critical: t('slo:status.critical'),
+      unknown: t('slo:status.unknown'),
+    };
+    return statusMap[status] || status;
+  };
 
   const cid = Number(clusterId ?? 0);
 
@@ -86,17 +91,17 @@ const SLOListPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => sloService.delete(cid, id),
     onSuccess: () => {
-      message.success('SLO 已刪除');
+      message.success(t('slo:messages.deleteSuccess'));
       queryClient.invalidateQueries({ queryKey: ['slos', cid] });
     },
-    onError: () => message.error('刪除失敗'),
+    onError: () => message.error(t('slo:messages.deleteFailed')),
   });
 
   const toggleMutation = useMutation({
     mutationFn: ({ slo, enabled }: { slo: SLO; enabled: boolean }) =>
       sloService.update(cid, slo.id, { ...slo, enabled }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['slos', cid] }),
-    onError: () => message.error('更新失敗'),
+    onError: () => message.error(t('slo:messages.updateFailed')),
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -125,7 +130,7 @@ const SLOListPage: React.FC = () => {
 
   const columns: TableColumnsType<SLO> = [
     {
-      title: '名稱',
+      title: t('slo:table.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
@@ -135,21 +140,21 @@ const SLOListPage: React.FC = () => {
       ),
     },
     {
-      title: '命名空間',
+      title: t('slo:table.namespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 140,
-      render: (ns: string) => ns || <Text type="secondary">叢集層級</Text>,
+      render: (ns: string) => ns || <Text type="secondary">{t('slo:table.clusterLevel')}</Text>,
     },
     {
-      title: '類型',
+      title: t('slo:table.type'),
       dataIndex: 'sli_type',
       key: 'sli_type',
       width: 120,
-      render: (t: string) => <Tag>{t}</Tag>,
+      render: (type: string) => <Tag>{type}</Tag>,
     },
     {
-      title: '目標',
+      title: t('slo:table.target'),
       dataIndex: 'target',
       key: 'target',
       width: 110,
@@ -160,29 +165,29 @@ const SLOListPage: React.FC = () => {
       ),
     },
     {
-      title: '計算視窗',
+      title: t('slo:table.window'),
       dataIndex: 'window',
       key: 'window',
       width: 90,
       render: (w: string) => <Tag color="blue">{w}</Tag>,
     },
     {
-      title: '燃燒率閾值',
+      title: t('slo:table.burnRate'),
       key: 'burn',
       width: 140,
       render: (_: unknown, r: SLO) => (
         <Space size={4}>
-          <Tooltip title="警告閾值">
+          <Tooltip title={t('slo:tooltips.warningThreshold')}>
             <Tag color="warning">{r.burn_rate_warning}x</Tag>
           </Tooltip>
-          <Tooltip title="嚴重閾值">
+          <Tooltip title={t('slo:tooltips.criticalThreshold')}>
             <Tag color="error">{r.burn_rate_critical}x</Tag>
           </Tooltip>
         </Space>
       ),
     },
     {
-      title: '啟用',
+      title: t('slo:table.enabled'),
       dataIndex: 'enabled',
       key: 'enabled',
       width: 80,
@@ -196,7 +201,7 @@ const SLOListPage: React.FC = () => {
       ),
     },
     {
-      title: '建立時間',
+      title: t('slo:table.createdAt'),
       dataIndex: 'created_at',
       key: 'created_at',
       width: 150,
@@ -207,13 +212,13 @@ const SLOListPage: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: t('slo:table.actions'),
       key: 'actions',
       width: 120,
       fixed: 'right',
       render: (_: unknown, record: SLO) => (
         <Space size={0}>
-          <Tooltip title="查看狀態">
+          <Tooltip title={t('slo:tooltips.viewStatus')}>
             <Button
               type="link"
               size="small"
@@ -221,7 +226,7 @@ const SLOListPage: React.FC = () => {
               onClick={() => setStatusDrawerSLO(record)}
             />
           </Tooltip>
-          <Tooltip title={t('actions.edit')}>
+          <Tooltip title={t('common:actions.edit')}>
             <Button
               type="link"
               size="small"
@@ -230,14 +235,14 @@ const SLOListPage: React.FC = () => {
             />
           </Tooltip>
           <Popconfirm
-            title="確認刪除"
-            description={`此操作將永久刪除「${record.name}」，無法復原。`}
+            title={t('slo:messages.deleteConfirmTitle')}
+            description={t('slo:messages.deleteConfirmContent', { name: record.name })}
             onConfirm={() => deleteMutation.mutate(record.id)}
-            okText={t('actions.delete')}
+            okText={t('common:actions.delete')}
             okButtonProps={{ danger: true }}
-            cancelText={t('actions.cancel')}
+            cancelText={t('common:actions.cancel')}
           >
-            <Tooltip title={t('actions.delete')}>
+            <Tooltip title={t('common:actions.delete')}>
               <Button type="link" size="small" danger icon={<DeleteOutlined />} />
             </Tooltip>
           </Popconfirm>
@@ -260,7 +265,7 @@ const SLOListPage: React.FC = () => {
           <Space>
             <Input
               prefix={<SearchOutlined />}
-              placeholder="搜尋 SLO 名稱或命名空間"
+              placeholder={t('slo:messages.searchPlaceholder')}
               allowClear
               style={{ width: 260 }}
               value={search}
@@ -268,7 +273,7 @@ const SLOListPage: React.FC = () => {
             />
           </Space>
           <Space>
-            <Tooltip title={t('actions.refresh')}>
+            <Tooltip title={t('common:actions.refresh')}>
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() => refetch()}
@@ -276,7 +281,7 @@ const SLOListPage: React.FC = () => {
               />
             </Tooltip>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              新增 SLO
+              {t('slo:messages.createButton')}
             </Button>
           </Space>
         </Flex>
@@ -292,10 +297,10 @@ const SLOListPage: React.FC = () => {
           pagination={{
             pageSize: 20,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 筆`,
+            showTotal: (total) => t('slo:messages.total', { total }),
           }}
           locale={{
-            emptyText: <EmptyState description={t('messages.noData')} />,
+            emptyText: <EmptyState description={t('common:messages.noData')} />,
           }}
         />
       </Card>

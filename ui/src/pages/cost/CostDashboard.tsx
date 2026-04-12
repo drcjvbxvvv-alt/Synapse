@@ -26,6 +26,17 @@ const CostDashboard: React.FC = () => {
 
   const tabItems = [
     {
+      key: 'overview',
+      label: t('cost:tabs.overview'),
+      children: (
+        <OverviewTab
+          snapshot={state.snapshot}
+          snapshotLoading={state.snapshotLoading}
+          onRefresh={state.loadSnapshot}
+        />
+      ),
+    },
+    {
       key: 'occupancy',
       label: t('cost:tabs.occupancy'),
       children: (
@@ -93,17 +104,6 @@ const CostDashboard: React.FC = () => {
           nsEfficiency={state.nsEfficiency}
           clusterId={clusterId!}
           onRefresh={state.loadWasteItems}
-        />
-      ),
-    },
-    {
-      key: 'overview',
-      label: t('cost:tabs.overview'),
-      children: (
-        <OverviewTab
-          snapshot={state.snapshot}
-          snapshotLoading={state.snapshotLoading}
-          onRefresh={state.loadSnapshot}
         />
       ),
     },

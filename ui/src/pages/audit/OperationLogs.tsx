@@ -246,7 +246,7 @@ const OperationLogs: React.FC = () => {
       render: (_, record) => (
         <Space>
           {actionIconMap[record.action] || <InfoCircleOutlined />}
-          <span>{record.action_name || record.action}</span>
+          <span>{t(`audit:actions.${record.action}`) || record.action}</span>
         </Space>
       ),
     },
@@ -382,7 +382,7 @@ const OperationLogs: React.FC = () => {
             <Space wrap size="small">
               {stats?.module_stats?.slice(0, 5).map((m) => (
                 <Tag key={m.module} color={moduleColorMap[m.module] || 'default'}>
-                  {m.module_name}: {m.count}
+                  {t(`audit:modules.${m.module}`)}: {m.count}
                 </Tag>
               ))}
             </Space>
@@ -522,13 +522,13 @@ const OperationLogs: React.FC = () => {
                 </Descriptions.Item>
                 <Descriptions.Item label={t('audit:operations.module')}>
                   <Tag color={moduleColorMap[selectedLog.module] || 'default'}>
-                    {selectedLog.module_name || selectedLog.module}
+                    {t(`audit:modules.${selectedLog.module}`) || selectedLog.module}
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label={t('common:table.actions')}>
                   <Space>
                     {actionIconMap[selectedLog.action] || <InfoCircleOutlined />}
-                    <span>{selectedLog.action_name || selectedLog.action}</span>
+                    <span>{t(`audit:actions.${selectedLog.action}`) || selectedLog.action}</span>
                   </Space>
                 </Descriptions.Item>
                 <Descriptions.Item label={t('common:table.status')}>

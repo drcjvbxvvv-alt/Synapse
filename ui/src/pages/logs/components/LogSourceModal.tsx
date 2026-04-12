@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, Form, Input, Select } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { FormInstance } from 'antd';
 import type { LogSource } from '../../../services/logService';
 
@@ -18,17 +19,19 @@ export const LogSourceModal: React.FC<LogSourceModalProps> = ({
   onOk,
   onCancel,
 }) => {
+  const { t } = useTranslation(['logs', 'common']);
+
   return (
     <Modal
-      title={editingSource ? '編輯日誌源' : '新增日誌源'}
+      title={editingSource ? t('logs:form.editLogSource') : t('logs:form.addLogSource')}
       open={visible}
       onOk={onOk}
       onCancel={onCancel}
-      okText="儲存"
-      cancelText="取消"
+      okText={t('logs:form.save')}
+      cancelText={t('logs:form.cancel')}
     >
       <Form form={form} layout="vertical">
-        <Form.Item name="type" label="型別" rules={[{ required: true }]}>
+        <Form.Item name="type" label={t('logs:form.type')} rules={[{ required: true }]}>
           <Select
             options={[
               { label: 'Loki', value: 'loki' },
@@ -37,20 +40,20 @@ export const LogSourceModal: React.FC<LogSourceModalProps> = ({
             disabled={!!editingSource}
           />
         </Form.Item>
-        <Form.Item name="name" label="名稱" rules={[{ required: true }]}>
-          <Input placeholder="如：prod-loki" />
+        <Form.Item name="name" label={t('logs:form.name')} rules={[{ required: true }]}>
+          <Input placeholder="e.g.: prod-loki" />
         </Form.Item>
-        <Form.Item name="url" label="URL" rules={[{ required: true }]}>
-          <Input placeholder="如：http://loki.monitoring:3100" />
+        <Form.Item name="url" label={t('logs:form.url')} rules={[{ required: true }]}>
+          <Input placeholder="e.g.: http://loki.monitoring:3100" />
         </Form.Item>
-        <Form.Item name="username" label="使用者名稱（可選）">
-          <Input placeholder="HTTP Basic Auth 使用者名稱" />
+        <Form.Item name="username" label={t('logs:form.username')}>
+          <Input placeholder="HTTP Basic Auth username" />
         </Form.Item>
-        <Form.Item name="password" label="密碼（可選）">
-          <Input.Password placeholder="HTTP Basic Auth 密碼" />
+        <Form.Item name="password" label={t('logs:form.password')}>
+          <Input.Password placeholder="HTTP Basic Auth password" />
         </Form.Item>
-        <Form.Item name="apiKey" label="API Key（可選）">
-          <Input.Password placeholder="Loki：X-Scope-OrgID；ES：ApiKey" />
+        <Form.Item name="apiKey" label={t('logs:form.apiKey')}>
+          <Input.Password placeholder="Loki: X-Scope-OrgID; ES: ApiKey" />
         </Form.Item>
       </Form>
     </Modal>
