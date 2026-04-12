@@ -49,14 +49,14 @@ import type {
 const { RangePicker } = DatePicker;
 const { Text, Paragraph } = Typography;
 
-// 終端型別配置
+// Terminal type configuration
 const terminalTypeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   kubectl: { label: 'Kubectl', color: 'blue', icon: <CodeOutlined /> },
   pod: { label: 'Pod', color: 'green', icon: <CloudServerOutlined /> },
   node: { label: 'Node SSH', color: 'orange', icon: <DesktopOutlined /> },
 };
 
-// 狀態配置
+// Status configuration
 const statusConfig: Record<string, { label: string; status: 'processing' | 'success' | 'error' | 'default' }> = {
   active: { label: 'active', status: 'processing' },
   closed: { label: 'closed', status: 'success' },
@@ -66,41 +66,41 @@ const statusConfig: Record<string, { label: string; status: 'processing' | 'succ
 const CommandHistory: React.FC = () => {
   const { message } = App.useApp();
 
-  // 資料狀態
+  // Data state
 const { t } = useTranslation(['audit', 'common']);
 const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<SessionStats | null>(null);
 
-  // 分頁狀態
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // 篩選狀態
+  // Filter state
   const [targetType, setTargetType] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [keyword, setKeyword] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
-  // 詳情抽屜
+  // Detail drawer state
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedSession, setSelectedSession] = useState<SessionDetailResponse | null>(null);
   const [commands, setCommands] = useState<TerminalCommand[]>([]);
   const [commandsLoading, setCommandsLoading] = useState(false);
   const [commandsTotal, setCommandsTotal] = useState(0);
 
-  // 獲取統計資料
+  // Fetch statistics
   const fetchStats = useCallback(async () => {
     try {
       const res = await auditService.getTerminalStats();
       setStats(res);
     } catch (error) {
-      console.error('獲取統計資訊失敗', error);
+      console.error('Failed to fetch statistics', error);
     }
   }, []);
 
-  // 獲取會話列表
+  // Fetch session list
   const fetchSessions = useCallback(async () => {
     setLoading(true);
     try {
@@ -126,7 +126,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
     }
   }, [currentPage, pageSize, targetType, status, keyword, dateRange, message]);
 
-  // 獲取會話詳情和命令
+  // Fetch session detail and commands
   const fetchSessionDetail = useCallback(async (sessionId: number) => {
     setCommandsLoading(true);
     try {
@@ -139,7 +139,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
       setCommands(commandsRes.items || []);
       setCommandsTotal(commandsRes.total);
     } catch {
-      message.error(t('commands.fetchDetailFailed'));
+      message.error(t('audit:commands.fetchDetailFailed'));
     } finally {
       setCommandsLoading(false);
     }
@@ -150,32 +150,32 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
     fetchSessions();
   }, [fetchStats, fetchSessions]);
 
-  // 開啟命令詳情
+  // Open command details
   const handleViewCommands = (record: TerminalSessionItem) => {
     setDrawerVisible(true);
     fetchSessionDetail(record.id);
   };
 
-  // 關閉抽屜
+  // Close drawer
   const handleCloseDrawer = () => {
     setDrawerVisible(false);
     setSelectedSession(null);
     setCommands([]);
   };
 
-  // 重新整理資料
+  // Refresh data
   const handleRefresh = () => {
     fetchStats();
     fetchSessions();
   };
 
-  // 搜尋
+  // Search handler
   const handleSearch = () => {
     setCurrentPage(1);
     fetchSessions();
   };
 
-  // 獲取目標顯示
+  // Get target display
   const getTargetDisplay = (record: TerminalSessionItem) => {
     if (record.target_type === 'pod') {
       return `${record.namespace}/${record.pod}${record.container ? ` (${record.container})` : ''}`;
@@ -186,7 +186,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
     return record.namespace || 'default';
   };
 
-  // 表格列定義
+  // Table column definitions
   const columns: ColumnsType<TerminalSessionItem> = [
     {
       title: t('audit:commands.user'),
@@ -200,7 +200,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
       ),
     },
     {
-      title: '叢集',
+      title: t('audit:commands.cluster'),
       key: 'cluster',
       width: 140,
       render: (_, record) => (
@@ -285,7 +285,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
 
   return (
     <div>
-      {/* 統計卡片 */}
+      {/* Statistics cards */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
           <Card size="small" variant="borderless">
@@ -318,7 +318,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         <Col span={4}>
           <Card size="small" variant="borderless">
             <Statistic
-              title="Kubectl"
+              title={t('audit:commands.terminalTypeKubectl')}
               value={stats?.kubectl_sessions || 0}
               valueStyle={{ color: '#1890ff' }}
             />
@@ -327,7 +327,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         <Col span={4}>
           <Card size="small" variant="borderless">
             <Statistic
-              title="Pod"
+              title={t('audit:commands.terminalTypePod')}
               value={stats?.pod_sessions || 0}
               valueStyle={{ color: '#52c41a' }}
             />
@@ -336,7 +336,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         <Col span={4}>
           <Card size="small" variant="borderless">
             <Statistic
-              title="Node SSH"
+              title={t('audit:commands.terminalTypeNode')}
               value={stats?.node_sessions || 0}
               valueStyle={{ color: '#fa8c16' }}
             />
@@ -344,7 +344,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         </Col>
       </Row>
 
-      {/* 主卡片 */}
+      {/* Main card */}
       <Card
         title={
           <Space>
@@ -359,7 +359,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         }
         variant="borderless"
       >
-        {/* 篩選區域 */}
+        {/* Filter area */}
         <Space wrap style={{ marginBottom: 16 }}>
           <Select
             placeholder={t('audit:commands.terminalTypeFilter')}
@@ -368,9 +368,9 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
             value={targetType || undefined}
             onChange={(v) => setTargetType(v || '')}
           >
-            <Select.Option value="kubectl">Kubectl</Select.Option>
-            <Select.Option value="pod">Pod</Select.Option>
-            <Select.Option value="node">Node SSH</Select.Option>
+            <Select.Option value="kubectl">{t('audit:commands.terminalTypeKubectl')}</Select.Option>
+            <Select.Option value="pod">{t('audit:commands.terminalTypePod')}</Select.Option>
+            <Select.Option value="node">{t('audit:commands.terminalTypeNode')}</Select.Option>
           </Select>
           <Select
             placeholder={t('audit:commands.status')}
@@ -398,7 +398,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           />
         </Space>
 
-        {/* 表格 */}
+        {/* Sessions table */}
         <Table
           columns={columns}
           dataSource={sessions}
@@ -412,7 +412,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
             total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => t('commands.totalCount', { total }),
+            showTotal: (total) => t('audit:commands.totalCount', { total }),
             onChange: (page, size) => {
               setCurrentPage(page);
               setPageSize(size);
@@ -421,7 +421,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         />
       </Card>
 
-      {/* 命令詳情抽屜 */}
+      {/* Command detail drawer */}
       <Drawer
         title={
           <Space>
@@ -437,7 +437,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
           <Button
             icon={<ExportOutlined />}
             onClick={() => {
-              // 匯出命令列表
+              // Export command list
               const content = commands.map(cmd => 
                 `[${dayjs(cmd.timestamp).format('HH:mm:ss')}] ${cmd.parsed_cmd}`
               ).join('\n');
@@ -457,7 +457,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
         <Spin spinning={commandsLoading}>
           {selectedSession && (
             <>
-              {/* 會話資訊 */}
+              {/* Session info */}
               <Descriptions
                 title={t('audit:commands.sessionInfo')}
                 bordered
