@@ -63,7 +63,9 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
   const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
 
   // Load workloads
-  const loadWorkloads = useCallback(async () => {
+  // Pass silent=true to suppress the error toast (used for background polling).
+  // Accepts unknown first arg so React's SyntheticEvent (from onClick) is treated as non-silent.
+  const loadWorkloads = useCallback(async (silent?: unknown) => {
     if (!clusterId) return;
     setLoading(true);
     try {
@@ -77,8 +79,12 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
       );
       setAllWorkloads(response.items || []);
     } catch (error) {
-      console.error(`獲取${workloadType}列表失敗:`, error);
-      message.error(t('messages.fetchError', { type: workloadType }));
+      console.error(`fetch ${workloadType} list failed:`, error);
+      // Only suppress when explicitly called with true (background poll).
+      // A SyntheticEvent passed via onClick={loadWorkloads} is not === true, so toast still shows.
+      if (silent !== true) {
+        message.error(t('messages.fetchError', { type: workloadType }));
+      }
     } finally {
       setLoading(false);
     }
@@ -340,10 +346,10 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
     loadWorkloads();
   }, [loadWorkloads]);
 
-  // Polling
+  // Polling — silent to avoid toast spam when optional components (e.g. Argo Rollout) are not installed
   useEffect(() => {
     if (!clusterId) return;
-    const timer = setInterval(loadWorkloads, POLL_INTERVALS.workload);
+    const timer = setInterval(() => loadWorkloads(true), POLL_INTERVALS.workload);
     return () => clearInterval(timer);
   }, [clusterId, loadWorkloads]);
 
