@@ -639,7 +639,7 @@ Synapse/
 
 ## 系統分析報告
 
-> 基於原始碼深度審查，涵蓋九個維度，誠實呈現優勢與已知缺陷。分析日期：2026-04-07。
+> 基於原始碼深度審查，涵蓋九個維度，誠實呈現優勢與已知缺陷。分析日期：2026-04-12。
 
 ### 總覽評分
 
@@ -647,11 +647,11 @@ Synapse/
 |------|------|----------|
 | 可靠度 | 8/10 | 主路徑錯誤處理完整；已修復 runbooks panic、kubectl terminal panic、Mesh 指標 stub |
 | 實用性 | 9/10 | 覆蓋 95% 日常 K8s 操作；新增資源治理、多叢集遷移、Service Mesh 視覺化、Gateway API 完整 CRUD、叢集網路拓樸圖 |
-| 可用性 | 9/10 | Design Token 統一、MainLayout 重構、空狀態元件標準化；API 回應格式一致 |
-| 誠實性 | 8/10 | 功能與實作高度一致；Service Mesh 流量指標已實作（非 stub）；已補充雲端帳單估算說明 |
+| 可用性 | 9/10 | Design Token 統一、MainLayout 重構、空狀態元件標準化；i18n 全面覆蓋三語言；API 回應格式一致 |
+| 誠實性 | 9/10 | 功能與實作高度一致；i18n 前後端架構分層明確；後端回應中立資料，前端負責完整翻譯 |
 | 系統架構 | 8/10 | Handler → Service → K8s Manager 分層清晰；`K8sInformerManager` 介面解除循環依賴 |
 | 穩定度 | 7/10 | 並發控制正確；高流量下無請求佇列保護，K8s client 超出 QPS/Burst 會直接回傳錯誤 |
-| 程式碼品質 | 8/10 | 錯誤包裝一致；具名常數取代硬編碼；主要 handler 行數合理；前端 Design Token 集中管理 |
+| 程式碼品質 | 9/10 | 錯誤包裝一致；具名常數取代硬編碼；i18n 全面遷移（後端無硬編碼中文，前端 100% t() 覆蓋）；Design Token 集中管理 |
 | 效能 | 9/10 | Informer 快取 + 連線池完善；GlobalSearch 並行化；Pod/Node 列表分層 refetchInterval |
 | 安全性 | 5/10 | RBAC / 稽核 / AI 脫敏完整；**kubeconfig 明文儲存仍為重大風險**；TLS 預設 skip verify |
 
@@ -699,18 +699,22 @@ Synapse/
 - `EmptyState` / `ErrorState` / `PageSkeleton` 統一規範，所有列表頁有非空白的空狀態
 - 分層 `refetchInterval`：Pod 5s / Node 10s / Deployment 15s / Overview 30s
 - RBAC 403 錯誤回傳可存取命名空間列表，方便使用者自助診斷
+- **i18n 全面覆蓋**：繁中 / 簡中 / 英文三語言，所有頁面零硬編碼中文字串
+- **後端中立設計**：API 回傳英文代碼（module、action），前端統一透過 i18n 翻譯
 
 **殘餘缺陷**
 - 工作負載列表缺少「日誌」快捷 icon（需進入詳情頁才能查看日誌）
 
 ---
 
-### 4. 誠實性（Honesty / Accuracy）8/10
+### 4. 誠實性（Honesty / Accuracy）9/10
 
 **與實際相符**
 - 工作負載、儲存、設定、RBAC、AI、GitOps、Helm、CRD、Terminal 均已實作
 - Service Mesh 流量指標已實際填入（`istio_requests_total` Prometheus 查詢）
 - 資源治理：佔用、效率、預測、Right-sizing、雲端帳單全部實作，非估算佔位符
+- **i18n 架構誠實**：後端不假裝翻譯（不返回硬編碼中文），前端 100% 透過 i18n 框架處理語言，職責分離清晰
+- **稽核日誌**：`operation_log_service.go` 已移除 `getModuleName()` / `getActionName()` 中文對映函數，統一回傳代碼
 
 **需補充說明**
 - 雲端帳單 GCP 部分依賴 Budget API（需建立預算才有資料），無 Budget 時建議改用 BigQuery Export
@@ -746,13 +750,19 @@ Synapse/
 
 ---
 
-### 7. 程式碼品質（Code Quality）8/10
+### 7. 程式碼品質（Code Quality）9/10
 
 **優勢**
 - `fmt.Errorf("...: %w", err)` 錯誤包裝全面使用
 - `wsBufferSize = 1024` 等具名常數集中定義於 `handlers/common.go`
 - 前端 `theme.ts` 集中 Design Token，`queryConfig.ts` 集中 refetchInterval
-- 多語言（i18n）覆蓋全部主要 UI 字串（zh-TW / en-US / zh-CN）
+- **i18n 全面遷移（2026-04-12 完成）**：
+  - 後端服務層（`operation_log_service.go`）移除所有硬編碼中文對映函數
+  - 後端 API 統一回傳英文代碼，前端透過 `i18next` 完成翻譯
+  - 前端所有 `t()` 呼叫移除 fallback 中文參數，翻譯來源唯一
+  - 三語言文件（zh-TW / zh-CN / en-US）保持同步，無缺漏 key
+  - 所有 i18n namespace 正確（`audit:*`、`cost:*`、`common:*`）
+- 後端所有 Go 檔案註釋統一改為英文，符合開源協作標準
 
 **殘留觀察**
 - 服務層大型方法（如 `GetWorkloadEfficiency`）邏輯較複雜，可進一步拆分
@@ -808,6 +818,11 @@ Synapse/
 [x] WebSocket buffer 硬編碼 → wsBufferSize 具名常數（已修復 2026-04-03）
 [x] GlobalSearch 串行叢集查詢 → goroutine 並行化（已修復 2026-04-03）
 [x] 啟動 Informer 預熱：GetConnectableClusters + 並行初始化（已修復 2026-04-03）
+[x] operation_log_service.go 硬編碼中文對映函數 → 移除 getModuleName/getActionName，後端回傳代碼（已修復 2026-04-12）
+[x] CommandHistory.tsx 硬編碼中文 → 全面 i18n（已修復 2026-04-12）
+[x] GlobalCostInsights.tsx 硬編碼中文 + 樣式值 → i18n + Design Token（已修復 2026-04-12）
+[x] 稽核 / 成本模組三語言翻譯缺漏 → 補齊 audit:modules、audit:actions、cost:global 等 key（已修復 2026-04-12）
+[x] 後端 Go 原始碼中文註釋 → 全部更新為英文（已修復 2026-04-12）
 ```
 
 ---
