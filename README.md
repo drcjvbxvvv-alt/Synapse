@@ -415,6 +415,8 @@ npm run dev
 # 訪問 http://localhost:5173
 ```
 
+> **i18n 提示**：前端所有文本必須透過 `i18next` 翻譯。編輯 `ui/src/locales/` 下的 JSON 文件新增或更新翻譯，詳見[國際化（i18n）](#國際化i18n)部分。
+
 ### 後端開發
 
 ```bash
@@ -426,6 +428,8 @@ go run main.go
 
 # 預設管理員帳號：admin / Synapse@2026
 ```
+
+> **i18n 提示**：後端 API 回應應返回英文或代碼，不應包含翻譯。前端負責透過 i18n 翻譯所有面向使用者的文本，詳見[國際化（i18n）](#國際化i18n)部分。
 
 ### 建構生產版本
 
@@ -450,6 +454,134 @@ go build -o synapse main.go
 | `DB_DSN`                | SQLite 路徑或 MySQL DSN                           | `./data/synapse.db` |
 | `LOG_FORMAT`            | 日誌格式（`text` / `json`）                       | `text`              |
 | `INFORMER_SYNC_TIMEOUT` | K8s Informer 同步超時（秒）                       | `30`                |
+
+---
+
+## 國際化（i18n）
+
+Synapse 支援繁體中文（zh-TW）、簡體中文（zh-CN）、英文（en-US）三種語言，使用 `i18next` 框架統一管理翻譯。
+
+### 設計原則
+
+- **後端返回中立資料**：所有 API 回應返回英文或代碼（如 `module: "cluster"`, `action: "create"`），不包含翻譯
+- **前端負責翻譯**：所有面向使用者的文本由前端透過 i18n key 翻譯，確保單一真實來源
+- **無硬編碼中文**：前端代碼中禁止硬編碼中文字符，所有文本必須使用 `t()` 函數
+
+### 文件結構
+
+```
+ui/src/locales/
+├── zh-TW/                    # 繁體中文
+│   ├── common.json           # 公共 key（actions, menu, status 等）
+│   ├── cost.json             # 成本分析頁面
+│   ├── audit.json            # 稽核（操作日誌、命令歷史）
+│   └── ...
+├── zh-CN/                    # 簡體中文
+│   ├── common.json
+│   ├── cost.json
+│   ├── audit.json
+│   └── ...
+└── en-US/                    # 英文
+    ├── common.json
+    ├── cost.json
+    ├── audit.json
+    └── ...
+```
+
+### 使用規範
+
+#### 1. React 元件中的翻譯
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+export default function MyPage() {
+  const { t } = useTranslation(['namespace', 'common']);
+
+  return (
+    <div>
+      {/* ✅ 正確：使用 i18n key，無 fallback */}
+      <Button>{t('common:actions.create')}</Button>
+
+      {/* ❌ 禁止：不要使用 fallback 中文 */}
+      <Button>{t('common:actions.create', '建立')}</Button>
+
+      {/* ❌ 禁止：硬編碼中文 */}
+      <Button>建立</Button>
+    </div>
+  );
+}
+```
+
+#### 2. i18n Key 命名規則
+
+```
+common:actions.*           # 通用動作（create, edit, delete, save, cancel 等）
+common:menu.*              # 菜單項目（clusters, nodes, pods 等）
+common:status.*            # 狀態標籤（healthy, unhealthy, loading 等）
+common:validation.*        # 表單驗證訊息（required, invalid 等）
+common:pagination.*        # 分頁相關（total, page 等）
+
+cost:*                     # 成本分析頁面（overview, trend, occupancy, global 等）
+audit:*                    # 稽核管理（operations, commands, modules, actions 等）
+```
+
+#### 3. 後端 API 回應規範
+
+**❌ 錯誤做法**（硬編碼中文）：
+```go
+"module_name": "叢集管理",
+"action_name": "建立",
+"status": "未就緒"
+```
+
+**✅ 正確做法**（返回代碼或英文）：
+```go
+"module": "cluster",        // 代碼，由前端翻譯為 t('audit:modules.cluster')
+"action": "create",         // 代碼，由前端翻譯為 t('audit:actions.create')
+"status": "not_ready"       // 代碼或英文，由前端翻譯為 t('cost:global.notReady')
+```
+
+#### 4. 新增或更新翻譯
+
+當增加新功能時：
+
+1. **後端**：確保 API 回應返回英文或代碼，無硬編碼中文
+2. **前端**：新增 i18n key 到所有三個語言文件
+3. **檢查清單**：
+   - ✓ 在 `common.json` 或模組專用文件中定義 key
+   - ✓ 在所有三個語言文件中一致定義
+   - ✓ 移除所有 `t()` 的 fallback 中文參數
+   - ✓ 替換所有硬編碼中文為 `t('namespace:key')`
+
+### 維護規範
+
+#### 靜止的 i18n Key
+
+部分 Key 定義為**靜止**（不再更新翻譯），應在註釋中標記：
+
+```json
+{
+  "modules": {
+    "auth": "認證管理",  // 靜止：後端直接返回中文，前端不翻譯
+    "cluster": "叢集管理"
+  }
+}
+```
+
+#### 檢測未加載的 i18n Key
+
+若頁面顯示 `i18n沒加載: <key>`，表示該 key 未在翻譯文件中定義：
+
+```tsx
+// 檢查所有三個語言文件
+// 若某個 key 缺失，會顯示為 "[audit:modules.unknown]" 或警告訊息
+
+// 解決方法：
+// 1. 確認 key 是否拼寫正確
+// 2. 在缺失的語言文件中補上該 key
+// 3. 確保後端不返回硬編碼翻譯
+```
 
 ---
 
