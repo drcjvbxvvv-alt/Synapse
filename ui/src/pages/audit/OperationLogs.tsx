@@ -51,7 +51,7 @@ import type {
 const { RangePicker } = DatePicker;
 const { Text, Paragraph } = Typography;
 
-// 操作圖示對映
+// Action icon mapping
 const actionIconMap: Record<string, React.ReactNode> = {
   login: <LoginOutlined style={{ color: '#52c41a' }} />,
   logout: <LogoutOutlined style={{ color: '#1890ff' }} />,
@@ -62,7 +62,7 @@ const actionIconMap: Record<string, React.ReactNode> = {
   scale: <EditOutlined style={{ color: '#fa8c16' }} />,
 };
 
-// 模組顏色對映
+// Module color mapping
 const moduleColorMap: Record<string, string> = {
   auth: 'purple',
   cluster: 'blue',
@@ -80,7 +80,7 @@ const moduleColorMap: Record<string, string> = {
   argocd: 'blue',
 };
 
-// HTTP 方法顏色對映
+// HTTP method color mapping
 const methodColorMap: Record<string, string> = {
   POST: 'green',
   PUT: 'blue',
@@ -92,25 +92,25 @@ const OperationLogs: React.FC = () => {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
 
-  // 資料狀態
+  // Translation hook
   const { t } = useTranslation(['audit', 'common']);
 
-  // 分頁狀態
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // 篩選狀態
+  // Filter state
   const [module, setModule] = useState<string>('');
   const [action, setAction] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [keyword, setKeyword] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
-  // 詳情抽屜
+  // Detail drawer state
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<OperationLogDetail | null>(null);
 
-  // React Query：模組和操作列表（長期快取，不常變）
+  // React Query: Modules and actions list (long-term cache, infrequently changed)
   const { data: modules = [] } = useQuery<ModuleOption[]>({
     queryKey: ['auditModules'],
     queryFn: () => auditService.getModules().then(r => r || []),
@@ -123,14 +123,14 @@ const OperationLogs: React.FC = () => {
     staleTime: 5 * 60_000,
   });
 
-  // React Query：統計資料
+  // React Query: Statistics data
   const { data: stats = null } = useQuery<OperationLogStats | null>({
     queryKey: ['auditStats'],
     queryFn: () => auditService.getOperationLogStats(),
     staleTime: 60_000,
   });
 
-  // React Query：日誌列表（依篩選條件和分頁變化重新請求）
+  // React Query: Logs list (re-requests based on filter and pagination changes)
   const logsParams: OperationLogListParams = {
     page: currentPage,
     pageSize,
@@ -160,7 +160,7 @@ const OperationLogs: React.FC = () => {
     message.error(t('audit:operations.fetchFailed'));
   }
 
-  // React Query：日誌詳情（依 selectedLog id 查詢）
+  // React Query: Log detail (queries based on selectedLog id)
   const [pendingDetailId, setPendingDetailId] = useState<number | null>(null);
   const {
     data: detailData,
@@ -181,31 +181,31 @@ const OperationLogs: React.FC = () => {
     if (detailError) message.error(t('audit:operations.fetchDetailFailed'));
   }, [detailError, message, t]);
 
-  // 檢視詳情
+  // View detail handler
   const handleViewDetail = useCallback((record: OperationLogItem) => {
     setDrawerVisible(true);
     setPendingDetailId(record.id);
   }, []);
 
-  // 關閉抽屜
+  // Close drawer handler
   const handleCloseDrawer = useCallback(() => {
     setDrawerVisible(false);
     setSelectedLog(null);
     setPendingDetailId(null);
   }, []);
 
-  // 重新整理資料
+  // Refresh data handler
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['auditStats'] });
     queryClient.invalidateQueries({ queryKey: ['operationLogs'] });
   }, [queryClient]);
 
-  // 搜尋（重置頁碼，React Query 會自動因 logsParams 變更而重新請求）
+  // Search handler (resets page number, React Query automatically re-requests based on logsParams changes)
   const handleSearch = () => {
     setCurrentPage(1);
   };
 
-  // 表格列定義
+  // Table column definitions
   const columns: ColumnsType<OperationLogItem> = [
     {
       title: t('audit:operations.time'),
@@ -333,7 +333,7 @@ const OperationLogs: React.FC = () => {
 
   return (
     <div>
-      {/* 統計卡片 */}
+      {/* Statistics cards */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
           <Card size="small" variant="borderless">
@@ -390,12 +390,12 @@ const OperationLogs: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 主卡片 */}
+      {/* Main card */}
       <Card
         title={
           <Space>
             <AuditOutlined />
-            <span>{t('operations.title')}</span>
+            <span>{t('audit:operations.title')}</span>
           </Space>
         }
         extra={
@@ -405,10 +405,10 @@ const OperationLogs: React.FC = () => {
         }
         variant="borderless"
       >
-        {/* 篩選區域 */}
+        {/* Filter area */}
         <Space wrap style={{ marginBottom: 16 }}>
           <Select
-            placeholder={t('operations.moduleFilter')}
+            placeholder={t('audit:operations.moduleFilter')}
             allowClear
             style={{ width: 140 }}
             value={module || undefined}
@@ -438,7 +438,7 @@ const OperationLogs: React.FC = () => {
             ))}
           </Select>
           <Select
-            placeholder={t('operations.statusFilter')}
+            placeholder={t('audit:operations.statusFilter')}
             allowClear
             style={{ width: 100 }}
             value={success || undefined}
@@ -462,7 +462,7 @@ const OperationLogs: React.FC = () => {
           />
         </Space>
 
-        {/* 表格 */}
+        {/* Operations table */}
         <Table
           columns={columns}
           dataSource={logs}
@@ -486,7 +486,7 @@ const OperationLogs: React.FC = () => {
         />
       </Card>
 
-      {/* 詳情抽屜 */}
+      {/* Detail drawer */}
       <Drawer
         title={
           <Space>
@@ -502,7 +502,7 @@ const OperationLogs: React.FC = () => {
         <Spin spinning={detailLoading}>
           {selectedLog && (
             <>
-              {/* 基本資訊 */}
+              {/* Basic information */}
               <Descriptions
                 title={t('audit:operations.basicInfo')}
                 bordered
@@ -510,8 +510,8 @@ const OperationLogs: React.FC = () => {
                 column={2}
                 style={{ marginBottom: 24 }}
               >
-                <Descriptions.Item label={t('operations.operationId')}>{selectedLog.id}</Descriptions.Item>
-                <Descriptions.Item label={t('operations.time')}>
+                <Descriptions.Item label={t('audit:operations.operationId')}>{selectedLog.id}</Descriptions.Item>
+                <Descriptions.Item label={t('audit:operations.time')}>
                   {dayjs(selectedLog.created_at).format('YYYY-MM-DD HH:mm:ss')}
                 </Descriptions.Item>
                 <Descriptions.Item label={t('audit:operations.user')}>
@@ -551,7 +551,7 @@ const OperationLogs: React.FC = () => {
 
               {/* 請求資訊 */}
               <Descriptions
-                title={t('operations.requestInfo')}
+                title={t('audit:operations.requestInfo')}
                 bordered
                 size="small"
                 column={1}
@@ -582,10 +582,10 @@ const OperationLogs: React.FC = () => {
                 )}
               </Descriptions>
 
-              {/* 請求體 */}
+              {/* Request body */}
               {selectedLog.request_body && (
                 <Card
-                  title={t('operations.requestBody')}
+                  title={t('audit:operations.requestBody')}
                   size="small"
                   style={{ marginBottom: 24 }}
                 >
@@ -615,7 +615,7 @@ const OperationLogs: React.FC = () => {
                 </Card>
               )}
 
-              {/* 錯誤資訊 */}
+              {/* Error information */}
               {!selectedLog.success && selectedLog.error_message && (
                 <Card
                   title={t('audit:operations.errorInfo')}
