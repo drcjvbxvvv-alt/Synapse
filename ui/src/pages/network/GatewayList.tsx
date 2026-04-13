@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Tag, Space, Button, Select, App, Popconfirm } from 'antd';
-import { ReloadOutlined, PlusOutlined } from '@ant-design/icons';
+import { Table, Tag, Space, Button, Select, App } from 'antd';
+import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import EmptyState from '@/components/EmptyState';
+import { ActionButtons } from '../../components/ActionButtons';
 import { gatewayService } from '../../services/gatewayService';
 import { showApiError } from '@/utils/api';
 import type { GatewayItem, GatewayListener, GatewayTabProps } from './gatewayTypes';
@@ -126,38 +127,29 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
-    ...((hasFeature('network:write')) || (hasFeature('network:delete')) ? [{
+    {
       title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
-      width: 120,
+      width: 70,
       render: (_: unknown, record: GatewayItem) => (
-        <Space size="small">
-          {hasFeature('network:write') && (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => { setEditingGateway(record); setFormVisible(true); }}
-            >
-              {t('common:actions.edit')}
-            </Button>
-          )}
-          {hasFeature('network:delete') && (
-            <Popconfirm
-              title={t('network:gatewayapi.messages.confirmDeleteTitle')}
-              description={t('network:gatewayapi.messages.confirmDeleteGateway', { name: record.name })}
-              onConfirm={() => handleDelete(record)}
-              okText={t('common:actions.confirm')}
-              cancelText={t('common:actions.cancel')}
-            >
-              <Button type="link" size="small" danger>
-                {t('common:actions.delete')}
-              </Button>
-            </Popconfirm>
-          )}
-        </Space>
+        <ActionButtons
+          primary={[
+            { key: 'edit', label: t('common:actions.edit'), icon: <EditOutlined />, onClick: () => { setEditingGateway(record); setFormVisible(true); } },
+          ]}
+          more={[
+            ...(hasFeature('network:delete') ? [{
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
+              onClick: () => handleDelete(record),
+              confirm: {
+                title: t('network:gatewayapi.messages.confirmDeleteTitle'),
+                description: t('network:gatewayapi.messages.confirmDeleteGateway', { name: record.name }),
+              },
+            }] : []),
+          ]}
+        />
       ),
-    }] : []),
+    },
   ];
 
   return (
