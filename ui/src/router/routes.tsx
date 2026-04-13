@@ -283,8 +283,8 @@ export function AppRoutes() {
         <Route path="clusters/:clusterId/event-alerts" element={<EventAlertRules />} />
 
         {/* ── Namespaces ───────────────────────────────────────────────── */}
-        <Route path="clusters/:clusterId/namespaces" element={<NamespaceList />} />
-        <Route path="clusters/:clusterId/namespaces/:namespace" element={<NamespaceDetail />} />
+        <Route path="clusters/:clusterId/namespaces" element={<PermissionGuard requiredFeature="namespace:view"><NamespaceList /></PermissionGuard>} />
+        <Route path="clusters/:clusterId/namespaces/:namespace" element={<PermissionGuard requiredFeature="namespace:view"><NamespaceDetail /></PermissionGuard>} />
 
         {/* ── Configs & Secrets ────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/configs" element={

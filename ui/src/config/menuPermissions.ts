@@ -80,7 +80,7 @@ export const CLUSTER_MENU_PERMISSIONS: Record<string, {
   'k8s-network':     { requiredFeature: 'network:view' },
   'k8s-storage':     { requiredFeature: 'storage:view' },
   'k8s-configs':     { requiredFeature: 'config:view' },
-  'k8s-namespaces':  {},
+  'k8s-namespaces':  { requiredFeature: 'namespace:view' },
 
   // === 叢集管理 - 需要較高權限 ===
   'cluster':          { requiredPermission: 'ops' },
