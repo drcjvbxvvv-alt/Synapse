@@ -323,6 +323,26 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 - 命名空間粒度（`["*"]` 或指定命名空間列表）
 - 支援用戶層級與用戶組層級綁定
 
+##### 前端操作權限矩陣
+
+> 最後更新：2026-04-13
+> 實作位置：`ui/src/contexts/PermissionContext.tsx`（`canWrite` / `canDelete`）、`ui/src/config/menuPermissions.ts`（路由 / 選單 / 操作按鈕）
+
+| 角色 | 查看 | 新增 / 編輯 | 刪除 | 說明 |
+|------|------|-------------|------|------|
+| **admin** | ✅ | ✅ | ✅ | 完整存取；叢集升級等高危操作限 admin |
+| **ops** | ✅ | ✅ | ✅ | 運維操作；無平台管理員頁面存取 |
+| **dev** | ✅ | ❌ | ❌ | 預設與唯讀相同；可透過策略管理頁開放特定功能 |
+| **custom** | ✅ | ✅ | ❌ | 寫入操作同 ops；刪除需 admin/ops |
+| **readonly** | ✅ | ❌ | ❌ | 純查看；僅 Pod Logs 操作可用 |
+
+**補充說明：**
+
+- **刪除操作**（`canDelete`）：僅限 `admin` 和 `ops`，`dev` / `custom` / `readonly` 一律隱藏刪除按鈕
+- **寫入操作**（`canWrite`）：`admin`、`ops`、`custom` 可用；`dev` 與 `readonly` 預設不可用
+- **路由層級限制**：`/nodes`、`/config-center`、`/plugins`、`/cost-insights` 需要 `ops` 以上；`/upgrade` 需要 `admin`
+- **策略管理**：管理員可在「策略管理」頁針對特定 `dev` 用戶的功能可見性做細粒度調整（`hasFeature` 機制）
+
 #### K8s RBAC
 
 - ClusterRole / Role / ClusterRoleBinding / RoleBinding 查看
