@@ -362,8 +362,8 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 | `/clusters/import` | admin（平台管理員）| `PermissionGuard platformAdminOnly` | 匯入叢集 |
 | `/audit/*` | admin（平台管理員）| `PermissionGuard platformAdminOnly` | 操作日誌、指令歷史 |
 | `/access/*` | admin（平台管理員）| `PermissionGuard platformAdminOnly` | 使用者 / 群組 / 權限 / 策略管理 |
-| `/settings` | admin（平台管理員）| `PermissionGuard platformAdminOnly` | 系統設定 |
-| `/profile` | 所有登入用戶 | 無 | 個人資料 |
+| `/settings` | admin、ops | `TopLevelGuard` | 系統設定 |
+| `/profile` | 所有登入用戶 | `RequireAuth`（已登入即可）| 個人資料，唯一允許所有角色訪問的頂層路由 |
 
 ###### 叢集路由（`/clusters/:id/path`）
 

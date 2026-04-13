@@ -411,9 +411,9 @@ export function AppRoutes() {
           <PermissionGuard platformAdminOnly><PermissionManagement /></PermissionGuard>
         } />
 
-        {/* ── Settings (platform admin only) ───────────────────────────── */}
+        {/* ── Settings (admin + ops) ───────────────────────────────────── */}
         <Route path="settings" element={
-          <PermissionGuard platformAdminOnly><SystemSettings /></PermissionGuard>
+          <TopLevelGuard><SystemSettings /></TopLevelGuard>
         } />
 
         {/* ── Profile ──────────────────────────────────────────────────── */}
