@@ -27,6 +27,7 @@ func (h *ResourceYAMLHandler) GetConfigMapYAML(c *gin.Context) {
 	}
 	clean := cm.DeepCopy()
 	clean.ManagedFields = nil
+	clean.Annotations = filterAnnotations(clean.Annotations)
 	clean.APIVersion = "v1"
 	clean.Kind = "ConfigMap"
 	respondWithYAML(c, clean)
@@ -66,6 +67,7 @@ func (h *ResourceYAMLHandler) GetSecretYAML(c *gin.Context) {
 
 	cleanSecret := secret.DeepCopy()
 	cleanSecret.ManagedFields = nil
+	cleanSecret.Annotations = filterAnnotations(cleanSecret.Annotations)
 	cleanSecret.APIVersion = "v1"
 	cleanSecret.Kind = "Secret"
 
@@ -96,6 +98,7 @@ func (h *ResourceYAMLHandler) GetServiceYAMLClean(c *gin.Context) {
 	}
 	clean := svc.DeepCopy()
 	clean.ManagedFields = nil
+	clean.Annotations = filterAnnotations(clean.Annotations)
 	clean.APIVersion = "v1"
 	clean.Kind = "Service"
 	respondWithYAML(c, clean)
@@ -117,6 +120,7 @@ func (h *ResourceYAMLHandler) GetIngressYAMLClean(c *gin.Context) {
 	}
 	clean := ing.DeepCopy()
 	clean.ManagedFields = nil
+	clean.Annotations = filterAnnotations(clean.Annotations)
 	clean.APIVersion = "networking.k8s.io/v1"
 	clean.Kind = "Ingress"
 	respondWithYAML(c, clean)
@@ -138,6 +142,7 @@ func (h *ResourceYAMLHandler) GetPVCYAMLClean(c *gin.Context) {
 	}
 	clean := pvc.DeepCopy()
 	clean.ManagedFields = nil
+	clean.Annotations = filterAnnotations(clean.Annotations)
 	clean.APIVersion = "v1"
 	clean.Kind = "PersistentVolumeClaim"
 	respondWithYAML(c, clean)
@@ -159,6 +164,7 @@ func (h *ResourceYAMLHandler) GetPVYAMLClean(c *gin.Context) {
 	}
 	clean := pv.DeepCopy()
 	clean.ManagedFields = nil
+	clean.Annotations = filterAnnotations(clean.Annotations)
 	clean.APIVersion = "v1"
 	clean.Kind = "PersistentVolume"
 	respondWithYAML(c, clean)
@@ -180,6 +186,7 @@ func (h *ResourceYAMLHandler) GetStorageClassYAMLClean(c *gin.Context) {
 	}
 	clean := sc.DeepCopy()
 	clean.ManagedFields = nil
+	clean.Annotations = filterAnnotations(clean.Annotations)
 	clean.APIVersion = "storage.k8s.io/v1"
 	clean.Kind = "StorageClass"
 	respondWithYAML(c, clean)

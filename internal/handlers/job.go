@@ -191,6 +191,7 @@ func (h *JobHandler) GetJob(c *gin.Context) {
 	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanJob := job.DeepCopy()
 	cleanJob.ManagedFields = nil
+	cleanJob.Annotations = filterAnnotations(cleanJob.Annotations)
 	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanJob.APIVersion = "batch/v1"
 	cleanJob.Kind = "Job"

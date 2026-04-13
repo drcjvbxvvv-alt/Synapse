@@ -198,6 +198,7 @@ func (h *DaemonSetHandler) GetDaemonSet(c *gin.Context) {
 	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanDaemonSet := daemonSet.DeepCopy()
 	cleanDaemonSet.ManagedFields = nil
+	cleanDaemonSet.Annotations = filterAnnotations(cleanDaemonSet.Annotations)
 	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanDaemonSet.APIVersion = "apps/v1"
 	cleanDaemonSet.Kind = "DaemonSet"

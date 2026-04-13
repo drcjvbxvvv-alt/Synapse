@@ -185,6 +185,7 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanDeployment := deployment.DeepCopy()
 	cleanDeployment.ManagedFields = nil
+	cleanDeployment.Annotations = filterAnnotations(cleanDeployment.Annotations)
 	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanDeployment.APIVersion = "apps/v1"
 	cleanDeployment.Kind = "Deployment"

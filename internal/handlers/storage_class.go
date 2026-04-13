@@ -187,8 +187,15 @@ func (h *StorageHandler) GetStorageClassYAML(c *gin.Context) {
 		return
 	}
 
+	// 清理 managed fields、noisy annotations 並設定 TypeMeta
+	clean := sc.DeepCopy()
+	clean.ManagedFields = nil
+	clean.Annotations = filterAnnotations(clean.Annotations)
+	clean.APIVersion = "storage.k8s.io/v1"
+	clean.Kind = "StorageClass"
+
 	// 轉換為YAML
-	yamlData, err := yaml.Marshal(sc)
+	yamlData, err := yaml.Marshal(clean)
 	if err != nil {
 		logger.Error("轉換YAML失敗", "error", err)
 		response.InternalError(c, fmt.Sprintf("轉換YAML失敗: %v", err))

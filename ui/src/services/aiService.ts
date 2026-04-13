@@ -27,10 +27,11 @@ export const aiService = {
     });
   },
 
-  analyzeRootCause: (clusterId: string, namespace: string, podName: string) => {
+  analyzeRootCause: (clusterId: string, namespace: string, podName: string, language?: string) => {
     return request.post<RCAResult>(`/clusters/${clusterId}/ai/rca`, {
       namespace,
       pod_name: podName,
+      language,
     });
   },
 

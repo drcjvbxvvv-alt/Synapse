@@ -175,6 +175,7 @@ func (h *NetworkPolicyHandler) GetNetworkPolicyYAML(c *gin.Context) {
 	clean.APIVersion = "networking.k8s.io/v1"
 	clean.Kind = "NetworkPolicy"
 	clean.ManagedFields = nil
+	clean.Annotations = filterAnnotations(clean.Annotations)
 
 	yamlData, err := yaml.Marshal(clean)
 	if err != nil {

@@ -182,6 +182,7 @@ func (h *CronJobHandler) GetCronJob(c *gin.Context) {
 	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanCronJob := cronJob.DeepCopy()
 	cleanCronJob.ManagedFields = nil
+	cleanCronJob.Annotations = filterAnnotations(cleanCronJob.Annotations)
 	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanCronJob.APIVersion = "batch/v1"
 	cleanCronJob.Kind = "CronJob"

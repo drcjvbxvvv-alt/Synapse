@@ -208,7 +208,8 @@ func (h *IngressHandler) GetIngressYAML(c *gin.Context) {
 	cleanIng := ingress.DeepCopy()
 	cleanIng.APIVersion = "networking.k8s.io/v1"
 	cleanIng.Kind = "Ingress"
-	cleanIng.ManagedFields = nil // 移除 managedFields 簡化 YAML
+	cleanIng.ManagedFields = nil
+	cleanIng.Annotations = filterAnnotations(cleanIng.Annotations)
 
 	// 轉換為YAML
 	yamlData, err := yaml.Marshal(cleanIng)

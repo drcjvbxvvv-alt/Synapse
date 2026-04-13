@@ -45,6 +45,7 @@ func (h *AIRCAHandler) AnalyzePod(c *gin.Context) {
 	var req struct {
 		Namespace string `json:"namespace" binding:"required"`
 		PodName   string `json:"pod_name"  binding:"required"`
+		Language  string `json:"language"`  // e.g. "Traditional Chinese", "English" — optional
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "invalid request body: "+err.Error())
@@ -74,7 +75,7 @@ func (h *AIRCAHandler) AnalyzePod(c *gin.Context) {
 		"pod", req.PodName,
 	)
 
-	result, err := h.rcaSvc.AnalyzePod(ctx, k8sClient.GetClientset(), req.Namespace, req.PodName)
+	result, err := h.rcaSvc.AnalyzePod(ctx, k8sClient.GetClientset(), req.Namespace, req.PodName, req.Language)
 	if err != nil {
 		logger.Error("AI RCA analysis failed",
 			"error", err,

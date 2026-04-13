@@ -46,7 +46,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t } = useTranslation('pod');
+  const { t, i18n } = useTranslation('pod');
   const { t: tc } = useTranslation('common');
   const { hasFeature } = usePermission();
   const initialTab = searchParams.get('tab') || 'overview';
@@ -109,7 +109,12 @@ const PodDetail: React.FC<PodDetailProps> = () => {
       .map(c => `  - ${c.type}: ${c.reason ?? ''} ${c.message ?? ''}`)
       .join('\n') ?? '';
 
+    const lang = i18n.language;
+    const isChinese = lang.startsWith('zh');
+    const langInstruction = isChinese ? '請用繁體中文回覆。' : 'Please reply in English.';
+
     const prompt =
+      `${langInstruction}\n\n` +
       `Please diagnose the following Kubernetes Pod and identify the root cause and suggest fixes:\n\n` +
       `Pod: ${pod.name}\nNamespace: ${pod.namespace}\nStatus: ${pod.status}\nTotal Restarts: ${restarts}\n` +
       (containers ? `Containers:\n${containers}\n` : '') +

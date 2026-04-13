@@ -47,7 +47,7 @@ func NewRCAService(aiConfigSvc *AIConfigService) *RCAService {
 }
 
 // AnalyzePod 對指定 Pod 進行根因分析
-func (s *RCAService) AnalyzePod(ctx context.Context, clientset kubernetes.Interface, namespace, podName string) (*RCAResult, error) {
+func (s *RCAService) AnalyzePod(ctx context.Context, clientset kubernetes.Interface, namespace, podName, language string) (*RCAResult, error) {
 	// 1. Get pod details
 	pod, err := clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *RCAService) AnalyzePod(ctx context.Context, clientset kubernetes.Interf
 	contextStr := s.buildContextString(pod, events, logSnippets, ownerKind, ownerName)
 
 	// 6. Call AI
-	analysis, err := s.callAI(ctx, contextStr)
+	analysis, err := s.callAI(ctx, contextStr, language)
 	if err != nil {
 		return nil, fmt.Errorf("AI analysis for pod %s/%s: %w", namespace, podName, err)
 	}
@@ -211,7 +211,7 @@ func (s *RCAService) buildContextString(pod *corev1.Pod, events *corev1.EventLis
 	return b.String()
 }
 
-func (s *RCAService) callAI(ctx context.Context, rcaContext string) (string, error) {
+func (s *RCAService) callAI(ctx context.Context, rcaContext, language string) (string, error) {
 	aiConfig, err := s.aiConfigSvc.GetConfigWithAPIKey()
 	if err != nil || aiConfig == nil {
 		return "", fmt.Errorf("AI not configured: %w", err)
@@ -220,14 +220,19 @@ func (s *RCAService) callAI(ctx context.Context, rcaContext string) (string, err
 		return "", fmt.Errorf("AI is not enabled")
 	}
 
-	systemPrompt := `You are a Kubernetes root cause analysis expert. Analyze the following pod diagnostic information and provide:
+	langInstruction := "Reply in the same language the user writes in."
+	if language != "" {
+		langInstruction = fmt.Sprintf("Always reply in %s.", language)
+	}
+
+	systemPrompt := fmt.Sprintf(`You are a Kubernetes root cause analysis expert. Analyze the following pod diagnostic information and provide:
 
 1. **Root Cause**: A clear explanation of why the pod is failing or unhealthy
 2. **Impact**: What is the blast radius of this issue
 3. **Suggestions**: Concrete steps to fix the issue (numbered list)
 4. **Prevention**: How to prevent this in the future
 
-Be concise and actionable. Use technical K8s terminology. Output in the user's language (Chinese if the data contains Chinese text, otherwise English).`
+Be concise and actionable. Use technical K8s terminology. %s`, langInstruction)
 
 	messages := []ChatMessage{
 		{Role: "system", Content: systemPrompt},

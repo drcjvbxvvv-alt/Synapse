@@ -208,7 +208,8 @@ func (h *ServiceHandler) GetServiceYAML(c *gin.Context) {
 	cleanSvc := service.DeepCopy()
 	cleanSvc.APIVersion = "v1"
 	cleanSvc.Kind = "Service"
-	cleanSvc.ManagedFields = nil // 移除 managedFields 簡化 YAML
+	cleanSvc.ManagedFields = nil
+	cleanSvc.Annotations = filterAnnotations(cleanSvc.Annotations)
 
 	// 轉換為YAML
 	yamlData, err := yaml.Marshal(cleanSvc)

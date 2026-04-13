@@ -48,7 +48,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
     name: string;
   }>();
   const [searchParams] = useSearchParams();
-const { t } = useTranslation(["workload", "common"]);
+const { t, i18n } = useTranslation(["workload", "common"]);
 const { token } = theme.useToken();
 const navigate = useNavigate();
   const { hasFeature } = usePermission();
@@ -152,7 +152,11 @@ const navigate = useNavigate();
   const handleAIDiagnose = () => {
     if (!workloadInfo) return;
     const ready = `${workloadInfo.readyReplicas ?? 0}/${workloadInfo.replicas ?? 0}`;
+    const isChinese = i18n.language.startsWith('zh');
+    const langInstruction = isChinese ? '請用繁體中文回覆。' : 'Please reply in English.';
+
     const prompt =
+      `${langInstruction}\n\n` +
       `Please diagnose the following Kubernetes ${workloadType} and identify why it may not be healthy:\n\n` +
       `Name: ${workloadInfo.name}\nNamespace: ${workloadInfo.namespace}\nType: ${workloadType}\n` +
       `Ready: ${ready}\nStatus: ${workloadInfo.status}\n` +

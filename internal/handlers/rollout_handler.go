@@ -242,6 +242,7 @@ func (h *RolloutHandler) GetRollout(c *gin.Context) {
 	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanRollout := rollout.DeepCopy()
 	cleanRollout.ManagedFields = nil
+	cleanRollout.Annotations = filterAnnotations(cleanRollout.Annotations)
 	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanRollout.APIVersion = "argoproj.io/v1alpha1"
 	cleanRollout.Kind = "Rollout"

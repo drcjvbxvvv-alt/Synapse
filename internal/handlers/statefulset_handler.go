@@ -194,6 +194,7 @@ func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 	// 清理 managed fields 以生成更乾淨的 YAML
 	cleanStatefulSet := statefulSet.DeepCopy()
 	cleanStatefulSet.ManagedFields = nil
+	cleanStatefulSet.Annotations = filterAnnotations(cleanStatefulSet.Annotations)
 	// 設定 TypeMeta（client-go 返回的物件預設不包含 apiVersion 和 kind）
 	cleanStatefulSet.APIVersion = "apps/v1"
 	cleanStatefulSet.Kind = "StatefulSet"
