@@ -28,7 +28,7 @@ import { usePermission } from '../../hooks/usePermission';
 import { MultiSearchBar } from '../../components/MultiSearchBar';
 
 const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canWrite } = usePermission();
+  const { hasFeature, canWrite, canDelete } = usePermission();
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
@@ -322,9 +322,9 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     onViewEndpoints: handleViewEndpoints,
     onDelete: handleDelete,
     t,
-    canDelete: canWrite(),
+    canDelete: canDelete(),
     showActions: canWrite(),
-  }), [sortField, sortOrder, t, canWrite, handleDelete, handleEdit, handleViewEndpoints, handleViewYAML]);
+  }), [sortField, sortOrder, t, canWrite, canDelete, handleDelete, handleEdit, handleViewEndpoints, handleViewYAML]);
 
   const columns = allColumns.filter(col => {
     if (col.key === 'actions' || col.key === 'name') return true;
@@ -357,7 +357,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          {canWrite() && (
+          {canDelete() && (
             <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger icon={<DeleteOutlined />}>
               {selectedRowKeys.length > 1
                 ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`

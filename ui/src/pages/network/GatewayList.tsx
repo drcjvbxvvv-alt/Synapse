@@ -13,7 +13,7 @@ import { usePermission } from '../../hooks/usePermission';
 const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const [items, setItems] = useState<GatewayItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -126,31 +126,35 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
       width: 120,
       render: (_: unknown, record: GatewayItem) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            onClick={() => { setEditingGateway(record); setFormVisible(true); }}
-          >
-            {t('common:actions.edit')}
-          </Button>
-          <Popconfirm
-            title={t('network:gatewayapi.messages.confirmDeleteTitle')}
-            description={t('network:gatewayapi.messages.confirmDeleteGateway', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
+          {canWrite() && (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => { setEditingGateway(record); setFormVisible(true); }}
+            >
+              {t('common:actions.edit')}
             </Button>
-          </Popconfirm>
+          )}
+          {canDelete() && (
+            <Popconfirm
+              title={t('network:gatewayapi.messages.confirmDeleteTitle')}
+              description={t('network:gatewayapi.messages.confirmDeleteGateway', { name: record.name })}
+              onConfirm={() => handleDelete(record)}
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
+            >
+              <Button type="link" size="small" danger>
+                {t('common:actions.delete')}
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     }] : []),

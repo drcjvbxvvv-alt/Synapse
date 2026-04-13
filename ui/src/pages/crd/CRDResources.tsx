@@ -42,7 +42,7 @@ const CRDResources: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
 
   const state = (location.state ?? {}) as LocationState;
   const kind = state.kind ?? plural;
@@ -172,7 +172,7 @@ const CRDResources: React.FC = () => {
             </Tag>
           )),
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('common.actions', '操作'),
       key: 'actions',
       width: 140,
@@ -185,14 +185,16 @@ const CRDResources: React.FC = () => {
           >
             {t('common.view', '檢視')}
           </Button>
-          <Button
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
-          >
-            {t('common.delete', '刪除')}
-          </Button>
+          {canDelete() && (
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record)}
+            >
+              {t('common.delete', '刪除')}
+            </Button>
+          )}
         </Space>
       ),
     }] : []),

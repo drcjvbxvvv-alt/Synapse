@@ -25,6 +25,7 @@ import {
 } from '../../services/permissionService';
 import CustomRoleEditor from '../../components/CustomRoleEditor';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import { usePermissionManagement } from './hooks/usePermissionManagement';
 import { createPermissionColumns } from './columns';
 import { PermissionModal } from './components/PermissionModal';
@@ -35,6 +36,7 @@ const { Option } = Select;
 
 const PermissionManagement: React.FC = () => {
   const { t } = useTranslation(['permission', 'common']);
+  const { canDelete } = usePermission();
 
   const {
     loading,
@@ -92,6 +94,7 @@ const PermissionManagement: React.FC = () => {
     getPermissionTypeColor,
     onEdit: handleEdit,
     onDelete: (record) => handleDelete(record.id),
+    canDelete,
   });
 
   const displayTypes = permissionTypes.length > 0 ? permissionTypes : defaultPermissionTypes;

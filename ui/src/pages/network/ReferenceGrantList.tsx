@@ -13,7 +13,7 @@ import { usePermission } from '../../hooks/usePermission';
 const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const [items, setItems] = useState<ReferenceGrantItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -99,7 +99,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -109,17 +109,19 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
           <Button type="link" size="small" onClick={() => handleViewYAML(record)}>
             YAML
           </Button>
-          <Popconfirm
-            title={t('gatewayapi.messages.confirmDeleteTitle')}
-            description={t('gatewayapi.messages.confirmDeleteReferenceGrant', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
+          {canDelete() && (
+            <Popconfirm
+              title={t('gatewayapi.messages.confirmDeleteTitle')}
+              description={t('gatewayapi.messages.confirmDeleteReferenceGrant', { name: record.name })}
+              onConfirm={() => handleDelete(record)}
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
+            >
+              <Button type="link" size="small" danger>
+                {t('common:actions.delete')}
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     }] : []),

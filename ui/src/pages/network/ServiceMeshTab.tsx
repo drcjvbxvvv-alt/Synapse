@@ -41,7 +41,7 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
 }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const [items, setItems] = useState<VirtualServiceSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespace] = useState('');
@@ -114,7 +114,7 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
       dataIndex: 'createdAt',
       render: (v: string) => (v ? new Date(v).toLocaleString() : '—'),
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -124,17 +124,19 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
           <Button type="link" size="small" onClick={() => handleViewYAML(record)}>
             YAML
           </Button>
-          <Popconfirm
-            title={t('common:messages.confirmDelete')}
-            description={t('network:servicemesh.confirmDeleteVS', { name: record.name })}
-            onConfirm={() => handleDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
+          {canDelete() && (
+            <Popconfirm
+              title={t('common:messages.confirmDelete')}
+              description={t('network:servicemesh.confirmDeleteVS', { name: record.name })}
+              onConfirm={() => handleDelete(record)}
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
+            >
+              <Button type="link" size="small" danger>
+                {t('common:actions.delete')}
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     }] : []),

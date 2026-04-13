@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import PageSkeleton from '../../components/PageSkeleton';
 import EmptyState from '../../components/EmptyState';
 import ReceiverManagement from './ReceiverManagement';
@@ -33,6 +34,7 @@ const AlertCenter: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation(['alert', 'common']);
+  const { canDelete } = usePermission();
 
   const state = useAlertCenter(clusterId);
 
@@ -42,8 +44,8 @@ const AlertCenter: React.FC = () => {
   );
 
   const silenceColumns = useMemo(
-    () => createSilenceColumns({ t, onDelete: state.handleDeleteSilence }),
-    [t, state.handleDeleteSilence],
+    () => createSilenceColumns({ t, onDelete: state.handleDeleteSilence, canDelete }),
+    [t, state.handleDeleteSilence, canDelete],
   );
 
   const tabItems: TabsProps['items'] = [

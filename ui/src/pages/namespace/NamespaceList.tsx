@@ -25,7 +25,7 @@ import CreateNamespaceModal from './components/CreateNamespaceModal';
 
 
 const NamespaceList: React.FC = () => {
-  const { hasFeature, canWrite } = usePermission();
+  const { hasFeature, canWrite, canDelete } = usePermission();
   const state = useNamespaceList();
   const { token } = theme.useToken();
 
@@ -37,9 +37,9 @@ const NamespaceList: React.FC = () => {
     SYSTEM_NAMESPACES: state.SYSTEM_NAMESPACES,
     handleViewDetail: state.handleViewDetail,
     handleDelete: state.handleDelete,
-    canDelete: canWrite(),
+    canDelete: canDelete(),
     showActions: canWrite(),
-  }), [state.t, token, state.sortField, state.sortOrder, state.SYSTEM_NAMESPACES, state.handleViewDetail, state.handleDelete, canWrite]);
+  }), [state.t, token, state.sortField, state.sortOrder, state.SYSTEM_NAMESPACES, state.handleViewDetail, state.handleDelete, canWrite, canDelete]);
 
   const columns = useMemo(() => allColumns.filter(col => {
     if (col.key === 'actions') return true;
@@ -74,7 +74,7 @@ const NamespaceList: React.FC = () => {
           {/* Action toolbar */}
           <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Space>
-              {canWrite() && (
+              {canDelete() && (
                 <Button
                   danger
                   disabled={state.selectedRowKeys.length === 0}

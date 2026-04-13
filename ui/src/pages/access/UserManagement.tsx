@@ -21,6 +21,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
+import { usePermission } from '../../hooks/usePermission';
 import userService from '../../services/userService';
 import type { User, CreateUserRequest, UpdateUserRequest } from '../../types';
 import { TableListLayout } from '../../components/TableListLayout';
@@ -29,6 +30,7 @@ import { FormModal } from '../../components/FormModal';
 const UserManagement: React.FC = () => {
   const { t } = useTranslation('permission');
   const { message, modal } = App.useApp();
+  const { canDelete } = usePermission();
   const [form] = Form.useForm();
   const [resetForm] = Form.useForm();
 
@@ -224,7 +226,7 @@ const UserManagement: React.FC = () => {
               {t('user.actions.resetPassword')}
             </Button>
           )}
-          {!isAdmin(record) && (
+          {!isAdmin(record) && canDelete() && (
             <Button
               type="link"
               size="small"

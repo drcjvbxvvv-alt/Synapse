@@ -14,6 +14,7 @@ interface CreatePermissionColumnsParams {
   getPermissionTypeColor: (type: string) => string;
   onEdit: (record: ClusterPermission) => void;
   onDelete: (record: ClusterPermission) => void;
+  canDelete: () => boolean;
 }
 
 export function createPermissionColumns({
@@ -22,6 +23,7 @@ export function createPermissionColumns({
   getPermissionTypeColor,
   onEdit,
   onDelete,
+  canDelete,
 }: CreatePermissionColumnsParams): ColumnsType<ClusterPermission> {
   return [
     {
@@ -91,16 +93,18 @@ export function createPermissionColumns({
               {t('permission:actions.editTooltip')}
             </Button>
           </Tooltip>
-          <Popconfirm
-            title={t('permission:actions.confirmDeletePermission')}
-            onConfirm={() => onDelete(record)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Button type="link" size="small" danger>
-              {t('common:actions.delete')}
-            </Button>
-          </Popconfirm>
+          {canDelete() && (
+            <Popconfirm
+              title={t('permission:actions.confirmDeletePermission')}
+              onConfirm={() => onDelete(record)}
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
+            >
+              <Button type="link" size="small" danger>
+                {t('common:actions.delete')}
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },

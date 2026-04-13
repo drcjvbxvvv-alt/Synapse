@@ -70,7 +70,7 @@ const EventAlertRules: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const { t } = useTranslation(['alert', 'common']);
   const { message, modal } = App.useApp();
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
 
   const [activeTab, setActiveTab] = useState('rules');
 
@@ -201,16 +201,20 @@ const EventAlertRules: React.FC = () => {
         <Switch checked={enabled} onChange={(v) => handleToggle(record, v)} size="small" />
       ),
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('alert:eventAlert.table.actions'), key: 'actions', fixed: 'right' as const, width: 100,
       render: (_: unknown, record: EventAlertRule) => (
         <Space>
-          <Tooltip title={t('common:actions.edit')}>
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
-          </Tooltip>
-          <Tooltip title={t('common:actions.delete')}>
-            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
-          </Tooltip>
+          {canWrite() && (
+            <Tooltip title={t('common:actions.edit')}>
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
+            </Tooltip>
+          )}
+          {canDelete() && (
+            <Tooltip title={t('common:actions.delete')}>
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
+            </Tooltip>
+          )}
         </Space>
       ),
     }] : []),

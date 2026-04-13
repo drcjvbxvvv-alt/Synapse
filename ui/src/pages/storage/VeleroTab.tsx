@@ -226,7 +226,7 @@ const RestorePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clust
 const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clusterId, veleroNS }) => {
   const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const [loading, setLoading] = useState(true);
   const [schedules, setSchedules] = useState<VeleroScheduleInfo[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -317,7 +317,7 @@ const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clus
     },
     {
       title: t('velero.actions'), key: 'actions', fixed: 'right' as const, width: 100,
-      render: (_: unknown, r: VeleroScheduleInfo) => canWrite() ? (
+      render: (_: unknown, r: VeleroScheduleInfo) => canDelete() ? (
         <Popconfirm
           title={t('velero.confirmDeleteSchedule')}
           description={t('velero.confirmDeleteScheduleDesc', { name: r.name })}

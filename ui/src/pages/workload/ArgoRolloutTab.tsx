@@ -18,7 +18,7 @@ interface RolloutTabProps {
 }
 
 const RolloutTab: React.FC<RolloutTabProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canWrite } = usePermission();
+  const { hasFeature, canWrite, canDelete } = usePermission();
   const state = useWorkloadTab({
     clusterId,
     workloadType: 'ArgoRollout',
@@ -36,12 +36,12 @@ const RolloutTab: React.FC<RolloutTabProps> = ({ clusterId, onCountChange }) => 
     openScaleModal: state.openScaleModal,
     handleRestart: state.handleRestart,
     handleDelete: state.handleDelete,
-    canDelete: canWrite(),
+    canDelete: canDelete(),
     showActions: canWrite(),
   }), [
     state.t, state.sortField, state.sortOrder,
     state.navigateToDetail, state.handleMonitor, state.handleEdit,
-    state.openScaleModal, state.handleRestart, state.handleDelete, canWrite
+    state.openScaleModal, state.handleRestart, state.handleDelete, canWrite, canDelete
   ]);
 
   const columns = useMemo(() => allColumns.filter(col => {

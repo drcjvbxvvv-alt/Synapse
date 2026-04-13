@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { pdbService, type PDBInfo, type PDBRequest } from '../../services/pdbService';
+import { usePermission } from '../../hooks/usePermission';
 
 interface PDBPanelProps {
   clusterId: string;
@@ -17,6 +18,7 @@ interface PDBPanelProps {
 
 const PDBPanel: React.FC<PDBPanelProps> = ({ clusterId, namespace, workloadLabels }) => {
   const { message } = App.useApp();
+  const { canDelete } = usePermission();
   const [items, setItems] = useState<PDBInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -138,9 +140,11 @@ const PDBPanel: React.FC<PDBPanelProps> = ({ clusterId, namespace, workloadLabel
       render: (_, r) => (
         <Space>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>編輯</Button>
-          <Popconfirm title="確定刪除此 PDB？" onConfirm={() => handleDelete(r)} okButtonProps={{ danger: true }}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>刪除</Button>
-          </Popconfirm>
+          {canDelete() && (
+            <Popconfirm title="確定刪除此 PDB？" onConfirm={() => handleDelete(r)} okButtonProps={{ danger: true }}>
+              <Button type="link" size="small" danger icon={<DeleteOutlined />}>刪除</Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },

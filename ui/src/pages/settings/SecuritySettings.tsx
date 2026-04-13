@@ -30,6 +30,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import { securitySettingService } from '../../services/securitySettingService';
 import type { SecurityConfig, APIToken, CreateAPITokenResponse } from '../../types';
 import SIEMConfigPage from './SIEMConfig';
@@ -41,6 +42,7 @@ const SCOPES = ['read', 'write', 'admin'];
 const SecuritySettings: React.FC = () => {
   const { t } = useTranslation(['settings', 'common']);
   const { message } = App.useApp();
+  const { canDelete } = usePermission();
 
   // ── Login Security State ──────────────────────────────────────────────────
   const [secForm] = Form.useForm<SecurityConfig>();
@@ -172,16 +174,18 @@ const SecuritySettings: React.FC = () => {
       title: t('common:actions'),
       key: 'actions',
       render: (_: unknown, record: APIToken) => (
-        <Popconfirm
-          title={t('settings:security.revokeTokenConfirm')}
-          onConfirm={() => handleDeleteToken(record.id)}
-          okText={t('common:confirm')}
-          cancelText={t('common:cancel')}
-        >
-          <Button danger icon={<DeleteOutlined />} size="small">
-            {t('settings:security.revokeToken')}
-          </Button>
-        </Popconfirm>
+        canDelete() ? (
+          <Popconfirm
+            title={t('settings:security.revokeTokenConfirm')}
+            onConfirm={() => handleDeleteToken(record.id)}
+            okText={t('common:confirm')}
+            cancelText={t('common:cancel')}
+          >
+            <Button danger icon={<DeleteOutlined />} size="small">
+              {t('settings:security.revokeToken')}
+            </Button>
+          </Popconfirm>
+        ) : null
       ),
     },
   ];

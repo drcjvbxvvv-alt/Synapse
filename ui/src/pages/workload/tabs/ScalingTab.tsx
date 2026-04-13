@@ -6,6 +6,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { WorkloadService } from '../../../services/workloadService';
 import { vpaService, type VPAInfo, type VPARequest } from '../../../services/vpaService';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../../hooks/usePermission';
 
 interface HPAInfo {
   name: string;
@@ -65,6 +66,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
 }) => {
   const { t } = useTranslation(['workload', 'common']);
   const { message } = App.useApp();
+  const { canDelete } = usePermission();
   const [loading, setLoading] = useState(false);
   const [hpa, setHpa] = useState<HPAInfo | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -258,9 +260,11 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
             extra={
               <Space>
                 <Button size="small" icon={<EditOutlined />} onClick={openEdit}>編輯</Button>
-                <Popconfirm title="確定刪除此 HPA？" onConfirm={handleDelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
-                  <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
-                </Popconfirm>
+                {canDelete() && (
+                  <Popconfirm title="確定刪除此 HPA？" onConfirm={handleDelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
+                    <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
+                  </Popconfirm>
+                )}
               </Space>
             }
           >
@@ -382,9 +386,11 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
                   extra={
                     <Space>
                       <Button size="small" icon={<EditOutlined />} onClick={openVPAEdit}>編輯</Button>
-                      <Popconfirm title="確定刪除此 VPA？" onConfirm={handleVPADelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
-                        <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
-                      </Popconfirm>
+                      {canDelete() && (
+                        <Popconfirm title="確定刪除此 VPA？" onConfirm={handleVPADelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
+                          <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
+                        </Popconfirm>
+                      )}
                     </Space>
                   }
                 >

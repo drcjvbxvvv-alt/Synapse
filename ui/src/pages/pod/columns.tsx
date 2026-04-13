@@ -20,6 +20,7 @@ interface PodColumnParams {
   handleViewEvents: (pod: PodInfo) => void;
   confirmDelete: (pod: PodInfo) => void;
   canTerminalPod?: boolean;
+  canDelete?: boolean;
   showActions?: boolean;
 }
 
@@ -29,6 +30,7 @@ export const createPodColumns = (params: PodColumnParams): ColumnsType<PodInfo> 
     handleViewDetail, handleLogs, handleTerminal,
     handleViewEvents, confirmDelete,
     canTerminalPod = true,
+    canDelete = true,
     showActions,
   } = params;
 
@@ -43,15 +45,15 @@ export const createPodColumns = (params: PodColumnParams): ColumnsType<PodInfo> 
       label: t('detail.events'),
       onClick: () => handleViewEvents(record),
     },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'delete',
-      label: tc('actions.delete'),
-      danger: true,
-      onClick: () => confirmDelete(record),
-    },
+    ...(canDelete ? [
+      { type: 'divider' as const },
+      {
+        key: 'delete',
+        label: tc('actions.delete'),
+        danger: true,
+        onClick: () => confirmDelete(record),
+      },
+    ] : []),
   ];
 
   return [

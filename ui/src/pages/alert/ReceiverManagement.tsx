@@ -68,7 +68,7 @@ function getReceiverTypes(r: ReceiverConfig): ReceiverType[] {
 
 const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) => {
   const { message: msg, modal: _modal } = App.useApp();
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const [loading, setLoading] = useState(false);
   const [receivers, setReceivers] = useState<ReceiverConfig[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -267,34 +267,40 @@ const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) =>
         </Space>
       ),
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: '操作',
       key: 'actions',
       width: 180,
       render: (_: unknown, r: ReceiverConfig) => (
         <Space>
-          <Tooltip title="測試推送">
-            <Button
-              size="small"
-              icon={<SendOutlined />}
-              loading={testingName === r.name}
-              onClick={() => handleTest(r.name)}
-            />
-          </Tooltip>
-          <Tooltip title="編輯">
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)} />
-          </Tooltip>
-          <Popconfirm
-            title={`確定刪除 Receiver "${r.name}"？`}
-            onConfirm={() => handleDelete(r.name)}
-            okText="刪除"
-            cancelText="取消"
-            okButtonProps={{ danger: true }}
-          >
-            <Tooltip title="刪除">
-              <Button size="small" danger icon={<DeleteOutlined />} />
+          {canWrite() && (
+            <Tooltip title="測試推送">
+              <Button
+                size="small"
+                icon={<SendOutlined />}
+                loading={testingName === r.name}
+                onClick={() => handleTest(r.name)}
+              />
             </Tooltip>
-          </Popconfirm>
+          )}
+          {canWrite() && (
+            <Tooltip title="編輯">
+              <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)} />
+            </Tooltip>
+          )}
+          {canDelete() && (
+            <Popconfirm
+              title={`確定刪除 Receiver "${r.name}"？`}
+              onConfirm={() => handleDelete(r.name)}
+              okText="刪除"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Tooltip title="刪除">
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       ),
     }] : []),

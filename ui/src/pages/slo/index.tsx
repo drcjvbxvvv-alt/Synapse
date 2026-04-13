@@ -42,7 +42,7 @@ const SLOListPage: React.FC = () => {
   const { token } = theme.useToken();
   const { message } = App.useApp();
   const { t } = useTranslation(['slo', 'common']);
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const queryClient = useQueryClient();
 
   const cid = Number(clusterId ?? 0);
@@ -191,41 +191,47 @@ const SLOListPage: React.FC = () => {
         </Text>
       ),
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('slo:table.actions'),
       key: 'actions',
       width: 120,
       fixed: 'right' as const,
       render: (_: unknown, record: SLO) => (
         <Space size={0}>
-          <Tooltip title={t('slo:tooltips.viewStatus')}>
-            <Button
-              type="link"
-              size="small"
-              icon={<LineChartOutlined />}
-              onClick={() => setStatusDrawerSLO(record)}
-            />
-          </Tooltip>
-          <Tooltip title={t('common:actions.edit')}>
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title={t('slo:messages.deleteConfirmTitle')}
-            description={t('slo:messages.deleteConfirmContent', { name: record.name })}
-            onConfirm={() => deleteMutation.mutate(record.id)}
-            okText={t('common:actions.delete')}
-            okButtonProps={{ danger: true }}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Tooltip title={t('common:actions.delete')}>
-              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+          {canWrite() && (
+            <Tooltip title={t('slo:tooltips.viewStatus')}>
+              <Button
+                type="link"
+                size="small"
+                icon={<LineChartOutlined />}
+                onClick={() => setStatusDrawerSLO(record)}
+              />
             </Tooltip>
-          </Popconfirm>
+          )}
+          {canWrite() && (
+            <Tooltip title={t('common:actions.edit')}>
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+          )}
+          {canDelete() && (
+            <Popconfirm
+              title={t('slo:messages.deleteConfirmTitle')}
+              description={t('slo:messages.deleteConfirmContent', { name: record.name })}
+              onConfirm={() => deleteMutation.mutate(record.id)}
+              okText={t('common:actions.delete')}
+              okButtonProps={{ danger: true }}
+              cancelText={t('common:actions.cancel')}
+            >
+              <Tooltip title={t('common:actions.delete')}>
+                <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       ),
     }] : []),

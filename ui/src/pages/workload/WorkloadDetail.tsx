@@ -32,6 +32,7 @@ import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
 import { useTranslation } from 'react-i18next';
 import WorkloadMetricsChart from '../../components/WorkloadMetricsChart';
+import { usePermission } from '../../hooks/usePermission';
 
 
 const { Title } = Typography;
@@ -50,6 +51,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
 const { t } = useTranslation(["workload", "common"]);
 const { token } = theme.useToken();
 const navigate = useNavigate();
+  const { canDelete } = usePermission();
   
   // URL 路徑中的 type 是小寫（如 statefulset），需要對映為 API 期望的 PascalCase
   const typeMap: Record<string, string> = {
@@ -272,15 +274,17 @@ const navigate = useNavigate();
               {t('actions.aiDiagnose')}
             </Button>
 
-            <Popconfirm
-              title={t("common:actions.delete")}
-description={t('actions.confirmDeleteWorkload', { name: workloadInfo.name })}
-onConfirm={handleDelete}
-              okText={t("common:actions.confirm")}
-              cancelText={t("common:actions.cancel")}
-            >
-              <Button danger icon={<DeleteOutlined />}>{t('actions.delete')}</Button>
-            </Popconfirm>
+            {canDelete() && (
+              <Popconfirm
+                title={t("common:actions.delete")}
+                description={t('actions.confirmDeleteWorkload', { name: workloadInfo.name })}
+                onConfirm={handleDelete}
+                okText={t("common:actions.confirm")}
+                cancelText={t("common:actions.cancel")}
+              >
+                <Button danger icon={<DeleteOutlined />}>{t('actions.delete')}</Button>
+              </Popconfirm>
+            )}
           </Space>
         </div>
       </div>

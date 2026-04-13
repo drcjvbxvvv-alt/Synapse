@@ -22,6 +22,7 @@ import {
 import ErrorPage from '../../components/ErrorPage';
 import { useNodeDetail } from './hooks/useNodeDetail';
 import { createNodeDetailTabItems, LabelModal, TaintModal, DrainModal } from './components';
+import { usePermission } from '../../hooks/usePermission';
 
 const { Title, Text } = Typography;
 
@@ -43,6 +44,7 @@ const NodeDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('node');
   const { t: tc } = useTranslation('common');
+  const { canDelete } = usePermission();
 
   const defaultTab = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -78,6 +80,7 @@ const NodeDetail: React.FC = () => {
     handleRemoveTaint: state.handleRemoveTaint,
     setLabelModalVisible: state.setLabelModalVisible,
     setTaintModalVisible: state.setTaintModalVisible,
+    canDelete: canDelete(),
   });
 
   return (

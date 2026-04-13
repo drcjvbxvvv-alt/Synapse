@@ -65,7 +65,7 @@ interface SyncDetailItem {
 const SyncPolicyList: React.FC = () => {
   const { t } = useTranslation(['multicluster', 'common']);
   const { message, modal } = App.useApp();
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const [loading, setLoading] = useState(false);
   const [policies, setPolicies] = useState<SyncPolicy[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
@@ -275,25 +275,33 @@ const SyncPolicyList: React.FC = () => {
       dataIndex: 'last_sync_at',
       render: (v: string) => v ? new Date(v).toLocaleString() : '—',
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('multicluster:syncPolicy.table.actions'),
       key: 'actions',
       fixed: 'right' as const,
       width: 160,
       render: (_: unknown, r: SyncPolicy) => (
         <Space>
-          <Tooltip title={t('multicluster:syncPolicy.buttons.immediateSync')}>
-            <Button size="small" icon={<PlayCircleOutlined />} onClick={() => handleTrigger(r)} />
-          </Tooltip>
-          <Tooltip title={t('multicluster:syncPolicy.buttons.history')}>
-            <Button size="small" icon={<HistoryOutlined />} onClick={() => handleHistory(r)} />
-          </Tooltip>
-          <Tooltip title={t('multicluster:syncPolicy.buttons.edit')}>
-            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
-          </Tooltip>
-          <Tooltip title={t('multicluster:syncPolicy.buttons.delete')}>
-            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r)} />
-          </Tooltip>
+          {canWrite() && (
+            <Tooltip title={t('multicluster:syncPolicy.buttons.immediateSync')}>
+              <Button size="small" icon={<PlayCircleOutlined />} onClick={() => handleTrigger(r)} />
+            </Tooltip>
+          )}
+          {canWrite() && (
+            <Tooltip title={t('multicluster:syncPolicy.buttons.history')}>
+              <Button size="small" icon={<HistoryOutlined />} onClick={() => handleHistory(r)} />
+            </Tooltip>
+          )}
+          {canWrite() && (
+            <Tooltip title={t('multicluster:syncPolicy.buttons.edit')}>
+              <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
+            </Tooltip>
+          )}
+          {canDelete() && (
+            <Tooltip title={t('multicluster:syncPolicy.buttons.delete')}>
+              <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r)} />
+            </Tooltip>
+          )}
         </Space>
       ),
     }] : []),

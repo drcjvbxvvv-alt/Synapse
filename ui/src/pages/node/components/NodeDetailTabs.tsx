@@ -48,6 +48,7 @@ interface NodeDetailTabsProps {
   handleRemoveTaint: (taint: NodeTaint) => void | Promise<void>;
   setLabelModalVisible: (visible: boolean) => void;
   setTaintModalVisible: (visible: boolean) => void;
+  canDelete?: boolean;
 }
 
 // Helper to get condition status badge
@@ -146,6 +147,7 @@ export function createNodeDetailTabItems(props: NodeDetailTabsProps) {
     handleRemoveTaint,
     setLabelModalVisible,
     setTaintModalVisible,
+    canDelete = false,
   } = props;
 
   const podColumns = buildPodColumns(clusterId, navigate, t, tc);
@@ -310,14 +312,16 @@ export function createNodeDetailTabItems(props: NodeDetailTabsProps) {
                 style={{ marginBottom: 16 }}
                 title={`${taint.key}${taint.value ? `=${taint.value}` : ''}:${taint.effect}`}
                 extra={
-                  <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => handleRemoveTaint(taint)}
-                  >
-                    {tc('actions.delete')}
-                  </Button>
+                  canDelete && (
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleRemoveTaint(taint)}
+                    >
+                      {tc('actions.delete')}
+                    </Button>
+                  )
                 }
               >
                 <Descriptions column={1}>

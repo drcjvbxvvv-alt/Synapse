@@ -48,7 +48,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('pod');
   const { t: tc } = useTranslation('common');
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const initialTab = searchParams.get('tab') || 'overview';
   
   const [pod, setPod] = useState<PodInfo | null>(null);
@@ -293,7 +293,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               AI 診斷
             </Button>
 
-            {canWrite() && (
+            {canDelete() && (
               <Popconfirm
                 title={tc('messages.confirmDelete')}
                 description={t('actions.confirmDeleteContent', { name: pod.name })}

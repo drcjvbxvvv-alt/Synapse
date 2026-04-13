@@ -23,6 +23,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { secretService, type SecretDetail as SecretDetailType, type ConfigVersion } from '../../services/configService';
+import { usePermission } from '../../hooks/usePermission';
 import MonacoEditor from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
 import { showApiError } from '../../utils/api';
@@ -40,6 +41,7 @@ const SecretDetail: React.FC = () => {
   }>();
   const { t } = useTranslation(['config', 'common']);
   const { modal } = App.useApp();
+  const { canDelete } = usePermission();
   const [loading, setLoading] = useState(false);
   const [secret, setSecret] = useState<SecretDetailType | null>(null);
   const [showValues, setShowValues] = useState(false);
@@ -151,9 +153,11 @@ const SecretDetail: React.FC = () => {
               >
                 {t('common:actions.edit')}
               </Button>
-              <Button icon={<DeleteOutlined />} danger onClick={handleDelete}>
-                {t('common:actions.delete')}
-              </Button>
+              {canDelete() && (
+                <Button icon={<DeleteOutlined />} danger onClick={handleDelete}>
+                  {t('common:actions.delete')}
+                </Button>
+              )}
             </Space>
           </Space>
         </Card>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Space, Card, Table, Input, DatePicker, Tag, Tooltip } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../../hooks/usePermission';
 import EmptyState from '../../../components/EmptyState';
 import type { Dayjs } from 'dayjs';
 import type { FormInstance } from 'antd';
@@ -50,6 +51,7 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
   srcForm,
 }) => {
   const { t } = useTranslation(['logs', 'common']);
+  const { canDelete } = usePermission();
 
   const selectedSource = logSources.find(s => s.id === selectedSrcId);
 
@@ -107,15 +109,17 @@ export const ExternalLogTab: React.FC<ExternalLogTabProps> = ({
                     type="link"
                     onClick={() => onEditSource(record, srcForm)}
                   />
-                  <Tooltip title={t('logs:center.delete')}>
-                    <Button
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      type="link"
-                      danger
-                      onClick={() => onDeleteSource(record)}
-                    />
-                  </Tooltip>
+                  {canDelete() && (
+                    <Tooltip title={t('logs:center.delete')}>
+                      <Button
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        type="link"
+                        danger
+                        onClick={() => onDeleteSource(record)}
+                      />
+                    </Tooltip>
+                  )}
                 </Space>
               ),
             },

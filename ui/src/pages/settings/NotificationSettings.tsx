@@ -16,6 +16,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { ColumnsType } from 'antd/es/table';
+import { usePermission } from '../../hooks/usePermission';
 import notifyChannelService from '../../services/notifyChannelService';
 import type { NotifyChannel } from '../../services/notifyChannelService';
 
@@ -25,6 +26,7 @@ const CHANNEL_TYPES = ['webhook', 'telegram', 'slack', 'teams'];
 
 const NotificationSettings: React.FC = () => {
   const { t } = useTranslation(['settings']);
+  const { canDelete } = usePermission();
   const [channels, setChannels] = useState<NotifyChannel[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -172,16 +174,18 @@ const NotificationSettings: React.FC = () => {
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
             {t('settings:notification.edit')}
           </Button>
-          <Popconfirm
-            title={t('settings:notification.deleteConfirm')}
-            onConfirm={() => handleDelete(record.id)}
-            okText={t('settings:notification.confirmOk')}
-            cancelText={t('settings:notification.confirmCancel')}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />}>
-              {t('settings:notification.delete')}
-            </Button>
-          </Popconfirm>
+          {canDelete() && (
+            <Popconfirm
+              title={t('settings:notification.deleteConfirm')}
+              onConfirm={() => handleDelete(record.id)}
+              okText={t('settings:notification.confirmOk')}
+              cancelText={t('settings:notification.confirmCancel')}
+            >
+              <Button size="small" danger icon={<DeleteOutlined />}>
+                {t('settings:notification.delete')}
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },

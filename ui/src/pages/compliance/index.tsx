@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import {
@@ -77,6 +78,7 @@ function ReportsTab({ clusterId }: { clusterId: string }) {
   const { t } = useTranslation(['compliance', 'common']);
   const { token } = theme.useToken();
   const { message } = App.useApp();
+  const { canDelete } = usePermission();
   const queryClient = useQueryClient();
   const [framework, setFramework] = useState<Framework>('SOC2');
   const [detailReport, setDetailReport] = useState<ComplianceReport | null>(null);
@@ -199,17 +201,19 @@ function ReportsTab({ clusterId }: { clusterId: string }) {
               </Tooltip>
             </>
           )}
-          <Popconfirm
-            title={t('compliance:report.deleteConfirm')}
-            onConfirm={() => deleteMut.mutate(r.id)}
-            okText={t('common:actions.delete')}
-            okButtonProps={{ danger: true }}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Tooltip title={t('common:actions.delete')}>
-              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
+          {canDelete() && (
+            <Popconfirm
+              title={t('compliance:report.deleteConfirm')}
+              onConfirm={() => deleteMut.mutate(r.id)}
+              okText={t('common:actions.delete')}
+              okButtonProps={{ danger: true }}
+              cancelText={t('common:actions.cancel')}
+            >
+              <Tooltip title={t('common:actions.delete')}>
+                <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },

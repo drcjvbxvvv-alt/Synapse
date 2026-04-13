@@ -31,7 +31,7 @@ import { usePermission } from '../../hooks/usePermission';
 import { MultiSearchBar } from '../../components/MultiSearchBar';
 
 const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canWrite } = usePermission();
+  const { hasFeature, canWrite, canDelete } = usePermission();
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
@@ -314,7 +314,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
 
   const columns = getIngressColumns(
     t,
-    { onViewYAML: handleViewYAML, onEdit: handleEdit, onDelete: handleDelete, canDelete: canWrite(), showActions: canWrite() },
+    { onViewYAML: handleViewYAML, onEdit: handleEdit, onDelete: handleDelete, canDelete: canDelete(), showActions: canWrite() },
     { sortField, sortOrder },
   ).filter(col => {
     if (col.key === 'actions' || col.key === 'name') return true;
@@ -341,7 +341,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          {canWrite() && (
+          {canDelete() && (
             <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger icon={<DeleteOutlined />}>
               {selectedRowKeys.length > 1
                 ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`

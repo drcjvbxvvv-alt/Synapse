@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import {
   Table,
   Button,
@@ -36,6 +37,7 @@ const { Search } = Input;
 const ClusterList: React.FC = () => {
   const navigate = useNavigate();
   const { modal } = App.useApp();
+  const { canDelete } = usePermission();
   const { t } = useTranslation('cluster');
   const { t: tc } = useTranslation('common');
   const [loading, setLoading] = useState(false);
@@ -204,7 +206,7 @@ const ClusterList: React.FC = () => {
           </Tooltip>
           <Dropdown
             menu={{
-              items: [
+              items: canDelete() ? [
                 {
                   key: 'delete',
                   label: t('actions.delete'),
@@ -214,7 +216,7 @@ const ClusterList: React.FC = () => {
                     handleDelete(record);
                   },
                 },
-              ],
+              ] : [],
             }}
             trigger={['click']}
           >

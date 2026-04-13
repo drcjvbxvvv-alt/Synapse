@@ -42,12 +42,14 @@ import {
   type LimitEntry,
 } from '../../services/namespaceService';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '@/hooks/usePermission';
 const { Title, Text } = Typography;
 
 const NamespaceDetail: React.FC = () => {
   const { clusterId, namespace } = useParams<{ clusterId: string; namespace: string }>();
   const navigate = useNavigate();
   const { message: messageApi } = App.useApp();
+  const { canDelete } = usePermission();
   const [namespaceDetail, setNamespaceDetail] = useState<NamespaceDetailData | null>(null);
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation(["namespace", "common"]);
@@ -321,9 +323,11 @@ const NamespaceDetail: React.FC = () => {
                 render: (_: unknown, record: ResourceQuotaItem) => (
                   <Space>
                     <Button size="small" icon={<EditOutlined />} onClick={() => openEditQuota(record)} />
-                    <Popconfirm title="確定刪除？" onConfirm={() => handleDeleteQuota(record.name)} okText="刪除" okButtonProps={{ danger: true }} cancelText="取消">
-                      <Button size="small" danger icon={<DeleteOutlined />} />
-                    </Popconfirm>
+                    {canDelete() && (
+                      <Popconfirm title="確定刪除？" onConfirm={() => handleDeleteQuota(record.name)} okText="刪除" okButtonProps={{ danger: true }} cancelText="取消">
+                        <Button size="small" danger icon={<DeleteOutlined />} />
+                      </Popconfirm>
+                    )}
                   </Space>
                 ),
               },
@@ -349,11 +353,11 @@ const NamespaceDetail: React.FC = () => {
               { title: 'Memory Max', dataIndex: 'limits', key: 'memmax', render: (l: LimitEntry[] | undefined) => l?.[0]?.max?.memory || '-' },
               {
                 title: '操作', key: 'action', width: 80,
-                render: (_: unknown, record: LimitRangeItem) => (
+                render: (_: unknown, record: LimitRangeItem) => canDelete() ? (
                   <Popconfirm title="確定刪除？" onConfirm={() => handleDeleteLR(record.name)} okText="刪除" okButtonProps={{ danger: true }} cancelText="取消">
                     <Button size="small" danger icon={<DeleteOutlined />} />
                   </Popconfirm>
-                ),
+                ) : null,
               },
             ]}
           />

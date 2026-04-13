@@ -170,6 +170,19 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     return permission.permission_type !== 'readonly';
   }, [clusterPermissions, currentClusterPermission]);
 
+  // 刪除操作：僅限 admin 和 ops 角色
+  const canDelete = useCallback((clusterId?: number | string): boolean => {
+    let permission: MyPermissionsResponse | null = null;
+    if (clusterId) {
+      const id = typeof clusterId === 'string' ? parseInt(clusterId, 10) : clusterId;
+      permission = clusterPermissions.get(id) || null;
+    } else {
+      permission = currentClusterPermission;
+    }
+    if (!permission) return false;
+    return permission.permission_type === 'admin' || permission.permission_type === 'ops';
+  }, [clusterPermissions, currentClusterPermission]);
+
   // 獲取權限型別
   const getPermissionType = useCallback((clusterId: number | string): PermissionType | null => {
     const id = typeof clusterId === 'string' ? parseInt(clusterId, 10) : clusterId;
@@ -253,6 +266,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     isAdmin,
     isReadonly,
     canWrite,
+    canDelete,
     hasFeature,
     getPermissionType,
     refreshPermissions,
@@ -269,6 +283,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     isAdmin,
     isReadonly,
     canWrite,
+    canDelete,
     hasFeature,
     getPermissionType,
     refreshPermissions,

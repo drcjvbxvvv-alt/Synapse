@@ -20,7 +20,7 @@ import { usePermission } from '../../hooks/usePermission';
 const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const [items, setItems] = useState<GRPCRouteItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -140,7 +140,7 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
             { key: 'edit', label: t('common:actions.edit'), icon: <EditOutlined />, onClick: () => handleEdit(record) },
           ]}
           more={[
-            ...(canWrite() ? [{
+            ...(canDelete() ? [{
               key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {

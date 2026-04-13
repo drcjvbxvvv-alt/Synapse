@@ -77,7 +77,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
   const { token } = theme.useToken();
   const { message } = App.useApp();
   const { t } = useTranslation(['chaos', 'common']);
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const queryClient = useQueryClient();
 
   const [searchText, setSearchText] = useState('');
@@ -180,28 +180,32 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
         </Text>
       ),
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('common:table.actions'),
       key: 'actions',
       width: 100,
       fixed: 'right' as const,
       render: (_: unknown, record: ChaosExperiment) => (
         <Space size={0}>
-          <Tooltip title={t('chaos:actions.viewDetail')}>
-            <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          </Tooltip>
-          <Popconfirm
-            title={t('common:confirm.deleteTitle')}
-            description={t('common:confirm.deleteDesc', { name: record.name })}
-            onConfirm={() => deleteMutation.mutate(record)}
-            okText={t('common:actions.delete')}
-            okButtonProps={{ danger: true }}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Tooltip title={t('common:actions.delete')}>
-              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+          {canWrite() && (
+            <Tooltip title={t('chaos:actions.viewDetail')}>
+              <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
             </Tooltip>
-          </Popconfirm>
+          )}
+          {canDelete() && (
+            <Popconfirm
+              title={t('common:confirm.deleteTitle')}
+              description={t('common:confirm.deleteDesc', { name: record.name })}
+              onConfirm={() => deleteMutation.mutate(record)}
+              okText={t('common:actions.delete')}
+              okButtonProps={{ danger: true }}
+              cancelText={t('common:actions.cancel')}
+            >
+              <Tooltip title={t('common:actions.delete')}>
+                <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       ),
     }] : []),
@@ -312,7 +316,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
   const { token } = theme.useToken();
   const { message } = App.useApp();
   const { t } = useTranslation(['chaos', 'common']);
-  const { canWrite } = usePermission();
+  const { canDelete } = usePermission();
   const queryClient = useQueryClient();
 
   const [searchText, setSearchText] = useState('');
@@ -390,7 +394,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
         </Text>
       ),
     },
-    ...(canWrite() ? [{
+    ...(canDelete() ? [{
       title: t('common:table.actions'),
       key: 'actions',
       width: 80,

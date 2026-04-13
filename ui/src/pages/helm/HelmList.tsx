@@ -61,7 +61,7 @@ const HelmList: React.FC = () => {
   const { id: clusterId } = useParams<{ id: string }>();
   const { t } = useTranslation('helm');
   const { message, modal } = App.useApp();
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
 
   // ---- state ----
   const [releases, setReleases] = useState<HelmRelease[]>([]);
@@ -309,41 +309,47 @@ const HelmList: React.FC = () => {
       dataIndex: 'updated_at',
       key: 'updated_at',
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('actions', 'Actions'),
       key: 'actions',
       width: 160,
       render: (_: unknown, record: HelmRelease) => (
         <Space size="small">
-          <Tooltip title={t('history', 'History')}>
-            <Button
-              size="small"
-              icon={<HistoryOutlined />}
-              onClick={() => handleShowHistory(record)}
-            />
-          </Tooltip>
-          <Tooltip title={t('upgrade', 'Upgrade')}>
-            <Button
-              size="small"
-              icon={<UploadOutlined />}
-              onClick={() => handleOpenUpgrade(record)}
-            />
-          </Tooltip>
-          <Tooltip title={t('rollback', 'Rollback')}>
-            <Button
-              size="small"
-              icon={<RollbackOutlined />}
-              onClick={() => handleOpenRollback(record)}
-            />
-          </Tooltip>
-          <Tooltip title={t('uninstall', 'Uninstall')}>
-            <Button
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleUninstall(record)}
-            />
-          </Tooltip>
+          {canWrite() && (
+            <>
+              <Tooltip title={t('history', 'History')}>
+                <Button
+                  size="small"
+                  icon={<HistoryOutlined />}
+                  onClick={() => handleShowHistory(record)}
+                />
+              </Tooltip>
+              <Tooltip title={t('upgrade', 'Upgrade')}>
+                <Button
+                  size="small"
+                  icon={<UploadOutlined />}
+                  onClick={() => handleOpenUpgrade(record)}
+                />
+              </Tooltip>
+              <Tooltip title={t('rollback', 'Rollback')}>
+                <Button
+                  size="small"
+                  icon={<RollbackOutlined />}
+                  onClick={() => handleOpenRollback(record)}
+                />
+              </Tooltip>
+            </>
+          )}
+          {canDelete() && (
+            <Tooltip title={t('uninstall', 'Uninstall')}>
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleUninstall(record)}
+              />
+            </Tooltip>
+          )}
         </Space>
       ),
     }] : []),

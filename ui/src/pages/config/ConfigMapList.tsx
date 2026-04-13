@@ -31,7 +31,7 @@ interface ConfigMapListProps {
 const COLUMN_KEYS = ['name', 'namespace', 'labels', 'dataCount', 'creationTimestamp', 'age'] as const;
 
 const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canWrite } = usePermission();
+  const { hasFeature, canWrite, canDelete } = usePermission();
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const { t } = useTranslation(['config', 'common']);
@@ -47,7 +47,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
     colorTextSecondary: token.colorTextSecondary,
     navigate,
     handleDelete: hook.handleDelete,
-    canDelete: canWrite(),
+    canDelete: canDelete(),
     showActions: canWrite(),
   });
 
@@ -66,7 +66,7 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
       {/* Action toolbar */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          {canWrite() && (
+          {canDelete() && (
             <Button
               disabled={hook.selectedRowKeys.length === 0}
               danger

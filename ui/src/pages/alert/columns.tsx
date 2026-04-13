@@ -158,9 +158,10 @@ export function createAlertColumns({ t, onSilence }: AlertColumnsParams): Column
 interface SilenceColumnsParams {
   t: TFunction;
   onDelete: (silenceId: string) => void;
+  canDelete: () => boolean;
 }
 
-export function createSilenceColumns({ t, onDelete }: SilenceColumnsParams): ColumnsType<Silence> {
+export function createSilenceColumns({ t, onDelete, canDelete }: SilenceColumnsParams): ColumnsType<Silence> {
   return [
     {
       title: t('alert:center.matchRules'),
@@ -235,14 +236,16 @@ export function createSilenceColumns({ t, onDelete }: SilenceColumnsParams): Col
       key: 'action',
       width: 80,
       render: (_, record) => (
-        <Popconfirm
-          title={t('alert:center.deleteSilenceConfirm')}
-          onConfirm={() => onDelete(record.id)}
-          okText={t('common:actions.confirm')}
-          cancelText={t('common:actions.cancel')}
-        >
-          <Button type="link" danger size="small" icon={<DeleteOutlined />} />
-        </Popconfirm>
+        canDelete() ? (
+          <Popconfirm
+            title={t('alert:center.deleteSilenceConfirm')}
+            onConfirm={() => onDelete(record.id)}
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
+          >
+            <Button type="link" danger size="small" icon={<DeleteOutlined />} />
+          </Popconfirm>
+        ) : null
       ),
     },
   ];

@@ -47,7 +47,7 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
 }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite } = usePermission();
+  const { canWrite, canDelete } = usePermission();
   const [items, setItems] = useState<DestinationRuleSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespace, setNamespace] = useState(propNamespace ?? '');
@@ -193,7 +193,7 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
             { key: 'yaml', label: t('common:actions.view') + ' YAML', icon: <CodeOutlined />, onClick: () => handleViewYAML(record) },
           ]}
           more={[
-            ...(canWrite() ? [{
+            ...(canDelete() ? [{
               key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {

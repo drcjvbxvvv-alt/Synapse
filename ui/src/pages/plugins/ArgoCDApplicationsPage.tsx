@@ -47,7 +47,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
   const navigate = useNavigate();
   
 const { t } = useTranslation(['plugins', 'common']);
-const { canWrite } = usePermission();
+const { canWrite, canDelete } = usePermission();
 const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
   const [loading, setLoading] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -278,39 +278,45 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
       width: 130,
       render: (text: string) => <Tag color="blue">{text || '-'}</Tag>,
     },
-    ...(canWrite() ? [{
+    ...((canWrite() || canDelete()) ? [{
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
       width: 200,
       render: (_: unknown, record: ArgoCDApplication) => (
         <Space size="small">
-          <Tooltip title={t('plugins:argocd.sync')}>
-            <Button
-              type="primary"
-              size="small"
-              icon={<SyncOutlined />}
-              onClick={() => handleSync(record.name)}
-            />
-          </Tooltip>
-          <Tooltip title={t('plugins:argocd.appDetail')}>
-            <Button
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title={t('plugins:argocd.deleteConfirm')}
-            description={t('plugins:argocd.deleteConfirmDesc')}
-            onConfirm={() => handleDelete(record.name)}
-            okText={t('common:actions.confirm')}
-            cancelText={t('common:actions.cancel')}
-          >
-            <Tooltip title={t('common:actions.delete')}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
+          {canWrite() && (
+            <Tooltip title={t('plugins:argocd.sync')}>
+              <Button
+                type="primary"
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={() => handleSync(record.name)}
+              />
             </Tooltip>
-          </Popconfirm>
+          )}
+          {canWrite() && (
+            <Tooltip title={t('plugins:argocd.appDetail')}>
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => handleViewDetail(record)}
+              />
+            </Tooltip>
+          )}
+          {canDelete() && (
+            <Popconfirm
+              title={t('plugins:argocd.deleteConfirm')}
+              description={t('plugins:argocd.deleteConfirmDesc')}
+              onConfirm={() => handleDelete(record.name)}
+              okText={t('common:actions.confirm')}
+              cancelText={t('common:actions.cancel')}
+            >
+              <Tooltip title={t('common:actions.delete')}>
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       ),
     }] : []),

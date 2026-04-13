@@ -35,7 +35,7 @@ interface PVCTabProps {
 }
 
 const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canWrite } = usePermission();
+  const { hasFeature, canDelete } = usePermission();
   const { message, modal } = App.useApp();
   
   // 資料狀態
@@ -433,7 +433,7 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
             },
           ]}
           more={[
-            ...(canWrite() ? [{
+            ...(canDelete() ? [{
               key: 'delete',
               label: t('common:actions.delete'),
               icon: <DeleteOutlined />,
@@ -480,7 +480,7 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          {canWrite() && (
+          {canDelete() && (
             <Button
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchDelete}

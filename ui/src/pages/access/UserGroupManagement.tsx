@@ -14,6 +14,7 @@ import {
 import { PlusOutlined, UserAddOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import type { UserGroup, User, CreateUserGroupRequest, UpdateUserGroupRequest } from '../../types';
 import permissionService from '../../services/permissionService';
 import dayjs from 'dayjs';
@@ -21,6 +22,7 @@ import dayjs from 'dayjs';
 const UserGroupManagement: React.FC = () => {
   const { t } = useTranslation('permission');
   const { message, modal } = App.useApp();
+  const { canDelete } = usePermission();
   const [form] = Form.useForm();
 
   const [loading, setLoading] = useState(false);
@@ -232,15 +234,17 @@ const UserGroupManagement: React.FC = () => {
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             {t('group.actions.edit')}
           </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
-          >
-            {t('group.actions.delete')}
-          </Button>
+          {canDelete() && (
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record)}
+            >
+              {t('group.actions.delete')}
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -347,14 +351,16 @@ const UserGroupManagement: React.FC = () => {
               key: 'action',
               width: 80,
               render: (_, record) => (
-                <Button
-                  type="link"
-                  size="small"
-                  danger
-                  onClick={() => handleRemoveMember(record)}
-                >
-                  {t('group.drawer.remove')}
-                </Button>
+                canDelete() ? (
+                  <Button
+                    type="link"
+                    size="small"
+                    danger
+                    onClick={() => handleRemoveMember(record)}
+                  >
+                    {t('group.drawer.remove')}
+                  </Button>
+                ) : null
               ),
             },
           ]}
