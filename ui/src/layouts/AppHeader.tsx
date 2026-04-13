@@ -10,18 +10,13 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { MenuProps } from 'antd';
 import synapseIcon from '../assets/synapse-icon.svg';
-import SearchDropdown from '../components/SearchDropdown';
 import NotificationPopover from '../components/NotificationPopover';
 import { tokenManager } from '../services/authService';
 import { supportedLanguages } from '../i18n';
 
 const { Header } = Layout;
 
-interface AppHeaderProps {
-  onSearch: (value: string) => void;
-}
-
-const AppHeader: React.FC<AppHeaderProps> = ({ onSearch }) => {
+const AppHeader: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const currentUser = tokenManager.getUser();
@@ -97,19 +92,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ onSearch }) => {
       >
         <img src={synapseIcon} alt="Synapse" style={{ width: 32, height: 32, marginRight: 8 }} />
         <span style={{ fontSize: 18, fontWeight: 'bold', color: '#ffffff' }}>Synapse</span>
-      </div>
-
-      {/* 全域搜尋 */}
-      <div
-        style={{
-          flex: 1,
-          maxWidth: 600,
-          margin: '0 24px',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        <SearchDropdown onSearch={onSearch} />
       </div>
 
       {/* 右側工具區 */}

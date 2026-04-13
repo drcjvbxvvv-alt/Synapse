@@ -13,7 +13,8 @@
     "nodeLabel": "Node",
     "replicas": "Replicas",
     "clusterLabel": "Cluster",
-    "namespaceLabel": "Namespace"
+    "namespaceLabel": "Namespace",
+    "noClusterAccess": "You do not have access to this cluster"
   },
   "namespaceSelector": {
     "placeholder": "Select namespace",

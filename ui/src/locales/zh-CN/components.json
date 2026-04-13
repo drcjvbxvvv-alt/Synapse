@@ -13,7 +13,8 @@
     "nodeLabel": "节点",
     "replicas": "副本数",
     "clusterLabel": "集群",
-    "namespaceLabel": "命名空间"
+    "namespaceLabel": "命名空间",
+    "noClusterAccess": "您没有此集群的访问权限"
   },
   "namespaceSelector": {
     "placeholder": "请选择命名空间",

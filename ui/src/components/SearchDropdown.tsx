@@ -11,6 +11,7 @@ import {
   Empty,
   Spin,
   Tabs,
+  message,
 } from 'antd';
 import type { InputRef } from 'antd';
 import {
@@ -22,6 +23,7 @@ import {
 } from '@ant-design/icons';
 import type { SearchResult } from '../types';
 import { searchService } from '../services/searchService';
+import { usePermission } from '../hooks/usePermission';
 
 const { Text } = Typography;
 
@@ -32,6 +34,7 @@ interface SearchDropdownProps {
 const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
   const navigate = useNavigate();
   const { t } = useTranslation('components');
+  const { hasClusterAccess } = usePermission();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -131,6 +134,10 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ onSearch }) => {
 
   // 處理資源點選
   const handleResourceClick = (result: SearchResult) => {
+    if (result.clusterId && !hasClusterAccess(result.clusterId)) {
+      message.warning(t('searchDropdown.noClusterAccess'));
+      return;
+    }
     setVisible(false);
     switch (result.type) {
       case 'cluster':

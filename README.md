@@ -340,8 +340,51 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 - **刪除操作**（`canDelete`）：僅限 `admin` 和 `ops`，`dev` / `custom` / `readonly` 一律隱藏刪除按鈕
 - **寫入操作**（`canWrite`）：`admin`、`ops`、`custom` 可用；`dev` 與 `readonly` 預設不可用
-- **路由層級限制**：`/nodes`、`/config-center`、`/plugins`、`/cost-insights` 需要 `ops` 以上；`/upgrade` 需要 `admin`
 - **策略管理**：管理員可在「策略管理」頁針對特定 `dev` 用戶的功能可見性做細粒度調整（`hasFeature` 機制）
+
+##### 前端路由訪問權限矩陣
+
+> 最後更新：2026-04-13
+> 實作位置：`ui/src/router/routes.tsx`（`TopLevelGuard` / `PermissionGuard` / `ClusterListRoute`）
+
+###### 頂層路由（非叢集上下文，`/path`）
+
+| 路徑 | 可存取角色 | 守衛機制 | 說明 |
+|------|-----------|---------|------|
+| `/overview` | admin、ops | `TopLevelGuard` | 平台總覽 |
+| `/alerts` | admin、ops | `TopLevelGuard` | 全域告警中心 |
+| `/cost-insights` | admin、ops | `TopLevelGuard` | 全域成本分析 |
+| `/multicluster` | admin、ops | `TopLevelGuard` | 多叢集管理 |
+| `/search` | admin、ops | `TopLevelGuard` | 全域搜尋結果頁 |
+| `/nodes`、`/nodes/:id` | admin、ops | `TopLevelGuard` | 舊版無叢集上下文節點路由 |
+| `/workloads`、`/workloads/...` | admin、ops | `TopLevelGuard` | 舊版無叢集上下文工作負載路由 |
+| `/clusters` | admin（平台管理員）| `ClusterListRoute` | 叢集列表，非管理員跳轉至各自首個叢集 |
+| `/clusters/import` | admin（平台管理員）| `PermissionGuard platformAdminOnly` | 匯入叢集 |
+| `/audit/*` | admin（平台管理員）| `PermissionGuard platformAdminOnly` | 操作日誌、指令歷史 |
+| `/access/*` | admin（平台管理員）| `PermissionGuard platformAdminOnly` | 使用者 / 群組 / 權限 / 策略管理 |
+| `/settings` | admin（平台管理員）| `PermissionGuard platformAdminOnly` | 系統設定 |
+| `/profile` | 所有登入用戶 | 無 | 個人資料 |
+
+###### 叢集路由（`/clusters/:id/path`）
+
+| 子路徑 | 最低角色 | 守衛機制 | 說明 |
+|--------|---------|---------|------|
+| `/overview` | 所有叢集成員 | 無（叢集存取由 middleware 控制）| 叢集總覽 |
+| `/nodes`、`/nodes/:name` | ops | `PermissionGuard requiredPermission="ops"` | 節點管理 |
+| `/config-center` | ops | `PermissionGuard requiredPermission="ops"` | 叢集設定中心 |
+| `/plugins`、`/argocd/*` | ops | `PermissionGuard requiredPermission="ops"` | ArgoCD 插件 |
+| `/helm` | ops | `PermissionGuard requiredPermission="ops"` | Helm 發佈管理 |
+| `/upgrade` | admin | `PermissionGuard requiredPermission="admin"` | 叢集升級 |
+| `/pods`、`/workloads`、`/autoscaling` | 依 Feature Policy | `PermissionGuard requiredFeature="workload:view"` | 工作負載 |
+| `/configs`、`/configs/*` | 依 Feature Policy | `PermissionGuard requiredFeature="config:view"` | ConfigMap / Secret |
+| `/network`、`/network/*` | 依 Feature Policy | `PermissionGuard requiredFeature="network:view"` | 網路資源 |
+| `/storage` | 依 Feature Policy | `PermissionGuard requiredFeature="storage:view"` | 儲存資源 |
+| `/logs`、`/logs/events` | 依 Feature Policy | `PermissionGuard requiredFeature="logs:view"` | 日誌中心 |
+| `/monitoring` | 依 Feature Policy | `PermissionGuard requiredFeature="monitoring:view"` | 監控中心 |
+
+> **`TopLevelGuard` 邏輯**：掃描用戶在所有叢集的權限（`clusterPermissions` Map），只要任一叢集為 `admin` 或 `ops` 即放行；否則顯示 403 錯誤頁。
+>
+> **`isPlatformAdmin` 邏輯**：username 為 `admin`，或在任意叢集擁有 `admin` 權限。
 
 #### K8s RBAC
 

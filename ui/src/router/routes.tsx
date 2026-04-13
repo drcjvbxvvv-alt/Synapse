@@ -133,6 +133,36 @@ const HomeRedirect: React.FC = () => {
 };
 
 /**
+ * Guard for all top-level (non-cluster) pages.
+ * Only admin or ops may access platform-wide views.
+ */
+const TopLevelGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const loading = usePermissionLoading();
+  const { clusterPermissions } = usePermission();
+  const user = tokenManager.getUser();
+
+  if (loading) return <Spin style={{ display: 'block', margin: '80px auto' }} />;
+
+  const allPerms = Array.from(clusterPermissions.values());
+  const canAccess =
+    isPlatformAdmin(user?.username, allPerms) ||
+    allPerms.some(p => p.permission_type === 'ops');
+
+  if (!canAccess) {
+    return (
+      <ErrorPage
+        status={403}
+        title="權限不足"
+        subTitle="此頁面僅限管理員（admin）和運維（ops）角色存取"
+        showBack
+      />
+    );
+  }
+
+  return <>{children}</>;
+};
+
+/**
  * Guards the /clusters list page.
  * Non-admin users are redirected to their first assigned cluster instead.
  */
@@ -172,7 +202,7 @@ export function AppRoutes() {
         }
       >
         <Route index element={<HomeRedirect />} />
-        <Route path="overview" element={<Overview />} />
+        <Route path="overview" element={<TopLevelGuard><Overview /></TopLevelGuard>} />
 
         {/* ── Clusters ─────────────────────────────────────────────────── */}
         <Route path="clusters" element={<ClusterListRoute />} />
@@ -195,8 +225,8 @@ export function AppRoutes() {
         <Route path="clusters/:clusterId/nodes/:nodeName" element={
           <PermissionGuard requiredPermission="ops"><NodeDetail /></PermissionGuard>
         } />
-        <Route path="nodes" element={<NodeList />} />
-        <Route path="nodes/:id" element={<NodeDetail />} />
+        <Route path="nodes" element={<TopLevelGuard><NodeList /></TopLevelGuard>} />
+        <Route path="nodes/:id" element={<TopLevelGuard><NodeDetail /></TopLevelGuard>} />
 
         {/* ── Pods ─────────────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/pods" element={
@@ -234,8 +264,8 @@ export function AppRoutes() {
         <Route path="clusters/:clusterId/workloads/:namespace/:name" element={
           <PermissionGuard requiredFeature="workload:view"><WorkloadDetail /></PermissionGuard>
         } />
-        <Route path="workloads" element={<WorkloadList />} />
-        <Route path="workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
+        <Route path="workloads" element={<TopLevelGuard><WorkloadList /></TopLevelGuard>} />
+        <Route path="workloads/:type/:namespace/:name" element={<TopLevelGuard><WorkloadDetail /></TopLevelGuard>} />
 
         {/* ── YAML ─────────────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/yaml/apply" element={
@@ -243,10 +273,10 @@ export function AppRoutes() {
         } />
 
         {/* ── Search ───────────────────────────────────────────────────── */}
-        <Route path="search" element={<GlobalSearch />} />
+        <Route path="search" element={<TopLevelGuard><GlobalSearch /></TopLevelGuard>} />
 
         {/* ── Alerts ───────────────────────────────────────────────────── */}
-        <Route path="alerts" element={<GlobalAlertCenter />} />
+        <Route path="alerts" element={<TopLevelGuard><GlobalAlertCenter /></TopLevelGuard>} />
         <Route path="clusters/:clusterId/alerts" element={<AlertCenter />} />
         <Route path="clusters/:clusterId/event-alerts" element={<EventAlertRules />} />
 
@@ -339,7 +369,7 @@ export function AppRoutes() {
 
         {/* ── Cost ─────────────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/cost-insights" element={<S><CostDashboard /></S>} />
-        <Route path="cost-insights" element={<S><GlobalCostInsights /></S>} />
+        <Route path="cost-insights" element={<TopLevelGuard><S><GlobalCostInsights /></S></TopLevelGuard>} />
 
         {/* ── Security ─────────────────────────────────────────────────── */}
         <Route path="clusters/:id/security" element={<S><SecurityDashboard /></S>} />
@@ -351,7 +381,7 @@ export function AppRoutes() {
         <Route path="clusters/:clusterId/compliance" element={<S><CompliancePage /></S>} />
 
         {/* ── Multi-cluster ────────────────────────────────────────────── */}
-        <Route path="multicluster" element={<S><MultiClusterPage /></S>} />
+        <Route path="multicluster" element={<TopLevelGuard><S><MultiClusterPage /></S></TopLevelGuard>} />
 
         {/* ── Audit (platform admin only) ──────────────────────────────── */}
         <Route path="audit/operations" element={

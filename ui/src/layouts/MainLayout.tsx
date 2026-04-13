@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Layout } from 'antd';
 import AppHeader from './AppHeader';
 import AppSider from './AppSider';
@@ -10,21 +10,14 @@ import { usePermission } from '../hooks/usePermission';
 const { Content } = Layout;
 
 const MainLayout: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { hasFeature } = usePermission();
 
   const isClusterDetail = !!location.pathname.match(/\/clusters\/[^/]+\//);
 
-  const handleSearch = useCallback((value: string) => {
-    if (value.trim()) {
-      navigate(`/search?q=${encodeURIComponent(value)}`);
-    }
-  }, [navigate]);
-
   return (
     <Layout style={{ minHeight: '100vh', background: '#fafbfc' }}>
-      <AppHeader onSearch={handleSearch} />
+      <AppHeader />
       {isClusterDetail && <ClusterContextBar />}
 
       <Layout style={{ marginTop: isClusterDetail ? 112 : 64 }}>

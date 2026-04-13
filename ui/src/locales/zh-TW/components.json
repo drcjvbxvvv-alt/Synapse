@@ -13,7 +13,8 @@
     "nodeLabel": "節點",
     "replicas": "副本數",
     "clusterLabel": "叢集",
-    "namespaceLabel": "命名空間"
+    "namespaceLabel": "命名空間",
+    "noClusterAccess": "您沒有此叢集的存取權限"
   },
   "namespaceSelector": {
     "placeholder": "請選擇命名空間",
