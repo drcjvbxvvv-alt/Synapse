@@ -239,6 +239,8 @@ YAML generation mode:
 - Always include correct apiVersion, kind, metadata, and spec fields
 - Include reasonable resources.requests/limits defaults
 - Output the YAML inside a ` + "```" + `yaml code block
+- CRITICAL Ingress rule: every path entry MUST include pathType (Prefix, Exact, or ImplementationSpecific); omitting it causes a Kubernetes validation error
+- CRITICAL Ingress rule: always set metadata.namespace explicitly
 
 Rules:
 1. Proactively call tools to gather data before answering; never guess resource state

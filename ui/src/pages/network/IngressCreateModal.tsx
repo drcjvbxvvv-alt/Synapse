@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Tabs, Form, Input, Select, Button, Space, App, InputNumber } from 'antd';
-import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { Modal, Tabs, Form, Input, Select, Button, Space, App, Alert } from 'antd';
+import { PlusOutlined, MinusCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { IngressService } from '../../services/ingressService';
+import { ResourceService } from '../../services/resourceService';
+import { ServiceService } from '../../services/serviceService';
 import { getNamespaces } from '../../services/configService';
 import { useTranslation } from 'react-i18next';
+import { parseApiError } from '../../utils/api';
+import type { Service } from '../../types';
 
 interface KubernetesIngressYAML {
   apiVersion: string;
@@ -98,11 +102,31 @@ spec:
                 port:
                   number: 80`);
   const [loading, setLoading] = useState(false);
-  
+  const [dryRunning, setDryRunning] = useState(false);
+  const [dryRunResult, setDryRunResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // 命名空間列表
   const [namespaces, setNamespaces] = useState<string[]>(['default']);
   const [loadingNamespaces, setLoadingNamespaces] = useState(false);
-  
+
+  // Service 列表（依命名空間）
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+
+  const loadServices = async (ns: string) => {
+    if (!clusterId || !ns) return;
+    setLoadingServices(true);
+    try {
+      const resp = await ServiceService.getServices(clusterId, ns, undefined, undefined, 1, 200);
+      const items = (resp as unknown as { data: { items: Service[] } }).data?.items ?? [];
+      setServices(items);
+    } catch {
+      setServices([]);
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
   // 載入命名空間列表
   useEffect(() => {
     const loadNamespaces = async () => {
@@ -111,6 +135,8 @@ spec:
       try {
         const nsList = await getNamespaces(Number(clusterId));
         setNamespaces(nsList);
+        // 預設載入 default namespace 的 services
+        await loadServices('default');
       } catch (error) {
         console.error('載入命名空間失敗:', error);
       } finally {
@@ -119,16 +145,37 @@ spec:
     };
 
     loadNamespaces();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId, visible]);
+
+  // 修補 YAML 中 Ingress path 缺少 pathType 的問題
+  const patchIngressPathType = (raw: string): string => {
+    try {
+      const doc = YAML.parse(raw) as Record<string, unknown>;
+      if ((doc?.kind as string) !== 'Ingress') return raw;
+      const rules = ((doc?.spec as Record<string, unknown>)?.rules as Record<string, unknown>[]) || [];
+      rules.forEach((rule) => {
+        const paths = ((rule?.http as Record<string, unknown>)?.paths as Record<string, unknown>[]) || [];
+        paths.forEach((p) => {
+          if (!p.pathType) p.pathType = 'Prefix';
+          if (!p.path) p.path = '/';
+        });
+      });
+      return YAML.stringify(doc);
+    } catch {
+      return raw;
+    }
+  };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
       if (activeTab === 'yaml') {
-        // YAML方式建立
+        // YAML方式建立：補齊缺少的 pathType
+        const patchedYaml = patchIngressPathType(yamlContent);
         await IngressService.createIngress(clusterId, {
           namespace: 'default',
-          yaml: yamlContent,
+          yaml: patchedYaml,
         });
         
         message.success(t('network:create.ingressSuccess'));
@@ -180,8 +227,64 @@ spec:
     }
   };
 
+  // 預檢（Dry Run）
+  const handleDryRun = async () => {
+    let currentYaml = yamlContent;
+    if (activeTab === 'form') {
+      formToYaml();
+      // formToYaml sets state async; build inline for immediate use
+      try {
+        const values = form.getFieldsValue();
+        const obj = {
+          apiVersion: 'networking.k8s.io/v1',
+          kind: 'Ingress',
+          metadata: { name: values.name || 'my-ingress', namespace: values.namespace || 'default' },
+          spec: {
+            ...(values.ingressClassName ? { ingressClassName: values.ingressClassName } : {}),
+            rules: ((values.rules as RuleFormItem[] | undefined) || []).map((rule) => ({
+              host: rule.host,
+              http: {
+                paths: (rule.paths || []).map((p) => ({
+                  path: p.path,
+                  pathType: p.pathType,
+                  backend: { service: { name: p.serviceName, port: { number: typeof p.servicePort === 'string' ? parseInt(p.servicePort, 10) : p.servicePort } } },
+                })),
+              },
+            })),
+          },
+        };
+        currentYaml = YAML.stringify(obj);
+      } catch {
+        message.error(t('network:create.yamlParseError'));
+        return;
+      }
+    }
+
+    try {
+      YAML.parse(currentYaml);
+    } catch (err) {
+      message.error(t('network:editPage.yamlFormatError', { error: err instanceof Error ? err.message : String(err) }));
+      return;
+    }
+
+    // 補齊缺少的 pathType，避免預檢誤報
+    currentYaml = patchIngressPathType(currentYaml);
+
+    setDryRunning(true);
+    setDryRunResult(null);
+    try {
+      await ResourceService.applyYAML(clusterId, 'Ingress', currentYaml, true);
+      setDryRunResult({ success: true, message: t('network:editPage.dryRunSuccess') });
+    } catch (err) {
+      setDryRunResult({ success: false, message: parseApiError(err) || t('network:editPage.dryRunFailed') });
+    } finally {
+      setDryRunning(false);
+    }
+  };
+
   const handleCancel = () => {
     form.resetFields();
+    setDryRunResult(null);
     setYamlContent(`apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -376,7 +479,10 @@ spec:
       initialValues={{
         namespace: 'default',
         ingressClassName: 'nginx',
-        rules: [{ paths: [{ pathType: 'Prefix' }] }],
+        rules: [{
+          host: 'example.com',
+          paths: [{ path: '/', pathType: 'Prefix', serviceName: 'my-service', servicePort: 80 }],
+        }],
       }}
     >
       <Form.Item
@@ -390,9 +496,9 @@ spec:
           showSearch
           filterOption={(input, option) => {
             if (!option?.children) return false;
-            const text = String(option.children);
-            return text.toLowerCase().includes(input.toLowerCase());
+            return String(option.children).toLowerCase().includes(input.toLowerCase());
           }}
+          onChange={(ns: string) => loadServices(ns)}
         >
           {namespaces.map((ns) => (
             <Select.Option key={ns} value={ns}>
@@ -445,7 +551,7 @@ spec:
                     <Form.List name={[field.name, 'paths']}>
                       {(pathFields, { add: addPath, remove: removePath }) => (
                         <>
-                          {pathFields.map((pathField) => (
+                          {pathFields.map((pathField, pathIdx) => (
                             <Space key={pathField.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
                               <Form.Item
                                 {...pathField}
@@ -453,7 +559,7 @@ spec:
                                 rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
-                                <Input placeholder="Path (/)" style={{ width: 120 }} />
+                                <Input placeholder="Path (/)" style={{ width: 100 }} />
                               </Form.Item>
                               <Form.Item
                                 {...pathField}
@@ -461,27 +567,72 @@ spec:
                                 rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
-                                <Select placeholder="PathType" style={{ width: 120 }}>
+                                <Select placeholder="PathType" style={{ width: 130 }}>
                                   <Select.Option value="Prefix">Prefix</Select.Option>
                                   <Select.Option value="Exact">Exact</Select.Option>
                                   <Select.Option value="ImplementationSpecific">ImplementationSpecific</Select.Option>
                                 </Select>
                               </Form.Item>
+                              {/* Service 下拉選單，選擇後自動帶入第一個 port */}
                               <Form.Item
                                 {...pathField}
                                 name={[pathField.name, 'serviceName']}
                                 rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
-                                <Input placeholder={t('network:create.serviceNameField')} style={{ width: 150 }} />
+                                <Select
+                                  showSearch
+                                  allowClear
+                                  placeholder={t('network:create.serviceNameField')}
+                                  style={{ width: 180 }}
+                                  loading={loadingServices}
+                                  filterOption={(input, option) =>
+                                    String(option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                                  }
+                                  options={services.map((s) => ({ label: s.name, value: s.name }))}
+                                  onChange={(svcName: string) => {
+                                    const svc = services.find((s) => s.name === svcName);
+                                    if (svc?.ports?.[0]) {
+                                      form.setFieldValue(
+                                        ['rules', field.name, 'paths', pathIdx, 'servicePort'],
+                                        svc.ports[0].port,
+                                      );
+                                    }
+                                  }}
+                                />
                               </Form.Item>
-                              <Form.Item
-                                {...pathField}
-                                name={[pathField.name, 'servicePort']}
-                                rules={[{ required: true, message: t('network:create.required') }]}
-                                noStyle
-                              >
-                                <InputNumber placeholder={t('network:ingress.edit.servicePort')} style={{ width: 100 }} min={1} max={65535} />
+                              {/* Port 下拉選單，依選定 Service 顯示可用 port */}
+                              <Form.Item noStyle shouldUpdate>
+                                {({ getFieldValue }) => {
+                                  const svcName = getFieldValue(['rules', field.name, 'paths', pathIdx, 'serviceName']);
+                                  const svc = services.find((s) => s.name === svcName);
+                                  const portOpts = svc?.ports.map((p) => ({
+                                    label: p.name ? `${p.port} (${p.name})` : String(p.port),
+                                    value: p.port,
+                                  })) ?? [];
+                                  return (
+                                    <Form.Item
+                                      name={[pathField.name, 'servicePort']}
+                                      rules={[{ required: true, message: t('network:create.required') }]}
+                                      noStyle
+                                    >
+                                      <Select
+                                        showSearch
+                                        placeholder="Port"
+                                        style={{ width: 130 }}
+                                        options={portOpts}
+                                        notFoundContent={
+                                          <span style={{ fontSize: 12, color: '#999' }}>
+                                            {t('network:create.noPortFound')}
+                                          </span>
+                                        }
+                                        filterOption={(input, option) =>
+                                          String(option?.value ?? '').includes(input)
+                                        }
+                                      />
+                                    </Form.Item>
+                                  );
+                                }}
                               </Form.Item>
                               <MinusCircleOutlined onClick={() => removePath(pathField.name)} />
                             </Space>
@@ -564,11 +715,31 @@ spec:
         <Button key="cancel" onClick={handleCancel}>
           {t('common:actions.cancel')}
         </Button>,
+        <Button
+          key="dryrun"
+          icon={<CheckCircleOutlined />}
+          loading={dryRunning}
+          onClick={handleDryRun}
+        >
+          {t('network:editPage.dryRun')}
+        </Button>,
         <Button key="submit" type="primary" loading={loading} onClick={handleSubmit}>
           {t('common:actions.create')}
         </Button>,
       ]}
     >
+      {dryRunResult && (
+        <Alert
+          message={dryRunResult.success ? t('network:editPage.dryRunSuccessTitle') : t('network:editPage.dryRunFailedTitle')}
+          description={dryRunResult.message}
+          type={dryRunResult.success ? 'success' : 'error'}
+          showIcon
+          icon={dryRunResult.success ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
+          closable
+          onClose={() => setDryRunResult(null)}
+          style={{ marginBottom: 12 }}
+        />
+      )}
       <Tabs
         activeKey={activeTab}
         onChange={handleTabChange}

@@ -348,6 +348,16 @@ spec: {}
   }, []);
 
   useEffect(() => {
+    // AI 助手「套用至叢集」：從 sessionStorage 取出預填 YAML，不需要 workloadType
+    const aiYAML = sessionStorage.getItem('ai_yaml_content');
+    if (aiYAML) {
+      sessionStorage.removeItem('ai_yaml_content');
+      setYaml(aiYAML);
+      setOriginalYaml('');
+      setError(null);
+      return;
+    }
+
     if (!clusterId || !workloadType) {
       setError(t('messages.missingParams'));
       return;
