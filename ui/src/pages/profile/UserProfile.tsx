@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Descriptions, Button, Modal, Form, Input, Space, Tag, Spin, App } from 'antd';
-import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, SafetyOutlined, EditOutlined } from '@ant-design/icons';
 import { authService, tokenManager } from '../../services/authService';
 import type { User } from '../../types';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +12,10 @@ const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
+  const [editProfileLoading, setEditProfileLoading] = useState(false);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
 
   const loadUserProfile = useCallback(async () => {
     setLoading(true);
@@ -78,6 +81,36 @@ const [user, setUser] = useState<User | null>(null);
     form.resetFields();
   };
 
+  const handleOpenEditProfile = () => {
+    editForm.setFieldsValue({
+      display_name: user?.display_name || '',
+      email: user?.email || '',
+    });
+    setEditProfileModalVisible(true);
+  };
+
+  const handleEditProfile = async () => {
+    try {
+      const values = await editForm.validateFields();
+      setEditProfileLoading(true);
+      const updated = await authService.updateProfile({
+        display_name: values.display_name,
+        email: values.email,
+      });
+      setUser(updated);
+      tokenManager.setUser(updated);
+      message.success(t('profile:updateProfileSuccess'));
+      setEditProfileModalVisible(false);
+    } catch (error: unknown) {
+      const err = error as { errorFields?: unknown[]; response?: { data?: { message?: string } }; message?: string };
+      if (err.errorFields) return;
+      const errorMessage = err?.response?.data?.message || err?.message || t('profile:updateProfileFailed');
+      message.error(errorMessage);
+    } finally {
+      setEditProfileLoading(false);
+    }
+  };
+
   const formatDateTime = (dateString?: string | null) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleString('zh-TW', {
@@ -109,8 +142,14 @@ const [user, setUser] = useState<User | null>(null);
         }
         extra={
           <Space>
-            <Button 
-              type="primary" 
+            <Button
+              icon={<EditOutlined />}
+              onClick={handleOpenEditProfile}
+            >
+              {t('profile:editProfile')}
+            </Button>
+            <Button
+              type="primary"
               icon={<LockOutlined />}
               onClick={handleOpenChangePassword}
               disabled={user?.auth_type === 'ldap'}
@@ -163,6 +202,39 @@ const [user, setUser] = useState<User | null>(null);
           </div>
         )}
       </Card>
+
+      <Modal
+        title={
+          <Space>
+            <EditOutlined />
+            <span>{t('profile:editProfileTitle')}</span>
+          </Space>
+        }
+        open={editProfileModalVisible}
+        onOk={handleEditProfile}
+        onCancel={() => { setEditProfileModalVisible(false); editForm.resetFields(); }}
+        confirmLoading={editProfileLoading}
+        width={480}
+        okText={t('common:actions.save')}
+        cancelText={t('common:actions.cancel')}
+        destroyOnHide
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item
+            label={t('profile:displayName')}
+            name="display_name"
+          >
+            <Input placeholder={t('profile:displayNamePlaceholder')} maxLength={100} />
+          </Form.Item>
+          <Form.Item
+            label={t('profile:email')}
+            name="email"
+            rules={[{ type: 'email', message: t('profile:emailInvalid') }]}
+          >
+            <Input placeholder={t('profile:emailPlaceholder')} maxLength={100} />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         title={

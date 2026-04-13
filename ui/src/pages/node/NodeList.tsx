@@ -14,7 +14,7 @@ import { usePermission } from '../../hooks/usePermission';
 
 const NodeList: React.FC = () => {
   const state = useNodeList();
-  const { hasFeature, canWrite } = usePermission();
+  const { hasFeature } = usePermission();
 
   // Create columns with memoization
   const allColumns = useMemo(() => createNodeColumns({
@@ -28,11 +28,11 @@ const NodeList: React.FC = () => {
     handleUncordon: state.handleUncordon,
     handleDrain: state.handleDrain,
     canTerminalNode: hasFeature('terminal:node'),
-    showActions: canWrite(),
+    showActions: hasFeature('node:manage'),
   }), [
     state.t, state.tc, state.sortField, state.sortOrder,
     state.handleViewDetail, state.handleNodeTerminal,
-    state.handleCordon, state.handleUncordon, state.handleDrain, hasFeature, canWrite
+    state.handleCordon, state.handleUncordon, state.handleDrain, hasFeature
   ]);
 
   // Filter columns by visibility
@@ -74,31 +74,35 @@ const NodeList: React.FC = () => {
           {/* Action Buttons */}
           <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Space>
-              <Button
-                disabled={state.selectedNodes.length === 0}
-                onClick={state.handleBatchCordon}
-              >
-                {state.isBatch ? state.t('actions.batchCordon') : state.t('actions.cordon')}
-              </Button>
-              <Button
-                disabled={state.selectedNodes.length === 0}
-                onClick={state.handleBatchUncordon}
-              >
-                {state.isBatch ? state.t('actions.batchUncordon') : state.t('actions.uncordon')}
-              </Button>
-              <Button
-                disabled={state.selectedNodes.length === 0}
-                danger
-                onClick={state.handleBatchDrain}
-              >
-                {state.isBatch ? '批次驅逐' : state.t('actions.drain')}
-              </Button>
-              <Button
-                disabled={state.selectedNodes.length === 0}
-                onClick={state.handleBatchLabel}
-              >
-                {state.isBatch ? state.t('actions.batchLabel') : '新增標籤'}
-              </Button>
+              {hasFeature('node:manage') && (
+                <>
+                  <Button
+                    disabled={state.selectedNodes.length === 0}
+                    onClick={state.handleBatchCordon}
+                  >
+                    {state.isBatch ? state.t('actions.batchCordon') : state.t('actions.cordon')}
+                  </Button>
+                  <Button
+                    disabled={state.selectedNodes.length === 0}
+                    onClick={state.handleBatchUncordon}
+                  >
+                    {state.isBatch ? state.t('actions.batchUncordon') : state.t('actions.uncordon')}
+                  </Button>
+                  <Button
+                    disabled={state.selectedNodes.length === 0}
+                    danger
+                    onClick={state.handleBatchDrain}
+                  >
+                    {state.isBatch ? '批次驅逐' : state.t('actions.drain')}
+                  </Button>
+                  <Button
+                    disabled={state.selectedNodes.length === 0}
+                    onClick={state.handleBatchLabel}
+                  >
+                    {state.isBatch ? state.t('actions.batchLabel') : '新增標籤'}
+                  </Button>
+                </>
+              )}
               {hasFeature('export') && (
                 <Button disabled={state.selectedNodes.length === 0} onClick={state.handleExport}>
                   {state.selectedNodes.length > 1

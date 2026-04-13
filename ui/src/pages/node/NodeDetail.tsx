@@ -44,7 +44,7 @@ const NodeDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('node');
   const { t: tc } = useTranslation('common');
-  const { canDelete } = usePermission();
+  const { canDelete, hasFeature } = usePermission();
 
   const defaultTab = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -81,6 +81,8 @@ const NodeDetail: React.FC = () => {
     setLabelModalVisible: state.setLabelModalVisible,
     setTaintModalVisible: state.setTaintModalVisible,
     canDelete: canDelete(),
+    canManage: hasFeature('node:manage'),
+    canTerminalNode: hasFeature('terminal:node'),
   });
 
   return (

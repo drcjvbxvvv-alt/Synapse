@@ -49,7 +49,7 @@ interface NetworkPolicyTabProps {
 const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountChange }) => {
   const { t } = useTranslation(['network', 'common']);
   const { message } = App.useApp();
-  const { canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
 
   const [viewMode, setViewMode] = useState<'list' | 'topology' | 'simulate'>('list');
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -244,7 +244,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
             { key: 'simulate', label: t('network:networkpolicy.columns.simulate', '策略模擬'), icon: <PlayCircleOutlined />, onClick: () => handleSimulate(record) },
           ]}
           more={[
-            ...(canDelete() ? [{
+            ...(hasFeature('network:delete') ? [{
               key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {
@@ -317,7 +317,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
         <Button icon={<ReloadOutlined />} onClick={() => fetchPolicies()}>
           {t('common:actions.refresh')}
         </Button>
-        {canWrite() && (
+        {hasFeature('network:write') && (
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
             {t('network:networkpolicy.create')}
           </Button>

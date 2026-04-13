@@ -38,5 +38,12 @@
   "changePasswordSuccess": "Password changed successfully",
   "changePasswordFailed": "Failed to change password",
   "changePasswordRetry": "Failed to change password, please try again later",
-  "fetchProfileFailed": "Failed to fetch user profile"
+  "fetchProfileFailed": "Failed to fetch user profile",
+  "editProfile": "Edit Profile",
+  "editProfileTitle": "Edit Profile",
+  "displayNamePlaceholder": "Enter display name",
+  "emailPlaceholder": "Enter email address",
+  "updateProfileSuccess": "Profile updated successfully",
+  "updateProfileFailed": "Failed to update profile",
+  "emailInvalid": "Please enter a valid email address"
 }

@@ -48,7 +48,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('pod');
   const { t: tc } = useTranslation('common');
-  const { canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const initialTab = searchParams.get('tab') || 'overview';
   
   const [pod, setPod] = useState<PodInfo | null>(null);
@@ -275,7 +275,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               {t('actions.viewLogs')}
             </Button>
             
-            {canWrite() && (
+            {hasFeature('terminal:pod') && (
               <Button
                 icon={<ConsoleSqlOutlined />}
                 onClick={handleTerminal}
@@ -293,7 +293,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               AI 診斷
             </Button>
 
-            {canDelete() && (
+            {hasFeature('workload:delete') && (
               <Popconfirm
                 title={tc('messages.confirmDelete')}
                 description={t('actions.confirmDeleteContent', { name: pod.name })}

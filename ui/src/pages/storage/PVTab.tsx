@@ -35,7 +35,7 @@ interface PVTabProps {
 }
 
 const PVTab: React.FC<PVTabProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const { message, modal } = App.useApp();
   
   // 資料狀態
@@ -418,7 +418,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
             },
           ]}
           more={[
-            ...(canDelete() ? [{
+            ...(hasFeature('storage:delete') ? [{
               key: 'delete',
               label: t('common:actions.delete'),
               icon: <DeleteOutlined />,
@@ -465,7 +465,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          {canDelete() && (
+          {hasFeature('storage:delete') && (
             <Button
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchDelete}

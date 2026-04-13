@@ -66,7 +66,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
 }) => {
   const { t } = useTranslation(['workload', 'common']);
   const { message } = App.useApp();
-  const { canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [loading, setLoading] = useState(false);
   const [hpa, setHpa] = useState<HPAInfo | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -245,7 +245,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
       {!hpa ? (
         <div style={{ textAlign: 'center' }}>
           <EmptyState description={t('scaling.noHpa')} style={{ padding: '50px 0' }} />
-          {isHPASupported && (
+          {isHPASupported && hasFeature('workload:write') && (
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
               建立 HPA
             </Button>
@@ -260,7 +260,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
             extra={
               <Space>
                 <Button size="small" icon={<EditOutlined />} onClick={openEdit}>編輯</Button>
-                {canDelete() && (
+                {hasFeature('workload:delete') && (
                   <Popconfirm title="確定刪除此 HPA？" onConfirm={handleDelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
                     <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
                   </Popconfirm>
@@ -375,9 +375,11 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
               {!vpa ? (
                 <div style={{ textAlign: 'center' }}>
                   <EmptyState description="尚未設定 VPA" style={{ padding: '32px 0' }} />
-                  <Button type="default" icon={<PlusOutlined />} onClick={openVPACreate}>
-                    建立 VPA
-                  </Button>
+                  {hasFeature('workload:write') && (
+                    <Button type="default" icon={<PlusOutlined />} onClick={openVPACreate}>
+                      建立 VPA
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Card
@@ -386,7 +388,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
                   extra={
                     <Space>
                       <Button size="small" icon={<EditOutlined />} onClick={openVPAEdit}>編輯</Button>
-                      {canDelete() && (
+                      {hasFeature('workload:delete') && (
                         <Popconfirm title="確定刪除此 VPA？" onConfirm={handleVPADelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
                           <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
                         </Popconfirm>

@@ -28,6 +28,7 @@ import { PodService } from '../../services/podService';
 import type { PodInfo } from '../../services/podService';
 import { tokenManager } from '../../services/authService';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -40,13 +41,14 @@ const PodTerminal: React.FC<PodTerminalProps> = () => {
     namespace: string;
     name: string;
   }>();
-  
+
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
   const websocket = useRef<WebSocket | null>(null);
-  
+
 const { t } = useTranslation(['pod', 'common']);
+const { hasFeature } = usePermission();
 const [pod, setPod] = useState<PodInfo | null>(null);
   const [selectedContainer, setSelectedContainer] = useState<string>('');
   const [connected, setConnected] = useState(false);
@@ -402,6 +404,20 @@ const [pod, setPod] = useState<PodInfo | null>(null);
   useEffect(() => {
     fetchPodDetail();
   }, [fetchPodDetail]);
+
+  // 功能權限驗證
+  if (!hasFeature('terminal:pod')) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
+        <Alert
+          message={t('pod:terminal.accessDenied')}
+          description={t('pod:terminal.accessDeniedDesc')}
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
 
   // 參數驗證
   if (!clusterId || !namespace || !name) {

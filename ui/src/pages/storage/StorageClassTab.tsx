@@ -38,7 +38,7 @@ interface StorageClassTabProps {
 }
 
 const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const { message, modal } = App.useApp();
   const { token } = theme.useToken();
 
@@ -399,7 +399,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
             },
           ]}
           more={[
-            ...(canDelete() ? [{
+            ...(hasFeature('storage:delete') ? [{
               key: 'delete',
               label: t('common:actions.delete'),
               icon: <DeleteOutlined />,
@@ -418,7 +418,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
 
   // 根據可見性過濾列
   const columns = allColumns.filter(col => {
-    if (col.key === 'actions') return canDelete();
+    if (col.key === 'actions') return hasFeature('storage:delete');
     if (col.key === 'name') return true;
     return visibleColumns.includes(col.key as string);
   });
@@ -446,7 +446,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          {canDelete() && (
+          {hasFeature('storage:delete') && (
             <Button
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchDelete}

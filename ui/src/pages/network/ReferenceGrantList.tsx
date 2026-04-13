@@ -13,7 +13,7 @@ import { usePermission } from '../../hooks/usePermission';
 const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [items, setItems] = useState<ReferenceGrantItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -99,7 +99,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
-    ...((canWrite() || canDelete()) ? [{
+    ...((hasFeature('network:write')) || (hasFeature('network:delete')) ? [{
       title: t('gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -109,7 +109,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
           <Button type="link" size="small" onClick={() => handleViewYAML(record)}>
             YAML
           </Button>
-          {canDelete() && (
+          {hasFeature('network:delete') && (
             <Popconfirm
               title={t('gatewayapi.messages.confirmDeleteTitle')}
               description={t('gatewayapi.messages.confirmDeleteReferenceGrant', { name: record.name })}
@@ -140,7 +140,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
         <div style={{ flex: 1 }} />
-        {canWrite() && (
+        {hasFeature('network:write') && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateVisible(true)}>
             {t('gatewayapi.refgrant.create')}
           </Button>

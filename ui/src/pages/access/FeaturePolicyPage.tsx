@@ -123,13 +123,29 @@ const FEATURE_GROUPS: FeatureGroup[] = [
 // 表格摘要欄位（最受關注的幾個功能）
 const SUMMARY_FEATURES = ['terminal:pod', 'terminal:node', 'export', 'ai_assistant'];
 
+// ALL_FEATURES mirrors the backend allFeatureKeys() — used for summary table display.
+// Non-readonly roles share this full ceiling; RBAC gates actual backend access.
+const ALL_FEATURES = [
+  'workload:view','workload:write','workload:delete',
+  'network:view','network:write','network:delete',
+  'storage:view','storage:write','storage:delete',
+  'node:view','node:manage',
+  'config:view','config:write','config:delete',
+  'terminal:pod','terminal:node',
+  'logs:view','monitoring:view',
+  'alerts:view','event_alerts:view',
+  'cost:view','security:view','certificates:view','slo:view','chaos:view','compliance:view',
+  'helm:view','helm:write',
+  'export','ai_assistant',
+];
+
 // per-type ceiling（前端鏡像後端 FeatureCeilings，僅用於表格摘要顯示）
 const CEILING: Record<string, string[]> = {
-  admin:    ['workload:view','workload:write','workload:delete','network:view','network:write','network:delete','storage:view','storage:write','storage:delete','node:view','node:manage','config:view','config:write','config:delete','terminal:pod','terminal:node','logs:view','monitoring:view','alerts:view','event_alerts:view','cost:view','security:view','certificates:view','slo:view','chaos:view','compliance:view','helm:view','helm:write','export','ai_assistant'],
-  ops:      ['workload:view','workload:write','workload:delete','network:view','network:write','network:delete','storage:view','storage:delete','node:view','config:view','config:write','config:delete','terminal:pod','terminal:node','logs:view','monitoring:view','alerts:view','event_alerts:view','cost:view','security:view','certificates:view','slo:view','chaos:view','compliance:view','helm:view','helm:write','export','ai_assistant'],
-  dev:      ['workload:view','workload:write','workload:delete','network:view','network:write','network:delete','config:view','config:write','config:delete','terminal:pod','logs:view','monitoring:view','alerts:view','event_alerts:view','security:view','slo:view','compliance:view','helm:view','export','ai_assistant'],
+  admin:    ALL_FEATURES,
+  ops:      ALL_FEATURES,
+  dev:      ALL_FEATURES,
   readonly: ['workload:view','network:view','storage:view','node:view','config:view','logs:view','monitoring:view','helm:view'],
-  custom:   ['workload:view','workload:write','workload:delete','network:view','network:write','network:delete','storage:view','storage:write','storage:delete','node:view','node:manage','config:view','config:write','config:delete','terminal:pod','terminal:node','logs:view','monitoring:view','alerts:view','event_alerts:view','cost:view','security:view','certificates:view','slo:view','chaos:view','compliance:view','helm:view','helm:write','export','ai_assistant'],
+  custom:   ALL_FEATURES,
 };
 
 // ─── 主元件 ────────────────────────────────────────────────────────────────

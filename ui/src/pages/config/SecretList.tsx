@@ -31,7 +31,7 @@ interface SecretListProps {
 const COLUMN_KEYS = ['name', 'namespace', 'type', 'labels', 'dataCount', 'creationTimestamp', 'age'] as const;
 
 const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const { t } = useTranslation(['config', 'common']);
@@ -47,8 +47,8 @@ const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => 
     colorTextSecondary: token.colorTextSecondary,
     navigate,
     handleDelete: hook.handleDelete,
-    canDelete: canDelete(),
-    showActions: canWrite(),
+    canDelete: hasFeature('config:delete'),
+    showActions: hasFeature('config:write') || hasFeature('config:delete'),
   });
 
   const columns = allColumns.filter(col =>
@@ -66,7 +66,7 @@ const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => 
       {/* Action toolbar */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          {canDelete() && (
+          {hasFeature('config:delete') && (
             <Button
               disabled={hook.selectedRowKeys.length === 0}
               danger
@@ -86,7 +86,7 @@ const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => 
             </Button>
           )}
         </Space>
-        {canWrite() && (
+        {hasFeature('config:write') && (
           <Button
             type="primary"
             icon={<PlusOutlined />}

@@ -47,7 +47,7 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
 }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [items, setItems] = useState<DestinationRuleSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespace, setNamespace] = useState(propNamespace ?? '');
@@ -193,7 +193,7 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
             { key: 'yaml', label: t('common:actions.view') + ' YAML', icon: <CodeOutlined />, onClick: () => handleViewYAML(record) },
           ]}
           more={[
-            ...(canDelete() ? [{
+            ...(hasFeature('network:delete') ? [{
               key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {
@@ -221,7 +221,7 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
         />
         <Button icon={<ReloadOutlined />} onClick={fetchList} loading={loading} />
         <div style={{ flex: 1 }} />
-        {canWrite() && (
+        {hasFeature('network:write') && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {t('network:servicemesh.createDestinationRule')}
           </Button>

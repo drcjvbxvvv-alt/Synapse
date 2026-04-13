@@ -38,5 +38,12 @@
   "changePasswordSuccess": "密碼修改成功",
   "changePasswordFailed": "密碼修改失敗",
   "changePasswordRetry": "密碼修改失敗，請稍後再試",
-  "fetchProfileFailed": "取得使用者資訊失敗"
+  "fetchProfileFailed": "取得使用者資訊失敗",
+  "editProfile": "編輯資料",
+  "editProfileTitle": "編輯個人資料",
+  "displayNamePlaceholder": "請輸入顯示名稱",
+  "emailPlaceholder": "請輸入電子郵件",
+  "updateProfileSuccess": "個人資料更新成功",
+  "updateProfileFailed": "個人資料更新失敗",
+  "emailInvalid": "請輸入有效的電子郵件格式"
 }

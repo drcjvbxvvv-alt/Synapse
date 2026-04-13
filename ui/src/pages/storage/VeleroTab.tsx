@@ -24,7 +24,7 @@ interface VeleroTabProps { clusterId: string }
 const BackupPanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clusterId, veleroNS }) => {
   const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
-  const { canWrite } = usePermission();
+  const { hasFeature } = usePermission();
   const [loading, setLoading] = useState(true);
   const [backups, setBackups] = useState<VeleroBackupInfo[]>([]);
   const [restoreOpen, setRestoreOpen] = useState(false);
@@ -110,7 +110,7 @@ const BackupPanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ cluste
     },
     {
       title: t('velero.actions'), key: 'actions', fixed: 'right' as const, width: 100,
-      render: (_: unknown, r: VeleroBackupInfo) => canWrite() ? (
+      render: (_: unknown, r: VeleroBackupInfo) => hasFeature('storage:write') ? (
         <Tooltip title={t('velero.triggerRestore')}>
           <Button
             type="link" size="small" icon={<PlayCircleOutlined />}
@@ -226,7 +226,7 @@ const RestorePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clust
 const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clusterId, veleroNS }) => {
   const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
-  const { canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [loading, setLoading] = useState(true);
   const [schedules, setSchedules] = useState<VeleroScheduleInfo[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -317,7 +317,7 @@ const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clus
     },
     {
       title: t('velero.actions'), key: 'actions', fixed: 'right' as const, width: 100,
-      render: (_: unknown, r: VeleroScheduleInfo) => canDelete() ? (
+      render: (_: unknown, r: VeleroScheduleInfo) => hasFeature('storage:delete') ? (
         <Popconfirm
           title={t('velero.confirmDeleteSchedule')}
           description={t('velero.confirmDeleteScheduleDesc', { name: r.name })}
@@ -335,7 +335,7 @@ const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clus
     <>
       <Space style={{ marginBottom: 12 }}>
         <Button icon={<ReloadOutlined />} loading={loading} onClick={load}>{t('velero.refresh')}</Button>
-        {canWrite() && (
+        {hasFeature('storage:write') && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {t('velero.createSchedule')}
           </Button>

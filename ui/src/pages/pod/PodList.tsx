@@ -22,7 +22,7 @@ import { usePermission } from '../../hooks/usePermission';
 
 
 const PodList: React.FC = () => {
-  const { hasFeature, canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const {
     clusterId,
     pods,
@@ -68,11 +68,11 @@ const PodList: React.FC = () => {
       createPodColumns({
         t, tc, sortField, sortOrder, clusterId,
         handleViewDetail, handleLogs, handleTerminal, handleViewEvents, confirmDelete,
-        canTerminalPod: canWrite() && hasFeature('terminal:pod'),
-        showActions: canWrite(),
-        canDelete: canDelete(),
+        canTerminalPod: hasFeature('terminal:pod'),
+        showActions: hasFeature('workload:write') || hasFeature('workload:delete'),
+        canDelete: hasFeature('workload:delete'),
       }),
-    [t, tc, sortField, sortOrder, clusterId, handleViewDetail, handleLogs, handleTerminal, handleViewEvents, confirmDelete, hasFeature, canWrite, canDelete]
+    [t, tc, sortField, sortOrder, clusterId, handleViewDetail, handleLogs, handleTerminal, handleViewEvents, confirmDelete, hasFeature]
   );
 
   const columns = useMemo(
@@ -109,7 +109,7 @@ const PodList: React.FC = () => {
                   {/* 操作按鈕欄 */}
                   <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <Space>
-                      {canDelete() && (
+                      {hasFeature('workload:delete') && (
                         <Button
                           danger
                           disabled={selectedRowKeys.length === 0}

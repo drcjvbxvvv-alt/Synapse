@@ -78,6 +78,11 @@ export const authService = {
     return request.get<AuthStatus>('/auth/status');
   },
 
+  // 更新個人資料
+  updateProfile: (data: { display_name?: string; email?: string }): Promise<ApiResponse<User>> => {
+    return request.put<User>('/auth/me', data);
+  },
+
   // 修改密碼
   changePassword: (data: ChangePasswordRequest): Promise<ApiResponse<null>> => {
     return request.post<null>('/auth/change-password', data);

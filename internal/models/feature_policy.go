@@ -4,61 +4,54 @@ import "encoding/json"
 
 // Feature key constants — used in FeaturePolicy JSON and frontend hasFeature() calls.
 const (
-	FeatureWorkloadView  = "workload:view"
-	FeatureWorkloadWrite = "workload:write"
-	FeatureNetworkView   = "network:view"
-	FeatureNetworkWrite  = "network:write"
-	FeatureStorageView   = "storage:view"
-	FeatureStorageWrite  = "storage:write"
-	FeatureNodeView      = "node:view"
-	FeatureNodeManage    = "node:manage"
-	FeatureConfigView    = "config:view"
-	FeatureConfigWrite   = "config:write"
-	FeatureTerminalPod   = "terminal:pod"
-	FeatureTerminalNode  = "terminal:node"
-	FeatureLogsView      = "logs:view"
-	FeatureMonitoringView = "monitoring:view"
-	FeatureHelmView      = "helm:view"
-	FeatureHelmWrite     = "helm:write"
-	FeatureExport        = "export"
-	FeatureAIAssistant   = "ai_assistant"
+	FeatureWorkloadView   = "workload:view"
+	FeatureWorkloadWrite  = "workload:write"
+	FeatureWorkloadDelete = "workload:delete"
+	FeatureNetworkView    = "network:view"
+	FeatureNetworkWrite   = "network:write"
+	FeatureNetworkDelete  = "network:delete"
+	FeatureStorageView    = "storage:view"
+	FeatureStorageWrite   = "storage:write"
+	FeatureStorageDelete  = "storage:delete"
+	FeatureNodeView       = "node:view"
+	FeatureNodeManage     = "node:manage"
+	FeatureConfigView     = "config:view"
+	FeatureConfigWrite    = "config:write"
+	FeatureConfigDelete   = "config:delete"
+	FeatureTerminalPod    = "terminal:pod"
+	FeatureTerminalNode   = "terminal:node"
+	FeatureLogsView       = "logs:view"
+	FeatureMonitoringView  = "monitoring:view"
+	FeatureAlertsView      = "alerts:view"
+	FeatureEventAlertsView = "event_alerts:view"
+	FeatureCostView        = "cost:view"
+	FeatureSecurityView    = "security:view"
+	FeatureCertificatesView = "certificates:view"
+	FeatureSLOView         = "slo:view"
+	FeatureChaosView       = "chaos:view"
+	FeatureComplianceView  = "compliance:view"
+	FeatureHelmView        = "helm:view"
+	FeatureHelmWrite       = "helm:write"
+	FeatureExport          = "export"
+	FeatureAIAssistant     = "ai_assistant"
 )
 
 // FeatureCeilings defines the maximum set of feature keys each permission_type
 // can ever have enabled. Feature policy can only restrict within this ceiling —
 // it cannot grant features that exceed the type's ceiling.
+//
+// For non-readonly roles the ceiling is the full feature set. The actual access
+// boundary is enforced by the permission_type check in route/handler middleware
+// (e.g. ops cannot exec into nodes even if terminal:node is in their ceiling).
+// Feature policy is an admin-configurable restriction layer on top of RBAC.
 var FeatureCeilings = map[string][]string{
-	PermissionTypeAdmin: {
-		FeatureWorkloadView, FeatureWorkloadWrite,
-		FeatureNetworkView, FeatureNetworkWrite,
-		FeatureStorageView, FeatureStorageWrite,
-		FeatureNodeView, FeatureNodeManage,
-		FeatureConfigView, FeatureConfigWrite,
-		FeatureTerminalPod, FeatureTerminalNode,
-		FeatureLogsView, FeatureMonitoringView,
-		FeatureHelmView, FeatureHelmWrite,
-		FeatureExport, FeatureAIAssistant,
-	},
-	PermissionTypeOps: {
-		FeatureWorkloadView, FeatureWorkloadWrite,
-		FeatureNetworkView, FeatureNetworkWrite,
-		FeatureStorageView, // storage:write excluded
-		FeatureNodeView,    // node:manage excluded
-		FeatureConfigView, FeatureConfigWrite,
-		FeatureTerminalPod, FeatureTerminalNode,
-		FeatureLogsView, FeatureMonitoringView,
-		FeatureHelmView, FeatureHelmWrite,
-		FeatureExport, FeatureAIAssistant,
-	},
-	PermissionTypeDev: {
-		FeatureWorkloadView, FeatureWorkloadWrite,
-		FeatureNetworkView, FeatureNetworkWrite,
-		FeatureConfigView, FeatureConfigWrite,
-		FeatureTerminalPod, // terminal:node excluded
-		FeatureLogsView, FeatureMonitoringView,
-		FeatureExport, FeatureAIAssistant,
-		// storage, node, helm excluded
-	},
+	// admin — all features enabled by default, fully configurable
+	PermissionTypeAdmin: allFeatureKeys(),
+	// ops — all features in ceiling; RBAC still gates backend operations
+	PermissionTypeOps: allFeatureKeys(),
+	// dev — all features in ceiling; RBAC still gates backend operations
+	PermissionTypeDev: allFeatureKeys(),
+	// readonly — hard-limited to read-only views, no writes/terminal/export
 	PermissionTypeReadonly: {
 		FeatureWorkloadView,
 		FeatureNetworkView,
@@ -67,22 +60,24 @@ var FeatureCeilings = map[string][]string{
 		FeatureConfigView,
 		FeatureLogsView, FeatureMonitoringView,
 		FeatureHelmView,
-		// no :write, no terminal, no export, no ai_assistant
 	},
-	// custom: all features — RBAC controls access, not feature policy
+	// custom — all features; RBAC controls access, not feature policy
 	PermissionTypeCustom: allFeatureKeys(),
 }
 
 // allFeatureKeys returns every defined feature key.
 func allFeatureKeys() []string {
 	return []string{
-		FeatureWorkloadView, FeatureWorkloadWrite,
-		FeatureNetworkView, FeatureNetworkWrite,
-		FeatureStorageView, FeatureStorageWrite,
+		FeatureWorkloadView, FeatureWorkloadWrite, FeatureWorkloadDelete,
+		FeatureNetworkView, FeatureNetworkWrite, FeatureNetworkDelete,
+		FeatureStorageView, FeatureStorageWrite, FeatureStorageDelete,
 		FeatureNodeView, FeatureNodeManage,
-		FeatureConfigView, FeatureConfigWrite,
+		FeatureConfigView, FeatureConfigWrite, FeatureConfigDelete,
 		FeatureTerminalPod, FeatureTerminalNode,
 		FeatureLogsView, FeatureMonitoringView,
+		FeatureAlertsView, FeatureEventAlertsView,
+		FeatureCostView, FeatureSecurityView, FeatureCertificatesView,
+		FeatureSLOView, FeatureChaosView, FeatureComplianceView,
 		FeatureHelmView, FeatureHelmWrite,
 		FeatureExport, FeatureAIAssistant,
 	}

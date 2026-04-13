@@ -155,6 +155,38 @@ func (s *AuthService) GetProfile(userID uint) (*models.User, error) {
 	return &user, nil
 }
 
+// UpdateProfileRequest 更新個人資料請求
+type UpdateProfileRequest struct {
+	DisplayName string `json:"display_name"`
+	Email       string `json:"email"`
+}
+
+// UpdateProfile 更新當前使用者的個人資料（display_name、email）
+func (s *AuthService) UpdateProfile(userID uint, req UpdateProfileRequest) (*models.User, error) {
+	var user models.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return nil, apierrors.ErrUserNotFound()
+	}
+
+	updates := map[string]interface{}{}
+	if req.DisplayName != "" {
+		updates["display_name"] = req.DisplayName
+	}
+	if req.Email != "" {
+		updates["email"] = req.Email
+	}
+	if len(updates) == 0 {
+		return &user, nil
+	}
+
+	if err := s.db.Model(&user).Updates(updates).Error; err != nil {
+		return nil, fmt.Errorf("update profile for user %d: %w", userID, err)
+	}
+
+	logger.Info("使用者更新個人資料", "user_id", userID, "username", user.Username)
+	return &user, nil
+}
+
 // GetAuthStatus 獲取LDAP認證是否啟用
 func (s *AuthService) GetAuthStatus() (bool, error) {
 	ldapConfig, err := s.ldapService.GetLDAPConfig()

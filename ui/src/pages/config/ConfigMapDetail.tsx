@@ -40,7 +40,7 @@ const ConfigMapDetail: React.FC = () => {
   }>();
   const { t } = useTranslation(['config', 'common']);
   const { modal } = App.useApp();
-  const { canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [loading, setLoading] = useState(false);
   const [configMap, setConfigMap] = useState<ConfigMapDetailType | null>(null);
   const [versions, setVersions] = useState<ConfigVersion[]>([]);
@@ -153,7 +153,7 @@ const ConfigMapDetail: React.FC = () => {
               >
                 {t('common:actions.edit')}
               </Button>
-              {canDelete() && (
+              {hasFeature('config:delete') && (
                 <Button icon={<DeleteOutlined />} danger onClick={handleDelete}>
                   {t('common:actions.delete')}
                 </Button>

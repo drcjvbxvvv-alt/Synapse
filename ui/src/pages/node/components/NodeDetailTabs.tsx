@@ -49,6 +49,8 @@ interface NodeDetailTabsProps {
   setLabelModalVisible: (visible: boolean) => void;
   setTaintModalVisible: (visible: boolean) => void;
   canDelete?: boolean;
+  canManage?: boolean;
+  canTerminalNode?: boolean;
 }
 
 // Helper to get condition status badge
@@ -148,6 +150,8 @@ export function createNodeDetailTabItems(props: NodeDetailTabsProps) {
     setLabelModalVisible,
     setTaintModalVisible,
     canDelete = false,
+    canManage = false,
+    canTerminalNode = false,
   } = props;
 
   const podColumns = buildPodColumns(clusterId, navigate, t, tc);
@@ -275,21 +279,23 @@ export function createNodeDetailTabItems(props: NodeDetailTabsProps) {
                 .map((label: { key: string; value: string }, index: number) => (
                   <Tag
                     key={index}
-                    closable
-                    onClose={() => handleRemoveLabel(label.key)}
+                    closable={canManage}
+                    onClose={canManage ? () => handleRemoveLabel(label.key) : undefined}
                   >
                     {label.key}={label.value}
                   </Tag>
                 ))}
             </Space>
 
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={() => setLabelModalVisible(true)}
-            >
-              {t('detail.addLabel')}
-            </Button>
+            {canManage && (
+              <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() => setLabelModalVisible(true)}
+              >
+                {t('detail.addLabel')}
+              </Button>
+            )}
           </Card>
         </div>
       ),
@@ -312,7 +318,7 @@ export function createNodeDetailTabItems(props: NodeDetailTabsProps) {
                 style={{ marginBottom: 16 }}
                 title={`${taint.key}${taint.value ? `=${taint.value}` : ''}:${taint.effect}`}
                 extra={
-                  canDelete && (
+                  canDelete && canManage && (
                     <Button
                       type="text"
                       danger
@@ -347,18 +353,20 @@ export function createNodeDetailTabItems(props: NodeDetailTabsProps) {
             <EmptyState description={t('detail.noTaints')} />
           )}
 
-          <Button
-            type="dashed"
-            icon={<PlusOutlined />}
-            onClick={() => setTaintModalVisible(true)}
-            style={{ marginTop: 16 }}
-          >
-            {t('detail.addTaint')}
-          </Button>
+          {canManage && (
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => setTaintModalVisible(true)}
+              style={{ marginTop: 16 }}
+            >
+              {t('detail.addTaint')}
+            </Button>
+          )}
         </Card>
       ),
     },
-    {
+    ...(canTerminalNode ? [{
       key: 'terminal',
       label: (
         <span>
@@ -373,6 +381,6 @@ export function createNodeDetailTabItems(props: NodeDetailTabsProps) {
           clusterId={clusterId}
         />
       ),
-    },
+    }] : []),
   ];
 }

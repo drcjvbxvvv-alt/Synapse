@@ -13,7 +13,7 @@ import { usePermission } from '../../hooks/usePermission';
 const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [items, setItems] = useState<GatewayItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -126,14 +126,14 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
-    ...((canWrite() || canDelete()) ? [{
+    ...((hasFeature('network:write')) || (hasFeature('network:delete')) ? [{
       title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
       width: 120,
       render: (_: unknown, record: GatewayItem) => (
         <Space size="small">
-          {canWrite() && (
+          {hasFeature('network:write') && (
             <Button
               type="link"
               size="small"
@@ -142,7 +142,7 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
               {t('common:actions.edit')}
             </Button>
           )}
-          {canDelete() && (
+          {hasFeature('network:delete') && (
             <Popconfirm
               title={t('network:gatewayapi.messages.confirmDeleteTitle')}
               description={t('network:gatewayapi.messages.confirmDeleteGateway', { name: record.name })}
@@ -173,7 +173,7 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
         <div style={{ flex: 1 }} />
-        {canWrite() && (
+        {hasFeature('network:write') && (
           <Button
             type="primary"
             icon={<PlusOutlined />}

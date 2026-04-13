@@ -153,6 +153,8 @@
     "connectError": "终端连接出错",
     "disconnectedMsg": "终端连接已断开",
     "createFailed": "创建终端连接失败",
+    "accessDenied": "无访问权限",
+    "accessDeniedDesc": "您的功能策略未开启「Pod 终端机」权限，请联系管理员调整。",
     "paramError": "参数错误",
     "paramErrorDesc": "缺少必要的路由参数（clusterId、namespace 或 name）",
     "podStatusAbnormal": "Pod状态异常",

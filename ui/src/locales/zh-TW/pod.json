@@ -153,6 +153,8 @@
     "connectError": "終端機連線出錯",
     "disconnectedMsg": "終端機連線已中斷",
     "createFailed": "建立終端機連線失敗",
+    "accessDenied": "無存取權限",
+    "accessDeniedDesc": "您的功能策略未開啟「Pod 終端機」權限，請聯絡管理員調整。",
     "paramError": "參數錯誤",
     "paramErrorDesc": "缺少必要的路由參數（clusterId、namespace 或 name）",
     "podStatusAbnormal": "Pod 狀態異常",

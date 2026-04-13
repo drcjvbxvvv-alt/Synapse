@@ -18,7 +18,7 @@ interface PDBPanelProps {
 
 const PDBPanel: React.FC<PDBPanelProps> = ({ clusterId, namespace, workloadLabels }) => {
   const { message } = App.useApp();
-  const { canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [items, setItems] = useState<PDBInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -140,7 +140,7 @@ const PDBPanel: React.FC<PDBPanelProps> = ({ clusterId, namespace, workloadLabel
       render: (_, r) => (
         <Space>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>編輯</Button>
-          {canDelete() && (
+          {hasFeature('workload:delete') && (
             <Popconfirm title="確定刪除此 PDB？" onConfirm={() => handleDelete(r)} okButtonProps={{ danger: true }}>
               <Button type="link" size="small" danger icon={<DeleteOutlined />}>刪除</Button>
             </Popconfirm>
@@ -155,9 +155,11 @@ const PDBPanel: React.FC<PDBPanelProps> = ({ clusterId, namespace, workloadLabel
       size="small"
       title="PodDisruptionBudget"
       extra={
-        <Button size="small" type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          建立 PDB
-        </Button>
+        hasFeature('workload:write') && (
+          <Button size="small" type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            建立 PDB
+          </Button>
+        )
       }
     >
       <Table

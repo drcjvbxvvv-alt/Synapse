@@ -281,6 +281,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		auth.POST("/logout", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.Logout)
 		auth.GET("/status", authHandler.GetAuthStatus)
 		auth.GET("/me", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.GetProfile)
+		auth.PUT("/me", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.UpdateProfile)
 		auth.POST("/change-password", middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc), authHandler.ChangePassword)
 	}
 

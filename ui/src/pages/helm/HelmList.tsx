@@ -61,7 +61,7 @@ const HelmList: React.FC = () => {
   const { id: clusterId } = useParams<{ id: string }>();
   const { t } = useTranslation('helm');
   const { message, modal } = App.useApp();
-  const { canWrite, canDelete } = usePermission();
+  const { canWrite, canDelete, hasFeature } = usePermission();
 
   // ---- state ----
   const [releases, setReleases] = useState<HelmRelease[]>([]);
@@ -315,7 +315,7 @@ const HelmList: React.FC = () => {
       width: 160,
       render: (_: unknown, record: HelmRelease) => (
         <Space size="small">
-          {canWrite() && (
+          {hasFeature('helm:write') && (
             <>
               <Tooltip title={t('history', 'History')}>
                 <Button
@@ -340,7 +340,7 @@ const HelmList: React.FC = () => {
               </Tooltip>
             </>
           )}
-          {canDelete() && (
+          {hasFeature('helm:write') && (
             <Tooltip title={t('uninstall', 'Uninstall')}>
               <Button
                 size="small"
@@ -395,7 +395,7 @@ const HelmList: React.FC = () => {
             <Button icon={<ReloadOutlined />} onClick={fetchReleases}>
               {t('refresh', 'Refresh')}
             </Button>
-            {canWrite() && (
+            {hasFeature('helm:write') && (
               <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenInstall}>
                 {t('install', 'Install')}
               </Button>

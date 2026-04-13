@@ -18,7 +18,7 @@ interface JobTabProps {
 }
 
 const JobTab: React.FC<JobTabProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const state = useWorkloadTab({
     clusterId,
     workloadType: 'Job',
@@ -36,12 +36,12 @@ const JobTab: React.FC<JobTabProps> = ({ clusterId, onCountChange }) => {
     openScaleModal: state.openScaleModal,
     handleRestart: state.handleRestart,
     handleDelete: state.handleDelete,
-    canDelete: canDelete(),
-    showActions: canWrite(),
+    canDelete: hasFeature('workload:delete'),
+    showActions: hasFeature('workload:write') || hasFeature('workload:delete'),
   }), [
     state.t, state.sortField, state.sortOrder,
     state.navigateToDetail, state.handleMonitor, state.handleEdit,
-    state.openScaleModal, state.handleRestart, state.handleDelete, canWrite, canDelete
+    state.openScaleModal, state.handleRestart, state.handleDelete, hasFeature
   ]);
 
   const columns = useMemo(() => allColumns.filter(col => {
@@ -86,7 +86,7 @@ const JobTab: React.FC<JobTabProps> = ({ clusterId, onCountChange }) => {
               </Button>
             )}
           </Space>
-          {canWrite() && (
+          {hasFeature('workload:write') && (
             <Button
               type="primary"
               icon={<PlusOutlined />}

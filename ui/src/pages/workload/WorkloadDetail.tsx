@@ -51,7 +51,7 @@ const WorkloadDetail: React.FC<WorkloadDetailProps> = () => {
 const { t } = useTranslation(["workload", "common"]);
 const { token } = theme.useToken();
 const navigate = useNavigate();
-  const { canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   
   // URL 路徑中的 type 是小寫（如 statefulset），需要對映為 API 期望的 PascalCase
   const typeMap: Record<string, string> = {
@@ -274,7 +274,7 @@ const navigate = useNavigate();
               {t('actions.aiDiagnose')}
             </Button>
 
-            {canDelete() && (
+            {hasFeature('workload:delete') && (
               <Popconfirm
                 title={t("common:actions.delete")}
                 description={t('actions.confirmDeleteWorkload', { name: workloadInfo.name })}

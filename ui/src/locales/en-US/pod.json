@@ -153,6 +153,8 @@
     "connectError": "Terminal connection error",
     "disconnectedMsg": "Terminal connection closed",
     "createFailed": "Failed to create terminal connection",
+    "accessDenied": "Access Denied",
+    "accessDeniedDesc": "The 'Pod Terminal' feature is not enabled in your feature policy. Please contact an administrator.",
     "paramError": "Parameter Error",
     "paramErrorDesc": "Missing required route parameters (clusterId, namespace or name)",
     "podStatusAbnormal": "Pod Status Abnormal",

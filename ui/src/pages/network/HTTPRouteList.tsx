@@ -14,7 +14,7 @@ import { usePermission } from '../../hooks/usePermission';
 const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
-  const { canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [items, setItems] = useState<HTTPRouteItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -138,7 +138,7 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
             { key: 'view', label: t('common:actions.viewDetails'), icon: <EyeOutlined />, onClick: () => setDrawerItem(record) },
           ]}
           more={[
-            ...(canDelete() ? [{
+            ...(hasFeature('network:delete') ? [{
               key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {
@@ -165,7 +165,7 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
         <div style={{ flex: 1 }} />
-        {canWrite() && (
+        {hasFeature('network:write') && (
           <Button
             type="primary"
             icon={<PlusOutlined />}

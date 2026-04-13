@@ -41,7 +41,7 @@ const SecretDetail: React.FC = () => {
   }>();
   const { t } = useTranslation(['config', 'common']);
   const { modal } = App.useApp();
-  const { canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const [loading, setLoading] = useState(false);
   const [secret, setSecret] = useState<SecretDetailType | null>(null);
   const [showValues, setShowValues] = useState(false);
@@ -153,7 +153,7 @@ const SecretDetail: React.FC = () => {
               >
                 {t('common:actions.edit')}
               </Button>
-              {canDelete() && (
+              {hasFeature('config:delete') && (
                 <Button icon={<DeleteOutlined />} danger onClick={handleDelete}>
                   {t('common:actions.delete')}
                 </Button>

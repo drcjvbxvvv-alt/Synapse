@@ -283,6 +283,67 @@ func (h *AuthHandler) GetAuthStatus(c *gin.Context) {
 	})
 }
 
+// UpdateProfileRequest 更新個人資料請求
+type UpdateProfileRequest struct {
+	DisplayName string `json:"display_name"`
+	Email       string `json:"email" binding:"omitempty,email"`
+}
+
+// UpdateProfile 更新當前登入使用者的個人資料
+//
+// @Summary     更新個人資料
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body UpdateProfileRequest true "更新資料"
+// @Success     200 {object} models.User
+// @Failure     400 {object} response.ErrorBody
+// @Failure     401 {object} response.ErrorBody
+// @Router      /auth/me [put]
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		response.Unauthorized(c, "無效的使用者認證資訊")
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "請求參數錯誤: "+err.Error())
+		return
+	}
+
+	user, err := h.authService.UpdateProfile(userID, services.UpdateProfileRequest{
+		DisplayName: req.DisplayName,
+		Email:       req.Email,
+	})
+	if err != nil {
+		response.FromError(c, err)
+		return
+	}
+
+	if h.opLogSvc != nil {
+		uid := userID
+		h.opLogSvc.RecordAsync(&services.LogEntry{
+			UserID:       &uid,
+			Username:     c.GetString("username"),
+			Method:       "PUT",
+			Path:         "/api/v1/auth/me",
+			Module:       constants.ModuleAuth,
+			Action:       constants.ActionUpdate,
+			ResourceType: "user",
+			ResourceName: c.GetString("username"),
+			StatusCode:   200,
+			Success:      true,
+			ClientIP:     c.ClientIP(),
+			UserAgent:    c.Request.UserAgent(),
+		})
+	}
+
+	response.OK(c, user)
+}
+
 // ChangePasswordRequest 修改密碼請求
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`

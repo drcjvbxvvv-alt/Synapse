@@ -383,6 +383,10 @@ func (s *PermissionService) UpdateClusterPermission(id uint, req *UpdateClusterP
 		if !validTypes[req.PermissionType] {
 			return nil, apierrors.ErrPermissionInvalidType()
 		}
+		// 切換角色時清空舊的 feature_policy，避免舊設定污染新角色的預設狀態
+		if req.PermissionType != permission.PermissionType {
+			permission.FeaturePolicy = ""
+		}
 		permission.PermissionType = req.PermissionType
 	}
 

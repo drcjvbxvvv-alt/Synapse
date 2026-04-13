@@ -18,7 +18,7 @@ interface StatefulSetTabProps {
 }
 
 const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChange }) => {
-  const { hasFeature, canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const state = useWorkloadTab({
     clusterId,
     workloadType: 'StatefulSet',
@@ -36,12 +36,12 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
     openScaleModal: state.openScaleModal,
     handleRestart: state.handleRestart,
     handleDelete: state.handleDelete,
-    canDelete: canDelete(),
-    showActions: canWrite(),
+    canDelete: hasFeature('workload:delete'),
+    showActions: hasFeature('workload:write') || hasFeature('workload:delete'),
   }), [
     state.t, state.sortField, state.sortOrder,
     state.navigateToDetail, state.handleMonitor, state.handleEdit,
-    state.openScaleModal, state.handleRestart, state.handleDelete, canWrite, canDelete
+    state.openScaleModal, state.handleRestart, state.handleDelete, hasFeature
   ]);
 
   const columns = useMemo(() => allColumns.filter(col => {
@@ -86,7 +86,7 @@ const StatefulSetTab: React.FC<StatefulSetTabProps> = ({ clusterId, onCountChang
               </Button>
             )}
           </Space>
-          {canWrite() && (
+          {hasFeature('workload:write') && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
