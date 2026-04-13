@@ -46,5 +46,21 @@
   "uninstallError": "卸载 Release 失败",
   "fetchError": "获取 Release 列表失败",
   "noReleases": "暂无 Helm 应用",
-  "noHistory": "暂无版本历史"
+  "noHistory": "暂无版本历史",
+  "current": "当前",
+  "stats": {
+    "total": "应用总数",
+    "deployed": "已部署",
+    "failed": "失败",
+    "pending": "处理中"
+  },
+  "statusLabel": {
+    "deployed": "已部署",
+    "failed": "失败",
+    "pending_install": "安装中",
+    "pending_upgrade": "升级中",
+    "pending_rollback": "回滚中",
+    "uninstalling": "卸载中",
+    "superseded": "已被取代"
+  }
 }

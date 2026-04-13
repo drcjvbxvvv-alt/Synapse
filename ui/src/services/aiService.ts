@@ -57,8 +57,9 @@ export const aiService = {
     })
       .then(async (response) => {
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-          onError(errorData.message || `HTTP ${response.status}`);
+          const errorData = await response.json().catch(() => null);
+          const msg = errorData?.error?.message || errorData?.message || `請求失敗（HTTP ${response.status}）`;
+          onError(msg);
           return;
         }
 

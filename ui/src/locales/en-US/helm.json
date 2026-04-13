@@ -46,5 +46,21 @@
   "uninstallError": "Failed to uninstall release",
   "fetchError": "Failed to fetch releases",
   "noReleases": "No Helm releases found",
-  "noHistory": "No release history found"
+  "noHistory": "No release history found",
+  "current": "current",
+  "stats": {
+    "total": "Total Apps",
+    "deployed": "Deployed",
+    "failed": "Failed",
+    "pending": "Pending"
+  },
+  "statusLabel": {
+    "deployed": "Deployed",
+    "failed": "Failed",
+    "pending_install": "Installing",
+    "pending_upgrade": "Upgrading",
+    "pending_rollback": "Rolling Back",
+    "uninstalling": "Uninstalling",
+    "superseded": "Superseded"
+  }
 }

@@ -111,24 +111,39 @@ func (h *AIConfigHandler) TestConnection(c *gin.Context) {
 		return
 	}
 
+	// ollama 本地部署不需要 API Key，其他 provider 才強制要求
+	apiKeyOptional := req.Provider == "ollama"
+
 	apiKey := req.APIKey
 	if apiKey == "" || apiKey == "******" {
 		fullConfig, err := h.configService.GetConfigWithAPIKey()
 		if err != nil || fullConfig == nil || fullConfig.APIKey == "" {
-			response.BadRequest(c, "請提供 API Key")
-			return
+			if !apiKeyOptional {
+				response.BadRequest(c, "請提供 API Key")
+				return
+			}
+			// ollama 允許空 key，繼續測試
+		} else {
+			apiKey = fullConfig.APIKey
 		}
-		apiKey = fullConfig.APIKey
 	}
 
 	endpoint := req.Endpoint
 	if endpoint == "" {
-		endpoint = "https://api.openai.com/v1"
+		if req.Provider == "ollama" {
+			endpoint = "http://localhost:11434"
+		} else {
+			endpoint = "https://api.openai.com/v1"
+		}
 	}
 
 	model := req.Model
 	if model == "" {
-		model = "gpt-4o"
+		if req.Provider == "ollama" {
+			model = "llama3"
+		} else {
+			model = "gpt-4o"
+		}
 	}
 
 	testConfig := &models.AIConfig{

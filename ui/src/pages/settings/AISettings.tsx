@@ -36,6 +36,7 @@ const PROVIDER_CONFIG: Record<string, {
   defaultEndpoint: string;
   defaultModel: string;
   needsApiKey: boolean;
+  apiKeyOptional?: boolean;  // 顯示 API Key 欄位但不強制填寫（如 Ollama）
   needsApiVersion: boolean;
   modelOptions: string[];
   endpointHint: string;
@@ -72,6 +73,7 @@ const PROVIDER_CONFIG: Record<string, {
     defaultEndpoint: 'http://localhost:11434',
     defaultModel: 'llama3',
     needsApiKey: false,
+    apiKeyOptional: true,
     needsApiVersion: false,
     modelOptions: ['llama3', 'llama3.1', 'llama3.2', 'mistral', 'qwen2', 'gemma2', 'phi3'],
     endpointHint: 'Ollama server URL, default: http://localhost:11434',
@@ -255,13 +257,18 @@ const AISettings: React.FC = () => {
             </Col>
           </Row>
 
-          {/* API Key — Ollama 不需要 */}
-          {providerCfg.needsApiKey && (
+          {/* API Key — 必填（一般 provider）或選填（Ollama） */}
+          {(providerCfg.needsApiKey || providerCfg.apiKeyOptional) && (
             <Form.Item
               name="api_key"
               label={
-                <Space>
+                <Space size={4}>
                   <span>{t('settings:ai.apiKey')}</span>
+                  {providerCfg.apiKeyOptional && (
+                    <Tag bordered={false} color="default" style={{ fontSize: 11 }}>
+                      {t('settings:ai.optional')}
+                    </Tag>
+                  )}
                   {hasApiKey && (
                     <Tag color="green" icon={<CheckCircleOutlined />}>
                       {t('settings:ai.configured')}
@@ -269,14 +276,25 @@ const AISettings: React.FC = () => {
                   )}
                 </Space>
               }
-              tooltip={t('settings:ai.apiKeyTooltip')}
+              tooltip={
+                providerCfg.apiKeyOptional
+                  ? t('settings:ai.ollamaApiKeyTooltip')
+                  : t('settings:ai.apiKeyTooltip')
+              }
+              extra={
+                providerCfg.apiKeyOptional
+                  ? t('settings:ai.ollamaApiKeyHint')
+                  : undefined
+              }
             >
               <Input.Password
                 prefix={<ApiOutlined />}
                 placeholder={
                   hasApiKey
                     ? t('settings:ai.apiKeyConfiguredPlaceholder')
-                    : t('settings:ai.apiKeyPlaceholder')
+                    : providerCfg.apiKeyOptional
+                      ? t('settings:ai.ollamaApiKeyPlaceholder')
+                      : t('settings:ai.apiKeyPlaceholder')
                 }
               />
             </Form.Item>

@@ -123,6 +123,11 @@ func (p *AIProvider) isAzure() bool {
 	return p.config.Provider == "azure"
 }
 
+// isOllama 判斷是否為 Ollama 本地部署
+func (p *AIProvider) isOllama() bool {
+	return p.config.Provider == "ollama"
+}
+
 // chatURL 返回聊天請求 URL
 func (p *AIProvider) chatURL(stream bool) string {
 	base := strings.TrimRight(p.config.Endpoint, "/")
@@ -136,7 +141,14 @@ func (p *AIProvider) chatURL(stream bool) string {
 		}
 		return fmt.Sprintf("%s/openai/deployments/%s/chat/completions?api-version=%s",
 			base, p.config.Model, apiVersion)
-	default: // openai / ollama / compatible
+	case p.isOllama():
+		// Ollama 預設只暴露 host:port，OpenAI 相容端點在 /v1/chat/completions
+		// 若使用者只填了 host:port（沒有 /v1 或 /api 路徑），自動補 /v1
+		if !strings.Contains(base, "/v1") && !strings.Contains(base, "/api") {
+			base = base + "/v1"
+		}
+		return base + "/chat/completions"
+	default: // openai / compatible
 		return base + "/chat/completions"
 	}
 }
@@ -150,6 +162,11 @@ func (p *AIProvider) setAuthHeaders(req *http.Request) {
 		req.Header.Set("anthropic-version", "2023-06-01")
 	case p.isAzure():
 		req.Header.Set("api-key", p.config.APIKey)
+	case p.isOllama():
+		// Ollama 本地部署不需要鑑權頭；若使用者仍設定了 API Key 則帶上
+		if p.config.APIKey != "" {
+			req.Header.Set("Authorization", "Bearer "+p.config.APIKey)
+		}
 	default:
 		req.Header.Set("Authorization", "Bearer "+p.config.APIKey)
 	}

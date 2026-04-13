@@ -64,8 +64,10 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 		response.BadRequest(c, "AI 功能未設定，請至系統設定配置 AI")
 		return
 	}
-	if !aiConfig.Enabled || aiConfig.APIKey == "" {
-		response.BadRequest(c, "AI 功能未啟用")
+	// Ollama 本地部署不需要 API Key
+	needsAPIKey := aiConfig.Provider != "ollama"
+	if !aiConfig.Enabled || (needsAPIKey && aiConfig.APIKey == "") {
+		response.BadRequest(c, "AI 功能未啟用，請至系統設定配置 AI")
 		return
 	}
 

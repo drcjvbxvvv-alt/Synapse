@@ -75,8 +75,14 @@ func (h *AINLQueryHandler) NLQuery(c *gin.Context) {
 	}
 
 	aiConfig, err := h.aiConfigService.GetConfigWithAPIKey()
-	if err != nil || aiConfig == nil || !aiConfig.Enabled || aiConfig.APIKey == "" {
+	if err != nil || aiConfig == nil {
 		response.BadRequest(c, "AI 功能未設定，請至系統設定配置 AI")
+		return
+	}
+	// Ollama 本地部署不需要 API Key
+	needsAPIKey := aiConfig.Provider != "ollama"
+	if !aiConfig.Enabled || (needsAPIKey && aiConfig.APIKey == "") {
+		response.BadRequest(c, "AI 功能未啟用，請至系統設定配置 AI")
 		return
 	}
 
