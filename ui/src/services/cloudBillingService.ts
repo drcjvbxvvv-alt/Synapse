@@ -51,7 +51,7 @@ export interface CloudBillingOverview {
   sync_error?: string;
 }
 
-export const CloudBillingService = {
+export const cloudBillingService = {
   getConfig: (clusterId: string): Promise<CloudBillingConfig> =>
     request.get(`/clusters/${clusterId}/billing/config`),
 

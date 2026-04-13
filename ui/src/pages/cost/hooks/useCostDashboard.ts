@@ -3,7 +3,7 @@ import { Form, App } from 'antd';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import {
-  CostService,
+  costService,
   ResourceService,
   type CostItem,
   type CostOverview,
@@ -17,7 +17,7 @@ import {
   type ForecastResult,
 } from '../../../services/costService';
 import {
-  CloudBillingService,
+  cloudBillingService,
   type CloudBillingConfig,
   type CloudBillingOverview,
   type UpdateBillingConfigReq,
@@ -92,7 +92,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     if (!clusterId) return;
     setOverviewLoading(true);
     try {
-      const data = await CostService.getOverview(clusterId, month);
+      const data = await costService.getOverview(clusterId, month);
       setOverview(data);
     } catch { /* ignore */ }
     finally { setOverviewLoading(false); }
@@ -102,7 +102,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     if (!clusterId) return;
     setNsLoading(true);
     try {
-      const data = await CostService.getNamespaceCosts(clusterId, month);
+      const data = await costService.getNamespaceCosts(clusterId, month);
       setNsCosts(data ?? []);
     } catch { /* ignore */ }
     finally { setNsLoading(false); }
@@ -112,7 +112,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     if (!clusterId) return;
     setWlLoading(true);
     try {
-      const res = await CostService.getWorkloadCosts(clusterId, month, undefined, page);
+      const res = await costService.getWorkloadCosts(clusterId, month, undefined, page);
       setWlCosts(res.items ?? []);
       setWlTotal(res.total ?? 0);
     } catch { /* ignore */ }
@@ -123,7 +123,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     if (!clusterId) return;
     setTrendLoading(true);
     try {
-      const data = await CostService.getTrend(clusterId, 6);
+      const data = await costService.getTrend(clusterId, 6);
       setTrend(data ?? []);
     } catch { /* ignore */ }
     finally { setTrendLoading(false); }
@@ -133,7 +133,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     if (!clusterId) return;
     setWasteLoading(true);
     try {
-      const data = await CostService.getWaste(clusterId);
+      const data = await costService.getWaste(clusterId);
       setWaste(data ?? []);
     } catch { /* ignore */ }
     finally { setWasteLoading(false); }
@@ -214,7 +214,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     if (!clusterId) return;
     setBillingConfigLoading(true);
     try {
-      const cfg = await CloudBillingService.getConfig(clusterId);
+      const cfg = await cloudBillingService.getConfig(clusterId);
       setBillingConfig(cfg);
       setBillingProvider(cfg.provider as 'disabled' | 'aws' | 'gcp');
       billingForm.setFieldsValue({
@@ -233,7 +233,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     if (!clusterId) return;
     setBillingOverviewLoading(true);
     try {
-      const data = await CloudBillingService.getOverview(clusterId, m ?? billingMonth);
+      const data = await cloudBillingService.getOverview(clusterId, m ?? billingMonth);
       setBillingOverview(data);
     } catch { setBillingOverview(null); }
     finally { setBillingOverviewLoading(false); }
@@ -244,7 +244,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     const values = await billingForm.validateFields();
     setBillingSaving(true);
     try {
-      await CloudBillingService.updateConfig(clusterId, values);
+      await cloudBillingService.updateConfig(clusterId, values);
       message.success(t('cost:billing.saveSuccess'));
       loadBillingConfig();
     } catch (e: unknown) {
@@ -256,7 +256,7 @@ export function useCostDashboard(clusterId: string | undefined) {
     if (!clusterId) return;
     setBillingSyncing(true);
     try {
-      await CloudBillingService.sync(clusterId, billingMonth);
+      await cloudBillingService.sync(clusterId, billingMonth);
       message.success(t('cost:billing.syncSuccess'));
       loadBillingOverview(billingMonth);
     } catch (e: unknown) {

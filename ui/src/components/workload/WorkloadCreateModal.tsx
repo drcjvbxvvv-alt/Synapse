@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { getNamespaces } from '../../services/namespaceService';
 import { secretService } from '../../services/configService';
 import WorkloadForm from './WorkloadForm';
-import { WorkloadYamlService } from '../../services/workloadYamlService';
+import { workloadYamlService } from '../../services/workloadYamlService';
 import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { Form, Card } from 'antd';
@@ -76,7 +76,7 @@ const WorkloadCreateModal: React.FC<WorkloadCreateModalProps> = ({
         },
       ],
     };
-    return WorkloadYamlService.formDataToYAML(workloadType, defaultData);
+    return workloadYamlService.formDataToYAML(workloadType, defaultData);
   }, [workloadType]);
 
   const [yamlContent, setYamlContent] = useState(() => getDefaultYaml());
@@ -167,7 +167,7 @@ const WorkloadCreateModal: React.FC<WorkloadCreateModalProps> = ({
         activeDeadlineSeconds: values.activeDeadlineSeconds,
         rolloutStrategy: values.rolloutStrategy,
       };
-      return WorkloadYamlService.formDataToYAML(workloadType, fd);
+      return workloadYamlService.formDataToYAML(workloadType, fd);
     } catch {
       return yamlContent;
     }
@@ -175,7 +175,7 @@ const WorkloadCreateModal: React.FC<WorkloadCreateModalProps> = ({
 
   const yamlToForm = useCallback((): boolean => {
     try {
-      const parsed = WorkloadYamlService.yamlToFormData(yamlContent);
+      const parsed = workloadYamlService.yamlToFormData(yamlContent);
       if (parsed) {
         form.setFieldsValue(parsed);
         setFormData(parsed);

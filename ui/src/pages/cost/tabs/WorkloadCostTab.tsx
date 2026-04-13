@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import EmptyState from '../../../components/EmptyState';
 import type { CostItem } from '../../../services/costService';
-import { CostService } from '../../../services/costService';
+import { costService } from '../../../services/costService';
 import { getWorkloadCostColumns } from '../columns';
 
 interface WorkloadCostTabProps {
@@ -48,7 +48,7 @@ export const WorkloadCostTab: React.FC<WorkloadCostTabProps> = ({
         <Tooltip title={t('cost:export.button')}>
           <Button
             icon={<DownloadOutlined />}
-            href={CostService.getExportURL(clusterId, month)}
+            href={costService.getExportURL(clusterId, month)}
             target="_blank"
           >
             {t('cost:export.button')}

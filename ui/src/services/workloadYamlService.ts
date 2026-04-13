@@ -117,12 +117,12 @@ export const yamlToFormData = (yamlContent: string): WorkloadFormData | null => 
 };
 
 // 匯出服務物件
-export const WorkloadYamlService = {
+export const workloadYamlService = {
   formDataToYAML,
   yamlToFormData,
 };
 
-export default WorkloadYamlService;
+export default workloadYamlService;
 
 // 重匯出子模組，保持向後相容
 export * from './yamlCommonService';

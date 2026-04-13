@@ -31,7 +31,7 @@ export interface EventAlertHistory {
   triggeredAt: string;
 }
 
-export const EventAlertService = {
+export const eventAlertService = {
   listRules: (clusterId: string, page = 1, pageSize = 20): Promise<PaginatedResponse<EventAlertRule>> =>
     request.get(`/clusters/${clusterId}/event-alerts/rules?page=${page}&pageSize=${pageSize}`),
 

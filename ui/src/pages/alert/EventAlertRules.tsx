@@ -30,7 +30,7 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { TablePaginationConfig } from 'antd/es/table';
-import { EventAlertService, type EventAlertRule, type EventAlertHistory } from '../../services/eventAlertService';
+import { eventAlertService, type EventAlertRule, type EventAlertHistory } from '../../services/eventAlertService';
 import { usePermission } from '../../hooks/usePermission';
 
 const { Text } = Typography;
@@ -97,7 +97,7 @@ const EventAlertRules: React.FC = () => {
     if (!clusterId) return;
     setRulesLoading(true);
     try {
-      const res = await EventAlertService.listRules(clusterId, page);
+      const res = await eventAlertService.listRules(clusterId, page);
       setRules(res.items ?? []);
       setRulesTotal(res.total ?? 0);
     } finally {
@@ -109,7 +109,7 @@ const EventAlertRules: React.FC = () => {
     if (!clusterId) return;
     setHistoryLoading(true);
     try {
-      const res = await EventAlertService.listHistory(clusterId, page);
+      const res = await eventAlertService.listHistory(clusterId, page);
       setHistory(res.items ?? []);
       setHistoryTotal(res.total ?? 0);
     } finally {
@@ -138,10 +138,10 @@ const EventAlertRules: React.FC = () => {
       const values = await form.validateFields();
       setSaving(true);
       if (editingRule) {
-        await EventAlertService.updateRule(clusterId!, editingRule.id, { ...values, clusterId: Number(clusterId) });
+        await eventAlertService.updateRule(clusterId!, editingRule.id, { ...values, clusterId: Number(clusterId) });
         message.success(t('alert:eventAlert.messages.saveSuccess'));
       } else {
-        await EventAlertService.createRule(clusterId!, { ...values, clusterId: Number(clusterId) });
+        await eventAlertService.createRule(clusterId!, { ...values, clusterId: Number(clusterId) });
         message.success(t('alert:eventAlert.messages.createSuccess'));
       }
       setFormOpen(false);
@@ -160,7 +160,7 @@ const EventAlertRules: React.FC = () => {
       content: rule.name,
       okType: 'danger',
       onOk: async () => {
-        await EventAlertService.deleteRule(clusterId!, rule.id);
+        await eventAlertService.deleteRule(clusterId!, rule.id);
         message.success(t('alert:eventAlert.messages.deleteSuccess'));
         fetchRules(1);
         setRulesPage(1);
@@ -170,7 +170,7 @@ const EventAlertRules: React.FC = () => {
 
   const handleToggle = async (rule: EventAlertRule, enabled: boolean) => {
     try {
-      await EventAlertService.toggleRule(clusterId!, rule.id, enabled);
+      await eventAlertService.toggleRule(clusterId!, rule.id, enabled);
       setRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled } : r));
     } catch {
       message.error(t('alert:eventAlert.messages.error'));

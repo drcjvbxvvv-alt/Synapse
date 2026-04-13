@@ -239,7 +239,7 @@ export interface BudgetStatus {
   status: string;
 }
 
-export const CostService = {
+export const costService = {
   getConfig: (clusterId: string): Promise<CostConfig> =>
     request.get(`/clusters/${clusterId}/cost/config`),
 

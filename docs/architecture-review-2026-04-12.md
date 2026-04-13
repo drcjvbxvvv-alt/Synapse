@@ -225,19 +225,33 @@
 
 ---
 
-### 9. 前端命名不一致
+### 9. 前端命名不一致 ✅ 已完成 (2026-04-13)
 
-| 問題 | 範例 |
-|------|------|
-| Service 檔混用大小寫 | `ConfigService` vs `podService` |
-| 頁面命名不統一 | `*List.tsx` / `*ListPage.tsx` / `*Tab.tsx` |
-| 缺乏命名規範文件 | 無 |
+**已修復項目:**
 
-**建議**: 統一規範並用 ESLint 規則強制:
-- Service 檔: `camelCase` (e.g., `podService.ts`)
+| 問題 | 修復前 | 修復後 | 影響檔案 |
+|------|--------|--------|---------|
+| PascalCase const export | `CloudBillingService` | `cloudBillingService` | `cloudBillingService.ts` + `useCostDashboard.ts` |
+| PascalCase const export | `CostService` | `costService` | `costService.ts` + `useCostDashboard.ts` + `WorkloadCostTab.tsx` |
+| PascalCase const export | `EventAlertService` | `eventAlertService` | `eventAlertService.ts` + `EventAlertRules.tsx` |
+| PascalCase const export | `WorkloadYamlService` | `workloadYamlService` | `workloadYamlService.ts` + `WorkloadCreateModal.tsx` + `DeploymentCreate.tsx` |
+| 頁面檔小寫開頭 | `kubectlTerminal.tsx` | `KubectlTerminal.tsx` | `pages/terminal/` + `router/routes.tsx` |
+
+**說明:**
+- Service 檔案名稱全部已是 camelCase（`podService.ts`、`clusterService.ts` 等）✅
+- **Class** export 保持 PascalCase（`PodService`、`StorageService` 等）— 這是 TypeScript class 命名慣例，無需修改 ✅
+- **const object** export 已全數改為 camelCase
+- React 元件頁面檔全部改為 PascalCase 開頭
+
+**已確立命名規範:**
+- Service const export: `camelCase` (e.g., `export const podService = {}`)
+- Service class export: `PascalCase` (e.g., `export class PodService {}`)
 - 列表頁: `*List.tsx`
 - Tab 子頁: `*Tab.tsx`
 - 表單頁: `*Form.tsx` / `*Create.tsx` / `*Edit.tsx`
+- 所有 React 元件檔: PascalCase 開頭
+
+**全部 `npx tsc --noEmit` 零錯誤。**
 
 ---
 
@@ -282,6 +296,7 @@
 | P1-6 God-Service 拆分 | prometheus_service (1792→857+174+796)；om_service (1195→749+467)；gateway_service (1107→499+177+451)；同 receiver 跨檔案拆分，零介面變更，全部 `go build ./internal/...` 通過 | ✅ 完成 | 2026-04-12 |
 | Phase 3 | 後端 God-Service 拆分 (prometheus_service, om_service) | ✅ 已完成（P1-6）| 2026-04-12 |
 | P2-7 前端大型元件拆分 | PVCTab/PVTab/ArgoCD/SecurityDashboard/StorageClassTab/YAMLEditor/ConfigMapCreate/SecretEdit；新增 YamlViewModal + ColumnSettingsDrawer 共用元件；零 TS 錯誤 | ✅ 完成 | 2026-04-13 |
+| P2-9 前端命名統一 | 修正 4 個 PascalCase const 服務 export（CostService/CloudBillingService/EventAlertService/WorkloadYamlService）；重命名 kubectlTerminal.tsx → KubectlTerminal.tsx；更新 6 個消費方檔案；零 TS 錯誤 | ✅ 完成 | 2026-04-13 |
 | Phase 4 | 品質提升：測試補齊、TypeScript strict | ⬜ 待開始 | — |
 
 ---
@@ -307,7 +322,7 @@ Phase 3 — 後端拆分 (預估 2-3 天)
 
 Phase 4 — 品質提升 (持續)
 ├── 補齊核心 service 測試
-├── 統一前端命名規範
+├── ✅ 統一前端命名規範 (P2-9 完成，2026-04-13)
 ├── 啟用 strict TypeScript 規則
 ├── ✅ 拆分大型前端元件 (P2-7 完成，2026-04-13)
 └── 前端效能優化 (memo, useCallback)

@@ -28,7 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { getNamespaces } from '../../services/namespaceService';
 import { secretService } from '../../services/configService';
 import WorkloadForm from '../../components/workload/WorkloadForm';
-import { WorkloadYamlService } from '../../services/workloadYamlService';
+import { workloadYamlService } from '../../services/workloadYamlService';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { Form } from 'antd';
@@ -101,7 +101,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
         },
       ],
     };
-    return WorkloadYamlService.formDataToYAML(workloadType, defaultData);
+    return workloadYamlService.formDataToYAML(workloadType, defaultData);
   }
 
   // 載入所有命名空間列表
@@ -182,7 +182,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
           setYamlContent(yaml);
           
           // 解析為表單資料
-          const parsedData = WorkloadYamlService.yamlToFormData(yaml);
+          const parsedData = workloadYamlService.yamlToFormData(yaml);
           if (parsedData) {
             // 先設定 formData state，這會觸發 WorkloadForm 的 useEffect
             setFormData(parsedData);
@@ -243,7 +243,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
         rolloutStrategy: values.rolloutStrategy,
       };
       
-      return WorkloadYamlService.formDataToYAML(workloadType, formData);
+      return workloadYamlService.formDataToYAML(workloadType, formData);
     } catch (error) {
       console.error('表單轉YAML失敗:', error);
       return yamlContent;
@@ -253,7 +253,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
   // YAML轉表單
   const yamlToForm = useCallback((): boolean => {
     try {
-      const parsedData = WorkloadYamlService.yamlToFormData(yamlContent);
+      const parsedData = workloadYamlService.yamlToFormData(yamlContent);
       if (parsedData) {
         form.setFieldsValue(parsedData);
         setFormData(parsedData);

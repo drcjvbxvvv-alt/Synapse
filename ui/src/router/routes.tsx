@@ -66,7 +66,7 @@ import UserProfile from '../pages/profile/UserProfile';
 
 // ── Lazy imports (heavy / rarely visited) ─────────────────────────────────
 const YAMLEditor              = lazy(() => import('../pages/yaml/YAMLEditor'));
-const KubectlTerminalPage     = lazy(() => import('../pages/terminal/kubectlTerminal'));
+const KubectlTerminalPage     = lazy(() => import('../pages/terminal/KubectlTerminal'));
 const ArgoCDConfigPage        = lazy(() => import('../pages/plugins/ArgoCDConfigPage'));
 const ArgoCDApplicationsPage  = lazy(() => import('../pages/plugins/ArgoCDApplicationsPage'));
 const MonitoringCenter        = lazy(() => import('../pages/om').then(m => ({ default: m.MonitoringCenter })));
