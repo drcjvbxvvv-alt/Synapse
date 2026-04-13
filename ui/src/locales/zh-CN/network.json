@@ -507,6 +507,7 @@
     "hostRequired": "请输入Host",
     "pathConfig": "路径配置",
     "serviceNameField": "Service名称",
+    "noServiceFound": "当前命名空间无可用 Service，请先创建 Service",
     "addPath": "添加路径",
     "addRule": "添加规则",
     "tlsConfig": "TLS配置",

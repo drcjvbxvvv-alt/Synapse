@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Tabs, Form, Input, InputNumber, Select, AutoComplete, Button, Space, App, Alert } from 'antd';
+import { Modal, Tabs, Form, Input, InputNumber, Select, Button, Space, App, Alert } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
@@ -498,7 +498,17 @@ spec:
             if (!option?.children) return false;
             return String(option.children).toLowerCase().includes(input.toLowerCase());
           }}
-          onChange={(ns: string) => loadServices(ns)}
+          onChange={(ns: string) => {
+            loadServices(ns);
+            // 命名空間切換後，清除所有 rule path 的 service 欄位
+            const rules = form.getFieldValue('rules') ?? [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const cleared = rules.map((rule: any) => ({
+              ...rule,
+              paths: (rule.paths ?? []).map((p: any) => ({ ...p, serviceName: undefined, servicePort: undefined })),
+            }));
+            form.setFieldValue('rules', cleared);
+          }}
         >
           {namespaces.map((ns) => (
             <Select.Option key={ns} value={ns}>
@@ -573,20 +583,27 @@ spec:
                                   <Select.Option value="ImplementationSpecific">ImplementationSpecific</Select.Option>
                                 </Select>
                               </Form.Item>
-                              {/* Service 名稱：AutoComplete 允許自由輸入，同時提供偵測到的 service 作為建議 */}
+                              {/* Service 名稱：純下拉，依命名空間偵測 */}
                               <Form.Item
                                 {...pathField}
                                 name={[pathField.name, 'serviceName']}
                                 rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
-                                <AutoComplete
+                                <Select
+                                  showSearch
                                   allowClear
                                   placeholder={t('network:create.serviceNameField')}
                                   style={{ width: 180 }}
-                                  options={services.map((s) => ({ label: s.name, value: s.name }))}
+                                  loading={loadingServices}
                                   filterOption={(input, option) =>
                                     String(option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                                  }
+                                  options={services.map((s) => ({ label: s.name, value: s.name }))}
+                                  notFoundContent={
+                                    <span style={{ fontSize: 12, color: '#999' }}>
+                                      {t('network:create.noServiceFound')}
+                                    </span>
                                   }
                                   onChange={(svcName: string) => {
                                     const svc = services.find((s) => s.name === svcName);

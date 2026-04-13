@@ -506,6 +506,7 @@
     "hostRequired": "Please enter Host",
     "pathConfig": "Path Configuration",
     "serviceNameField": "Service Name",
+    "noServiceFound": "No Services found in this namespace. Please create a Service first.",
     "addPath": "Add Path",
     "addRule": "Add Rule",
     "tlsConfig": "TLS Configuration",

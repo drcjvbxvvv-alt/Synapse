@@ -506,6 +506,7 @@
     "hostRequired": "請輸入 Host",
     "pathConfig": "路徑設定",
     "serviceNameField": "Service 名稱",
+    "noServiceFound": "目前命名空間無可用 Service，請先建立 Service",
     "addPath": "新增路徑",
     "addRule": "新增規則",
     "tlsConfig": "TLS 設定",
