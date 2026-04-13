@@ -165,9 +165,11 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     }
     
     if (!permission) return false;
-    
-    // 只讀權限無法執行寫操作
-    return permission.permission_type !== 'readonly';
+
+    // 開發(dev)與唯讀(readonly)預設無寫入權限，需透過策略管理額外開放
+    return permission.permission_type === 'admin' ||
+           permission.permission_type === 'ops' ||
+           permission.permission_type === 'custom';
   }, [clusterPermissions, currentClusterPermission]);
 
   // 刪除操作：僅限 admin 和 ops 角色
