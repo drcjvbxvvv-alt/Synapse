@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout, Dropdown, Avatar, Space } from 'antd';
 import {
@@ -13,6 +13,8 @@ import synapseIcon from '../assets/synapse-icon.svg';
 import NotificationPopover from '../components/NotificationPopover';
 import { tokenManager } from '../services/authService';
 import { supportedLanguages } from '../i18n';
+import { usePermission } from '../hooks/usePermission';
+import { isPlatformAdmin } from '../config/menuPermissions';
 
 const { Header } = Layout;
 
@@ -20,6 +22,12 @@ const AppHeader: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const currentUser = tokenManager.getUser();
+  const { clusterPermissions } = usePermission();
+  const allPerms = useMemo(() => Array.from(clusterPermissions.values()), [clusterPermissions]);
+  const isAdminOrOps = useMemo(
+    () => isPlatformAdmin(currentUser?.username, allPerms) || allPerms.some(p => p.permission_type === 'ops'),
+    [currentUser, allPerms]
+  );
 
   const getDisplayName = () => {
     const name = currentUser?.display_name || currentUser?.username || 'User';
@@ -45,12 +53,12 @@ const AppHeader: React.FC = () => {
       icon: <UserOutlined />,
       label: t('common:menu.profile'),
     },
-    {
+    ...(isAdminOrOps ? [{
       key: 'settings',
       icon: <SettingOutlined />,
       label: t('common:menu.settings'),
-    },
-    { type: 'divider' },
+    }] : []),
+    { type: 'divider' as const },
     {
       key: 'language',
       icon: <GlobalOutlined />,
