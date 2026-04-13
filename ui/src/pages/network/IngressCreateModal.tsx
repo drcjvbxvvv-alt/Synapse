@@ -118,7 +118,7 @@ spec:
     setLoadingServices(true);
     try {
       const resp = await ServiceService.getServices(clusterId, ns, undefined, undefined, 1, 200);
-      const items = (resp as unknown as { data: { items: Service[] } }).data?.items ?? [];
+      const items = (resp as unknown as { items: Service[] }).items ?? [];
       setServices(items);
     } catch {
       setServices([]);
