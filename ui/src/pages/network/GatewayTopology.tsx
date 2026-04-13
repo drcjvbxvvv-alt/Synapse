@@ -14,6 +14,8 @@ import {
   type Node,
   type Edge,
   type NodeProps,
+  type EdgeProps,
+  getBezierPath,
   Position,
   Handle,
 } from '@xyflow/react';
@@ -37,6 +39,61 @@ const KIND_COLOR: Record<string, string> = {
 
 const MAX_LABEL = 18;
 const truncate = (s: string) => s.length > MAX_LABEL ? s.slice(0, MAX_LABEL) + '…' : s;
+
+const PARTICLE_COUNT = 3;
+
+// Edge color by source node kind: GatewayClass→Gateway (purple), Gateway→Route (blue), Route→Service (orange)
+const KIND_EDGE_COLOR: Record<string, { stroke: string; dur: string }> = {
+  gatewayClass: { stroke: '#722ed1', dur: '2s'   },
+  gateway:      { stroke: '#1677ff', dur: '1.8s' },
+  route:        { stroke: '#fa8c16', dur: '2.2s' },
+  gwService:    { stroke: '#fa8c16', dur: '2.2s' },
+};
+
+// ---- Custom particle edge ----
+
+interface GwParticleEdgeData extends Record<string, unknown> {
+  sourceKind?: string;
+}
+
+const GwParticleEdge: React.FC<EdgeProps> = ({
+  id, sourceX, sourceY, targetX, targetY,
+  sourcePosition, targetPosition, data,
+}) => {
+  const d = (data ?? {}) as GwParticleEdgeData;
+  const style = KIND_EDGE_COLOR[d.sourceKind ?? ''] ?? { stroke: '#bfbfbf', dur: '2s' };
+  const pathId = `gwpe-${id}`;
+
+  const [edgePath] = getBezierPath({
+    sourceX, sourceY, sourcePosition,
+    targetX, targetY, targetPosition,
+  });
+
+  return (
+    <g>
+      <path
+        id={pathId}
+        d={edgePath}
+        stroke={style.stroke}
+        strokeWidth={1.5}
+        fill="none"
+        strokeOpacity={0.65}
+      />
+      <path d={edgePath} fill="none" stroke="transparent" strokeWidth={12} />
+      {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
+        <circle key={i} r={3} fill={style.stroke} fillOpacity={0.85}>
+          <animateMotion
+            dur={style.dur}
+            begin={`${(i / PARTICLE_COUNT) * parseFloat(style.dur)}s`}
+            repeatCount="indefinite"
+          >
+            <mpath href={`#${pathId}`} />
+          </animateMotion>
+        </circle>
+      ))}
+    </g>
+  );
+};
 
 // ---- Custom node data types ----
 
@@ -198,6 +255,10 @@ const nodeTypes = {
   gwService:    GwServiceNode,
 };
 
+const edgeTypes = {
+  gwParticle: GwParticleEdge,
+};
+
 // ---- Dagre layout ----
 
 const runDagreLayout = (nodes: Node[], edges: Edge[]) => {
@@ -280,14 +341,15 @@ const GatewayTopology: React.FC<GatewayTabProps> = ({ clusterId }) => {
 
   const { nodes, edges } = useMemo(() => {
     const rawNodes = buildFlowElements(topoNodes);
+    // Build a map of node id → node type to pass sourceKind to edge for coloring
+    const nodeTypeMap: Record<string, string> = {};
+    rawNodes.forEach((n) => { if (n.type) nodeTypeMap[n.id] = n.type; });
     const rawEdges: Edge[] = topoEdges.map((e, i) => ({
       id: `e-${i}`,
       source: e.source,
       target: e.target,
-      type: 'smoothstep',
-      animated: false,
-      style: { stroke: '#bfbfbf', strokeWidth: 1.5 },
-      markerEnd: { type: 'arrowclosed' as const, color: '#bfbfbf' },
+      type: 'gwParticle',
+      data: { sourceKind: nodeTypeMap[e.source] },
     }));
     const layoutedNodes = runDagreLayout(rawNodes, rawEdges);
     return { nodes: layoutedNodes, edges: rawEdges };
@@ -338,6 +400,7 @@ const GatewayTopology: React.FC<GatewayTabProps> = ({ clusterId }) => {
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             fitView
             fitViewOptions={{ padding: 0.2 }}
             nodesDraggable

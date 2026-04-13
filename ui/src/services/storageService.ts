@@ -63,6 +63,15 @@ export class StorageService {
     return request.get(`/clusters/${clusterId}/pvcs/${namespace}/${name}/yaml`);
   }
 
+  // 套用 PVC YAML（建立或更新）
+  static async applyPVCYAML(
+    clusterId: string,
+    yaml: string,
+    dryRun = false
+  ): Promise<ApiResponse<{ name: string; namespace: string; isCreated: boolean }>> {
+    return request.post(`/clusters/${clusterId}/pvcs/yaml/apply`, { yaml, dryRun });
+  }
+
   // 刪除PVC
   static async deletePVC(
     clusterId: string,

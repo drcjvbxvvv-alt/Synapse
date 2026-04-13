@@ -219,6 +219,7 @@ type ClusterPermissionResponse struct {
 	PermissionName string    `json:"permission_name"`
 	Namespaces     []string  `json:"namespaces"`
 	CustomRoleRef  string    `json:"custom_role_ref,omitempty"`
+	FeaturePolicy  string    `json:"feature_policy,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
@@ -233,6 +234,7 @@ func (cp *ClusterPermission) ToResponse() ClusterPermissionResponse {
 		PermissionType: cp.PermissionType,
 		Namespaces:     cp.GetNamespaceList(),
 		CustomRoleRef:  cp.CustomRoleRef,
+		FeaturePolicy:  cp.FeaturePolicy,
 		CreatedAt:      cp.CreatedAt,
 		UpdatedAt:      cp.UpdatedAt,
 	}

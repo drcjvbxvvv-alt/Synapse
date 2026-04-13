@@ -418,7 +418,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
 
   // 根據可見性過濾列
   const columns = allColumns.filter(col => {
-    if (col.key === 'actions') return hasFeature('storage:delete');
+    if (col.key === 'actions') return true;
     if (col.key === 'name') return true;
     return visibleColumns.includes(col.key as string);
   });

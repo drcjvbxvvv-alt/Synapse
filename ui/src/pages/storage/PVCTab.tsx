@@ -13,6 +13,8 @@ import {
   SettingOutlined,
   DeleteOutlined,
   CodeOutlined,
+  PlusOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import { useMultiSearch, applyMultiSearch } from '../../hooks/useMultiSearch';
 import { MultiSearchBar } from '../../components/MultiSearchBar';
@@ -26,6 +28,7 @@ import EmptyState from '../../components/EmptyState';
 import YamlViewModal from '../../components/YamlViewModal';
 import ColumnSettingsDrawer from '../../components/ColumnSettingsDrawer';
 import { usePermission } from '../../hooks/usePermission';
+import PVCForm from './PVCForm';
 
 const { Link } = Typography;
 
@@ -78,6 +81,10 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
   const [yamlModalVisible, setYamlModalVisible] = useState(false);
   const [currentYaml, setCurrentYaml] = useState('');
   const [yamlLoading, setYamlLoading] = useState(false);
+
+  // 建立/編輯表單
+  const [formVisible, setFormVisible] = useState(false);
+  const [editingPVC, setEditingPVC] = useState<PVC | null>(null);
   
   // 命名空間列表
   const [, setNamespaces] = useState<{ name: string; count: number }[]>([]);
@@ -433,6 +440,12 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
             },
           ]}
           more={[
+            ...(hasFeature('storage:write') ? [{
+              key: 'edit',
+              label: t('common:actions.edit'),
+              icon: <EditOutlined />,
+              onClick: () => { setEditingPVC(record); setFormVisible(true); },
+            }] : []),
             ...(hasFeature('storage:delete') ? [{
               key: 'delete',
               label: t('common:actions.delete'),
@@ -500,6 +513,15 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
             </Button>
           )}
         </Space>
+        {hasFeature('storage:write') && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => { setEditingPVC(null); setFormVisible(true); }}
+          >
+            {t('storage:form.createPVC')}
+          </Button>
+        )}
       </div>
 
       <MultiSearchBar
@@ -576,6 +598,14 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
           { key: 'accessModes', label: t('storage:columns.accessModes') },
           { key: 'createdAt', label: t('common:table.createdAt') },
         ]}
+      />
+
+      <PVCForm
+        open={formVisible}
+        clusterId={clusterId}
+        editing={editingPVC}
+        onClose={() => setFormVisible(false)}
+        onSuccess={loadPVCs}
       />
     </div>
   );

@@ -176,9 +176,11 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
           onPressEnter={load}
         />
         <Button icon={<ReloadOutlined />} loading={loading} onClick={load}>{t('snapshot.refresh')}</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          {t('snapshot.create')}
-        </Button>
+        {hasFeature('storage:write') && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            {t('snapshot.create')}
+          </Button>
+        )}
       </Space>
 
       <Table
