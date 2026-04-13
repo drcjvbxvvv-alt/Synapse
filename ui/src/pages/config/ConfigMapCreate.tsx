@@ -2,22 +2,14 @@ import React, { useState } from 'react';
 import {
   Card,
   Form,
-  Input,
   Button,
   Space,
   message,
-  Tooltip,
-  Row,
-  Col,
   Segmented,
-  Select,
 } from 'antd';
 import {
   ArrowLeftOutlined,
   SaveOutlined,
-  PlusOutlined,
-  DeleteOutlined,
-  QuestionCircleOutlined,
   FormOutlined,
   CodeOutlined,
 } from '@ant-design/icons';
@@ -27,6 +19,7 @@ import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
 import { showApiError } from '../../utils/api';
+import ConfigMapFormBody from './components/ConfigMapFormBody';
 
 const ConfigMapCreate: React.FC = () => {
   const navigate = useNavigate();
@@ -392,226 +385,28 @@ data: {}`);
           </Card>
         ) : (
           /* 表單編輯模式 */
-          <>
-            {/* 基本資訊 */}
-            <Card title={t('config:create.basicInfo')}>
-              <Form form={form} layout="vertical">
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Form.Item 
-                      label={t('config:create.name')} 
-                      required
-                      help={t('config:create.configMapNameHelp')}
-                    >
-                      <Input 
-                        placeholder={t('config:create.configMapNamePlaceholder')} 
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item 
-                      label={t('config:create.namespace')}
-                      help={t('config:create.configMapNamespaceHelp')}
-                    >
-                      <Select
-                        value={namespace}
-                        onChange={setNamespace}
-                        placeholder={t('config:create.namespacePlaceholder')}
-                        loading={loadingNamespaces}
-                        showSearch
-                        filterOption={(input, option) => {
-                          if (!option?.children) return false;
-                          const text = String(option.children);
-                          return text.toLowerCase().includes(input.toLowerCase());
-                        }}
-                      >
-                        {namespaces.map((ns) => (
-                          <Select.Option key={ns} value={ns}>
-                            {ns}
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Form>
-            </Card>
-
-            {/* 標籤 */}
-            <Card
-              title={
-                <Space>
-                  <span>{t('config:create.labels')}</span>
-                  <Tooltip title={t('config:create.labelsTooltip')}>
-                    <QuestionCircleOutlined style={{ color: '#999' }} />
-                  </Tooltip>
-                </Space>
-              }
-              extra={
-                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={handleAddLabel}>
-                  {t('config:create.addLabel')}
-                </Button>
-              }
-            >
-              <Space direction="vertical" style={{ width: '100%' }} size="small">
-                {labels.map((label, index) => (
-                  <Row key={index} gutter={8} align="middle">
-                    <Col span={10}>
-                      <Input
-                        placeholder={t('config:create.keyPlaceholder')}
-                        value={label.key}
-                        onChange={(e) => handleLabelChange(index, 'key', e.target.value)}
-                      />
-                    </Col>
-                    <Col span={10}>
-                      <Input
-                        placeholder={t('config:create.valuePlaceholder')}
-                        value={label.value}
-                        onChange={(e) => handleLabelChange(index, 'value', e.target.value)}
-                      />
-                    </Col>
-                    <Col span={4}>
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleRemoveLabel(index)}
-                      >
-                        {t('common:actions.delete')}
-                      </Button>
-                    </Col>
-                  </Row>
-                ))}
-                {labels.length === 0 && (
-                  <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                    {t('config:create.noLabels')}
-                  </div>
-                )}
-              </Space>
-            </Card>
-
-            {/* 註解 */}
-            <Card
-              title={
-                <Space>
-                  <span>{t('config:create.annotations')}</span>
-                  <Tooltip title={t('config:create.annotationsTooltip')}>
-                    <QuestionCircleOutlined style={{ color: '#999' }} />
-                  </Tooltip>
-                </Space>
-              }
-              extra={
-                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={handleAddAnnotation}>
-                  {t('config:create.addAnnotation')}
-                </Button>
-              }
-            >
-              <Space direction="vertical" style={{ width: '100%' }} size="small">
-                {annotations.map((annotation, index) => (
-                  <Row key={index} gutter={8} align="middle">
-                    <Col span={10}>
-                      <Input
-                        placeholder={t('config:create.keyPlaceholder')}
-                        value={annotation.key}
-                        onChange={(e) => handleAnnotationChange(index, 'key', e.target.value)}
-                      />
-                    </Col>
-                    <Col span={10}>
-                      <Input
-                        placeholder={t('config:create.valuePlaceholder')}
-                        value={annotation.value}
-                        onChange={(e) => handleAnnotationChange(index, 'value', e.target.value)}
-                      />
-                    </Col>
-                    <Col span={4}>
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleRemoveAnnotation(index)}
-                      >
-                        {t('common:actions.delete')}
-                      </Button>
-                    </Col>
-                  </Row>
-                ))}
-                {annotations.length === 0 && (
-                  <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                    {t('config:create.noAnnotations')}
-                  </div>
-                )}
-              </Space>
-            </Card>
-
-            {/* 資料內容 */}
-            <Card
-              title={
-                <Space>
-                  <span>{t('config:create.dataContent')}</span>
-                  <Tooltip title={t('config:create.dataTooltip')}>
-                    <QuestionCircleOutlined style={{ color: '#999' }} />
-                  </Tooltip>
-                </Space>
-              }
-              extra={
-                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={handleAddDataItem}>
-                  {t('config:create.addDataItem')}
-                </Button>
-              }
-            >
-              <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                {dataItems.map((item, index) => (
-                  <Card
-                    key={index}
-                    size="small"
-                    title={
-                      <Input
-                        placeholder={t('config:create.dataKeyPlaceholder')}
-                        value={item.key}
-                        onChange={(e) => handleDataKeyChange(index, e.target.value)}
-                        style={{ width: '400px' }}
-                      />
-                    }
-                    extra={
-                      <Button
-                        type="text"
-                        danger
-                        size="small"
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleRemoveDataItem(index)}
-                      >
-                        {t('common:actions.delete')}
-                      </Button>
-                    }
-                  >
-                    <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
-                      <MonacoEditor
-                        height="300px"
-                        language="plaintext"
-                        value={item.value}
-                        onChange={(value) => handleDataValueChange(index, value)}
-                        options={{
-                          minimap: { enabled: false },
-                          lineNumbers: 'on',
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                          tabSize: 2,
-                        }}
-                        theme="vs-light"
-                      />
-                    </div>
-                  </Card>
-                ))}
-                {dataItems.length === 0 && (
-                  <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                    {t('config:create.noDataItems')}
-                  </div>
-                )}
-              </Space>
-            </Card>
-          </>
+          <ConfigMapFormBody
+            form={form}
+            name={name}
+            namespace={namespace}
+            namespaces={namespaces}
+            loadingNamespaces={loadingNamespaces}
+            labels={labels}
+            annotations={annotations}
+            dataItems={dataItems}
+            onNameChange={setName}
+            onNamespaceChange={setNamespace}
+            onAddLabel={handleAddLabel}
+            onRemoveLabel={handleRemoveLabel}
+            onLabelChange={handleLabelChange}
+            onAddAnnotation={handleAddAnnotation}
+            onRemoveAnnotation={handleRemoveAnnotation}
+            onAnnotationChange={handleAnnotationChange}
+            onAddDataItem={handleAddDataItem}
+            onRemoveDataItem={handleRemoveDataItem}
+            onDataKeyChange={handleDataKeyChange}
+            onDataValueChange={handleDataValueChange}
+          />
         )}
       </Space>
     </div>

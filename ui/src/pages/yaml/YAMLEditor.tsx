@@ -1,48 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Card,
-  Button,
-  Space,
-  message,
-  Typography,
-  Alert,
-  Spin,
-  Switch,
-  Modal,
-  App,
-} from 'antd';
-import {
-  ArrowLeftOutlined,
-  SaveOutlined,
-  EyeOutlined,
-  ReloadOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  DiffOutlined,
-} from '@ant-design/icons';
-import { Editor, DiffEditor, loader } from '@monaco-editor/react';
+import { message, App } from 'antd';
+import { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { WorkloadService } from '../../services/workloadService';
 import { useTranslation } from 'react-i18next';
 import * as YAML from 'yaml';
 
+import YAMLSubmitBar from './YAMLSubmitBar';
+import YAMLEditorPane from './YAMLEditorPane';
+import YAMLDiffView from './YAMLDiffView';
+
 // 配置Monaco Editor使用本地資源
 loader.config({ monaco });
 
-const { Title, Text } = Typography;
-
 const YAMLEditor: React.FC = () => {
   const { modal } = App.useApp();
-const { t } = useTranslation(["yaml", "common"]);
-const { clusterId } = useParams<{ clusterId: string }>();
+  const { t } = useTranslation(['yaml', 'common']);
+  const { clusterId } = useParams<{ clusterId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   // 從URL參數獲取工作負載資訊
   const workloadRef = searchParams.get('workload'); // namespace/name
   const workloadType = searchParams.get('type');
-  
+
   const [yaml, setYaml] = useState('');
   const [originalYaml, setOriginalYaml] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,7 +34,7 @@ const { clusterId } = useParams<{ clusterId: string }>();
   const [previewResult, setPreviewResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editorLoading, setEditorLoading] = useState(true);
-  
+
   // Diff 對比相關狀態
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
@@ -74,7 +56,6 @@ const { clusterId } = useParams<{ clusterId: string }>();
   };
 
   const handleEditorValidation = (markers: unknown[]) => {
-    // 處理編輯器驗證錯誤
     if (markers && markers.length > 0) {
       console.warn('Editor validation markers:', markers);
     }
@@ -83,10 +64,10 @@ const { clusterId } = useParams<{ clusterId: string }>();
   // 載入現有工作負載的YAML
   const loadWorkloadYAML = useCallback(async () => {
     if (!clusterId || !workloadRef || !workloadType) return;
-    
+
     const [namespace, name] = workloadRef.split('/');
     if (!namespace || !name) return;
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -96,13 +77,16 @@ const { clusterId } = useParams<{ clusterId: string }>();
         namespace,
         name
       );
-      
+
       const yamlContent = response.yaml || YAML.stringify(response.raw);
       setYaml(yamlContent);
       setOriginalYaml(yamlContent);
     } catch (error) {
       console.error('載入YAML失敗:', error);
-      const errorMsg = t('messages.loadError') + ': ' + (error instanceof Error ? error.message : t('messages.unknownError'));
+      const errorMsg =
+        t('messages.loadError') +
+        ': ' +
+        (error instanceof Error ? error.message : t('messages.unknownError'));
       setError(errorMsg);
       message.error(errorMsg);
     } finally {
@@ -116,12 +100,12 @@ const { clusterId } = useParams<{ clusterId: string }>();
       message.error(t('messages.emptyContent'));
       return;
     }
-    
+
     setApplying(true);
     setDryRunResult(null);
     try {
       const response = await WorkloadService.applyYAML(clusterId, yaml, isDryRun);
-      
+
       if (isDryRun) {
         setPreviewResult(response as Record<string, unknown>);
         setDryRunResult({
@@ -136,7 +120,9 @@ const { clusterId } = useParams<{ clusterId: string }>();
       }
     } catch (error) {
       console.error(`YAML ${isDryRun ? 'validate' : 'apply'} failed:`, error);
-      const errorMsg = t('messages.yamlFailed', { action: isDryRun ? t('messages.validateFailed') : t('messages.applyFailed') });
+      const errorMsg = t('messages.yamlFailed', {
+        action: isDryRun ? t('messages.validateFailed') : t('messages.applyFailed'),
+      });
       if (isDryRun) {
         setDryRunResult({
           success: false,
@@ -161,7 +147,6 @@ const { clusterId } = useParams<{ clusterId: string }>();
       return;
     }
 
-    // 如果是編輯模式（有原始 YAML），先預檢再展示 diff
     if (workloadRef && originalYaml) {
       setApplying(true);
       try {
@@ -175,7 +160,6 @@ const { clusterId } = useParams<{ clusterId: string }>();
         setApplying(false);
       }
     } else {
-      // 建立模式，直接確認應用
       modal.confirm({
         title: t('confirm.applyYaml'),
         content: t('confirm.applyYamlDesc'),
@@ -206,10 +190,25 @@ const { clusterId } = useParams<{ clusterId: string }>();
     });
   };
 
+  // 返回處理 — 有未儲存更改時確認
+  const handleBack = () => {
+    if (hasUnsavedChanges) {
+      modal.confirm({
+        title: t('confirm.leave'),
+        content: t('confirm.leaveDesc'),
+        okText: t('common:actions.confirm'),
+        cancelText: t('common:actions.cancel'),
+        onOk: () => navigate(-1),
+      });
+    } else {
+      navigate(-1);
+    }
+  };
+
   // 生成預設YAML模板
   const generateDefaultYAML = useCallback((type: string) => {
     const templates: Record<string, string> = {
-      'Deployment': `apiVersion: apps/v1
+      Deployment: `apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: my-deployment
@@ -230,7 +229,7 @@ spec:
         ports:
         - containerPort: 80
 `,
-      'Rollout': `apiVersion: argoproj.io/v1alpha1
+      Rollout: `apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
   name: my-rollout
@@ -260,7 +259,7 @@ spec:
       - setWeight: 80
       - pause: {duration: 10}
 `,
-      'StatefulSet': `apiVersion: apps/v1
+      StatefulSet: `apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: my-statefulset
@@ -282,7 +281,7 @@ spec:
         ports:
         - containerPort: 80
 `,
-      'DaemonSet': `apiVersion: apps/v1
+      DaemonSet: `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: my-daemonset
@@ -302,7 +301,7 @@ spec:
         ports:
         - containerPort: 80
 `,
-      'Job': `apiVersion: batch/v1
+      Job: `apiVersion: batch/v1
 kind: Job
 metadata:
   name: my-job
@@ -317,7 +316,7 @@ spec:
       restartPolicy: Never
   backoffLimit: 4
 `,
-      'CronJob': `apiVersion: batch/v1
+      CronJob: `apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: my-cronjob
@@ -333,30 +332,30 @@ spec:
             image: busybox
             command: ['sh', '-c', 'echo Hello Kubernetes! && date']
           restartPolicy: Never
-`
+`,
     };
-    
-    return templates[type] || `apiVersion: v1
+
+    return (
+      templates[type] ||
+      `apiVersion: v1
 kind: ${type}
 metadata:
   name: my-resource
   namespace: default
 spec: {}
-`;
+`
+    );
   }, []);
-  
+
   useEffect(() => {
-    // 檢查必要參數
     if (!clusterId || !workloadType) {
       setError(t('messages.missingParams'));
       return;
     }
-    
-    // 如果有workloadRef，則是編輯模式，載入現有YAML
+
     if (workloadRef) {
       loadWorkloadYAML();
     } else {
-      // 否則是建立模式，生成預設YAML模板
       const defaultYAML = generateDefaultYAML(workloadType);
       setYaml(defaultYAML);
       setOriginalYaml(defaultYAML);
@@ -379,274 +378,45 @@ spec: {}
 
   return (
     <div style={{ padding: '24px', height: 'calc(100vh - 64px)' }}>
-      {/* 頁面頭部 */}
-      <div style={{ marginBottom: 16 }}>
-        <Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => {
-              if (hasUnsavedChanges) {
-                modal.confirm({
-                  title: t('confirm.leave'),
-                  content: t('confirm.leaveDesc'),
-                  okText: t('common:actions.confirm'),
-                  cancelText: t('common:actions.cancel'),
-                  onOk: () => navigate(-1),
-                });
-              } else {
-                navigate(-1);
-              }
-            }}
-          >
-            {t('editor.back')}
-          </Button>
-          <Title level={3} style={{ margin: 0 }}>
-            {t('editor.title')}
-          </Title>
-          {workloadRef && (
-            <Text type="secondary">
-              {workloadType}: {workloadRef}
-            </Text>
-          )}
-          {hasUnsavedChanges && (
-            <Text type="warning">{t('alert.hasUnsavedChanges')}</Text>
-          )}
-        </Space>
-        
-        <div style={{ marginTop: 16 }}>
-          <Space>
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              onClick={handleSave}
-              loading={applying}
-              disabled={!hasUnsavedChanges}
-            >
-              {t('editor.apply')}
-            </Button>
-            
-            <Button
-              icon={<EyeOutlined />}
-              onClick={handlePreview}
-              loading={applying}
-            >
-              {t('editor.preview')}
-            </Button>
-            
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={handleReset}
-              disabled={!hasUnsavedChanges}
-            >
-              {t('editor.reset')}
-            </Button>
-            
-            <div style={{ marginLeft: 16 }}>
-              <Space>
-                <Text>{t('editor.dryRunMode')}:</Text>
-                <Switch
-                  checked={dryRun}
-                  onChange={setDryRun}
-                  checkedChildren={t("editor.on")}
-                  unCheckedChildren={t("editor.off")}
-                />
-              </Space>
-            </div>
-          </Space>
-        </div>
-      </div>
+      <YAMLSubmitBar
+        workloadRef={workloadRef}
+        workloadType={workloadType}
+        hasUnsavedChanges={hasUnsavedChanges}
+        applying={applying}
+        dryRun={dryRun}
+        error={error}
+        dryRunResult={dryRunResult}
+        onBack={handleBack}
+        onSave={handleSave}
+        onPreview={handlePreview}
+        onReset={handleReset}
+        onDryRunChange={setDryRun}
+        onRetry={loadWorkloadYAML}
+        onCloseDryRunResult={() => setDryRunResult(null)}
+      />
 
-      {/* 提示資訊 */}
-      {error && (
-        <Alert
-          message={t('alert.loadFailed')}
-          description={error}
-          type="error"
-          showIcon
-          style={{ marginBottom: 16 }}
-          action={
-            <Button size="small" onClick={loadWorkloadYAML}>
-              {t('alert.retry')}
-            </Button>
-          }
-        />
-      )}
-      
-      {/* 預檢結果提示 */}
-      {dryRunResult && (
-        <Alert
-          message={dryRunResult.success ? t('messages.dryRunCheckPassed') : t('messages.dryRunCheckFailed')}
-          description={dryRunResult.message}
-          type={dryRunResult.success ? 'success' : 'error'}
-          showIcon
-          icon={dryRunResult.success ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
-          closable
-          onClose={() => setDryRunResult(null)}
-          style={{ marginBottom: 16 }}
-        />
-      )}
-      
-      {hasUnsavedChanges && !error && !dryRunResult && (
-        <Alert
-          message={t('alert.unsavedChanges')}
-          description={t('alert.unsavedChangesDesc')}
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      )}
+      <YAMLEditorPane
+        yaml={yaml}
+        loading={loading}
+        editorLoading={editorLoading}
+        onYamlChange={setYaml}
+        onEditorWillMount={handleEditorWillMount}
+        onEditorDidMount={handleEditorDidMount}
+        onEditorValidation={handleEditorValidation}
+      />
 
-      {/* YAML編輯器 */}
-      <Card style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
-        <Spin spinning={loading || editorLoading} tip={loading ? t('messages.loadingYaml') : t('messages.initEditor')}>
-          <div style={{ height: '500px', width: '100%' }}>
-            {yaml ? (
-              <Editor
-                height="500px"
-                width="100%"
-                defaultLanguage="yaml"
-                value={yaml}
-                onChange={(value) => setYaml(value || '')}
-                loading={<div style={{ padding: '20px', textAlign: 'center' }}>{t('messages.editorLoading')}</div>}
-                beforeMount={handleEditorWillMount}
-                onMount={handleEditorDidMount}
-                onValidate={handleEditorValidation}
-                options={{
-                  minimap: { enabled: true },
-                  fontSize: 14,
-                  lineNumbers: 'on',
-                  roundedSelection: false,
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  tabSize: 2,
-                  insertSpaces: true,
-                  wordWrap: 'on',
-                  folding: true,
-                  foldingStrategy: 'indentation',
-                  showFoldingControls: 'always',
-                  bracketPairColorization: { enabled: true },
-                }}
-              />
-            ) : (
-              <div style={{ 
-                height: '500px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: '#666',
-                fontSize: '16px'
-              }}>
-                {loading ? t('messages.loading') : t('messages.noContent')}
-              </div>
-            )}
-          </div>
-        </Spin>
-      </Card>
-
-      {/* 預覽模態框 */}
-      <Modal
-        title={t('preview.title')}
-        open={previewVisible}
-        onCancel={() => setPreviewVisible(false)}
-        footer={[
-          <Button key="cancel" onClick={() => setPreviewVisible(false)}>
-            {t('editor.close')}
-          </Button>,
-          <Button
-            key="apply"
-            type="primary"
-            onClick={() => {
-              setPreviewVisible(false);
-              handleSave();
-            }}
-          >
-            {t('editor.confirmApply')}
-          </Button>,
-        ]}
-        width={800}
-      >
-        {previewResult && (
-          <div>
-            <Alert
-              message={t('preview.validationSuccess')}
-              description={t('preview.validationSuccessDesc')}
-              type="success"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-            <pre style={{
-              background: '#f5f5f5',
-              padding: '16px',
-              borderRadius: '4px',
-              overflow: 'auto',
-              maxHeight: '400px'
-            }}>
-              {JSON.stringify(previewResult, null, 2)}
-            </pre>
-          </div>
-        )}
-      </Modal>
-
-      {/* YAML Diff 對比 Modal */}
-      <Modal
-        title={
-          <Space>
-            <DiffOutlined />
-            <span>{t('diff.title')}</span>
-          </Space>
-        }
-        open={diffModalVisible}
-        onCancel={() => setDiffModalVisible(false)}
-        width={1200}
-        footer={[
-          <Button key="cancel" onClick={() => setDiffModalVisible(false)}>
-            {t('editor.cancel')}
-          </Button>,
-          <Button
-            key="submit"
-            type="primary"
-            loading={applying}
-            onClick={handleConfirmDiff}
-          >
-            {t('editor.confirmUpdate')}
-          </Button>,
-        ]}
-      >
-        <Alert
-          message={t('diff.reviewChanges')}
-          description={t('diff.reviewChangesDesc')}
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-        <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
-          <div style={{ flex: 1 }}>
-            <Text strong style={{ color: '#cf1322' }}>{t('diff.originalConfig')}</Text>
-          </div>
-          <div style={{ flex: 1 }}>
-            <Text strong style={{ color: '#389e0d' }}>{t('diff.modifiedConfig')}</Text>
-          </div>
-        </div>
-        <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px' }}>
-          <DiffEditor
-            height="500px"
-            language="yaml"
-            original={originalYaml}
-            modified={pendingYaml}
-            options={{
-              readOnly: true,
-              minimap: { enabled: false },
-              fontSize: 13,
-              lineNumbers: 'on',
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              renderSideBySide: true,
-              enableSplitViewResizing: true,
-            }}
-            theme="vs-light"
-          />
-        </div>
-      </Modal>
+      <YAMLDiffView
+        previewVisible={previewVisible}
+        previewResult={previewResult}
+        onPreviewClose={() => setPreviewVisible(false)}
+        onPreviewApply={handleSave}
+        diffModalVisible={diffModalVisible}
+        originalYaml={originalYaml}
+        pendingYaml={pendingYaml}
+        applying={applying}
+        onDiffClose={() => setDiffModalVisible(false)}
+        onDiffConfirm={handleConfirmDiff}
+      />
     </div>
   );
 };

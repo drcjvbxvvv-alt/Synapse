@@ -4,16 +4,12 @@ import {
   Button,
   Space,
   message,
-  Spin,
   Tag,
   Alert,
   Modal,
   Typography,
   App,
   Segmented,
-  Row,
-  Col,
-  Input,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -23,8 +19,6 @@ import {
   DiffOutlined,
   FormOutlined,
   CodeOutlined,
-  PlusOutlined,
-  DeleteOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { secretService, type SecretDetail } from '../../services/configService';
@@ -34,6 +28,7 @@ import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
 import { parseApiError, showApiError } from '../../utils/api';
 import PageSkeleton from '../../components/PageSkeleton';
+import SecretEditFormPanel from './components/SecretEditFormPanel';
 
 const { Text, Title } = Typography;
 
@@ -340,167 +335,17 @@ const [loading, setLoading] = useState(true);
 
         {/* 表單模式 */}
         {editMode === 'form' && (
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            {/* 基本資訊 */}
-            <Card title="基本資訊">
-              <Row gutter={16} style={{ marginBottom: 16 }}>
-                <Col span={8}>
-                  <div style={{ marginBottom: 8 }}>
-                    <Text strong>名稱</Text>
-                  </div>
-                  <Input value={name} disabled />
-                </Col>
-                <Col span={8}>
-                  <div style={{ marginBottom: 8 }}>
-                    <Text strong>命名空間</Text>
-                  </div>
-                  <Input value={namespace} disabled />
-                </Col>
-                <Col span={8}>
-                  <div style={{ marginBottom: 8 }}>
-                    <Text strong>類型</Text>
-                  </div>
-                  <Input value={secret.type} disabled />
-                </Col>
-              </Row>
-            </Card>
-
-            {/* 標籤 */}
-            <Card
-              title="標籤 (Labels)"
-              extra={
-                <Button
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() => setFormLabels(prev => [...prev, { key: '', value: '' }])}
-                >
-                  新增
-                </Button>
-              }
-            >
-              {formLabels.map((item, i) => (
-                <Row key={i} gutter={8} style={{ marginBottom: 8 }}>
-                  <Col span={10}>
-                    <Input
-                      placeholder="key"
-                      value={item.key}
-                      onChange={e => setFormLabels(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
-                    />
-                  </Col>
-                  <Col span={10}>
-                    <Input
-                      placeholder="value"
-                      value={item.value}
-                      onChange={e => setFormLabels(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
-                    />
-                  </Col>
-                  <Col span={4}>
-                    <Button
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => setFormLabels(prev => prev.filter((_, j) => j !== i))}
-                    />
-                  </Col>
-                </Row>
-              ))}
-              {formLabels.length === 0 && (
-                <Text type="secondary">無標籤</Text>
-              )}
-            </Card>
-
-            {/* 注解 */}
-            <Card
-              title="注解 (Annotations)"
-              extra={
-                <Button
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() => setFormAnnotations(prev => [...prev, { key: '', value: '' }])}
-                >
-                  新增
-                </Button>
-              }
-            >
-              {formAnnotations.map((item, i) => (
-                <Row key={i} gutter={8} style={{ marginBottom: 8 }}>
-                  <Col span={10}>
-                    <Input
-                      placeholder="key"
-                      value={item.key}
-                      onChange={e => setFormAnnotations(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
-                    />
-                  </Col>
-                  <Col span={10}>
-                    <Input
-                      placeholder="value"
-                      value={item.value}
-                      onChange={e => setFormAnnotations(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
-                    />
-                  </Col>
-                  <Col span={4}>
-                    <Button
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => setFormAnnotations(prev => prev.filter((_, j) => j !== i))}
-                    />
-                  </Col>
-                </Row>
-              ))}
-              {formAnnotations.length === 0 && (
-                <Text type="secondary">無注解</Text>
-              )}
-            </Card>
-
-            {/* 資料 */}
-            <Card
-              title="資料 (Base64 編碼)"
-              extra={
-                <Button
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() => setFormData(prev => [...prev, { key: '', value: '' }])}
-                >
-                  新增
-                </Button>
-              }
-            >
-              <Alert
-                message="值為 base64 編碼格式"
-                type="info"
-                showIcon
-                style={{ marginBottom: 12 }}
-              />
-              {formData.map((item, i) => (
-                <Row key={i} gutter={8} style={{ marginBottom: 8 }}>
-                  <Col span={10}>
-                    <Input
-                      placeholder="key"
-                      value={item.key}
-                      onChange={e => setFormData(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
-                    />
-                  </Col>
-                  <Col span={10}>
-                    <Input.TextArea
-                      placeholder="value (base64)"
-                      rows={3}
-                      value={item.value}
-                      onChange={e => setFormData(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
-                    />
-                  </Col>
-                  <Col span={4}>
-                    <Button
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => setFormData(prev => prev.filter((_, j) => j !== i))}
-                    />
-                  </Col>
-                </Row>
-              ))}
-              {formData.length === 0 && (
-                <Text type="secondary">無資料</Text>
-              )}
-            </Card>
-          </Space>
+          <SecretEditFormPanel
+            secret={secret}
+            name={name}
+            namespace={namespace}
+            formLabels={formLabels}
+            formAnnotations={formAnnotations}
+            formData={formData}
+            onLabelsChange={setFormLabels}
+            onAnnotationsChange={setFormAnnotations}
+            onDataChange={setFormData}
+          />
         )}
 
         {/* YAML 編輯器 */}

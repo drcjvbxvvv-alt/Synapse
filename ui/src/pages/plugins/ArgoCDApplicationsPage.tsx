@@ -7,10 +7,7 @@ import {
   Space,
   Tag,
   Badge,
-  Modal,
   Form,
-  Input,
-  Switch,
   Popconfirm,
   Statistic,
   Row,
@@ -18,10 +15,6 @@ import {
   Empty,
   message,
   Tooltip,
-  Drawer,
-  Descriptions,
-  Timeline,
-  Tabs,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -30,7 +23,6 @@ import {
   ReloadOutlined,
   BranchesOutlined,
   DeleteOutlined,
-  RollbackOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   ClockCircleOutlined,
@@ -43,11 +35,12 @@ import {
 import { argoCDService } from '../../services/argoCDService';
 import { useTranslation } from 'react-i18next';
 import { usePermission } from '../../hooks/usePermission';
-import type { 
-  ArgoCDApplication, 
+import type {
+  ArgoCDApplication,
   CreateApplicationRequest,
-  ArgoCDResource,
 } from '../../services/argoCDService';
+import ArgoCDAppFormModal from './ArgoCDAppFormModal';
+import ArgoCDAppDetailDrawer from './ArgoCDAppDetailDrawer';
 
 const ArgoCDApplicationsPage: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
@@ -449,215 +442,25 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
       </Card>
 
       {/* 建立應用彈窗 */}
-      <Modal
-        title={t('plugins:argocd.createAppTitle')}
+      <ArgoCDAppFormModal
         open={createModalVisible}
+        form={form}
+        creating={creating}
         onOk={handleCreate}
         onCancel={() => {
           setCreateModalVisible(false);
           form.resetFields();
         }}
-        confirmLoading={creating}
-        width={600}
-        okText={t('plugins:argocd.createBtn')}
-        cancelText={t('common:actions.cancel')}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label={t('plugins:argocd.appName')}
-            rules={[
-              { required: true, message: t('plugins:argocd.appNameRequired') },
-              { pattern: /^[a-z0-9-]+$/, message: t('plugins:argocd.appNamePattern') }
-            ]}
-          >
-            <Input placeholder="my-app" />
-          </Form.Item>
-
-          <Form.Item
-            name="path"
-            label={t('plugins:argocd.gitPath')}
-            rules={[{ required: true, message: t('plugins:argocd.gitPathRequired') }]}
-            extra={t('plugins:argocd.gitPathExtra')}
-          >
-            <Input placeholder="apps/my-app 或 environments/prod/my-app" />
-          </Form.Item>
-
-          <Form.Item
-            name="target_revision"
-            label={t('plugins:argocd.targetRevision')}
-            initialValue="HEAD"
-            extra={t('plugins:argocd.targetRevisionExtra')}
-          >
-            <Input placeholder="HEAD, main, v1.0.0, commit SHA" />
-          </Form.Item>
-
-          <Form.Item
-            name="dest_namespace"
-            label={t('plugins:argocd.destNamespace')}
-            rules={[{ required: true, message: t('plugins:argocd.destNamespaceRequired') }]}
-            extra={t('plugins:argocd.destNamespaceExtra')}
-          >
-            <Input placeholder="production" />
-          </Form.Item>
-
-          <Form.Item
-            name="helm_values"
-            label={t('plugins:argocd.helmValues')}
-            extra={t('plugins:argocd.helmValuesExtra')}
-          >
-            <Input.TextArea rows={4} placeholder="replicaCount: 3&#10;image:&#10;  tag: latest" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="auto_sync" label={t('plugins:argocd.autoSync')} valuePropName="checked">
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Form.Item
-              noStyle
-              shouldUpdate={(prevValues, currentValues) => prevValues.auto_sync !== currentValues.auto_sync}
-            >
-              {({ getFieldValue }) =>
-                getFieldValue('auto_sync') && (
-                  <>
-                    <Col span={8}>
-                      <Form.Item 
-                        name="self_heal" 
-                        label={t('plugins:argocd.selfHeal')} 
-                        valuePropName="checked"
-                        tooltip={t('plugins:argocd.selfHealTooltip')}
-                      >
-                        <Switch />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item 
-                        name="prune" 
-                        label={t('plugins:argocd.autoPrune')} 
-                        valuePropName="checked"
-                        tooltip={t('plugins:argocd.autoPruneTooltip')}
-                      >
-                        <Switch />
-                      </Form.Item>
-                    </Col>
-                  </>
-                )
-              }
-            </Form.Item>
-          </Row>
-        </Form>
-      </Modal>
+      />
 
       {/* 應用詳情抽屜 */}
-      <Drawer
-        title={`${t('plugins:argocd.appDetail')}: ${selectedApp?.name || ''}`}
+      <ArgoCDAppDetailDrawer
         open={detailDrawerVisible}
+        selectedApp={selectedApp}
         onClose={() => setDetailDrawerVisible(false)}
-        width={700}
-        extra={
-          <Space>
-            <Button 
-              type="primary" 
-              icon={<SyncOutlined />}
-              onClick={() => selectedApp && handleSync(selectedApp.name)}
-            >
-              {t('plugins:argocd.sync')}
-            </Button>
-          </Space>
-        }
-      >
-        {selectedApp && (
-          <Tabs
-            items={[
-              {
-                key: 'overview',
-                label: t('plugins:argocd.overview'),
-                children: (
-                  <div>
-                    <Descriptions column={2} bordered size="small">
-                      <Descriptions.Item label={t('plugins:argocd.appName')}>{selectedApp.name}</Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.project')}>{selectedApp.project}</Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.syncStatus')}>{getSyncStatusTag(selectedApp.sync_status)}</Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.healthStatus')}>{getHealthStatusBadge(selectedApp.health_status)}</Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.gitRepo')} span={2}>
-                        <a href={selectedApp.source?.repo_url} target="_blank" rel="noopener noreferrer">
-                          {selectedApp.source?.repo_url}
-                        </a>
-                      </Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.gitPath')}>{selectedApp.source?.path}</Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.targetRevision')}>{selectedApp.target_revision}</Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.currentVersion')}>
-                        <code>{selectedApp.synced_revision?.substring(0, 12)}</code>
-                      </Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.destNamespace')}>
-                        <Tag color="blue">{selectedApp.destination?.namespace}</Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label={t('common:table.createdAt')}>{selectedApp.created_at}</Descriptions.Item>
-                      <Descriptions.Item label={t('plugins:argocd.lastSync')}>{selectedApp.reconciled_at}</Descriptions.Item>
-                    </Descriptions>
-                  </div>
-                ),
-              },
-              {
-                key: 'resources',
-                label: t('plugins:argocd.resourceList'),
-                children: (
-                  <Table
-                    scroll={{ x: 'max-content' }}
-                    size="small"
-                    dataSource={selectedApp.resources || []}
-                    rowKey={(record: ArgoCDResource) => `${record.kind}-${record.namespace}-${record.name}`}
-                    columns={[
-                      { title: 'Kind', dataIndex: 'kind', key: 'kind', width: 120 },
-                      { title: t('common:table.namespace'), dataIndex: 'namespace', key: 'namespace', width: 120 },
-                      { title: t('common:table.name'), dataIndex: 'name', key: 'name' },
-                      { 
-                        title: t('plugins:argocd.healthStatus'), 
-                        dataIndex: 'health', 
-                        key: 'health', 
-                        width: 100,
-                        render: (text: string) => getHealthStatusBadge(text)
-                      },
-                    ]}
-                    pagination={false}
-                  />
-                ),
-              },
-              {
-                key: 'history',
-                label: t('plugins:argocd.syncHistory'),
-                children: (
-                  <Timeline
-                    items={(selectedApp.history || []).slice(0, 10).map((h) => ({
-                      color: 'green',
-                      children: (
-                        <div>
-                          <div>
-                            <strong>{t('plugins:argocd.version')}:</strong> <code>{h.revision?.substring(0, 12)}</code>
-                            <Button 
-                              type="link" 
-                              size="small"
-                              icon={<RollbackOutlined />}
-                              onClick={() => handleRollback(selectedApp.name, h.id)}
-                            >
-                              {t('plugins:argocd.rollbackToVersion')}
-                            </Button>
-                          </div>
-                          <div style={{ color: '#999', fontSize: 12 }}>
-                            {t('plugins:argocd.deployTime')}: {h.deployed_at}
-                          </div>
-                        </div>
-                      ),
-                    }))}
-                  />
-                ),
-              },
-            ]}
-          />
-        )}
-      </Drawer>
+        onSync={handleSync}
+        onRollback={handleRollback}
+      />
     </div>
   );
 };

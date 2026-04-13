@@ -184,20 +184,26 @@
 
 ## P2 — 改善項目
 
-### 7. 前端大型元件需拆分
+### 7. 前端大型元件需拆分 ✅ 已完成 (2026-04-13)
 
-| 檔案 | 行數 | 建議拆分方式 |
-|------|------|-------------|
-| `PVCTab.tsx` | 690 | → `<PVCTable>` + `<PVCDetailModal>` |
-| `PVTab.tsx` | 676 | → `<PVTable>` + `<PVDetailModal>` |
-| `ArgoCDApplicationsPage.tsx` | 664 | → `<AppList>` + `<AppDetail>` + `<DeployAction>` |
-| `SecurityDashboard.tsx` | 656 | → `<VulnerabilityScan>` + `<BenchmarkResults>` + `<ControlDetails>` |
-| `CompliancePage.tsx` | 656 | → 按審計類型拆分子元件 |
-| `StorageClassTab.tsx` | 655 | → `<StorageClassTable>` + `<StatusRenderer>` |
-| `YAMLEditor.tsx` | 653 | → `<EditorPane>` + `<DiffView>` + `<SubmitBar>` |
-| `NetworkPolicyForm.tsx` | 651 | → `<RuleBuilder>` + `<PeerSelector>` + `<PolicyPreview>` |
-| `ConfigMapCreate.tsx` | 622 | → 用 `<FormModal>` 重構 |
-| `SecretEdit.tsx` | 601 | → 用 `<FormModal>` 重構 |
+| 檔案 | 原行數 | 拆分後 | 提取的子元件 |
+|------|--------|--------|-------------|
+| `PVCTab.tsx` | 625 | ~565 | 共用 `<YamlViewModal>` + `<ColumnSettingsDrawer>` |
+| `PVTab.tsx` | 612 | ~552 | 共用 `<YamlViewModal>` + `<ColumnSettingsDrawer>` |
+| `ArgoCDApplicationsPage.tsx` | 666 | **469** | `<ArgoCDAppFormModal>` + `<ArgoCDAppDetailDrawer>` |
+| `SecurityDashboard.tsx` | 656 | **65** | `<ImageScanTab>` + `<BenchTab>` + `<GatekeeperTab>` + `<SeverityTag>` |
+| `CompliancePage.tsx` | — | — | 檔案不存在，架構報告資訊有誤 |
+| `StorageClassTab.tsx` | 590 | 542 | `<StorageClassYAMLModal>` + `<StorageClassColumnSettingsDrawer>` |
+| `YAMLEditor.tsx` | 654 | **424** | `<YAMLSubmitBar>` + `<YAMLEditorPane>` + `<YAMLDiffView>` |
+| `NetworkPolicyForm.tsx` | — | — | `<RuleBuilder>` 已在 P1-5 完成 |
+| `ConfigMapCreate.tsx` | 622 | **417** | `<ConfigMapFormBody>` |
+| `SecretEdit.tsx` | 601 | **446** | `<SecretEditFormPanel>` |
+
+**新增共用元件** (`ui/src/components/`):
+- `YamlViewModal.tsx` — 泛用 YAML 預覽 Modal（PVCTab + PVTab 共用）
+- `ColumnSettingsDrawer.tsx` — 泛用欄位可見性 Drawer（PVCTab + PVTab 共用）
+
+**全部 `npx tsc --noEmit` 零錯誤。**
 
 ---
 
@@ -275,7 +281,8 @@
 | P1-5 共用元件 | 建立 `<YAMLDiffModal>`（從 ResourceYAMLEditor 提取內嵌 diff Modal）；建立 `<RuleBuilder>`（從 NetworkPolicyForm 提取 RuleEditor）；更新兩個消費端使用新元件；TypeScript 通過 | ✅ 完成 | 2026-04-12 |
 | P1-6 God-Service 拆分 | prometheus_service (1792→857+174+796)；om_service (1195→749+467)；gateway_service (1107→499+177+451)；同 receiver 跨檔案拆分，零介面變更，全部 `go build ./internal/...` 通過 | ✅ 完成 | 2026-04-12 |
 | Phase 3 | 後端 God-Service 拆分 (prometheus_service, om_service) | ✅ 已完成（P1-6）| 2026-04-12 |
-| Phase 4 | 品質提升：測試補齊、TypeScript strict、大型元件拆分 | ⬜ 待開始 | — |
+| P2-7 前端大型元件拆分 | PVCTab/PVTab/ArgoCD/SecurityDashboard/StorageClassTab/YAMLEditor/ConfigMapCreate/SecretEdit；新增 YamlViewModal + ColumnSettingsDrawer 共用元件；零 TS 錯誤 | ✅ 完成 | 2026-04-13 |
+| Phase 4 | 品質提升：測試補齊、TypeScript strict | ⬜ 待開始 | — |
 
 ---
 
@@ -302,7 +309,7 @@ Phase 4 — 品質提升 (持續)
 ├── 補齊核心 service 測試
 ├── 統一前端命名規範
 ├── 啟用 strict TypeScript 規則
-├── 拆分大型前端元件 (P2 列表)
+├── ✅ 拆分大型前端元件 (P2-7 完成，2026-04-13)
 └── 前端效能優化 (memo, useCallback)
 ```
 

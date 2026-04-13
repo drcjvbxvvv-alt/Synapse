@@ -6,10 +6,7 @@ import {
   Tag,
   Typography,
   Tooltip,
-  Modal,
   App,
-  Drawer,
-  Checkbox,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -26,6 +23,8 @@ import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
 import { ActionButtons } from '../../components/ActionButtons';
 import EmptyState from '../../components/EmptyState';
+import YamlViewModal from '../../components/YamlViewModal';
+import ColumnSettingsDrawer from '../../components/ColumnSettingsDrawer';
 import { usePermission } from '../../hooks/usePermission';
 
 const { Link } = Typography;
@@ -540,71 +539,31 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
         }}
       />
 
-      {/* YAML檢視Modal */}
-      <Modal
+      <YamlViewModal
         title="PV YAML"
         open={yamlModalVisible}
         onCancel={() => setYamlModalVisible(false)}
-        footer={null}
-        width={800}
-      >
-        {yamlLoading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <span>{t('common:messages.loading')}</span>
-          </div>
-        ) : (
-          <pre style={{ maxHeight: 600, overflow: 'auto', background: '#f5f5f5', padding: 16 }}>
-            {currentYaml}
-          </pre>
-        )}
-      </Modal>
+        yaml={currentYaml}
+        loading={yamlLoading}
+      />
 
-      {/* 列設定抽屜 */}
-      <Drawer
-        title={t('storage:columnSettings.title')}
-        placement="right"
-        width={400}
+      <ColumnSettingsDrawer
         open={columnSettingsVisible}
         onClose={() => setColumnSettingsVisible(false)}
-        footer={
-          <div style={{ textAlign: 'right' }}>
-            <Space>
-              <Button onClick={() => setColumnSettingsVisible(false)}>{t('common:actions.cancel')}</Button>
-              <Button type="primary" onClick={handleColumnSettingsSave}>{t('storage:columnSettings.confirm')}</Button>
-            </Space>
-          </div>
-        }
-      >
-        <div style={{ marginBottom: 16 }}>
-          <p style={{ marginBottom: 8, color: '#666' }}>{t('storage:columnSettings.selectColumns')}</p>
-          <Space direction="vertical" style={{ width: '100%' }}>
-            {[
-              { key: 'status', label: t('common:table.status') },
-              { key: 'capacity', label: t('storage:columns.capacity') },
-              { key: 'accessModes', label: t('storage:columns.accessModes') },
-              { key: 'reclaimPolicy', label: t('storage:columns.reclaimPolicy') },
-              { key: 'storageClassName', label: t('storage:columns.storageClassName') },
-              { key: 'claimRef', label: t('storage:columns.claimRef') },
-              { key: 'persistentVolumeSource', label: t('storage:columns.persistentVolumeSource') },
-              { key: 'createdAt', label: t('common:table.createdAt') },
-            ].map(item => (
-              <Checkbox
-                key={item.key}
-                checked={visibleColumns.includes(item.key)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setVisibleColumns([...visibleColumns, item.key]);
-                  } else {
-                    setVisibleColumns(visibleColumns.filter(c => c !== item.key));
-                  }
-                }}
-              >
-                {item.label}
-              </Checkbox>
-            ))}
-          </Space>
-        </div>
-      </Drawer>
+        onSave={handleColumnSettingsSave}
+        visibleColumns={visibleColumns}
+        onChange={setVisibleColumns}
+        columnOptions={[
+          { key: 'status', label: t('common:table.status') },
+          { key: 'capacity', label: t('storage:columns.capacity') },
+          { key: 'accessModes', label: t('storage:columns.accessModes') },
+          { key: 'reclaimPolicy', label: t('storage:columns.reclaimPolicy') },
+          { key: 'storageClassName', label: t('storage:columns.storageClassName') },
+          { key: 'claimRef', label: t('storage:columns.claimRef') },
+          { key: 'persistentVolumeSource', label: t('storage:columns.persistentVolumeSource') },
+          { key: 'createdAt', label: t('common:table.createdAt') },
+        ]}
+      />
     </div>
   );
 };
