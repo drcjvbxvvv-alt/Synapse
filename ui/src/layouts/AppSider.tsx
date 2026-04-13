@@ -205,6 +205,10 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     () => isPlatformAdmin(currentUser?.username, allPerms),
     [currentUser, allPerms]
   );
+  const isAdminOrOps = useMemo(
+    () => isUserPlatformAdmin || allPerms.some(p => p.permission_type === 'ops'),
+    [isUserPlatformAdmin, allPerms]
+  );
   const currentPermissionType = currentClusterPermission?.permission_type as PermissionType | undefined;
 
   const filterMainMenuItems = useCallback((items: MenuItem[]): MenuItem[] =>
@@ -212,6 +216,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
       if (!item || typeof item !== 'object' || !('key' in item)) { acc.push(item); return acc; }
       const config = MAIN_MENU_PERMISSIONS[item.key as string];
       if (config?.platformAdminOnly && !isUserPlatformAdmin) return acc;
+      if (config?.adminOpsOnly && !isAdminOrOps) return acc;
       if ('children' in item && Array.isArray(item.children)) {
         const filtered = filterMainMenuItems(item.children as MenuItem[]);
         if (filtered.length === 0) return acc;
@@ -221,7 +226,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
       acc.push(item);
       return acc;
     }, []),
-  [isUserPlatformAdmin]);
+  [isUserPlatformAdmin, isAdminOrOps]);
 
   const filterClusterMenuItems = useCallback((items: MenuItem[]): MenuItem[] =>
     items.reduce<MenuItem[]>((acc, item) => {

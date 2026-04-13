@@ -37,24 +37,30 @@ export const isPlatformAdmin = (username: string | undefined, permissions?: { pe
 export const MAIN_MENU_PERMISSIONS: Record<string, {
   requiredPermission?: PermissionType;  // 叢集級權限要求
   platformAdminOnly?: boolean;          // 是否僅平臺管理員可見
+  adminOpsOnly?: boolean;               // 是否僅 admin 或 ops 可見（對應 TopLevelGuard）
 }> = {
-  // 所有人可見
-  'overview': {},
+  // admin 或 ops 可見
+  'overview':      { adminOpsOnly: true },
+  'cost-insights': { adminOpsOnly: true },
+  'multicluster':  { adminOpsOnly: true },
+  'alert-center':  { adminOpsOnly: true },
+  'system-settings': { adminOpsOnly: true },
+
   // 叢集管理（叢集列表）僅平臺管理員可見；非管理員直接進入已分配叢集
   'cluster-management': { platformAdminOnly: true },
-  
-  // 訪問控制選單組 - 僅平臺管理員可見
-  'access-control': { platformAdminOnly: true },
-  'access-users': { platformAdminOnly: true },
-  'access-user-groups': { platformAdminOnly: true },
-  'access-permissions': { platformAdminOnly: true },
 
-  // 僅平臺管理員可見
+  // 訪問控制選單組 - 僅平臺管理員可見
+  'access-control':        { platformAdminOnly: true },
+  'access-users':          { platformAdminOnly: true },
+  'access-user-groups':    { platformAdminOnly: true },
+  'access-permissions':    { platformAdminOnly: true },
+  'access-feature-policy': { platformAdminOnly: true },
+
+  // 稽核 - 僅平臺管理員可見
   'permission-management': { platformAdminOnly: true },
-  'audit-management': { platformAdminOnly: true },
-  'audit-operations': { platformAdminOnly: true },
-  'audit-commands': { platformAdminOnly: true },
-  'system-settings': { platformAdminOnly: true },
+  'audit-management':      { platformAdminOnly: true },
+  'audit-operations':      { platformAdminOnly: true },
+  'audit-commands':        { platformAdminOnly: true },
 };
 
 // 叢集內層側邊欄選單權限配置
