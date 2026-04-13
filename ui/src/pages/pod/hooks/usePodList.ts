@@ -89,7 +89,7 @@ export function usePodList() {
     message.error(t('list.fetchError'));
   }
 
-  const allPods: PodInfo[] = podData?.items || [];
+  const allPods: PodInfo[] = useMemo(() => podData?.items ?? [], [podData?.items]);
 
   const loadPods = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['pods', clusterId] });

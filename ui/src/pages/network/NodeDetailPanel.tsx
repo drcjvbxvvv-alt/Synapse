@@ -166,7 +166,7 @@ interface ConnectionRowProps {
   direction: 'in' | 'out';
 }
 
-const ConnectionRow: React.FC<ConnectionRowProps> = ({ edge, targetId, direction }) => {
+const ConnectionRow: React.FC<ConnectionRowProps> = ({ edge, targetId, direction: _direction }) => {
   // Parse node ID: "workload/ns/kind/name" or "service/ns/name"
   const parts = targetId.split('/');
   const displayName = parts[parts.length - 1];

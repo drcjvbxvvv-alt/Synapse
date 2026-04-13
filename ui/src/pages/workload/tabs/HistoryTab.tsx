@@ -70,7 +70,7 @@ const [loading, setLoading] = useState(false);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [clusterId, namespace, workloadName, workloadType, t]);
 
   useEffect(() => {
     loadReplicaSets();

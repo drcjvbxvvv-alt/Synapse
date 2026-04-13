@@ -137,7 +137,7 @@ const [events, setEvents] = useState<EventLogEntry[]>([]);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, eventType, resourceKind, keyword]);
+  }, [clusterId, namespace, eventType, resourceKind, keyword, t]);
 
   useEffect(() => {
     fetchNamespaces();

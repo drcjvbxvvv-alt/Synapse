@@ -66,7 +66,7 @@ const [loading, setLoading] = useState(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadData();

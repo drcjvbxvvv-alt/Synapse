@@ -184,7 +184,7 @@ const FeaturePolicyPage: React.FC = () => {
     } finally {
       setPermLoading(false);
     }
-  }, [message, t]);
+  }, [message]);
 
   useEffect(() => {
     if (selectedClusterId != null) loadPermissions(selectedClusterId);
@@ -208,7 +208,7 @@ const FeaturePolicyPage: React.FC = () => {
     } finally {
       setFeatureLoading(false);
     }
-  }, [message, t]);
+  }, [message]);
 
   // ── 儲存 ─────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {

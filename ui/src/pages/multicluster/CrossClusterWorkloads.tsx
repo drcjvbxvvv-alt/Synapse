@@ -55,7 +55,7 @@ const CrossClusterWorkloads: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterKind, filterName, filterNS, message]);
+  }, [filterKind, filterName, filterNS, message, t]);
 
   useEffect(() => {
     loadStats();

@@ -75,18 +75,23 @@ const [loading, setLoading] = useState(true);
 
   const parseYamlToForm = (yamlStr: string) => {
     try {
-      const parsed = YAML.parse(yamlStr) as any;
-      setFormServiceType(parsed?.spec?.type || 'ClusterIP');
-      setFormPorts((parsed?.spec?.ports || []).map((p: any) => ({
-        name: p.name || '',
-        protocol: p.protocol || 'TCP',
-        port: p.port || 80,
-        targetPort: String(p.targetPort || 80),
-        nodePort: p.nodePort,
+      const parsed = YAML.parse(yamlStr) as unknown;
+      const p = parsed as Record<string, Record<string, unknown>>;
+      const spec = (p?.spec ?? {}) as Record<string, unknown>;
+      const metadata = (p?.metadata ?? {}) as Record<string, unknown>;
+      setFormServiceType((spec?.type as string) || 'ClusterIP');
+      setFormPorts(((spec?.ports ?? []) as Record<string, unknown>[]).map((port) => ({
+        name: (port.name as string) || '',
+        protocol: (port.protocol as string) || 'TCP',
+        port: (port.port as number) || 80,
+        targetPort: String(port.targetPort || 80),
+        nodePort: port.nodePort as number | undefined,
       })));
-      setFormSelector(Object.entries(parsed?.spec?.selector || {}).map(([k, v]) => ({key: k, value: String(v)})));
-      setFormLabels(Object.entries(parsed?.metadata?.labels || {}).map(([k, v]) => ({key: k, value: String(v)})));
-    } catch {}
+      setFormSelector(Object.entries((spec?.selector ?? {}) as Record<string, string>).map(([k, v]) => ({key: k, value: String(v)})));
+      setFormLabels(Object.entries((metadata?.labels ?? {}) as Record<string, string>).map(([k, v]) => ({key: k, value: String(v)})));
+    } catch {
+      // intentional
+    }
   };
 
   // 載入 Service 詳情
@@ -106,7 +111,7 @@ const [loading, setLoading] = useState(true);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, name, navigate]);
+  }, [clusterId, namespace, name, navigate, t]);
 
   useEffect(() => {
     loadService();
@@ -124,9 +129,12 @@ const [loading, setLoading] = useState(true);
     }));
     let existingMeta = {name: name || '', namespace: namespace || ''};
     try {
-      const parsed = YAML.parse(originalYaml) as any;
-      existingMeta = {name: parsed?.metadata?.name || name || '', namespace: parsed?.metadata?.namespace || namespace || ''};
-    } catch {}
+      const parsed = YAML.parse(originalYaml) as unknown;
+      const p = parsed as Record<string, Record<string, string>>;
+      existingMeta = {name: p?.metadata?.name || name || '', namespace: p?.metadata?.namespace || namespace || ''};
+    } catch {
+      // intentional
+    }
     const obj = {
       apiVersion: 'v1', kind: 'Service',
       metadata: { ...existingMeta, labels: labelsObj },

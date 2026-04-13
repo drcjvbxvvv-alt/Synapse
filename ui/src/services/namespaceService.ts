@@ -73,9 +73,29 @@ export const deleteNamespace = async (
   await request.delete<void>(`/clusters/${clusterId}/namespaces/${namespace}`);
 };
 
+// ─── ResourceQuota / LimitRange shared types ──────────────────────────────────
+export interface ResourceQuotaItem {
+  name: string;
+  hard?: Record<string, string>;
+  used?: Record<string, string>;
+}
+
+export interface LimitEntry {
+  type: string;
+  max?: Record<string, string>;
+  min?: Record<string, string>;
+  default?: Record<string, string>;
+  defaultRequest?: Record<string, string>;
+}
+
+export interface LimitRangeItem {
+  name: string;
+  limits?: LimitEntry[];
+}
+
 // ─── ResourceQuota API ────────────────────────────────────────────────────────
 export const listResourceQuotas = (clusterId: string, namespace: string) =>
-  request.get<{ items: any[]; total: number }>(`/clusters/${clusterId}/namespaces/${namespace}/quotas`);
+  request.get<{ items: ResourceQuotaItem[]; total: number }>(`/clusters/${clusterId}/namespaces/${namespace}/quotas`);
 
 export const createResourceQuota = (clusterId: string, namespace: string, data: { name: string; hard: Record<string, string> }) =>
   request.post(`/clusters/${clusterId}/namespaces/${namespace}/quotas`, data);
@@ -88,12 +108,12 @@ export const deleteResourceQuota = (clusterId: string, namespace: string, name: 
 
 // ─── LimitRange API ───────────────────────────────────────────────────────────
 export const listLimitRanges = (clusterId: string, namespace: string) =>
-  request.get<{ items: any[]; total: number }>(`/clusters/${clusterId}/namespaces/${namespace}/limitranges`);
+  request.get<{ items: LimitRangeItem[]; total: number }>(`/clusters/${clusterId}/namespaces/${namespace}/limitranges`);
 
-export const createLimitRange = (clusterId: string, namespace: string, data: { name: string; limits: any[] }) =>
+export const createLimitRange = (clusterId: string, namespace: string, data: { name: string; limits: LimitEntry[] }) =>
   request.post(`/clusters/${clusterId}/namespaces/${namespace}/limitranges`, data);
 
-export const updateLimitRange = (clusterId: string, namespace: string, name: string, data: { limits: any[] }) =>
+export const updateLimitRange = (clusterId: string, namespace: string, name: string, data: { limits: LimitEntry[] }) =>
   request.put(`/clusters/${clusterId}/namespaces/${namespace}/limitranges/${name}`, data);
 
 export const deleteLimitRange = (clusterId: string, namespace: string, name: string) =>

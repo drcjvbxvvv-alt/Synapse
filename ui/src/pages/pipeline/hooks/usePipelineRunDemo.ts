@@ -130,7 +130,6 @@ export function usePipelineRunDemo() {
     if (autoLoop && !stopRef.current) {
       timerRef.current = setTimeout(() => run(), 2000);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reset, runStep, scenario, autoLoop, syncGraph]);
 
   // Cleanup on unmount

@@ -15,7 +15,6 @@ import {
   Typography,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
 import type { SecretDetail } from '../../../services/configService';
 
 const { Text } = Typography;
@@ -48,7 +47,6 @@ const SecretEditFormPanel: React.FC<SecretEditFormPanelProps> = ({
   onAnnotationsChange,
   onDataChange,
 }) => {
-  const { t } = useTranslation(['config', 'common']);
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">

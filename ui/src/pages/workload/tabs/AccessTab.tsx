@@ -97,7 +97,7 @@ const [loading, setLoading] = useState(false);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [clusterId, namespace, workloadName, workloadType, t]);
 
   // 載入Ingress列表
   const loadIngresses = useCallback(async () => {
@@ -119,7 +119,7 @@ const [loading, setLoading] = useState(false);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, workloadName, workloadType]);
+  }, [clusterId, namespace, workloadName, workloadType, t]);
 
   useEffect(() => {
     loadServices();

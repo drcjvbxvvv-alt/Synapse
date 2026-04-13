@@ -234,7 +234,7 @@ const WorkloadCreateModal: React.FC<WorkloadCreateModalProps> = ({
       messageApi.success(t('messages.createSuccess'));
       onSuccess();
     } catch (error: unknown) {
-      if (!axios.isAxiosError(error) || !(error as any)._permissionHandled) {
+      if (!axios.isAxiosError(error) || !(error as unknown as Record<string, unknown>)._permissionHandled) {
         messageApi.error(error instanceof Error ? error.message : t('messages.operationFailed'));
       }
     } finally {

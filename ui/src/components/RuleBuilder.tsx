@@ -35,6 +35,7 @@ export interface RuleState {
 let _ruleCounter = 1000;
 
 /** Create a blank rule with a unique id. */
+// eslint-disable-next-line react-refresh/only-export-components
 export const newRule = (): RuleState => ({
   id: ++_ruleCounter,
   type: 'all',

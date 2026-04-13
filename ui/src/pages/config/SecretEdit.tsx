@@ -123,7 +123,7 @@ const [loading, setLoading] = useState(true);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, name, navigate]);
+  }, [clusterId, namespace, name, navigate, t]);
 
   useEffect(() => {
     loadSecret();
@@ -135,11 +135,14 @@ const [loading, setLoading] = useState(true);
       syncFormToYaml();
     } else {
       try {
-        const parsed = YAML.parse(yamlContent) as any;
-        setFormLabels(Object.entries(parsed?.metadata?.labels || {}).map(([k, v]) => ({ key: k, value: String(v) })));
-        setFormAnnotations(Object.entries(parsed?.metadata?.annotations || {}).map(([k, v]) => ({ key: k, value: String(v) })));
-        setFormData(Object.entries(parsed?.data || {}).map(([k, v]) => ({ key: k, value: String(v) })));
-      } catch {}
+        const parsed = YAML.parse(yamlContent) as unknown;
+        const parsedObj = parsed as { metadata?: { labels?: Record<string, unknown>; annotations?: Record<string, unknown> }; data?: Record<string, unknown> };
+        setFormLabels(Object.entries(parsedObj?.metadata?.labels || {}).map(([k, v]) => ({ key: k, value: String(v) })));
+        setFormAnnotations(Object.entries(parsedObj?.metadata?.annotations || {}).map(([k, v]) => ({ key: k, value: String(v) })));
+        setFormData(Object.entries(parsedObj?.data || {}).map(([k, v]) => ({ key: k, value: String(v) })));
+      } catch {
+        // intentional: parse error handled by YAML validator
+      }
     }
     setEditMode(mode as 'form' | 'yaml');
   };

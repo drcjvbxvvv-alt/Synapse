@@ -8,7 +8,6 @@ import {
   Card,
   Drawer,
   Input,
-  Modal,
   Select,
   Space,
   Table,
@@ -85,6 +84,7 @@ const CRDResources: React.FC = () => {
 
   useEffect(() => {
     fetchItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId, group, version, plural, namespace]);
 
   const handleView = async (record: CRDResourceItem) => {

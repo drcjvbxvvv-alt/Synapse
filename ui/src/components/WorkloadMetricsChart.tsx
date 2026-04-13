@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Statistic, Segmented, Button, Alert, Spin } from 'antd';
 import { Line } from '@ant-design/plots';
 import { ReloadOutlined } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
 import EmptyState from './EmptyState';
 import api from '../utils/api';
 
@@ -69,7 +68,6 @@ const lineConfig = (data: ReturnType<typeof buildChartData>, color: string, yFor
 });
 
 const WorkloadMetricsChart: React.FC<Props> = ({ clusterId, namespace, name, workloadKind }) => {
-  const { t } = useTranslation(['common']);
   const [metrics, setMetrics] = useState<WorkloadMetricsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [range, setRange] = useState('1h');

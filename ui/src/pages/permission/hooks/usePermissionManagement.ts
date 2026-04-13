@@ -97,7 +97,7 @@ export function usePermissionManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message, t]);
 
   useEffect(() => {
     loadData();

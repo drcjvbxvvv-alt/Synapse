@@ -76,7 +76,7 @@ const { id: clusterId } = useParams<{ id: string }>();
         console.error('貼上失敗:', err);
         message.error(t('messages.pasteFailed'));
       });
-  }, []);
+  }, [t]);
 
   // 顯示歡迎資訊
   const showWelcomeMessage = useCallback(() => {
@@ -198,7 +198,7 @@ const { id: clusterId } = useParams<{ id: string }>();
         terminal.current = null;
       }
     };
-  }, [showWelcomeMessage, handleTerminalInput, pasteFromClipboard]);
+  }, [showWelcomeMessage, handleTerminalInput, pasteFromClipboard, t]);
 
   // 處理 WebSocket 訊息
   interface WebSocketMessage {

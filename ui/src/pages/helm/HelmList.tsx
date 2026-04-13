@@ -102,7 +102,7 @@ const HelmList: React.FC = () => {
       const resp = await helmService.listReleases(clusterId, namespace || undefined);
       const items = Array.isArray(resp) ? resp : (resp as { items: HelmRelease[] }).items ?? [];
       setReleases(items);
-    } catch (err) {
+    } catch (_err) {
       message.error(t('fetchError', 'Failed to fetch releases'));
     } finally {
       setLoading(false);

@@ -109,7 +109,7 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
     setSearch(searchInput);
   };
 
-  const handleViewYAML = async (policy: NetworkPolicyInfo) => {
+  const _handleViewYAML = async (policy: NetworkPolicyInfo) => {
     try {
       const res = await NetworkPolicyService.getYAML(clusterId, policy.namespace, policy.name);
       setYamlContent(res.yaml);

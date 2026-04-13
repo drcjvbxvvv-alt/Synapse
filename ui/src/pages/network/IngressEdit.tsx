@@ -74,20 +74,29 @@ const [loading, setLoading] = useState(true);
 
   const parseYamlToForm = (yamlStr: string) => {
     try {
-      const parsed = YAML.parse(yamlStr) as any;
-      setFormIngressClass(parsed?.spec?.ingressClassName || '');
-      setFormLabels(Object.entries(parsed?.metadata?.labels || {}).map(([k, v]) => ({key: k, value: String(v)})));
-      setFormAnnotations(Object.entries(parsed?.metadata?.annotations || {}).map(([k, v]) => ({key: k, value: String(v)})));
-      setFormRules((parsed?.spec?.rules || []).map((r: any) => ({
-        host: r.host || '',
-        paths: (r.http?.paths || []).map((p: any) => ({
-          path: p.path || '/',
-          pathType: p.pathType || 'Prefix',
-          serviceName: p.backend?.service?.name || '',
-          servicePort: String(p.backend?.service?.port?.number || 80),
-        })),
+      const parsed = YAML.parse(yamlStr) as unknown;
+      const doc = parsed as Record<string, Record<string, unknown>>;
+      const spec = (doc?.spec ?? {}) as Record<string, unknown>;
+      const metadata = (doc?.metadata ?? {}) as Record<string, unknown>;
+      setFormIngressClass((spec?.ingressClassName as string) || '');
+      setFormLabels(Object.entries((metadata?.labels ?? {}) as Record<string, string>).map(([k, v]) => ({key: k, value: String(v)})));
+      setFormAnnotations(Object.entries((metadata?.annotations ?? {}) as Record<string, string>).map(([k, v]) => ({key: k, value: String(v)})));
+      setFormRules(((spec?.rules ?? []) as Record<string, unknown>[]).map((r) => ({
+        host: (r.host as string) || '',
+        paths: ((r.http as Record<string, unknown>)?.paths ?? [] as unknown[]).map((p) => {
+          const path = p as Record<string, unknown>;
+          const backend = (path.backend as Record<string, unknown>)?.service as Record<string, unknown> | undefined;
+          return {
+            path: (path.path as string) || '/',
+            pathType: (path.pathType as string) || 'Prefix',
+            serviceName: (backend?.name as string) || '',
+            servicePort: String((backend?.port as Record<string, unknown>)?.number || 80),
+          };
+        }),
       })));
-    } catch {}
+    } catch {
+      // intentional
+    }
   };
 
   // 載入 Ingress 詳情
@@ -107,7 +116,7 @@ const [loading, setLoading] = useState(true);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, name, navigate]);
+  }, [clusterId, namespace, name, navigate, t]);
 
   useEffect(() => {
     loadIngress();
@@ -126,9 +135,12 @@ const [loading, setLoading] = useState(true);
     }));
     let existingMeta = {name: ingressName, namespace: namespace || ''};
     try {
-      const parsed = YAML.parse(originalYaml) as any;
-      existingMeta = {name: parsed?.metadata?.name || ingressName, namespace: parsed?.metadata?.namespace || namespace || ''};
-    } catch {}
+      const parsed = YAML.parse(originalYaml) as unknown;
+      const p = parsed as Record<string, Record<string, string>>;
+      existingMeta = {name: p?.metadata?.name || ingressName, namespace: p?.metadata?.namespace || namespace || ''};
+    } catch {
+      // intentional
+    }
     const obj = {
       apiVersion: 'networking.k8s.io/v1', kind: 'Ingress',
       metadata: { ...existingMeta, labels: labelsObj, annotations: annotationsObj },

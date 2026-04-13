@@ -64,7 +64,7 @@ const ArgoCDConfigForm: React.FC<ArgoCDConfigFormProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [clusterId, form]);
+  }, [clusterId, form, t]);
 
   useEffect(() => {
     loadConfig();

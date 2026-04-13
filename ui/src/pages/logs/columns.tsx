@@ -1,4 +1,4 @@
-import { Tag, Space, Tooltip, Typography, Popover, Button } from 'antd';
+import { Tag, Space, Typography, Popover, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { TFunction } from 'i18next';
@@ -9,6 +9,7 @@ import { CopyOutlined } from '@ant-design/icons';
 const { Text } = Typography;
 
 // 長文本懸停卡片
+// eslint-disable-next-line react-refresh/only-export-components
 const TextPopover: React.FC<{ content: string; t: TFunction }> = ({ content, t }) => (
   <Popover
     content={

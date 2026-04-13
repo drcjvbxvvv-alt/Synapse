@@ -92,7 +92,7 @@ const YAMLEditor: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [clusterId, workloadRef, workloadType]);
+  }, [clusterId, workloadRef, workloadType, t]);
 
   // 應用YAML
   const handleApply = async (isDryRun = false) => {
@@ -361,7 +361,7 @@ spec: {}
       setOriginalYaml(defaultYAML);
       setError(null);
     }
-  }, [clusterId, workloadRef, workloadType, loadWorkloadYAML, generateDefaultYAML]);
+  }, [clusterId, workloadRef, workloadType, loadWorkloadYAML, generateDefaultYAML, t]);
 
   // 頁面離開前提醒
   useEffect(() => {

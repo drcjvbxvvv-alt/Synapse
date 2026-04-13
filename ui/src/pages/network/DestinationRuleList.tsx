@@ -68,7 +68,7 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, message]);
+  }, [clusterId, namespace, message, t]);
 
   useEffect(() => {
     fetchList();

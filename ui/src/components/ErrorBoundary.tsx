@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { Button, Space, Typography } from 'antd';
-import { WarningOutlined, ReloadOutlined, HomeOutlined } from '@ant-design/icons';
+import { Button, Typography } from 'antd';
+import { WarningOutlined, ReloadOutlined } from '@ant-design/icons';
 import ErrorPage from './ErrorPage';
 
 const { Text } = Typography;

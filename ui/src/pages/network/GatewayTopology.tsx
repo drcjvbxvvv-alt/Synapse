@@ -16,7 +16,6 @@ import {
   type NodeProps,
   Position,
   Handle,
-  type NodeMouseHandler,
 } from '@xyflow/react';
 import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';

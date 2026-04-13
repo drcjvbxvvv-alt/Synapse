@@ -21,7 +21,6 @@ import {
   Statistic,
   Typography,
   Divider,
-  Empty,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
@@ -38,6 +37,9 @@ import {
   listResourceQuotas, createResourceQuota, updateResourceQuota, deleteResourceQuota,
   listLimitRanges, createLimitRange, deleteLimitRange,
   type NamespaceDetailData,
+  type ResourceQuotaItem,
+  type LimitRangeItem,
+  type LimitEntry,
 } from '../../services/namespaceService';
 import { useTranslation } from 'react-i18next';
 const { Title, Text } = Typography;
@@ -51,13 +53,13 @@ const NamespaceDetail: React.FC = () => {
   const { t } = useTranslation(["namespace", "common"]);
 
   // Quota state
-  const [quotas, setQuotas] = useState<any[]>([]);
+  const [quotas, setQuotas] = useState<ResourceQuotaItem[]>([]);
   const [quotaModal, setQuotaModal] = useState(false);
-  const [editingQuota, setEditingQuota] = useState<any | null>(null);
+  const [editingQuota, setEditingQuota] = useState<ResourceQuotaItem | null>(null);
   const [quotaForm] = Form.useForm();
 
   // LimitRange state
-  const [limitRanges, setLimitRanges] = useState<any[]>([]);
+  const [limitRanges, setLimitRanges] = useState<LimitRangeItem[]>([]);
   const [lrModal, setLrModal] = useState(false);
   const [lrForm] = Form.useForm();
 
@@ -99,13 +101,13 @@ const NamespaceDetail: React.FC = () => {
 
   // ResourceQuota handlers
   const openCreateQuota = () => { setEditingQuota(null); quotaForm.resetFields(); setQuotaModal(true); };
-  const openEditQuota = (q: any) => {
+  const openEditQuota = (q: ResourceQuotaItem) => {
     setEditingQuota(q);
     quotaForm.setFieldsValue({
       name: q.name,
-      cpu: q.hard?.['limits.cpu'] || q.hard?.cpu || '',
-      memory: q.hard?.['limits.memory'] || q.hard?.memory || '',
-      pods: q.hard?.pods || '',
+      cpu: q.hard?.['limits.cpu'] ?? q.hard?.cpu ?? '',
+      memory: q.hard?.['limits.memory'] ?? q.hard?.memory ?? '',
+      pods: q.hard?.pods ?? '',
     });
     setQuotaModal(true);
   };
@@ -311,12 +313,12 @@ const NamespaceDetail: React.FC = () => {
             pagination={false}
             columns={[
               { title: '名稱', dataIndex: 'name', key: 'name' },
-              { title: 'CPU (Hard)', dataIndex: 'hard', key: 'cpu', render: (h: any) => h?.['limits.cpu'] || h?.cpu || '-' },
-              { title: 'Memory (Hard)', dataIndex: 'hard', key: 'mem', render: (h: any) => h?.['limits.memory'] || h?.memory || '-' },
-              { title: 'Pods', dataIndex: 'hard', key: 'pods', render: (h: any) => h?.pods || '-' },
+              { title: 'CPU (Hard)', dataIndex: 'hard', key: 'cpu', render: (h: Record<string, string> | undefined) => h?.['limits.cpu'] || h?.cpu || '-' },
+              { title: 'Memory (Hard)', dataIndex: 'hard', key: 'mem', render: (h: Record<string, string> | undefined) => h?.['limits.memory'] || h?.memory || '-' },
+              { title: 'Pods', dataIndex: 'hard', key: 'pods', render: (h: Record<string, string> | undefined) => h?.pods || '-' },
               {
                 title: '操作', key: 'action', width: 120,
-                render: (_: any, record: any) => (
+                render: (_: unknown, record: ResourceQuotaItem) => (
                   <Space>
                     <Button size="small" icon={<EditOutlined />} onClick={() => openEditQuota(record)} />
                     <Popconfirm title="確定刪除？" onConfirm={() => handleDeleteQuota(record.name)} okText="刪除" okButtonProps={{ danger: true }} cancelText="取消">
@@ -342,12 +344,12 @@ const NamespaceDetail: React.FC = () => {
             pagination={false}
             columns={[
               { title: '名稱', dataIndex: 'name', key: 'name' },
-              { title: '型別', dataIndex: 'limits', key: 'type', render: (l: any[]) => l?.map(i => i.type).join(', ') || '-' },
-              { title: 'CPU Max', dataIndex: 'limits', key: 'cpumax', render: (l: any[]) => l?.[0]?.max?.cpu || '-' },
-              { title: 'Memory Max', dataIndex: 'limits', key: 'memmax', render: (l: any[]) => l?.[0]?.max?.memory || '-' },
+              { title: '型別', dataIndex: 'limits', key: 'type', render: (l: LimitEntry[] | undefined) => l?.map(i => i.type).join(', ') || '-' },
+              { title: 'CPU Max', dataIndex: 'limits', key: 'cpumax', render: (l: LimitEntry[] | undefined) => l?.[0]?.max?.cpu || '-' },
+              { title: 'Memory Max', dataIndex: 'limits', key: 'memmax', render: (l: LimitEntry[] | undefined) => l?.[0]?.max?.memory || '-' },
               {
                 title: '操作', key: 'action', width: 80,
-                render: (_: any, record: any) => (
+                render: (_: unknown, record: LimitRangeItem) => (
                   <Popconfirm title="確定刪除？" onConfirm={() => handleDeleteLR(record.name)} okText="刪除" okButtonProps={{ danger: true }} cancelText="取消">
                     <Button size="small" danger icon={<DeleteOutlined />} />
                   </Popconfirm>

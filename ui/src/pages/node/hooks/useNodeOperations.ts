@@ -96,7 +96,7 @@ export function useNodeOperations({
       }));
       setNodeOperationStatus(initialStatus);
     }
-  }, [selectedNodes]);
+  }, [selectedNodes, t]);
 
   const handleOperationTypeChange = (value: 'cordon' | 'uncordon' | 'drain') => {
     setOperationType(value);

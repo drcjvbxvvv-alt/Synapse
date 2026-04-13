@@ -17,7 +17,6 @@ import {
   Progress,
   Popconfirm,
   Drawer,
-  Timeline,
   Tooltip,
   App,
   theme,
@@ -31,7 +30,6 @@ import {
   DeleteOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  WarningOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
 import {

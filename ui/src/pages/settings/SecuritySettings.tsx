@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Form,
@@ -34,7 +34,7 @@ import { securitySettingService } from '../../services/securitySettingService';
 import type { SecurityConfig, APIToken, CreateAPITokenResponse } from '../../types';
 import SIEMConfigPage from './SIEMConfig';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 const SCOPES = ['read', 'write', 'admin'];
 
@@ -64,17 +64,17 @@ const SecuritySettings: React.FC = () => {
       .finally(() => setSecLoading(false));
   }, [secForm, message, t]);
 
-  useEffect(() => {
-    loadTokens();
-  }, []);
-
-  const loadTokens = () => {
+  const loadTokens = useCallback(() => {
     setTokensLoading(true);
     securitySettingService.listAPITokens()
       .then(setTokens)
       .catch(() => message.error(t('settings:security.loadTokensFailed')))
       .finally(() => setTokensLoading(false));
-  };
+  }, [t, message]);
+
+  useEffect(() => {
+    loadTokens();
+  }, [loadTokens]);
 
   // ── Security Config Handlers ───────────────────────────────────────────────
   const handleSecSave = async () => {

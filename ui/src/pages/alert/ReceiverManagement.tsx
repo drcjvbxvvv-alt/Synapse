@@ -10,7 +10,6 @@ import {
   Popconfirm,
   Tag,
   Tooltip,
-  message,
   Tabs,
   Switch,
   InputNumber,
@@ -68,7 +67,7 @@ function getReceiverTypes(r: ReceiverConfig): ReceiverType[] {
 }
 
 const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) => {
-  const { message: msg, modal } = App.useApp();
+  const { message: msg, modal: _modal } = App.useApp();
   const { canWrite } = usePermission();
   const [loading, setLoading] = useState(false);
   const [receivers, setReceivers] = useState<ReceiverConfig[]>([]);
@@ -160,7 +159,7 @@ const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) =>
       await alertService.deleteReceiver(clusterId, name);
       msg.success(`已刪除 Receiver: ${name}`);
       loadReceivers();
-    } catch (err) {
+    } catch (_err) {
       msg.error('刪除失敗');
     }
   };
@@ -170,7 +169,7 @@ const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) =>
       setTestingName(name);
       await alertService.testReceiver(clusterId, name);
       msg.success(`測試告警已傳送至 ${name}`);
-    } catch (err) {
+    } catch (_err) {
       msg.error('測試失敗，請確認 Receiver 設定');
     } finally {
       setTestingName(null);

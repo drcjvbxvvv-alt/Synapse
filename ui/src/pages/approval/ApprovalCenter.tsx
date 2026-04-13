@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   App, Badge, Button, Card, Form, Input, Modal, Popconfirm,
-  Select, Space, Table, Tag, Tooltip, Typography,
+  Select, Space, Table, Tooltip, Typography,
 } from 'antd';
 import {
   CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined,
@@ -113,7 +113,7 @@ const ApprovalCenter: React.FC = () => {
       width: 100,
       render: (status: string) => {
         const cfg = STATUS_CONFIG[status] ?? { color: 'default', label: status };
-        return <Badge status={cfg.color as any} text={cfg.label} />;
+        return <Badge status={cfg.color as 'success' | 'processing' | 'error' | 'warning' | 'default'} text={cfg.label} />;
       },
     },
     {

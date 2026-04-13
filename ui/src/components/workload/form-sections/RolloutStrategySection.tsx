@@ -24,7 +24,7 @@ const { Panel } = Collapse;
 const { Text } = Typography;
 
 // Canary strategy configuration sub-component
-const CanaryConfig: React.FC<FormSectionProps> = ({ form, t }) => (
+const CanaryConfig: React.FC<FormSectionProps> = ({ form: _form, t }) => (
   <>
     <Divider orientation="left">{t('workloadForm.canaryConfig')}</Divider>
 

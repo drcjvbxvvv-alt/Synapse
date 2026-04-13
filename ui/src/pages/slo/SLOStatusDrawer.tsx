@@ -36,10 +36,6 @@ interface Props {
   onClose: () => void;
 }
 
-function fmt(v: number | null | undefined, digits = 4): string {
-  if (v == null || isNaN(v)) return '—';
-  return v.toFixed(digits);
-}
 
 const BurnRateCell: React.FC<{ label: string; value: number | null; warning: number; critical: number }> = ({
   label, value, warning, critical,

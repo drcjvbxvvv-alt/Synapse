@@ -21,17 +21,11 @@ const { t } = useTranslation(['workload']);
   const activeTab = searchParams.get('tab') || 'deployment';
 
   // 統計資訊狀態（保留用於回撥，但不顯示）
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_deploymentCount, setDeploymentCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_rolloutCount, setRolloutCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_statefulSetCount, setStatefulSetCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_daemonSetCount, setDaemonSetCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_jobCount, setJobCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_cronJobCount, setCronJobCount] = useState(0);
 
   // Tab切換處理

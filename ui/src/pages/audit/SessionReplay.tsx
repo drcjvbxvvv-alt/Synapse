@@ -1,9 +1,9 @@
 import EmptyState from '@/components/EmptyState';
 import React, { useState, useEffect } from 'react';
 import {
-  Badge, Button, Card, Descriptions, Space, Steps, Tag, Timeline, Typography,
+  Badge, Button, Card, Descriptions, Space, Tag, Typography,
 } from 'antd';
-import { CodeOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { PlayCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const { Text } = Typography;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Button,
   Form,
@@ -33,7 +33,7 @@ const NotificationSettings: React.FC = () => {
   const [testing, setTesting] = useState<number | null>(null);
   const [form] = Form.useForm();
 
-  const fetchChannels = async () => {
+  const fetchChannels = useCallback(async () => {
     setLoading(true);
     try {
       const data = await notifyChannelService.list();
@@ -43,11 +43,11 @@ const NotificationSettings: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchChannels();
-  }, []);
+  }, [fetchChannels]);
 
   const openCreate = () => {
     setEditingChannel(null);

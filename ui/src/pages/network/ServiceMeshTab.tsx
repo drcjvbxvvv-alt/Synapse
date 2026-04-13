@@ -44,7 +44,7 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
   const { canWrite } = usePermission();
   const [items, setItems] = useState<VirtualServiceSummary[]>([]);
   const [loading, setLoading] = useState(false);
-  const [namespace, setNamespace] = useState('');
+  const [namespace] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [yamlOpen, setYamlOpen] = useState(false);
   const [yamlContent, setYamlContent] = useState('');

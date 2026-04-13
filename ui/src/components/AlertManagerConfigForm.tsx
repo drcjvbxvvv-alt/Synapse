@@ -69,7 +69,7 @@ const AlertManagerConfigForm: React.FC<AlertManagerConfigFormProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [clusterId, form]);
+  }, [clusterId, form, t]);
 
   const loadStatus = useCallback(async () => {
     if (!enabled) return;

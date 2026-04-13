@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Typography, Steps, Button, App } from 'antd';
+import { Card, Typography, Steps, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { Node } from '../../types';
 import { useNodeOperations } from './hooks/useNodeOperations';

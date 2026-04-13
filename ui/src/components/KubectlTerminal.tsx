@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Card, Button, Space, message, Alert } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Terminal } from 'xterm';
@@ -148,15 +148,15 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
   }, []);
 
   // 顯示歡迎資訊
-  const showWelcomeMessage = () => {
+  const showWelcomeMessage = useCallback(() => {
     if (!terminal.current) return;
-    
+
     terminal.current.clear();
     terminal.current.writeln(t('kubectlTerminal.welcomeLine1'));
     terminal.current.writeln(t('kubectlTerminal.welcomeLine2'));
     terminal.current.writeln(t('kubectlTerminal.welcomeLine3'));
     terminal.current.writeln('');
-  };
+  }, [t]);
 
   // 連線到後端 WebSocket
   const connectWebSocket = () => {
@@ -392,7 +392,7 @@ const KubectlTerminal: React.FC<KubectlTerminalProps> = ({
 
   useEffect(() => {
     showWelcomeMessage();
-  }, []);
+  }, [showWelcomeMessage]);
 
   // 貼上剪貼簿內容
   const pasteFromClipboard = () => {

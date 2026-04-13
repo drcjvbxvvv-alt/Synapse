@@ -4,7 +4,6 @@ import {
   Table,
   Button,
   Space,
-  Modal,
   App,
 } from 'antd';
 import EmptyState from '@/components/EmptyState';
@@ -139,7 +138,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     } finally {
       setLoading(false);
     }
-  }, [clusterId, message]);
+  }, [clusterId, message, t]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -185,7 +184,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
 
   // --- 操作回撥 ---
 
-  const handleViewYAML = async (service: Service) => {
+  const handleViewYAML = useCallback(async (service: Service) => {
     setYamlModalVisible(true);
     setYamlLoading(true);
     try {
@@ -197,9 +196,9 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     } finally {
       setYamlLoading(false);
     }
-  };
+  }, [clusterId, message, t]);
 
-  const handleViewEndpoints = async (service: Service) => {
+  const handleViewEndpoints = useCallback(async (service: Service) => {
     setEndpointsModalVisible(true);
     setEndpointsLoading(true);
     try {
@@ -211,9 +210,9 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     } finally {
       setEndpointsLoading(false);
     }
-  };
+  }, [clusterId, message, t]);
 
-  const handleDelete = async (service: Service) => {
+  const handleDelete = useCallback(async (service: Service) => {
     try {
       await ServiceService.deleteService(clusterId, service.namespace, service.name);
       message.success(t('common:messages.deleteSuccess'));
@@ -222,7 +221,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       console.error('Failed to delete:', error);
       message.error(t('common:messages.deleteError'));
     }
-  };
+  }, [clusterId, message, t, loadServices]);
 
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
@@ -305,9 +304,9 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     }
   };
 
-  const handleEdit = (service: Service) => {
+  const handleEdit = useCallback((service: Service) => {
     navigate(`/clusters/${clusterId}/network/service/${service.namespace}/${service.name}/edit`);
-  };
+  }, [clusterId, navigate]);
 
   const handleColumnSettingsSave = () => {
     setColumnSettingsVisible(false);
@@ -325,7 +324,7 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     t,
     canDelete: canWrite(),
     showActions: canWrite(),
-  }), [sortField, sortOrder, clusterId, t, canWrite]);
+  }), [sortField, sortOrder, t, canWrite, handleDelete, handleEdit, handleViewEndpoints, handleViewYAML]);
 
   const columns = allColumns.filter(col => {
     if (col.key === 'actions' || col.key === 'name') return true;

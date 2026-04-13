@@ -201,7 +201,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
     };
     
     loadWorkload();
-  }, [isEdit, clusterId, editNamespace, editName, workloadType, messageApi, form]);
+  }, [isEdit, clusterId, editNamespace, editName, workloadType, messageApi, form, t]);
 
   // 表單轉YAML
   const formToYaml = useCallback((): string => {
@@ -264,7 +264,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       messageApi.error(t('messages.yamlFormatError') + ': ' + (err instanceof Error ? err.message : ''));
       return false;
     }
-  }, [yamlContent, form, messageApi]);
+  }, [yamlContent, form, messageApi, t]);
 
   // 切換編輯模式
   const handleModeChange = (newMode: string) => {
@@ -341,7 +341,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       navigate(`/clusters/${clusterId}/workloads`);
     } catch (error: unknown) {
       console.error('提交失敗:', error);
-      if (!axios.isAxiosError(error) || !(error as any)._permissionHandled) {
+      if (!axios.isAxiosError(error) || !(error as unknown as Record<string, unknown>)._permissionHandled) {
         messageApi.error(error instanceof Error ? error.message : t('messages.operationFailed'));
       }
     } finally {

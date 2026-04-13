@@ -120,7 +120,7 @@ const [allPVs, setAllPVs] = useState<PV[]>([]);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, message]);
+  }, [clusterId, message, t]);
 
   // 當搜尋條件改變時重置到第一頁
   useEffect(() => {

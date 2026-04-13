@@ -22,11 +22,8 @@ const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'pvc';
 
   // 統計資訊狀態（保留用於回撥，但不顯示）
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_pvcCount, setPVCCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_pvCount, setPVCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_scCount, setSCCount] = useState(0);
 
   // Tab切換處理

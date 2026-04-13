@@ -40,7 +40,7 @@ const triggerColor = (type: string) => TRIGGER_COLORS[type.toLowerCase()] ?? 'de
 interface PanelProps { clusterId: string }
 
 // ─── HPA Tab ────────────────────────────────────────────────────────────────
-const HPATab: React.FC<PanelProps> = ({ clusterId }) => {
+const HPATab: React.FC<PanelProps> = ({ clusterId: _clusterId }) => {
   const { t } = useTranslation('workload');
   return (
     <div style={{ display: 'flex', justifyContent: 'center', width: '100%', paddingTop: 48 }}>

@@ -78,7 +78,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
       console.error('獲取Pod詳情失敗:', error);
       message.error(t('pod:logs.fetchPodError'));
     }
-  }, [clusterId, namespace, name, selectedContainer]);
+  }, [clusterId, namespace, name, selectedContainer, t]);
 
   // 獲取日誌
   const fetchLogs = useCallback(async (isFollow = false) => {
@@ -114,7 +114,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, name, selectedContainer, previous, tailLines, sinceSeconds]);
+  }, [clusterId, namespace, name, selectedContainer, previous, tailLines, sinceSeconds, t]);
 
   // 建立 WebSocket 連線（支援重連呼叫）
   const connectWebSocket = useCallback(() => {

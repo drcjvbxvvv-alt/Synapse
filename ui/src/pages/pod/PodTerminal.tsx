@@ -69,7 +69,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     terminal.current.writeln('');
     terminal.current.writeln(`\x1b[33m${t('terminal.welcomeSelectContainer')}\x1b[0m`);
     terminal.current.writeln('');
-  }, [namespace, name, clusterId]);
+  }, [namespace, name, clusterId, t]);
 
   // 處理終端輸入
   const handleTerminalInput = useCallback((data: string) => {
@@ -104,7 +104,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, name, selectedContainer]);
+  }, [clusterId, namespace, name, selectedContainer, t]);
 
   // 初始化終端 - 只在 pod 載入完成後初始化
   useEffect(() => {
@@ -204,7 +204,7 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         terminal.current = null;
       }
     };
-  }, [pod, showWelcomeMessage, handleTerminalInput]);
+  }, [pod, showWelcomeMessage, handleTerminalInput, t]);
 
   // 連線終端
   const connectTerminal = () => {

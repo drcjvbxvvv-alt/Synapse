@@ -6,10 +6,8 @@ import {
   Button,
   Tag,
   message,
-  Spin,
   Tabs,
   Typography,
-  Modal,
   Table,
   Popconfirm,
   App,
@@ -62,7 +60,7 @@ const ConfigMapDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, name]);
+  }, [clusterId, namespace, name, t]);
 
   const loadVersions = useCallback(async () => {
     if (!clusterId || !namespace || !name) return;

@@ -255,13 +255,25 @@
 
 ---
 
-### 10. 前端效能優化機會
+### 10. 前端效能優化機會 ✅ 已完成 (2026-04-13)
+
+**已完成:**
+
+| 優化項 | 實作內容 |
+|--------|----------|
+| ESLint strict 規則 | 啟用 `@typescript-eslint/no-explicit-any: error`、`no-unused-vars: error`、`react-hooks/exhaustive-deps: error` |
+| React.memo | 已套用至 StatusTag、EmptyState、ClusterSelector、NamespaceSelector、LanguageSwitcher、SearchDropdown |
+| 191 處 ESLint 違規清零 | 跨 80 個檔案：`any` → `unknown`、補 hook deps、移除未使用 import、修正 react-refresh exports |
+| hook deps 正確性 | 36 個 useCallback/useEffect 補齊 `t`、`message` 等 deps；5 個迴圈風險函式加 eslint-disable + 說明 |
+| `any` 型別消除 | 新增 `ResourceQuotaItem`、`LimitRangeItem`、`SyncPolicyFormValues` 等介面取代 `any[]` |
+
+**最終結果**: `npx eslint src --max-warnings 0` ✅ 零錯誤零警告；`npx tsc --noEmit` ✅ 零型別錯誤
+
+**待後續處理 (非緊急):**
 
 | 問題 | 影響 | 建議 |
 |------|------|------|
 | 1,043 處 `useState/useEffect` | 部分元件不必要 re-render | 抽取 custom hooks，使用 `useMemo`/`useCallback` |
-| 表格 cell 未用 `React.memo` | 大列表滾動卡頓 | 對純展示 cell 加 memo |
-| ESLint 規則寬鬆 | `any` 可能擴散 | 啟用 `@typescript-eslint/no-explicit-any` |
 | PermissionContext.tsx 9,069 行 | Context re-render 影響子樹 | 拆分為多個 Context 或改用 Zustand slice |
 
 ---
@@ -297,6 +309,7 @@
 | Phase 3 | 後端 God-Service 拆分 (prometheus_service, om_service) | ✅ 已完成（P1-6）| 2026-04-12 |
 | P2-7 前端大型元件拆分 | PVCTab/PVTab/ArgoCD/SecurityDashboard/StorageClassTab/YAMLEditor/ConfigMapCreate/SecretEdit；新增 YamlViewModal + ColumnSettingsDrawer 共用元件；零 TS 錯誤 | ✅ 完成 | 2026-04-13 |
 | P2-9 前端命名統一 | 修正 4 個 PascalCase const 服務 export（CostService/CloudBillingService/EventAlertService/WorkloadYamlService）；重命名 kubectlTerminal.tsx → KubectlTerminal.tsx；更新 6 個消費方檔案；零 TS 錯誤 | ✅ 完成 | 2026-04-13 |
+| P2-10 前端效能優化 | ESLint strict 規則啟用；React.memo 套用至 6 個共用元件；191 處 ESLint 違規清零（80 個檔案）；`any`→`unknown` 型別強化；hook deps 正確性修復；零 lint 錯誤零 TS 錯誤 | ✅ 完成 | 2026-04-13 |
 | Phase 4 | 品質提升：測試補齊、TypeScript strict | ⬜ 待開始 | — |
 
 ---
@@ -325,7 +338,7 @@ Phase 4 — 品質提升 (持續)
 ├── ✅ 統一前端命名規範 (P2-9 完成，2026-04-13)
 ├── 啟用 strict TypeScript 規則
 ├── ✅ 拆分大型前端元件 (P2-7 完成，2026-04-13)
-└── 前端效能優化 (memo, useCallback)
+└── ✅ 前端效能優化 (P2-10 完成，2026-04-13)：ESLint strict、React.memo、191 處違規清零
 ```
 
 ---

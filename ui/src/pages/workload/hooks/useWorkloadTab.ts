@@ -264,7 +264,7 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
       console.error('匯出失敗:', error);
       message.error(t('messages.exportError'));
     }
-  }, [allWorkloads, selectedRowKeys, workloadType, message, t]);
+  }, [allWorkloads, selectedRowKeys, workloadType, message, t, filterWorkloads]);
 
   const getFieldLabel = useCallback((field: string): string => {
     const labels: Record<string, string> = {

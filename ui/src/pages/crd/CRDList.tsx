@@ -20,7 +20,7 @@ const CRDList: React.FC = () => {
   const [crds, setCrds] = useState<CRDInfo[]>([]);
   const [search, setSearch] = useState('');
 
-  const fetchCRDs = async () => {
+  const fetchCRDs = useCallback(async () => {
     if (!clusterId) return;
     setLoading(true);
     try {
@@ -31,10 +31,11 @@ const CRDList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, message, t]);
 
   useEffect(() => {
     fetchCRDs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId]);
 
   // 按 API Group 分組

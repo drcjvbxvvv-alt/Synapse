@@ -6,7 +6,6 @@ import {
   Form,
   Input,
   Modal,
-  Progress,
   Row,
   Select,
   Space,
@@ -19,7 +18,7 @@ import {
 import { SwapOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { clusterService } from '../../services/clusterService';
-import { multiclusterService, type MigrateCheckResult } from '../../services/multiclusterService';
+import { multiclusterService, type MigrateCheckResult, type MigrateResult } from '../../services/multiclusterService';
 import { namespaceService } from '../../services/namespaceService';
 import type { Cluster } from '../../types';
 
@@ -68,21 +67,21 @@ const MigrationWizard: React.FC<Props> = ({ open, onClose, onMigrated }) => {
 
   useEffect(() => {
     if (open) {
-      clusterService.getClusters({ pageSize: 100 }).then((res: any) => {
-        setClusters(res?.items ?? res?.data?.items ?? []);
+      clusterService.getClusters({ pageSize: 100 }).then((res) => {
+        setClusters(res?.items ?? []);
       }).catch(() => {});
     }
   }, [open]);
 
   const loadSrcNamespaces = useCallback((cid: string) => {
     namespaceService.getNamespaces(cid)
-      .then((res: any) => setSrcNamespaces((res?.items ?? []).map((n: any) => n.name)))
+      .then((res) => setSrcNamespaces(res.map((n) => n.name)))
       .catch(() => {});
   }, []);
 
   const loadDstNamespaces = useCallback((cid: string) => {
     namespaceService.getNamespaces(cid)
-      .then((res: any) => setDstNamespaces((res?.items ?? []).map((n: any) => n.name)))
+      .then((res) => setDstNamespaces(res.map((n) => n.name)))
       .catch(() => {});
   }, []);
 
@@ -91,8 +90,7 @@ const MigrationWizard: React.FC<Props> = ({ open, onClose, onMigrated }) => {
     try {
       const { WorkloadService } = await import('../../services/workloadService');
       const res = await WorkloadService.getWorkloads(cid, ns, kind.toLowerCase() + 's', 1, 200);
-      const items = (res as any)?.items ?? [];
-      setWorkloads(items.map((w: any) => ({ name: w.name, kind, namespace: w.namespace, replicas: w.replicas })));
+      setWorkloads((res?.items ?? []).map((w) => ({ name: w.name, kind, namespace: w.namespace, replicas: w.replicas })));
     } catch {
       setWorkloads([]);
     }
@@ -113,7 +111,7 @@ const MigrationWizard: React.FC<Props> = ({ open, onClose, onMigrated }) => {
         syncConfigMaps,
         syncSecrets,
       });
-      setCheckResult((res as any)?.data ?? res as any);
+      setCheckResult((res as { data?: MigrateCheckResult })?.data ?? (res as MigrateCheckResult));
     } catch (e) {
       message.error(t('multicluster:migrationWizard.precheck', { error: String(e) }));
     } finally {
@@ -135,7 +133,7 @@ const MigrationWizard: React.FC<Props> = ({ open, onClose, onMigrated }) => {
         syncConfigMaps,
         syncSecrets,
       });
-      const data = (res as any)?.data ?? res as any;
+      const data = (res as { data?: MigrateResult })?.data ?? (res as MigrateResult);
       setMigrateResult({ success: data.success, message: data.message });
       if (data.success) {
         onMigrated?.();

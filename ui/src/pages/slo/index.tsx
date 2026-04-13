@@ -13,7 +13,6 @@ import {
   Flex,
   App,
   theme,
-  Progress,
   Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
@@ -29,23 +28,12 @@ import { useTranslation } from 'react-i18next';
 import { usePermission } from '../../hooks/usePermission';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { sloService, type SLO, type SLOStatus } from '../../services/sloService';
+import { sloService, type SLO } from '../../services/sloService';
 import EmptyState from '../../components/EmptyState';
 import SLOFormModal from './SLOFormModal';
 import SLOStatusDrawer from './SLOStatusDrawer';
 
 const { Text } = Typography;
-
-// ── Status tag helpers ────────────────────────────────────────────────────────
-
-const STATUS_COLOR: Record<string, string> = {
-  ok:       'success',
-  warning:  'warning',
-  critical: 'error',
-  unknown:  'default',
-};
-
-// Status labels will be loaded from i18n
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -56,16 +44,6 @@ const SLOListPage: React.FC = () => {
   const { t } = useTranslation(['slo', 'common']);
   const { canWrite } = usePermission();
   const queryClient = useQueryClient();
-
-  const getStatusLabel = (status: string) => {
-    const statusMap: Record<string, string> = {
-      ok: t('slo:status.ok'),
-      warning: t('slo:status.warning'),
-      critical: t('slo:status.critical'),
-      unknown: t('slo:status.unknown'),
-    };
-    return statusMap[status] || status;
-  };
 
   const cid = Number(clusterId ?? 0);
 

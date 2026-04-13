@@ -133,7 +133,7 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
       onSuccess?.();
     } catch (error: unknown) {
       console.error('Submit failed:', error);
-      if (!axios.isAxiosError(error) || !(error as any)._permissionHandled) {
+      if (!axios.isAxiosError(error) || !(error as unknown as Record<string, unknown>)._permissionHandled) {
         messageApi.error(error instanceof Error ? error.message : t('resourceYAMLEditor.operationFailed'));
       }
     } finally {

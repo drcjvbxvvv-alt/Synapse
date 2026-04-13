@@ -17,7 +17,6 @@ import {
   App,
   Typography,
   Tooltip,
-  Empty,
   Spin,
   Descriptions,
   Badge,
@@ -124,7 +123,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, targetType, status, keyword, dateRange, message]);
+  }, [currentPage, pageSize, targetType, status, keyword, dateRange, message, t]);
 
   // Fetch session detail and commands
   const fetchSessionDetail = useCallback(async (sessionId: number) => {
@@ -143,7 +142,7 @@ const [sessions, setSessions] = useState<TerminalSessionItem[]>([]);
     } finally {
       setCommandsLoading(false);
     }
-  }, [message]);
+  }, [message, t]);
 
   useEffect(() => {
     fetchStats();

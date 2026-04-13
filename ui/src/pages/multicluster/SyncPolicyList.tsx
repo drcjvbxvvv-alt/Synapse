@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { usePermission } from '../../hooks/usePermission';
 import {
   Alert,
@@ -7,7 +7,6 @@ import {
   Drawer,
   Form,
   Input,
-  Modal,
   Select,
   Space,
   Switch,
@@ -30,7 +29,6 @@ import { multiclusterService, type SyncPolicy, type SyncHistory } from '../../se
 import { clusterService } from '../../services/clusterService';
 import { namespaceService } from '../../services/namespaceService';
 import type { Cluster } from '../../types';
-import type { TablePaginationConfig } from 'antd/es/table';
 
 const { Text } = Typography;
 
@@ -44,6 +42,25 @@ const statusColor: Record<string, string> = {
   partial: 'warning',
   failed: 'error',
 };
+
+interface SyncPolicyFormValues {
+  name: string;
+  description?: string;
+  source_cluster_id: number;
+  source_namespace: string;
+  resource_type: string;
+  resource_names: string[];
+  target_clusters: number[];
+  conflict_policy: string;
+  schedule?: string;
+  enabled: boolean;
+}
+
+interface SyncDetailItem {
+  clusterId: number;
+  status: string;
+  message: string;
+}
 
 const SyncPolicyList: React.FC = () => {
   const { t } = useTranslation(['multicluster', 'common']);
@@ -68,32 +85,32 @@ const SyncPolicyList: React.FC = () => {
   const [history, setHistory] = useState<SyncHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  const fetchPolicies = async () => {
+  const fetchPolicies = useCallback(async () => {
     setLoading(true);
     try {
       const res = await multiclusterService.listSyncPolicies();
-      setPolicies((res as any)?.items ?? []);
+      setPolicies((res as { items?: SyncPolicy[] })?.items ?? []);
     } catch {
       message.error(t('multicluster:messages.syncPolicyListError'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [message, t]);
 
   useEffect(() => {
     fetchPolicies();
-    clusterService.getClusters({ pageSize: 100 }).then((res: any) => {
-      setClusters(res?.items ?? res?.data?.items ?? []);
+    clusterService.getClusters({ pageSize: 100 }).then((res) => {
+      setClusters(res?.items ?? []);
     }).catch(() => {});
-  }, []);
+  }, [fetchPolicies]);
 
   const clusterName = (id: number) => clusters.find(c => Number(c.id) === id)?.name ?? String(id);
 
   const loadNamespaces = async (cid: number) => {
     if (!cid) return;
     try {
-      const res = await namespaceService.getNamespaces(String(cid)) as any;
-      setNamespaces((res?.items ?? []).map((n: any) => n.name));
+      const res = await namespaceService.getNamespaces(String(cid));
+      setNamespaces(res.map((n) => n.name));
     } catch { setNamespaces([]); }
   };
 
@@ -102,11 +119,11 @@ const SyncPolicyList: React.FC = () => {
     try {
       const { request } = await import('../../utils/api');
       if (type === 'ConfigMap') {
-        const res = await request.get(`/clusters/${cid}/configmaps?namespace=${ns}&pageSize=200`) as any;
-        setConfigmapNames((res?.items ?? []).map((i: any) => i.name));
+        const res = await request.get(`/clusters/${cid}/configmaps?namespace=${ns}&pageSize=200`) as { items?: { name: string }[] };
+        setConfigmapNames((res?.items ?? []).map((i) => i.name));
       } else if (type === 'Secret') {
-        const res = await request.get(`/clusters/${cid}/secrets?namespace=${ns}&pageSize=200`) as any;
-        setSecretNames((res?.items ?? []).map((i: any) => i.name));
+        const res = await request.get(`/clusters/${cid}/secrets?namespace=${ns}&pageSize=200`) as { items?: { name: string }[] };
+        setSecretNames((res?.items ?? []).map((i) => i.name));
       }
     } catch { setConfigmapNames([]); setSecretNames([]); }
   };
@@ -128,7 +145,7 @@ const SyncPolicyList: React.FC = () => {
   };
 
   const handleSave = async () => {
-    let values: any;
+    let values: SyncPolicyFormValues;
     try { values = await form.validateFields(); } catch { return; }
     setSaving(true);
     try {
@@ -178,7 +195,7 @@ const SyncPolicyList: React.FC = () => {
     setHistoryOpen(true);
     setHistoryLoading(true);
     try {
-      const res = await multiclusterService.getSyncHistory(policy.id!) as any;
+      const res = await multiclusterService.getSyncHistory(policy.id!) as { items?: SyncHistory[] };
       setHistory(res?.items ?? []);
     } catch {
       message.error(t('multicluster:messages.historyLoadError'));
@@ -202,7 +219,7 @@ const SyncPolicyList: React.FC = () => {
     {
       title: t('multicluster:syncPolicy.table.source'),
       key: 'source',
-      render: (_: any, r: SyncPolicy) => (
+      render: (_: unknown, r: SyncPolicy) => (
         <Space size={4} wrap>
           <Tag color="blue">{clusterName(r.source_cluster_id)}</Tag>
           <Tag>{r.source_namespace}</Tag>
@@ -234,7 +251,7 @@ const SyncPolicyList: React.FC = () => {
     {
       title: t('multicluster:syncPolicy.table.status'),
       key: 'status',
-      render: (_: any, r: SyncPolicy) => (
+      render: (_: unknown, r: SyncPolicy) => (
         <Space>
           <Switch
             checked={r.enabled}
@@ -245,7 +262,7 @@ const SyncPolicyList: React.FC = () => {
             }}
           />
           {r.last_sync_status && (
-            <Badge status={statusColor[r.last_sync_status] as any} text={r.last_sync_status} />
+            <Badge status={statusColor[r.last_sync_status] as "success" | "warning" | "error" | "default" | "processing"} text={r.last_sync_status} />
           )}
         </Space>
       ),
@@ -260,7 +277,7 @@ const SyncPolicyList: React.FC = () => {
       key: 'actions',
       fixed: 'right' as const,
       width: 160,
-      render: (_: any, r: SyncPolicy) => (
+      render: (_: unknown, r: SyncPolicy) => (
         <Space>
           <Tooltip title={t('multicluster:syncPolicy.buttons.immediateSync')}>
             <Button size="small" icon={<PlayCircleOutlined />} onClick={() => handleTrigger(r)} />
@@ -281,13 +298,13 @@ const SyncPolicyList: React.FC = () => {
 
   const historyColumns = [
     { title: t('multicluster:syncPolicy.historyTable.triggeredBy'), dataIndex: 'triggered_by', key: 'triggered_by', render: (v: string) => <Tag>{v}</Tag> },
-    { title: t('multicluster:syncPolicy.historyTable.status'), dataIndex: 'status', key: 'status', render: (v: string) => <Badge status={statusColor[v] as any} text={v} /> },
+    { title: t('multicluster:syncPolicy.historyTable.status'), dataIndex: 'status', key: 'status', render: (v: string) => <Badge status={statusColor[v] as "success" | "warning" | "error" | "default" | "processing"} text={v} /> },
     { title: t('multicluster:syncPolicy.historyTable.message'), dataIndex: 'message', key: 'message', ellipsis: true },
     { title: t('multicluster:syncPolicy.historyTable.startedAt'), dataIndex: 'started_at', key: 'started_at', render: (v: string) => new Date(v).toLocaleString() },
     {
       title: t('multicluster:syncPolicy.historyTable.duration'),
       key: 'duration',
-      render: (_: any, r: SyncHistory) => {
+      render: (_: unknown, r: SyncHistory) => {
         if (!r.finished_at) return '—';
         const ms = new Date(r.finished_at).getTime() - new Date(r.started_at).getTime();
         return `${(ms / 1000).toFixed(1)}s`;
@@ -416,7 +433,7 @@ const SyncPolicyList: React.FC = () => {
                 const details = JSON.parse(r.details);
                 return (
                   <Space direction="vertical" style={{ width: '100%' }}>
-                    {details.map((d: any, i: number) => (
+                    {(details as SyncDetailItem[]).map((d, i) => (
                       <Alert
                         key={i}
                         type={d.status === 'success' ? 'success' : 'error'}

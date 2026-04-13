@@ -53,6 +53,7 @@ const [searchParams, setSearchParams] = useSearchParams();
       setQuery(urlQuery);
       performSearch(urlQuery);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
 

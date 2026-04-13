@@ -29,7 +29,6 @@ import {
   CopyOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import type { TablePaginationConfig } from 'antd/es/table';
 import { eventAlertService, type EventAlertRule, type EventAlertHistory } from '../../services/eventAlertService';
 import { usePermission } from '../../hooks/usePermission';
 
@@ -117,8 +116,8 @@ const EventAlertRules: React.FC = () => {
     }
   }, [clusterId, historyPage]);
 
-  useEffect(() => { fetchRules(1); setRulesPage(1); }, [clusterId]);
-  useEffect(() => { if (activeTab === 'history') { fetchHistory(1); setHistoryPage(1); } }, [activeTab, clusterId]);
+  useEffect(() => { fetchRules(1); setRulesPage(1); }, [clusterId, fetchRules]);
+  useEffect(() => { if (activeTab === 'history') { fetchHistory(1); setHistoryPage(1); } }, [activeTab, clusterId, fetchHistory]);
 
   const handleOpenCreate = () => {
     setEditingRule(null);

@@ -15,6 +15,7 @@ import type { StepDef, StepStatus } from '../pipelineTypes';
 
 // ─── 節點顏色 Token ───────────────────────────────────────────────────────────
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const STATUS_STYLES: Record<StepStatus, {
   bg: string; border: string; text: string; shadow?: string; badgeColor?: string;
 }> = {

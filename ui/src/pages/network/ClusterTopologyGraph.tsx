@@ -507,9 +507,11 @@ const ClusterTopologyGraph: React.FC<ClusterTopologyGraphProps> = ({ topoNodes, 
 export default ClusterTopologyGraph;
 
 // Export legend data for the parent tab
+// eslint-disable-next-line react-refresh/only-export-components
 export const HEALTH_LEGEND = Object.entries(HEALTH_EDGE).map(([k, v]) => ({
   key: k,
   color: v.stroke,
 }));
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { WORKLOAD_KIND_COLOR };

@@ -1,6 +1,6 @@
 import { Progress, Tag, Typography } from 'antd';
 import type { TFunction } from 'i18next';
-import type { CostItem, WasteItem, NamespaceOccupancy, WorkloadEfficiency } from '../../services/costService';
+import type { CostItem, WasteItem, WorkloadEfficiency } from '../../services/costService';
 
 const { Text } = Typography;
 

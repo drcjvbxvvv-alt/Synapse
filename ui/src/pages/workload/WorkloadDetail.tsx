@@ -31,7 +31,6 @@ import {
 import { WorkloadService } from '../../services/workloadService';
 import type { WorkloadInfo } from '../../services/workloadService';
 import { useTranslation } from 'react-i18next';
-import MonitoringCharts from '../../components/MonitoringCharts';
 import WorkloadMetricsChart from '../../components/WorkloadMetricsChart';
 
 
@@ -123,7 +122,7 @@ const navigate = useNavigate();
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, name, workloadType]);
+  }, [clusterId, namespace, name, workloadType, t]);
 
   // 擴縮容工作負載
   const handleScale = async () => {

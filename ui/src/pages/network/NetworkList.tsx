@@ -25,11 +25,8 @@ const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'service';
 
   // 統計資訊狀態（保留用於回撥，但不顯示）
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_serviceCount, setServiceCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_ingressCount, setIngressCount] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_npCount, setNpCount] = useState(0);
 
   useEffect(() => {

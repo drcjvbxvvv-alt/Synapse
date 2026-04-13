@@ -2,6 +2,7 @@ import React from 'react';
 import { Tag } from 'antd';
 
 // Use antd preset tag color names (theme-aware, no hardcoded hex)
+// eslint-disable-next-line react-refresh/only-export-components
 export const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: 'red',
   HIGH: 'orange',

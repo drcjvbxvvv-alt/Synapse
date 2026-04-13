@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -42,7 +42,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
   const [form] = Form.useForm();
 
   // 初始化終端
-  const initTerminal = () => {
+  const initTerminal = useCallback(() => {
     if (!terminalRef.current) return;
 
     terminal.current = new Terminal({
@@ -111,7 +111,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  };
+  }, [t]);
 
   // 連線SSH
   const connectSSH = async (connection: SSHConnection) => {
@@ -284,7 +284,7 @@ const SSHTerminal: React.FC<SSHTerminalProps> = ({ nodeIP, clusterId }) => {
         terminal.current.dispose();
       }
     };
-  }, []);
+  }, [initTerminal]);
 
   // 設定預設連線資訊
   useEffect(() => {

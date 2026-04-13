@@ -72,7 +72,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, name]);
+  }, [clusterId, namespace, name, t]);
 
   // 刪除Pod
   const handleDelete = async () => {
