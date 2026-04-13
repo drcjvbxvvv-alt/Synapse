@@ -30,7 +30,7 @@ const createPermissionMock = (): PermissionContextType => ({
   canPerformAction: () => true,
   isAdmin: () => true,
   isReadonly: () => false,
-  canWrite: () => true,
+  canWrite: () => true,\n  canDelete: () => true,
   hasFeature: () => true,
   getPermissionType: () => 'admin',
   refreshPermissions: vi.fn().mockResolvedValue(undefined),
