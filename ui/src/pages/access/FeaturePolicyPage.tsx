@@ -70,6 +70,15 @@ const FEATURE_GROUPS: FeatureGroup[] = [
     ],
   },
   {
+    groupKey: 'namespace',
+    labelKey: 'featurePolicy.group.namespace',
+    features: [
+      { key: 'namespace:view',   labelKey: 'featurePolicy.key.namespaceView',   descKey: 'featurePolicy.desc.namespaceView' },
+      { key: 'namespace:write',  labelKey: 'featurePolicy.key.namespaceWrite',  descKey: 'featurePolicy.desc.namespaceWrite' },
+      { key: 'namespace:delete', labelKey: 'featurePolicy.key.namespaceDelete', descKey: 'featurePolicy.desc.namespaceDelete' },
+    ],
+  },
+  {
     groupKey: 'config',
     labelKey: 'featurePolicy.group.config',
     features: [
@@ -130,6 +139,7 @@ const ALL_FEATURES = [
   'network:view','network:write','network:delete',
   'storage:view','storage:write','storage:delete',
   'node:view','node:manage',
+  'namespace:view','namespace:write','namespace:delete',
   'config:view','config:write','config:delete',
   'terminal:pod','terminal:node',
   'logs:view','monitoring:view',
@@ -144,7 +154,7 @@ const CEILING: Record<string, string[]> = {
   admin:    ALL_FEATURES,
   ops:      ALL_FEATURES,
   dev:      ALL_FEATURES,
-  readonly: ['workload:view','network:view','storage:view','node:view','config:view','logs:view','monitoring:view','helm:view'],
+  readonly: ['workload:view','network:view','storage:view','node:view','namespace:view','config:view','logs:view','monitoring:view','helm:view'],
   custom:   ALL_FEATURES,
 };
 

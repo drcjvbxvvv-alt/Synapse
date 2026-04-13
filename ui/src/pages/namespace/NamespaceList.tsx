@@ -27,7 +27,7 @@ import CreateNamespaceModal from './components/CreateNamespaceModal';
 
 
 const NamespaceList: React.FC = () => {
-  const { hasFeature, canWrite, canDelete } = usePermission();
+  const { hasFeature } = usePermission();
   const state = useNamespaceList();
   const { token } = theme.useToken();
 
@@ -39,9 +39,9 @@ const NamespaceList: React.FC = () => {
     SYSTEM_NAMESPACES: state.SYSTEM_NAMESPACES,
     handleViewDetail: state.handleViewDetail,
     handleDelete: state.handleDelete,
-    canDelete: canDelete(),
-    showActions: canWrite(),
-  }), [state.t, token, state.sortField, state.sortOrder, state.SYSTEM_NAMESPACES, state.handleViewDetail, state.handleDelete, canWrite, canDelete]);
+    canDelete: hasFeature('namespace:delete'),
+    showActions: hasFeature('namespace:write') || hasFeature('namespace:delete'),
+  }), [state.t, token, state.sortField, state.sortOrder, state.SYSTEM_NAMESPACES, state.handleViewDetail, state.handleDelete, hasFeature]);
 
   const columns = useMemo(() => allColumns.filter(col => {
     if (col.key === 'actions') return true;
@@ -92,7 +92,7 @@ const NamespaceList: React.FC = () => {
                 {state.t('common:table.selectedCount', { count: state.selectedRowKeys.length })}
               </span>
               <Divider type="vertical" style={{ margin: 0, height: 14 }} />
-              {canDelete() && (
+              {hasFeature('namespace:delete') && (
                 <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={state.handleBatchDelete}>
                   {state.t('common:actions.batchDelete')}
                 </Button>
@@ -109,7 +109,7 @@ const NamespaceList: React.FC = () => {
                 style={{ marginLeft: 'auto', color: token.colorTextTertiary }}
               />
             </div>
-            {canWrite() && (
+            {hasFeature('namespace:write') && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}

@@ -15,6 +15,9 @@ const (
 	FeatureStorageDelete  = "storage:delete"
 	FeatureNodeView       = "node:view"
 	FeatureNodeManage     = "node:manage"
+	FeatureNamespaceView   = "namespace:view"
+	FeatureNamespaceWrite  = "namespace:write"
+	FeatureNamespaceDelete = "namespace:delete"
 	FeatureConfigView     = "config:view"
 	FeatureConfigWrite    = "config:write"
 	FeatureConfigDelete   = "config:delete"
@@ -57,6 +60,7 @@ var FeatureCeilings = map[string][]string{
 		FeatureNetworkView,
 		FeatureStorageView,
 		FeatureNodeView,
+		FeatureNamespaceView,
 		FeatureConfigView,
 		FeatureLogsView, FeatureMonitoringView,
 		FeatureHelmView,
@@ -72,6 +76,7 @@ func allFeatureKeys() []string {
 		FeatureNetworkView, FeatureNetworkWrite, FeatureNetworkDelete,
 		FeatureStorageView, FeatureStorageWrite, FeatureStorageDelete,
 		FeatureNodeView, FeatureNodeManage,
+		FeatureNamespaceView, FeatureNamespaceWrite, FeatureNamespaceDelete,
 		FeatureConfigView, FeatureConfigWrite, FeatureConfigDelete,
 		FeatureTerminalPod, FeatureTerminalNode,
 		FeatureLogsView, FeatureMonitoringView,
