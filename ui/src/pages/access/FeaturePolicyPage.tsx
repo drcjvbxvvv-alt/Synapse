@@ -9,7 +9,7 @@ import {
   Tooltip,
   Flex,
   Typography,
-  Divider,
+  Collapse,
   App,
   theme,
 } from 'antd';
@@ -475,64 +475,72 @@ const FeaturePolicyForm: React.FC<FeaturePolicyFormProps> = ({
     return featureData.ceiling.includes(featureKey);
   };
 
+  const collapseItems = FEATURE_GROUPS.map((group) => {
+    const ceilingFeatures = group.features.filter(f => featureData.ceiling.includes(f.key));
+    const enabledCount   = ceilingFeatures.filter(f => isDraftEnabled(f.key)).length;
+    const totalCount     = ceilingFeatures.length;
+    const allEnabled     = enabledCount === totalCount;
+
+    const label = (
+      <Flex justify="space-between" align="center" style={{ width: '100%', paddingRight: token.paddingSM }}>
+        <Text strong style={{ fontSize: token.fontSize }}>{t(group.labelKey)}</Text>
+        <Text
+          style={{
+            fontSize: token.fontSizeSM,
+            color: totalCount === 0
+              ? token.colorTextDisabled
+              : allEnabled
+                ? token.colorSuccess
+                : token.colorWarning,
+          }}
+        >
+          {totalCount === 0 ? '—' : `${enabledCount} / ${totalCount}`}
+        </Text>
+      </Flex>
+    );
+
+    return {
+      key: group.groupKey,
+      label,
+      children: (
+        <Space direction="vertical" size={token.marginSM} style={{ width: '100%' }}>
+          {group.features.map((feat) => {
+            const inCeiling = featureData.ceiling.includes(feat.key);
+            const enabled   = isDraftEnabled(feat.key);
+            return (
+              <Flex key={feat.key} justify="space-between" align="center">
+                <div style={{ flex: 1, marginRight: token.marginSM }}>
+                  <Text>{t(feat.labelKey)}</Text>
+                  <br />
+                  <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+                    {inCeiling
+                      ? t(feat.descKey)
+                      : t('featurePolicy.drawer.notInCeiling', { type: featureData.permission_type })}
+                  </Text>
+                </div>
+                <Tooltip title={!inCeiling ? t('featurePolicy.drawer.notInCeiling', { type: featureData.permission_type }) : undefined}>
+                  <Switch
+                    checked={inCeiling && enabled}
+                    disabled={!inCeiling}
+                    onChange={(val) => handleToggle(feat.key, val)}
+                    size="small"
+                  />
+                </Tooltip>
+              </Flex>
+            );
+          })}
+        </Space>
+      ),
+    };
+  });
+
   return (
-    <div>
-      {FEATURE_GROUPS.map((group, gi) => (
-        <div key={group.groupKey}>
-          {gi > 0 && <Divider style={{ margin: `${token.marginSM}px 0` }} />}
-          <Text
-            strong
-            style={{
-              display: 'block',
-              marginBottom: token.marginXS,
-              color: token.colorTextSecondary,
-              fontSize: token.fontSizeSM,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            {t(group.labelKey)}
-          </Text>
-          <Space direction="vertical" size={token.marginSM} style={{ width: '100%' }}>
-            {group.features.map((feat) => {
-              const inCeiling = featureData.ceiling.includes(feat.key);
-              const enabled = isDraftEnabled(feat.key);
-              return (
-                <Flex key={feat.key} justify="space-between" align="center">
-                  <div>
-                    <Text>{t(feat.labelKey)}</Text>
-                    <br />
-                    <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                      {inCeiling
-                        ? t(feat.descKey)
-                        : t('featurePolicy.drawer.notInCeiling', {
-                            type: featureData.permission_type,
-                          })}
-                    </Text>
-                  </div>
-                  <Tooltip
-                    title={
-                      !inCeiling
-                        ? t('featurePolicy.drawer.notInCeiling', {
-                            type: featureData.permission_type,
-                          })
-                        : undefined
-                    }
-                  >
-                    <Switch
-                      checked={inCeiling && enabled}
-                      disabled={!inCeiling}
-                      onChange={(val) => handleToggle(feat.key, val)}
-                      size="small"
-                    />
-                  </Tooltip>
-                </Flex>
-              );
-            })}
-          </Space>
-        </div>
-      ))}
-    </div>
+    <Collapse
+      items={collapseItems}
+      defaultActiveKey={FEATURE_GROUPS.map(g => g.groupKey)}
+      size="small"
+      style={{ background: 'transparent' }}
+    />
   );
 };
 
