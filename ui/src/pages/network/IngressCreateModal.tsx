@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Tabs, Form, Input, Select, Button, Space, App, Alert } from 'antd';
+import { Modal, Tabs, Form, Input, InputNumber, Select, AutoComplete, Button, Space, App, Alert } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
@@ -573,23 +573,21 @@ spec:
                                   <Select.Option value="ImplementationSpecific">ImplementationSpecific</Select.Option>
                                 </Select>
                               </Form.Item>
-                              {/* Service 下拉選單，選擇後自動帶入第一個 port */}
+                              {/* Service 名稱：AutoComplete 允許自由輸入，同時提供偵測到的 service 作為建議 */}
                               <Form.Item
                                 {...pathField}
                                 name={[pathField.name, 'serviceName']}
                                 rules={[{ required: true, message: t('network:create.required') }]}
                                 noStyle
                               >
-                                <Select
-                                  showSearch
+                                <AutoComplete
                                   allowClear
                                   placeholder={t('network:create.serviceNameField')}
                                   style={{ width: 180 }}
-                                  loading={loadingServices}
+                                  options={services.map((s) => ({ label: s.name, value: s.name }))}
                                   filterOption={(input, option) =>
                                     String(option?.value ?? '').toLowerCase().includes(input.toLowerCase())
                                   }
-                                  options={services.map((s) => ({ label: s.name, value: s.name }))}
                                   onChange={(svcName: string) => {
                                     const svc = services.find((s) => s.name === svcName);
                                     if (svc?.ports?.[0]) {
@@ -601,7 +599,7 @@ spec:
                                   }}
                                 />
                               </Form.Item>
-                              {/* Port 下拉選單，依選定 Service 顯示可用 port */}
+                              {/* Port：有匹配 service 時顯示 Select，否則顯示 InputNumber 允許手動輸入 */}
                               <Form.Item noStyle shouldUpdate>
                                 {({ getFieldValue }) => {
                                   const svcName = getFieldValue(['rules', field.name, 'paths', pathIdx, 'serviceName']);
@@ -616,20 +614,24 @@ spec:
                                       rules={[{ required: true, message: t('network:create.required') }]}
                                       noStyle
                                     >
-                                      <Select
-                                        showSearch
-                                        placeholder="Port"
-                                        style={{ width: 130 }}
-                                        options={portOpts}
-                                        notFoundContent={
-                                          <span style={{ fontSize: 12, color: '#999' }}>
-                                            {t('network:create.noPortFound')}
-                                          </span>
-                                        }
-                                        filterOption={(input, option) =>
-                                          String(option?.value ?? '').includes(input)
-                                        }
-                                      />
+                                      {portOpts.length > 0 ? (
+                                        <Select
+                                          showSearch
+                                          placeholder="Port"
+                                          style={{ width: 130 }}
+                                          options={portOpts}
+                                          filterOption={(input, option) =>
+                                            String(option?.value ?? '').includes(input)
+                                          }
+                                        />
+                                      ) : (
+                                        <InputNumber
+                                          placeholder="Port"
+                                          style={{ width: 130 }}
+                                          min={1}
+                                          max={65535}
+                                        />
+                                      )}
                                     </Form.Item>
                                   );
                                 }}
