@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { usePermission } from '../../hooks/usePermission';
 import {
   Alert,
   Badge,
@@ -47,6 +48,7 @@ const statusColor: Record<string, string> = {
 const SyncPolicyList: React.FC = () => {
   const { t } = useTranslation(['multicluster', 'common']);
   const { message, modal } = App.useApp();
+  const { canWrite } = usePermission();
   const [loading, setLoading] = useState(false);
   const [policies, setPolicies] = useState<SyncPolicy[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
@@ -253,7 +255,7 @@ const SyncPolicyList: React.FC = () => {
       dataIndex: 'last_sync_at',
       render: (v: string) => v ? new Date(v).toLocaleString() : '—',
     },
-    {
+    ...(canWrite() ? [{
       title: t('multicluster:syncPolicy.table.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -274,7 +276,7 @@ const SyncPolicyList: React.FC = () => {
           </Tooltip>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   const historyColumns = [

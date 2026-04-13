@@ -23,7 +23,7 @@ import {
   CodeOutlined,
 } from '@ant-design/icons';
 import { authService, tokenManager } from '../../services/authService';
-import { parseApiError } from '@/utils/api';
+import { showApiError } from '@/utils/api';
 import './Login.css';
 
 const { Text } = Typography;
@@ -89,7 +89,7 @@ const Login: React.FC = () => {
       message.success(t('auth.loginSuccess'));
       navigate(from, { replace: true });
     } catch (error: unknown) {
-      message.error(parseApiError(error) || t('messages.networkError'));
+      showApiError(error, t('messages.networkError'));
     } finally {
       setLoading(false);
     }

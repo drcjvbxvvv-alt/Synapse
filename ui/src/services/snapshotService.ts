@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 
 const base = (clusterId: string) => `/clusters/${clusterId}`;
 
@@ -92,58 +92,58 @@ export interface CreateScheduleRequest {
 export const snapshotService = {
   // VolumeSnapshot CRD status
   checkVolumeSnapshotCRD: (clusterId: string) =>
-    axios.get<{ installed: boolean }>(`${base(clusterId)}/volume-snapshots/status`),
+    api.get<{ installed: boolean }>(`${base(clusterId)}/volume-snapshots/status`),
 
   listVolumeSnapshots: (clusterId: string, namespace?: string, pvc?: string) =>
-    axios.get<{ items: VolumeSnapshotInfo[]; total: number }>(
+    api.get<{ items: VolumeSnapshotInfo[]; total: number }>(
       `${base(clusterId)}/volume-snapshots`,
       { params: { namespace, pvc } },
     ),
 
   createVolumeSnapshot: (clusterId: string, req: CreateSnapshotRequest) =>
-    axios.post<VolumeSnapshotInfo>(`${base(clusterId)}/volume-snapshots`, req),
+    api.post<VolumeSnapshotInfo>(`${base(clusterId)}/volume-snapshots`, req),
 
   deleteVolumeSnapshot: (clusterId: string, namespace: string, name: string) =>
-    axios.delete(`${base(clusterId)}/volume-snapshots/${namespace}/${name}`),
+    api.delete(`${base(clusterId)}/volume-snapshots/${namespace}/${name}`),
 
   listVolumeSnapshotClasses: (clusterId: string) =>
-    axios.get<{ items: VolumeSnapshotClassInfo[]; total: number }>(
+    api.get<{ items: VolumeSnapshotClassInfo[]; total: number }>(
       `${base(clusterId)}/volume-snapshot-classes`,
     ),
 
   // Velero
   checkVelero: (clusterId: string, veleroNS = 'velero') =>
-    axios.get<{ installed: boolean; namespace: string }>(
+    api.get<{ installed: boolean; namespace: string }>(
       `${base(clusterId)}/velero/status`,
       { params: { veleroNS } },
     ),
 
   listBackups: (clusterId: string, veleroNS = 'velero') =>
-    axios.get<{ items: VeleroBackupInfo[]; total: number }>(
+    api.get<{ items: VeleroBackupInfo[]; total: number }>(
       `${base(clusterId)}/velero/backups`,
       { params: { veleroNS } },
     ),
 
   listRestores: (clusterId: string, veleroNS = 'velero') =>
-    axios.get<{ items: VeleroRestoreInfo[]; total: number }>(
+    api.get<{ items: VeleroRestoreInfo[]; total: number }>(
       `${base(clusterId)}/velero/restores`,
       { params: { veleroNS } },
     ),
 
   triggerRestore: (clusterId: string, req: TriggerRestoreRequest) =>
-    axios.post<VeleroRestoreInfo>(`${base(clusterId)}/velero/restores`, req),
+    api.post<VeleroRestoreInfo>(`${base(clusterId)}/velero/restores`, req),
 
   listSchedules: (clusterId: string, veleroNS = 'velero') =>
-    axios.get<{ items: VeleroScheduleInfo[]; total: number }>(
+    api.get<{ items: VeleroScheduleInfo[]; total: number }>(
       `${base(clusterId)}/velero/schedules`,
       { params: { veleroNS } },
     ),
 
   createSchedule: (clusterId: string, req: CreateScheduleRequest) =>
-    axios.post<VeleroScheduleInfo>(`${base(clusterId)}/velero/schedules`, req),
+    api.post<VeleroScheduleInfo>(`${base(clusterId)}/velero/schedules`, req),
 
   deleteSchedule: (clusterId: string, name: string, veleroNS = 'velero') =>
-    axios.delete(`${base(clusterId)}/velero/schedules/${name}`, { params: { veleroNS } }),
+    api.delete(`${base(clusterId)}/velero/schedules/${name}`, { params: { veleroNS } }),
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

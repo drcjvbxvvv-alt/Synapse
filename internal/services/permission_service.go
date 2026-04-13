@@ -689,6 +689,42 @@ func (s *PermissionService) GetUserAllClusterPermissions(userID uint) ([]models.
 	return permissions, nil
 }
 
+// UpdateFeaturePolicy 更新指定叢集權限記錄的功能開關策略。
+// Keys that exceed the permission type's ceiling are silently dropped.
+func (s *PermissionService) UpdateFeaturePolicy(id uint, policy map[string]bool) (*models.ClusterPermission, error) {
+	permission, err := s.GetClusterPermission(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build ceiling set for fast lookup.
+	ceiling := models.FeatureCeilings[permission.PermissionType]
+	inCeiling := make(map[string]struct{}, len(ceiling))
+	for _, key := range ceiling {
+		inCeiling[key] = struct{}{}
+	}
+
+	// Drop keys that exceed the ceiling.
+	filtered := make(map[string]bool, len(policy))
+	for k, v := range policy {
+		if _, ok := inCeiling[k]; ok {
+			filtered[k] = v
+		}
+	}
+
+	if err := permission.SetFeaturePolicyMap(filtered); err != nil {
+		return nil, fmt.Errorf("encode feature policy: %w", err)
+	}
+
+	ctx := context.Background()
+	if err := s.db.WithContext(ctx).
+		Model(permission).
+		Update("feature_policy", permission.FeaturePolicy).Error; err != nil {
+		return nil, fmt.Errorf("update feature policy: %w", err)
+	}
+	return permission, nil
+}
+
 // HasClusterAccess 檢查使用者是否有叢集訪問權限
 func (s *PermissionService) HasClusterAccess(userID, clusterID uint) bool {
 	_, err := s.GetUserClusterPermission(userID, clusterID)

@@ -20,7 +20,7 @@ import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
 import { getNamespaces } from '../../services/configService';
 import { NetworkPolicyService } from '../../services/networkPolicyService';
-import { parseApiError } from '@/utils/api';
+import { parseApiError, showApiError } from '@/utils/api';
 import { RuleBuilder, newRule } from '../../components/RuleBuilder';
 import type { RuleState, LabelPair, RulePort } from '../../components/RuleBuilder';
 
@@ -259,7 +259,7 @@ const NetworkPolicyForm: React.FC<NetworkPolicyFormProps> = ({
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      message.error(parseApiError(err) || t('networkpolicy.messages.createError'));
+      showApiError(err, t('networkpolicy.messages.createError'));
     } finally {
       setLoading(false);
     }

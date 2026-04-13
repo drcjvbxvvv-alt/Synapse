@@ -28,6 +28,7 @@ import {
   ScheduleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import {
@@ -76,6 +77,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
   const { token } = theme.useToken();
   const { message } = App.useApp();
   const { t } = useTranslation(['chaos', 'common']);
+  const { canWrite } = usePermission();
   const queryClient = useQueryClient();
 
   const [searchText, setSearchText] = useState('');
@@ -178,12 +180,12 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
         </Text>
       ),
     },
-    {
+    ...(canWrite() ? [{
       title: t('common:table.actions'),
       key: 'actions',
       width: 100,
-      fixed: 'right',
-      render: (_, record) => (
+      fixed: 'right' as const,
+      render: (_: unknown, record: ChaosExperiment) => (
         <Space size={0}>
           <Tooltip title={t('chaos:actions.viewDetail')}>
             <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
@@ -202,7 +204,7 @@ const ExperimentsTab: React.FC<ExperimentsTabProps> = ({ clusterId, installed, o
           </Popconfirm>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   return (
@@ -310,6 +312,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
   const { token } = theme.useToken();
   const { message } = App.useApp();
   const { t } = useTranslation(['chaos', 'common']);
+  const { canWrite } = usePermission();
   const queryClient = useQueryClient();
 
   const [searchText, setSearchText] = useState('');
@@ -387,12 +390,12 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
         </Text>
       ),
     },
-    {
+    ...(canWrite() ? [{
       title: t('common:table.actions'),
       key: 'actions',
       width: 80,
-      fixed: 'right',
-      render: (_, record) => (
+      fixed: 'right' as const,
+      render: (_: unknown, record: ChaosSchedule) => (
         <Popconfirm
           title={t('common:confirm.deleteTitle')}
           description={t('common:confirm.deleteDesc', { name: record.name })}
@@ -406,7 +409,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ clusterId, installed, onCre
           </Tooltip>
         </Popconfirm>
       ),
-    },
+    }] : []),
   ];
 
   return (

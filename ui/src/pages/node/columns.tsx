@@ -23,6 +23,8 @@ interface ColumnParams {
   handleCordon: (name: string) => void;
   handleUncordon: (name: string) => void;
   handleDrain: (name: string) => void;
+  canTerminalNode?: boolean;
+  showActions?: boolean;
 }
 
 export const getStatusTag = (status: string, t: TFunction) => {
@@ -91,7 +93,7 @@ export const getTaintTooltip = (taints: NodeTaint[], t: TFunction) => {
 };
 
 export const createNodeColumns = (params: ColumnParams): ColumnsType<Node> => {
-  const { t, tc, sortField, sortOrder, handleViewDetail, handleNodeTerminal, handleCordon, handleUncordon, handleDrain } = params;
+  const { t, tc, sortField, sortOrder, handleViewDetail, handleNodeTerminal, handleCordon, handleUncordon, handleDrain, canTerminalNode = true, showActions } = params;
 
   return [
     {
@@ -224,12 +226,12 @@ export const createNodeColumns = (params: ColumnParams): ColumnsType<Node> => {
         return <span>{date.toLocaleString()}</span>;
       },
     },
-    {
+    ...(showActions !== false ? [{
       title: tc('table.actions'),
       key: 'actions',
       width: 150,
       fixed: 'right' as const,
-      render: (_, record) => (
+      render: (_: unknown, record: Node) => (
         <Space>
           <Button
             type="text"
@@ -237,12 +239,14 @@ export const createNodeColumns = (params: ColumnParams): ColumnsType<Node> => {
             onClick={() => handleViewDetail(record.name)}
             title={tc('actions.view')}
           />
-          <Button
-            type="text"
-            icon={<CodeOutlined />}
-            onClick={() => handleNodeTerminal(record.name)}
-            title={t('actions.terminal')}
-          />
+          {canTerminalNode && (
+            <Button
+              type="text"
+              icon={<CodeOutlined />}
+              onClick={() => handleNodeTerminal(record.name)}
+              title={t('actions.terminal')}
+            />
+          )}
           <Dropdown
             menu={{
               items: [
@@ -267,6 +271,6 @@ export const createNodeColumns = (params: ColumnParams): ColumnsType<Node> => {
           </Dropdown>
         </Space>
       ),
-    },
+    }] : []),
   ];
 };

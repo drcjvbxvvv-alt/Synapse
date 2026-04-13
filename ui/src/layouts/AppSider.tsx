@@ -31,7 +31,7 @@ import { useTranslation } from 'react-i18next';
 import type { MenuProps as AntMenuProps } from 'antd';
 import type { PermissionType } from '../types';
 import { tokenManager } from '../services/authService';
-import { usePermission } from '../hooks/usePermission';
+import { usePermission, usePermissionLoading } from '../hooks/usePermission';
 import {
   MAIN_MENU_PERMISSIONS,
   CLUSTER_MENU_PERMISSIONS,
@@ -112,6 +112,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     if (path === '/access/user-groups') return ['access-user-groups'];
     if (path === '/access/permissions') return ['access-permissions'];
     if (path.startsWith('/permissions')) return ['access-permissions'];
+    if (path === '/access/feature-policy') return ['access-feature-policy'];
     if (path === '/audit/operations') return ['audit-operations'];
     if (path === '/audit/commands') return ['audit-commands'];
     if (path.startsWith('/audit')) return ['audit-operations'];
@@ -137,6 +138,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
         { key: 'access-users', icon: <UserOutlined />, label: t('common:menu.userManagement', '使用者管理'), onClick: () => navigate('/access/users') },
         { key: 'access-user-groups', icon: <ClusterOutlined />, label: t('common:menu.userGroups', '使用者組管理'), onClick: () => navigate('/access/user-groups') },
         { key: 'access-permissions', icon: <KeyOutlined />, label: t('common:menu.permissions', '權限分配'), onClick: () => navigate('/access/permissions') },
+        { key: 'access-feature-policy', icon: <KeyOutlined />, label: t('common:menu.featurePolicy', '功能策略'), onClick: () => navigate('/access/feature-policy') },
       ],
     },
     {
@@ -196,7 +198,8 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
 
   // ─── 權限過濾 ────────────────────────────────────────────────────────
   const currentUser = tokenManager.getUser();
-  const { currentClusterPermission, clusterPermissions } = usePermission();
+  const { currentClusterPermission, clusterPermissions, hasFeature } = usePermission();
+  const permissionsLoading = usePermissionLoading();
   const allPerms = useMemo(() => Array.from(clusterPermissions.values()), [clusterPermissions]);
   const isUserPlatformAdmin = useMemo(
     () => isPlatformAdmin(currentUser?.username, allPerms),
@@ -205,34 +208,41 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
   const currentPermissionType = currentClusterPermission?.permission_type as PermissionType | undefined;
 
   const filterMainMenuItems = useCallback((items: MenuItem[]): MenuItem[] =>
-    items.filter(item => {
-      if (!item || typeof item !== 'object' || !('key' in item)) return true;
+    items.reduce<MenuItem[]>((acc, item) => {
+      if (!item || typeof item !== 'object' || !('key' in item)) { acc.push(item); return acc; }
       const config = MAIN_MENU_PERMISSIONS[item.key as string];
-      if (!config) return true;
-      if (config.platformAdminOnly && !isUserPlatformAdmin) return false;
+      if (config?.platformAdminOnly && !isUserPlatformAdmin) return acc;
       if ('children' in item && Array.isArray(item.children)) {
         const filtered = filterMainMenuItems(item.children as MenuItem[]);
-        if (filtered.length === 0) return false;
-        (item as MenuItem & { children: MenuItem[] }).children = filtered;
+        if (filtered.length === 0) return acc;
+        acc.push({ ...item, children: filtered });
+        return acc;
       }
-      return true;
-    }),
+      acc.push(item);
+      return acc;
+    }, []),
   [isUserPlatformAdmin]);
 
   const filterClusterMenuItems = useCallback((items: MenuItem[]): MenuItem[] =>
-    items.filter(item => {
-      if (!item || typeof item !== 'object' || !('key' in item)) return true;
+    items.reduce<MenuItem[]>((acc, item) => {
+      if (!item || typeof item !== 'object' || !('key' in item)) { acc.push(item); return acc; }
       const config = CLUSTER_MENU_PERMISSIONS[item.key as string];
-      if (!config) return true;
-      if (config.requiredPermission && !hasPermission(currentPermissionType, config.requiredPermission)) return false;
+      if (config) {
+        if (config.requiredPermission && !hasPermission(currentPermissionType, config.requiredPermission)) return acc;
+        // Skip feature filtering while permissions are loading — avoids flashing an empty menu
+        // while currentClusterPermission is null (cache miss on first cluster entry).
+        if (!permissionsLoading && config.requiredFeature && !hasFeature(config.requiredFeature)) return acc;
+      }
       if ('children' in item && Array.isArray(item.children)) {
         const filtered = filterClusterMenuItems(item.children as MenuItem[]);
-        if (filtered.length === 0) return false;
-        (item as MenuItem & { children: MenuItem[] }).children = filtered;
+        if (filtered.length === 0) return acc;
+        acc.push({ ...item, children: filtered });
+        return acc;
       }
-      return true;
-    }),
-  [currentPermissionType]);
+      acc.push(item);
+      return acc;
+    }, []),
+  [currentPermissionType, hasFeature, permissionsLoading]);
 
   const menuItems = useMemo(() =>
     isClusterDetail

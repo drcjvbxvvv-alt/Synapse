@@ -18,7 +18,7 @@ import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
 import { getNamespaces } from '../../services/configService';
 import { gatewayService } from '../../services/gatewayService';
-import { parseApiError } from '@/utils/api';
+import { parseApiError, showApiError } from '@/utils/api';
 
 const DEFAULT_YAML = `apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
@@ -179,7 +179,7 @@ const ReferenceGrantForm: React.FC<ReferenceGrantFormProps> = ({
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      message.error(parseApiError(err) || t('gatewayapi.messages.createReferenceGrantError'));
+      showApiError(err, t('gatewayapi.messages.createReferenceGrantError'));
     } finally {
       setLoading(false);
     }

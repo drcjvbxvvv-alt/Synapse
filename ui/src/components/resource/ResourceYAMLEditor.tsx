@@ -19,6 +19,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
+import axios from 'axios';
 import { ResourceService } from '../../services/resourceService';
 import type { ResourceKind } from '../../services/resourceService';
 import { YAMLDiffModal } from '../YAMLDiffModal';
@@ -132,7 +133,9 @@ const ResourceYAMLEditor: React.FC<ResourceYAMLEditorProps> = ({
       onSuccess?.();
     } catch (error: unknown) {
       console.error('Submit failed:', error);
-      messageApi.error(error instanceof Error ? error.message : t('resourceYAMLEditor.operationFailed'));
+      if (!axios.isAxiosError(error) || !(error as any)._permissionHandled) {
+        messageApi.error(error instanceof Error ? error.message : t('resourceYAMLEditor.operationFailed'));
+      }
     } finally {
       setSubmitting(false);
     }

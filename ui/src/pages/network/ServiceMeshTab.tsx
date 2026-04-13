@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import MonacoEditor from '@monaco-editor/react';
 import { Modal } from 'antd';
 import { MeshService, type MeshStatus, type VirtualServiceSummary } from '../../services/meshService';
+import { usePermission } from '../../hooks/usePermission';
 import ServiceTopologyGraph from './ServiceTopologyGraph';
 import VirtualServiceForm from './VirtualServiceForm';
 import DestinationRuleList from './DestinationRuleList';
@@ -40,6 +41,7 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
 }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
+  const { canWrite } = usePermission();
   const [items, setItems] = useState<VirtualServiceSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespace, setNamespace] = useState('');
@@ -112,7 +114,7 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
       dataIndex: 'createdAt',
       render: (v: string) => (v ? new Date(v).toLocaleString() : '—'),
     },
-    {
+    ...(canWrite() ? [{
       title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -135,7 +137,7 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
           </Popconfirm>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   return (
@@ -143,9 +145,11 @@ const VirtualServiceList: React.FC<{ clusterId: string; namespaces: string[] }> 
       <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
         <Button icon={<ReloadOutlined />} onClick={fetchList} loading={loading} />
         <div style={{ flex: 1 }} />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          {t('network:servicemesh.createVirtualService')}
-        </Button>
+        {canWrite() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            {t('network:servicemesh.createVirtualService')}
+          </Button>
+        )}
       </div>
 
       <Table

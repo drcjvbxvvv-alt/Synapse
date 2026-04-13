@@ -29,6 +29,7 @@ import {
 } from '@ant-design/icons';
 import { PodService } from '../../services/podService';
 import { clusterService } from '../../services/clusterService';
+import { usePermission } from '../../hooks/usePermission';
 import PodMonitoringTab from './tabs/PodMonitoringTab';
 import type { PodInfo, ContainerInfo } from '../../services/podService';
 
@@ -47,6 +48,7 @@ const PodDetail: React.FC<PodDetailProps> = () => {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('pod');
   const { t: tc } = useTranslation('common');
+  const { canWrite } = usePermission();
   const initialTab = searchParams.get('tab') || 'overview';
   
   const [pod, setPod] = useState<PodInfo | null>(null);
@@ -289,17 +291,19 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               AI 診斷
             </Button>
 
-            <Popconfirm
-              title={tc('messages.confirmDelete')}
-              description={t('actions.confirmDeleteContent', { name: pod.name })}
-              onConfirm={handleDelete}
-              okText={tc('actions.confirm')}
-              cancelText={tc('actions.cancel')}
-            >
-              <Button danger icon={<DeleteOutlined />}>
-                {tc('actions.delete')}
-              </Button>
-            </Popconfirm>
+            {canWrite() && (
+              <Popconfirm
+                title={tc('messages.confirmDelete')}
+                description={t('actions.confirmDeleteContent', { name: pod.name })}
+                onConfirm={handleDelete}
+                okText={tc('actions.confirm')}
+                cancelText={tc('actions.cancel')}
+              >
+                <Button danger icon={<DeleteOutlined />}>
+                  {tc('actions.delete')}
+                </Button>
+              </Popconfirm>
+            )}
           </Space>
         </div>
       </div>

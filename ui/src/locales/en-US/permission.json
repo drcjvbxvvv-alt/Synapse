@@ -233,5 +233,113 @@
     "pagination": {
       "total": "Total {{total}} items"
     }
+  },
+  "featurePolicy": {
+    "page": {
+      "title": "Feature Policy Management",
+      "subtitle": "Fine-tune allowed features for each cluster permission record"
+    },
+    "actions": {
+      "edit": "Edit Feature Policy"
+    },
+    "drawer": {
+      "title": "Feature Settings — {{name}} ({{type}})",
+      "save": "Save Settings",
+      "notInCeiling": "{{type}} permission type does not support this feature"
+    },
+    "messages": {
+      "loadClusterFailed": "Failed to load cluster list",
+      "loadFailed": "Failed to load permission list",
+      "loadFeatureFailed": "Failed to load feature policy",
+      "saveSuccess": "Feature policy updated",
+      "saveFailed": "Failed to save feature policy",
+      "selectCluster": "Please select a cluster first"
+    },
+    "summary": {
+      "notInCeiling": "This permission type does not support this feature",
+      "inCeiling": "This permission type supports this feature (can be further restricted)",
+      "policyDisabled": "Disabled by Feature Policy"
+    },
+    "summaryKey": {
+      "terminal_pod": "Pod Terminal",
+      "terminal_node": "Node Terminal",
+      "export": "Export",
+      "aiAssistant": "AI Assistant"
+    },
+    "group": {
+      "workload": "Workload",
+      "network": "Network",
+      "storage": "Storage",
+      "node": "Node",
+      "config": "Config",
+      "terminal": "Terminal",
+      "observability": "Observability",
+      "helm": "Helm",
+      "tools": "Tools"
+    },
+    "key": {
+      "workloadView": "View Workloads",
+      "workloadWrite": "Manage Workloads",
+      "workloadDelete": "Delete Workloads",
+      "networkView": "View Network",
+      "networkWrite": "Manage Network",
+      "networkDelete": "Delete Network Resources",
+      "storageView": "View Storage",
+      "storageWrite": "Manage Storage",
+      "storageDelete": "Delete Storage Resources",
+      "nodeView": "View Nodes",
+      "nodeManage": "Manage Nodes",
+      "configView": "View Configs",
+      "configWrite": "Manage Configs",
+      "configDelete": "Delete Config Resources",
+      "terminalPod": "Pod Terminal",
+      "terminalNode": "Node Terminal",
+      "logsView": "View Logs",
+      "monitoringView": "View Monitoring",
+      "alertsView": "View Alerts",
+      "eventAlertsView": "View Event Alerts",
+      "costView": "View Cost Insights",
+      "securityView": "Security Scan",
+      "certificatesView": "Certificate Management",
+      "sloView": "SLO Management",
+      "chaosView": "Chaos Engineering",
+      "complianceView": "Compliance Management",
+      "helmView": "View Helm",
+      "helmWrite": "Manage Helm",
+      "export": "Export",
+      "aiAssistant": "AI Assistant"
+    },
+    "desc": {
+      "workloadView": "View Deployments, Pods and other workload resources",
+      "workloadWrite": "Create and update workload resources",
+      "workloadDelete": "Delete Deployments, StatefulSets and other workload resources",
+      "networkView": "View Services, Ingresses and other network resources",
+      "networkWrite": "Manage network resources",
+      "networkDelete": "Delete Services, Ingresses and other network resources",
+      "storageView": "View PVCs, PVs, and StorageClasses",
+      "storageWrite": "Manage storage resources",
+      "storageDelete": "Delete PVCs, PVs, and StorageClasses",
+      "nodeView": "View node information",
+      "nodeManage": "Cordon, drain, and manage nodes",
+      "configView": "View ConfigMaps and Secrets",
+      "configWrite": "Manage ConfigMaps and Secrets",
+      "configDelete": "Delete ConfigMaps and Secrets",
+      "terminalPod": "Open terminal session inside Pods",
+      "terminalNode": "SSH into cluster nodes",
+      "logsView": "View Pod logs",
+      "monitoringView": "View Grafana monitoring dashboards",
+      "alertsView": "View AlertManager alerts, rules, and silences",
+      "eventAlertsView": "View Kubernetes Event alerts",
+      "costView": "View cluster resource cost analysis",
+      "securityView": "View cluster security scan results",
+      "certificatesView": "View and manage TLS certificates",
+      "sloView": "View and manage SLO service level objectives",
+      "chaosView": "View and run chaos engineering experiments",
+      "complianceView": "View cluster compliance management reports",
+      "helmView": "View Helm Releases",
+      "helmWrite": "Install, upgrade, and remove Helm Releases",
+      "export": "Export resource lists",
+      "aiAssistant": "Use the AI intelligent assistant"
+    }
   }
 }

@@ -17,10 +17,12 @@ interface ServiceColumnsOptions {
   onViewEndpoints: (service: Service) => void;
   onDelete: (service: Service) => void;
   t: TFunction;
+  canDelete?: boolean;
+  showActions?: boolean;
 }
 
 export function getServiceColumns(options: ServiceColumnsOptions): ColumnsType<Service> {
-  const { sortField, sortOrder, onViewYAML, onEdit, onViewEndpoints, onDelete, t } = options;
+  const { sortField, sortOrder, onViewYAML, onEdit, onViewEndpoints, onDelete, t, canDelete = true, showActions } = options;
 
   return [
     {
@@ -133,7 +135,7 @@ export function getServiceColumns(options: ServiceColumnsOptions): ColumnsType<S
         return <span>{formatted}</span>;
       },
     },
-    {
+    ...(showActions !== false ? [{
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -146,17 +148,17 @@ export function getServiceColumns(options: ServiceColumnsOptions): ColumnsType<S
           ]}
           more={[
             { key: 'endpoints', label: 'Endpoints', icon: <ApiOutlined />, onClick: () => onViewEndpoints(record) },
-            {
-              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+            ...(canDelete ? [{
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => onDelete(record),
               confirm: {
                 title: t('network:service.messages.confirmDeleteItem'),
                 description: t('network:service.messages.confirmDeleteDesc', { name: record.name }),
               },
-            },
+            }] : []),
           ]}
         />
       ),
-    },
+    }] : []),
   ];
 }

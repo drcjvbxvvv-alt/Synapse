@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -46,6 +47,15 @@ func (h *VolumeSnapshotHandler) ListVeleroBackups(c *gin.Context) {
 
 	list, err := dyn.Resource(veleroBackupGVR).Namespace(veleroNS(c)).List(ctx, metav1.ListOptions{})
 	if err != nil {
+		if k8serrors.IsNotFound(err) || k8serrors.IsMethodNotSupported(err) {
+			response.OK(c, map[string]interface{}{"items": []interface{}{}, "total": 0})
+			return
+		}
+		if k8serrors.IsForbidden(err) || k8serrors.IsUnauthorized(err) {
+			response.Forbidden(c, "無權限讀取 Velero Backup 資源")
+			return
+		}
+		logger.Error("列出 Velero Backup 失敗", "error", err)
 		response.InternalError(c, "取得 Velero Backup 失敗: "+err.Error())
 		return
 	}
@@ -132,6 +142,15 @@ func (h *VolumeSnapshotHandler) ListVeleroRestores(c *gin.Context) {
 
 	list, err := dyn.Resource(veleroRestoreGVR).Namespace(veleroNS(c)).List(ctx, metav1.ListOptions{})
 	if err != nil {
+		if k8serrors.IsNotFound(err) || k8serrors.IsMethodNotSupported(err) {
+			response.OK(c, map[string]interface{}{"items": []interface{}{}, "total": 0})
+			return
+		}
+		if k8serrors.IsForbidden(err) || k8serrors.IsUnauthorized(err) {
+			response.Forbidden(c, "無權限讀取 Velero Restore 資源")
+			return
+		}
+		logger.Error("列出 Velero Restore 失敗", "error", err)
 		response.InternalError(c, "取得 Velero Restore 失敗: "+err.Error())
 		return
 	}
@@ -155,6 +174,15 @@ func (h *VolumeSnapshotHandler) ListVeleroSchedules(c *gin.Context) {
 
 	list, err := dyn.Resource(veleroScheduleGVR).Namespace(veleroNS(c)).List(ctx, metav1.ListOptions{})
 	if err != nil {
+		if k8serrors.IsNotFound(err) || k8serrors.IsMethodNotSupported(err) {
+			response.OK(c, map[string]interface{}{"items": []interface{}{}, "total": 0})
+			return
+		}
+		if k8serrors.IsForbidden(err) || k8serrors.IsUnauthorized(err) {
+			response.Forbidden(c, "無權限讀取 Velero Schedule 資源")
+			return
+		}
+		logger.Error("列出 Velero Schedule 失敗", "error", err)
 		response.InternalError(c, "取得 Velero Schedule 失敗: "+err.Error())
 		return
 	}

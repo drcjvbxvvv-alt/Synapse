@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { StatusTag } from '../../components/StatusTag';
 import { ActionButtons } from '../../components/ActionButtons';
 import EmptyState from '../../components/EmptyState';
+import { usePermission } from '../../hooks/usePermission';
 import { useMultiSearch, applyMultiSearch } from '../../hooks/useMultiSearch';
 import { MultiSearchBar } from '../../components/MultiSearchBar';
 
@@ -38,6 +39,7 @@ interface StorageClassTabProps {
 }
 
 const StorageClassTab: React.FC<StorageClassTabProps> = ({ clusterId, onCountChange }) => {
+  const { hasFeature, canWrite } = usePermission();
   const { message, modal } = App.useApp();
   const { token } = theme.useToken();
 
@@ -398,17 +400,17 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
             },
           ]}
           more={[
-            {
+            ...(canWrite() ? [{
               key: 'delete',
               label: t('common:actions.delete'),
               icon: <DeleteOutlined />,
-              danger: true,
+              danger: true as const,
               confirm: {
                 title: t('storage:messages.confirmDeleteSC'),
                 description: t('storage:messages.confirmDeleteSCDesc', { name: record.name }),
               },
               onClick: () => handleDelete(record),
-            },
+            }] : []),
           ]}
         />
       ),
@@ -417,7 +419,7 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
 
   // 根據可見性過濾列
   const columns = allColumns.filter(col => {
-    if (col.key === 'actions') return true;
+    if (col.key === 'actions') return canWrite();
     if (col.key === 'name') return true;
     return visibleColumns.includes(col.key as string);
   });
@@ -445,21 +447,25 @@ const [allStorageClasses, setAllStorageClasses] = useState<StorageClass[]>([]);
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          <Button
-            disabled={selectedRowKeys.length === 0}
-            onClick={handleBatchDelete}
-            danger
-            icon={<DeleteOutlined />}
-          >
-            {selectedRowKeys.length > 1
-              ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
-              : t('common:actions.delete')}
-          </Button>
-          <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
-            {selectedRowKeys.length > 1
-              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
-              : t('common:actions.export')}
-          </Button>
+          {canWrite() && (
+            <Button
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleBatchDelete}
+              danger
+              icon={<DeleteOutlined />}
+            >
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
+                : t('common:actions.delete')}
+            </Button>
+          )}
+          {hasFeature('export') && (
+            <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+                : t('common:actions.export')}
+            </Button>
+          )}
         </Space>
       </div>
 

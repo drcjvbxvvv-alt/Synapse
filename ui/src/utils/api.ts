@@ -1,6 +1,11 @@
 import axios from 'axios';
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { message } from 'antd';
 import { tokenManager, silentRefresh } from '../services/authService';
+import { showPermissionDenied } from './permissionError';
+
+// Internal marker — set on 403 errors so parseApiError can suppress duplicate toasts
+type HandledAxiosError = AxiosError & { _permissionHandled?: boolean };
 
 // P1-6：Tiered timeouts
 // GET  → 60 000 ms (handles both list and detail)
@@ -50,6 +55,12 @@ api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    if (error.response?.status === 403) {
+      showPermissionDenied();
+      (error as HandledAxiosError)._permissionHandled = true;
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && !originalRequest._retried) {
       const requestUrl = originalRequest?.url || '';
@@ -121,6 +132,11 @@ export const request = {
 
 export function parseApiError(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    // If the interceptor already showed a permission-denied notification,
+    // return empty string so component catch blocks don't show a second toast.
+    if ((error as HandledAxiosError)._permissionHandled) {
+      return '';
+    }
     const data = error.response?.data;
     if (data?.error?.message) {
       return data.error.message;
@@ -128,12 +144,32 @@ export function parseApiError(error: unknown): string {
     if (data?.message) {
       return data.message;
     }
+    // Avoid raw "Request failed with status code N" leaking to the UI
+    const status = error.response?.status;
+    if (status === 403) return '';
+    if (status === 401) return '';
     return error.message;
   }
   if (error instanceof Error) {
     return error.message;
   }
   return '未知錯誤';
+}
+
+/**
+ * Show an API error as a message.error toast.
+ * If the error was already handled by the 403 interceptor (permission denied),
+ * this is a no-op — preventing duplicate notifications.
+ */
+export function showApiError(error: unknown, fallbackMsg?: string): void {
+  if (axios.isAxiosError(error) && (error as HandledAxiosError)._permissionHandled) {
+    return;
+  }
+  const msg = parseApiError(error);
+  const display = msg || fallbackMsg;
+  if (display) {
+    message.error(display);
+  }
 }
 
 export default api;

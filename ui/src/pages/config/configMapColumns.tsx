@@ -21,10 +21,12 @@ interface ConfigMapColumnParams {
   colorTextSecondary: string;
   navigate: (path: string) => void;
   handleDelete: (namespace: string, name: string) => void;
+  canDelete?: boolean;
+  showActions?: boolean;
 }
 
 export function getConfigMapColumns(params: ConfigMapColumnParams): ColumnsType<ConfigMapListItem> {
-  const { t, clusterId, sortField, sortOrder, colorTextTertiary, colorTextSecondary, navigate, handleDelete } = params;
+  const { t, clusterId, sortField, sortOrder, colorTextTertiary, colorTextSecondary, navigate, handleDelete, canDelete = true, showActions } = params;
 
   return [
     {
@@ -118,7 +120,7 @@ export function getConfigMapColumns(params: ConfigMapColumnParams): ColumnsType<
         return `${Math.floor(diff / 1440)}d`;
       },
     },
-    {
+    ...(showActions !== false ? [{
       title: t('common:table.actions'),
       key: 'actions',
       width: 90,
@@ -146,7 +148,7 @@ export function getConfigMapColumns(params: ConfigMapColumnParams): ColumnsType<
               icon: <HistoryOutlined />,
               onClick: () => navigate(`/clusters/${clusterId}/configs/configmap/${record.namespace}/${record.name}/history`),
             },
-            {
+            ...(canDelete ? [{
               key: 'delete',
               label: t('common:actions.delete'),
               icon: <DeleteOutlined />,
@@ -156,10 +158,10 @@ export function getConfigMapColumns(params: ConfigMapColumnParams): ColumnsType<
                 description: t('config:list.messages.confirmDeleteDesc', { name: record.name }),
               },
               onClick: () => handleDelete(record.namespace, record.name),
-            },
+            }] : []),
           ]}
         />
       ),
-    },
+    }] : []),
   ];
 }

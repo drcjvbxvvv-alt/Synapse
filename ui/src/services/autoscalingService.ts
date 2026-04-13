@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 
 const base = (clusterId: string) => `/clusters/${clusterId}`;
 
@@ -70,35 +70,35 @@ export interface CASStatus {
 export const autoscalingService = {
   // KEDA
   checkKEDA: (clusterId: string) =>
-    axios.get<KEDAStatus>(`${base(clusterId)}/keda/status`),
+    api.get<KEDAStatus>(`${base(clusterId)}/keda/status`),
 
   listScaledObjects: (clusterId: string, namespace?: string) =>
-    axios.get<{ items: ScaledObjectInfo[]; total: number }>(
+    api.get<{ items: ScaledObjectInfo[]; total: number }>(
       `${base(clusterId)}/keda/scaled-objects`,
       { params: namespace ? { namespace } : {} },
     ),
 
   listScaledJobs: (clusterId: string, namespace?: string) =>
-    axios.get<{ items: ScaledJobInfo[]; total: number }>(
+    api.get<{ items: ScaledJobInfo[]; total: number }>(
       `${base(clusterId)}/keda/scaled-jobs`,
       { params: namespace ? { namespace } : {} },
     ),
 
   // Karpenter
   checkKarpenter: (clusterId: string) =>
-    axios.get<KarpenterStatus>(`${base(clusterId)}/karpenter/status`),
+    api.get<KarpenterStatus>(`${base(clusterId)}/karpenter/status`),
 
   listNodePools: (clusterId: string) =>
-    axios.get<{ items: NodePoolInfo[]; total: number }>(
+    api.get<{ items: NodePoolInfo[]; total: number }>(
       `${base(clusterId)}/karpenter/node-pools`,
     ),
 
   listNodeClaims: (clusterId: string) =>
-    axios.get<{ items: NodeClaimInfo[]; total: number }>(
+    api.get<{ items: NodeClaimInfo[]; total: number }>(
       `${base(clusterId)}/karpenter/node-claims`,
     ),
 
   // CAS
   getCASStatus: (clusterId: string) =>
-    axios.get<CASStatus>(`${base(clusterId)}/cas/status`),
+    api.get<CASStatus>(`${base(clusterId)}/cas/status`),
 };

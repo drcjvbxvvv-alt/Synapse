@@ -59,36 +59,46 @@ export const MAIN_MENU_PERMISSIONS: Record<string, {
 // 叢集內層側邊欄選單權限配置
 export const CLUSTER_MENU_PERMISSIONS: Record<string, {
   requiredPermission?: PermissionType;
+  requiredFeature?: string;   // 功能策略 key，對應 FeaturePolicyPage 中定義的 key
   description?: string;
 }> = {
   // === 概覽 - 所有人可見 ===
   'cluster-overview': {},
-  
-  // === Kubernetes資源 - 大部分所有人可見 ===
+
+  // === Kubernetes資源 ===
   'kubernetes-resources': {},
-  'k8s-workloads': {},
-  'k8s-pods': {},
-  'k8s-network': {},
-  'k8s-storage': {},           // 儲存管理，所有人可檢視
-  'k8s-configs': {},
-  'k8s-namespaces': {},        // 命名空間，所有人可檢視
-  
+  'k8s-workloads':   { requiredFeature: 'workload:view' },
+  'k8s-autoscaling': { requiredFeature: 'workload:view' },
+  'k8s-pods':        { requiredFeature: 'workload:view' },
+  'k8s-network':     { requiredFeature: 'network:view' },
+  'k8s-storage':     { requiredFeature: 'storage:view' },
+  'k8s-configs':     { requiredFeature: 'config:view' },
+  'k8s-namespaces':  {},
+
   // === 叢集管理 - 需要較高權限 ===
-  'cluster': { requiredPermission: 'ops' },           // 叢集分組需要運維權限
-  'cluster-nodes': { requiredPermission: 'ops' },     // 節點管理需要運維權限
-  'cluster-config': { requiredPermission: 'ops' },    // 配置中心需要運維權限
-  'cluster-upgrade': { requiredPermission: 'admin' }, // 叢集升級僅管理員
-  'cluster-plugins': { requiredPermission: 'ops' },   // 外掛中心需要運維權限
-  
-  // === 雲原生觀測 - 大部分所有人可見 ===
+  'cluster':          { requiredPermission: 'ops' },
+  'cluster-nodes':    { requiredPermission: 'ops', requiredFeature: 'node:view' },
+  'cluster-config':   { requiredPermission: 'ops' },
+  'cluster-upgrade':  { requiredPermission: 'admin' },
+  'cluster-plugins':  { requiredPermission: 'ops' },
+  'cluster-helm':     { requiredPermission: 'ops', requiredFeature: 'helm:view' },
+
+  // === 雲原生觀測 ===
   'cloud-native-observability': {},
-  'observability-monitoring': {},
-  'observability-logs': {},
-  'observability-alerts': { requiredPermission: 'dev' }, // 告警中心需要開發及以上權限
-  
+  'observability-monitoring': { requiredFeature: 'monitoring:view' },
+  'observability-logs':       { requiredFeature: 'logs:view' },
+  'observability-alerts':     { requiredPermission: 'dev', requiredFeature: 'alerts:view' },
+  'cluster-event-alerts':     { requiredFeature: 'event_alerts:view' },
+  'cluster-cost':             { requiredPermission: 'ops', requiredFeature: 'cost:view' },
+  'cluster-security':         { requiredFeature: 'security:view' },
+  'cluster-certificates':     { requiredFeature: 'certificates:view' },
+  'cluster-slos':             { requiredFeature: 'slo:view' },
+  'cluster-chaos':            { requiredFeature: 'chaos:view' },
+  'cluster-compliance':       { requiredFeature: 'compliance:view' },
+
   // === 雲原生成本治理 - 需要運維權限 ===
   'cloud-native-cost': { requiredPermission: 'ops' },
-  'cost-insights': { requiredPermission: 'ops' },
+  'cost-insights':     { requiredPermission: 'ops' },
 };
 
 // 操作按鈕權限配置

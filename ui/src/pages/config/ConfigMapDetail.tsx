@@ -26,7 +26,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { configMapService, type ConfigMapDetail as ConfigMapDetailType, type ConfigVersion } from '../../services/configService';
 import MonacoEditor from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
-import { parseApiError } from '../../utils/api';
+import { showApiError } from '../../utils/api';
 import PageSkeleton from '../../components/PageSkeleton';
 
 const { Title, Text } = Typography;
@@ -58,7 +58,7 @@ const ConfigMapDetail: React.FC = () => {
       );
       setConfigMap(data);
     } catch (error: unknown) {
-      message.error(parseApiError(error) || t('config:detail.loadConfigMapError'));
+      showApiError(error, t('config:detail.loadConfigMapError'));
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ const ConfigMapDetail: React.FC = () => {
       loadConfigMap();
       loadVersions();
     } catch (error: unknown) {
-      message.error(parseApiError(error) || '回滾失敗');
+      showApiError(error, '回滾失敗');
     }
   };
 
@@ -106,7 +106,7 @@ const ConfigMapDetail: React.FC = () => {
           message.success(t('config:detail.deleteConfigMapSuccess'));
           navigate(`/clusters/${clusterId}/configs`);
         } catch (error: unknown) {
-          message.error(parseApiError(error) || t('config:detail.deleteConfigMapError'));
+          showApiError(error, t('config:detail.deleteConfigMapError'));
         }
       },
     });

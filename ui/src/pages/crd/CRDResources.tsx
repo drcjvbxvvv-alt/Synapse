@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import {
   App,
   Button,
@@ -42,6 +43,7 @@ const CRDResources: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
+  const { canWrite } = usePermission();
 
   const state = (location.state ?? {}) as LocationState;
   const kind = state.kind ?? plural;
@@ -170,7 +172,7 @@ const CRDResources: React.FC = () => {
             </Tag>
           )),
     },
-    {
+    ...(canWrite() ? [{
       title: t('common.actions', '操作'),
       key: 'actions',
       width: 140,
@@ -193,7 +195,7 @@ const CRDResources: React.FC = () => {
           </Button>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   return (

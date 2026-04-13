@@ -5,12 +5,14 @@ import AppHeader from './AppHeader';
 import AppSider from './AppSider';
 import ClusterContextBar from './ClusterContextBar';
 import AIChatPanel from '../components/AIChat/AIChatPanel';
+import { usePermission } from '../hooks/usePermission';
 
 const { Content } = Layout;
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { hasFeature } = usePermission();
 
   const isClusterDetail = !!location.pathname.match(/\/clusters\/[^/]+\//);
 
@@ -44,7 +46,7 @@ const MainLayout: React.FC = () => {
         </Layout>
       </Layout>
 
-      <AIChatPanel />
+      {hasFeature('ai_assistant') && <AIChatPanel />}
     </Layout>
   );
 };

@@ -33,7 +33,9 @@
     "opsPermission": "运维权限",
     "devPermission": "开发权限",
     "readonlyPermission": "只读权限",
-    "customPermission": "自定义权限"
+    "customPermission": "自定义权限",
+    "featureDisabled": "功能已禁用",
+    "featureDisabledDesc": "管理员已在功能策略中禁用此功能，如需开启请联系管理员"
   },
   "kubectlTerminal": {
     "title": "Kubectl 终端",

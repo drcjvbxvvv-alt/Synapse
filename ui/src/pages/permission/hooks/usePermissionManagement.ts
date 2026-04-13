@@ -233,7 +233,8 @@ export function usePermissionManagement() {
       setModalVisible(false);
       loadData();
     } catch (error: unknown) {
-      message.error(parseApiError(error));
+      const msg = parseApiError(error);
+      if (msg) message.error(msg);
     }
   };
 

@@ -27,6 +27,7 @@ import {
 } from '@ant-design/icons';
 import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import type { TablePaginationConfig } from 'antd/es/table';
 import MonacoEditor from '@monaco-editor/react';
 import { NetworkPolicyService, type NetworkPolicyInfo } from '../../services/networkPolicyService';
@@ -48,6 +49,7 @@ interface NetworkPolicyTabProps {
 const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountChange }) => {
   const { t } = useTranslation(['network', 'common']);
   const { message } = App.useApp();
+  const { canWrite } = usePermission();
 
   const [viewMode, setViewMode] = useState<'list' | 'topology' | 'simulate'>('list');
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -242,14 +244,14 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
             { key: 'simulate', label: t('network:networkpolicy.columns.simulate', '策略模擬'), icon: <PlayCircleOutlined />, onClick: () => handleSimulate(record) },
           ]}
           more={[
-            {
-              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+            ...(canWrite() ? [{
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {
                 title: t('network:networkpolicy.messages.confirmDeleteTitle'),
                 description: t('network:networkpolicy.messages.confirmDeleteDesc', { name: record.name }),
               },
-            },
+            }] : []),
           ]}
         />
       ),
@@ -315,9 +317,11 @@ const NetworkPolicyTab: React.FC<NetworkPolicyTabProps> = ({ clusterId, onCountC
         <Button icon={<ReloadOutlined />} onClick={() => fetchPolicies()}>
           {t('common:actions.refresh')}
         </Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
-          {t('network:networkpolicy.create')}
-        </Button>
+        {canWrite() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
+            {t('network:networkpolicy.create')}
+          </Button>
+        )}
       </Space>
 
       <Table

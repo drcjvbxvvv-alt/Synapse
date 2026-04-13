@@ -18,12 +18,14 @@ import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { NamespaceData } from '../../services/namespaceService';
 import { useNamespaceList } from './hooks/useNamespaceList';
+import { usePermission } from '@/hooks/usePermission';
 import { createNamespaceColumns } from './columns';
 import ColumnSettingsDrawer from './components/ColumnSettingsDrawer';
 import CreateNamespaceModal from './components/CreateNamespaceModal';
 
 
 const NamespaceList: React.FC = () => {
+  const { hasFeature, canWrite } = usePermission();
   const state = useNamespaceList();
   const { token } = theme.useToken();
 
@@ -35,7 +37,9 @@ const NamespaceList: React.FC = () => {
     SYSTEM_NAMESPACES: state.SYSTEM_NAMESPACES,
     handleViewDetail: state.handleViewDetail,
     handleDelete: state.handleDelete,
-  }), [state.t, token, state.sortField, state.sortOrder, state.SYSTEM_NAMESPACES, state.handleViewDetail, state.handleDelete]);
+    canDelete: canWrite(),
+    showActions: canWrite(),
+  }), [state.t, token, state.sortField, state.sortOrder, state.SYSTEM_NAMESPACES, state.handleViewDetail, state.handleDelete, canWrite]);
 
   const columns = useMemo(() => allColumns.filter(col => {
     if (col.key === 'actions') return true;
@@ -70,27 +74,33 @@ const NamespaceList: React.FC = () => {
           {/* Action toolbar */}
           <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Space>
-              <Button
-                danger
-                disabled={state.selectedRowKeys.length === 0}
-                onClick={state.handleBatchDelete}
-                icon={<DeleteOutlined />}
-              >
-                {state.selectedRowKeys.length > 1
-                  ? `${state.t('common:actions.batchDelete')} (${state.selectedRowKeys.length})`
-                  : state.t('common:actions.delete')}
-              </Button>
-              <Button disabled={state.selectedRowKeys.length === 0} onClick={state.handleExport}>
-                {state.selectedRowKeys.length > 1
-                  ? `${state.t('common:actions.batchExport')} (${state.selectedRowKeys.length})`
-                  : state.t('common:actions.export')}
-              </Button>
+              {canWrite() && (
+                <Button
+                  danger
+                  disabled={state.selectedRowKeys.length === 0}
+                  onClick={state.handleBatchDelete}
+                  icon={<DeleteOutlined />}
+                >
+                  {state.selectedRowKeys.length > 1
+                    ? `${state.t('common:actions.batchDelete')} (${state.selectedRowKeys.length})`
+                    : state.t('common:actions.delete')}
+                </Button>
+              )}
+              {hasFeature('export') && (
+                <Button disabled={state.selectedRowKeys.length === 0} onClick={state.handleExport}>
+                  {state.selectedRowKeys.length > 1
+                    ? `${state.t('common:actions.batchExport')} (${state.selectedRowKeys.length})`
+                    : state.t('common:actions.export')}
+                </Button>
+              )}
             </Space>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => state.setCreateModalVisible(true)}
-            >{state.t('list.createNamespace')}</Button>
+            {canWrite() && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => state.setCreateModalVisible(true)}
+              >{state.t('list.createNamespace')}</Button>
+            )}
           </div>
 
           <MultiSearchBar

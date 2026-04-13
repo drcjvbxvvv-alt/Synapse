@@ -4,14 +4,16 @@ import { ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import EmptyState from '@/components/EmptyState';
 import { gatewayService } from '../../services/gatewayService';
-import { parseApiError } from '@/utils/api';
+import { showApiError } from '@/utils/api';
 import type { GatewayItem, GatewayListener, GatewayTabProps } from './gatewayTypes';
 import GatewayDrawer from './GatewayDrawer';
 import GatewayForm from './GatewayForm';
+import { usePermission } from '../../hooks/usePermission';
 
 const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
+  const { canWrite } = usePermission();
   const [items, setItems] = useState<GatewayItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -44,7 +46,7 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
       message.success(t('network:gatewayapi.messages.deleteGatewaySuccess'));
       loadData();
     } catch (err) {
-      message.error(parseApiError(err) || t('network:gatewayapi.messages.deleteGatewayError'));
+      showApiError(err, t('network:gatewayapi.messages.deleteGatewayError'));
     }
   };
 
@@ -124,7 +126,7 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
-    {
+    ...(canWrite() ? [{
       title: t('network:gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -151,7 +153,7 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
           </Popconfirm>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   return (
@@ -167,13 +169,15 @@ const GatewayList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) =>
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
         <div style={{ flex: 1 }} />
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => { setEditingGateway(null); setFormVisible(true); }}
-        >
-          {t('network:gatewayapi.form.createGateway')}
-        </Button>
+        {canWrite() && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => { setEditingGateway(null); setFormVisible(true); }}
+          >
+            {t('network:gatewayapi.form.createGateway')}
+          </Button>
+        )}
       </div>
 
       <Table

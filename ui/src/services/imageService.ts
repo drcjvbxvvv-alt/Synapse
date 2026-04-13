@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 
 export interface ImageIndex {
   id: number;
@@ -30,21 +30,21 @@ export interface CrossClusterWorkload {
 
 export const imageService = {
   search: (params: { q?: string; tag?: string; namespace?: string; cluster?: number; page?: number; limit?: number }) =>
-    axios.get<{ items: ImageIndex[]; total: number; page: number; limit: number }>('/api/v1/images/search', { params }),
+    api.get<{ items: ImageIndex[]; total: number; page: number; limit: number }>('images/search', { params }),
 
   syncStatus: () =>
-    axios.get<{ indexed: number; lastSyncAt: string }>('/api/v1/images/status'),
+    api.get<{ indexed: number; lastSyncAt: string }>('images/status'),
 
   sync: () =>
-    axios.post<{ message: string; indexed: number }>('/api/v1/images/sync'),
+    api.post<{ message: string; indexed: number }>('images/sync'),
 };
 
 export const crossClusterService = {
   listWorkloads: (params?: { kind?: string; name?: string; namespace?: string; cluster?: number }) =>
-    axios.get<{ items: CrossClusterWorkload[]; total: number }>('/api/v1/workloads', { params }),
+    api.get<{ items: CrossClusterWorkload[]; total: number }>('workloads', { params }),
 
   getStats: () =>
-    axios.get<{ clusters: Array<{ clusterId: number; clusterName: string; deployments: number; statefulSets: number; daemonSets: number; degraded: number }> }>(
-      '/api/v1/workloads/stats'
+    api.get<{ clusters: Array<{ clusterId: number; clusterName: string; deployments: number; statefulSets: number; daemonSets: number; degraded: number }> }>(
+      'workloads/stats'
     ),
 };

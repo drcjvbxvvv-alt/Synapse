@@ -12,13 +12,15 @@ import EmptyState from '@/components/EmptyState';
 import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
-import { parseApiError } from '@/utils/api';
+import { showApiError } from '@/utils/api';
 import type { GRPCRouteItem, GatewayK8sCondition, GatewayTabProps } from './gatewayTypes';
 import GRPCRouteForm from './GRPCRouteForm';
+import { usePermission } from '../../hooks/usePermission';
 
 const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
+  const { canWrite } = usePermission();
   const [items, setItems] = useState<GRPCRouteItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -60,7 +62,7 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
       message.success(t('gatewayapi.messages.deleteGRPCRouteSuccess'));
       loadData();
     } catch (err) {
-      message.error(parseApiError(err) || t('gatewayapi.messages.deleteGRPCRouteError'));
+      showApiError(err, t('gatewayapi.messages.deleteGRPCRouteError'));
     }
   };
 
@@ -138,14 +140,14 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
             { key: 'edit', label: t('common:actions.edit'), icon: <EditOutlined />, onClick: () => handleEdit(record) },
           ]}
           more={[
-            {
-              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+            ...(canWrite() ? [{
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {
                 title: t('gatewayapi.messages.confirmDeleteTitle'),
                 description: t('gatewayapi.messages.confirmDeleteGRPCRoute', { name: record.name }),
               },
-            },
+            }] : []),
           ]}
         />
       ),
@@ -165,9 +167,11 @@ const GRPCRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
         <div style={{ flex: 1 }} />
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          {t('gatewayapi.form.createGRPCRoute')}
-        </Button>
+        {canWrite() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            {t('gatewayapi.form.createGRPCRoute')}
+          </Button>
+        )}
       </div>
 
       <Table

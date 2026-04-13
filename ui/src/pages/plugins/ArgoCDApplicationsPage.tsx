@@ -42,6 +42,7 @@ import {
 } from '@ant-design/icons';
 import { argoCDService } from '../../services/argoCDService';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import type { 
   ArgoCDApplication, 
   CreateApplicationRequest,
@@ -53,6 +54,7 @@ const ArgoCDApplicationsPage: React.FC = () => {
   const navigate = useNavigate();
   
 const { t } = useTranslation(['plugins', 'common']);
+const { canWrite } = usePermission();
 const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
   const [loading, setLoading] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -283,10 +285,10 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
       width: 130,
       render: (text: string) => <Tag color="blue">{text || '-'}</Tag>,
     },
-    {
+    ...(canWrite() ? [{
       title: t('common:table.actions'),
       key: 'actions',
-      fixed: 'right',
+      fixed: 'right' as const,
       width: 200,
       render: (_: unknown, record: ArgoCDApplication) => (
         <Space size="small">
@@ -299,8 +301,8 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
             />
           </Tooltip>
           <Tooltip title={t('plugins:argocd.appDetail')}>
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               icon={<EyeOutlined />}
               onClick={() => handleViewDetail(record)}
             />
@@ -318,7 +320,7 @@ const [applications, setApplications] = useState<ArgoCDApplication[]>([]);
           </Popconfirm>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   // 載入配置狀態中

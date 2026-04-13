@@ -1,8 +1,8 @@
 # Synapse 功能說明手冊
 
-> 版本：v1.0 — 2026-04-11
+> 版本：v1.1 — 2026-04-12
 > 目的：記錄各功能模組的用途、設計決策與使用方式，方便日後查詢。
-> 範疇：P0 ~ P2 已完成功能
+> 範疇：P0 ~ P2 已完成功能；細粒度功能權限管理（Phase 1–3）
 
 ---
 
@@ -24,6 +24,7 @@
 - [P2-6 DB-backed Feature Flag（功能旗標）](#p2-6-db-backed-feature-flag功能旗標)
 - [P2-8 K8s Informer 健康檢查與自動重啟](#p2-8-k8s-informer-健康檢查與自動重啟)
 - [P2-9 前端 Bundle Size 監控](#p2-9-前端-bundle-size-監控)
+- [細粒度功能權限管理（Feature Policy）](#細粒度功能權限管理feature-policy)
 
 ---
 
@@ -456,6 +457,74 @@ TOTAL_BUDGET_MB=10 npm run bundle-size  # 自訂預算
 | `ArgoCDApplicationsPage`、`HelmList` | 非高頻頁面 |
 
 **Chunk 分割策略**（`vite.config.ts`）：`vendor` / `antd` / `monaco` / `charts` / `i18n` / `query` / `router` 七個獨立 chunk，利用瀏覽器快取。
+
+---
+
+## 細粒度功能權限管理（Feature Policy）
+
+> 規劃書：`docs/FEATURE_PERMISSION_PLAN.md`
+
+**問題**：原有「類型-命名空間」粗粒度模型無法針對特定功能（Terminal、匯出、AI 助手）做差異化限制，所有同類型使用者獲得完全相同的功能集合。
+
+**解決方案**：在 `ClusterPermission` 上疊加一層 Feature Policy，讓 Platform Admin 可針對每個權限記錄額外收緊功能開關。
+
+### 架構
+
+```
+最終有效功能 = permission_type 基礎 ceiling ∩ feature_policy 允許集合
+```
+
+Feature Policy **只能收緊**，永遠無法賦予超出基礎類型上限的功能。
+
+### 後端（Phase 1–2）
+
+| 元件 | 說明 |
+|------|------|
+| `internal/models/feature_policy.go` | 18 個 feature key 常數、`FeatureCeilings` 對照表、`ComputeAllowedFeatures()` |
+| `ClusterPermission.FeaturePolicy` | `TEXT NULL` 欄位，JSON 格式，NULL = 使用預設值 |
+| `MyPermissionsResponse.AllowedFeatures` | 後端預算完整有效集合，前端直接使用 |
+| `GET /permissions/cluster-permissions/:id/features` | 取得 ceiling / policy / effective（Platform Admin） |
+| `PATCH /permissions/cluster-permissions/:id/features` | 更新 feature policy，ceiling 過濾在後端強制執行 |
+| `007_feature_policy.up.sql` | `ALTER TABLE cluster_permissions ADD COLUMN feature_policy TEXT NULL` |
+
+**Feature Key 分類**：
+
+| 類別 | Keys |
+|------|------|
+| 工作負載 | `workload:view` / `workload:write` |
+| 網路 | `network:view` / `network:write` |
+| 儲存 | `storage:view` / `storage:write` |
+| 節點 | `node:view` / `node:manage` |
+| 設定 | `config:view` / `config:write` |
+| 終端機 | `terminal:pod` / `terminal:node` |
+| 可觀測性 | `logs:view` / `monitoring:view` |
+| Helm | `helm:view` / `helm:write` |
+| 工具 | `export` / `ai_assistant` |
+
+### 前端（Phase 3）
+
+| 元件 | 說明 |
+|------|------|
+| `MyPermissionsResponse.allowed_features` | 新增 `string[]` 欄位，由後端填充 |
+| `PermissionContextType.hasFeature()` | `hasFeature(key, clusterId?) => boolean` |
+| `PermissionProvider` | `hasFeature` 實作：查 `allowed_features` 是否包含 key |
+
+**使用方式**：
+
+```tsx
+const { hasFeature } = usePermission();
+
+// 隱藏 AI 助手（當功能被 feature policy 禁止時）
+{hasFeature('ai_assistant') && <AIChatButton />}
+
+// 隱藏 Pod 終端機
+{hasFeature('terminal:pod') && <TerminalButton />}
+```
+
+### 向後相容
+
+- `feature_policy` 欄位為 NULL 時，`ComputeAllowedFeatures` 直接回傳該 `permission_type` 的完整 ceiling，現有使用者體驗不受影響
+- `allowed_features` 為空陣列時，前端 `hasFeature()` 回傳 `false`，安全降級
 
 ---
 

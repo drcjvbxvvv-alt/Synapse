@@ -31,6 +31,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { TablePaginationConfig } from 'antd/es/table';
 import { EventAlertService, type EventAlertRule, type EventAlertHistory } from '../../services/eventAlertService';
+import { usePermission } from '../../hooks/usePermission';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -70,6 +71,7 @@ const EventAlertRules: React.FC = () => {
   const { clusterId } = useParams<{ clusterId: string }>();
   const { t } = useTranslation(['alert', 'common']);
   const { message, modal } = App.useApp();
+  const { canWrite } = usePermission();
 
   const [activeTab, setActiveTab] = useState('rules');
 
@@ -200,7 +202,7 @@ const EventAlertRules: React.FC = () => {
         <Switch checked={enabled} onChange={(v) => handleToggle(record, v)} size="small" />
       ),
     },
-    {
+    ...(canWrite() ? [{
       title: t('alert:eventAlert.table.actions'), key: 'actions', fixed: 'right' as const, width: 100,
       render: (_: unknown, record: EventAlertRule) => (
         <Space>
@@ -212,7 +214,7 @@ const EventAlertRules: React.FC = () => {
           </Tooltip>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   const historyColumns = [

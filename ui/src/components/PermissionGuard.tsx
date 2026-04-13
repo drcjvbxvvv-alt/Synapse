@@ -22,6 +22,7 @@ interface PermissionGuardProps {
   children: React.ReactNode;
   platformAdminOnly?: boolean;
   requiredPermission?: PermissionType;
+  requiredFeature?: string;
   fallback?: React.ReactNode;
 }
 
@@ -33,11 +34,12 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   children,
   platformAdminOnly = false,
   requiredPermission,
+  requiredFeature,
   fallback,
 }) => {
   const { t } = useTranslation('components');
   const currentUser = tokenManager.getUser();
-  const { currentClusterPermission, clusterPermissions } = usePermission();
+  const { currentClusterPermission, clusterPermissions, hasFeature } = usePermission();
   const loading = usePermissionLoading();
 
   if (loading) {
@@ -80,6 +82,20 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
         />
       );
     }
+  }
+
+  // 檢查功能策略
+  if (requiredFeature && !hasFeature(requiredFeature)) {
+    if (fallback) return <>{fallback}</>;
+    return (
+      <ErrorPage
+        status={403}
+        title={t('permissionGuard.featureDisabled')}
+        subTitle={t('permissionGuard.featureDisabledDesc')}
+        showBack
+        showHome
+      />
+    );
   }
 
   return <>{children}</>;

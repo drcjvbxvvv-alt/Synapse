@@ -21,7 +21,7 @@ const ClusterSelector: React.FC = () => {
   const location = useLocation();
   const { t } = useTranslation(['permission', 'common']);
   const [clusters, setClusters] = useState<Cluster[]>([]);
-  const { getPermissionType, setCurrentClusterId, canWrite } = usePermission();
+  const { getPermissionType, setCurrentClusterId, canWrite, refreshPermissions } = usePermission();
   const { setActiveClusterId, setClusters: setStoreClusters } = useClusterStore();
 
   const currentClusterId = clusterId || id;
@@ -33,8 +33,10 @@ const ClusterSelector: React.FC = () => {
     if (currentClusterId) {
       setCurrentClusterId(currentClusterId);
       setActiveClusterId(currentClusterId);
+      // 每次進入叢集都重新拉取最新權限，確保管理員在後台修改策略後立即生效。
+      refreshPermissions();
     }
-  }, [currentClusterId, setCurrentClusterId, setActiveClusterId]);
+  }, [currentClusterId, setCurrentClusterId, setActiveClusterId, refreshPermissions]);
 
   const openTerminal = () => {
     if (currentClusterId) {
@@ -92,11 +94,6 @@ const ClusterSelector: React.FC = () => {
           <Tag color={getPermissionTypeColor(permissionType)} style={{ marginLeft: 8 }}>
             {t(`permission:types.${permissionType}.name`)}
           </Tag>
-        )}
-        {!hasWritePermission && permissionType && (
-          <span style={{ color: '#ff4d4f', fontSize: '12px' }}>
-            {t('common:menu.readonlyMode')}
-          </span>
         )}
       </div>
       <Space size="middle">

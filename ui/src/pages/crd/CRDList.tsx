@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import { App, Card, Collapse, Input, Space, Table, Tag, Typography } from 'antd';
 import { ApiOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -13,6 +14,7 @@ const CRDList: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { message } = App.useApp();
+  const { canWrite } = usePermission();
 
   const [loading, setLoading] = useState(false);
   const [crds, setCrds] = useState<CRDInfo[]>([]);
@@ -85,7 +87,7 @@ const CRDList: React.FC = () => {
           <Tag color="purple">Cluster</Tag>
         ),
     },
-    {
+    ...(canWrite() ? [{
       title: t('common.actions', '操作'),
       key: 'actions',
       render: (_: unknown, record: CRDInfo) => (
@@ -100,7 +102,7 @@ const CRDList: React.FC = () => {
           {t('crd.viewResources', '檢視例項')}
         </a>
       ),
-    },
+    }] : []),
   ];
 
   const collapseItems = grouped.map(([group, items]) => ({

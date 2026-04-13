@@ -49,6 +49,7 @@ type ClusterPermission struct {
 	PermissionType string         `json:"permission_type" gorm:"not null;size:50"` // admin, ops, dev, readonly, custom
 	Namespaces     string         `json:"namespaces" gorm:"type:text"`             // 命名空間範圍，JSON格式，["*"] 表示全部
 	CustomRoleRef  string         `json:"custom_role_ref" gorm:"size:200"`         // 自定義權限時引用的 ClusterRole/Role 名稱
+	FeaturePolicy  string         `json:"feature_policy" gorm:"type:text"`         // 功能開關策略，JSON格式，NULL = 使用預設值
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
@@ -260,11 +261,12 @@ func (cp *ClusterPermission) ToResponse() ClusterPermissionResponse {
 
 // MyPermissionsResponse 使用者權限響應
 type MyPermissionsResponse struct {
-	ClusterID      uint     `json:"cluster_id"`
-	ClusterName    string   `json:"cluster_name"`
-	PermissionType string   `json:"permission_type"`
-	PermissionName string   `json:"permission_name"`
-	Namespaces     []string `json:"namespaces"`
-	AllowedActions []string `json:"allowed_actions"`
-	CustomRoleRef  string   `json:"custom_role_ref,omitempty"`
+	ClusterID       uint     `json:"cluster_id"`
+	ClusterName     string   `json:"cluster_name"`
+	PermissionType  string   `json:"permission_type"`
+	PermissionName  string   `json:"permission_name"`
+	Namespaces      []string `json:"namespaces"`
+	AllowedActions  []string `json:"allowed_actions"`
+	CustomRoleRef   string   `json:"custom_role_ref,omitempty"`
+	AllowedFeatures []string `json:"allowed_features"` // 已套用 ceiling ∩ feature_policy 後的有效功能集合
 }

@@ -26,6 +26,7 @@ import {
   LineChartOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../hooks/usePermission';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { sloService, type SLO, type SLOStatus } from '../../services/sloService';
@@ -53,6 +54,7 @@ const SLOListPage: React.FC = () => {
   const { token } = theme.useToken();
   const { message } = App.useApp();
   const { t } = useTranslation(['slo', 'common']);
+  const { canWrite } = usePermission();
   const queryClient = useQueryClient();
 
   const getStatusLabel = (status: string) => {
@@ -211,11 +213,11 @@ const SLOListPage: React.FC = () => {
         </Text>
       ),
     },
-    {
+    ...(canWrite() ? [{
       title: t('slo:table.actions'),
       key: 'actions',
       width: 120,
-      fixed: 'right',
+      fixed: 'right' as const,
       render: (_: unknown, record: SLO) => (
         <Space size={0}>
           <Tooltip title={t('slo:tooltips.viewStatus')}>
@@ -248,7 +250,7 @@ const SLOListPage: React.FC = () => {
           </Popconfirm>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────────

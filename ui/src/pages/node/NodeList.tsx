@@ -9,10 +9,12 @@ import type { Node } from '../../types';
 import { useNodeList } from './hooks/useNodeList';
 import { createNodeColumns } from './columns';
 import { NodeStatsCards, NodeLabelModal, ColumnSettingsDrawer } from './components';
+import { usePermission } from '../../hooks/usePermission';
 
 
 const NodeList: React.FC = () => {
   const state = useNodeList();
+  const { hasFeature, canWrite } = usePermission();
 
   // Create columns with memoization
   const allColumns = useMemo(() => createNodeColumns({
@@ -25,10 +27,12 @@ const NodeList: React.FC = () => {
     handleCordon: state.handleCordon,
     handleUncordon: state.handleUncordon,
     handleDrain: state.handleDrain,
+    canTerminalNode: hasFeature('terminal:node'),
+    showActions: canWrite(),
   }), [
     state.t, state.tc, state.sortField, state.sortOrder,
     state.handleViewDetail, state.handleNodeTerminal,
-    state.handleCordon, state.handleUncordon, state.handleDrain
+    state.handleCordon, state.handleUncordon, state.handleDrain, hasFeature, canWrite
   ]);
 
   // Filter columns by visibility
@@ -95,11 +99,13 @@ const NodeList: React.FC = () => {
               >
                 {state.isBatch ? state.t('actions.batchLabel') : '新增標籤'}
               </Button>
-              <Button disabled={state.selectedNodes.length === 0} onClick={state.handleExport}>
-                {state.selectedNodes.length > 1
-                  ? `${state.tc('actions.batchExport')} (${state.selectedNodes.length})`
-                  : state.tc('actions.export')}
-              </Button>
+              {hasFeature('export') && (
+                <Button disabled={state.selectedNodes.length === 0} onClick={state.handleExport}>
+                  {state.selectedNodes.length > 1
+                    ? `${state.tc('actions.batchExport')} (${state.selectedNodes.length})`
+                    : state.tc('actions.export')}
+                </Button>
+              )}
             </Space>
           </div>
 

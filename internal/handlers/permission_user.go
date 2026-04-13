@@ -42,12 +42,13 @@ func (h *PermissionHandler) GetMyPermissions(c *gin.Context) {
 		}
 
 		responses[i] = models.MyPermissionsResponse{
-			ClusterID:      p.ClusterID,
-			ClusterName:    clusterName,
-			PermissionType: p.PermissionType,
-			PermissionName: permissionName,
-			Namespaces:     p.GetNamespaceList(),
-			CustomRoleRef:  p.CustomRoleRef,
+			ClusterID:       p.ClusterID,
+			ClusterName:     clusterName,
+			PermissionType:  p.PermissionType,
+			PermissionName:  permissionName,
+			Namespaces:      p.GetNamespaceList(),
+			CustomRoleRef:   p.CustomRoleRef,
+			AllowedFeatures: models.ComputeAllowedFeatures(p.PermissionType, p.FeaturePolicy),
 		}
 	}
 
@@ -86,12 +87,13 @@ func (h *PermissionHandler) GetMyClusterPermission(c *gin.Context) {
 	}
 
 	response.OK(c, models.MyPermissionsResponse{
-		ClusterID:      permission.ClusterID,
-		PermissionType: permission.PermissionType,
-		PermissionName: permissionName,
-		Namespaces:     permission.GetNamespaceList(),
-		AllowedActions: allowedActions,
-		CustomRoleRef:  permission.CustomRoleRef,
+		ClusterID:       permission.ClusterID,
+		PermissionType:  permission.PermissionType,
+		PermissionName:  permissionName,
+		Namespaces:      permission.GetNamespaceList(),
+		AllowedActions:  allowedActions,
+		CustomRoleRef:   permission.CustomRoleRef,
+		AllowedFeatures: models.ComputeAllowedFeatures(permission.PermissionType, permission.FeaturePolicy),
 	})
 }
 

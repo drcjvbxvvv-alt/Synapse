@@ -238,6 +238,10 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 				clusterPerms.PUT("/:id", permissionHandler.UpdateClusterPermission)
 				clusterPerms.DELETE("/:id", permissionHandler.DeleteClusterPermission)
 				clusterPerms.POST("/batch-delete", permissionHandler.BatchDeleteClusterPermissions)
+
+				// 功能開關策略
+				clusterPerms.GET("/:id/features", permissionHandler.GetFeaturePolicy)
+				clusterPerms.PATCH("/:id/features", permissionHandler.UpdateFeaturePolicy)
 			}
 		}
 	}

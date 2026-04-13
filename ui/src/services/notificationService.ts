@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 
 export interface NotificationItem {
   id: number;
@@ -23,14 +23,14 @@ export interface NotificationListResponse {
 
 export const notificationService = {
   list: () =>
-    axios.get<NotificationListResponse>('/notifications'),
+    api.get<NotificationListResponse>('/notifications'),
 
   unreadCount: () =>
-    axios.get<{ unreadCount: number }>('/notifications/unread-count'),
+    api.get<{ unreadCount: number }>('/notifications/unread-count'),
 
   markRead: (id: number) =>
-    axios.put(`/notifications/${id}/read`),
+    api.put(`/notifications/${id}/read`),
 
   markAllRead: () =>
-    axios.put('/notifications/read-all'),
+    api.put('/notifications/read-all'),
 };

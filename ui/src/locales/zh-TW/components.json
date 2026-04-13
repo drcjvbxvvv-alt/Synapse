@@ -33,7 +33,9 @@
     "opsPermission": "運維權限",
     "devPermission": "開發權限",
     "readonlyPermission": "唯讀權限",
-    "customPermission": "自訂權限"
+    "customPermission": "自訂權限",
+    "featureDisabled": "功能已停用",
+    "featureDisabledDesc": "管理員已在功能策略中停用此功能，如需開啟請聯絡管理員"
   },
   "kubectlTerminal": {
     "title": "Kubectl 終端機",

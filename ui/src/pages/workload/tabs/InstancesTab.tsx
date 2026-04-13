@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import { WorkloadService } from '../../../services/workloadService';
 import { useTranslation } from 'react-i18next';
+import { usePermission } from '../../../hooks/usePermission';
 
 interface PodInfo {
   name: string;
@@ -44,7 +45,8 @@ const InstancesTab: React.FC<InstancesTabProps> = ({
   cronJobName
 }) => {
   const navigate = useNavigate();
-const { t } = useTranslation(['workload', 'common']);
+  const { t } = useTranslation(['workload', 'common']);
+  const { hasFeature } = usePermission();
 const [loading, setLoading] = useState(false);
   const [pods, setPods] = useState<PodInfo[]>([]);
 
@@ -238,14 +240,16 @@ const [loading, setLoading] = useState(false);
           >
             {t('instances.logs')}
           </Button>
-          <Button
-            type="link"
-            size="small"
-            style={{ padding: 0 }}
-            onClick={() => navigate(`/clusters/${clusterId}/pods/${record.namespace}/${record.name}/terminal`)}
-          >
-            {t('instances.terminal')}
-          </Button>
+          {hasFeature('terminal:pod') && (
+            <Button
+              type="link"
+              size="small"
+              style={{ padding: 0 }}
+              onClick={() => navigate(`/clusters/${clusterId}/pods/${record.namespace}/${record.name}/terminal`)}
+            >
+              {t('instances.terminal')}
+            </Button>
+          )}
         </Space>
       ),
     },

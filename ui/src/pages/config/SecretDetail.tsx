@@ -27,7 +27,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { secretService, type SecretDetail as SecretDetailType, type ConfigVersion } from '../../services/configService';
 import MonacoEditor from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
-import { parseApiError } from '../../utils/api';
+import { showApiError } from '../../utils/api';
 import PageSkeleton from '../../components/PageSkeleton';
 
 const { Title, Text } = Typography;
@@ -56,7 +56,7 @@ const SecretDetail: React.FC = () => {
       const data = await secretService.getSecret(Number(clusterId), namespace, name);
       setSecret(data);
     } catch (error: unknown) {
-      message.error(parseApiError(error) || t('config:detail.loadSecretError'));
+      showApiError(error, t('config:detail.loadSecretError'));
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ const SecretDetail: React.FC = () => {
           message.success(t('config:detail.deleteSecretSuccess'));
           navigate(`/clusters/${clusterId}/configs`);
         } catch (error: unknown) {
-          message.error(parseApiError(error) || t('config:detail.deleteSecretError'));
+          showApiError(error, t('config:detail.deleteSecretError'));
         }
       },
     });

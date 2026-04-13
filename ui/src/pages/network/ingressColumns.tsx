@@ -13,6 +13,8 @@ export interface IngressColumnHandlers {
   onViewYAML: (ingress: Ingress) => void;
   onEdit: (ingress: Ingress) => void;
   onDelete: (ingress: Ingress) => void;
+  canDelete?: boolean;
+  showActions?: boolean;
 }
 
 export interface IngressColumnSortState {
@@ -159,7 +161,7 @@ export function getIngressColumns(
         return <span>{formatted}</span>;
       },
     },
-    {
+    ...(handlers.showActions !== false ? [{
       title: t('common:table.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -171,17 +173,17 @@ export function getIngressColumns(
             { key: 'edit', label: t('common:actions.edit'), icon: <EditOutlined />, onClick: () => handlers.onEdit(record) },
           ]}
           more={[
-            {
-              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+            ...(handlers.canDelete !== false ? [{
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handlers.onDelete(record),
               confirm: {
                 title: t('network:ingress.messages.confirmDeleteItem'),
                 description: t('network:ingress.messages.confirmDeleteDesc', { name: record.name }),
               },
-            },
+            }] : []),
           ]}
         />
       ),
-    },
+    }] : []),
   ];
 }

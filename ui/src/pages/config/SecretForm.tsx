@@ -25,7 +25,7 @@ import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
 import { secretService, getNamespaces } from '../../services/configService';
-import { parseApiError } from '../../utils/api';
+import { parseApiError, showApiError } from '../../utils/api';
 
 const DEFAULT_YAML = `apiVersion: v1
 kind: Secret
@@ -175,7 +175,7 @@ const SecretForm: React.FC<SecretFormProps> = ({ open, clusterId, onClose, onSuc
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      message.error(parseApiError(err) || t('config:create.messages.secretCreateError'));
+      showApiError(err, t('config:create.messages.secretCreateError'));
     } finally {
       setLoading(false);
     }

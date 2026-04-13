@@ -14,6 +14,8 @@ export interface PermissionContextType {
   isAdmin: (clusterId?: number | string) => boolean;
   isReadonly: (clusterId?: number | string) => boolean;
   canWrite: (clusterId?: number | string) => boolean;
+  // 檢查當前叢集是否允許指定功能（基於後端計算的 allowed_features）
+  hasFeature: (key: string, clusterId?: number | string) => boolean;
   // 獲取權限型別
   getPermissionType: (clusterId: number | string) => PermissionType | null;
   // 重新整理權限

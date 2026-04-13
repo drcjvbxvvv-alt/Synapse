@@ -7,7 +7,7 @@ import { App } from 'antd';
 import { useTranslation } from 'react-i18next';
 import * as YAML from 'yaml';
 import { secretService, getNamespaces } from '../../../services/configService';
-import { parseApiError } from '../../../utils/api';
+import { showApiError } from '../../../utils/api';
 
 export interface LabelItem       { key: string; value: string; }
 export interface AnnotationItem  { key: string; value: string; }
@@ -258,7 +258,7 @@ export function useSecretCreate() {
       message.success(t('config:create.messages.secretCreateSuccess'));
       navigate(`/clusters/${clusterId}/configs`);
     } catch (error: unknown) {
-      message.error(parseApiError(error) || t('config:create.messages.secretCreateError'));
+      showApiError(error, t('config:create.messages.secretCreateError'));
     } finally {
       setSubmitting(false);
     }

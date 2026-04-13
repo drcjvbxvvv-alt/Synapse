@@ -25,9 +25,11 @@ import { getServiceColumns } from './serviceColumns';
 import type { ServiceTabProps, EndpointsData } from './serviceTypes';
 import { useTranslation } from 'react-i18next';
 import { useMultiSearch, applyMultiSearch } from '../../hooks/useMultiSearch';
+import { usePermission } from '../../hooks/usePermission';
 import { MultiSearchBar } from '../../components/MultiSearchBar';
 
 const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => {
+  const { hasFeature, canWrite } = usePermission();
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
@@ -321,7 +323,9 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
     onViewEndpoints: handleViewEndpoints,
     onDelete: handleDelete,
     t,
-  }), [sortField, sortOrder, clusterId, t]);
+    canDelete: canWrite(),
+    showActions: canWrite(),
+  }), [sortField, sortOrder, clusterId, t, canWrite]);
 
   const columns = allColumns.filter(col => {
     if (col.key === 'actions' || col.key === 'name') return true;
@@ -354,20 +358,26 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger icon={<DeleteOutlined />}>
-            {selectedRowKeys.length > 1
-              ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
-              : t('common:actions.delete')}
-          </Button>
-          <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
-            {selectedRowKeys.length > 1
-              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
-              : t('common:actions.export')}
-          </Button>
+          {canWrite() && (
+            <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger icon={<DeleteOutlined />}>
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
+                : t('common:actions.delete')}
+            </Button>
+          )}
+          {hasFeature('export') && (
+            <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+                : t('common:actions.export')}
+            </Button>
+          )}
         </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
-          {t('network:service.createService')}
-        </Button>
+        {canWrite() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
+            {t('network:service.createService')}
+          </Button>
+        )}
       </div>
 
       {/* 多條件搜尋欄 */}

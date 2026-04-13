@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import helmService from '../../services/helmService';
+import { usePermission } from '../../hooks/usePermission';
 import type {
   HelmRelease,
   HelmHistory,
@@ -60,6 +61,7 @@ const HelmList: React.FC = () => {
   const { id: clusterId } = useParams<{ id: string }>();
   const { t } = useTranslation('helm');
   const { message, modal } = App.useApp();
+  const { canWrite } = usePermission();
 
   // ---- state ----
   const [releases, setReleases] = useState<HelmRelease[]>([]);
@@ -307,11 +309,11 @@ const HelmList: React.FC = () => {
       dataIndex: 'updated_at',
       key: 'updated_at',
     },
-    {
+    ...(canWrite() ? [{
       title: t('actions', 'Actions'),
       key: 'actions',
       width: 160,
-      render: (_, record) => (
+      render: (_: unknown, record: HelmRelease) => (
         <Space size="small">
           <Tooltip title={t('history', 'History')}>
             <Button
@@ -344,7 +346,7 @@ const HelmList: React.FC = () => {
           </Tooltip>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   const historyColumns: ColumnsType<HelmHistory> = [
@@ -387,9 +389,11 @@ const HelmList: React.FC = () => {
             <Button icon={<ReloadOutlined />} onClick={fetchReleases}>
               {t('refresh', 'Refresh')}
             </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenInstall}>
-              {t('install', 'Install')}
-            </Button>
+            {canWrite() && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenInstall}>
+                {t('install', 'Install')}
+              </Button>
+            )}
           </Space>
         }
       >

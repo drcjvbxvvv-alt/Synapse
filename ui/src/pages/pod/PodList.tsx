@@ -18,9 +18,11 @@ import {
 import { MultiSearchBar } from '@/components/MultiSearchBar';
 import { usePodList } from './hooks/usePodList';
 import { createPodColumns } from './columns';
+import { usePermission } from '../../hooks/usePermission';
 
 
 const PodList: React.FC = () => {
+  const { hasFeature, canWrite } = usePermission();
   const {
     clusterId,
     pods,
@@ -66,8 +68,10 @@ const PodList: React.FC = () => {
       createPodColumns({
         t, tc, sortField, sortOrder, clusterId,
         handleViewDetail, handleLogs, handleTerminal, handleViewEvents, confirmDelete,
+        canTerminalPod: hasFeature('terminal:pod'),
+        showActions: canWrite(),
       }),
-    [t, tc, sortField, sortOrder, clusterId, handleViewDetail, handleLogs, handleTerminal, handleViewEvents, confirmDelete]
+    [t, tc, sortField, sortOrder, clusterId, handleViewDetail, handleLogs, handleTerminal, handleViewEvents, confirmDelete, hasFeature, canWrite]
   );
 
   const columns = useMemo(
@@ -104,21 +108,25 @@ const PodList: React.FC = () => {
                   {/* 操作按鈕欄 */}
                   <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <Space>
-                      <Button
-                        danger
-                        disabled={selectedRowKeys.length === 0}
-                        onClick={handleBatchDelete}
-                        icon={<DeleteOutlined />}
-                      >
-                        {selectedRowKeys.length > 1
-                          ? `${t('actions.batchDelete')} (${selectedRowKeys.length})`
-                          : tc('actions.delete')}
-                      </Button>
-                      <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
-                        {selectedRowKeys.length > 1
-                          ? `${tc('actions.batchExport')} (${selectedRowKeys.length})`
-                          : tc('actions.export')}
-                      </Button>
+                      {canWrite() && (
+                        <Button
+                          danger
+                          disabled={selectedRowKeys.length === 0}
+                          onClick={handleBatchDelete}
+                          icon={<DeleteOutlined />}
+                        >
+                          {selectedRowKeys.length > 1
+                            ? `${t('actions.batchDelete')} (${selectedRowKeys.length})`
+                            : tc('actions.delete')}
+                        </Button>
+                      )}
+                      {hasFeature('export') && (
+                        <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
+                          {selectedRowKeys.length > 1
+                            ? `${tc('actions.batchExport')} (${selectedRowKeys.length})`
+                            : tc('actions.export')}
+                        </Button>
+                      )}
                     </Space>
                   </div>
 

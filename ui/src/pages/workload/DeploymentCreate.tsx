@@ -21,6 +21,7 @@ import {
   DiffOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import { WorkloadService } from '../../services/workloadService';
 import { parseApiError } from '../../utils/api';
 import { useTranslation } from 'react-i18next';
@@ -340,7 +341,9 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       navigate(`/clusters/${clusterId}/workloads`);
     } catch (error: unknown) {
       console.error('提交失敗:', error);
-      messageApi.error(error instanceof Error ? error.message : t('messages.operationFailed'));
+      if (!axios.isAxiosError(error) || !(error as any)._permissionHandled) {
+        messageApi.error(error instanceof Error ? error.message : t('messages.operationFailed'));
+      }
     } finally {
       setSubmitting(false);
     }

@@ -22,6 +22,8 @@ interface SecretColumnParams {
   colorTextSecondary: string;
   navigate: (path: string) => void;
   handleDelete: (namespace: string, name: string) => void;
+  canDelete?: boolean;
+  showActions?: boolean;
 }
 
 const getTypeColor = (type: string): string => {
@@ -38,7 +40,7 @@ const getTypeColor = (type: string): string => {
 };
 
 export function getSecretColumns(params: SecretColumnParams): ColumnsType<SecretListItem> {
-  const { t, clusterId, sortField, sortOrder, colorTextTertiary, colorTextSecondary, navigate, handleDelete } = params;
+  const { t, clusterId, sortField, sortOrder, colorTextTertiary, colorTextSecondary, navigate, handleDelete, canDelete = true, showActions } = params;
 
   return [
     {
@@ -150,7 +152,7 @@ export function getSecretColumns(params: SecretColumnParams): ColumnsType<Secret
         return `${Math.floor(diff / 1440)}d`;
       },
     },
-    {
+    ...(showActions !== false ? [{
       title: t('common:table.actions'),
       key: 'actions',
       width: 90,
@@ -178,7 +180,7 @@ export function getSecretColumns(params: SecretColumnParams): ColumnsType<Secret
               icon: <HistoryOutlined />,
               onClick: () => navigate(`/clusters/${clusterId}/configs/secret/${record.namespace}/${record.name}/history`),
             },
-            {
+            ...(canDelete ? [{
               key: 'delete',
               label: t('common:actions.delete'),
               icon: <DeleteOutlined />,
@@ -188,10 +190,10 @@ export function getSecretColumns(params: SecretColumnParams): ColumnsType<Secret
                 description: t('config:list.messages.confirmDeleteDesc', { name: record.name }),
               },
               onClick: () => handleDelete(record.namespace, record.name),
-            },
+            }] : []),
           ]}
         />
       ),
-    },
+    }] : []),
   ];
 }

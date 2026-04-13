@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 
 export interface PortForwardSession {
   id: number;
@@ -16,16 +16,16 @@ export interface PortForwardSession {
 
 export const portforwardService = {
   start: (clusterID: string, namespace: string, podName: string, podPort: number) =>
-    axios.post<{ sessionId: number; localPort: number; podPort: number; message: string }>(
-      `/api/v1/clusters/${clusterID}/pods/${namespace}/${podName}/portforward`,
+    api.post<{ sessionId: number; localPort: number; podPort: number; message: string }>(
+      `clusters/${clusterID}/pods/${namespace}/${podName}/portforward`,
       { podPort }
     ),
 
   stop: (sessionId: number) =>
-    axios.delete(`/api/v1/portforwards/${sessionId}`),
+    api.delete(`portforwards/${sessionId}`),
 
   list: (status?: string) =>
-    axios.get<{ items: PortForwardSession[]; total: number }>('/api/v1/portforwards', {
+    api.get<{ items: PortForwardSession[]; total: number }>('portforwards', {
       params: { status },
     }),
 };

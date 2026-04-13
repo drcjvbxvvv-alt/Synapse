@@ -16,7 +16,7 @@ import MonacoEditor from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
 import { configMapService, getNamespaces } from '../../services/configService';
-import { parseApiError } from '../../utils/api';
+import { parseApiError, showApiError } from '../../utils/api';
 
 const DEFAULT_YAML = `apiVersion: v1
 kind: ConfigMap
@@ -146,7 +146,7 @@ const ConfigMapForm: React.FC<ConfigMapFormProps> = ({ open, clusterId, onClose,
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      message.error(parseApiError(err) || t('create.messages.configMapCreateError'));
+      showApiError(err, t('create.messages.configMapCreateError'));
     } finally {
       setLoading(false);
     }

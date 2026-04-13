@@ -19,6 +19,8 @@ interface PodColumnParams {
   handleTerminal: (pod: PodInfo) => void;
   handleViewEvents: (pod: PodInfo) => void;
   confirmDelete: (pod: PodInfo) => void;
+  canTerminalPod?: boolean;
+  showActions?: boolean;
 }
 
 export const createPodColumns = (params: PodColumnParams): ColumnsType<PodInfo> => {
@@ -26,6 +28,8 @@ export const createPodColumns = (params: PodColumnParams): ColumnsType<PodInfo> 
     t, tc, sortField, sortOrder,
     handleViewDetail, handleLogs, handleTerminal,
     handleViewEvents, confirmDelete,
+    canTerminalPod = true,
+    showActions,
   } = params;
 
   const morePodActions = (record: PodInfo): MenuProps['items'] => [
@@ -189,22 +193,24 @@ export const createPodColumns = (params: PodColumnParams): ColumnsType<PodInfo> 
       width: 100,
       render: (_: unknown, record: PodInfo) => PodService.getAge(record.createdAt),
     },
-    {
+    ...(showActions !== false ? [{
       title: tc('table.actions'),
       key: 'actions',
       width: 120,
       fixed: 'right' as const,
       render: (_: unknown, record: PodInfo) => (
         <Space size={0}>
-          <Tooltip title={t('actions.terminal')}>
-            <Button
-              type="link"
-              size="small"
-              icon={<CodeOutlined />}
-              onClick={() => handleTerminal(record)}
-              disabled={record.status !== 'Running'}
-            />
-          </Tooltip>
+          {canTerminalPod && (
+            <Tooltip title={t('actions.terminal')}>
+              <Button
+                type="link"
+                size="small"
+                icon={<CodeOutlined />}
+                onClick={() => handleTerminal(record)}
+                disabled={record.status !== 'Running'}
+              />
+            </Tooltip>
+          )}
           <Tooltip title={t('actions.logs')}>
             <Button
               type="link"
@@ -218,6 +224,6 @@ export const createPodColumns = (params: PodColumnParams): ColumnsType<PodInfo> 
           </Dropdown>
         </Space>
       ),
-    },
+    }] : []),
   ];
 };

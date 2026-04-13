@@ -4,14 +4,16 @@ import { ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import EmptyState from '@/components/EmptyState';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
-import { parseApiError } from '@/utils/api';
+import { showApiError } from '@/utils/api';
 import type { ReferenceGrantItem, ReferenceGrantPeer, GatewayTabProps } from './gatewayTypes';
 import MonacoEditor from '@monaco-editor/react';
 import ReferenceGrantForm from './ReferenceGrantForm';
+import { usePermission } from '../../hooks/usePermission';
 
 const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
+  const { canWrite } = usePermission();
   const [items, setItems] = useState<ReferenceGrantItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -44,7 +46,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
       message.success(t('gatewayapi.messages.deleteReferenceGrantSuccess'));
       loadData();
     } catch (err) {
-      message.error(parseApiError(err) || t('gatewayapi.messages.deleteReferenceGrantError'));
+      showApiError(err, t('gatewayapi.messages.deleteReferenceGrantError'));
     }
   };
 
@@ -97,7 +99,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
       key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
-    {
+    ...(canWrite() ? [{
       title: t('gatewayapi.columns.actions'),
       key: 'actions',
       fixed: 'right' as const,
@@ -120,7 +122,7 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
           </Popconfirm>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   return (
@@ -136,9 +138,11 @@ const ReferenceGrantList: React.FC<GatewayTabProps> = ({ clusterId, onCountChang
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
         <div style={{ flex: 1 }} />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateVisible(true)}>
-          {t('gatewayapi.refgrant.create')}
-        </Button>
+        {canWrite() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateVisible(true)}>
+            {t('gatewayapi.refgrant.create')}
+          </Button>
+        )}
       </div>
 
       <Table

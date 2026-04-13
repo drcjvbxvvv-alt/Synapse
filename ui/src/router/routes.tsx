@@ -57,7 +57,7 @@ import EventAlertRules from '../pages/alert/EventAlertRules';
 import { CommandHistory, OperationLogs } from '../pages/audit';
 import { LogCenter, EventLogs } from '../pages/logs';
 import { PermissionManagement } from '../pages/permission';
-import { UserManagement, UserGroupManagement } from '../pages/access';
+import { UserManagement, UserGroupManagement, FeaturePolicyPage } from '../pages/access';
 import SystemSettings from '../pages/settings/SystemSettings';
 import UserProfile from '../pages/profile/UserProfile';
 
@@ -132,21 +132,41 @@ export function AppRoutes() {
         <Route path="nodes/:id" element={<NodeDetail />} />
 
         {/* ── Pods ─────────────────────────────────────────────────────── */}
-        <Route path="clusters/:clusterId/pods" element={<PodList />} />
-        <Route path="clusters/:clusterId/pods/:namespace/:name" element={<PodDetail />} />
-        <Route path="clusters/:clusterId/pods/:namespace/:name/logs" element={<PodLogs />} />
+        <Route path="clusters/:clusterId/pods" element={
+          <PermissionGuard requiredFeature="workload:view"><PodList /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/pods/:namespace/:name" element={
+          <PermissionGuard requiredFeature="workload:view"><PodDetail /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/pods/:namespace/:name/logs" element={
+          <PermissionGuard requiredFeature="workload:view"><PodLogs /></PermissionGuard>
+        } />
         <Route path="clusters/:clusterId/pods/:namespace/:name/terminal" element={
           <ErrorBoundary fallbackType="section"><PodTerminal /></ErrorBoundary>
         } />
 
         {/* ── Workloads ────────────────────────────────────────────────── */}
-        <Route path="clusters/:clusterId/autoscaling" element={<AutoscalingPage />} />
-        <Route path="clusters/:clusterId/workloads" element={<WorkloadList />} />
-        <Route path="clusters/:clusterId/workloads/create" element={<DeploymentCreate />} />
-        <Route path="clusters/:clusterId/workloads/deployment/:namespace/:name" element={<DeploymentDetail />} />
-        <Route path="clusters/:clusterId/workloads/rollout/:namespace/:name" element={<RolloutDetail />} />
-        <Route path="clusters/:clusterId/workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
-        <Route path="clusters/:clusterId/workloads/:namespace/:name" element={<WorkloadDetail />} />
+        <Route path="clusters/:clusterId/autoscaling" element={
+          <PermissionGuard requiredFeature="workload:view"><AutoscalingPage /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/workloads" element={
+          <PermissionGuard requiredFeature="workload:view"><WorkloadList /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/workloads/create" element={
+          <PermissionGuard requiredFeature="workload:view"><DeploymentCreate /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/workloads/deployment/:namespace/:name" element={
+          <PermissionGuard requiredFeature="workload:view"><DeploymentDetail /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/workloads/rollout/:namespace/:name" element={
+          <PermissionGuard requiredFeature="workload:view"><RolloutDetail /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/workloads/:type/:namespace/:name" element={
+          <PermissionGuard requiredFeature="workload:view"><WorkloadDetail /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/workloads/:namespace/:name" element={
+          <PermissionGuard requiredFeature="workload:view"><WorkloadDetail /></PermissionGuard>
+        } />
         <Route path="workloads" element={<WorkloadList />} />
         <Route path="workloads/:type/:namespace/:name" element={<WorkloadDetail />} />
 
@@ -168,35 +188,63 @@ export function AppRoutes() {
         <Route path="clusters/:clusterId/namespaces/:namespace" element={<NamespaceDetail />} />
 
         {/* ── Configs & Secrets ────────────────────────────────────────── */}
-        <Route path="clusters/:clusterId/configs" element={<ConfigSecretManagement />} />
-        <Route path="clusters/:clusterId/configs/configmap/create" element={<ConfigMapCreate />} />
-        <Route path="clusters/:clusterId/configs/configmap/:namespace/:name" element={<ConfigMapDetail />} />
-        <Route path="clusters/:clusterId/configs/configmap/:namespace/:name/edit" element={<ConfigMapEdit />} />
-        <Route path="clusters/:clusterId/configs/secret/create" element={<SecretCreate />} />
-        <Route path="clusters/:clusterId/configs/secret/:namespace/:name" element={<SecretDetail />} />
-        <Route path="clusters/:clusterId/configs/secret/:namespace/:name/edit" element={<SecretEdit />} />
+        <Route path="clusters/:clusterId/configs" element={
+          <PermissionGuard requiredFeature="config:view"><ConfigSecretManagement /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/configs/configmap/create" element={
+          <PermissionGuard requiredFeature="config:view"><ConfigMapCreate /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/configs/configmap/:namespace/:name" element={
+          <PermissionGuard requiredFeature="config:view"><ConfigMapDetail /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/configs/configmap/:namespace/:name/edit" element={
+          <PermissionGuard requiredFeature="config:view"><ConfigMapEdit /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/configs/secret/create" element={
+          <PermissionGuard requiredFeature="config:view"><SecretCreate /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/configs/secret/:namespace/:name" element={
+          <PermissionGuard requiredFeature="config:view"><SecretDetail /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/configs/secret/:namespace/:name/edit" element={
+          <PermissionGuard requiredFeature="config:view"><SecretEdit /></PermissionGuard>
+        } />
 
         {/* ── Network ──────────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/network" element={
-          <ErrorBoundary fallbackType="section"><NetworkList /></ErrorBoundary>
+          <PermissionGuard requiredFeature="network:view">
+            <ErrorBoundary fallbackType="section"><NetworkList /></ErrorBoundary>
+          </PermissionGuard>
         } />
-        <Route path="clusters/:clusterId/network/service/:namespace/:name/edit" element={<ServiceEdit />} />
-        <Route path="clusters/:clusterId/network/ingress/:namespace/:name/edit" element={<IngressEdit />} />
+        <Route path="clusters/:clusterId/network/service/:namespace/:name/edit" element={
+          <PermissionGuard requiredFeature="network:view"><ServiceEdit /></PermissionGuard>
+        } />
+        <Route path="clusters/:clusterId/network/ingress/:namespace/:name/edit" element={
+          <PermissionGuard requiredFeature="network:view"><IngressEdit /></PermissionGuard>
+        } />
 
         {/* ── Storage ──────────────────────────────────────────────────── */}
-        <Route path="clusters/:clusterId/storage" element={<StorageList />} />
+        <Route path="clusters/:clusterId/storage" element={
+          <PermissionGuard requiredFeature="storage:view"><StorageList /></PermissionGuard>
+        } />
 
         {/* ── Logs ─────────────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/logs" element={
-          <ErrorBoundary fallbackType="section"><LogCenter /></ErrorBoundary>
+          <PermissionGuard requiredFeature="logs:view">
+            <ErrorBoundary fallbackType="section"><LogCenter /></ErrorBoundary>
+          </PermissionGuard>
         } />
         <Route path="clusters/:clusterId/logs/events" element={
-          <ErrorBoundary fallbackType="section"><EventLogs /></ErrorBoundary>
+          <PermissionGuard requiredFeature="logs:view">
+            <ErrorBoundary fallbackType="section"><EventLogs /></ErrorBoundary>
+          </PermissionGuard>
         } />
 
         {/* ── Monitoring ───────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/monitoring" element={
-          <ErrorBoundary fallbackType="section"><S><MonitoringCenter /></S></ErrorBoundary>
+          <PermissionGuard requiredFeature="monitoring:view">
+            <ErrorBoundary fallbackType="section"><S><MonitoringCenter /></S></ErrorBoundary>
+          </PermissionGuard>
         } />
 
         {/* ── ArgoCD ───────────────────────────────────────────────────── */}
@@ -215,7 +263,7 @@ export function AppRoutes() {
 
         {/* ── Helm ─────────────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/helm" element={
-          <PermissionGuard requiredPermission="ops"><S><HelmList /></S></PermissionGuard>
+          <PermissionGuard requiredPermission="ops" requiredFeature="helm:view"><S><HelmList /></S></PermissionGuard>
         } />
 
         {/* ── CRDs ─────────────────────────────────────────────────────── */}
@@ -255,6 +303,9 @@ export function AppRoutes() {
         } />
         <Route path="access/permissions" element={
           <PermissionGuard platformAdminOnly><PermissionManagement /></PermissionGuard>
+        } />
+        <Route path="access/feature-policy" element={
+          <PermissionGuard platformAdminOnly><FeaturePolicyPage /></PermissionGuard>
         } />
         {/* Legacy route compatibility */}
         <Route path="permissions" element={

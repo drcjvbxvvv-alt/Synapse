@@ -26,6 +26,7 @@ import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { useTranslation } from 'react-i18next';
 import { ActionButtons } from '../../components/ActionButtons';
 import EmptyState from '../../components/EmptyState';
+import { usePermission } from '../../hooks/usePermission';
 
 const { Link } = Typography;
 
@@ -35,6 +36,7 @@ interface PVCTabProps {
 }
 
 const PVCTab: React.FC<PVCTabProps> = ({ clusterId, onCountChange }) => {
+  const { hasFeature, canWrite } = usePermission();
   const { message, modal } = App.useApp();
   
   // 資料狀態
@@ -432,17 +434,17 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
             },
           ]}
           more={[
-            {
+            ...(canWrite() ? [{
               key: 'delete',
               label: t('common:actions.delete'),
               icon: <DeleteOutlined />,
-              danger: true,
+              danger: true as const,
               confirm: {
                 title: t('storage:messages.confirmDeletePVCItem'),
                 description: t('storage:messages.confirmDeletePVCDesc', { name: record.name }),
               },
               onClick: () => handleDelete(record),
-            },
+            }] : []),
           ]}
         />
       ),
@@ -479,21 +481,25 @@ const [allPVCs, setAllPVCs] = useState<PVC[]>([]);
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          <Button
-            disabled={selectedRowKeys.length === 0}
-            onClick={handleBatchDelete}
-            danger
-            icon={<DeleteOutlined />}
-          >
-            {selectedRowKeys.length > 1
-              ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
-              : t('common:actions.delete')}
-          </Button>
-          <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
-            {selectedRowKeys.length > 1
-              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
-              : t('common:actions.export')}
-          </Button>
+          {canWrite() && (
+            <Button
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleBatchDelete}
+              danger
+              icon={<DeleteOutlined />}
+            >
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
+                : t('common:actions.delete')}
+            </Button>
+          )}
+          {hasFeature('export') && (
+            <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+                : t('common:actions.export')}
+            </Button>
+          )}
         </Space>
       </div>
 

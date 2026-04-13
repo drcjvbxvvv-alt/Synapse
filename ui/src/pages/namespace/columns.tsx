@@ -18,6 +18,8 @@ interface CreateNamespaceColumnsParams {
   SYSTEM_NAMESPACES: string[];
   handleViewDetail: (namespace: string) => void;
   handleDelete: (namespace: string) => void;
+  canDelete?: boolean;
+  showActions?: boolean;
 }
 
 export function createNamespaceColumns({
@@ -28,6 +30,8 @@ export function createNamespaceColumns({
   SYSTEM_NAMESPACES,
   handleViewDetail,
   handleDelete,
+  canDelete = true,
+  showActions,
 }: CreateNamespaceColumnsParams): ColumnsType<NamespaceData> {
   return [
     {
@@ -113,7 +117,7 @@ export function createNamespaceColumns({
         return <span>{formatted}</span>;
       },
     },
-    {
+    ...(showActions !== false ? [{
       title: t('common:table.actions'),
       key: 'actions',
       width: 90,
@@ -129,7 +133,7 @@ export function createNamespaceColumns({
               onClick: () => handleViewDetail(record.name),
             }]}
             more={[
-              ...(!isSystem ? [{
+              ...(!isSystem && canDelete ? [{
                 key: 'delete',
                 label: t('common:actions.delete'),
                 icon: <DeleteOutlined />,
@@ -144,6 +148,6 @@ export function createNamespaceColumns({
           />
         );
       },
-    },
+    }] : []),
   ];
 }

@@ -25,13 +25,16 @@ interface WorkloadColumnParams {
   openScaleModal: (workload: WorkloadInfo) => void;
   handleRestart: (workload: WorkloadInfo) => void;
   handleDelete: (workload: WorkloadInfo) => void;
+  canDelete?: boolean;
+  showActions?: boolean;
 }
 
 export const createWorkloadColumns = (params: WorkloadColumnParams): ColumnsType<WorkloadInfo> => {
   const {
     t, workloadType, sortField, sortOrder,
     navigateToDetail, handleMonitor, handleEdit,
-    openScaleModal, handleRestart, handleDelete
+    openScaleModal, handleRestart, handleDelete, canDelete = true,
+    showActions,
   } = params;
 
   const moreActions = (record: WorkloadInfo): MenuProps['items'] => [
@@ -47,23 +50,25 @@ export const createWorkloadColumns = (params: WorkloadColumnParams): ColumnsType
       icon: <ReloadOutlined />,
       onClick: () => handleRestart(record),
     },
-    { type: 'divider' },
-    {
-      key: 'delete',
-      danger: true,
-      icon: <DeleteOutlined />,
-      label: (
-        <Popconfirm
-          title={t('actions.confirmDelete', { type: workloadType })}
-          description={t('actions.confirmDeleteDesc', { name: record.name })}
-          onConfirm={() => handleDelete(record)}
-          okText={t('common:actions.confirm')}
-          cancelText={t('common:actions.cancel')}
-        >
-          {t('common:actions.delete')}
-        </Popconfirm>
-      ),
-    },
+    ...(canDelete ? [
+      { type: 'divider' as const },
+      {
+        key: 'delete',
+        danger: true,
+        icon: <DeleteOutlined />,
+        label: (
+          <Popconfirm
+            title={t('actions.confirmDelete', { type: workloadType })}
+            description={t('actions.confirmDeleteDesc', { name: record.name })}
+            onConfirm={() => handleDelete(record)}
+            okText={t('common:actions.confirm')}
+            cancelText={t('common:actions.cancel')}
+          >
+            {t('common:actions.delete')}
+          </Popconfirm>
+        ),
+      },
+    ] : []),
   ];
 
   return [
@@ -205,7 +210,7 @@ export const createWorkloadColumns = (params: WorkloadColumnParams): ColumnsType
         return <span>{formatted}</span>;
       },
     },
-    {
+    ...(showActions !== false ? [{
       title: t('columns.actions'),
       key: 'actions',
       width: 120,
@@ -223,6 +228,6 @@ export const createWorkloadColumns = (params: WorkloadColumnParams): ColumnsType
           </Dropdown>
         </Space>
       ),
-    },
+    }] : []),
   ];
 };

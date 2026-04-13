@@ -233,5 +233,113 @@
     "pagination": {
       "total": "共 {{total}} 条"
     }
+  },
+  "featurePolicy": {
+    "page": {
+      "title": "功能策略管理",
+      "subtitle": "针对每个集群权限记录，细部调整允许的功能范围"
+    },
+    "actions": {
+      "edit": "编辑功能策略"
+    },
+    "drawer": {
+      "title": "功能设置 — {{name}} ({{type}})",
+      "save": "保存设置",
+      "notInCeiling": "{{type}} 类型不支持此功能"
+    },
+    "messages": {
+      "loadClusterFailed": "加载集群列表失败",
+      "loadFailed": "加载权限列表失败",
+      "loadFeatureFailed": "加载功能策略失败",
+      "saveSuccess": "功能策略已更新",
+      "saveFailed": "保存功能策略失败",
+      "selectCluster": "请先选择集群"
+    },
+    "summary": {
+      "notInCeiling": "此权限类型不支持该功能",
+      "inCeiling": "此权限类型支持该功能（可进一步限制）",
+      "policyDisabled": "已被 Feature Policy 限制停用"
+    },
+    "summaryKey": {
+      "terminal_pod": "Pod 终端",
+      "terminal_node": "Node 终端",
+      "export": "导出",
+      "aiAssistant": "AI 助手"
+    },
+    "group": {
+      "workload": "工作负载",
+      "network": "网络",
+      "storage": "存储",
+      "node": "节点",
+      "config": "配置",
+      "terminal": "终端",
+      "observability": "可观测性",
+      "helm": "Helm",
+      "tools": "工具"
+    },
+    "key": {
+      "workloadView": "工作负载查看",
+      "workloadWrite": "工作负载操作",
+      "workloadDelete": "工作负载删除",
+      "networkView": "网络查看",
+      "networkWrite": "网络操作",
+      "networkDelete": "网络资源删除",
+      "storageView": "存储查看",
+      "storageWrite": "存储操作",
+      "storageDelete": "存储资源删除",
+      "nodeView": "节点查看",
+      "nodeManage": "节点管理",
+      "configView": "配置查看",
+      "configWrite": "配置操作",
+      "configDelete": "配置资源删除",
+      "terminalPod": "Pod 终端机",
+      "terminalNode": "Node 终端机",
+      "logsView": "日志查看",
+      "monitoringView": "监控查看",
+      "alertsView": "告警查看",
+      "eventAlertsView": "事件告警查看",
+      "costView": "成本分析查看",
+      "securityView": "安全扫描",
+      "certificatesView": "凭证管理",
+      "sloView": "SLO 管理",
+      "chaosView": "混沌工程",
+      "complianceView": "合规管理",
+      "helmView": "Helm 查看",
+      "helmWrite": "Helm 操作",
+      "export": "导出功能",
+      "aiAssistant": "AI 助手"
+    },
+    "desc": {
+      "workloadView": "允许查看 Deployment、Pod 等工作负载资源",
+      "workloadWrite": "允许创建、更新工作负载资源",
+      "workloadDelete": "允许删除 Deployment、StatefulSet 等工作负载资源",
+      "networkView": "允许查看 Service、Ingress 等网络资源",
+      "networkWrite": "允许管理网络资源",
+      "networkDelete": "允许删除 Service、Ingress 等网络资源",
+      "storageView": "允许查看 PVC、PV、StorageClass",
+      "storageWrite": "允许管理存储资源",
+      "storageDelete": "允许删除 PVC、PV、StorageClass",
+      "nodeView": "允许查看节点信息",
+      "nodeManage": "允许对节点执行封锁、排水等操作",
+      "configView": "允许查看 ConfigMap、Secret",
+      "configWrite": "允许管理 ConfigMap、Secret",
+      "configDelete": "允许删除 ConfigMap、Secret",
+      "terminalPod": "允许进入 Pod 执行终端机",
+      "terminalNode": "允许通过 SSH 登录节点",
+      "logsView": "允许查看 Pod 日志",
+      "monitoringView": "允许查看 Grafana 监控面板",
+      "alertsView": "允许查看 AlertManager 告警、规则及静默设置",
+      "eventAlertsView": "允许查看 Kubernetes Event 告警",
+      "costView": "允许查看集群资源成本分析",
+      "securityView": "允许查看集群安全扫描结果",
+      "certificatesView": "允许查看及管理 TLS 凭证",
+      "sloView": "允许查看及管理 SLO 服务水准目标",
+      "chaosView": "允许查看及执行混沌工程实验",
+      "complianceView": "允许查看集群合规管理报告",
+      "helmView": "允许查看 Helm Release",
+      "helmWrite": "允许安装、升级、移除 Helm Release",
+      "export": "允许导出资源清单",
+      "aiAssistant": "允许使用 AI 智能助理"
+    }
   }
 }

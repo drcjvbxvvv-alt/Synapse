@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 
 export interface PDBInfo {
   name: string;
@@ -21,21 +21,21 @@ export interface PDBRequest {
   maxUnavailable?: string;
 }
 
-const base = (clusterID: string) => `/api/v1/clusters/${clusterID}/pdbs`;
+const base = (clusterID: string) => `/clusters/${clusterID}/pdbs`;
 
 export const pdbService = {
   list: (clusterID: string, namespace?: string) =>
-    axios.get<{ items: PDBInfo[]; total: number }>(base(clusterID), { params: { namespace } }),
+    api.get<{ items: PDBInfo[]; total: number }>(base(clusterID), { params: { namespace } }),
 
   listForNamespace: (clusterID: string, namespace: string) =>
-    axios.get<{ items: PDBInfo[]; total: number }>(`${base(clusterID)}/${namespace}`),
+    api.get<{ items: PDBInfo[]; total: number }>(`${base(clusterID)}/${namespace}`),
 
   create: (clusterID: string, data: PDBRequest) =>
-    axios.post<PDBInfo>(base(clusterID), data),
+    api.post<PDBInfo>(base(clusterID), data),
 
   update: (clusterID: string, namespace: string, name: string, data: PDBRequest) =>
-    axios.put<PDBInfo>(`${base(clusterID)}/${namespace}/${name}`, data),
+    api.put<PDBInfo>(`${base(clusterID)}/${namespace}/${name}`, data),
 
   delete: (clusterID: string, namespace: string, name: string) =>
-    axios.delete(`${base(clusterID)}/${namespace}/${name}`),
+    api.delete(`${base(clusterID)}/${namespace}/${name}`),
 };

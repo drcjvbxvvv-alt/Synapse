@@ -27,9 +27,11 @@ import { getIngressColumns } from './ingressColumns';
 import type { IngressTabProps } from './ingressTypes';
 import { useTranslation } from 'react-i18next';
 import { useMultiSearch, applyMultiSearch } from '../../hooks/useMultiSearch';
+import { usePermission } from '../../hooks/usePermission';
 import { MultiSearchBar } from '../../components/MultiSearchBar';
 
 const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => {
+  const { hasFeature, canWrite } = usePermission();
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
@@ -312,7 +314,7 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
 
   const columns = getIngressColumns(
     t,
-    { onViewYAML: handleViewYAML, onEdit: handleEdit, onDelete: handleDelete },
+    { onViewYAML: handleViewYAML, onEdit: handleEdit, onDelete: handleDelete, canDelete: canWrite(), showActions: canWrite() },
     { sortField, sortOrder },
   ).filter(col => {
     if (col.key === 'actions' || col.key === 'name') return true;
@@ -339,20 +341,26 @@ const IngressTab: React.FC<IngressTabProps> = ({ clusterId, onCountChange }) => 
       {/* 操作按鈕欄 */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger icon={<DeleteOutlined />}>
-            {selectedRowKeys.length > 1
-              ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
-              : t('common:actions.delete')}
-          </Button>
-          <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
-            {selectedRowKeys.length > 1
-              ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
-              : t('common:actions.export')}
-          </Button>
+          {canWrite() && (
+            <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger icon={<DeleteOutlined />}>
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
+                : t('common:actions.delete')}
+            </Button>
+          )}
+          {hasFeature('export') && (
+            <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
+              {selectedRowKeys.length > 1
+                ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
+                : t('common:actions.export')}
+            </Button>
+          )}
         </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
-          {t('network:ingress.createIngress')}
-        </Button>
+        {canWrite() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
+            {t('network:ingress.createIngress')}
+          </Button>
+        )}
       </div>
 
       {/* 多條件搜尋欄 */}

@@ -10,6 +10,7 @@ import type {
   CreateUserGroupRequest,
   UpdateUserGroupRequest,
   User,
+  FeaturePolicyResponse,
 } from '../types';
 
 const BASE_URL = '/permissions';
@@ -134,6 +135,23 @@ export const getMyClusterPermission = async (clusterId: number | string): Promis
   return response.data;
 };
 
+// ========== Feature Policy ==========
+
+// 取得某個 ClusterPermission 的 Feature Policy（ceiling / policy / effective）
+export const getFeaturePolicy = async (id: number): Promise<FeaturePolicyResponse> => {
+  const response = await api.get(`${BASE_URL}/cluster-permissions/${id}/features`);
+  return response.data;
+};
+
+// 更新某個 ClusterPermission 的 Feature Policy
+export const updateFeaturePolicy = async (
+  id: number,
+  policy: Record<string, boolean>,
+): Promise<FeaturePolicyResponse> => {
+  const response = await api.patch(`${BASE_URL}/cluster-permissions/${id}/features`, { policy });
+  return response.data;
+};
+
 // ========== 權限工具函式 ==========
 
 // 權限型別顯示名稱對映
@@ -141,7 +159,7 @@ export const permissionTypeNames: Record<string, string> = {
   admin: '管理員權限',
   ops: '運維權限',
   dev: '開發權限',
-  readonly: '只讀權限',
+  readonly: '唯讀權限',
   custom: '自定義權限',
 };
 

@@ -28,7 +28,7 @@ import {
 import { systemSettingService } from '../../services/authService';
 import type { LDAPConfig } from '../../types';
 import { useTranslation } from 'react-i18next';
-import { parseApiError } from '../../utils/api';
+import { parseApiError, showApiError } from '../../utils/api';
 import PageSkeleton from '../../components/PageSkeleton';
 
 const { Title, Text } = Typography;
@@ -98,7 +98,7 @@ const [form] = Form.useForm();
       }
     } catch (error: unknown) {
       console.error(error);
-      message.error(parseApiError(error) || t('settings:ldap.testConnectionFailed'));
+      showApiError(error, t('settings:ldap.testConnectionFailed'));
     } finally {
       setTesting(false);
     }

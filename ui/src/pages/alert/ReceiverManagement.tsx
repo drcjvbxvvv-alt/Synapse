@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { App } from 'antd';
+import { usePermission } from '../../hooks/usePermission';
 import {
   alertService,
   type ReceiverConfig,
@@ -68,6 +69,7 @@ function getReceiverTypes(r: ReceiverConfig): ReceiverType[] {
 
 const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) => {
   const { message: msg, modal } = App.useApp();
+  const { canWrite } = usePermission();
   const [loading, setLoading] = useState(false);
   const [receivers, setReceivers] = useState<ReceiverConfig[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -266,11 +268,11 @@ const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) =>
         </Space>
       ),
     },
-    {
+    ...(canWrite() ? [{
       title: '操作',
       key: 'actions',
       width: 180,
-      render: (_, r) => (
+      render: (_: unknown, r: ReceiverConfig) => (
         <Space>
           <Tooltip title="測試推送">
             <Button
@@ -296,7 +298,7 @@ const ReceiverManagement: React.FC<ReceiverManagementProps> = ({ clusterId }) =>
           </Popconfirm>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   return (

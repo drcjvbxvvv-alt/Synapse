@@ -16,6 +16,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
+import axios from 'axios';
 import { WorkloadService } from '../../services/workloadService';
 import { parseApiError } from '../../utils/api';
 import { useTranslation } from 'react-i18next';
@@ -233,7 +234,9 @@ const WorkloadCreateModal: React.FC<WorkloadCreateModalProps> = ({
       messageApi.success(t('messages.createSuccess'));
       onSuccess();
     } catch (error: unknown) {
-      messageApi.error(error instanceof Error ? error.message : t('messages.operationFailed'));
+      if (!axios.isAxiosError(error) || !(error as any)._permissionHandled) {
+        messageApi.error(error instanceof Error ? error.message : t('messages.operationFailed'));
+      }
     } finally {
       setSubmitting(false);
     }

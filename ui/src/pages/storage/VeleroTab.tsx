@@ -9,6 +9,7 @@ import {
 import NotInstalledCard from '../../components/NotInstalledCard';
 import { useTranslation } from 'react-i18next';
 import EmptyState from '../../components/EmptyState';
+import { usePermission } from '../../hooks/usePermission';
 import {
   snapshotService, backupPhaseColor, restorePhaseColor,
   type VeleroBackupInfo, type VeleroRestoreInfo, type VeleroScheduleInfo,
@@ -23,6 +24,7 @@ interface VeleroTabProps { clusterId: string }
 const BackupPanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clusterId, veleroNS }) => {
   const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
+  const { canWrite } = usePermission();
   const [loading, setLoading] = useState(true);
   const [backups, setBackups] = useState<VeleroBackupInfo[]>([]);
   const [restoreOpen, setRestoreOpen] = useState(false);
@@ -108,7 +110,7 @@ const BackupPanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ cluste
     },
     {
       title: t('velero.actions'), key: 'actions', fixed: 'right' as const, width: 100,
-      render: (_: unknown, r: VeleroBackupInfo) => (
+      render: (_: unknown, r: VeleroBackupInfo) => canWrite() ? (
         <Tooltip title={t('velero.triggerRestore')}>
           <Button
             type="link" size="small" icon={<PlayCircleOutlined />}
@@ -118,7 +120,7 @@ const BackupPanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ cluste
             {t('velero.restore')}
           </Button>
         </Tooltip>
-      ),
+      ) : null,
     },
   ];
 
@@ -224,6 +226,7 @@ const RestorePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clust
 const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clusterId, veleroNS }) => {
   const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
+  const { canWrite } = usePermission();
   const [loading, setLoading] = useState(true);
   const [schedules, setSchedules] = useState<VeleroScheduleInfo[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -314,7 +317,7 @@ const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clus
     },
     {
       title: t('velero.actions'), key: 'actions', fixed: 'right' as const, width: 100,
-      render: (_: unknown, r: VeleroScheduleInfo) => (
+      render: (_: unknown, r: VeleroScheduleInfo) => canWrite() ? (
         <Popconfirm
           title={t('velero.confirmDeleteSchedule')}
           description={t('velero.confirmDeleteScheduleDesc', { name: r.name })}
@@ -324,7 +327,7 @@ const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clus
         >
           <Button type="link" size="small" danger>{t('velero.delete')}</Button>
         </Popconfirm>
-      ),
+      ) : null,
     },
   ];
 
@@ -332,9 +335,11 @@ const SchedulePanel: React.FC<{ clusterId: string; veleroNS: string }> = ({ clus
     <>
       <Space style={{ marginBottom: 12 }}>
         <Button icon={<ReloadOutlined />} loading={loading} onClick={load}>{t('velero.refresh')}</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          {t('velero.createSchedule')}
-        </Button>
+        {canWrite() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            {t('velero.createSchedule')}
+          </Button>
+        )}
       </Space>
       <Table
         rowKey="name" columns={columns} dataSource={schedules} loading={loading}
@@ -392,8 +397,8 @@ const VeleroTab: React.FC<VeleroTabProps> = ({ clusterId }) => {
 
   useEffect(() => {
     snapshotService.checkVelero(clusterId, veleroNS)
-      .then(res => setInstalled(res.data.installed))
-      .catch(() => message.error(t('velero.fetchStatusError')))
+      .then((res: { data: { installed: boolean } }) => setInstalled(res.data.installed))
+      .catch(() => message.error(t('velero.fetchError')))
       .finally(() => setLoading(false));
   }, [clusterId, veleroNS, message, t]);
 
@@ -411,8 +416,8 @@ const VeleroTab: React.FC<VeleroTabProps> = ({ clusterId }) => {
             setInstalled(null);
             setLoading(true);
             snapshotService.checkVelero(clusterId, veleroNS)
-              .then(res => setInstalled(res.data.installed))
-              .catch(() => message.error(t('velero.fetchStatusError')))
+              .then((res: { data: { installed: boolean } }) => setInstalled(res.data.installed))
+              .catch(() => message.error(t('velero.fetchError')))
               .finally(() => setLoading(false));
           }}
           recheckLoading={loading}

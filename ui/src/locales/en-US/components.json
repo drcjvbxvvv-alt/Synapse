@@ -33,7 +33,9 @@
     "opsPermission": "Ops",
     "devPermission": "Developer",
     "readonlyPermission": "Read-only",
-    "customPermission": "Custom"
+    "customPermission": "Custom",
+    "featureDisabled": "Feature Disabled",
+    "featureDisabledDesc": "This feature has been disabled by the administrator. Contact your admin to enable it."
   },
   "kubectlTerminal": {
     "title": "Kubectl Terminal",

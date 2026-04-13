@@ -21,6 +21,7 @@ import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import MonacoEditor from '@monaco-editor/react';
 import { MeshService, type DestinationRuleSummary } from '../../services/meshService';
+import { usePermission } from '../../hooks/usePermission';
 
 interface DestinationRuleListProps {
   clusterId: string;
@@ -46,6 +47,7 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
 }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
+  const { canWrite } = usePermission();
   const [items, setItems] = useState<DestinationRuleSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespace, setNamespace] = useState(propNamespace ?? '');
@@ -191,14 +193,14 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
             { key: 'yaml', label: t('common:actions.view') + ' YAML', icon: <CodeOutlined />, onClick: () => handleViewYAML(record) },
           ]}
           more={[
-            {
-              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+            ...(canWrite() ? [{
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {
                 title: t('common:messages.confirmDelete'),
                 description: t('network:servicemesh.confirmDeleteDR', { name: record.name }),
               },
-            },
+            }] : []),
           ]}
         />
       ),
@@ -219,9 +221,11 @@ const DestinationRuleList: React.FC<DestinationRuleListProps> = ({
         />
         <Button icon={<ReloadOutlined />} onClick={fetchList} loading={loading} />
         <div style={{ flex: 1 }} />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          {t('network:servicemesh.createDestinationRule')}
-        </Button>
+        {canWrite() && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            {t('network:servicemesh.createDestinationRule')}
+          </Button>
+        )}
       </div>
 
       <Table

@@ -10,6 +10,7 @@ import { useWorkloadTab } from './hooks/useWorkloadTab';
 import { createWorkloadColumns } from './columns';
 import { ScaleModal, WorkloadColumnSettingsDrawer } from './components';
 import WorkloadCreateModal from '../../components/workload/WorkloadCreateModal';
+import { usePermission } from '@/hooks/usePermission';
 
 interface DeploymentTabProps {
   clusterId: string;
@@ -17,6 +18,7 @@ interface DeploymentTabProps {
 }
 
 const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange }) => {
+  const { hasFeature, canWrite } = usePermission();
   const state = useWorkloadTab({
     clusterId,
     workloadType: 'Deployment',
@@ -35,10 +37,12 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
     openScaleModal: state.openScaleModal,
     handleRestart: state.handleRestart,
     handleDelete: state.handleDelete,
+    canDelete: canWrite(),
+    showActions: canWrite(),
   }), [
     state.t, state.sortField, state.sortOrder,
     state.navigateToDetail, state.handleMonitor, state.handleEdit,
-    state.openScaleModal, state.handleRestart, state.handleDelete
+    state.openScaleModal, state.handleRestart, state.handleDelete, canWrite
   ]);
 
   // Filter columns by visibility
@@ -78,19 +82,23 @@ const DeploymentTab: React.FC<DeploymentTabProps> = ({ clusterId, onCountChange 
                 ? `${state.t('actions.batchRedeploy')} (${state.selectedRowKeys.length})`
                 : state.t('actions.redeploy')}
             </Button>
-            <Button disabled={state.selectedRowKeys.length === 0} onClick={state.handleExport}>
-              {state.selectedRowKeys.length > 1
-                ? `${state.t('actions.batchExport')} (${state.selectedRowKeys.length})`
-                : state.t('actions.export')}
-            </Button>
+            {hasFeature('export') && (
+              <Button disabled={state.selectedRowKeys.length === 0} onClick={state.handleExport}>
+                {state.selectedRowKeys.length > 1
+                  ? `${state.t('actions.batchExport')} (${state.selectedRowKeys.length})`
+                  : state.t('actions.export')}
+              </Button>
+            )}
           </Space>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => state.setCreateModalVisible(true)}
-          >
-            {state.t('actions.create', { type: 'Deployment' })}
-          </Button>
+          {canWrite() && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => state.setCreateModalVisible(true)}
+            >
+              {state.t('actions.create', { type: 'Deployment' })}
+            </Button>
+          )}
         </div>
 
         {/* Search Bar */}

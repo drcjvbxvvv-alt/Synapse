@@ -5,14 +5,16 @@ import EmptyState from '@/components/EmptyState';
 import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
-import { parseApiError } from '@/utils/api';
+import { showApiError } from '@/utils/api';
 import type { HTTPRouteItem, GatewayK8sCondition, GatewayTabProps } from './gatewayTypes';
 import HTTPRouteDrawer from './HTTPRouteDrawer';
 import HTTPRouteForm from './HTTPRouteForm';
+import { usePermission } from '../../hooks/usePermission';
 
 const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) => {
   const { message } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
+  const { canWrite } = usePermission();
   const [items, setItems] = useState<HTTPRouteItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [namespaceFilter, setNamespaceFilter] = useState<string>('');
@@ -45,7 +47,7 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
       message.success(t('network:gatewayapi.messages.deleteHTTPRouteSuccess'));
       loadData();
     } catch (err) {
-      message.error(parseApiError(err) || t('network:gatewayapi.messages.deleteHTTPRouteError'));
+      showApiError(err, t('network:gatewayapi.messages.deleteHTTPRouteError'));
     }
   };
 
@@ -136,14 +138,14 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
             { key: 'view', label: t('common:actions.viewDetails'), icon: <EyeOutlined />, onClick: () => setDrawerItem(record) },
           ]}
           more={[
-            {
-              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true,
+            ...(canWrite() ? [{
+              key: 'delete', label: t('common:actions.delete'), icon: <DeleteOutlined />, danger: true as const,
               onClick: () => handleDelete(record),
               confirm: {
                 title: t('network:gatewayapi.messages.confirmDeleteTitle'),
                 description: t('network:gatewayapi.messages.confirmDeleteHTTPRoute', { name: record.name }),
               },
-            },
+            }] : []),
           ]}
         />
       ),
@@ -163,13 +165,15 @@ const HTTPRouteList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange }) 
         />
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading} />
         <div style={{ flex: 1 }} />
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => { setEditingRoute(null); setFormVisible(true); }}
-        >
-          {t('network:gatewayapi.form.createHTTPRoute')}
-        </Button>
+        {canWrite() && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => { setEditingRoute(null); setFormVisible(true); }}
+          >
+            {t('network:gatewayapi.form.createHTTPRoute')}
+          </Button>
+        )}
       </div>
 
       <Table

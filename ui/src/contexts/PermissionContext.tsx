@@ -9,13 +9,12 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
   const [clusterPermissions, setClusterPermissions] = useState<Map<number, MyPermissionsResponse>>(new Map());
   const [currentClusterPermission, setCurrentClusterPermission] = useState<MyPermissionsResponse | null>(null);
   const [currentClusterId, setCurrentClusterIdState] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // 載入使用者權限
+  // 載入使用者權限（stable — 不依賴任何 state，結果透過 useEffect 同步到 currentClusterPermission）
   const refreshPermissions = useCallback(async () => {
     if (!tokenManager.isLoggedIn()) {
       setClusterPermissions(new Map());
-      setCurrentClusterPermission(null);
       return;
     }
 
@@ -23,37 +22,30 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       const response = await permissionService.getMyPermissions();
       const permissions = response || [];
-      
+
       const permMap = new Map<number, MyPermissionsResponse>();
       permissions.forEach((p) => {
         permMap.set(p.cluster_id, p);
       });
-      
+
       setClusterPermissions(permMap);
-      
-      // 更新當前叢集權限
-      if (currentClusterId) {
-        setCurrentClusterPermission(permMap.get(currentClusterId) || null);
-      }
+      // currentClusterPermission 由下方 useEffect 響應式更新，無需手動 set
     } catch (error) {
       console.error('載入權限失敗:', error);
     } finally {
       setLoading(false);
     }
-  }, [currentClusterId]);
+  }, []);
 
-  // 設定當前叢集
+  // 設定當前叢集（stable — currentClusterPermission 由 useEffect 響應式更新）
   const setCurrentClusterId = useCallback((clusterId: number | string | null) => {
     if (clusterId === null) {
       setCurrentClusterIdState(null);
-      setCurrentClusterPermission(null);
       return;
     }
-    
     const id = typeof clusterId === 'string' ? parseInt(clusterId, 10) : clusterId;
     setCurrentClusterIdState(id);
-    setCurrentClusterPermission(clusterPermissions.get(id) || null);
-  }, [clusterPermissions]);
+  }, []);
 
   // 檢查是否有叢集訪問權限
   const hasClusterAccess = useCallback((clusterId: number | string): boolean => {
@@ -116,6 +108,21 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
       default:
         return false;
     }
+  }, [clusterPermissions, currentClusterPermission]);
+
+  // 檢查當前叢集是否允許指定功能
+  const hasFeature = useCallback((key: string, clusterId?: number | string): boolean => {
+    let permission: MyPermissionsResponse | null = null;
+
+    if (clusterId) {
+      const id = typeof clusterId === 'string' ? parseInt(clusterId, 10) : clusterId;
+      permission = clusterPermissions.get(id) || null;
+    } else {
+      permission = currentClusterPermission;
+    }
+
+    if (!permission) return false;
+    return (permission.allowed_features ?? []).includes(key);
   }, [clusterPermissions, currentClusterPermission]);
 
   // 檢查是否是管理員
@@ -219,6 +226,16 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     });
   }, [getAllowedNamespaces]);
 
+  // 響應式同步：clusterPermissions 或 currentClusterId 任一變動時自動更新 currentClusterPermission。
+  // 這確保 refreshPermissions() 完成後 UI 立即看到最新的 allowed_features，無需手動傳遞 id。
+  useEffect(() => {
+    if (currentClusterId !== null) {
+      setCurrentClusterPermission(clusterPermissions.get(currentClusterId) ?? null);
+    } else {
+      setCurrentClusterPermission(null);
+    }
+  }, [clusterPermissions, currentClusterId]);
+
   // 初始載入
   useEffect(() => {
     refreshPermissions();
@@ -236,6 +253,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     isAdmin,
     isReadonly,
     canWrite,
+    hasFeature,
     getPermissionType,
     refreshPermissions,
     setCurrentClusterId,
@@ -251,6 +269,7 @@ export const PermissionProvider: React.FC<{ children: ReactNode }> = ({ children
     isAdmin,
     isReadonly,
     canWrite,
+    hasFeature,
     getPermissionType,
     refreshPermissions,
     setCurrentClusterId,

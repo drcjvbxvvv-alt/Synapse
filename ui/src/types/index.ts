@@ -530,6 +530,8 @@ export interface ClusterPermission {
   permission_name: string;
   namespaces: string[];
   custom_role_ref?: string;
+  /** JSON 字串，格式 {"terminal:pod": false, ...}，NULL 表示無限制 */
+  feature_policy?: string;
   created_at: string;
   updated_at: string;
 }
@@ -562,6 +564,17 @@ export interface MyPermissionsResponse {
   namespaces: string[];
   allowed_actions: string[];
   custom_role_ref?: string;
+  /** 後端已套用 ceiling ∩ feature_policy 後的有效功能集合 */
+  allowed_features: string[];
+}
+
+// Feature Policy 回應（GET /permissions/cluster-permissions/:id/features）
+export interface FeaturePolicyResponse {
+  permission_id: number;
+  permission_type: string;
+  ceiling: string[];
+  policy: Record<string, boolean>;
+  effective: string[];
 }
 
 // 建立使用者組請求

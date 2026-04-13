@@ -32,7 +32,7 @@ import { ResourceService } from '../../services/resourceService';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
-import { parseApiError } from '../../utils/api';
+import { parseApiError, showApiError } from '../../utils/api';
 import PageSkeleton from '../../components/PageSkeleton';
 
 const { Text, Title } = Typography;
@@ -123,7 +123,7 @@ const [loading, setLoading] = useState(true);
       setFormAnnotations(Object.entries(data.annotations || {}).map(([key, value]) => ({ key, value })));
       setFormData(Object.entries(data.data || {}).map(([key, value]) => ({ key, value: String(value) })));
     } catch (error: unknown) {
-      message.error(parseApiError(error) || t('config:edit.messages.loadSecretError'));
+      showApiError(error, t('config:edit.messages.loadSecretError'));
       navigate(`/clusters/${clusterId}/configs`);
     } finally {
       setLoading(false);
@@ -196,7 +196,7 @@ const [loading, setLoading] = useState(true);
       setDiffModalVisible(false);
       navigate(`/clusters/${clusterId}/configs/secret/${namespace}/${name}`);
     } catch (error: unknown) {
-      message.error(parseApiError(error) || t('config:edit.messages.updateError'));
+      showApiError(error, t('config:edit.messages.updateError'));
     } finally {
       setSubmitting(false);
     }

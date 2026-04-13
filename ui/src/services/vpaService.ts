@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 
 export interface VPARecommendation {
   containerName: string;
@@ -30,29 +30,29 @@ export interface VPARequest {
   maxMemory?: string;
 }
 
-const base = (clusterID: string) => `/api/v1/clusters/${clusterID}/vpa`;
+const base = (clusterID: string) => `/clusters/${clusterID}/vpa`;
 
 export const vpaService = {
   checkCRD: (clusterID: string) =>
-    axios.get<{ installed: boolean }>(`${base(clusterID)}/crd-check`),
+    api.get<{ installed: boolean }>(`${base(clusterID)}/crd-check`),
 
   list: (clusterID: string, namespace?: string) =>
-    axios.get<{ items: VPAInfo[]; total: number; installed: boolean }>(base(clusterID), {
+    api.get<{ items: VPAInfo[]; total: number; installed: boolean }>(base(clusterID), {
       params: { namespace },
     }),
 
   getWorkloadVPA: (clusterID: string, namespace: string, name: string, kind: string) =>
-    axios.get<{ vpa: VPAInfo | null; installed: boolean }>(
+    api.get<{ vpa: VPAInfo | null; installed: boolean }>(
       `${base(clusterID)}/${namespace}/${name}/workload`,
       { params: { kind } }
     ),
 
   create: (clusterID: string, data: VPARequest) =>
-    axios.post<VPAInfo>(base(clusterID), data),
+    api.post<VPAInfo>(base(clusterID), data),
 
   update: (clusterID: string, namespace: string, name: string, data: VPARequest) =>
-    axios.put<VPAInfo>(`${base(clusterID)}/${namespace}/${name}`, data),
+    api.put<VPAInfo>(`${base(clusterID)}/${namespace}/${name}`, data),
 
   delete: (clusterID: string, namespace: string, name: string) =>
-    axios.delete(`${base(clusterID)}/${namespace}/${name}`),
+    api.delete(`${base(clusterID)}/${namespace}/${name}`),
 };

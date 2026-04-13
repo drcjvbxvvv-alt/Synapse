@@ -8,6 +8,7 @@ import { ActionButtons } from '../../components/ActionButtons';
 import { useTranslation } from 'react-i18next';
 import NotInstalledCard from '../../components/NotInstalledCard';
 import EmptyState from '../../components/EmptyState';
+import { usePermission } from '../../hooks/usePermission';
 import {
   snapshotService,
   type VolumeSnapshotInfo, type VolumeSnapshotClassInfo,
@@ -22,6 +23,7 @@ interface VolumeSnapshotTabProps {
 const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
   const { t } = useTranslation(['storage', 'common']);
   const { message } = App.useApp();
+  const { canWrite } = usePermission();
 
   const [loading, setLoading] = useState(true);
   const [installed, setInstalled] = useState<boolean | null>(null);
@@ -140,7 +142,7 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
       title: t('snapshot.createdAt'), dataIndex: 'createdAt', key: 'createdAt',
       render: (v: string) => v ? new Date(v).toLocaleString() : '—',
     },
-    {
+    ...(canWrite() ? [{
       title: t('snapshot.actions'), key: 'actions', fixed: 'right' as const, width: 90,
       render: (_: unknown, r: VolumeSnapshotInfo) => (
         <ActionButtons
@@ -159,7 +161,7 @@ const VolumeSnapshotTab: React.FC<VolumeSnapshotTabProps> = ({ clusterId }) => {
           ]}
         />
       ),
-    },
+    }] : []),
   ];
 
   return (

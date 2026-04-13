@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import EmptyState from '@/components/EmptyState';
 import SecretForm from './SecretForm';
 import { useSecretList } from './hooks/useSecretList';
+import { usePermission } from '@/hooks/usePermission';
 import { getSecretColumns } from './secretColumns';
 
 
@@ -30,6 +31,7 @@ interface SecretListProps {
 const COLUMN_KEYS = ['name', 'namespace', 'type', 'labels', 'dataCount', 'creationTimestamp', 'age'] as const;
 
 const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => {
+  const { hasFeature, canWrite } = usePermission();
   const navigate = useNavigate();
   const { token } = theme.useToken();
   const { t } = useTranslation(['config', 'common']);
@@ -45,6 +47,8 @@ const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => 
     colorTextSecondary: token.colorTextSecondary,
     navigate,
     handleDelete: hook.handleDelete,
+    canDelete: canWrite(),
+    showActions: canWrite(),
   });
 
   const columns = allColumns.filter(col =>
@@ -62,29 +66,35 @@ const SecretList: React.FC<SecretListProps> = ({ clusterId, onCountChange }) => 
       {/* Action toolbar */}
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Space>
-          <Button
-            disabled={hook.selectedRowKeys.length === 0}
-            danger
-            icon={<DeleteOutlined />}
-            onClick={hook.handleBatchDelete}
-          >
-            {hook.selectedRowKeys.length > 1
-              ? `${t('common:actions.batchDelete')} (${hook.selectedRowKeys.length})`
-              : t('common:actions.delete')}
-          </Button>
-          <Button disabled={hook.selectedRowKeys.length === 0} onClick={hook.handleExport}>
-            {hook.selectedRowKeys.length > 1
-              ? `${t('common:actions.batchExport')} (${hook.selectedRowKeys.length})`
-              : t('common:actions.export')}
-          </Button>
+          {canWrite() && (
+            <Button
+              disabled={hook.selectedRowKeys.length === 0}
+              danger
+              icon={<DeleteOutlined />}
+              onClick={hook.handleBatchDelete}
+            >
+              {hook.selectedRowKeys.length > 1
+                ? `${t('common:actions.batchDelete')} (${hook.selectedRowKeys.length})`
+                : t('common:actions.delete')}
+            </Button>
+          )}
+          {hasFeature('export') && (
+            <Button disabled={hook.selectedRowKeys.length === 0} onClick={hook.handleExport}>
+              {hook.selectedRowKeys.length > 1
+                ? `${t('common:actions.batchExport')} (${hook.selectedRowKeys.length})`
+                : t('common:actions.export')}
+            </Button>
+          )}
         </Space>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => hook.setCreateModalOpen(true)}
-        >
-          {t('config:list.createSecret')}
-        </Button>
+        {canWrite() && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => hook.setCreateModalOpen(true)}
+          >
+            {t('config:list.createSecret')}
+          </Button>
+        )}
       </div>
 
       <MultiSearchBar

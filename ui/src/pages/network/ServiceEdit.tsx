@@ -32,7 +32,7 @@ import { ResourceService } from '../../services/resourceService';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
-import { parseApiError } from '../../utils/api';
+import { parseApiError, showApiError } from '../../utils/api';
 import PageSkeleton from '../../components/PageSkeleton';
 
 const { Text, Title } = Typography;
@@ -101,7 +101,7 @@ const [loading, setLoading] = useState(true);
       setOriginalYaml(yamlStr);
       parseYamlToForm(yamlStr);
     } catch (error: unknown) {
-      message.error(parseApiError(error) || t('network:editPage.loadServiceError'));
+      showApiError(error, t('network:editPage.loadServiceError'));
       navigate(`/clusters/${clusterId}/network`);
     } finally {
       setLoading(false);
@@ -193,7 +193,7 @@ const [loading, setLoading] = useState(true);
       setDiffModalVisible(false);
       navigate(`/clusters/${clusterId}/network`);
     } catch (error: unknown) {
-      message.error(parseApiError(error) || t('network:editPage.updateFailed'));
+      showApiError(error, t('network:editPage.updateFailed'));
     } finally {
       setSubmitting(false);
     }
