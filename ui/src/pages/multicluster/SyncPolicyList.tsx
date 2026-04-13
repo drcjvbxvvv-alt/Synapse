@@ -152,7 +152,7 @@ const SyncPolicyList: React.FC = () => {
       const payload: Partial<SyncPolicy> = {
         ...values,
         resource_names: JSON.stringify(values.resource_names ?? []),
-        target_clusters: JSON.stringify((values.target_clusters ?? []).map(Number)) as unknown as number[],
+        target_clusters: JSON.stringify((values.target_clusters ?? []).map(Number)),
       };
       if (editing?.id) {
         await multiclusterService.updateSyncPolicy(editing.id, payload);
