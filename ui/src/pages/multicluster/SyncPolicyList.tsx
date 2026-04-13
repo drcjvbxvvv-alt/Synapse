@@ -149,13 +149,16 @@ const SyncPolicyList: React.FC = () => {
     try { values = await form.validateFields(); } catch { return; }
     setSaving(true);
     try {
-      values.resource_names = JSON.stringify(values.resource_names ?? []);
-      values.target_clusters = JSON.stringify((values.target_clusters ?? []).map(Number));
+      const payload: Partial<SyncPolicy> = {
+        ...values,
+        resource_names: JSON.stringify(values.resource_names ?? []),
+        target_clusters: JSON.stringify((values.target_clusters ?? []).map(Number)) as unknown as number[],
+      };
       if (editing?.id) {
-        await multiclusterService.updateSyncPolicy(editing.id, values);
+        await multiclusterService.updateSyncPolicy(editing.id, payload);
         message.success(t('common:messages.success'));
       } else {
-        await multiclusterService.createSyncPolicy(values);
+        await multiclusterService.createSyncPolicy(payload);
         message.success(t('common:messages.success'));
       }
       setDrawerOpen(false);

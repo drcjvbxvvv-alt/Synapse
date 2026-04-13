@@ -83,7 +83,7 @@ const [loading, setLoading] = useState(true);
       setFormAnnotations(Object.entries((metadata?.annotations ?? {}) as Record<string, string>).map(([k, v]) => ({key: k, value: String(v)})));
       setFormRules(((spec?.rules ?? []) as Record<string, unknown>[]).map((r) => ({
         host: (r.host as string) || '',
-        paths: ((r.http as Record<string, unknown>)?.paths ?? [] as unknown[]).map((p) => {
+        paths: ((r.http as Record<string, unknown>)?.paths as unknown[] ?? []).map((p) => {
           const path = p as Record<string, unknown>;
           const backend = (path.backend as Record<string, unknown>)?.service as Record<string, unknown> | undefined;
           return {

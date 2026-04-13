@@ -224,7 +224,7 @@ const ClusterList: React.FC = () => {
       ),
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [t, tc, navigate, modal, getStatusTag, handleDelete, openTerminal]);
+  ], [t, tc, navigate, modal, getStatusTag]);
 
   // 開啟終端
   const openTerminal = (cluster: Cluster) => {
