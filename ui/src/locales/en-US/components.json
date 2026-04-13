@@ -36,7 +36,8 @@
     "readonlyPermission": "Read-only",
     "customPermission": "Custom",
     "featureDisabled": "Feature Disabled",
-    "featureDisabledDesc": "This feature has been disabled by the administrator. Contact your admin to enable it."
+    "featureDisabledDesc": "This feature has been disabled by the administrator. Contact your admin to enable it.",
+    "adminOpsOnly": "This page is only accessible to admin and ops roles."
   },
   "kubectlTerminal": {
     "title": "Kubectl Terminal",

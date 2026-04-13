@@ -270,5 +270,39 @@
     "title": "Notifications",
     "markAllRead": "Mark all as read",
     "empty": "No notifications"
+  },
+  "errorPage": {
+    "403": {
+      "title": "No Entry, Pal",
+      "subTitle": "This is a VIP area. Ask an admin for access — nothing I can do from here."
+    },
+    "404": {
+      "title": "Where Did This Page Go?",
+      "subTitle": "We sent three Pods to find it and they all got lost too. Try going home?"
+    },
+    "500": {
+      "title": "Oops, the Server Overheated",
+      "subTitle": "The on-call engineer has been paged (they are not happy). Retry in a bit, or grab a coffee first."
+    },
+    "503": {
+      "title": "Service Went to Recharge",
+      "subTitle": "It said it was exhausted and needed a break. Usually back in a few minutes — hang tight."
+    },
+    "network": {
+      "title": "Network Has Left the Building",
+      "subTitle": "Did the cat chew through the cable? Check your connection and try again."
+    },
+    "boundary": {
+      "sectionTitle": "Component Failed to Load",
+      "sectionDesc": "This component encountered an error. Please retry or refresh the page.",
+      "pageTitle": "Page Error",
+      "pageSubTitle": "An unexpected error occurred. Please refresh and try again. If the problem persists, contact an admin."
+    },
+    "actions": {
+      "retry": "Retry",
+      "reload": "Refresh",
+      "goBack": "Go Back",
+      "goHome": "Go Home"
+    }
   }
 }

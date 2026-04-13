@@ -2,9 +2,91 @@ import React, { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Button, Typography } from 'antd';
 import { WarningOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import ErrorPage from './ErrorPage';
 
 const { Text } = Typography;
+
+// ── Functional fallback components (hooks allowed here) ──────────────────────
+
+const SectionFallback: React.FC<{ errorRef: string | null; onRetry: () => void }> = ({ errorRef, onRetry }) => {
+  const { t } = useTranslation('common');
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 240,
+      padding: 32,
+    }}>
+      <div style={{
+        background: '#fff',
+        border: '1px solid #fee2e2',
+        borderRadius: 16,
+        padding: '32px 40px',
+        textAlign: 'center',
+        maxWidth: 420,
+      }}>
+        <div style={{
+          width: 56,
+          height: 56,
+          borderRadius: '50%',
+          background: '#fef2f2',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 16px',
+        }}>
+          <WarningOutlined style={{ fontSize: 24, color: '#ef4444' }} />
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 8 }}>
+          {t('errorPage.boundary.sectionTitle')}
+        </div>
+        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
+          {t('errorPage.boundary.sectionDesc')}
+        </div>
+        {errorRef && (
+          <Text
+            type="secondary"
+            style={{
+              display: 'inline-block',
+              marginBottom: 20,
+              fontSize: 11,
+              background: '#f3f4f6',
+              padding: '2px 8px',
+              borderRadius: 6,
+              fontFamily: 'monospace',
+            }}
+          >
+            {errorRef}
+          </Text>
+        )}
+        <br />
+        <Button type="primary" icon={<ReloadOutlined />} onClick={onRetry} style={{ borderRadius: 8 }}>
+          {t('errorPage.actions.retry')}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const PageFallback: React.FC<{ errorRef: string | null; onRetry: () => void }> = ({ errorRef, onRetry }) => {
+  const { t } = useTranslation('common');
+  return (
+    <ErrorPage
+      status={500}
+      title={t('errorPage.boundary.pageTitle')}
+      subTitle={t('errorPage.boundary.pageSubTitle')}
+      errorRef={errorRef ?? undefined}
+      onRetry={onRetry}
+      retryLabel={t('errorPage.actions.reload')}
+      showHome
+      showBack={false}
+    />
+  );
+};
+
+// ── Class component ───────────────────────────────────────────────────────────
 
 interface Props {
   children: ReactNode;
@@ -44,80 +126,10 @@ class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      // Section fallback：行內卡片式錯誤（用於 Terminal、LogCenter 等局部元件）
       if (this.props.fallbackType === 'section') {
-        return (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 240,
-            padding: 32,
-          }}>
-            <div style={{
-              background: '#fff',
-              border: '1px solid #fee2e2',
-              borderRadius: 16,
-              padding: '32px 40px',
-              textAlign: 'center',
-              maxWidth: 420,
-            }}>
-              <div style={{
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                background: '#fef2f2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 16px',
-              }}>
-                <WarningOutlined style={{ fontSize: 24, color: '#ef4444' }} />
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 8 }}>
-                元件載入失敗
-              </div>
-              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
-                此元件發生錯誤，請重試或重新整理頁面。
-              </div>
-              {this.state.errorRef && (
-                <Text
-                  type="secondary"
-                  style={{
-                    display: 'inline-block',
-                    marginBottom: 20,
-                    fontSize: 11,
-                    background: '#f3f4f6',
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  {this.state.errorRef}
-                </Text>
-              )}
-              <br />
-              <Button type="primary" icon={<ReloadOutlined />} onClick={this.handleReset} style={{ borderRadius: 8 }}>
-                重試
-              </Button>
-            </div>
-          </div>
-        );
+        return <SectionFallback errorRef={this.state.errorRef} onRetry={this.handleReset} />;
       }
-
-      // Page fallback：全頁錯誤 → 使用自製 ErrorPage，顯示通用錯誤訊息，不暴露內部細節
-      return (
-        <ErrorPage
-          status={500}
-          title="頁面發生錯誤"
-          subTitle="頁面遇到了非預期的錯誤，請重新整理後再試。若問題持續發生，請聯繫管理員。"
-          errorRef={this.state.errorRef ?? undefined}
-          onRetry={this.handleReload}
-          retryLabel="重新整理"
-          showHome
-          showBack={false}
-        />
-      );
+      return <PageFallback errorRef={this.state.errorRef} onRetry={this.handleReload} />;
     }
 
     return this.props.children;

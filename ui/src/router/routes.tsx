@@ -14,6 +14,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Spin } from 'antd';
+import { useTranslation } from 'react-i18next';
 import MainLayout from '../layouts/MainLayout';
 import { PermissionProvider } from '../contexts/PermissionContext.tsx';
 import { PermissionGuard } from '../components/PermissionGuard';
@@ -140,6 +141,7 @@ const TopLevelGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const loading = usePermissionLoading();
   const { clusterPermissions } = usePermission();
   const user = tokenManager.getUser();
+  const { t } = useTranslation('components');
 
   if (loading) return <Spin style={{ display: 'block', margin: '80px auto' }} />;
 
@@ -152,8 +154,8 @@ const TopLevelGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     return (
       <ErrorPage
         status={403}
-        title="權限不足"
-        subTitle="此頁面僅限管理員（admin）和運維（ops）角色存取"
+        title={t('permissionGuard.insufficientPermission')}
+        subTitle={t('permissionGuard.adminOpsOnly')}
         showBack
       />
     );

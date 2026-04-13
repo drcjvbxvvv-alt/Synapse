@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Space, Typography, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { HomeOutlined, ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Illus403, Illus404, Illus500, Illus503, IllusNetwork } from './ErrorIllustrations';
 
@@ -19,23 +20,19 @@ interface ErrorPageProps {
   errorRef?: string;
 }
 
-interface ErrorConfig {
+interface ErrorStaticConfig {
   illustration: React.ReactNode;
   code: string;
-  title: string;
-  subTitle: string;
   tagColor: string;
   tagLabel: string;
   accentColor: string;
   bgGradient: string;
 }
 
-const ERROR_CONFIG: Record<ErrorStatus, ErrorConfig> = {
+const ERROR_STATIC: Record<ErrorStatus, ErrorStaticConfig> = {
   403: {
     illustration: <Illus403 />,
     code: '403',
-    title: '老兄，你沒有通行證',
-    subTitle: '這裡是 VIP 專區。要入場的話，去找管理員申請授權吧，我也很無奈。',
     tagColor: 'warning',
     tagLabel: 'Forbidden',
     accentColor: '#f59e0b',
@@ -44,8 +41,6 @@ const ERROR_CONFIG: Record<ErrorStatus, ErrorConfig> = {
   404: {
     illustration: <Illus404 />,
     code: '404',
-    title: '這頁跑去哪了？',
-    subTitle: '我們派了三個 Pod 去找，結果它們也迷路了。試試返回首頁？',
     tagColor: 'blue',
     tagLabel: 'Not Found',
     accentColor: '#3b82f6',
@@ -54,8 +49,6 @@ const ERROR_CONFIG: Record<ErrorStatus, ErrorConfig> = {
   500: {
     illustration: <Illus500 />,
     code: '500',
-    title: '糟糕，伺服器中暑了',
-    subTitle: 'On-Call 工程師已被緊急叫醒（他非常不高興）。請稍後重試，或者先去泡杯咖啡。',
     tagColor: 'error',
     tagLabel: 'Internal Server Error',
     accentColor: '#ef4444',
@@ -64,8 +57,6 @@ const ERROR_CONFIG: Record<ErrorStatus, ErrorConfig> = {
   503: {
     illustration: <Illus503 />,
     code: '503',
-    title: '服務去充電了',
-    subTitle: '它說最近太累了，需要喘口氣。通常幾分鐘就好，留個便利貼等一下？',
     tagColor: 'processing',
     tagLabel: 'Service Unavailable',
     accentColor: '#6366f1',
@@ -74,8 +65,6 @@ const ERROR_CONFIG: Record<ErrorStatus, ErrorConfig> = {
   network: {
     illustration: <IllusNetwork />,
     code: '—',
-    title: '網路跑掉了！',
-    subTitle: '是貓咬斷網路線了嗎？還是有人欠費了？先確認一下連線狀態吧。',
     tagColor: 'default',
     tagLabel: 'Network Error',
     accentColor: '#6b7280',
@@ -88,13 +77,17 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
   title,
   subTitle,
   onRetry,
-  retryLabel = '重試',
+  retryLabel,
   showHome = true,
   showBack = false,
   errorRef,
 }) => {
   const navigate = useNavigate();
-  const config = ERROR_CONFIG[status];
+  const { t } = useTranslation('common');
+  const config = ERROR_STATIC[status];
+  const statusKey = status === 'network' ? 'network' : String(status);
+  const defaultTitle = t(`errorPage.${statusKey}.title`);
+  const defaultSubTitle = t(`errorPage.${statusKey}.subTitle`);
 
   return (
     <div
@@ -217,7 +210,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
             color: '#111827',
           }}
         >
-          {title ?? config.title}
+          {title ?? defaultTitle}
         </Title>
 
         {/* Subtitle */}
@@ -230,7 +223,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
             maxWidth: 340,
           }}
         >
-          {subTitle ?? config.subTitle}
+          {subTitle ?? defaultSubTitle}
           {errorRef && (
             <>
               <br />
@@ -273,7 +266,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               size="large"
               style={{ borderRadius: 10, fontWeight: 600 }}
             >
-              {retryLabel}
+              {retryLabel ?? t('errorPage.actions.retry')}
             </Button>
           )}
           {showBack && (
@@ -283,7 +276,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               size="large"
               style={{ borderRadius: 10 }}
             >
-              返回上一頁
+              {t('errorPage.actions.goBack')}
             </Button>
           )}
           {showHome && (
@@ -301,7 +294,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
                 }),
               }}
             >
-              返回首頁
+              {t('errorPage.actions.goHome')}
             </Button>
           )}
         </Space>

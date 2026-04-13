@@ -36,7 +36,8 @@
     "readonlyPermission": "唯讀權限",
     "customPermission": "自訂權限",
     "featureDisabled": "功能已停用",
-    "featureDisabledDesc": "管理員已在功能策略中停用此功能，如需開啟請聯絡管理員"
+    "featureDisabledDesc": "管理員已在功能策略中停用此功能，如需開啟請聯絡管理員",
+    "adminOpsOnly": "此頁面僅限管理員（admin）和運維（ops）角色存取"
   },
   "kubectlTerminal": {
     "title": "Kubectl 終端機",
