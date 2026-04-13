@@ -53,6 +53,9 @@
     "copyCmd": "Copy Install Command",
     "officialDocs": "View Official Docs",
     "recheck": "Re-detect",
+    "noGatewayClass": "No GatewayClass found",
+    "noGatewayClassDesc": "GatewayClass defines which controller handles Gateway resources. It is usually created automatically when installing a Gateway controller (e.g. NGINX Gateway Fabric, Istio, Envoy Gateway), or you can apply one manually.",
+    "noGatewayClassCmd": "# Example: manually create a GatewayClass (nginx)\nkubectl apply -f - <<EOF\napiVersion: gateway.networking.k8s.io/v1\nkind: GatewayClass\nmetadata:\n  name: nginx\nspec:\n  controllerName: gateway.nginx.org/nginx-gateway-controller\nEOF",
     "tabs": {
       "gatewayclass": "GatewayClass",
       "gateways": "Gateways",

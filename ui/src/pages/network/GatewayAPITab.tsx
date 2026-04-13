@@ -18,12 +18,12 @@ const GatewayAPITab: React.FC<GatewayTabProps> = ({ clusterId }) => {
   const [available, setAvailable] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const checkAvailability = async () => {
+  const checkAvailability = async (showToast = false) => {
     setChecking(true);
     try {
       const res = await gatewayService.getStatus(clusterId);
       setAvailable(res.available);
-      if (res.available) {
+      if (showToast && res.available) {
         message.success(t('gatewayapi.messages.recheckSuccess'));
       }
     } catch {
@@ -34,7 +34,7 @@ const GatewayAPITab: React.FC<GatewayTabProps> = ({ clusterId }) => {
   };
 
   useEffect(() => {
-    checkAvailability();
+    checkAvailability(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId]);
 
@@ -57,7 +57,7 @@ const GatewayAPITab: React.FC<GatewayTabProps> = ({ clusterId }) => {
         docsUrl="https://gateway-api.sigs.k8s.io/guides/"
         onRecheck={() => {
           setAvailable(null);
-          checkAvailability();
+          checkAvailability(true);
         }}
         recheckLoading={checking}
       />
@@ -107,7 +107,7 @@ const GatewayAPITab: React.FC<GatewayTabProps> = ({ clusterId }) => {
           size="small"
           icon={<ReloadOutlined />}
           loading={checking}
-          onClick={checkAvailability}
+          onClick={() => checkAvailability(true)}
         >
           {t('gatewayapi.recheck')}
         </Button>

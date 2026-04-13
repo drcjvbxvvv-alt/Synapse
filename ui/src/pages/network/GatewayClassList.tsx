@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, App } from 'antd';
 import { CheckCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import EmptyState from '@/components/EmptyState';
+import NotInstalledCard from '@/components/NotInstalledCard';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import type { GatewayClassItem, GatewayTabProps } from './gatewayTypes';
@@ -11,6 +12,7 @@ const GatewayClassList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange 
   const { t } = useTranslation(['network', 'common']);
   const [items, setItems] = useState<GatewayClassItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -22,6 +24,7 @@ const GatewayClassList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange 
       message.error(t('network:gatewayapi.messages.fetchError'));
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, [clusterId, message, t, onCountChange]);
 
@@ -43,6 +46,20 @@ const GatewayClassList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange 
       </Tag>
     );
   };
+
+  // 載入完成且沒有任何 GatewayClass → 顯示建立指引
+  if (loaded && !loading && items.length === 0) {
+    return (
+      <NotInstalledCard
+        title={t('network:gatewayapi.noGatewayClass')}
+        description={t('network:gatewayapi.noGatewayClassDesc')}
+        command={t('network:gatewayapi.noGatewayClassCmd')}
+        docsUrl="https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass"
+        onRecheck={loadData}
+        recheckLoading={loading}
+      />
+    );
+  }
 
   const columns = [
     {
