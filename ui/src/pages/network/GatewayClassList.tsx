@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, App } from 'antd';
 import { CheckCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import EmptyState from '@/components/EmptyState';
+import NotInstalledCard from '@/components/NotInstalledCard';
 import { useTranslation } from 'react-i18next';
 import { gatewayService } from '../../services/gatewayService';
 import type { GatewayClassItem, GatewayTabProps } from './gatewayTypes';
@@ -11,10 +12,17 @@ const GatewayClassList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange 
   const { t } = useTranslation(['network', 'common']);
   const [items, setItems] = useState<GatewayClassItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [installed, setInstalled] = useState<boolean | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      const status = await gatewayService.getStatus(clusterId);
+      setInstalled(status.available);
+      if (!status.available) {
+        onCountChange?.(0);
+        return;
+      }
       const res = await gatewayService.listGatewayClasses(clusterId);
       setItems(res.items ?? []);
       onCountChange?.(res.total ?? 0);
@@ -70,6 +78,22 @@ const GatewayClassList: React.FC<GatewayTabProps> = ({ clusterId, onCountChange 
       render: (v: string) => v ? new Date(v).toLocaleString() : '-',
     },
   ];
+
+  if (installed === false) {
+    return (
+      <NotInstalledCard
+        title={t('network:gatewayapi.notInstalled')}
+        description={t('network:gatewayapi.notInstalledDesc')}
+        command={t('network:gatewayapi.installCmd')}
+        docsUrl="https://gateway-api.sigs.k8s.io/guides/"
+        onRecheck={() => {
+          setInstalled(null);
+          loadData();
+        }}
+        recheckLoading={loading}
+      />
+    );
+  }
 
   return (
     <Table
