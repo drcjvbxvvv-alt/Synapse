@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Table, Button, Space, App } from 'antd';
-import { PlusOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
+import { Table, Button, Divider, App, theme } from 'antd';
+import { PlusOutlined, ReloadOutlined, SettingOutlined, CloseOutlined, ExportOutlined } from '@ant-design/icons';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { WorkloadInfo } from '../../services/workloadService';
@@ -19,6 +19,7 @@ interface DaemonSetTabProps {
 
 const DaemonSetTab: React.FC<DaemonSetTabProps> = ({ clusterId, onCountChange }) => {
   const { hasFeature } = usePermission();
+  const { token } = theme.useToken();
   const state = useWorkloadTab({
     clusterId,
     workloadType: 'DaemonSet',
@@ -67,25 +68,40 @@ const DaemonSetTab: React.FC<DaemonSetTabProps> = ({ clusterId, onCountChange })
   return (
     <App>
       <div>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Space>
-            <Button
-              disabled={state.selectedRowKeys.length === 0}
-              onClick={state.handleBatchRedeploy}
-              icon={<ReloadOutlined />}
-            >
-              {state.selectedRowKeys.length > 1
-                ? `${state.t('actions.batchRedeploy')} (${state.selectedRowKeys.length})`
-                : state.t('actions.redeploy')}
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* 批次操作列 — 永遠佔位，勾選後才顯示內容 */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: token.marginSM,
+            height: 36,
+            padding: `0 ${token.paddingSM}px`,
+            borderRadius: token.borderRadius,
+            background: state.selectedRowKeys.length > 0 ? token.colorFillAlter : 'transparent',
+            opacity: state.selectedRowKeys.length > 0 ? 1 : 0,
+            pointerEvents: state.selectedRowKeys.length > 0 ? 'auto' : 'none',
+            transition: 'opacity 0.2s ease, background 0.2s ease',
+          }}>
+            <span style={{ color: token.colorTextSecondary, fontSize: token.fontSizeSM }}>
+              {state.t('actions.selectedCount', { count: state.selectedRowKeys.length })}
+            </span>
+            <Divider type="vertical" style={{ margin: 0, height: 14 }} />
+            <Button size="small" type="text" icon={<ReloadOutlined />} onClick={state.handleBatchRedeploy}>
+              {state.t('actions.batchRedeploy')}
             </Button>
             {hasFeature('export') && (
-              <Button disabled={state.selectedRowKeys.length === 0} onClick={state.handleExport}>
-                {state.selectedRowKeys.length > 1
-                  ? `${state.t('actions.batchExport')} (${state.selectedRowKeys.length})`
-                  : state.t('actions.export')}
+              <Button size="small" type="text" icon={<ExportOutlined />} onClick={state.handleExport}>
+                {state.t('actions.export')}
               </Button>
             )}
-          </Space>
+            <Button
+              size="small" type="text"
+              icon={<CloseOutlined />}
+              onClick={() => state.setSelectedRowKeys([])}
+              style={{ marginLeft: 'auto', color: token.colorTextTertiary }}
+            />
+          </div>
+
           {hasFeature('workload:write') && (
             <Button
               type="primary"

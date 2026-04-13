@@ -182,6 +182,7 @@
     "total": "共",
     "selected": "已選取",
     "totalCount": "共 {{count}} 筆",
+    "selectedCount": "已選擇 {{count}} 項",
     "version": "版本",
     "image": "映像",
     "images": "映像"

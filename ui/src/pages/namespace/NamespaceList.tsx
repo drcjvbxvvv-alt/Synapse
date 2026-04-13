@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import {
   Table,
   Button,
-  Space,
+  Divider,
   App,
   Card,
   theme,
@@ -12,6 +12,8 @@ import {
   ReloadOutlined,
   SettingOutlined,
   DeleteOutlined,
+  ExportOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { MultiSearchBar } from '@/components/MultiSearchBar';
 import type { TablePaginationConfig } from 'antd/es/table';
@@ -72,28 +74,41 @@ const NamespaceList: React.FC = () => {
       <div style={{ padding: '24px' }}>
         <Card variant="borderless">
           {/* Action toolbar */}
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <Space>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* 批次操作列 — 永遠佔位，勾選後才顯示內容 */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: token.marginSM,
+              height: 36,
+              padding: `0 ${token.paddingSM}px`,
+              borderRadius: token.borderRadius,
+              background: state.selectedRowKeys.length > 0 ? token.colorFillAlter : 'transparent',
+              opacity: state.selectedRowKeys.length > 0 ? 1 : 0,
+              pointerEvents: state.selectedRowKeys.length > 0 ? 'auto' : 'none',
+              transition: 'opacity 0.2s ease, background 0.2s ease',
+            }}>
+              <span style={{ color: token.colorTextSecondary, fontSize: token.fontSizeSM }}>
+                {state.t('common:table.selectedCount', { count: state.selectedRowKeys.length })}
+              </span>
+              <Divider type="vertical" style={{ margin: 0, height: 14 }} />
               {canDelete() && (
-                <Button
-                  danger
-                  disabled={state.selectedRowKeys.length === 0}
-                  onClick={state.handleBatchDelete}
-                  icon={<DeleteOutlined />}
-                >
-                  {state.selectedRowKeys.length > 1
-                    ? `${state.t('common:actions.batchDelete')} (${state.selectedRowKeys.length})`
-                    : state.t('common:actions.delete')}
+                <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={state.handleBatchDelete}>
+                  {state.t('common:actions.batchDelete')}
                 </Button>
               )}
               {hasFeature('export') && (
-                <Button disabled={state.selectedRowKeys.length === 0} onClick={state.handleExport}>
-                  {state.selectedRowKeys.length > 1
-                    ? `${state.t('common:actions.batchExport')} (${state.selectedRowKeys.length})`
-                    : state.t('common:actions.export')}
+                <Button size="small" type="text" icon={<ExportOutlined />} onClick={state.handleExport}>
+                  {state.t('common:actions.export')}
                 </Button>
               )}
-            </Space>
+              <Button
+                size="small" type="text"
+                icon={<CloseOutlined />}
+                onClick={() => state.setSelectedRowKeys([])}
+                style={{ marginLeft: 'auto', color: token.colorTextTertiary }}
+              />
+            </div>
             {canWrite() && (
               <Button
                 type="primary"

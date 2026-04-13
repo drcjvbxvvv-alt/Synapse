@@ -387,6 +387,7 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
     setPageSize,
     setCurrentSearchField,
     setCurrentSearchValue,
+    setSelectedRowKeys,
     setScaleModalVisible,
     setScaleReplicas,
     setCreateModalVisible,

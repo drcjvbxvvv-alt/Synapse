@@ -43,7 +43,8 @@
     "confirmRedeploy": "确认重新部署",
     "confirmRedeployDesc": "确定要重新部署选中的 {{count}} 个{{type}}吗？",
     "selectRedeploy": "请先选择要重新部署的{{type}}",
-    "aiDiagnose": "AI 诊断"
+    "aiDiagnose": "AI 诊断",
+    "selectedCount": "已选择 {{count}} 项"
   },
   "detail": {
     "title": "工作负载详情",

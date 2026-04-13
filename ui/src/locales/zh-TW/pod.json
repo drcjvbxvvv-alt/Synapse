@@ -8,7 +8,8 @@
     "fetchError": "取得 Pod 列表失敗",
     "noPods": "暫無 Pod",
     "columnSettings": "欄位設定",
-    "selectColumns": "選擇要顯示的欄位"
+    "selectColumns": "選擇要顯示的欄位",
+    "selectedCount": "已選擇 {{count}} 項"
   },
   "columns": {
     "name": "實例名稱",

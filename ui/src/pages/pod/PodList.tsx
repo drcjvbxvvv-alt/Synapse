@@ -8,12 +8,16 @@ import {
   Drawer,
   Tabs,
   Spin,
+  Divider,
+  theme,
 } from 'antd';
 import EmptyState from '@/components/EmptyState';
 import {
   ReloadOutlined,
   SettingOutlined,
   DeleteOutlined,
+  ExportOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { MultiSearchBar } from '@/components/MultiSearchBar';
 import { usePodList } from './hooks/usePodList';
@@ -22,6 +26,7 @@ import { usePermission } from '../../hooks/usePermission';
 
 
 const PodList: React.FC = () => {
+  const { token } = theme.useToken();
   const { hasFeature } = usePermission();
   const {
     clusterId,
@@ -33,6 +38,7 @@ const PodList: React.FC = () => {
     setCurrentPage,
     setPageSize,
     selectedRowKeys,
+    setSelectedRowKeys,
     rowSelection,
     searchConditions,
     currentSearchField,
@@ -106,29 +112,41 @@ const PodList: React.FC = () => {
               label: t('list.tabTitle'),
               children: (
                 <div>
-                  {/* 操作按鈕欄 */}
-                  <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Space>
-                      {hasFeature('workload:delete') && (
-                        <Button
-                          danger
-                          disabled={selectedRowKeys.length === 0}
-                          onClick={handleBatchDelete}
-                          icon={<DeleteOutlined />}
-                        >
-                          {selectedRowKeys.length > 1
-                            ? `${t('actions.batchDelete')} (${selectedRowKeys.length})`
-                            : tc('actions.delete')}
-                        </Button>
-                      )}
-                      {hasFeature('export') && (
-                        <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
-                          {selectedRowKeys.length > 1
-                            ? `${tc('actions.batchExport')} (${selectedRowKeys.length})`
-                            : tc('actions.export')}
-                        </Button>
-                      )}
-                    </Space>
+                  {/* 批次操作列 — 永遠佔位，勾選後才顯示內容 */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: token.marginSM,
+                    height: 36,
+                    padding: `0 ${token.paddingSM}px`,
+                    marginBottom: token.marginSM,
+                    borderRadius: token.borderRadius,
+                    background: selectedRowKeys.length > 0 ? token.colorFillAlter : 'transparent',
+                    opacity: selectedRowKeys.length > 0 ? 1 : 0,
+                    pointerEvents: selectedRowKeys.length > 0 ? 'auto' : 'none',
+                    transition: 'opacity 0.2s ease, background 0.2s ease',
+                  }}>
+                    <span style={{ color: token.colorTextSecondary, fontSize: token.fontSizeSM }}>
+                      {t('list.selectedCount', { count: selectedRowKeys.length })}
+                    </span>
+                    <Divider type="vertical" style={{ margin: 0, height: 14 }} />
+                    {hasFeature('workload:delete') && (
+                      <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+                        {tc('actions.batchDelete')}
+                      </Button>
+                    )}
+                    {hasFeature('export') && (
+                      <Button size="small" type="text" icon={<ExportOutlined />} onClick={handleExport}>
+                        {tc('actions.export')}
+                      </Button>
+                    )}
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<CloseOutlined />}
+                      onClick={() => setSelectedRowKeys([])}
+                      style={{ marginLeft: 'auto', color: token.colorTextTertiary }}
+                    />
                   </div>
 
                   <MultiSearchBar

@@ -8,7 +8,8 @@
     "fetchError": "Failed to fetch pod list",
     "noPods": "No pods",
     "columnSettings": "Column Settings",
-    "selectColumns": "Select columns to display"
+    "selectColumns": "Select columns to display",
+    "selectedCount": "{{count}} selected"
   },
   "columns": {
     "name": "Pod Name",

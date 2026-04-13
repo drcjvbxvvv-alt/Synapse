@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Table,
   Button,
+  Divider,
   Space,
   Drawer,
   Checkbox,
@@ -12,6 +13,8 @@ import {
   ReloadOutlined,
   DeleteOutlined,
   SettingOutlined,
+  CloseOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { MultiSearchBar } from '@/components/MultiSearchBar';
 import { useNavigate } from 'react-router-dom';
@@ -64,28 +67,42 @@ const ConfigMapList: React.FC<ConfigMapListProps> = ({ clusterId, onCountChange 
   return (
     <div>
       {/* Action toolbar */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Space>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* 批次操作列 */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: token.marginSM,
+          height: 36,
+          padding: `0 ${token.paddingSM}px`,
+          borderRadius: token.borderRadius,
+          background: hook.selectedRowKeys.length > 0 ? token.colorFillAlter : 'transparent',
+          opacity: hook.selectedRowKeys.length > 0 ? 1 : 0,
+          pointerEvents: hook.selectedRowKeys.length > 0 ? 'auto' : 'none',
+          transition: 'opacity 0.2s ease, background 0.2s ease',
+        }}>
+          <span style={{ color: token.colorTextSecondary, fontSize: token.fontSizeSM }}>
+            {t('common:table.selectedCount', { count: hook.selectedRowKeys.length })}
+          </span>
+          <Divider type="vertical" style={{ margin: 0, height: 14 }} />
           {hasFeature('config:delete') && (
-            <Button
-              disabled={hook.selectedRowKeys.length === 0}
-              danger
-              icon={<DeleteOutlined />}
-              onClick={hook.handleBatchDelete}
-            >
-              {hook.selectedRowKeys.length > 1
-                ? `${t('common:actions.batchDelete')} (${hook.selectedRowKeys.length})`
-                : t('common:actions.delete')}
+            <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={hook.handleBatchDelete}>
+              {t('common:actions.batchDelete')}
             </Button>
           )}
           {hasFeature('export') && (
-            <Button disabled={hook.selectedRowKeys.length === 0} onClick={hook.handleExport}>
-              {hook.selectedRowKeys.length > 1
-                ? `${t('common:actions.batchExport')} (${hook.selectedRowKeys.length})`
-                : t('common:actions.export')}
+            <Button size="small" type="text" icon={<ExportOutlined />} onClick={hook.handleExport}>
+              {t('common:actions.export')}
             </Button>
           )}
-        </Space>
+          <Button
+            size="small" type="text"
+            icon={<CloseOutlined />}
+            onClick={() => hook.setSelectedRowKeys([])}
+            style={{ marginLeft: 'auto', color: token.colorTextTertiary }}
+          />
+        </div>
+
         {hasFeature('config:write') && (
           <Button
             type="primary"

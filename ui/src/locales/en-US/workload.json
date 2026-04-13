@@ -43,7 +43,8 @@
     "confirmRedeploy": "Confirm Redeploy",
     "confirmRedeployDesc": "Are you sure you want to redeploy {{count}} selected {{type}}(s)?",
     "selectRedeploy": "Please select {{type}}(s) to redeploy",
-    "aiDiagnose": "AI Diagnose"
+    "aiDiagnose": "AI Diagnose",
+    "selectedCount": "{{count}} selected"
   },
   "detail": {
     "title": "Workload Detail",

@@ -181,6 +181,7 @@
     "total": "共",
     "selected": "已选中",
     "totalCount": "共 {{count}} 条",
+    "selectedCount": "已选择 {{count}} 项",
     "version": "版本",
     "image": "镜像",
     "images": "镜像"

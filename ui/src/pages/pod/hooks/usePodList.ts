@@ -334,6 +334,7 @@ export function usePodList() {
     setPageSize,
     // selection
     selectedRowKeys,
+    setSelectedRowKeys,
     rowSelection,
     // search
     searchConditions,

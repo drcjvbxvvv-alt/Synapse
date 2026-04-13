@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Table,
   Button,
+  Divider,
   Space,
   App,
+  theme,
 } from 'antd';
 import EmptyState from '@/components/EmptyState';
 import {
@@ -12,6 +14,8 @@ import {
   PlusOutlined,
   SettingOutlined,
   DeleteOutlined,
+  CloseOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { ServiceService } from '../../services/serviceService';
 import type { Service } from '../../types';
@@ -29,6 +33,7 @@ import { MultiSearchBar } from '../../components/MultiSearchBar';
 
 const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => {
   const { hasFeature } = usePermission();
+  const { token } = theme.useToken();
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
   const { t } = useTranslation(['network', 'common']);
@@ -355,23 +360,42 @@ const ServiceTab: React.FC<ServiceTabProps> = ({ clusterId, onCountChange }) => 
   return (
     <div>
       {/* 操作按鈕欄 */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Space>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* 批次操作列 */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: token.marginSM,
+          height: 36,
+          padding: `0 ${token.paddingSM}px`,
+          borderRadius: token.borderRadius,
+          background: selectedRowKeys.length > 0 ? token.colorFillAlter : 'transparent',
+          opacity: selectedRowKeys.length > 0 ? 1 : 0,
+          pointerEvents: selectedRowKeys.length > 0 ? 'auto' : 'none',
+          transition: 'opacity 0.2s ease, background 0.2s ease',
+        }}>
+          <span style={{ color: token.colorTextSecondary, fontSize: token.fontSizeSM }}>
+            {t('common:table.selectedCount', { count: selectedRowKeys.length })}
+          </span>
+          <Divider type="vertical" style={{ margin: 0, height: 14 }} />
           {hasFeature('network:delete') && (
-            <Button disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete} danger icon={<DeleteOutlined />}>
-              {selectedRowKeys.length > 1
-                ? `${t('common:actions.batchDelete')} (${selectedRowKeys.length})`
-                : t('common:actions.delete')}
+            <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+              {t('common:actions.batchDelete')}
             </Button>
           )}
           {hasFeature('export') && (
-            <Button disabled={selectedRowKeys.length === 0} onClick={handleExport}>
-              {selectedRowKeys.length > 1
-                ? `${t('common:actions.batchExport')} (${selectedRowKeys.length})`
-                : t('common:actions.export')}
+            <Button size="small" type="text" icon={<ExportOutlined />} onClick={handleExport}>
+              {t('common:actions.export')}
             </Button>
           )}
-        </Space>
+          <Button
+            size="small" type="text"
+            icon={<CloseOutlined />}
+            onClick={() => setSelectedRowKeys([])}
+            style={{ marginLeft: 'auto', color: token.colorTextTertiary }}
+          />
+        </div>
+
         {hasFeature('network:write') && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalVisible(true)}>
             {t('network:service.createService')}

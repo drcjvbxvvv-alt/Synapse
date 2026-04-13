@@ -181,6 +181,7 @@
     "total": "Total",
     "selected": "Selected",
     "totalCount": "Total {{count}} items",
+    "selectedCount": "{{count}} selected",
     "version": "Version",
     "image": "Image",
     "images": "Images"
