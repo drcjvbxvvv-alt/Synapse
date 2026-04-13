@@ -12,6 +12,7 @@ import {
   Row,
   Col,
   Input,
+  InputNumber,
   Select,
 } from 'antd';
 import {
@@ -28,6 +29,8 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { IngressService } from '../../services/ingressService';
 import { ResourceService } from '../../services/resourceService';
+import { ServiceService } from '../../services/serviceService';
+import type { Service } from '../../types';
 import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
 import * as YAML from 'yaml';
 import { useTranslation } from 'react-i18next';
@@ -68,6 +71,9 @@ const [loading, setLoading] = useState(true);
     message: string;
   } | null>(null);
 
+  // Service 列表（依命名空間偵測）
+  const [services, setServices] = useState<Service[]>([]);
+
   // Diff 對比相關狀態
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
@@ -104,12 +110,17 @@ const [loading, setLoading] = useState(true);
     if (!clusterId || !namespace || !name) return;
     setLoading(true);
     try {
-      const response = await IngressService.getIngressYAML(clusterId, namespace, name);
+      const [response, svcResp] = await Promise.all([
+        IngressService.getIngressYAML(clusterId, namespace, name),
+        ServiceService.getServices(clusterId, namespace, undefined, undefined, 1, 200).catch(() => null),
+      ]);
       setIngressName(name);
       const yamlStr = response.yaml || '';
       setYamlContent(yamlStr);
       setOriginalYaml(yamlStr);
       parseYamlToForm(yamlStr);
+      const svcItems = (svcResp as unknown as { items: Service[] } | null)?.items ?? [];
+      setServices(svcItems);
     } catch (error: unknown) {
       showApiError(error, t('network:editPage.loadIngressError'));
       navigate(`/clusters/${clusterId}/network`);
@@ -373,8 +384,64 @@ const [loading, setLoading] = useState(true);
                         <Select value={path.pathType} style={{width: '100%'}} onChange={v => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, pathType: v} : pp)} : r))}
                           options={['Prefix', 'Exact', 'ImplementationSpecific'].map(v => ({value: v, label: v}))} />
                       </Col>
-                      <Col span={8}><Input placeholder="Service 名稱" value={path.serviceName} onChange={e => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, serviceName: e.target.value} : pp)} : r))} /></Col>
-                      <Col span={4}><Input placeholder="Port" value={path.servicePort} onChange={e => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, servicePort: e.target.value} : pp)} : r))} /></Col>
+                      <Col span={8}>
+                        <Select
+                          showSearch
+                          allowClear
+                          style={{ width: '100%' }}
+                          placeholder="Service 名稱"
+                          value={path.serviceName || undefined}
+                          options={services.map(s => ({ label: s.name, value: s.name }))}
+                          filterOption={(input, option) =>
+                            String(option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                          }
+                          notFoundContent={
+                            <span style={{ fontSize: 12, color: '#999' }}>
+                              {t('network:create.noServiceFound')}
+                            </span>
+                          }
+                          onChange={(val: string) => {
+                            const svc = services.find(s => s.name === val);
+                            setFormRules(p => p.map((r, j) => j === ri ? {
+                              ...r,
+                              paths: r.paths.map((pp, k) => k === pi ? {
+                                ...pp,
+                                serviceName: val ?? '',
+                                servicePort: svc?.ports?.[0] ? String(svc.ports[0].port) : pp.servicePort,
+                              } : pp),
+                            } : r));
+                          }}
+                        />
+                      </Col>
+                      <Col span={4}>
+                        {(() => {
+                          const svc = services.find(s => s.name === path.serviceName);
+                          const portOpts = svc?.ports?.map(p => ({
+                            label: p.name ? `${p.port} (${p.name})` : String(p.port),
+                            value: String(p.port),
+                          })) ?? [];
+                          return portOpts.length > 0 ? (
+                            <Select
+                              showSearch
+                              style={{ width: '100%' }}
+                              placeholder="Port"
+                              value={path.servicePort || undefined}
+                              options={portOpts}
+                              filterOption={(input, option) => String(option?.value ?? '').includes(input)}
+                              onChange={(val: string) => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, servicePort: val} : pp)} : r))}
+                            />
+                          ) : (
+                            <InputNumber
+                              style={{ width: '100%' }}
+                              placeholder="Port"
+                              min={1}
+                              max={65535}
+                              value={path.servicePort ? Number(path.servicePort) : undefined}
+                              onChange={(val) => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.map((pp, k) => k === pi ? {...pp, servicePort: String(val ?? '')} : pp)} : r))}
+                            />
+                          );
+                        })()}
+                      </Col>
                       <Col span={3}><Button danger size="small" icon={<DeleteOutlined />} onClick={() => setFormRules(p => p.map((r, j) => j === ri ? {...r, paths: r.paths.filter((_, k) => k !== pi)} : r))} /></Col>
                     </Row>
                   ))}
