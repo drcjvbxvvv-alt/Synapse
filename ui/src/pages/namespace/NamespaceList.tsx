@@ -19,6 +19,7 @@ import { MultiSearchBar } from '@/components/MultiSearchBar';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { NamespaceData } from '../../services/namespaceService';
+import { useParams } from 'react-router-dom';
 import { useNamespaceList } from './hooks/useNamespaceList';
 import { usePermission } from '@/hooks/usePermission';
 import { createNamespaceColumns } from './columns';
@@ -27,6 +28,7 @@ import CreateNamespaceModal from './components/CreateNamespaceModal';
 
 
 const NamespaceList: React.FC = () => {
+  const { clusterId } = useParams<{ clusterId: string }>();
   const { hasFeature } = usePermission();
   const state = useNamespaceList();
   const { token } = theme.useToken();
@@ -39,9 +41,9 @@ const NamespaceList: React.FC = () => {
     SYSTEM_NAMESPACES: state.SYSTEM_NAMESPACES,
     handleViewDetail: state.handleViewDetail,
     handleDelete: state.handleDelete,
-    canDelete: hasFeature('namespace:delete'),
-    showActions: hasFeature('namespace:write') || hasFeature('namespace:delete'),
-  }), [state.t, token, state.sortField, state.sortOrder, state.SYSTEM_NAMESPACES, state.handleViewDetail, state.handleDelete, hasFeature]);
+    canDelete: hasFeature('namespace:delete', clusterId),
+    showActions: hasFeature('namespace:write', clusterId) || hasFeature('namespace:delete', clusterId),
+  }), [state.t, token, state.sortField, state.sortOrder, state.SYSTEM_NAMESPACES, state.handleViewDetail, state.handleDelete, hasFeature, clusterId]);
 
   const columns = useMemo(() => allColumns.filter(col => {
     if (col.key === 'actions') return true;
@@ -92,12 +94,12 @@ const NamespaceList: React.FC = () => {
                 {state.t('common:table.selectedCount', { count: state.selectedRowKeys.length })}
               </span>
               <Divider type="vertical" style={{ margin: 0, height: 14 }} />
-              {hasFeature('namespace:delete') && (
+              {hasFeature('namespace:delete', clusterId) && (
                 <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={state.handleBatchDelete}>
                   {state.t('common:actions.batchDelete')}
                 </Button>
               )}
-              {hasFeature('export') && (
+              {hasFeature('export', clusterId) && (
                 <Button size="small" type="text" icon={<ExportOutlined />} onClick={state.handleExport}>
                   {state.t('common:actions.export')}
                 </Button>
@@ -109,7 +111,7 @@ const NamespaceList: React.FC = () => {
                 style={{ marginLeft: 'auto', color: token.colorTextTertiary }}
               />
             </div>
-            {hasFeature('namespace:write') && (
+            {hasFeature('namespace:write', clusterId) && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
