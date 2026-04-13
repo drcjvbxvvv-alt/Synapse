@@ -537,7 +537,7 @@ const FeaturePolicyForm: React.FC<FeaturePolicyFormProps> = ({
   return (
     <Collapse
       items={collapseItems}
-      defaultActiveKey={FEATURE_GROUPS.map(g => g.groupKey)}
+      defaultActiveKey={[]}
       size="small"
       style={{ background: 'transparent' }}
     />
