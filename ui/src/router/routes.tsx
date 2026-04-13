@@ -20,6 +20,9 @@ import { PermissionGuard } from '../components/PermissionGuard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ErrorPage from '../components/ErrorPage';
 import { RequireAuth } from './RequireAuth';
+import { usePermission, usePermissionLoading } from '../hooks/usePermission';
+import { tokenManager } from '../services/authService';
+import { isPlatformAdmin } from '../config/menuPermissions';
 
 // ── Eager imports (small / always needed) ──────────────────────────────────
 import Login from '../pages/auth/Login';
@@ -85,6 +88,70 @@ const S = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<Spin />}>{children}</Suspense>
 );
 
+// ─── Redirect helpers ──────────────────────────────────────────────────────
+
+/**
+ * Returns the default destination for the current user:
+ *   admin → /clusters   (cluster list)
+ *   others → /clusters/:id/overview  (first assigned cluster)
+ *   no clusters → /overview
+ */
+function useDefaultDestination(): string | null {
+  const { clusterPermissions } = usePermission();
+  const loading = usePermissionLoading();
+  const user = tokenManager.getUser();
+
+  if (loading) return null;
+
+  const allPerms = Array.from(clusterPermissions.values());
+
+  if (isPlatformAdmin(user?.username, allPerms)) {
+    return '/clusters';
+  }
+
+  const first = allPerms[0];
+  return first ? `/clusters/${first.cluster_id}/overview` : '/overview';
+}
+
+/**
+ * Root-level redirect: admins go to the cluster list,
+ * everyone else goes directly to their first assigned cluster.
+ */
+const HomeRedirect: React.FC = () => {
+  const loading = usePermissionLoading();
+  const dest = useDefaultDestination();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  return <Navigate to={dest!} replace />;
+};
+
+/**
+ * Guards the /clusters list page.
+ * Non-admin users are redirected to their first assigned cluster instead.
+ */
+const ClusterListRoute: React.FC = () => {
+  const loading = usePermissionLoading();
+  const dest = useDefaultDestination();
+  const user = tokenManager.getUser();
+  const { clusterPermissions } = usePermission();
+
+  if (loading) return <Spin style={{ display: 'block', margin: '80px auto' }} />;
+
+  const allPerms = Array.from(clusterPermissions.values());
+  if (!isPlatformAdmin(user?.username, allPerms)) {
+    return <Navigate to={dest ?? '/overview'} replace />;
+  }
+
+  return <ClusterList />;
+};
+
 // ─── Routes ────────────────────────────────────────────────────────────────
 
 export function AppRoutes() {
@@ -104,11 +171,11 @@ export function AppRoutes() {
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to="/overview" replace />} />
+        <Route index element={<HomeRedirect />} />
         <Route path="overview" element={<Overview />} />
 
         {/* ── Clusters ─────────────────────────────────────────────────── */}
-        <Route path="clusters" element={<ClusterList />} />
+        <Route path="clusters" element={<ClusterListRoute />} />
         <Route path="clusters/import" element={<ClusterImport />} />
         <Route path="clusters/:id/overview" element={<ClusterDetail />} />
         <Route path="clusters/:clusterId/config-center" element={

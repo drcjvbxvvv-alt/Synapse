@@ -68,7 +68,7 @@ const PodList: React.FC = () => {
       createPodColumns({
         t, tc, sortField, sortOrder, clusterId,
         handleViewDetail, handleLogs, handleTerminal, handleViewEvents, confirmDelete,
-        canTerminalPod: hasFeature('terminal:pod'),
+        canTerminalPod: canWrite() && hasFeature('terminal:pod'),
         showActions: canWrite(),
       }),
     [t, tc, sortField, sortOrder, clusterId, handleViewDetail, handleLogs, handleTerminal, handleViewEvents, confirmDelete, hasFeature, canWrite]

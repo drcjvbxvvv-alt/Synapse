@@ -40,7 +40,8 @@ export const MAIN_MENU_PERMISSIONS: Record<string, {
 }> = {
   // 所有人可見
   'overview': {},
-  'cluster-management': {},
+  // 叢集管理（叢集列表）僅平臺管理員可見；非管理員直接進入已分配叢集
+  'cluster-management': { platformAdminOnly: true },
   
   // 訪問控制選單組 - 僅平臺管理員可見
   'access-control': { platformAdminOnly: true },

@@ -275,13 +275,15 @@ const PodDetail: React.FC<PodDetailProps> = () => {
               {t('actions.viewLogs')}
             </Button>
             
-            <Button
-              icon={<ConsoleSqlOutlined />}
-              onClick={handleTerminal}
-              disabled={pod.status !== 'Running'}
-            >
-              {t('actions.terminal')}
-            </Button>
+            {canWrite() && (
+              <Button
+                icon={<ConsoleSqlOutlined />}
+                onClick={handleTerminal}
+                disabled={pod.status !== 'Running'}
+              >
+                {t('actions.terminal')}
+              </Button>
+            )}
             
             <Button
               icon={<RobotOutlined />}
