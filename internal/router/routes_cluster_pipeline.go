@@ -12,10 +12,10 @@ func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 	secretSvc := services.NewPipelineSecretService(d.db)
 	logSvc := services.NewPipelineLogService(d.db)
 
-	pipelineHandler := handlers.NewPipelineHandler(d.pipelineSvc)
+	pipelineHandler := handlers.NewPipelineHandler(d.pipelineSvc, d.auditSvc)
 	secretHandler := handlers.NewPipelineSecretHandler(secretSvc)
 	logHandler := handlers.NewPipelineLogHandler(logSvc, d.pipelineSvc)
-	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, d.pipelineScheduler)
+	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, d.pipelineScheduler, d.auditSvc)
 
 	// ── Pipelines ──────────────────────────────────────────────────────
 	pipelines := cluster.Group("/pipelines")

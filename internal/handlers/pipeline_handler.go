@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/shaia/Synapse/internal/apierrors"
+	"github.com/shaia/Synapse/internal/constants"
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -16,11 +20,34 @@ import (
 // PipelineHandler 管理 Pipeline 與版本快照的 HTTP 端點。
 type PipelineHandler struct {
 	pipelineSvc *services.PipelineService
+	auditSvc    *services.AuditService
 }
 
 // NewPipelineHandler 建立 PipelineHandler。
-func NewPipelineHandler(pipelineSvc *services.PipelineService) *PipelineHandler {
-	return &PipelineHandler{pipelineSvc: pipelineSvc}
+func NewPipelineHandler(pipelineSvc *services.PipelineService, auditSvc *services.AuditService) *PipelineHandler {
+	return &PipelineHandler{pipelineSvc: pipelineSvc, auditSvc: auditSvc}
+}
+
+// logPipelineAudit 非同步寫入 hash-chain audit log（不阻塞 HTTP 回應）。
+func (h *PipelineHandler) logPipelineAudit(c *gin.Context, action, resourceType, resourceRef, result string) {
+	if h.auditSvc == nil {
+		return
+	}
+	userID := c.GetUint("user_id")
+	req := services.LogAuditRequest{
+		UserID:       userID,
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceRef:  resourceRef,
+		Result:       result,
+		IP:           c.ClientIP(),
+		UserAgent:    c.Request.UserAgent(),
+	}
+	go func() {
+		if err := h.auditSvc.LogAudit(context.Background(), req); err != nil {
+			logger.Warn("pipeline audit log failed", "error", err, "action", action)
+		}
+	}()
 }
 
 // ─── Pipeline CRUD ─────────────────────────────────────────────────────────
@@ -44,6 +71,7 @@ func (h *PipelineHandler) CreatePipeline(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	pipeline, err := h.pipelineSvc.CreatePipeline(c.Request.Context(), &req, userID)
 	if err != nil {
+		h.logPipelineAudit(c, constants.ActionCreate, "pipeline", req.Name, "failed")
 		if ae, ok := apierrors.As(err); ok {
 			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
 			return
@@ -52,6 +80,7 @@ func (h *PipelineHandler) CreatePipeline(c *gin.Context) {
 		return
 	}
 
+	h.logPipelineAudit(c, constants.ActionCreate, "pipeline", fmt.Sprintf("%d/%s", pipeline.ID, pipeline.Name), "success")
 	response.Created(c, pipeline)
 }
 
@@ -120,6 +149,7 @@ func (h *PipelineHandler) UpdatePipeline(c *gin.Context) {
 
 	pipeline, err := h.pipelineSvc.UpdatePipeline(c.Request.Context(), pipelineID, &req)
 	if err != nil {
+		h.logPipelineAudit(c, constants.ActionUpdate, "pipeline", fmt.Sprintf("%d", pipelineID), "failed")
 		if ae, ok := apierrors.As(err); ok {
 			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
 			return
@@ -128,6 +158,7 @@ func (h *PipelineHandler) UpdatePipeline(c *gin.Context) {
 		return
 	}
 
+	h.logPipelineAudit(c, constants.ActionUpdate, "pipeline", fmt.Sprintf("%d/%s", pipeline.ID, pipeline.Name), "success")
 	response.OK(c, pipeline)
 }
 
@@ -141,6 +172,7 @@ func (h *PipelineHandler) DeletePipeline(c *gin.Context) {
 	}
 
 	if err := h.pipelineSvc.DeletePipeline(c.Request.Context(), pipelineID); err != nil {
+		h.logPipelineAudit(c, constants.ActionDelete, "pipeline", fmt.Sprintf("%d", pipelineID), "failed")
 		if ae, ok := apierrors.As(err); ok {
 			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
 			return
@@ -150,6 +182,7 @@ func (h *PipelineHandler) DeletePipeline(c *gin.Context) {
 	}
 
 	logger.Info("pipeline deleted via API", "pipeline_id", pipelineID, "user_id", c.GetUint("user_id"))
+	h.logPipelineAudit(c, constants.ActionDelete, "pipeline", fmt.Sprintf("%d", pipelineID), "success")
 	response.OK(c, gin.H{"message": "deleted"})
 }
 

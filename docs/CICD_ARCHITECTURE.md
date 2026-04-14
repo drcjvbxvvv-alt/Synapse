@@ -1859,8 +1859,8 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 - [x] Step 類型：`build-image`（Kaniko）、`deploy`（kubectl apply）、`run-script`
 - [x] Pipeline CRUD API + 手動觸發 API
 - [x] Cancel / Rerun API
-- [ ] OperationAudit 整合
-- [ ] M13a E2E 測試：手動觸發一條 build + deploy Pipeline 成功
+- [x] OperationAudit 整合
+- [x] M13a E2E 測試：手動觸發一條 build + deploy Pipeline 成功
 
 ### M13b — 進階 Steps 與 UX（4 週）
 

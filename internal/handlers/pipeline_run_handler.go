@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/shaia/Synapse/internal/apierrors"
+	"github.com/shaia/Synapse/internal/constants"
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
@@ -20,17 +23,41 @@ import (
 type PipelineRunHandler struct {
 	pipelineSvc *services.PipelineService
 	scheduler   *services.PipelineScheduler
+	auditSvc    *services.AuditService
 }
 
 // NewPipelineRunHandler 建立 PipelineRunHandler。
 func NewPipelineRunHandler(
 	pipelineSvc *services.PipelineService,
 	scheduler *services.PipelineScheduler,
+	auditSvc *services.AuditService,
 ) *PipelineRunHandler {
 	return &PipelineRunHandler{
 		pipelineSvc: pipelineSvc,
 		scheduler:   scheduler,
+		auditSvc:    auditSvc,
 	}
+}
+
+// logRunAudit 非同步寫入 Pipeline Run 操作的 hash-chain audit log。
+func (h *PipelineRunHandler) logRunAudit(c *gin.Context, action, resourceRef, result string) {
+	if h.auditSvc == nil {
+		return
+	}
+	req := services.LogAuditRequest{
+		UserID:       c.GetUint("user_id"),
+		Action:       action,
+		ResourceType: "pipeline_run",
+		ResourceRef:  resourceRef,
+		Result:       result,
+		IP:           c.ClientIP(),
+		UserAgent:    c.Request.UserAgent(),
+	}
+	go func() {
+		if err := h.auditSvc.LogAudit(context.Background(), req); err != nil {
+			logger.Warn("pipeline run audit log failed", "error", err, "action", action)
+		}
+	}()
 }
 
 // TriggerRunRequest 手動觸發 Pipeline Run 的請求。
@@ -84,6 +111,7 @@ func (h *PipelineRunHandler) TriggerRun(c *gin.Context) {
 	}
 
 	if err := h.scheduler.EnqueueRun(c.Request.Context(), run); err != nil {
+		h.logRunAudit(c, constants.ActionTrigger, fmt.Sprintf("pipeline:%d", pipelineID), "failed")
 		if ae, ok := apierrors.As(err); ok {
 			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
 			return
@@ -98,6 +126,7 @@ func (h *PipelineRunHandler) TriggerRun(c *gin.Context) {
 		"user_id", userID,
 		"snapshot_id", *snapshotID,
 	)
+	h.logRunAudit(c, constants.ActionTrigger, fmt.Sprintf("pipeline:%d/run:%d", pipelineID, run.ID), "success")
 
 	c.JSON(http.StatusAccepted, gin.H{
 		"run_id":  run.ID,
@@ -116,6 +145,7 @@ func (h *PipelineRunHandler) CancelRun(c *gin.Context) {
 	}
 
 	if err := h.scheduler.CancelRun(c.Request.Context(), runID); err != nil {
+		h.logRunAudit(c, constants.ActionCancel, fmt.Sprintf("run:%d", runID), "failed")
 		if ae, ok := apierrors.As(err); ok {
 			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
 			return
@@ -128,6 +158,7 @@ func (h *PipelineRunHandler) CancelRun(c *gin.Context) {
 		"run_id", runID,
 		"user_id", c.GetUint("user_id"),
 	)
+	h.logRunAudit(c, constants.ActionCancel, fmt.Sprintf("run:%d", runID), "success")
 
 	response.OK(c, gin.H{"message": "cancel requested", "run_id": runID})
 }
@@ -234,6 +265,7 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 	}
 
 	if err := h.scheduler.EnqueueRun(c.Request.Context(), newRun); err != nil {
+		h.logRunAudit(c, constants.ActionRerun, fmt.Sprintf("pipeline:%d/from-run:%d", pipelineID, runID), "failed")
 		if ae, ok := apierrors.As(err); ok {
 			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
 			return
@@ -248,12 +280,13 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 		"new_run_id", newRun.ID,
 		"user_id", userID,
 	)
+	h.logRunAudit(c, constants.ActionRerun, fmt.Sprintf("pipeline:%d/from-run:%d/new-run:%d", pipelineID, runID, newRun.ID), "success")
 
 	c.JSON(http.StatusAccepted, gin.H{
-		"run_id":          newRun.ID,
-		"rerun_from_id":   originalRun.ID,
-		"status":          newRun.Status,
-		"message":         "pipeline rerun triggered",
+		"run_id":        newRun.ID,
+		"rerun_from_id": originalRun.ID,
+		"status":        newRun.Status,
+		"message":       "pipeline rerun triggered",
 	})
 }
 
