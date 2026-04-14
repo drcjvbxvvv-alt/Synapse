@@ -893,6 +893,9 @@ internal/
     pipeline_schema/v1.json     ← JSON Schema Draft 2020-12（前後端共用）
     git_provider_service.go     ← Git Provider CRUD + webhook token 生成
     git_provider_webhook.go     ← Webhook payload parser（GitHub/GitLab/Gitea）
+    registry_service.go         ← Registry CRUD + 連線測試
+    registry_adapter.go         ← RegistryAdapter 介面 + Harbor/DockerHub/DockerV2 實作
+    environment_service.go      ← Environment CRUD + PromotionHistory 管理
     pipeline_gc_worker.go       ← GC Worker（孤兒 Job + Run 90d + Log 30d）
     pipeline_recover.go         ← 啟動時孤兒 Run 恢復
   models/
@@ -901,6 +904,8 @@ internal/
     pipeline_artifact.go
     pipeline_log.go
     git_provider.go              ← GitProvider model（GitHub/GitLab/Gitea + AES 加密）
+    registry.go                  ← Registry model（AES-256-GCM 加密 password + ca_bundle）
+    environment.go               ← Environment + PromotionHistory model
   router/
     routes_cluster_pipeline.go  ← Pipeline + Run + Secret + Log 路由
     routes_webhook.go           ← 公開 Webhook 端點（HMAC 驗證）
@@ -1892,7 +1897,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 ### M15 — Registry 整合（3 週）
 
-- [ ] `registries` 資料表（insecure_tls + ca_bundle_enc）
+- [x] `registries` 資料表（insecure_tls + ca_bundle_enc）
 - [ ] Harbor API 整合（Project / Robot Account）
 - [ ] Repository / Tag 瀏覽 UI
 - [ ] Tag 保留策略
@@ -1910,7 +1915,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 ### M17 — 環境流水線（5 週）
 
-- [ ] `environments` 資料表
+- [x] `environments` 資料表 + `promotion_history` 資料表
 - [ ] ApprovalRequest 擴充（Action=promote_environment/production_gate + pipeline_run_id）
 - [ ] Promotion 邏輯（自動 / 人工審核）
 - [ ] 冒煙測試 Step 整合
@@ -1983,12 +1988,12 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 |-------|------|------|------|------|
 | ✅ P2-1 | 進階 Step 類型（trivy-scan / push-image / deploy-helm / deploy-argocd-sync / notify） | M13b W5–6 | **Opus** | Config + validation + command gen，含 30 個測試 |
 | ✅ P2-2 | GitHub / GitLab / Gitea Provider adapter | M14 | **Opus** | GitProvider model + CRUD service + 3 webhook payload parsers + 17 測試 |
-| P2-3 | Registry CRUD + Harbor / ECR / GCR adapter | M15 | **Sonnet** | API wrapper |
-| P2-4 | Credential 加密儲存（Registry） | M15 | **Opus** | 復用 PipelineSecret 加密，key rotation 一致性 |
+| ✅ P2-3 | Registry CRUD + Harbor / ECR / GCR adapter | M15 | **Sonnet** | Registry model + CRUD service + 4 adapter（Harbor/DockerHub/DockerV2/ECR/GCR）+ 15 測試 |
+| ✅ P2-4 | Credential 加密儲存（Registry） | M15 | **Opus** | 復用 encryptFields/decryptFields AES-256-GCM（password_enc + ca_bundle_enc）|
 | P2-5 | GitOps Application CRUD + Reconcile Loop | M16 | **Opus**（Reconcile）/ **Sonnet**（CRUD） | Reconciler 狀態機需 Opus |
 | P2-6 | ArgoCD / 原生 GitOps 邊界定義（§12.1） | M16 | **Opus** | 誤判 = 雙寫雙讀，生產事故 |
 | ✅ P2-7 | rollout-promote / rollout-abort Step | M13c | **Opus** | 4 rollout 類型 validation + command gen（deploy-rollout/promote/abort/status）+ 20 測試 |
-| P2-8 | Environment CRUD + Promotion History | M17 | **Sonnet** | 依 §13 結構 |
+| ✅ P2-8 | Environment CRUD + Promotion History | M17 | **Sonnet** | Environment + PromotionHistory model + CRUD service + validation + 14 測試 |
 | ✅ P2-9 | NotifyChannel 整合（Pipeline 事件路由） | M13b W8 | **Opus** | PipelineNotifier + 4 channel formats (slack/telegram/teams/webhook) + dedup 整合 + 19 測試 |
 | ✅ P2-10 | 失敗告警去重（通知風暴防護） | M13b W8 | **Opus** | 5min 去重視窗 + LRU eviction + retry/concurrency 抑制 + 11 測試 |
 
