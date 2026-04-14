@@ -56,6 +56,15 @@ const [pod, setPod] = useState<PodInfo | null>(null);
   const [loading, setLoading] = useState(true);
   
   const connectedRef = useRef(false);
+  const isManualDisconnectRef = useRef(false);
+  const retryDelayRef = useRef(1000);
+  const isMountedRef = useRef(true);
+
+  // Track component lifecycle for reconnect guard
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   // 顯示歡迎資訊
   const showWelcomeMessage = useCallback(() => {
@@ -227,13 +236,15 @@ const [pod, setPod] = useState<PodInfo | null>(null);
       return;
     }
     
+    isManualDisconnectRef.current = false;
+    retryDelayRef.current = 1000;
     setConnecting(true);
-    
+
     if (terminal.current) {
       terminal.current.clear();
       terminal.current.writeln('\x1b[33m正在連線終端...\x1b[0m');
     }
-    
+
     const wsUrl = buildWebSocketUrl(
       `/ws/clusters/${clusterId}/pods/${namespace}/${name}/terminal?container=${selectedContainer}&token=${encodeURIComponent(token)}`
     );
@@ -321,11 +332,26 @@ const [pod, setPod] = useState<PodInfo | null>(null);
         setConnected(false);
         setConnecting(false);
         connectedRef.current = false;
-        message.info(t('pod:terminal.disconnectedMsg'));
-        
-        if (terminal.current) {
-          terminal.current.writeln('\x1b[31m\r\n連線已斷開\x1b[0m');
+
+        if (isManualDisconnectRef.current || !isMountedRef.current) {
+          message.info(t('pod:terminal.disconnectedMsg'));
+          if (terminal.current) {
+            terminal.current.writeln('\x1b[31m\r\n連線已斷開\x1b[0m');
+          }
+          return;
         }
+
+        // Unexpected disconnect — reconnect with exponential backoff
+        const delay = retryDelayRef.current;
+        retryDelayRef.current = Math.min(retryDelayRef.current * 2, 30_000);
+        if (terminal.current) {
+          terminal.current.writeln(`\x1b[33m\r\n[Connection lost. Reconnecting in ${delay / 1000}s...]\x1b[0m`);
+        }
+        setTimeout(() => {
+          if (isMountedRef.current && !isManualDisconnectRef.current) {
+            connectTerminal();
+          }
+        }, delay);
       };
       
     } catch (error) {
@@ -341,13 +367,14 @@ const [pod, setPod] = useState<PodInfo | null>(null);
 
   // 斷開終端連線
   const disconnectTerminal = () => {
+    isManualDisconnectRef.current = true;
     if (websocket.current) {
       websocket.current.close();
       websocket.current = null;
     }
     setConnected(false);
     connectedRef.current = false;
-    
+
     if (terminal.current) {
       terminal.current.writeln('\x1b[33m\r\n手動斷開連線\x1b[0m');
     }

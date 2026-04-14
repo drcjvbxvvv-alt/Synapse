@@ -205,24 +205,24 @@ export function usePodList() {
     message.success(tc('messages.saveSuccess'));
   };
 
-  const handleLogs = (pod: PodInfo) => {
+  const handleLogs = useCallback((pod: PodInfo) => {
     navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/logs`);
-  };
+  }, [navigate, clusterId]);
 
-  const handleTerminal = (pod: PodInfo) => {
+  const handleTerminal = useCallback((pod: PodInfo) => {
     window.open(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}/terminal`, '_blank');
-  };
+  }, [clusterId]);
 
-  const handleViewDetail = (pod: PodInfo) => {
+  const handleViewDetail = useCallback((pod: PodInfo) => {
     navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}`);
-  };
+  }, [navigate, clusterId]);
 
-  const handleViewEvents = (pod: PodInfo) => {
+  const handleViewEvents = useCallback((pod: PodInfo) => {
     navigate(`/clusters/${clusterId}/pods/${pod.namespace}/${pod.name}?tab=events`);
-  };
+  }, [navigate, clusterId]);
 
   // 確認刪除對話框
-  const confirmDelete = (record: PodInfo) => {
+  const confirmDelete = useCallback((record: PodInfo) => {
     modal.confirm({
       title: tc('messages.confirmDelete'),
       content: t('actions.confirmDeleteContent', { name: record.name }),
@@ -231,7 +231,7 @@ export function usePodList() {
       okButtonProps: { danger: true },
       onOk: () => handleDelete(record),
     });
-  };
+  }, [modal, tc, t, handleDelete]);
 
   // 當搜尋條件改變時重置到第一頁
   useEffect(() => {

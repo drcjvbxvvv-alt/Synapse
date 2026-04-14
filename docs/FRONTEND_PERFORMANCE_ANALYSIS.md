@@ -1,6 +1,6 @@
 # Synapse 前端性能分析文件
 
-> 版本：v1.1 | 日期：2026-04-14 | 狀態：P0-1 已完成
+> 版本：v1.2 | 日期：2026-04-14 | 狀態：P0-1 ✅ P1 ✅
 > 範圍：`ui/src` 下所有 React / TypeScript 前端程式碼
 
 ---
@@ -43,15 +43,15 @@
 
 ### 2.1 Bundle / 程式碼分割
 
-#### F-BUNDLE-1：大量重頁面未使用 Lazy Load ⚠️ 高優先
-- **位置**：`ui/src/router/routes.tsx:29-67`
+#### F-BUNDLE-1：大量重頁面未使用 Lazy Load ✅ 已完成
+- **位置**：`ui/src/router/routes.tsx`
 - **問題**：39 個頁面元件中只有 17 個使用 `lazy()`。PodLogs、PodTerminal
   （含 xterm.js + WebSocket）、DeploymentCreate（573 行複雜表單）、
   ServiceEdit、IngressEdit、所有 Config/Namespace/Audit 編輯頁，
   在首次訪問任意頁面時即被打包進主 bundle。
 - **影響**：初始 JS bundle 估計比必要多 30-40%，首屏 TTI（Time to Interactive）
   在低速網路下明顯增加
-- **具體頁面（應改為 lazy）**：
+- **修復**：13 個頁面已改為 `lazy()` + `<S>` Suspense：
   ```
   PodLogs              - xterm.js 依賴（重）
   PodTerminal          - xterm.js + WebSocket（最重）
@@ -67,7 +67,6 @@
   EventAlertRules      - 告警規則
   GlobalSearch         - 全域搜尋
   ```
-- **修復**：包裝為 `lazy(() => import(...))` 並用 `<S>` Suspense 包裹
 
 #### F-BUNDLE-2：Monaco Editor 無預取策略
 - **位置**：`ui/vite.config.ts`
@@ -85,38 +84,27 @@
 
 ### 2.2 React 渲染效能
 
-#### F-RENDER-1：表單行內 onChange 使 children 全部重渲染 ⚠️ 高優先
-- **位置**：多個表單頁面（ServiceEdit、IngressCreateModal、ConfigMapEdit 等）
-- **問題**：動態列表（Labels/Annotations/Ports/Rules）的 onChange handler
+#### F-RENDER-1：表單行內 onChange 使 children 全部重渲染 ✅ 已完成
+- **位置**：`ConfigMapEdit.tsx`（6 個 handler）、`ServiceEdit.tsx`（9 個 handler）
+- **問題**：動態列表（Labels/Annotations/Ports）的 onChange handler
   在 `.map()` 裡建立 inline arrow function，每次父元件 re-render 都
-  生成新的函式參考，導致所有子項重渲染：
-  ```tsx
-  // ❌ 每次 render 都是新函式
-  onChange={e => setFormLabels(p => p.map((x, j) =>
-    j === i ? {...x, key: e.target.value} : x)
-  )}
-  ```
+  生成新的函式參考，導致所有子項重渲染
 - **影響**：高 — 表單有 10+ 個 label 行時，每次輸入觸發 10 次 re-render
-- **修復**：提取為 `useCallback`：
+- **修復**：提取為 `useCallback(fn, [])` — setter functions 本身穩定，deps 為空：
   ```tsx
-  const handleLabelKeyChange = useCallback((idx: number, val: string) => {
-    setFormLabels(p => p.map((x, j) => j === idx ? {...x, key: val} : x));
-  }, []);
-  // 使用：onChange={e => handleLabelKeyChange(i, e.target.value)}
+  const handleLabelKeyChange = useCallback((idx: number, val: string) =>
+    setFormLabels(p => p.map((x, j) => j === idx ? { ...x, key: val } : x)), []);
+  // JSX: onChange={e => handleLabelKeyChange(i, e.target.value)}
   ```
 
-#### F-RENDER-2：useMemo deps 包含未穩定化的函式參考
-- **位置**：`ui/src/pages/pod/PodList.tsx:72-82`（及類似的 WorkloadList、NodeList）
+#### F-RENDER-2：useMemo deps 包含未穩定化的函式參考 ✅ 已完成
+- **位置**：`ui/src/pages/pod/hooks/usePodList.ts`
 - **問題**：`allColumns` 的 useMemo 依賴 `handleViewDetail`、`handleLogs` 等
-  callback，但這些 callback 若未用 `useCallback` 穩定化，每次父元件 render
-  都會讓 useMemo 重新計算整個 columns 定義：
-  ```tsx
-  const allColumns = useMemo(() => createPodColumns({
-    handleViewDetail, handleLogs, handleTerminal, confirmDelete, // 不穩定
-  }), [t, tc, sortField, handleViewDetail, handleLogs, ...]); // 頻繁觸發
-  ```
+  callback，但這些 callback 未用 `useCallback` 穩定化，每次父元件 render
+  都會讓 useMemo 重新計算整個 columns 定義
 - **影響**：中 — 每次無關 state 更新都重建 columns，觸發 Table reconcile
-- **修復**：確保傳入 useMemo 的所有函式都已包裝 `useCallback`
+- **修復**：5 個 handler（`handleLogs`、`handleTerminal`、`handleViewDetail`、
+  `handleViewEvents`、`confirmDelete`）已改為 `useCallback`
 
 #### F-RENDER-3：NotificationPopover list items 未 memo 化
 - **位置**：`ui/src/components/NotificationPopover.tsx:83-137`
@@ -192,25 +180,15 @@
 
 ### 2.4 WebSocket 管理
 
-#### F-WS-1：terminal WebSocket 無重連機制
+#### F-WS-1：terminal WebSocket 無重連機制 ✅ 已完成
 - **位置**：`ui/src/pages/terminal/KubectlTerminal.tsx`、`PodTerminal.tsx`
 - **問題**：WebSocket 連線中斷（網路切換、後端重啟）後，沒有自動重連邏輯，
   使用者需要手動重新整理頁面
 - **影響**：中 — 使用 terminal 的使用者體驗差，特別在 Wi-Fi 不穩的環境
-- **修復**：實作指數退避重連：
-  ```ts
-  let retryDelay = 1000;
-  function reconnect() {
-    setTimeout(() => {
-      ws = new WebSocket(url);
-      ws.onclose = () => {
-        retryDelay = Math.min(retryDelay * 2, 30000);
-        reconnect();
-      };
-      retryDelay = 1000; // 成功後重置
-    }, retryDelay);
-  }
-  ```
+- **修復**：指數退避重連（1s → 2s → 4s … max 30s），三個 ref 守衛：
+  - `isManualDisconnectRef` — 使用者主動斷線時設為 true，阻止自動重連
+  - `retryDelayRef` — 追蹤目前退避延遲，連線成功後重置為 1s
+  - `isMountedRef` — 元件 unmount 後阻止重連嘗試（防 memory leak）
 
 #### F-WS-2：ClusterTopologyTab 另起 setInterval 輪詢（非 WebSocket 優化項）
 - **位置**：`ui/src/pages/network/ClusterTopologyTab.tsx:73`
@@ -338,10 +316,10 @@
 
 | # | 項目 | 相關瓶頸 | 預估工時 | 狀態 |
 |---|------|---------|---------|------|
-| 3 | 將重頁面改為 lazy import（PodLogs、PodTerminal、DeploymentCreate 等 13 個） | F-BUNDLE-1 | 1-2h | ⬜ |
-| 4 | 表單行內 onChange 改 useCallback（ServiceEdit、IngressCreateModal、ConfigMapEdit） | F-RENDER-1 | 2-3h | ⬜ |
-| 5 | useMemo deps 內的 callback 改 useCallback（PodList、NodeList、WorkloadList） | F-RENDER-2 | 1-2h | ⬜ |
-| 6 | Terminal WebSocket 加入指數退避重連邏輯 | F-WS-1 | 2h | ⬜ |
+| 3 | 將重頁面改為 lazy import（PodLogs、PodTerminal、DeploymentCreate 等 13 個） | F-BUNDLE-1 | 1-2h | ✅ |
+| 4 | 表單行內 onChange 改 useCallback（ServiceEdit、ConfigMapEdit） | F-RENDER-1 | 2-3h | ✅ |
+| 5 | useMemo deps 內的 callback 改 useCallback（usePodList） | F-RENDER-2 | 1-2h | ✅ |
+| 6 | Terminal WebSocket 加入指數退避重連邏輯 | F-WS-1 | 2h | ✅ |
 
 ### P2 — 下一個迭代
 

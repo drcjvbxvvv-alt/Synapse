@@ -37,28 +37,16 @@ import NodeList from '../pages/node/NodeList';
 import NodeDetail from '../pages/node/NodeDetail';
 import PodList from '../pages/pod/PodList';
 import PodDetail from '../pages/pod/PodDetail';
-import PodLogs from '../pages/pod/PodLogs';
-import PodTerminal from '../pages/pod/PodTerminal';
 import WorkloadList from '../pages/workload/WorkloadList';
 import WorkloadDetail from '../pages/workload/WorkloadDetail';
-import DeploymentCreate from '../pages/workload/DeploymentCreate';
 import DeploymentDetail from '../pages/workload/DeploymentDetail';
 import RolloutDetail from '../pages/workload/RolloutDetail';
 import AutoscalingPage from '../pages/workload/AutoscalingPage';
-import GlobalSearch from '../pages/search/GlobalSearch';
 import { ConfigSecretManagement, ConfigMapDetail, SecretDetail } from '../pages/config';
-import ConfigMapEdit from '../pages/config/ConfigMapEdit';
-import SecretEdit from '../pages/config/SecretEdit';
-import ConfigMapCreate from '../pages/config/ConfigMapCreate';
-import SecretCreate from '../pages/config/SecretCreate';
 import { NamespaceList, NamespaceDetail } from '../pages/namespace';
 import NetworkList from '../pages/network/NetworkList';
-import ServiceEdit from '../pages/network/ServiceEdit';
-import IngressEdit from '../pages/network/IngressEdit';
 import StorageList from '../pages/storage/StorageList';
 import { AlertCenter, GlobalAlertCenter } from '../pages/alert';
-import EventAlertRules from '../pages/alert/EventAlertRules';
-import { CommandHistory, OperationLogs } from '../pages/audit';
 import { LogCenter, EventLogs } from '../pages/logs';
 import { PermissionManagement } from '../pages/permission';
 import { UserManagement, UserGroupManagement, FeaturePolicyPage } from '../pages/access';
@@ -66,6 +54,20 @@ import SystemSettings from '../pages/settings/SystemSettings';
 import UserProfile from '../pages/profile/UserProfile';
 
 // ── Lazy imports (heavy / rarely visited) ─────────────────────────────────
+// Previously eager — moved to lazy to reduce initial bundle size (F-BUNDLE-1)
+const PodLogs                 = lazy(() => import('../pages/pod/PodLogs'));
+const PodTerminal             = lazy(() => import('../pages/pod/PodTerminal'));
+const DeploymentCreate        = lazy(() => import('../pages/workload/DeploymentCreate'));
+const GlobalSearch            = lazy(() => import('../pages/search/GlobalSearch'));
+const ConfigMapEdit           = lazy(() => import('../pages/config/ConfigMapEdit'));
+const SecretEdit              = lazy(() => import('../pages/config/SecretEdit'));
+const ConfigMapCreate         = lazy(() => import('../pages/config/ConfigMapCreate'));
+const SecretCreate            = lazy(() => import('../pages/config/SecretCreate'));
+const ServiceEdit             = lazy(() => import('../pages/network/ServiceEdit'));
+const IngressEdit             = lazy(() => import('../pages/network/IngressEdit'));
+const EventAlertRules         = lazy(() => import('../pages/alert/EventAlertRules'));
+const OperationLogs           = lazy(() => import('../pages/audit/OperationLogs'));
+const CommandHistory          = lazy(() => import('../pages/audit/CommandHistory'));
 const YAMLEditor              = lazy(() => import('../pages/yaml/YAMLEditor'));
 const KubectlTerminalPage     = lazy(() => import('../pages/terminal/KubectlTerminal'));
 const ArgoCDConfigPage        = lazy(() => import('../pages/plugins/ArgoCDConfigPage'));
@@ -238,10 +240,10 @@ export function AppRoutes() {
           <PermissionGuard requiredFeature="workload:view"><PodDetail /></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/pods/:namespace/:name/logs" element={
-          <PermissionGuard requiredFeature="workload:view"><PodLogs /></PermissionGuard>
+          <PermissionGuard requiredFeature="workload:view"><S><PodLogs /></S></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/pods/:namespace/:name/terminal" element={
-          <ErrorBoundary fallbackType="section"><PodTerminal /></ErrorBoundary>
+          <ErrorBoundary fallbackType="section"><S><PodTerminal /></S></ErrorBoundary>
         } />
 
         {/* ── Workloads ────────────────────────────────────────────────── */}
@@ -252,7 +254,7 @@ export function AppRoutes() {
           <PermissionGuard requiredFeature="workload:view"><WorkloadList /></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/workloads/create" element={
-          <PermissionGuard requiredFeature="workload:view"><DeploymentCreate /></PermissionGuard>
+          <PermissionGuard requiredFeature="workload:view"><S><DeploymentCreate /></S></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/workloads/deployment/:namespace/:name" element={
           <PermissionGuard requiredFeature="workload:view"><DeploymentDetail /></PermissionGuard>
@@ -275,12 +277,12 @@ export function AppRoutes() {
         } />
 
         {/* ── Search ───────────────────────────────────────────────────── */}
-        <Route path="search" element={<TopLevelGuard><GlobalSearch /></TopLevelGuard>} />
+        <Route path="search" element={<TopLevelGuard><S><GlobalSearch /></S></TopLevelGuard>} />
 
         {/* ── Alerts ───────────────────────────────────────────────────── */}
         <Route path="alerts" element={<TopLevelGuard><GlobalAlertCenter /></TopLevelGuard>} />
         <Route path="clusters/:clusterId/alerts" element={<AlertCenter />} />
-        <Route path="clusters/:clusterId/event-alerts" element={<EventAlertRules />} />
+        <Route path="clusters/:clusterId/event-alerts" element={<S><EventAlertRules /></S>} />
 
         {/* ── Namespaces ───────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/namespaces" element={<PermissionGuard requiredFeature="namespace:view"><NamespaceList /></PermissionGuard>} />
@@ -291,22 +293,22 @@ export function AppRoutes() {
           <PermissionGuard requiredFeature="config:view"><ConfigSecretManagement /></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/configs/configmap/create" element={
-          <PermissionGuard requiredFeature="config:view"><ConfigMapCreate /></PermissionGuard>
+          <PermissionGuard requiredFeature="config:view"><S><ConfigMapCreate /></S></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/configs/configmap/:namespace/:name" element={
           <PermissionGuard requiredFeature="config:view"><ConfigMapDetail /></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/configs/configmap/:namespace/:name/edit" element={
-          <PermissionGuard requiredFeature="config:view"><ConfigMapEdit /></PermissionGuard>
+          <PermissionGuard requiredFeature="config:view"><S><ConfigMapEdit /></S></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/configs/secret/create" element={
-          <PermissionGuard requiredFeature="config:view"><SecretCreate /></PermissionGuard>
+          <PermissionGuard requiredFeature="config:view"><S><SecretCreate /></S></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/configs/secret/:namespace/:name" element={
           <PermissionGuard requiredFeature="config:view"><SecretDetail /></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/configs/secret/:namespace/:name/edit" element={
-          <PermissionGuard requiredFeature="config:view"><SecretEdit /></PermissionGuard>
+          <PermissionGuard requiredFeature="config:view"><S><SecretEdit /></S></PermissionGuard>
         } />
 
         {/* ── Network ──────────────────────────────────────────────────── */}
@@ -316,10 +318,10 @@ export function AppRoutes() {
           </PermissionGuard>
         } />
         <Route path="clusters/:clusterId/network/service/:namespace/:name/edit" element={
-          <PermissionGuard requiredFeature="network:view"><ServiceEdit /></PermissionGuard>
+          <PermissionGuard requiredFeature="network:view"><S><ServiceEdit /></S></PermissionGuard>
         } />
         <Route path="clusters/:clusterId/network/ingress/:namespace/:name/edit" element={
-          <PermissionGuard requiredFeature="network:view"><IngressEdit /></PermissionGuard>
+          <PermissionGuard requiredFeature="network:view"><S><IngressEdit /></S></PermissionGuard>
         } />
 
         {/* ── Storage ──────────────────────────────────────────────────── */}
@@ -387,10 +389,10 @@ export function AppRoutes() {
 
         {/* ── Audit (platform admin only) ──────────────────────────────── */}
         <Route path="audit/operations" element={
-          <PermissionGuard platformAdminOnly><OperationLogs /></PermissionGuard>
+          <PermissionGuard platformAdminOnly><S><OperationLogs /></S></PermissionGuard>
         } />
         <Route path="audit/commands" element={
-          <PermissionGuard platformAdminOnly><CommandHistory /></PermissionGuard>
+          <PermissionGuard platformAdminOnly><S><CommandHistory /></S></PermissionGuard>
         } />
 
         {/* ── Access control (platform admin only) ─────────────────────── */}

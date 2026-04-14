@@ -38,6 +38,15 @@ const { id: clusterId } = useParams<{ id: string }>();
   const [connecting, setConnecting] = useState(false);
   
   const connectedRef = useRef(false);
+  const isManualDisconnectRef = useRef(false);
+  const retryDelayRef = useRef(1000);
+  const isMountedRef = useRef(true);
+
+  // Track component lifecycle for reconnect guard
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   // 處理終端輸入 - 直接傳送所有輸入到服務端（Pod Terminal 模式）
   const handleTerminalInput = useCallback((data: string) => {
@@ -258,14 +267,16 @@ const { id: clusterId } = useParams<{ id: string }>();
       return;
     }
     
+    isManualDisconnectRef.current = false;
+    retryDelayRef.current = 1000;
     setConnecting(true);
-    
+
     if (terminal.current) {
       terminal.current.clear();
       // 不換行，便於後續 kubectl_prep 用 \r 重新整理同一行進度
       terminal.current.write('\x1b[33m' + t('kubectl.connecting') + '\x1b[0m');
     }
-    
+
     const wsUrl = buildWebSocketUrl(
       `/ws/clusters/${clusterId}/kubectl?token=${encodeURIComponent(token)}`
     );
@@ -327,11 +338,26 @@ const { id: clusterId } = useParams<{ id: string }>();
         setConnected(false);
         setConnecting(false);
         connectedRef.current = false;
-        message.info(t('messages.connectionLost'));
-        
-        if (terminal.current) {
-          terminal.current.writeln('\x1b[31m\r\n' + t('messages.connectionClosed') + '\x1b[0m');
+
+        if (isManualDisconnectRef.current || !isMountedRef.current) {
+          message.info(t('messages.connectionLost'));
+          if (terminal.current) {
+            terminal.current.writeln('\x1b[31m\r\n' + t('messages.connectionClosed') + '\x1b[0m');
+          }
+          return;
         }
+
+        // Unexpected disconnect — reconnect with exponential backoff
+        const delay = retryDelayRef.current;
+        retryDelayRef.current = Math.min(retryDelayRef.current * 2, 30_000);
+        if (terminal.current) {
+          terminal.current.writeln(`\x1b[33m\r\n[Connection lost. Reconnecting in ${delay / 1000}s...]\x1b[0m`);
+        }
+        setTimeout(() => {
+          if (isMountedRef.current && !isManualDisconnectRef.current) {
+            connectTerminal();
+          }
+        }, delay);
       };
       
     } catch (error) {
@@ -347,13 +373,14 @@ const { id: clusterId } = useParams<{ id: string }>();
 
   // 斷開終端連線
   const disconnectTerminal = () => {
+    isManualDisconnectRef.current = true;
     if (websocket.current) {
       websocket.current.close();
       websocket.current = null;
     }
     setConnected(false);
     connectedRef.current = false;
-    
+
     if (terminal.current) {
       terminal.current.writeln('\x1b[33m\r\n' + t('messages.disconnected') + '\x1b[0m');
     }

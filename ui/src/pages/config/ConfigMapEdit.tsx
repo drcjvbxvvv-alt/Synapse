@@ -70,6 +70,20 @@ const [loading, setLoading] = useState(true);
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
 
+  // 穩定化的表單欄位 onChange 處理器（避免 .map 迴圈中每次 render 產生新函式）
+  const handleLabelKeyChange = useCallback((idx: number, val: string) =>
+    setFormLabels(prev => prev.map((p, j) => j === idx ? { ...p, key: val } : p)), []);
+  const handleLabelValueChange = useCallback((idx: number, val: string) =>
+    setFormLabels(prev => prev.map((p, j) => j === idx ? { ...p, value: val } : p)), []);
+  const handleAnnotationKeyChange = useCallback((idx: number, val: string) =>
+    setFormAnnotations(prev => prev.map((p, j) => j === idx ? { ...p, key: val } : p)), []);
+  const handleAnnotationValueChange = useCallback((idx: number, val: string) =>
+    setFormAnnotations(prev => prev.map((p, j) => j === idx ? { ...p, value: val } : p)), []);
+  const handleDataKeyChange = useCallback((idx: number, val: string) =>
+    setFormData(prev => prev.map((p, j) => j === idx ? { ...p, key: val } : p)), []);
+  const handleDataValueChange = useCallback((idx: number, val: string) =>
+    setFormData(prev => prev.map((p, j) => j === idx ? { ...p, value: val } : p)), []);
+
   // 從表單狀態同步到 YAML
   const syncFormToYaml = useCallback(() => {
     const labelsObj = Object.fromEntries(formLabels.filter(l => l.key).map(l => [l.key, l.value]));
@@ -367,14 +381,14 @@ const [loading, setLoading] = useState(true);
                     <Input
                       placeholder="key"
                       value={item.key}
-                      onChange={e => setFormLabels(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
+                      onChange={e => handleLabelKeyChange(i, e.target.value)}
                     />
                   </Col>
                   <Col span={10}>
                     <Input
                       placeholder="value"
                       value={item.value}
-                      onChange={e => setFormLabels(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
+                      onChange={e => handleLabelValueChange(i, e.target.value)}
                     />
                   </Col>
                   <Col span={4}>
@@ -410,14 +424,14 @@ const [loading, setLoading] = useState(true);
                     <Input
                       placeholder="key"
                       value={item.key}
-                      onChange={e => setFormAnnotations(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
+                      onChange={e => handleAnnotationKeyChange(i, e.target.value)}
                     />
                   </Col>
                   <Col span={10}>
                     <Input
                       placeholder="value"
                       value={item.value}
-                      onChange={e => setFormAnnotations(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
+                      onChange={e => handleAnnotationValueChange(i, e.target.value)}
                     />
                   </Col>
                   <Col span={4}>
@@ -453,7 +467,7 @@ const [loading, setLoading] = useState(true);
                     <Input
                       placeholder="key"
                       value={item.key}
-                      onChange={e => setFormData(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
+                      onChange={e => handleDataKeyChange(i, e.target.value)}
                     />
                   </Col>
                   <Col span={10}>
@@ -461,7 +475,7 @@ const [loading, setLoading] = useState(true);
                       placeholder="value"
                       rows={3}
                       value={item.value}
-                      onChange={e => setFormData(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
+                      onChange={e => handleDataValueChange(i, e.target.value)}
                     />
                   </Col>
                   <Col span={4}>

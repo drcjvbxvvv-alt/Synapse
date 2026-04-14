@@ -73,6 +73,26 @@ const [loading, setLoading] = useState(true);
   const [diffModalVisible, setDiffModalVisible] = useState(false);
   const [pendingYaml, setPendingYaml] = useState<string>('');
 
+  // 穩定化的表單欄位 onChange 處理器（避免 .map 迴圈中每次 render 產生新函式）
+  const handleLabelKeyChange = useCallback((idx: number, val: string) =>
+    setFormLabels(p => p.map((x, j) => j === idx ? { ...x, key: val } : x)), []);
+  const handleLabelValueChange = useCallback((idx: number, val: string) =>
+    setFormLabels(p => p.map((x, j) => j === idx ? { ...x, value: val } : x)), []);
+  const handleSelectorKeyChange = useCallback((idx: number, val: string) =>
+    setFormSelector(p => p.map((x, j) => j === idx ? { ...x, key: val } : x)), []);
+  const handleSelectorValueChange = useCallback((idx: number, val: string) =>
+    setFormSelector(p => p.map((x, j) => j === idx ? { ...x, value: val } : x)), []);
+  const handlePortNameChange = useCallback((idx: number, val: string) =>
+    setFormPorts(p => p.map((x, j) => j === idx ? { ...x, name: val } : x)), []);
+  const handlePortProtocolChange = useCallback((idx: number, val: string) =>
+    setFormPorts(p => p.map((x, j) => j === idx ? { ...x, protocol: val } : x)), []);
+  const handlePortPortChange = useCallback((idx: number, val: number) =>
+    setFormPorts(p => p.map((x, j) => j === idx ? { ...x, port: val } : x)), []);
+  const handlePortTargetPortChange = useCallback((idx: number, val: string) =>
+    setFormPorts(p => p.map((x, j) => j === idx ? { ...x, targetPort: val } : x)), []);
+  const handlePortNodePortChange = useCallback((idx: number, val: number | undefined) =>
+    setFormPorts(p => p.map((x, j) => j === idx ? { ...x, nodePort: val } : x)), []);
+
   const parseYamlToForm = (yamlStr: string) => {
     try {
       const parsed = YAML.parse(yamlStr) as unknown;
@@ -340,8 +360,8 @@ const [loading, setLoading] = useState(true);
             <Card title="標籤" extra={<Button size="small" icon={<PlusOutlined />} onClick={() => setFormLabels(p => [...p, {key: '', value: ''}])}>新增</Button>}>
               {formLabels.map((item, i) => (
                 <Row key={i} gutter={8} style={{marginBottom: 8}}>
-                  <Col span={10}><Input placeholder="key" value={item.key} onChange={e => setFormLabels(p => p.map((x, j) => j === i ? {...x, key: e.target.value} : x))} /></Col>
-                  <Col span={10}><Input placeholder="value" value={item.value} onChange={e => setFormLabels(p => p.map((x, j) => j === i ? {...x, value: e.target.value} : x))} /></Col>
+                  <Col span={10}><Input placeholder="key" value={item.key} onChange={e => handleLabelKeyChange(i, e.target.value)} /></Col>
+                  <Col span={10}><Input placeholder="value" value={item.value} onChange={e => handleLabelValueChange(i, e.target.value)} /></Col>
                   <Col span={4}><Button danger icon={<DeleteOutlined />} onClick={() => setFormLabels(p => p.filter((_, j) => j !== i))} /></Col>
                 </Row>
               ))}
@@ -350,8 +370,8 @@ const [loading, setLoading] = useState(true);
             <Card title="Pod 選擇器" extra={<Button size="small" icon={<PlusOutlined />} onClick={() => setFormSelector(p => [...p, {key: '', value: ''}])}>新增</Button>}>
               {formSelector.map((item, i) => (
                 <Row key={i} gutter={8} style={{marginBottom: 8}}>
-                  <Col span={10}><Input placeholder="key" value={item.key} onChange={e => setFormSelector(p => p.map((x, j) => j === i ? {...x, key: e.target.value} : x))} /></Col>
-                  <Col span={10}><Input placeholder="value" value={item.value} onChange={e => setFormSelector(p => p.map((x, j) => j === i ? {...x, value: e.target.value} : x))} /></Col>
+                  <Col span={10}><Input placeholder="key" value={item.key} onChange={e => handleSelectorKeyChange(i, e.target.value)} /></Col>
+                  <Col span={10}><Input placeholder="value" value={item.value} onChange={e => handleSelectorValueChange(i, e.target.value)} /></Col>
                   <Col span={4}><Button danger icon={<DeleteOutlined />} onClick={() => setFormSelector(p => p.filter((_, j) => j !== i))} /></Col>
                 </Row>
               ))}
@@ -360,14 +380,14 @@ const [loading, setLoading] = useState(true);
             <Card title="連接埠" extra={<Button size="small" icon={<PlusOutlined />} onClick={() => setFormPorts(p => [...p, {name: '', protocol: 'TCP', port: 80, targetPort: '80'}])}>新增</Button>}>
               {formPorts.map((port, i) => (
                 <Row key={i} gutter={8} style={{marginBottom: 8}} align="middle">
-                  <Col span={4}><Input placeholder="名稱" value={port.name} onChange={e => setFormPorts(p => p.map((x, j) => j === i ? {...x, name: e.target.value} : x))} /></Col>
+                  <Col span={4}><Input placeholder="名稱" value={port.name} onChange={e => handlePortNameChange(i, e.target.value)} /></Col>
                   <Col span={4}>
-                    <Select value={port.protocol} onChange={v => setFormPorts(p => p.map((x, j) => j === i ? {...x, protocol: v} : x))} style={{width: '100%'}}
+                    <Select value={port.protocol} onChange={v => handlePortProtocolChange(i, v)} style={{width: '100%'}}
                       options={['TCP', 'UDP', 'SCTP'].map(v => ({value: v, label: v}))} />
                   </Col>
-                  <Col span={4}><InputNumber placeholder="Port" value={port.port} min={1} max={65535} style={{width: '100%'}} onChange={v => setFormPorts(p => p.map((x, j) => j === i ? {...x, port: v || 80} : x))} /></Col>
-                  <Col span={4}><Input placeholder="TargetPort" value={port.targetPort} onChange={e => setFormPorts(p => p.map((x, j) => j === i ? {...x, targetPort: e.target.value} : x))} /></Col>
-                  {formServiceType === 'NodePort' && <Col span={4}><InputNumber placeholder="NodePort" value={port.nodePort} min={30000} max={32767} style={{width: '100%'}} onChange={v => setFormPorts(p => p.map((x, j) => j === i ? {...x, nodePort: v || undefined} : x))} /></Col>}
+                  <Col span={4}><InputNumber placeholder="Port" value={port.port} min={1} max={65535} style={{width: '100%'}} onChange={v => handlePortPortChange(i, v || 80)} /></Col>
+                  <Col span={4}><Input placeholder="TargetPort" value={port.targetPort} onChange={e => handlePortTargetPortChange(i, e.target.value)} /></Col>
+                  {formServiceType === 'NodePort' && <Col span={4}><InputNumber placeholder="NodePort" value={port.nodePort} min={30000} max={32767} style={{width: '100%'}} onChange={v => handlePortNodePortChange(i, v || undefined)} /></Col>}
                   <Col span={4}><Button danger icon={<DeleteOutlined />} onClick={() => setFormPorts(p => p.filter((_, j) => j !== i))} /></Col>
                 </Row>
               ))}
