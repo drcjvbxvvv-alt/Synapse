@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS slos (
     prom_query          text             NOT NULL,
     total_query         text,
     target              double precision NOT NULL,
-    window              varchar(16)      NOT NULL,
+    "window"            varchar(16)      NOT NULL,
     burn_rate_warning   double precision NOT NULL DEFAULT 2,
     burn_rate_critical  double precision NOT NULL DEFAULT 10,
     enabled             boolean          NOT NULL DEFAULT true,
