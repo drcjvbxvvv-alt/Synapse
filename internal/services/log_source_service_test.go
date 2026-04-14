@@ -10,7 +10,7 @@ import (
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -27,9 +27,9 @@ func (s *LogSourceServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -119,8 +119,8 @@ func (s *LogSourceServiceTestSuite) TestListLogSources_DBError() {
 
 func (s *LogSourceServiceTestSuite) TestCreateLogSource_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `log_source_configs`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO "log_source_configs"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	src := newLogSource()
@@ -133,7 +133,7 @@ func (s *LogSourceServiceTestSuite) TestCreateLogSource_Success() {
 
 func (s *LogSourceServiceTestSuite) TestCreateLogSource_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `log_source_configs`").
+	s.mock.ExpectQuery(`INSERT INTO "log_source_configs"`).
 		WillReturnError(errors.New("duplicate entry"))
 	s.mock.ExpectRollback()
 
@@ -191,7 +191,7 @@ func (s *LogSourceServiceTestSuite) TestGetEnabledLogSource_NotFound() {
 
 func (s *LogSourceServiceTestSuite) TestUpdateLogSource_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `log_source_configs`").
+	s.mock.ExpectExec(`UPDATE "log_source_configs"`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -203,7 +203,7 @@ func (s *LogSourceServiceTestSuite) TestUpdateLogSource_Success() {
 
 func (s *LogSourceServiceTestSuite) TestUpdateLogSource_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `log_source_configs`").
+	s.mock.ExpectExec(`UPDATE "log_source_configs"`).
 		WillReturnError(errors.New("update failed"))
 	s.mock.ExpectRollback()
 
@@ -218,7 +218,7 @@ func (s *LogSourceServiceTestSuite) TestUpdateLogSource_DBError() {
 
 func (s *LogSourceServiceTestSuite) TestDeleteLogSource_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `log_source_configs`").
+	s.mock.ExpectExec(`UPDATE "log_source_configs"`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -228,7 +228,7 @@ func (s *LogSourceServiceTestSuite) TestDeleteLogSource_Success() {
 
 func (s *LogSourceServiceTestSuite) TestDeleteLogSource_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `log_source_configs`").
+	s.mock.ExpectExec(`UPDATE "log_source_configs"`).
 		WillReturnError(errors.New("delete failed"))
 	s.mock.ExpectRollback()
 

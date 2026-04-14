@@ -8,44 +8,34 @@ import (
 	"io/fs"
 
 	"github.com/golang-migrate/migrate/v4"
-	migmysql "github.com/golang-migrate/migrate/v4/database/mysql"
+	migpg "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/shaia/Synapse/pkg/logger"
 )
 
-//go:embed migrations/mysql
-var mysqlMigrationsFS embed.FS
+//go:embed migrations/postgres
+var pgMigrationsFS embed.FS
 
-// RunMigrations executes all pending versioned SQL migrations.
+// RunMigrations executes all pending versioned SQL migrations for PostgreSQL.
 //
 // Strategy:
-//   - MySQL (production): uses golang-migrate with embedded SQL files under
-//     internal/database/migrations/mysql/. The schema_migrations table tracks
-//     which migrations have run. CREATE TABLE IF NOT EXISTS in migration 001
-//     makes it safe to run against databases previously managed by GORM
-//     AutoMigrate — existing tables and rows are untouched.
-//   - SQLite (development): no-op; the caller falls back to GORM AutoMigrate.
+//   - Uses golang-migrate with embedded SQL files under
+//     internal/database/migrations/postgres/.
+//   - The schema_migrations table tracks which migrations have run.
+//   - CREATE TABLE IF NOT EXISTS in migration 001 makes it safe to run
+//     against databases previously managed by GORM AutoMigrate.
 //
-// dsn must be the full MySQL DSN including database name.
-// multiStatements=true is appended automatically so multi-statement SQL files work.
-func RunMigrations(driver, dsn string) error {
-	if driver != "mysql" {
-		return nil // SQLite uses AutoMigrate — nothing to do here.
-	}
-
-	// Open a dedicated connection with multiStatements=true so the migration
-	// files (which contain multiple CREATE TABLE statements) execute correctly.
-	migDSN := dsn + "&multiStatements=true"
-	sqlDB, err := sql.Open("mysql", migDSN)
+// dsn must be the full PostgreSQL DSN.
+func RunMigrations(dsn string) error {
+	sqlDB, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return fmt.Errorf("migrations: open db: %w", err)
 	}
 	defer sqlDB.Close()
 
-	// Sub-FS rooted at migrations/mysql so the iofs driver sees *.sql directly.
-	sub, err := fs.Sub(mysqlMigrationsFS, "migrations/mysql")
+	sub, err := fs.Sub(pgMigrationsFS, "migrations/postgres")
 	if err != nil {
 		return fmt.Errorf("migrations: sub fs: %w", err)
 	}
@@ -55,12 +45,12 @@ func RunMigrations(driver, dsn string) error {
 		return fmt.Errorf("migrations: iofs source: %w", err)
 	}
 
-	dbDriver, err := migmysql.WithInstance(sqlDB, &migmysql.Config{})
+	dbDriver, err := migpg.WithInstance(sqlDB, &migpg.Config{})
 	if err != nil {
-		return fmt.Errorf("migrations: mysql driver: %w", err)
+		return fmt.Errorf("migrations: postgres driver: %w", err)
 	}
 
-	m, err := migrate.NewWithInstance("iofs", srcDriver, "mysql", dbDriver)
+	m, err := migrate.NewWithInstance("iofs", srcDriver, "postgres", dbDriver)
 	if err != nil {
 		return fmt.Errorf("migrations: create migrator: %w", err)
 	}

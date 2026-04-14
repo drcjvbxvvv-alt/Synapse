@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -26,9 +26,9 @@ func (s *ConfigVersionServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -68,8 +68,8 @@ func (s *ConfigVersionServiceTestSuite) TestSaveConfigMapVersion_Success() {
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(1))
 	// INSERT
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `config_versions`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	data := map[string]string{"key": "value", "env": "prod"}
@@ -83,7 +83,7 @@ func (s *ConfigVersionServiceTestSuite) TestSaveConfigMapVersion_InsertError() {
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(3))
 	// INSERT fails — service logs warning and continues (no panic)
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `config_versions`").
+	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
 		WillReturnError(errors.New("disk full"))
 	s.mock.ExpectRollback()
 
@@ -96,8 +96,8 @@ func (s *ConfigVersionServiceTestSuite) TestSaveConfigMapVersion_ZeroVersionFall
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(0))
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `config_versions`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	s.service.SaveConfigMapVersion(context.Background(), 10, "default", "my-config", "alice", map[string]string{})
@@ -109,8 +109,8 @@ func (s *ConfigVersionServiceTestSuite) TestSaveSecretVersion_Success() {
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(1))
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `config_versions`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	data := map[string][]byte{"password": []byte("s3cr3t"), "token": []byte("tok")}
@@ -122,7 +122,7 @@ func (s *ConfigVersionServiceTestSuite) TestSaveSecretVersion_InsertError() {
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(2))
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `config_versions`").
+	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
 		WillReturnError(errors.New("constraint violation"))
 	s.mock.ExpectRollback()
 

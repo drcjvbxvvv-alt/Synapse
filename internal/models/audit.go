@@ -12,7 +12,7 @@ type TerminalSession struct {
 	UserID     uint           `json:"user_id" gorm:"not null"`
 	ClusterID  uint           `json:"cluster_id" gorm:"not null"`
 	TargetType string         `json:"target_type" gorm:"not null;size:20"` // pod, node, cluster
-	TargetRef  string         `json:"target_ref" gorm:"type:json"`         // JSON格式儲存目標引用資訊
+	TargetRef  string         `json:"target_ref" gorm:"type:jsonb"`         // JSON格式儲存目標引用資訊
 	Namespace  string         `json:"namespace" gorm:"size:100"`
 	Pod        string         `json:"pod" gorm:"size:100"`
 	Container  string         `json:"container" gorm:"size:100"`
@@ -59,7 +59,7 @@ type AuditLog struct {
 	UserID       uint      `json:"user_id" gorm:"not null;index"`
 	Action       string    `json:"action" gorm:"not null;size:100"`       // 操作型別
 	ResourceType string    `json:"resource_type" gorm:"not null;size:50"` // 資源型別
-	ResourceRef  string    `json:"resource_ref" gorm:"type:json"`         // 資源引用資訊
+	ResourceRef  string    `json:"resource_ref" gorm:"type:jsonb"`         // 資源引用資訊
 	Result       string    `json:"result" gorm:"not null;size:20"`        // success, failed
 	IP           string    `json:"ip" gorm:"size:45"`                     // 客戶端IP
 	UserAgent    string    `json:"user_agent" gorm:"size:500"`            // 使用者代理

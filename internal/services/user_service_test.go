@@ -8,7 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -25,9 +25,9 @@ func (s *UserServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -54,8 +54,8 @@ func (s *UserServiceTestSuite) TestCreateUser_Success() {
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .users.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .users.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	user, err := s.service.CreateUser(context.Background(), &CreateUserRequest{

@@ -8,7 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -26,9 +26,9 @@ type SystemSettingHelperTestSuite struct {
 func (s *SystemSettingHelperTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	s.Require().NoError(err)
 	s.db = gormDB
@@ -94,8 +94,8 @@ func (s *SystemSettingHelperTestSuite) TestSaveSystemSetting_Create() {
 	// First call: First → not found → create
 	s.mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .system_settings.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .system_settings.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	err := SaveSystemSetting(s.db, "new_key", "test", &cfgStruct{Foo: "baz"})
@@ -137,9 +137,9 @@ type SystemSecurityServiceTestSuite struct {
 func (s *SystemSecurityServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	s.Require().NoError(err)
 	s.db = gormDB
@@ -205,8 +205,8 @@ func (s *SystemSecurityServiceTestSuite) TestSaveSecurityConfig_Create() {
 	// SELECT → not found → INSERT
 	s.mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .system_settings.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .system_settings.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	cfg := &models.SystemSecurityConfig{
@@ -266,8 +266,8 @@ func (s *SystemSecurityServiceTestSuite) TestCreateAPIToken_Success() {
 		TokenHash: "sha256hash",
 	}
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .api_tokens.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .api_tokens.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	err := s.service.CreateAPIToken(context.Background(), token)
@@ -277,7 +277,7 @@ func (s *SystemSecurityServiceTestSuite) TestCreateAPIToken_Success() {
 func (s *SystemSecurityServiceTestSuite) TestCreateAPIToken_DBError() {
 	token := &models.APIToken{UserID: 1, Name: "bad", TokenHash: "h"}
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .api_tokens.`).
+	s.mock.ExpectQuery(`INSERT INTO .api_tokens.`).
 		WillReturnError(gorm.ErrInvalidDB)
 	s.mock.ExpectRollback()
 
@@ -333,9 +333,9 @@ type SSHSettingServiceTestSuite struct {
 func (s *SSHSettingServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	s.Require().NoError(err)
 	s.db = gormDB
@@ -376,8 +376,8 @@ func (s *SSHSettingServiceTestSuite) TestGetSSHConfig_NotFound_ReturnsDefaults()
 func (s *SSHSettingServiceTestSuite) TestSaveSSHConfig_Create() {
 	s.mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .system_settings.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .system_settings.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	cfg := &models.SSHConfig{

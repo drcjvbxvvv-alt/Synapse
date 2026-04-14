@@ -27,7 +27,7 @@ var (
 	// ErrAlreadyExists is returned when a Create violates a unique index.
 	// Domain repositories may return this after inspecting the driver error;
 	// BaseRepository does not detect this automatically because the error
-	// shape is driver-specific (sqlite / mysql / postgres).
+	// shape is driver-specific (postgres).
 	ErrAlreadyExists = errors.New("repository: record already exists")
 
 	// ErrInvalidArgument is returned for programmer errors — e.g. passing a

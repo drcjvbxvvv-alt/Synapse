@@ -8,7 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -25,9 +25,9 @@ func (s *TokenBlacklistServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -55,8 +55,8 @@ func (s *TokenBlacklistServiceTestSuite) TestRevoke_Success() {
 	expiresAt := time.Now().Add(1 * time.Hour)
 
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .token_blacklists.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .token_blacklists.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	err := s.service.Revoke(context.Background(), jti, 1, expiresAt, "logout")
@@ -89,7 +89,7 @@ func (s *TokenBlacklistServiceTestSuite) TestRevoke_DuplicateKey() {
 
 	// 模擬 UNIQUE constraint 錯誤
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .token_blacklists.`).
+	s.mock.ExpectQuery(`INSERT INTO .token_blacklists.`).
 		WillReturnError(gorm.ErrDuplicatedKey)
 	s.mock.ExpectRollback()
 

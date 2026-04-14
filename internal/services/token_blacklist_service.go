@@ -118,7 +118,7 @@ func (s *TokenBlacklistService) CleanupExpired(ctx context.Context) (int64, erro
 }
 
 // isDuplicateKeyError 判斷是否為 GORM 的唯一鍵重複錯誤
-// 不同驅動（MySQL/SQLite）錯誤訊息不同，統一用字串檢查
+// 不同驅動錯誤訊息不同，統一用字串檢查
 func isDuplicateKeyError(err error) bool {
 	if err == nil {
 		return false

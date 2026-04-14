@@ -7,7 +7,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -24,9 +24,9 @@ func (s *AuditServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -46,8 +46,8 @@ func (s *AuditServiceTestSuite) TearDownTest() {
 // TestCreateSession_Success 測試建立終端會話成功
 func (s *AuditServiceTestSuite) TestCreateSession_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .terminal_sessions.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .terminal_sessions.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	req := &CreateSessionRequest{
@@ -71,8 +71,8 @@ func (s *AuditServiceTestSuite) TestCreateSession_Success() {
 // TestCreateSession_Kubectl 測試建立 kubectl 會話
 func (s *AuditServiceTestSuite) TestCreateSession_Kubectl() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .terminal_sessions.`).
-		WillReturnResult(sqlmock.NewResult(2, 1))
+	s.mock.ExpectQuery(`INSERT INTO .terminal_sessions.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(2))
 	s.mock.ExpectCommit()
 
 	req := &CreateSessionRequest{
@@ -90,7 +90,7 @@ func (s *AuditServiceTestSuite) TestCreateSession_Kubectl() {
 // TestCreateSession_DBError 測試 DB 錯誤
 func (s *AuditServiceTestSuite) TestCreateSession_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .terminal_sessions.`).
+	s.mock.ExpectQuery(`INSERT INTO .terminal_sessions.`).
 		WillReturnError(gorm.ErrInvalidDB)
 	s.mock.ExpectRollback()
 
@@ -128,8 +128,8 @@ func (s *AuditServiceTestSuite) TestRecordCommand_Success() {
 
 	// INSERT terminal_command
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .terminal_commands.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .terminal_commands.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	// UPDATE terminal_sessions.input_size (best-effort, can fail silently)
@@ -145,7 +145,7 @@ func (s *AuditServiceTestSuite) TestRecordCommand_Success() {
 // TestRecordCommand_DBError 測試記錄命令 DB 錯誤
 func (s *AuditServiceTestSuite) TestRecordCommand_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .terminal_commands.`).
+	s.mock.ExpectQuery(`INSERT INTO .terminal_commands.`).
 		WillReturnError(gorm.ErrInvalidDB)
 	s.mock.ExpectRollback()
 

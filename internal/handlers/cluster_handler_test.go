@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -44,9 +44,9 @@ func (s *ClusterHandlerTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -244,7 +244,7 @@ func (s *ClusterHandlerTestSuite) TestGetClusterStats_DBError() {
 
 func (s *ClusterHandlerTestSuite) TestGetCluster_Success() {
 	now := time.Now()
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "clusters" WHERE "clusters"."id" = $1 AND "clusters"."deleted_at" IS NULL ORDER BY "clusters"."id" LIMIT $2`)).
 		WithArgs(1, 1).
 		WillReturnRows(sqlmock.NewRows(clusterCols).AddRow(
 			1, "prod-cluster", "https://k8s.example.com:6443", "", "", "",
@@ -275,7 +275,7 @@ func (s *ClusterHandlerTestSuite) TestGetCluster_InvalidID() {
 }
 
 func (s *ClusterHandlerTestSuite) TestGetCluster_NotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "clusters" WHERE "clusters"."id" = $1 AND "clusters"."deleted_at" IS NULL ORDER BY "clusters"."id" LIMIT $2`)).
 		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 

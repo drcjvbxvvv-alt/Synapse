@@ -47,7 +47,7 @@ func TestPermissionRepository_FindByClusterUser_NotFound(t *testing.T) {
 	defer sqlDB.Close()
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `cluster_permissions` WHERE (cluster_id = ? AND user_id = ?) AND `cluster_permissions`.`deleted_at` IS NULL ORDER BY `cluster_permissions`.`id` LIMIT ?",
+		`SELECT * FROM "cluster_permissions" WHERE (cluster_id = $1 AND user_id = $2) AND "cluster_permissions"."deleted_at" IS NULL ORDER BY "cluster_permissions"."id" LIMIT $3`,
 	)).WithArgs(1, 2, 1).WillReturnError(gorm.ErrRecordNotFound)
 
 	repo := repositories.NewPermissionRepository(gdb)
@@ -76,7 +76,7 @@ func TestPermissionRepository_ExistsForClusterUser_True(t *testing.T) {
 	defer sqlDB.Close()
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT count(*) FROM `cluster_permissions` WHERE (cluster_id = ? AND user_id = ?) AND `cluster_permissions`.`deleted_at` IS NULL",
+		`SELECT count(*) FROM "cluster_permissions" WHERE (cluster_id = $1 AND user_id = $2) AND "cluster_permissions"."deleted_at" IS NULL`,
 	)).WithArgs(1, 2).WillReturnRows(
 		sqlmock.NewRows([]string{"count"}).AddRow(1),
 	)
@@ -94,7 +94,7 @@ func TestPermissionRepository_CountAdminByUser(t *testing.T) {
 	defer sqlDB.Close()
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT count(*) FROM `cluster_permissions` WHERE (user_id = ? AND permission_type = ?) AND `cluster_permissions`.`deleted_at` IS NULL",
+		`SELECT count(*) FROM "cluster_permissions" WHERE (user_id = $1 AND permission_type = $2) AND "cluster_permissions"."deleted_at" IS NULL`,
 	)).WithArgs(7, "admin").WillReturnRows(
 		sqlmock.NewRows([]string{"count"}).AddRow(3),
 	)
@@ -138,7 +138,7 @@ func TestPermissionRepository_AddUserToGroup_Idempotent(t *testing.T) {
 	// First call to AddUserToGroup: membership already exists, count = 1,
 	// repository returns nil without issuing an INSERT.
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT count(*) FROM `user_group_members` WHERE user_id = ? AND user_group_id = ?",
+		`SELECT count(*) FROM "user_group_members" WHERE user_id = $1 AND user_group_id = $2`,
 	)).WithArgs(1, 2).WillReturnRows(
 		sqlmock.NewRows([]string{"count"}).AddRow(1),
 	)
@@ -156,13 +156,13 @@ func TestPermissionRepository_AddUserToGroup_NewMembership(t *testing.T) {
 
 	// Exists-check returns 0, so the repo performs an INSERT.
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT count(*) FROM `user_group_members` WHERE user_id = ? AND user_group_id = ?",
+		`SELECT count(*) FROM "user_group_members" WHERE user_id = $1 AND user_group_id = $2`,
 	)).WithArgs(1, 2).WillReturnRows(
 		sqlmock.NewRows([]string{"count"}).AddRow(0),
 	)
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(
-		"INSERT INTO `user_group_members`",
+		`INSERT INTO "user_group_members"`,
 	)).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
@@ -179,12 +179,12 @@ func TestPermissionRepository_DeleteUserGroupTx_Success(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(
-		"DELETE FROM `user_group_members` WHERE user_group_id = ?",
+		`DELETE FROM "user_group_members" WHERE user_group_id = $1`,
 	)).WithArgs(5).WillReturnResult(sqlmock.NewResult(0, 2))
 	// UserGroup has soft-delete (gorm.DeletedAt), so the final delete is an
 	// UPDATE SET deleted_at=? rather than a DELETE FROM.
 	mock.ExpectExec(regexp.QuoteMeta(
-		"UPDATE `user_groups` SET `deleted_at`=? WHERE `user_groups`.`id` = ? AND `user_groups`.`deleted_at` IS NULL",
+		`UPDATE "user_groups" SET "deleted_at"=$1 WHERE "user_groups"."id" = $2 AND "user_groups"."deleted_at" IS NULL`,
 	)).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
@@ -200,7 +200,7 @@ func TestPermissionRepository_ListGroupIDsForUser(t *testing.T) {
 	defer sqlDB.Close()
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT `user_group_id` FROM `user_group_members` WHERE user_id = ?",
+		`SELECT "user_group_id" FROM "user_group_members" WHERE user_id = $1`,
 	)).WithArgs(1).WillReturnRows(
 		sqlmock.NewRows([]string{"user_group_id"}).AddRow(10).AddRow(20),
 	)
@@ -225,12 +225,12 @@ func TestPermissionRepository_ListByCluster_AllClusters(t *testing.T) {
 	// the preload queries for User/UserGroup are wired in. We match only
 	// the main query; unmatched preload queries would fail the test.
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `cluster_permissions` WHERE `cluster_permissions`.`deleted_at` IS NULL",
+		`SELECT * FROM "cluster_permissions" WHERE "cluster_permissions"."deleted_at" IS NULL`,
 	)).WillReturnRows(rows)
 	// Preloads: user_id=1 → users lookup; user_group_id IS NULL → groups
 	// lookup never runs because all UserGroupIDs are nil.
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL",
+		`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL`,
 	)).WithArgs(1).WillReturnRows(userRows())
 
 	repo := repositories.NewPermissionRepository(gdb)

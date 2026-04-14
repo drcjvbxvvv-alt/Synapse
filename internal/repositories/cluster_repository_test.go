@@ -40,7 +40,7 @@ func TestClusterRepository_FindByName_Success(t *testing.T) {
 
 	rows := addClusterRow(clusterRows(), 1, "prod-01", "healthy")
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `clusters` WHERE name = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?",
+		`SELECT * FROM "clusters" WHERE name = $1 AND "clusters"."deleted_at" IS NULL ORDER BY "clusters"."id" LIMIT $2`,
 	)).WithArgs("prod-01", 1).WillReturnRows(rows)
 
 	repo := repositories.NewClusterRepository(gdb)
@@ -72,7 +72,7 @@ func TestClusterRepository_ListConnectable(t *testing.T) {
 	addClusterRow(rows, 2, "stg-01", "unknown")
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `clusters` WHERE status != ? AND `clusters`.`deleted_at` IS NULL",
+		`SELECT * FROM "clusters" WHERE status != $1 AND "clusters"."deleted_at" IS NULL`,
 	)).WithArgs("unhealthy").WillReturnRows(rows)
 
 	repo := repositories.NewClusterRepository(gdb)
@@ -105,7 +105,7 @@ func TestClusterRepository_FindByIDs_WithIDs(t *testing.T) {
 	addClusterRow(rows, 2, "prod-02", "healthy")
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `clusters` WHERE id IN (?,?) AND `clusters`.`deleted_at` IS NULL",
+		`SELECT * FROM "clusters" WHERE id IN ($1,$2) AND "clusters"."deleted_at" IS NULL`,
 	)).WithArgs(1, 2).WillReturnRows(rows)
 
 	repo := repositories.NewClusterRepository(gdb)
@@ -121,7 +121,7 @@ func TestClusterRepository_CountByStatus(t *testing.T) {
 	defer sqlDB.Close()
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT count(*) FROM `clusters` WHERE status = ? AND `clusters`.`deleted_at` IS NULL",
+		`SELECT count(*) FROM "clusters" WHERE status = $1 AND "clusters"."deleted_at" IS NULL`,
 	)).WithArgs("healthy").WillReturnRows(
 		sqlmock.NewRows([]string{"count"}).AddRow(5),
 	)

@@ -11,31 +11,29 @@
 
 services:
   # ==========================================
-  # MySQL 数据库
+  # PostgreSQL 数据库
   # ==========================================
-  mysql:
-    image: registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/mysql:8.0
-    container_name: synapse-mysql
+  postgres:
+    image: postgres:16-alpine
+    container_name: synapse-postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: synapse
-      MYSQL_USER: synapse
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      POSTGRES_DB: synapse
+      POSTGRES_USER: synapse
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
       TZ: Asia/Shanghai
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${PG_PORT:-5432}:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      - pg_data:/var/lib/postgresql/data
     networks:
       - synapse-network
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD && mysql -h localhost -u synapse -p$$MYSQL_PASSWORD -e 'SELECT 1' synapse || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U synapse -d synapse"]
       interval: 5s
-      timeout: 10s
+      timeout: 5s
       retries: 30
-      start_period: 60s
+      start_period: 30s
 
   # ==========================================
   # Synapse 应用服务
@@ -48,19 +46,20 @@ services:
     container_name: synapse
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       grafana:
         condition: service_healthy
     environment:
       SERVER_PORT: 8080
       SERVER_MODE: ${SERVER_MODE:-release}
-      DB_DRIVER: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
+      DB_DRIVER: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_USERNAME: synapse
-      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_PASSWORD: ${PG_PASSWORD}
       DB_DATABASE: synapse
+      DB_SSL_MODE: disable
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRE_TIME: 24
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -205,8 +204,8 @@ services:
 # 数据卷
 # ==========================================
 volumes:
-  mysql_data:
-    name: synapse-mysql-data
+  pg_data:
+    name: synapse-pg-data
   grafana_data:
     name: synapse-grafana-data
   synapse_logs:

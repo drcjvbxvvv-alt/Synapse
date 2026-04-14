@@ -10,7 +10,7 @@ import (
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -27,9 +27,9 @@ func (s *ApprovalServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -94,8 +94,8 @@ func newApprovalRequest() *models.ApprovalRequest {
 
 func (s *ApprovalServiceTestSuite) TestCreateApprovalRequest_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `approval_requests`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO "approval_requests"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	err := s.service.CreateApprovalRequest(context.Background(), newApprovalRequest())
@@ -104,7 +104,7 @@ func (s *ApprovalServiceTestSuite) TestCreateApprovalRequest_Success() {
 
 func (s *ApprovalServiceTestSuite) TestCreateApprovalRequest_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `approval_requests`").
+	s.mock.ExpectQuery(`INSERT INTO "approval_requests"`).
 		WillReturnError(errors.New("db error"))
 	s.mock.ExpectRollback()
 
@@ -179,7 +179,7 @@ func (s *ApprovalServiceTestSuite) TestGetApprovalRequest_NotFound() {
 
 func (s *ApprovalServiceTestSuite) TestUpdateApprovalRequest_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `approval_requests`").
+	s.mock.ExpectExec(`UPDATE "approval_requests"`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -191,7 +191,7 @@ func (s *ApprovalServiceTestSuite) TestUpdateApprovalRequest_Success() {
 
 func (s *ApprovalServiceTestSuite) TestUpdateApprovalRequest_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `approval_requests`").
+	s.mock.ExpectExec(`UPDATE "approval_requests"`).
 		WillReturnError(errors.New("update failed"))
 	s.mock.ExpectRollback()
 
@@ -249,8 +249,8 @@ func (s *ApprovalServiceTestSuite) TestUpsertNamespaceProtection_Creates() {
 	s.mock.ExpectQuery("SELECT").
 		WillReturnError(gorm.ErrRecordNotFound)
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `namespace_protections`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO "namespace_protections"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	np, err := s.service.UpsertNamespaceProtection(context.Background(), 10, "staging", true, "needs approval")
@@ -264,7 +264,7 @@ func (s *ApprovalServiceTestSuite) TestUpsertNamespaceProtection_CreateError() {
 	s.mock.ExpectQuery("SELECT").
 		WillReturnError(gorm.ErrRecordNotFound)
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `namespace_protections`").
+	s.mock.ExpectQuery(`INSERT INTO "namespace_protections"`).
 		WillReturnError(errors.New("insert failed"))
 	s.mock.ExpectRollback()
 
@@ -282,7 +282,7 @@ func (s *ApprovalServiceTestSuite) TestUpsertNamespaceProtection_Updates() {
 		WillReturnRows(namespaceProtectionRows())
 	// Updates()
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `namespace_protections`").
+	s.mock.ExpectExec(`UPDATE "namespace_protections"`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -295,7 +295,7 @@ func (s *ApprovalServiceTestSuite) TestUpsertNamespaceProtection_UpdateError() {
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(namespaceProtectionRows())
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `namespace_protections`").
+	s.mock.ExpectExec(`UPDATE "namespace_protections"`).
 		WillReturnError(errors.New("update failed"))
 	s.mock.ExpectRollback()
 

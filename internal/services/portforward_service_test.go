@@ -10,7 +10,7 @@ import (
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -27,9 +27,9 @@ func (s *PortForwardServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -87,8 +87,8 @@ func newPortForwardSession() *models.PortForwardSession {
 
 func (s *PortForwardServiceTestSuite) TestCreateSession_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `port_forward_sessions`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO "port_forward_sessions"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	err := s.service.CreateSession(context.Background(), newPortForwardSession())
@@ -97,7 +97,7 @@ func (s *PortForwardServiceTestSuite) TestCreateSession_Success() {
 
 func (s *PortForwardServiceTestSuite) TestCreateSession_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `port_forward_sessions`").
+	s.mock.ExpectQuery(`INSERT INTO "port_forward_sessions"`).
 		WillReturnError(errors.New("constraint violation"))
 	s.mock.ExpectRollback()
 
@@ -111,7 +111,7 @@ func (s *PortForwardServiceTestSuite) TestCreateSession_DBError() {
 func (s *PortForwardServiceTestSuite) TestMarkStopped_Success() {
 	// MarkStopped does not use WithContext — match plain UPDATE
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `port_forward_sessions`").
+	s.mock.ExpectExec(`UPDATE "port_forward_sessions"`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -122,7 +122,7 @@ func (s *PortForwardServiceTestSuite) TestMarkStopped_Success() {
 func (s *PortForwardServiceTestSuite) TestMarkStopped_DBError() {
 	// Even on DB error, MarkStopped silently ignores it
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `port_forward_sessions`").
+	s.mock.ExpectExec(`UPDATE "port_forward_sessions"`).
 		WillReturnError(errors.New("db error"))
 	s.mock.ExpectRollback()
 
@@ -134,7 +134,7 @@ func (s *PortForwardServiceTestSuite) TestMarkStopped_DBError() {
 
 func (s *PortForwardServiceTestSuite) TestStopSession_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `port_forward_sessions`").
+	s.mock.ExpectExec(`UPDATE "port_forward_sessions"`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -144,7 +144,7 @@ func (s *PortForwardServiceTestSuite) TestStopSession_Success() {
 
 func (s *PortForwardServiceTestSuite) TestStopSession_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `port_forward_sessions`").
+	s.mock.ExpectExec(`UPDATE "port_forward_sessions"`).
 		WillReturnError(errors.New("update failed"))
 	s.mock.ExpectRollback()
 

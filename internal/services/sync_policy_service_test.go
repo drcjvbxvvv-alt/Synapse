@@ -10,7 +10,7 @@ import (
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -27,9 +27,9 @@ func (s *SyncPolicyServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -131,8 +131,8 @@ func (s *SyncPolicyServiceTestSuite) TestListPolicies_DBError() {
 
 func (s *SyncPolicyServiceTestSuite) TestCreatePolicy_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `sync_policies`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO "sync_policies"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	err := s.service.CreatePolicy(context.Background(), newSyncPolicy())
@@ -141,7 +141,7 @@ func (s *SyncPolicyServiceTestSuite) TestCreatePolicy_Success() {
 
 func (s *SyncPolicyServiceTestSuite) TestCreatePolicy_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("INSERT INTO `sync_policies`").
+	s.mock.ExpectQuery(`INSERT INTO "sync_policies"`).
 		WillReturnError(errors.New("unique constraint"))
 	s.mock.ExpectRollback()
 
@@ -177,7 +177,7 @@ func (s *SyncPolicyServiceTestSuite) TestGetPolicy_NotFound() {
 func (s *SyncPolicyServiceTestSuite) TestUpdatePolicy_Success() {
 	// GORM Save on a record with ID issues an UPDATE (with full field set)
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `sync_policies`").
+	s.mock.ExpectExec(`UPDATE "sync_policies"`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -190,7 +190,7 @@ func (s *SyncPolicyServiceTestSuite) TestUpdatePolicy_Success() {
 
 func (s *SyncPolicyServiceTestSuite) TestUpdatePolicy_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("UPDATE `sync_policies`").
+	s.mock.ExpectExec(`UPDATE "sync_policies"`).
 		WillReturnError(errors.New("update failed"))
 	s.mock.ExpectRollback()
 
@@ -205,7 +205,7 @@ func (s *SyncPolicyServiceTestSuite) TestUpdatePolicy_DBError() {
 
 func (s *SyncPolicyServiceTestSuite) TestDeletePolicy_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("DELETE FROM `sync_policies`").
+	s.mock.ExpectExec(`DELETE FROM "sync_policies"`).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -215,7 +215,7 @@ func (s *SyncPolicyServiceTestSuite) TestDeletePolicy_Success() {
 
 func (s *SyncPolicyServiceTestSuite) TestDeletePolicy_DBError() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec("DELETE FROM `sync_policies`").
+	s.mock.ExpectExec(`DELETE FROM "sync_policies"`).
 		WillReturnError(errors.New("delete failed"))
 	s.mock.ExpectRollback()
 

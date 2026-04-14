@@ -11,7 +11,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -35,9 +35,9 @@ func newMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock, *sql.DB) {
 	sqlDB, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
-	dialector := mysql.New(mysql.Config{
+	dialector := postgres.New(postgres.Config{
 		Conn:                      sqlDB,
-		SkipInitializeWithVersion: true,
+		PreferSimpleProtocol: true,
 	})
 	gdb, err := gorm.Open(dialector, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
@@ -51,7 +51,7 @@ func TestBaseRepository_Get_Success(t *testing.T) {
 	gdb, mock, sqlDB := newMockDB(t)
 	defer sqlDB.Close()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `fixtures` WHERE `fixtures`.`id` = ? ORDER BY `fixtures`.`id` LIMIT ?")).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "fixtures" WHERE "fixtures"."id" = $1 ORDER BY "fixtures"."id" LIMIT $2`)).
 		WithArgs(7, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "created_at"}).
 			AddRow(7, "alpha", time.Now()))
@@ -69,7 +69,7 @@ func TestBaseRepository_Get_NotFound(t *testing.T) {
 	gdb, mock, sqlDB := newMockDB(t)
 	defer sqlDB.Close()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `fixtures` WHERE `fixtures`.`id` = ? ORDER BY `fixtures`.`id` LIMIT ?")).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "fixtures" WHERE "fixtures"."id" = $1 ORDER BY "fixtures"."id" LIMIT $2`)).
 		WithArgs(99, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
@@ -96,7 +96,7 @@ func TestBaseRepository_Count(t *testing.T) {
 	gdb, mock, sqlDB := newMockDB(t)
 	defer sqlDB.Close()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `fixtures` WHERE name = ?")).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT count(*) FROM "fixtures" WHERE name = $1`)).
 		WithArgs("alpha").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
 
@@ -113,7 +113,7 @@ func TestBaseRepository_UpdateFields_RowsAffected(t *testing.T) {
 	defer sqlDB.Close()
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta("UPDATE `fixtures` SET `name`=? WHERE id = ?")).
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "fixtures" SET "name"=$1 WHERE id = $2`)).
 		WithArgs("beta", 7).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
@@ -149,7 +149,7 @@ func TestBaseRepository_Exists_True(t *testing.T) {
 	gdb, mock, sqlDB := newMockDB(t)
 	defer sqlDB.Close()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT count(*) FROM `fixtures` WHERE name = ?")).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT count(*) FROM "fixtures" WHERE name = $1`)).
 		WithArgs("alpha").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 

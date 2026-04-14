@@ -7,7 +7,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -26,9 +26,9 @@ func (s *EventAlertServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -113,8 +113,8 @@ func (s *EventAlertServiceTestSuite) TestCreateRule_Success() {
 	}
 
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .event_alert_rules.`).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(`INSERT INTO .event_alert_rules.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	err := s.service.CreateRule(rule)
@@ -129,7 +129,7 @@ func (s *EventAlertServiceTestSuite) TestCreateRule_DBError() {
 	}
 
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .event_alert_rules.`).
+	s.mock.ExpectQuery(`INSERT INTO .event_alert_rules.`).
 		WillReturnError(gorm.ErrInvalidDB)
 	s.mock.ExpectRollback()
 

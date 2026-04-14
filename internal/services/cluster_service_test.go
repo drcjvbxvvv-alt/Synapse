@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -29,9 +29,9 @@ func (s *ClusterServiceTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -63,8 +63,8 @@ func (s *ClusterServiceTestSuite) TestCreateCluster() {
 	}
 
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `clusters`")).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "clusters"`)).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	err := s.service.CreateCluster(context.Background(), cluster)
@@ -82,7 +82,7 @@ func (s *ClusterServiceTestSuite) TestCreateCluster_DBError() {
 	}
 
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `clusters`")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "clusters"`)).
 		WillReturnError(gorm.ErrDuplicatedKey)
 	s.mock.ExpectRollback()
 
@@ -103,7 +103,7 @@ func (s *ClusterServiceTestSuite) TestGetCluster_Success() {
 		"{}", "{}", "{}", now, now, now,
 	)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "clusters" WHERE "clusters"."id" = $1 AND "clusters"."deleted_at" IS NULL ORDER BY "clusters"."id" LIMIT $2`)).
 		WithArgs(1, 1).
 		WillReturnRows(rows)
 
@@ -116,7 +116,7 @@ func (s *ClusterServiceTestSuite) TestGetCluster_Success() {
 
 // TestGetCluster_NotFound 測試獲取不存在的叢集
 func (s *ClusterServiceTestSuite) TestGetCluster_NotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "clusters" WHERE "clusters"."id" = $1 AND "clusters"."deleted_at" IS NULL ORDER BY "clusters"."id" LIMIT $2`)).
 		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
@@ -139,7 +139,7 @@ func (s *ClusterServiceTestSuite) TestGetAllClusters_Success() {
 		AddRow(2, "cluster-2", "https://k8s2.example.com:6443", "config2",
 			"v1.29.0", "connected", "", "", "", "{}", "{}", "{}", now, now, now)
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters`")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "clusters"`)).
 		WillReturnRows(rows)
 
 	clusters, err := s.service.GetAllClusters(context.Background())
@@ -157,7 +157,7 @@ func (s *ClusterServiceTestSuite) TestGetAllClusters_Empty() {
 		"alert_manager_config", "created_at", "updated_at", "last_heartbeat",
 	})
 
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters`")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "clusters"`)).
 		WillReturnRows(rows)
 
 	clusters, err := s.service.GetAllClusters(context.Background())
@@ -168,7 +168,7 @@ func (s *ClusterServiceTestSuite) TestGetAllClusters_Empty() {
 // TestUpdateClusterStatus_Success 測試更新叢集狀態成功
 func (s *ClusterServiceTestSuite) TestUpdateClusterStatus_Success() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(regexp.QuoteMeta("UPDATE `clusters`")).
+	s.mock.ExpectExec(regexp.QuoteMeta(`UPDATE "clusters"`)).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	s.mock.ExpectCommit()
 
@@ -191,7 +191,7 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
 	)
 
 	s.mock.ExpectBegin()
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "clusters" WHERE "clusters"."id" = $1 AND "clusters"."deleted_at" IS NULL ORDER BY "clusters"."id" LIMIT $2`)).
 		WithArgs(1, 1).
 		WillReturnRows(rows)
 	// 刪除關聯資料 - 使用 Unscoped
@@ -226,7 +226,7 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_Success() {
 // TestDeleteCluster_NotFound 測試刪除不存在的叢集
 func (s *ClusterServiceTestSuite) TestDeleteCluster_NotFound() {
 	s.mock.ExpectBegin()
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `clusters` WHERE `clusters`.`id` = ? AND `clusters`.`deleted_at` IS NULL ORDER BY `clusters`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "clusters" WHERE "clusters"."id" = $1 AND "clusters"."deleted_at" IS NULL ORDER BY "clusters"."id" LIMIT $2`)).
 		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 	s.mock.ExpectRollback()

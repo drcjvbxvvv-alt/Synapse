@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -43,9 +43,9 @@ func (s *UserHandlerTestSuite) SetupTest() {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
 	s.Require().NoError(err)
 
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      db,
-		SkipInitializeWithVersion: true,
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
 	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -120,7 +120,7 @@ func (s *UserHandlerTestSuite) TestListUsers_DBError() {
 
 func (s *UserHandlerTestSuite) TestGetUser_Success() {
 	now := time.Now()
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(1, 1).
 		WillReturnRows(sqlmock.NewRows(userCols).AddRow(
 			1, "alice", "", "", "alice@example.com", "Alice", "", "local", "active", "user",
@@ -147,7 +147,7 @@ func (s *UserHandlerTestSuite) TestGetUser_InvalidID() {
 }
 
 func (s *UserHandlerTestSuite) TestGetUser_NotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(999, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
@@ -172,8 +172,8 @@ func (s *UserHandlerTestSuite) TestCreateUser_Success() {
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 	// INSERT
 	s.mock.ExpectBegin()
-	s.mock.ExpectExec(`INSERT INTO .users.`).
-		WillReturnResult(sqlmock.NewResult(2, 1))
+	s.mock.ExpectQuery(`INSERT INTO .users.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(2))
 	s.mock.ExpectCommit()
 
 	body, _ := json.Marshal(map[string]string{
@@ -237,7 +237,7 @@ func (s *UserHandlerTestSuite) TestCreateUser_DuplicateUsername() {
 func (s *UserHandlerTestSuite) TestUpdateUser_Success() {
 	now := time.Now()
 	// fetchUser SELECT
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(1, 1).
 		WillReturnRows(sqlmock.NewRows(userCols).AddRow(
 			1, "alice", "", "", "alice@example.com", "Alice", "", "local", "active", "user",
@@ -268,7 +268,7 @@ func (s *UserHandlerTestSuite) TestUpdateUser_InvalidID() {
 }
 
 func (s *UserHandlerTestSuite) TestUpdateUser_UserNotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(99, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
@@ -313,7 +313,7 @@ func (s *UserHandlerTestSuite) TestDeleteUser_CannotDeleteSelf() {
 }
 
 func (s *UserHandlerTestSuite) TestDeleteUser_NotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(88, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
@@ -327,7 +327,7 @@ func (s *UserHandlerTestSuite) TestDeleteUser_NotFound() {
 func (s *UserHandlerTestSuite) TestDeleteUser_AdminProtected() {
 	now := time.Now()
 	// fetch returns a platform_admin user
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(3, 1).
 		WillReturnRows(sqlmock.NewRows(userCols).AddRow(
 			3, "admin", "", "", "", "Admin", "", "local", "active", "platform_admin",
@@ -374,7 +374,7 @@ func (s *UserHandlerTestSuite) TestUpdateUserStatus_MissingBody() {
 func (s *UserHandlerTestSuite) TestUpdateUserStatus_Success() {
 	now := time.Now()
 	// fetchUser
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(2, 1).
 		WillReturnRows(sqlmock.NewRows(userCols).AddRow(
 			2, "carol", "", "", "", "Carol", "", "local", "active", "user",
@@ -395,7 +395,7 @@ func (s *UserHandlerTestSuite) TestUpdateUserStatus_Success() {
 }
 
 func (s *UserHandlerTestSuite) TestUpdateUserStatus_UserNotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(77, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 
@@ -441,7 +441,7 @@ func (s *UserHandlerTestSuite) TestResetPassword_PasswordTooShort() {
 
 func (s *UserHandlerTestSuite) TestResetPassword_Success() {
 	now := time.Now()
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(1, 1).
 		WillReturnRows(sqlmock.NewRows(userCols).AddRow(
 			1, "alice", "", "kp_alice_salt", "alice@example.com", "Alice", "", "local", "active", "user",
@@ -461,7 +461,7 @@ func (s *UserHandlerTestSuite) TestResetPassword_Success() {
 }
 
 func (s *UserHandlerTestSuite) TestResetPassword_UserNotFound() {
-	s.mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`id` = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?")).
+	s.mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE "users"."id" = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs(55, 1).
 		WillReturnError(gorm.ErrRecordNotFound)
 

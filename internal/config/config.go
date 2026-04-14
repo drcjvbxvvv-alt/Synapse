@@ -79,18 +79,17 @@ type ServerConfig struct {
 	Mode string `mapstructure:"mode"`
 }
 
-// DatabaseConfig 資料庫配置
+// DatabaseConfig 資料庫配置（PostgreSQL）
 type DatabaseConfig struct {
-	Driver     string `mapstructure:"driver"`
-	DSN        string `mapstructure:"dsn"`
-	Host       string `mapstructure:"host"`
-	Port       int    `mapstructure:"port"`
-	Username   string `mapstructure:"username"`
-	Password   string `mapstructure:"password"`
-	Database   string `mapstructure:"database"`
-	Charset    string `mapstructure:"charset"`
-	TLSEnabled bool   `mapstructure:"tls_enabled"` // MySQL TLS（env: DB_TLS_ENABLED）
-	TLSCACert  string `mapstructure:"tls_ca_cert"` // CA 憑證路徑（env: DB_TLS_CA_CERT）
+	Driver      string `mapstructure:"driver"`
+	DSN         string `mapstructure:"dsn"`
+	Host        string `mapstructure:"host"`
+	Port        int    `mapstructure:"port"`
+	Username    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	Database    string `mapstructure:"database"`
+	SSLMode     string `mapstructure:"ssl_mode"`      // disable, require, verify-ca, verify-full（env: DB_SSL_MODE）
+	SSLRootCert string `mapstructure:"ssl_root_cert"` // CA 憑證路徑（env: DB_SSL_ROOT_CERT）
 }
 
 // JWTConfig JWT配置
@@ -164,9 +163,8 @@ func Load() *Config {
 	_ = viper.BindEnv("database.username", "DB_USERNAME")
 	_ = viper.BindEnv("database.password", "DB_PASSWORD")
 	_ = viper.BindEnv("database.database", "DB_DATABASE")
-	_ = viper.BindEnv("database.charset", "DB_CHARSET")
-	_ = viper.BindEnv("database.tls_enabled", "DB_TLS_ENABLED")
-	_ = viper.BindEnv("database.tls_ca_cert", "DB_TLS_CA_CERT")
+	_ = viper.BindEnv("database.ssl_mode", "DB_SSL_MODE")
+	_ = viper.BindEnv("database.ssl_root_cert", "DB_SSL_ROOT_CERT")
 
 	// 繫結 JWT 環境變數
 	_ = viper.BindEnv("jwt.secret", "JWT_SECRET")
@@ -247,17 +245,16 @@ func setDefaults() {
 	viper.SetDefault("server.port", 8080)
 	viper.SetDefault("server.mode", "debug")
 
-	// 資料庫預設配置（SQLite 已棄用，生產環境強制使用 MySQL）
-	viper.SetDefault("database.driver", "mysql")
+	// 資料庫預設配置（PostgreSQL）
+	viper.SetDefault("database.driver", "postgres")
 	viper.SetDefault("database.dsn", "")
 	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", 3306)
-	viper.SetDefault("database.username", "root")
+	viper.SetDefault("database.port", 5432)
+	viper.SetDefault("database.username", "synapse")
 	viper.SetDefault("database.password", "")
 	viper.SetDefault("database.database", "synapse")
-	viper.SetDefault("database.charset", "utf8mb4")
-	viper.SetDefault("database.tls_enabled", false)
-	viper.SetDefault("database.tls_ca_cert", "")
+	viper.SetDefault("database.ssl_mode", "disable")
+	viper.SetDefault("database.ssl_root_cert", "")
 
 	// JWT預設配置
 	viper.SetDefault("jwt.secret", "synapse-secret")

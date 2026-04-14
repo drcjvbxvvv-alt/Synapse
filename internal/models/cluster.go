@@ -17,7 +17,7 @@ type Cluster struct {
 	SATokenEnc    string         `json:"-" gorm:"type:text"` // 加密儲存的 SA Token
 	Version       string         `json:"version" gorm:"size:50"`
 	Status        string         `json:"status" gorm:"default:unknown;size:20"` // healthy, unhealthy, unknown
-	Labels        string         `json:"labels" gorm:"type:json"`               // JSON 格式儲存標籤
+	Labels        string         `json:"labels" gorm:"type:jsonb"`               // JSON 格式儲存標籤
 	CertExpireAt  *time.Time     `json:"cert_expire_at"`
 	LastHeartbeat *time.Time     `json:"last_heartbeat"`
 	CreatedBy     uint           `json:"created_by"`
@@ -26,10 +26,10 @@ type Cluster struct {
 	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
 
 	// 監控配置
-	MonitoringConfig string `json:"monitoring_config" gorm:"type:json"` // JSON 格式儲存監控配置
+	MonitoringConfig string `json:"monitoring_config" gorm:"type:jsonb"` // JSON 格式儲存監控配置
 
 	// Alertmanager 配置
-	AlertManagerConfig string `json:"alertmanager_config" gorm:"type:json"` // JSON 格式儲存 Alertmanager 配置
+	AlertManagerConfig string `json:"alertmanager_config" gorm:"type:jsonb"` // JSON 格式儲存 Alertmanager 配置
 
 	// 關聯關係
 	Creator         User              `json:"creator" gorm:"foreignKey:CreatedBy"`

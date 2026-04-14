@@ -38,7 +38,7 @@ func TestUserRepository_FindByUsername_Success(t *testing.T) {
 
 	rows := addUserRow(userRows(), 1, "alice", "active", "local")
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `users` WHERE username = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?",
+		`SELECT * FROM "users" WHERE username = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`,
 	)).WithArgs("alice", 1).WillReturnRows(rows)
 
 	repo := repositories.NewUserRepository(gdb)
@@ -66,7 +66,7 @@ func TestUserRepository_FindByUsername_NotFound(t *testing.T) {
 	defer sqlDB.Close()
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `users` WHERE username = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT ?",
+		`SELECT * FROM "users" WHERE username = $1 AND "users"."deleted_at" IS NULL ORDER BY "users"."id" LIMIT $2`,
 	)).WithArgs("ghost", 1).WillReturnRows(userRows())
 
 	repo := repositories.NewUserRepository(gdb)
@@ -84,13 +84,13 @@ func TestUserRepository_ListPaged_Search(t *testing.T) {
 	// Count comes first (ListOptions path), then the SELECT.
 	// GORM wraps the outer WHERE clause in parentheses.
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT count(*) FROM `users` WHERE ((username LIKE ? OR display_name LIKE ? OR email LIKE ?)) AND `users`.`deleted_at` IS NULL",
+		`SELECT count(*) FROM "users" WHERE ((username LIKE $1 OR display_name LIKE $2 OR email LIKE $3)) AND "users"."deleted_at" IS NULL`,
 	)).WithArgs("%ali%", "%ali%", "%ali%").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 	rows := addUserRow(userRows(), 1, "alice", "active", "local")
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `users` WHERE ((username LIKE ? OR display_name LIKE ? OR email LIKE ?)) AND `users`.`deleted_at` IS NULL ORDER BY id ASC LIMIT ?",
+		`SELECT * FROM "users" WHERE ((username LIKE $1 OR display_name LIKE $2 OR email LIKE $3)) AND "users"."deleted_at" IS NULL ORDER BY id ASC LIMIT $4`,
 	)).WithArgs("%ali%", "%ali%", "%ali%", 20).WillReturnRows(rows)
 
 	repo := repositories.NewUserRepository(gdb)
@@ -113,12 +113,12 @@ func TestUserRepository_ListPaged_StatusAndAuthFilter(t *testing.T) {
 
 	// GORM wraps the outer WHERE clause in parentheses.
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT count(*) FROM `users` WHERE (status = ? AND auth_type = ?) AND `users`.`deleted_at` IS NULL",
+		`SELECT count(*) FROM "users" WHERE (status = $1 AND auth_type = $2) AND "users"."deleted_at" IS NULL`,
 	)).WithArgs("active", "ldap").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		"SELECT * FROM `users` WHERE (status = ? AND auth_type = ?) AND `users`.`deleted_at` IS NULL ORDER BY id ASC LIMIT ?",
+		`SELECT * FROM "users" WHERE (status = $1 AND auth_type = $2) AND "users"."deleted_at" IS NULL ORDER BY id ASC LIMIT $3`,
 	)).WithArgs("active", "ldap", 10).WillReturnRows(userRows())
 
 	repo := repositories.NewUserRepository(gdb)
