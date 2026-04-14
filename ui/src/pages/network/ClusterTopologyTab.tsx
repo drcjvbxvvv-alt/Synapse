@@ -71,7 +71,7 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     if (timerRef.current) clearInterval(timerRef.current);
     if (autoRefresh) {
       timerRef.current = setInterval(() => {
-        if (!isInteractingRef.current) loadTopology();
+        if (!document.hidden && !isInteractingRef.current) loadTopology();
       }, 15000);
     }
     return () => {

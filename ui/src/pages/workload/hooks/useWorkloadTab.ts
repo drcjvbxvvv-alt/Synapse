@@ -5,6 +5,7 @@ import { App } from 'antd';
 import { WorkloadService, type WorkloadInfo } from '../../../services/workloadService';
 import { POLL_INTERVALS } from '../../../config/queryConfig';
 import { useMultiSearch, applyMultiSearch } from '../../../hooks/useMultiSearch';
+import { useVisibilityInterval } from '../../../hooks/useVisibilityInterval';
 
 export type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob' | 'ArgoRollout';
 
@@ -347,12 +348,11 @@ export function useWorkloadTab({ clusterId, workloadType, onCountChange }: UseWo
     loadWorkloads();
   }, [loadWorkloads]);
 
-  // Polling — silent to avoid toast spam when optional components (e.g. Argo Rollout) are not installed
-  useEffect(() => {
+  // Polling — silent + pauses when tab is hidden
+  useVisibilityInterval(() => {
     if (!clusterId) return;
-    const timer = setInterval(() => loadWorkloads(true), POLL_INTERVALS.workload);
-    return () => clearInterval(timer);
-  }, [clusterId, loadWorkloads]);
+    loadWorkloads(true);
+  }, POLL_INTERVALS.workload);
 
   // Row selection config
   const rowSelection = {

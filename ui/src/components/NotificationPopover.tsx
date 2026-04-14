@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import {
   notificationService, type NotificationItem,
 } from '../services/notificationService';
+import { useVisibilityInterval } from '../hooks/useVisibilityInterval';
 
 const { Text } = Typography;
 
@@ -170,12 +171,9 @@ const NotificationPopover: React.FC = () => {
     }
   }, []);
 
-  // Poll unread count every 30s
-  useEffect(() => {
-    fetchUnread();
-    const timer = setInterval(fetchUnread, POLL_INTERVAL);
-    return () => clearInterval(timer);
-  }, [fetchUnread]);
+  // Initial load + polling — pauses when tab is hidden
+  useEffect(() => { fetchUnread(); }, [fetchUnread]);
+  useVisibilityInterval(fetchUnread, POLL_INTERVAL);
 
   const handleOpenChange = (v: boolean) => {
     setOpen(v);

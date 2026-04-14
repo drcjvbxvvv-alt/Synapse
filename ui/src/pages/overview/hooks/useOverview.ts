@@ -4,6 +4,7 @@ import { App } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { overviewService } from '../../../services/overviewService';
 import { POLL_INTERVALS } from '../../../config/queryConfig';
+import { useVisibilityInterval } from '../../../hooks/useVisibilityInterval';
 import type {
   OverviewStatsResponse,
   ResourceUsageResponse,
@@ -108,19 +109,11 @@ export function useOverview() {
     fetchTrends(podTimeRange, nodeTimeRange);
   }, [fetchTrends, podTimeRange, nodeTimeRange]);
 
-  // Auto-refresh
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (autoRefresh) {
-      timer = setInterval(() => {
-        fetchData();
-        fetchTrends(podTimeRange, nodeTimeRange);
-      }, refreshInterval * 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [autoRefresh, refreshInterval, fetchData, fetchTrends, podTimeRange, nodeTimeRange]);
+  // Auto-refresh — pauses when tab is hidden
+  useVisibilityInterval(() => {
+    fetchData();
+    fetchTrends(podTimeRange, nodeTimeRange);
+  }, autoRefresh ? refreshInterval * 1000 : null);
 
   // ─── Data transformations ─────────────────────────────────────────────────
 

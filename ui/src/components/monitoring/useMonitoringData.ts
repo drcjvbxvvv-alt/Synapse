@@ -117,7 +117,9 @@ export function useMonitoringData({
     }
 
     if (autoRefresh) {
-      intervalRef.current = setInterval(() => fetchMetrics(true), 30000);
+      intervalRef.current = setInterval(() => {
+        if (!document.hidden) fetchMetrics(true);
+      }, 30000);
     }
 
     return () => {

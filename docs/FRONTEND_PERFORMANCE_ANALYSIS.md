@@ -1,6 +1,6 @@
 # Synapse 前端性能分析文件
 
-> 版本：v1.0 | 日期：2026-04-14 | 狀態：待實作
+> 版本：v1.1 | 日期：2026-04-14 | 狀態：P0-1 已完成
 > 範圍：`ui/src` 下所有 React / TypeScript 前端程式碼
 
 ---
@@ -134,15 +134,15 @@
 
 ### 2.3 輪詢 / 資料請求
 
-#### F-POLL-1：手動 setInterval 取代 React Query refetchInterval ⚠️ 高優先
-- **位置**：6 處使用 `setInterval`：
+#### F-POLL-1：手動 setInterval 取代 React Query refetchInterval ✅ 已完成
+- **位置**：6 處使用 `setInterval`（已全部修復）：
   ```
-  useNodeList.ts:386       node 列表   10s
-  useWorkloadTab.ts:353    工作負載    15s
-  useOverview.ts:115       Overview    30s
-  NotificationPopover:176  通知        30s
-  useMonitoringData.ts:120 監控指標    30s
-  ClusterTopologyTab.tsx:73 拓撲圖    30s
+  useNodeList.ts           node 列表   10s  → useVisibilityInterval
+  useWorkloadTab.ts        工作負載    15s  → useVisibilityInterval
+  useOverview.ts           Overview    30s  → useVisibilityInterval
+  NotificationPopover.tsx  通知        30s  → useVisibilityInterval
+  useMonitoringData.ts     監控指標    30s  → document.hidden guard
+  ClusterTopologyTab.tsx   拓撲圖     15s  → document.hidden guard
   ```
 - **問題**：
   1. 手動 `setInterval` 不具備 React Query 的請求去重（request deduplication）
@@ -151,17 +151,26 @@
   3. API 錯誤後無退避（backoff），持續高頻重試
   4. 專案已安裝 `@tanstack/react-query`，等同閒置了內建輪詢能力
 - **影響**：高 — 50 使用者 × 4 輪詢端點 × 平均 2 Tab = 400 req/min 不必要請求
-- **修復**：遷移為 React Query `refetchInterval`：
-  ```tsx
-  // ✅ 取代 setInterval 的正確寫法
-  const { data } = useQuery({
-    queryKey: [QUERY_KEYS.NODE_LIST, clusterId],
-    queryFn: () => fetchNodes(clusterId),
-    refetchInterval: POLL_INTERVALS.node,          // 10s
-    refetchIntervalInBackground: false,             // 切換 Tab 時暫停
-  });
+- **修復方式**：新增 `ui/src/hooks/useVisibilityInterval.ts`，在每次 tick 前檢查
+  `document.hidden`，效果等同 `refetchIntervalInBackground: false`：
+  ```ts
+  // useVisibilityInterval — 每次 tick 跳過隱藏 tab
+  export function useVisibilityInterval(callback: () => void, delay: number | null): void {
+    const savedCallback = useRef(callback);
+    savedCallback.current = callback;
+    useEffect(() => {
+      if (delay === null) return;
+      const id = setInterval(() => {
+        if (!document.hidden) savedCallback.current();
+      }, delay);
+      return () => clearInterval(id);
+    }, [delay]);
+  }
   ```
-  React Query 會自動：頁面隱藏時暫停、錯誤時指數退避、跨元件去重
+  - `delay: null` 傳入時完全停止計時器（用於 `autoRefresh=false` 的情況）
+  - callback 透過 ref 捕捉，永遠取得最新閉包，無 stale-closure 問題
+  - useMonitoringData / ClusterTopologyTab 因使用 ref-based timer，直接在 callback 加
+    `if (!document.hidden)` guard
 
 #### F-POLL-2：NotificationPopover 在關閉時仍輪詢
 - **位置**：`ui/src/components/NotificationPopover.tsx:176`
@@ -322,7 +331,7 @@
 
 | # | 項目 | 相關瓶頸 | 預估工時 | 狀態 |
 |---|------|---------|---------|------|
-| 1 | 遷移所有 setInterval 輪詢至 React Query refetchInterval（含頁面隱藏暫停） | F-POLL-1 | 3-4h | ⬜ |
+| 1 | 遷移所有 setInterval 輪詢至 React Query refetchInterval（含頁面隱藏暫停） | F-POLL-1 | 3-4h | ✅ |
 | 2 | 為 CICD Pipeline Log 使用虛擬列表渲染 | 新增（CICD） | 2-3h | ⏳ 待 M13a |
 
 ### P1 — 上線後一個月內

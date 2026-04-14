@@ -6,6 +6,7 @@ import type { Node } from '../../../types';
 import { nodeService, type NodeListParams, type NodeOverview } from '../../../services/nodeService';
 import { POLL_INTERVALS } from '../../../config/queryConfig';
 import { useMultiSearch, applyMultiSearch } from '../../../hooks/useMultiSearch';
+import { useVisibilityInterval } from '../../../hooks/useVisibilityInterval';
 
 export function useNodeList() {
   const { clusterId: routeClusterId } = useParams<{ clusterId: string }>();
@@ -380,15 +381,12 @@ export function useNodeList() {
     }
   }, [selectedClusterId, fetchNodes, fetchNodeOverview]);
 
-  // Polling
-  useEffect(() => {
+  // Polling — pauses when tab is hidden
+  useVisibilityInterval(() => {
     if (!selectedClusterId) return;
-    const timer = setInterval(() => {
-      fetchNodes({ clusterId: selectedClusterId });
-      fetchNodeOverview();
-    }, POLL_INTERVALS.node);
-    return () => clearInterval(timer);
-  }, [selectedClusterId, fetchNodes, fetchNodeOverview]);
+    fetchNodes({ clusterId: selectedClusterId });
+    fetchNodeOverview();
+  }, POLL_INTERVALS.node);
 
   // Statistics
   const totalNodes = overview?.totalNodes || 0;
