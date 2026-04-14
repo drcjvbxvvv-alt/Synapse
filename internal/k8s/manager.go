@@ -51,18 +51,29 @@ type ClusterRuntime struct {
 	rolloutGroupVersion schema.GroupVersion
 }
 
+// discoveryEntry 快取單一叢集的 Discovery 結果
+type discoveryEntry struct {
+	gv    schema.GroupVersion
+	found bool
+	at    time.Time
+}
+
+const discoveryTTL = 5 * time.Minute
+
 // ClusterInformerManager 統一管理各叢集的 Informer 生命週期與快取訪問
 type ClusterInformerManager struct {
-	mu          sync.RWMutex
-	clusters    map[uint]*ClusterRuntime
-	syncTimeout time.Duration        // configurable cache-sync timeout (default 30s)
-	k8sMetrics  *metrics.K8sMetrics // optional; nil = disabled
+	mu             sync.RWMutex
+	clusters       map[uint]*ClusterRuntime
+	syncTimeout    time.Duration        // configurable cache-sync timeout (default 30s)
+	k8sMetrics     *metrics.K8sMetrics // optional; nil = disabled
+	discoveryCache map[uint]discoveryEntry // Discovery API 結果快取（TTL 5 分鐘）
 }
 
 func NewClusterInformerManager() *ClusterInformerManager {
 	return &ClusterInformerManager{
-		clusters:    make(map[uint]*ClusterRuntime),
-		syncTimeout: 30 * time.Second,
+		clusters:       make(map[uint]*ClusterRuntime),
+		syncTimeout:    30 * time.Second,
+		discoveryCache: make(map[uint]discoveryEntry),
 	}
 }
 
@@ -122,8 +133,8 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	_ = factory.Apps().V1().DaemonSets().Informer()
 	_ = factory.Batch().V1().Jobs().Informer()
 
-	// Detect and setup Argo Rollouts typed informer if CRD exists
-	if gv, found := hasArgoRollouts(clientset); found {
+	// Detect and setup Argo Rollouts typed informer if CRD exists（結果快取 5 分鐘）
+	if gv, found := m.cachedHasArgoRollouts(cluster.ID, clientset); found {
 		cfg := kc.GetRestConfig()
 		if cfg != nil {
 			if roc, err := rolloutsclientset.NewForConfig(cfg); err != nil {
@@ -398,6 +409,24 @@ func (m *ClusterInformerManager) JobsLister(clusterID uint) batchv1listers.JobLi
 		return rt.factory.Batch().V1().Jobs().Lister()
 	}
 	return nil
+}
+
+// cachedHasArgoRollouts 帶 TTL 快取的 Argo Rollouts CRD 偵測。
+// 呼叫端必須已持有 m.mu 寫鎖（在 EnsureForCluster 內呼叫）。
+func (m *ClusterInformerManager) cachedHasArgoRollouts(clusterID uint, cs *kubernetes.Clientset) (schema.GroupVersion, bool) {
+	if entry, ok := m.discoveryCache[clusterID]; ok && time.Since(entry.at) < discoveryTTL {
+		return entry.gv, entry.found
+	}
+	gv, found := hasArgoRollouts(cs)
+	m.discoveryCache[clusterID] = discoveryEntry{gv: gv, found: found, at: time.Now()}
+	return gv, found
+}
+
+// InvalidateDiscoveryCache 清除指定叢集的 Discovery 快取（叢集更新時呼叫）
+func (m *ClusterInformerManager) InvalidateDiscoveryCache(clusterID uint) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.discoveryCache, clusterID)
 }
 
 // hasArgoRollouts 探測是否存在 argoproj.io 的 rollouts 資源，返回其 GroupVersion

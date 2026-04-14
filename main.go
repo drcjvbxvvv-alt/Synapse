@@ -136,6 +136,9 @@ func main() {
 		Addr:              fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,  // 防止慢速請求長期佔用連線
+		WriteTimeout:      120 * time.Second, // 須大於 AI Chat SSE 最長逾時（120s）
+		IdleTimeout:       120 * time.Second, // Keep-Alive 閒置連線最長存活時間
 	}
 
 	// 啟動伺服器

@@ -344,7 +344,7 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 		return nil, fmt.Errorf("LLM API 返回錯誤 (status=%d): %s", resp.StatusCode, string(respBody))
 	}
 
-	ch := make(chan ChatStreamEvent, 64)
+	ch := make(chan ChatStreamEvent, 512)
 
 	isAnthropic := p.isAnthropic()
 

@@ -194,6 +194,9 @@ func (h *AIChatHandler) Chat(c *gin.Context) {
 					logger.Error("工具執行失敗", "tool", tc.Function.Name, "error", execErr)
 				}
 
+				// 截斷超大工具結果，避免記憶體暴增與 LLM context 超限
+				result = truncateToolResult(result)
+
 				// Sanitize tool results before sending to AI to prevent leaking secrets
 				sanitizedResult := services.SanitizeK8sContext(result)
 
@@ -248,6 +251,28 @@ Rules:
 3. Format responses in Markdown; use tables for lists of resources
 4. If a tool returns an error, explain the cause clearly to the user
 5. Always reply in the same language the user writes in (Traditional Chinese if they write in Chinese, English if they write in English)`, name, version)
+}
+
+// truncateToolResult 限制工具回傳結果大小，防止大型 Log 暴增記憶體或超出 LLM context。
+// 保留前 500 行 + 後 100 行，並插入截斷提示。超過 512KB 的結果同樣截斷。
+func truncateToolResult(result string) string {
+	const maxBytes = 512 * 1024 // 512 KB
+	const headLines = 500
+	const tailLines = 100
+
+	if len(result) <= maxBytes {
+		lines := strings.Split(result, "\n")
+		if len(lines) <= headLines+tailLines {
+			return result
+		}
+		head := strings.Join(lines[:headLines], "\n")
+		tail := strings.Join(lines[len(lines)-tailLines:], "\n")
+		omitted := len(lines) - headLines - tailLines
+		return fmt.Sprintf("%s\n\n[... %d lines omitted for context limit ...]\n\n%s", head, omitted, tail)
+	}
+
+	// 位元組層級截斷（非文字結果如 JSON blob）
+	return result[:maxBytes] + fmt.Sprintf("\n\n[... truncated, total %d bytes ...]", len(result))
 }
 
 func escapeJSON(s string) string {
