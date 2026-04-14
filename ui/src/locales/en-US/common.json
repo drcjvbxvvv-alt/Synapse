@@ -56,7 +56,8 @@
     "certificates": "Certificate Management",
     "slos": "SLO Management",
     "chaos": "Chaos Engineering",
-    "compliance": "Compliance Management"
+    "compliance": "Compliance Management",
+    "language": "Language"
   },
   "actions": {
     "create": "Create",

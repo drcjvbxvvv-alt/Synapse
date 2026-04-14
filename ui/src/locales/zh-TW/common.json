@@ -57,7 +57,8 @@
     "certificates": "憑證管理",
     "slos": "SLO 管理",
     "chaos": "混沌工程",
-    "compliance": "合規管理"
+    "compliance": "合規管理",
+    "language": "語言"
   },
   "actions": {
     "create": "建立",

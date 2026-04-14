@@ -62,7 +62,7 @@ const AppHeader: React.FC = () => {
     {
       key: 'language',
       icon: <GlobalOutlined />,
-      label: t('common:menu.language', '語言'),
+      label: t('common:menu.language'),
       children: supportedLanguages.map(lang => ({
         key: lang.code,
         label: lang.name,

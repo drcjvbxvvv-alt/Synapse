@@ -56,7 +56,8 @@
     "certificates": "证书管理",
     "slos": "SLO 管理",
     "chaos": "混沌工程",
-    "compliance": "合规管理"
+    "compliance": "合规管理",
+    "language": "语言"
   },
   "actions": {
     "create": "创建",
