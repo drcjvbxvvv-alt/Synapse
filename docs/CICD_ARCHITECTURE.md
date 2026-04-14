@@ -2013,7 +2013,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | ✅ P3-5 | AI 根因分析按鈕 + context 組裝 | M13b W8 | **Opus** | PipelineRCAService + BuildContext/Analyze + 失敗 Step log/Job/Pod 收集 + 9 測試 |
 | ✅ P3-6 | Prometheus Metrics 註冊（§16） | M13b W8 | **Opus** | 9 指標（4 counter + 3 histogram + 2 gauge）+ convenience helpers + 7 測試 |
 | ✅ P3-7 | Pipeline YAML Schema（附錄 A） | 跨 Milestone | **Opus** | JSON Schema v1 + 結構驗證 + DAG 環偵測 + embed + 19 測試 |
-| P3-8 | Trivy 雙軌遷移 Phase 3–4 | Post-M13 | **Sonnet** | 可延後，現有 host exec 仍可用 |
+| P3-8 | Trivy 雙軌遷移 Phase 2–4 | Post-M13 | **Opus** | ✅完成 — TrivyJobScanner (K8s Job), TrivyService 遷移, DB Cache PVC + CronJob |
 
 #### 跨 Milestone 常駐任務
 

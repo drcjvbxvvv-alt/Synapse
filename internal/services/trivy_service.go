@@ -8,18 +8,32 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/pkg/logger"
 )
 
 // TrivyService handles async Trivy image scanning.
+// Phase 3（§14.3）: supports both legacy host exec and K8s Job modes.
 type TrivyService struct {
-	db *gorm.DB
+	db         *gorm.DB
+	jobScanner *TrivyJobScanner // nil = K8s Job mode unavailable
 }
 
+// NewTrivyService creates a TrivyService (legacy host exec mode only).
 func NewTrivyService(db *gorm.DB) *TrivyService {
 	return &TrivyService{db: db}
+}
+
+// NewTrivyServiceWithJobScanner creates a TrivyService with K8s Job support (Phase 3).
+func NewTrivyServiceWithJobScanner(db *gorm.DB, jobScanner *TrivyJobScanner) *TrivyService {
+	return &TrivyService{db: db, jobScanner: jobScanner}
+}
+
+// HasJobScanner returns true if the K8s Job scanner is available.
+func (s *TrivyService) HasJobScanner() bool {
+	return s.jobScanner != nil
 }
 
 // trivyVulnerability represents a single CVE entry in Trivy JSON output.
@@ -60,7 +74,31 @@ type ScanResult struct {
 	ScannedAt     *time.Time `json:"scanned_at"`
 }
 
+// TriggerJobScan creates a Trivy scan via K8s Job (Phase 3, §14.3).
+// Falls back to host exec if jobScanner is not configured.
+func (s *TrivyService) TriggerJobScan(
+	ctx context.Context,
+	clientset kubernetes.Interface,
+	clusterID uint,
+	namespace, podName, containerName, image string,
+) (*models.ImageScanResult, error) {
+	if s.jobScanner == nil {
+		return nil, fmt.Errorf("K8s Job scanner not configured, use TriggerScan for host exec mode")
+	}
+
+	cfg := TrivyJobConfig{
+		Image:         image,
+		ClusterID:     clusterID,
+		Namespace:     namespace,
+		PodName:       podName,
+		ContainerName: containerName,
+		ScanSource:    TrivyScanSourceJob,
+	}
+	return s.jobScanner.TriggerJobScan(ctx, clientset, cfg)
+}
+
 // TriggerScan creates a pending record and kicks off an async goroutine.
+// Deprecated: Legacy host exec mode — use TriggerJobScan for K8s Job mode (Phase 3).
 func (s *TrivyService) TriggerScan(clusterID uint, namespace, podName, containerName, image string) (*models.ImageScanResult, error) {
 	// Deduplicate: if a pending/scanning record exists for same image+cluster, return it
 	var existing models.ImageScanResult
