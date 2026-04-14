@@ -896,8 +896,36 @@ internal/
 - Pipeline 修改後，歷史 Run 仍能看到當時的 steps 定義
 - PipelineSecret 加密儲存，Log 內不出現明文
 - Run 結束 1 小時後 K8s Job 已被清理
-- 跨叢集執行：Pipeline 目標為遠端匯入的叢集時，Job 建立在該叢集並正確監聽
+- 跨叢集執行：Pipeline 目標為遠端匯入的叢集時，Job 建立在該叢集並正確監聯
 - 所有 Pipeline 寫入動作出現在操作稽核
+
+### 8.6 P0 地基層審計紀錄（2026-04-14）
+
+P0 全 8 項（P0-1 ~ P0-8）+ P1-1、P1-3 實作完成後，對全部原始碼進行交叉審計，
+發現並修復以下缺陷。所有修復已通過完整 `go test ./internal/...` 驗證。
+
+#### 8.6.1 已修復缺陷
+
+| # | 嚴重度 | 檔案 | 問題 | 影響 | 修復方式 |
+|---|--------|------|------|------|----------|
+| 1 | **Critical** | `pipeline_service.go` CreateVersion | `Scan(&maxVersion)` 未檢查 error | DB 查詢失敗時 maxVersion=0，導致版本號碰撞（version=1 重複建立） | 加上 `.Error` 檢查，失敗時回傳 error |
+| 2 | **Critical** | `pipeline_scheduler.go` getPipelineMaxConcurrent | DB 查詢缺少 `WithContext(ctx)` | 查詢不帶 context，無法正確傳播 timeout/cancellation，長時間阻塞可能拖慢 scheduler tick | 新增 ctx 參數，透過 `canSchedule(ctx, ...)` 傳入 |
+| 3 | **High** | `pipeline_job_watcher.go` syncStepRunStatus | log 中 `old_status` 是覆寫後的 newStatus | 狀態變更日誌無法正確追蹤「從哪個狀態轉移」，影響除錯與稽核 | 覆寫前先暫存 `oldStatus := sr.Status` |
+| 4 | **High** | `pipeline_recover.go` finalizeOrphanedRun | `Count(&failedCount)` 未檢查 error | DB 查詢失敗時 failedCount=0，孤兒 Run 誤判為 success | 加上 error check，查詢失敗時保守標記為 failed |
+| 5 | **High** | `pipeline_log_service.go` ScrubSecrets | `secretPattern` regex 定義後從未啟用 | Log Scrubber 無法偵測 `password=xxx`、`token=xxx` 等常見洩漏模式，僅靠直接值比對 | 在直接替換後加上 `secretPattern.ReplaceAllString()` |
+| 6 | **Medium** | `pipeline_handler.go` GetVersion | 先 `parseIntQuery` 讀 query string，再 `parseUintParam` 讀 path param，邏輯衝突 | `GET /versions/:version` 的 version 永遠從 query string 讀取而非 path，路由無法正常匹配 | 直接使用 `parseUintParam(c, "version")` |
+| 7 | **Medium** | `pipeline_secret_handler.go` ListSecrets | 解析 path param `clusterID` 後丟棄（`_ = ref`），scope_ref 從 query string 讀取但入口條件錯誤 | `?scope=pipeline&scope_ref=5` 查詢可能在沒有 clusterID path param 時失效 | 直接從 `c.Query("scope_ref")` 讀取，移除無用的 clusterID 解析 |
+| 8 | **Low** | `pipeline_webhook_handler.go` nonceCache | cleanup goroutine `for range ticker.C` 無法停止 | 長期運行時 goroutine 洩漏（每次建立新 handler 時累積一個永久 goroutine） | 加 `stopCh` channel，改為 `select` 迴圈 |
+
+#### 8.6.2 審計確認：非缺陷項目
+
+| 項目 | 審計結論 | 說明 |
+|------|----------|------|
+| `008_pipeline.up.sql:62` snapshot_id FK 無 ON DELETE CASCADE | **正確設計** | Pipeline Version 是 immutable 快照，刪除版本不應級聯刪除歷史 Run 記錄 |
+| `executeRunAsync` 使用 `context.Background()` | **正確設計** | 背景 goroutine 不應繫結 HTTP request context（CLAUDE.md §5 明確規範） |
+| `tick()` 10s timeout vs `executeRunAsync` 2h timeout | **正確設計** | 兩者是獨立 context；tick 只負責排程決策，executeRunAsync 用自己的 2h timeout |
+| `concurrencyCounts` 在 tick loop 中無鎖 | **正確設計** | counts 是 tick() 內的區域變數，單一 goroutine 順序操作，不存在併發競爭 |
+| `stepRuns` map 在 executeRunAsync 中 | **正確設計** | map 是函數內區域變數，僅由單一 goroutine 讀寫，waitForStep 是同步等待 |
 
 ---
 
