@@ -1,15 +1,5 @@
 import React from 'react';
-import {
-  Card,
-  Button,
-  Spin,
-  Space,
-  Typography,
-  theme,
-  Flex,
-  Divider,
-  Tag,
-} from 'antd';
+import { Button, Spin, Typography, theme, Flex } from 'antd';
 import EmptyState from '@/components/EmptyState';
 import {
   SyncOutlined,
@@ -25,6 +15,7 @@ import {
 import type { TFunction } from 'i18next';
 import type { ControlPlaneStatusResponse, ControlPlaneComponent } from '../../../services/omService';
 import { formatBytes, formatTime } from './omUtils';
+import css from '../om.module.css';
 
 const { Text } = Typography;
 
@@ -35,24 +26,32 @@ interface ControlPlaneCardProps {
   t: TFunction;
 }
 
-const getComponentIcon = (type: string, color: string) => {
-  const style = { fontSize: 18, color };
+const COMPONENT_COLORS: Record<string, { bg: string; color: string }> = {
+  apiserver:            { bg: 'rgba(139,92,246,0.1)',  color: '#7c3aed' },
+  scheduler:            { bg: 'rgba(245,158,11,0.1)',  color: '#d97706' },
+  'controller-manager': { bg: 'rgba(34,197,94,0.1)',   color: '#16a34a' },
+  etcd:                 { bg: 'rgba(59,130,246,0.1)',  color: '#2563eb' },
+};
+
+const getComponentIcon = (type: string) => {
   switch (type) {
-    case 'apiserver': return <ApiOutlined style={style} />;
-    case 'scheduler': return <ClusterOutlined style={style} />;
-    case 'controller-manager': return <AppstoreOutlined style={style} />;
-    case 'etcd': return <DatabaseOutlined style={style} />;
-    default: return <CloudServerOutlined style={style} />;
+    case 'apiserver':            return <ApiOutlined />;
+    case 'scheduler':            return <ClusterOutlined />;
+    case 'controller-manager':   return <AppstoreOutlined />;
+    case 'etcd':                 return <DatabaseOutlined />;
+    default:                     return <CloudServerOutlined />;
   }
 };
 
-const OverallBadge: React.FC<{ status: string; t: TFunction }> = ({ status, t }) => {
-  const { token } = theme.useToken();
+const STATUS_INDICATOR: React.FC<{ status: string; t: TFunction }> = ({ status, t }) => {
   if (status === 'healthy') {
     return (
       <Flex align="center" gap={6}>
-        <CheckCircleFilled style={{ color: token.colorSuccess }} />
-        <Text style={{ color: token.colorSuccess, fontWeight: 600 }}>
+        <span
+          className={css.pulseDot}
+          style={{ width: 8, height: 8, background: '#22c55e', color: '#22c55e', flexShrink: 0 }}
+        />
+        <Text style={{ fontSize: 12, fontWeight: 500, color: '#16a34a' }}>
           {t('om:controlPlane.statusHealthy')}
         </Text>
       </Flex>
@@ -61,8 +60,8 @@ const OverallBadge: React.FC<{ status: string; t: TFunction }> = ({ status, t })
   if (status === 'unhealthy') {
     return (
       <Flex align="center" gap={6}>
-        <CloseCircleFilled style={{ color: token.colorError }} />
-        <Text style={{ color: token.colorError, fontWeight: 600 }}>
+        <CloseCircleFilled style={{ color: '#ef4444', fontSize: 12 }} />
+        <Text style={{ fontSize: 12, fontWeight: 500, color: '#ef4444' }}>
           {t('om:controlPlane.statusUnhealthy')}
         </Text>
       </Flex>
@@ -70,225 +69,174 @@ const OverallBadge: React.FC<{ status: string; t: TFunction }> = ({ status, t })
   }
   return (
     <Flex align="center" gap={6}>
-      <QuestionCircleFilled style={{ color: token.colorTextTertiary }} />
-      <Text type="secondary">{t('om:controlPlane.statusUnknown')}</Text>
+      <QuestionCircleFilled style={{ color: '#bbb', fontSize: 12 }} />
+      <Text style={{ fontSize: 12, color: '#aaa' }}>
+        {t('om:controlPlane.statusUnknown')}
+      </Text>
     </Flex>
   );
 };
 
-const ComponentRow: React.FC<{ component: ControlPlaneComponent; t: TFunction; isLast: boolean }> = ({
-  component,
-  t,
-  isLast,
+const ComponentRow: React.FC<{ component: ControlPlaneComponent; t: TFunction }> = ({
+  component, t,
 }) => {
   const { token } = theme.useToken();
-
-  const statusColor =
-    component.status === 'healthy'
-      ? token.colorSuccess
-      : component.status === 'unhealthy'
-      ? token.colorError
-      : token.colorTextTertiary;
-
-  const StatusIcon =
-    component.status === 'healthy'
-      ? CheckCircleFilled
-      : component.status === 'unhealthy'
-      ? CloseCircleFilled
-      : QuestionCircleFilled;
+  const colorCfg = COMPONENT_COLORS[component.type] ?? { bg: 'rgba(0,0,0,0.06)', color: '#666' };
 
   return (
-    <>
-      <div style={{ padding: `${token.paddingSM}px 0` }}>
-        <Flex align="flex-start" gap={token.marginMD}>
-          {/* Icon */}
-          <div
-            style={{
-              flexShrink: 0,
-              width: 36,
-              height: 36,
-              borderRadius: token.borderRadius,
-              background: token.colorFillAlter,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {getComponentIcon(component.type, statusColor)}
-          </div>
-
-          {/* Body */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <Flex justify="space-between" align="center" style={{ marginBottom: 2 }}>
-              <Text strong style={{ fontSize: token.fontSizeSM }}>
-                {component.name}
-              </Text>
-              <Flex align="center" gap={4}>
-                <StatusIcon style={{ fontSize: 13, color: statusColor }} />
-                <Text style={{ fontSize: token.fontSizeSM, color: statusColor }}>
-                  {component.status === 'healthy'
-                    ? t('om:controlPlane.statusHealthy')
-                    : component.status === 'unhealthy'
-                    ? t('om:controlPlane.statusUnhealthy')
-                    : t('om:controlPlane.statusUnknown')}
-                </Text>
-              </Flex>
-            </Flex>
-
-            {component.message && (
-              <Text
-                type="secondary"
-                style={{ fontSize: token.fontSizeSM, display: 'block', marginBottom: 4 }}
-              >
-                {component.message}
-              </Text>
-            )}
-
-            {/* Metrics */}
-            {component.metrics && (
-              <Flex gap={token.marginMD} wrap="wrap">
-                {component.metrics.request_rate !== undefined && (
-                  <Flex align="center" gap={4}>
-                    <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                      {t('om:controlPlane.requestRate')}:
-                    </Text>
-                    <Text style={{ fontSize: token.fontSizeSM }}>
-                      {component.metrics.request_rate}/s
-                    </Text>
-                  </Flex>
-                )}
-                {component.metrics.error_rate !== undefined && (
-                  <Flex align="center" gap={4}>
-                    <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                      {t('om:controlPlane.errorRate')}:
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: token.fontSizeSM,
-                        color:
-                          component.metrics.error_rate > 1
-                            ? token.colorError
-                            : token.colorSuccess,
-                      }}
-                    >
-                      {component.metrics.error_rate}%
-                    </Text>
-                  </Flex>
-                )}
-                {component.metrics.leader_status !== undefined && (
-                  <Flex align="center" gap={4}>
-                    <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                      Leader:
-                    </Text>
-                    {component.metrics.leader_status ? (
-                      <CheckCircleFilled
-                        style={{ fontSize: token.fontSizeSM, color: token.colorSuccess }}
-                      />
-                    ) : (
-                      <CloseCircleFilled
-                        style={{ fontSize: token.fontSizeSM, color: token.colorError }}
-                      />
-                    )}
-                  </Flex>
-                )}
-                {component.metrics.db_size !== undefined && (
-                  <Flex align="center" gap={4}>
-                    <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                      {t('om:controlPlane.dbSize')}:
-                    </Text>
-                    <Text style={{ fontSize: token.fontSizeSM }}>
-                      {formatBytes(component.metrics.db_size)}
-                    </Text>
-                  </Flex>
-                )}
-                {component.metrics.queue_length !== undefined && (
-                  <Flex align="center" gap={4}>
-                    <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                      {t('om:controlPlane.queueLength')}:
-                    </Text>
-                    <Text style={{ fontSize: token.fontSizeSM }}>
-                      {component.metrics.queue_length}
-                    </Text>
-                  </Flex>
-                )}
-              </Flex>
-            )}
-
-            {component.instances && component.instances.length > 0 && (
-              <Tag style={{ marginTop: 4, fontSize: token.fontSizeSM - 1 }}>
-                {component.instances.length} {t('om:controlPlane.instanceCount')}
-              </Tag>
-            )}
-          </div>
-        </Flex>
+    <div
+      className={css.componentRow}
+      style={{ background: '#f7f8fa' }}
+    >
+      {/* icon box */}
+      <div
+        style={{
+          width: 38, height: 38, borderRadius: 8, flexShrink: 0, marginRight: 14,
+          background: colorCfg.bg, color: colorCfg.color,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16,
+        }}
+      >
+        {getComponentIcon(component.type)}
       </div>
-      {!isLast && <Divider style={{ margin: 0 }} />}
-    </>
+
+      {/* name + desc */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 13, fontWeight: 500, color: '#1a1a1a',
+            marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}
+        >
+          {component.name}
+        </div>
+        <Text style={{ fontSize: 11, color: '#bbb' }}>{component.message || t('om:controlPlane.statusHealthy')}</Text>
+
+        {/* metrics inline */}
+        {component.metrics && (
+          <Flex gap={12} wrap="wrap" style={{ marginTop: 4 }}>
+            {component.metrics.request_rate !== undefined && (
+              <Text style={{ fontSize: 11, color: token.colorTextTertiary }}>
+                {component.metrics.request_rate}/s
+              </Text>
+            )}
+            {component.metrics.error_rate !== undefined && (
+              <Text style={{
+                fontSize: 11,
+                color: component.metrics.error_rate > 1 ? '#ef4444' : '#22c55e',
+              }}>
+                err {component.metrics.error_rate}%
+              </Text>
+            )}
+            {component.metrics.db_size !== undefined && (
+              <Text style={{ fontSize: 11, color: token.colorTextTertiary }}>
+                {formatBytes(component.metrics.db_size)}
+              </Text>
+            )}
+          </Flex>
+        )}
+      </div>
+
+      {/* right — instance badge + status */}
+      <Flex align="center" gap={12} style={{ flexShrink: 0 }}>
+        {component.instances && component.instances.length > 0 && (
+          <span style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 11, padding: '3px 9px',
+            borderRadius: 5, background: '#fff',
+            border: '1px solid rgba(0,0,0,0.08)',
+            color: '#888',
+          }}>
+            {component.instances.length} {t('om:controlPlane.instanceCount')}
+          </span>
+        )}
+        <STATUS_INDICATOR status={component.status} t={t} />
+      </Flex>
+    </div>
   );
 };
 
 const ControlPlaneCard: React.FC<ControlPlaneCardProps> = ({
-  controlPlaneStatus,
-  controlPlaneLoading,
-  onRefresh,
-  t,
+  controlPlaneStatus, controlPlaneLoading, onRefresh, t,
 }) => {
-  const { token } = theme.useToken();
-
   if (controlPlaneLoading) {
     return (
-      <Card variant="borderless" title={t('om:controlPlane.title')}>
-        <Flex justify="center" style={{ padding: token.paddingXL }}>
+      <div style={cardStyle}>
+        <Flex justify="center" style={{ padding: 48 }}>
           <Spin size="large" />
         </Flex>
-      </Card>
+      </div>
     );
   }
 
   if (!controlPlaneStatus) {
     return (
-      <Card variant="borderless" title={t('om:controlPlane.title')}>
+      <div style={cardStyle}>
         <EmptyState description={t('common:messages.noData')} />
-      </Card>
+      </div>
     );
   }
 
+  const overall = controlPlaneStatus.overall;
+
   return (
-    <Card
-      variant="borderless"
-      title={
-        <Flex align="center" gap={token.marginSM}>
-          <CloudServerOutlined />
-          <span>{t('om:controlPlane.title')}</span>
+    <div style={cardStyle} className={css.fadeUpDelay2}>
+      {/* header */}
+      <Flex justify="space-between" align="center" style={{ marginBottom: 20 }}>
+        <Flex align="center" gap={8}>
+          <CloudServerOutlined style={{ fontSize: 16, color: '#666' }} />
+          <Text strong style={{ fontSize: 15 }}>{t('om:controlPlane.title')}</Text>
         </Flex>
-      }
-      extra={
-        <Space>
-          <OverallBadge status={controlPlaneStatus.overall} t={t} />
+        <Flex align="center" gap={14}>
+          {overall === 'healthy' ? (
+            <Flex align="center" gap={6}>
+              <span
+                className={css.pulseDot}
+                style={{ width: 8, height: 8, background: '#22c55e', color: '#22c55e' }}
+              />
+              <CheckCircleFilled style={{ color: '#22c55e', fontSize: 13 }} />
+              <Text style={{ fontSize: 13, fontWeight: 500, color: '#16a34a' }}>
+                {t('om:controlPlane.statusHealthy')}
+              </Text>
+            </Flex>
+          ) : (
+            <Flex align="center" gap={6}>
+              <CloseCircleFilled style={{ color: '#ef4444', fontSize: 13 }} />
+              <Text style={{ fontSize: 13, fontWeight: 500, color: '#ef4444' }}>
+                {t('om:controlPlane.statusUnhealthy')}
+              </Text>
+            </Flex>
+          )}
           <Button size="small" icon={<SyncOutlined />} onClick={onRefresh}>
             {t('common:actions.refresh')}
           </Button>
-        </Space>
-      }
-    >
-      <div>
-        {controlPlaneStatus.components.map((component, index) => (
-          <ComponentRow
-            key={component.name}
-            component={component}
-            t={t}
-            isLast={index === controlPlaneStatus.components.length - 1}
-          />
+        </Flex>
+      </Flex>
+
+      {/* component list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {controlPlaneStatus.components.map((component) => (
+          <ComponentRow key={component.name} component={component} t={t} />
         ))}
       </div>
 
-      <div style={{ marginTop: token.marginMD, textAlign: 'right' }}>
-        <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+      <div style={{ marginTop: 14, textAlign: 'right' }}>
+        <Text style={{ fontSize: 11, color: '#bbb' }}>
           {t('om:controlPlane.checkTime')}: {formatTime(controlPlaneStatus.check_time)}
         </Text>
       </div>
-    </Card>
+    </div>
   );
+};
+
+const cardStyle: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 16,
+  padding: 24,
+  border: '1px solid rgba(0,0,0,0.06)',
+  boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
+  height: '100%',
 };
 
 export default ControlPlaneCard;

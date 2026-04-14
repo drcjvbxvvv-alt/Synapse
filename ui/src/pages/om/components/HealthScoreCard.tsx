@@ -1,39 +1,26 @@
-import EmptyState from '@/components/EmptyState';
-import React from 'react';
-import {
-  Card,
-  Row,
-  Col,
-  Progress,
-  Tag,
-  Button,
-  Spin,
-  Space,
-  Typography,
-  Collapse,
-  theme,
-  Flex,
-  Divider,
-} from 'antd';
+import React, { useId } from 'react';
+import { Button, Spin, Tag, Typography, theme, Flex, Collapse } from 'antd';
 import {
   SyncOutlined,
   WarningOutlined,
   CloseCircleOutlined,
   InfoCircleOutlined,
-  ThunderboltOutlined,
   HddOutlined,
   CloudServerOutlined,
   NodeIndexOutlined,
   AppstoreOutlined,
   DashboardOutlined,
-  CheckCircleFilled,
-  ExclamationCircleFilled,
   CloseCircleFilled,
+  ExclamationCircleFilled,
+  CheckCircleFilled,
   BulbOutlined,
+  WifiOutlined,
 } from '@ant-design/icons';
 import type { TFunction } from 'i18next';
 import type { HealthDiagnosisResponse, RiskItem } from '../../../services/omService';
 import { formatTime, getHealthColor } from './omUtils';
+import EmptyState from '@/components/EmptyState';
+import css from '../om.module.css';
 
 const { Text, Paragraph } = Typography;
 
@@ -44,55 +31,51 @@ interface HealthScoreCardProps {
   t: TFunction;
 }
 
-const getSeverityConfig = (severity: string, t: TFunction) => {
-  switch (severity) {
-    case 'critical':
-      return {
-        icon: <CloseCircleFilled />,
-        color: 'error' as const,
-        label: t('om:health.severityCritical'),
-      };
-    case 'warning':
-      return {
-        icon: <ExclamationCircleFilled />,
-        color: 'warning' as const,
-        label: t('om:health.severityWarning'),
-      };
-    default:
-      return {
-        icon: <InfoCircleOutlined />,
-        color: 'processing' as const,
-        label: t('om:health.severityInfo'),
-      };
-  }
+/* ── category config ───────────────────────────────────────────────────── */
+const CATEGORY_CONFIG: Record<
+  string,
+  { icon: React.ReactNode; color: 'green' | 'blue' | 'purple' | 'amber' }
+> = {
+  control_plane: { icon: <CloudServerOutlined />, color: 'green' },
+  node:          { icon: <NodeIndexOutlined />,   color: 'blue' },
+  resource:      { icon: <DashboardOutlined />,   color: 'purple' },
+  storage:       { icon: <HddOutlined />,         color: 'amber' },
+  workload:      { icon: <AppstoreOutlined />,    color: 'green' },
+  network:       { icon: <WifiOutlined />,        color: 'blue' },
 };
 
-const getCategoryIcon = (category: string) => {
-  switch (category) {
-    case 'node': return <NodeIndexOutlined />;
-    case 'workload': return <AppstoreOutlined />;
-    case 'resource': return <DashboardOutlined />;
-    case 'storage': return <HddOutlined />;
-    case 'control_plane': return <CloudServerOutlined />;
-    default: return <InfoCircleOutlined />;
-  }
+const COLOR_MAP = {
+  green:  { bg: 'rgba(34,197,94,0.08)',   text: '#16a34a', bar: 'linear-gradient(90deg,#22c55e,#4ade80)' },
+  blue:   { bg: 'rgba(59,130,246,0.08)',  text: '#2563eb', bar: 'linear-gradient(90deg,#3b82f6,#60a5fa)' },
+  purple: { bg: 'rgba(139,92,246,0.08)', text: '#7c3aed', bar: 'linear-gradient(90deg,#8b5cf6,#a78bfa)' },
+  amber:  { bg: 'rgba(245,158,11,0.08)', text: '#d97706', bar: 'linear-gradient(90deg,#f59e0b,#fbbf24)' },
 };
 
 const getCategoryName = (category: string, t: TFunction): string => {
   const names: Record<string, string> = {
-    node: t('om:health.categoryNode'),
-    workload: t('om:health.categoryWorkload'),
-    resource: t('om:health.categoryResource'),
-    storage: t('om:health.categoryStorage'),
+    node:          t('om:health.categoryNode'),
+    workload:      t('om:health.categoryWorkload'),
+    resource:      t('om:health.categoryResource'),
+    storage:       t('om:health.categoryStorage'),
     control_plane: t('om:health.categoryControlPlane'),
-    network: t('om:health.categoryNetwork'),
+    network:       t('om:health.categoryNetwork'),
   };
   return names[category] || category;
 };
 
-const ScoreRing: React.FC<{ score: number; status: string; t: TFunction }> = ({ score, status, t }) => {
-  const { token } = theme.useToken();
-  const color = getHealthColor(status);
+/* ── SVG ring ──────────────────────────────────────────────────────────── */
+const HealthRing: React.FC<{ score: number; status: string; t: TFunction }> = ({
+  score, status, t,
+}) => {
+  const gradId = useId().replace(/:/g, '');
+  const R = 70;
+  const CIRC = 2 * Math.PI * R; // ≈ 439.8
+  const offset = CIRC * (1 - score / 100);
+
+  const statusColor =
+    status === 'healthy' ? '#22c55e' : status === 'warning' ? '#f59e0b' : '#ef4444';
+  const gradEnd =
+    status === 'healthy' ? '#4ade80' : status === 'warning' ? '#fbbf24' : '#f87171';
 
   const statusLabel =
     status === 'healthy'
@@ -110,197 +93,160 @@ const ScoreRing: React.FC<{ score: number; status: string; t: TFunction }> = ({ 
 
   return (
     <div style={{ textAlign: 'center' }}>
-      <Progress
-        type="circle"
-        percent={score}
-        strokeColor={color}
-        trailColor={token.colorFillSecondary}
-        strokeWidth={8}
-        size={160}
-        format={(percent) => (
-          <div>
-            <div
-              style={{
-                fontSize: 38,
-                fontWeight: 700,
-                lineHeight: 1,
-                color,
-              }}
-            >
-              {percent}
-            </div>
-            <div
-              style={{
-                fontSize: token.fontSizeSM,
-                color: token.colorTextTertiary,
-                marginTop: token.marginXS,
-              }}
-            >
-              {t('om:health.healthScore')}
-            </div>
+      <div style={{ position: 'relative', width: 160, height: 160, margin: '0 auto 16px' }}>
+        <svg
+          width="160"
+          height="160"
+          viewBox="0 0 160 160"
+          style={{ transform: 'rotate(-90deg)' }}
+        >
+          <defs>
+            <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={statusColor} />
+              <stop offset="100%" stopColor={gradEnd} />
+            </linearGradient>
+          </defs>
+          {/* track */}
+          <circle
+            cx="80" cy="80" r={R}
+            fill="none"
+            stroke="rgba(0,0,0,0.06)"
+            strokeWidth="10"
+          />
+          {/* progress */}
+          <circle
+            cx="80" cy="80" r={R}
+            className={css.ringProgress}
+            stroke={`url(#${gradId})`}
+            strokeWidth="10"
+            strokeDasharray={CIRC}
+            style={
+              {
+                '--ring-full': CIRC,
+                '--ring-offset': offset,
+                filter: `drop-shadow(0 2px 6px ${statusColor}66)`,
+              } as React.CSSProperties
+            }
+          />
+        </svg>
+        {/* centre label */}
+        <div
+          style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)', textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 40, fontWeight: 600,
+              lineHeight: 1, color: statusColor,
+            }}
+          >
+            {score}
           </div>
-        )}
-      />
-      <Flex
-        justify="center"
-        align="center"
-        gap={6}
-        style={{ marginTop: token.marginMD }}
-      >
-        <StatusIcon style={{ color, fontSize: token.fontSizeLG }} />
-        <Text style={{ color, fontWeight: 600 }}>{statusLabel}</Text>
-      </Flex>
-    </div>
-  );
-};
+          <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+            {t('om:health.healthScore')}
+          </div>
+        </div>
+      </div>
 
-const CategoryScores: React.FC<{
-  categoryScores: Record<string, number>;
-  t: TFunction;
-}> = ({ categoryScores, t }) => {
-  const { token } = theme.useToken();
-
-  return (
-    <div>
-      <Text
-        strong
-        style={{ display: 'block', marginBottom: token.marginMD, fontSize: token.fontSizeLG }}
-      >
-        {t('om:health.categoryScores')}
-      </Text>
-      <Row gutter={[token.marginSM, token.marginMD]}>
-        {Object.entries(categoryScores).map(([category, score]) => {
-          const color =
-            score >= 80
-              ? token.colorSuccess
-              : score >= 60
-              ? token.colorWarning
-              : token.colorError;
-          return (
-            <Col xs={12} key={category}>
-              <div
-                style={{
-                  padding: `${token.paddingSM}px ${token.padding}px`,
-                  background: token.colorFillAlter,
-                  borderRadius: token.borderRadius,
-                  borderLeft: `3px solid ${color}`,
-                }}
-              >
-                <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
-                  <Flex align="center" gap={6}>
-                    <span style={{ color: token.colorTextSecondary }}>
-                      {getCategoryIcon(category)}
-                    </span>
-                    <Text style={{ fontSize: token.fontSizeSM }}>
-                      {getCategoryName(category, t)}
-                    </Text>
-                  </Flex>
-                  <Text strong style={{ color, fontSize: token.fontSizeSM }}>
-                    {score}
-                  </Text>
-                </Flex>
-                <Progress
-                  percent={score}
-                  showInfo={false}
-                  strokeColor={color}
-                  trailColor={token.colorFillSecondary}
-                  size={['100%', 4]}
-                />
-              </div>
-            </Col>
-          );
-        })}
-      </Row>
-    </div>
-  );
-};
-
-const SuggestionList: React.FC<{ suggestions: string[]; t: TFunction }> = ({
-  suggestions,
-  t,
-}) => {
-  const { token } = theme.useToken();
-
-  if (suggestions.length === 0) {
-    return (
-      <Flex
-        align="center"
-        gap={token.marginSM}
+      {/* status pill */}
+      <div
         style={{
-          padding: token.padding,
-          background: token.colorSuccessBg,
-          borderRadius: token.borderRadius,
-          border: `1px solid ${token.colorSuccessBorder}`,
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          padding: '6px 16px',
+          background: status === 'healthy' ? '#dcfce7' : status === 'warning' ? '#fef3c7' : '#fee2e2',
+          borderRadius: 20,
+          color: statusColor,
+          fontSize: 13, fontWeight: 500,
         }}
       >
-        <CheckCircleFilled style={{ color: token.colorSuccess }} />
-        <Text style={{ color: token.colorSuccess }}>{t('om:health.noSuggestions')}</Text>
-      </Flex>
-    );
-  }
-
-  return (
-    <div>
-      <Text
-        strong
-        style={{ display: 'block', marginBottom: token.marginMD, fontSize: token.fontSizeLG }}
-      >
-        <BulbOutlined style={{ marginRight: token.marginXS, color: token.colorWarning }} />
-        {t('om:health.suggestions')}
-      </Text>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: token.marginSM }}>
-        {suggestions.map((item, index) => (
-          <Flex key={index} gap={token.marginSM} align="flex-start">
-            <div
-              style={{
-                flexShrink: 0,
-                width: 22,
-                height: 22,
-                borderRadius: '50%',
-                background: token.colorPrimaryBg,
-                border: `1px solid ${token.colorPrimaryBorder}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: token.fontSizeSM,
-                color: token.colorPrimary,
-                fontWeight: 600,
-                lineHeight: 1,
-              }}
-            >
-              {index + 1}
-            </div>
-            <Text style={{ fontSize: token.fontSizeSM, lineHeight: '22px' }}>{item}</Text>
-          </Flex>
-        ))}
+        <span
+          className={css.pulseDot}
+          style={{ width: 8, height: 8, background: statusColor, color: statusColor, flexShrink: 0 }}
+        />
+        <StatusIcon style={{ fontSize: 13 }} />
+        {statusLabel}
       </div>
     </div>
   );
 };
 
+/* ── Metric card (category score) ──────────────────────────────────────── */
+const MetricCard: React.FC<{
+  category: string; score: number; highlight?: boolean; t: TFunction;
+}> = ({ category, score, highlight, t }) => {
+  const cfg = CATEGORY_CONFIG[category] ?? { icon: <InfoCircleOutlined />, color: 'blue' as const };
+  const colors = COLOR_MAP[cfg.color];
+
+  return (
+    <div
+      className={css.metricCard}
+      style={{ background: highlight ? `${colors.bg}` : '#f7f8fa' }}
+    >
+      <Flex align="center" gap={10} style={{ marginBottom: 10 }}>
+        <div
+          style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: colors.bg, color: colors.text,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 15, flexShrink: 0,
+          }}
+        >
+          {cfg.icon}
+        </div>
+        <span style={{ fontSize: 13, color: '#666' }}>{getCategoryName(category, t)}</span>
+      </Flex>
+      <div
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 26, fontWeight: 600,
+          color: '#1a1a1a', marginBottom: 8,
+        }}
+      >
+        {score}
+      </div>
+      <div style={{ height: 4, background: 'rgba(0,0,0,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+        <div
+          className={css.metricFill}
+          style={{ width: `${score}%`, background: colors.bar }}
+        />
+      </div>
+    </div>
+  );
+};
+
+/* ── Risk item ─────────────────────────────────────────────────────────── */
+const getSeverityConfig = (severity: string, t: TFunction) => {
+  switch (severity) {
+    case 'critical': return { icon: <CloseCircleOutlined />, color: 'error' as const, label: t('om:health.severityCritical') };
+    case 'warning':  return { icon: <WarningOutlined />,     color: 'warning' as const, label: t('om:health.severityWarning') };
+    default:         return { icon: <InfoCircleOutlined />,  color: 'processing' as const, label: t('om:health.severityInfo') };
+  }
+};
+
+/* ── Main component ────────────────────────────────────────────────────── */
 const HealthScoreCard: React.FC<HealthScoreCardProps> = ({
-  healthDiagnosis,
-  healthLoading,
-  onRefresh,
-  t,
+  healthDiagnosis, healthLoading, onRefresh, t,
 }) => {
   const { token } = theme.useToken();
 
   if (healthLoading) {
     return (
-      <Card variant="borderless">
-        <Flex justify="center" style={{ padding: token.paddingXL }}>
+      <div style={cardStyle}>
+        <Flex justify="center" style={{ padding: 48 }}>
           <Spin size="large" />
         </Flex>
-      </Card>
+      </div>
     );
   }
 
   if (!healthDiagnosis) {
     return (
-      <Card variant="borderless">
+      <div style={cardStyle}>
         <EmptyState description={t('om:health.noDiagnosisData')} />
-      </Card>
+      </div>
     );
   }
 
@@ -308,182 +254,205 @@ const HealthScoreCard: React.FC<HealthScoreCardProps> = ({
     healthDiagnosis;
 
   const groupedRisks = risk_items.reduce(
-    (acc, item) => {
-      if (!acc[item.category]) acc[item.category] = [];
-      acc[item.category].push(item);
-      return acc;
-    },
+    (acc, item) => { (acc[item.category] ??= []).push(item); return acc; },
     {} as Record<string, RiskItem[]>,
   );
 
-  const criticalCount = risk_items.filter((r) => r.severity === 'critical').length;
-  const warningCount = risk_items.filter((r) => r.severity === 'warning').length;
+  const categoryOrder = ['control_plane', 'node', 'resource', 'storage', 'workload', 'network'];
+  const sortedCategories = [
+    ...categoryOrder.filter((c) => c in category_scores),
+    ...Object.keys(category_scores).filter((c) => !categoryOrder.includes(c)),
+  ];
 
   return (
-    <Card
-      variant="borderless"
-      title={
-        <Flex align="center" gap={token.marginSM}>
-          <ThunderboltOutlined style={{ color: getHealthColor(status) }} />
-          <span>{t('om:health.title')}</span>
-        </Flex>
-      }
-      extra={
-        <Flex align="center" gap={token.marginSM}>
-          <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+    <div style={cardStyle} className={css.fadeUp}>
+      {/* top accent line */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+        background: 'linear-gradient(90deg, #22c55e, #4ade80)',
+        borderRadius: '14px 14px 0 0',
+      }} />
+
+      {/* header */}
+      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
+        <Text strong style={{ fontSize: 15 }}>
+          {t('om:health.title')}
+        </Text>
+        <Flex align="center" gap={12}>
+          <Text style={{ fontSize: 12, color: '#999' }}>
             {t('om:health.diagnosisTime')}: {formatTime(diagnosis_time)}
           </Text>
           <Button size="small" icon={<SyncOutlined />} onClick={onRefresh}>
             {t('common:actions.refresh')}
           </Button>
         </Flex>
-      }
-    >
-      <Row gutter={[token.marginXL, token.marginLG]}>
-        {/* Score */}
-        <Col xs={24} md={6}>
-          <ScoreRing score={health_score} status={status} t={t} />
+      </Flex>
 
-          {/* Risk summary pills */}
-          {risk_items.length > 0 && (
-            <Flex justify="center" gap={token.marginSM} style={{ marginTop: token.marginLG }}>
-              {criticalCount > 0 && (
-                <Tag
-                  icon={<CloseCircleOutlined />}
-                  color="error"
-                  style={{ margin: 0 }}
-                >
-                  {criticalCount} {t('om:health.severityCritical')}
-                </Tag>
-              )}
-              {warningCount > 0 && (
-                <Tag
-                  icon={<WarningOutlined />}
-                  color="warning"
-                  style={{ margin: 0 }}
-                >
-                  {warningCount} {t('om:health.severityWarning')}
-                </Tag>
-              )}
-            </Flex>
-          )}
-        </Col>
+      {/* body: ring left, metrics right */}
+      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 24 }}>
+        {/* left — ring + suggestions */}
+        <div>
+          <HealthRing score={health_score} status={status} t={t} />
 
-        {/* Category scores */}
-        <Col xs={24} md={10}>
-          <CategoryScores categoryScores={category_scores} t={t} />
-        </Col>
-
-        {/* Suggestions */}
-        <Col xs={24} md={8}>
-          <SuggestionList suggestions={suggestions} t={t} />
-        </Col>
-      </Row>
-
-      {/* Risk items */}
-      {risk_items.length > 0 && (
-        <>
-          <Divider style={{ margin: `${token.marginLG}px 0 ${token.marginMD}px` }} />
-          <div>
-            <Text
-              strong
-              style={{ display: 'block', marginBottom: token.marginMD, fontSize: token.fontSizeLG }}
-            >
-              <WarningOutlined
-                style={{ marginRight: token.marginXS, color: token.colorWarning }}
-              />
-              {t('om:health.riskItems')} ({risk_items.length})
-            </Text>
-            <Collapse
-              size="small"
-              items={Object.entries(groupedRisks).map(([category, items]) => ({
-                key: category,
-                label: (
-                  <Flex align="center" gap={token.marginSM}>
-                    <span style={{ color: token.colorTextSecondary }}>
-                      {getCategoryIcon(category)}
-                    </span>
-                    <Text strong>{getCategoryName(category, t)}</Text>
-                    <Tag
-                      color={items.some((i) => i.severity === 'critical') ? 'error' : 'warning'}
-                      style={{ margin: 0 }}
-                    >
-                      {items.length}
-                    </Tag>
-                  </Flex>
-                ),
-                children: (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: token.marginSM }}>
-                    {items.map((item, i) => {
-                      const sev = getSeverityConfig(item.severity, t);
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            padding: token.padding,
-                            background: token.colorFillAlter,
-                            borderRadius: token.borderRadius,
-                            borderLeft: `3px solid ${
-                              item.severity === 'critical'
-                                ? token.colorError
-                                : item.severity === 'warning'
-                                ? token.colorWarning
-                                : token.colorInfo
-                            }`,
-                          }}
-                        >
-                          <Flex align="center" gap={token.marginSM} style={{ marginBottom: 6 }}>
-                            <Tag icon={sev.icon} color={sev.color} style={{ margin: 0 }}>
-                              {sev.label}
-                            </Tag>
-                            <Text strong style={{ fontSize: token.fontSizeSM }}>
-                              {item.title}
-                            </Text>
-                          </Flex>
-                          <Paragraph
-                            style={{
-                              margin: 0,
-                              fontSize: token.fontSizeSM,
-                              color: token.colorTextSecondary,
-                            }}
-                          >
-                            {item.description}
-                          </Paragraph>
-                          {(item.namespace || item.resource) && (
-                            <Flex gap={token.marginMD} style={{ marginTop: 6 }}>
-                              {item.namespace && (
-                                <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                                  {t('om:health.namespace')}: {item.namespace}
-                                </Text>
-                              )}
-                              {item.resource && (
-                                <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                                  {t('om:health.resource')}: {item.resource}
-                                </Text>
-                              )}
-                            </Flex>
-                          )}
-                          <div style={{ marginTop: 8 }}>
-                            <Text
-                              type="secondary"
-                              style={{ fontSize: token.fontSizeSM }}
-                            >
-                              {t('om:health.solution')}:{' '}
-                            </Text>
-                            <Text style={{ fontSize: token.fontSizeSM }}>{item.solution}</Text>
-                          </div>
-                        </div>
-                      );
-                    })}
+          {suggestions.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <Flex align="center" gap={6} style={{ marginBottom: 10 }}>
+                <BulbOutlined style={{ color: token.colorWarning, fontSize: 13 }} />
+                <Text strong style={{ fontSize: 13 }}>{t('om:health.suggestions')}</Text>
+              </Flex>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {suggestions.map((s, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      background: '#f0fdf4',
+                      border: '1px solid rgba(34,197,94,0.2)',
+                      borderRadius: 8, padding: '10px 12px',
+                      display: 'flex', gap: 10, alignItems: 'flex-start',
+                    }}
+                  >
+                    <div style={{
+                      flexShrink: 0, width: 20, height: 20, borderRadius: '50%',
+                      background: 'rgba(34,197,94,0.12)', color: '#16a34a',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 700, lineHeight: 1,
+                    }}>
+                      {i + 1}
+                    </div>
+                    <Text style={{ fontSize: 12, color: '#555', lineHeight: '20px' }}>{s}</Text>
                   </div>
-                ),
-              }))}
-            />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {suggestions.length === 0 && (
+            <div style={{
+              marginTop: 16, padding: '12px 14px',
+              background: '#f0fdf4', borderRadius: 10,
+              border: '1px solid rgba(34,197,94,0.2)',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <CheckCircleFilled style={{ color: '#22c55e' }} />
+              <Text style={{ fontSize: 13, color: '#16a34a' }}>{t('om:health.noSuggestions')}</Text>
+            </div>
+          )}
+        </div>
+
+        {/* right — category scores grid */}
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {sortedCategories.map((cat, i) => (
+              <MetricCard
+                key={cat}
+                category={cat}
+                score={category_scores[cat]}
+                highlight={i === 0}
+                t={t}
+              />
+            ))}
           </div>
-        </>
+        </div>
+      </div>
+
+      {/* risk items */}
+      {risk_items.length > 0 && (
+        <div style={{ marginTop: 24, borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 20 }}>
+          <Flex align="center" gap={8} style={{ marginBottom: 12 }}>
+            <WarningOutlined style={{ color: token.colorWarning }} />
+            <Text strong style={{ fontSize: 14 }}>
+              {t('om:health.riskItems')}
+              <span style={{ marginLeft: 6, fontSize: 12, color: '#999', fontWeight: 400 }}>
+                ({risk_items.length})
+              </span>
+            </Text>
+          </Flex>
+          <Collapse
+            size="small"
+            items={Object.entries(groupedRisks).map(([category, items]) => ({
+              key: category,
+              label: (
+                <Flex align="center" gap={8}>
+                  <span style={{ color: '#888', fontSize: 13 }}>
+                    {CATEGORY_CONFIG[category]?.icon ?? <InfoCircleOutlined />}
+                  </span>
+                  <Text style={{ fontSize: 13 }}>{getCategoryName(category, t)}</Text>
+                  <Tag
+                    color={items.some((i) => i.severity === 'critical') ? 'error' : 'warning'}
+                    style={{ margin: 0, fontSize: 11 }}
+                  >
+                    {items.length}
+                  </Tag>
+                </Flex>
+              ),
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {items.map((item, i) => {
+                    const sev = getSeverityConfig(item.severity, t);
+                    const borderColor =
+                      item.severity === 'critical' ? token.colorError
+                      : item.severity === 'warning' ? token.colorWarning
+                      : token.colorInfo;
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          padding: '12px 14px',
+                          background: '#fafafa',
+                          borderRadius: 8,
+                          borderLeft: `3px solid ${borderColor}`,
+                        }}
+                      >
+                        <Flex align="center" gap={8} style={{ marginBottom: 6 }}>
+                          <Tag icon={sev.icon} color={sev.color} style={{ margin: 0 }}>
+                            {sev.label}
+                          </Tag>
+                          <Text strong style={{ fontSize: 13 }}>{item.title}</Text>
+                        </Flex>
+                        <Paragraph style={{ margin: 0, fontSize: 12, color: '#666' }}>
+                          {item.description}
+                        </Paragraph>
+                        {(item.namespace || item.resource) && (
+                          <Flex gap={16} style={{ marginTop: 4 }}>
+                            {item.namespace && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {t('om:health.namespace')}: {item.namespace}
+                              </Text>
+                            )}
+                            {item.resource && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {t('om:health.resource')}: {item.resource}
+                              </Text>
+                            )}
+                          </Flex>
+                        )}
+                        <div style={{ marginTop: 8 }}>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {t('om:health.solution')}:{' '}
+                          </Text>
+                          <Text style={{ fontSize: 12 }}>{item.solution}</Text>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ),
+            }))}
+          />
+        </div>
       )}
-    </Card>
+    </div>
   );
+};
+
+const cardStyle: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 16,
+  padding: 24,
+  border: '1px solid rgba(0,0,0,0.06)',
+  boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
+  position: 'relative',
+  overflow: 'hidden',
 };
 
 export default HealthScoreCard;

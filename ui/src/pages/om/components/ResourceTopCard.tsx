@@ -1,21 +1,11 @@
-import React from 'react';
-import {
-  Card,
-  Table,
-  Button,
-  Select,
-  Space,
-  Progress,
-  Tooltip,
-  Typography,
-  theme,
-  Flex,
-} from 'antd';
+import React, { useState } from 'react';
+import { Button, Select, Typography, theme, Flex } from 'antd';
 import { SyncOutlined, BarChartOutlined } from '@ant-design/icons';
 import type { TFunction } from 'i18next';
 import type { ResourceTopResponse, ResourceTopItem } from '../../../services/omService';
 import EmptyState from '@/components/EmptyState';
 import { formatBytes, formatCPU, formatTime } from './omUtils';
+import css from '../om.module.css';
 
 const { Text } = Typography;
 
@@ -30,86 +20,23 @@ interface ResourceTopCardProps {
   t: TFunction;
 }
 
-const RankBadge: React.FC<{ rank: number }> = ({ rank }) => {
-  const { token } = theme.useToken();
-
-  if (rank === 1) {
-    return (
-      <div
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: '50%',
-          background: '#FFD700',
-          color: '#7a6000',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 12,
-          fontWeight: 700,
-          flexShrink: 0,
-        }}
-      >
-        {rank}
-      </div>
-    );
-  }
-  if (rank === 2) {
-    return (
-      <div
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: '50%',
-          background: '#C0C0C0',
-          color: '#555',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 12,
-          fontWeight: 700,
-          flexShrink: 0,
-        }}
-      >
-        {rank}
-      </div>
-    );
-  }
-  if (rank === 3) {
-    return (
-      <div
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: '50%',
-          background: '#CD7F32',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 12,
-          fontWeight: 700,
-          flexShrink: 0,
-        }}
-      >
-        {rank}
-      </div>
-    );
-  }
-  return (
-    <Text
-      type="secondary"
-      style={{
-        width: 24,
-        display: 'inline-block',
-        textAlign: 'center',
-        fontSize: token.fontSizeSM,
-      }}
-    >
-      {rank}
-    </Text>
-  );
+const RESOURCE_COLORS: Record<string, { from: string; to: string }> = {
+  cpu:     { from: '#22c55e', to: '#4ade80' },
+  memory:  { from: '#3b82f6', to: '#60a5fa' },
+  disk:    { from: '#f59e0b', to: '#fbbf24' },
+  network: { from: '#8b5cf6', to: '#a78bfa' },
 };
+
+function formatUsage(item: ResourceTopItem): string {
+  if (item.unit === 'bytes' || item.unit === 'bytes/s') return formatBytes(item.usage);
+  if (item.unit === 'cores') return formatCPU(item.usage);
+  return `${item.usage.toFixed(1)} ${item.unit}`;
+}
+
+function shortName(name: string, namespace?: string): string {
+  const full = namespace ? `${namespace}/${name}` : name;
+  return full.length > 22 ? full.slice(0, 20) + '…' : full;
+}
 
 const ResourceTopCard: React.FC<ResourceTopCardProps> = ({
   resourceTop,
@@ -122,109 +49,52 @@ const ResourceTopCard: React.FC<ResourceTopCardProps> = ({
   t,
 }) => {
   const { token } = theme.useToken();
+  const colors = RESOURCE_COLORS[resourceType];
 
-  const columns = [
-    {
-      title: t('om:resourceTop.rank'),
-      dataIndex: 'rank',
-      key: 'rank',
-      width: 56,
-      render: (rank: number) => <RankBadge rank={rank} />,
-    },
-    {
-      title: t('common:table.name'),
-      dataIndex: 'name',
-      key: 'name',
-      ellipsis: true,
-      render: (name: string, record: ResourceTopItem) => (
-        <Tooltip title={record.namespace ? `${record.namespace}/${name}` : name}>
-          <span>
-            {record.namespace && (
-              <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-                {record.namespace}/
-              </Text>
-            )}
-            <Text style={{ fontSize: token.fontSizeSM }}>{name}</Text>
-          </span>
-        </Tooltip>
-      ),
-    },
-    {
-      title: t('om:resourceTop.usage'),
-      dataIndex: 'usage',
-      key: 'usage',
-      width: 100,
-      render: (usage: number, record: ResourceTopItem) => {
-        let formatted: string;
-        if (record.unit === 'bytes' || record.unit === 'bytes/s') {
-          formatted = formatBytes(usage);
-        } else if (record.unit === 'cores') {
-          formatted = formatCPU(usage);
-        } else {
-          formatted = `${usage.toFixed(2)} ${record.unit}`;
-        }
-        return <Text style={{ fontSize: token.fontSizeSM }}>{formatted}</Text>;
-      },
-    },
-    {
-      title: t('om:resourceTop.usageRate'),
-      dataIndex: 'usage_rate',
-      key: 'usage_rate',
-      width: 130,
-      render: (rate: number) => {
-        const color =
-          rate > 80
-            ? token.colorError
-            : rate > 60
-            ? token.colorWarning
-            : token.colorSuccess;
-        return (
-          <Flex align="center" gap={token.marginXS}>
-            <Progress
-              percent={Math.min(rate, 100)}
-              showInfo={false}
-              strokeColor={color}
-              trailColor={token.colorFillSecondary}
-              size={['100%', 4]}
-              style={{ flex: 1 }}
-            />
-            <Text style={{ fontSize: token.fontSizeSM, color, flexShrink: 0, width: 40 }}>
-              {rate.toFixed(1)}%
-            </Text>
-          </Flex>
-        );
-      },
-    },
-  ];
+  const items: ResourceTopItem[] = resourceTop?.items ?? [];
+  const maxRate = Math.max(...items.map((i) => i.usage_rate), 1);
 
   return (
-    <Card
-      variant="borderless"
-      title={
-        <Flex align="center" gap={token.marginSM}>
-          <BarChartOutlined />
-          <span>{t('om:resourceTop.title')}</span>
+    <div style={cardStyle} className={css.fadeUpDelay1}>
+      {/* header */}
+      <Flex justify="space-between" align="center" style={{ marginBottom: 20 }}>
+        <Flex align="center" gap={8}>
+          <BarChartOutlined style={{ color: colors.from, fontSize: 16 }} />
+          <Text strong style={{ fontSize: 15 }}>{t('om:resourceTop.title')}</Text>
         </Flex>
-      }
-      extra={
-        <Space size={token.marginXS}>
-          <Select
-            value={resourceType}
-            onChange={setResourceType}
-            size="small"
-            style={{ width: 90 }}
-            options={[
-              { label: 'CPU', value: 'cpu' },
-              { label: t('om:resourceTop.memory'), value: 'memory' },
-              { label: t('om:resourceTop.disk'), value: 'disk' },
-              { label: t('om:resourceTop.network'), value: 'network' },
-            ]}
-          />
+        <Flex align="center" gap={8}>
+          {/* resource type tabs */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['cpu', 'memory', 'disk', 'network'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setResourceType(type)}
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 11, fontWeight: 500,
+                  padding: '5px 10px',
+                  borderRadius: 6,
+                  border: '1px solid',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  background: resourceType === type
+                    ? `rgba(${hexToRgb(RESOURCE_COLORS[type].from)},0.1)`
+                    : 'transparent',
+                  borderColor: resourceType === type
+                    ? `rgba(${hexToRgb(RESOURCE_COLORS[type].from)},0.35)`
+                    : 'rgba(0,0,0,0.1)',
+                  color: resourceType === type ? RESOURCE_COLORS[type].from : '#888',
+                }}
+              >
+                {type.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <Select
             value={resourceLevel}
             onChange={setResourceLevel}
             size="small"
-            style={{ width: 100 }}
+            style={{ width: 96 }}
             options={[
               { label: t('om:resourceTop.namespaceLevel'), value: 'namespace' },
               { label: t('om:resourceTop.workloadLevel'), value: 'workload' },
@@ -236,28 +106,101 @@ const ResourceTopCard: React.FC<ResourceTopCardProps> = ({
             icon={<SyncOutlined spin={resourceLoading} />}
             onClick={onRefresh}
           />
-        </Space>
-      }
-    >
-      <Table
-        scroll={{ x: 'max-content' }}
-        columns={columns}
-        dataSource={resourceTop?.items || []}
-        loading={resourceLoading}
-        rowKey="rank"
-        pagination={false}
-        size="small"
-        locale={{ emptyText: <EmptyState /> }}
-      />
+        </Flex>
+      </Flex>
+
+      {/* bar chart */}
+      {items.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div
+          style={{
+            height: 220,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: 8,
+            paddingTop: 24,
+            paddingBottom: 0,
+          }}
+        >
+          {items.slice(0, 10).map((item, idx) => {
+            const heightPct = (item.usage_rate / maxRate) * 100;
+            const delayMs = 80 + idx * 35;
+            return (
+              <div
+                key={idx}
+                title={`${shortName(item.name, item.namespace)}\n${formatUsage(item)} · ${item.usage_rate.toFixed(1)}%`}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: '100%',
+                  justifyContent: 'flex-end',
+                }}
+              >
+                {/* value label shown above bar */}
+                <Text
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10, color: '#999',
+                    opacity: heightPct > 30 ? 1 : 0,
+                  }}
+                >
+                  {item.usage_rate.toFixed(0)}%
+                </Text>
+                <div
+                  className={css.bar}
+                  style={{
+                    width: '100%',
+                    maxWidth: 40,
+                    height: `${Math.max(heightPct, 4)}%`,
+                    background: `linear-gradient(180deg, ${colors.from} 0%, ${colors.to} 100%)`,
+                    animationDelay: `${delayMs}ms`,
+                  }}
+                />
+                <Text
+                  style={{
+                    fontSize: 10, color: token.colorTextTertiary,
+                    textAlign: 'center', maxWidth: 48,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}
+                >
+                  {shortName(item.name)}
+                </Text>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {resourceTop && (
-        <div style={{ marginTop: token.marginSM, textAlign: 'right' }}>
-          <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+        <div style={{ marginTop: 14, textAlign: 'right' }}>
+          <Text style={{ fontSize: 11, color: '#bbb' }}>
             {t('om:resourceTop.queryTime')}: {formatTime(resourceTop.query_time)}
           </Text>
         </div>
       )}
-    </Card>
+    </div>
   );
+};
+
+function hexToRgb(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `${r},${g},${b}`;
+}
+
+const cardStyle: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 16,
+  padding: 24,
+  border: '1px solid rgba(0,0,0,0.06)',
+  boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
+  height: '100%',
 };
 
 export default ResourceTopCard;
