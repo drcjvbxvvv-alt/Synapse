@@ -34,4 +34,8 @@ type routeDeps struct {
 	syncPolicySvc    *services.SyncPolicyService
 	featureFlagSvc   *services.FeatureFlagService
 	featureDBStore   *features.DBStore
+
+	// Pipeline CI/CD subsystem (shared singletons)
+	pipelineScheduler *services.PipelineScheduler
+	pipelineSvc       *services.PipelineService
 }

@@ -326,6 +326,68 @@ func (s *PipelineService) GetStepRun(ctx context.Context, stepRunID uint) (*mode
 }
 
 // ---------------------------------------------------------------------------
+// Pipeline Run 查詢
+// ---------------------------------------------------------------------------
+
+// ListPipelineRunsParams 列出 Run 的查詢參數。
+type ListPipelineRunsParams struct {
+	PipelineID uint
+	Status     string // 篩選狀態（可選）
+	Page       int
+	PageSize   int
+}
+
+// ListPipelineRuns 列出 Pipeline 的執行記錄。
+func (s *PipelineService) ListPipelineRuns(ctx context.Context, params *ListPipelineRunsParams) ([]models.PipelineRun, int64, error) {
+	query := s.db.WithContext(ctx).Where("pipeline_id = ?", params.PipelineID)
+	if params.Status != "" {
+		query = query.Where("status = ?", params.Status)
+	}
+
+	var total int64
+	if err := query.Model(&models.PipelineRun{}).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count pipeline runs: %w", err)
+	}
+
+	var runs []models.PipelineRun
+	offset := (params.Page - 1) * params.PageSize
+	if err := query.Order("created_at DESC").
+		Offset(offset).Limit(params.PageSize).
+		Find(&runs).Error; err != nil {
+		return nil, 0, fmt.Errorf("list pipeline runs: %w", err)
+	}
+	return runs, total, nil
+}
+
+// GetPipelineRun 取得單一 Run 詳情。
+func (s *PipelineService) GetPipelineRun(ctx context.Context, runID uint) (*models.PipelineRun, error) {
+	var run models.PipelineRun
+	if err := s.db.WithContext(ctx).First(&run, runID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, &apierrors.AppError{
+				Code:       apierrors.CodePipelineNotFound,
+				HTTPStatus: 404,
+				Message:    fmt.Sprintf("pipeline run %d not found", runID),
+			}
+		}
+		return nil, fmt.Errorf("get pipeline run %d: %w", runID, err)
+	}
+	return &run, nil
+}
+
+// ListStepRuns 列出 Run 的所有 Step 記錄（按 step_index 升序）。
+func (s *PipelineService) ListStepRuns(ctx context.Context, runID uint) ([]models.StepRun, error) {
+	var steps []models.StepRun
+	if err := s.db.WithContext(ctx).
+		Where("pipeline_run_id = ?", runID).
+		Order("step_index ASC").
+		Find(&steps).Error; err != nil {
+		return nil, fmt.Errorf("list step runs for run %d: %w", runID, err)
+	}
+	return steps, nil
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

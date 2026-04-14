@@ -865,28 +865,34 @@ internal/router/
 
 所有叢集 scoped 路由自動掛載 `ClusterAccessRequired()` + `AutoWriteCheck()`。
 
-### 8.4 程式碼結構
+### 8.4 程式碼結構（實際）
 
 ```
 internal/
   handlers/
-    pipeline.go                 ← CRUD + Run handlers
-    pipeline_secret.go
-    pipeline_log.go             ← SSE + 歷史 log 查詢
+    pipeline_handler.go         ← Pipeline + Version CRUD
+    pipeline_run_handler.go     ← Run trigger / cancel / rerun / list / get
+    pipeline_secret_handler.go  ← Secret CRUD
+    pipeline_log_handler.go     ← SSE + 歷史 log 查詢
+    pipeline_webhook_handler.go ← Webhook 觸發（HMAC + nonce + timestamp）
   services/
-    pipeline_service.go         ← 業務邏輯
-    pipeline_executor.go        ← Scheduler + JobBuilder
-    pipeline_watcher.go         ← JobWatcher（搭配 ClusterInformerManager）
-    pipeline_secret_service.go
-    pipeline_log_service.go
+    pipeline_service.go         ← 業務邏輯（Pipeline/Version/Run/Step CRUD）
+    pipeline_scheduler.go       ← Scheduler loop + 並發控制 + DAG 執行
+    pipeline_job_builder.go     ← JobBuilder（K8s Job spec + Secret 注入）
+    pipeline_job_watcher.go     ← JobWatcher（Job 狀態同步 + log 收集）
+    pipeline_secret_service.go  ← Secret CRUD + AES-256-GCM 加密
+    pipeline_log_service.go     ← Log 雙層儲存 + Scrubber
+    pipeline_step_types.go      ← Step 類型 registry + validation + command gen
+    pipeline_gc_worker.go       ← GC Worker（孤兒 Job + Run 90d + Log 30d）
+    pipeline_recover.go         ← 啟動時孤兒 Run 恢復
   models/
     pipeline.go                 ← Pipeline / PipelineVersion / PipelineRun / StepRun
     pipeline_secret.go
     pipeline_artifact.go
     pipeline_log.go
-  workers/
-    pipeline_gc_worker.go       ← 清理 K8s Job + Workspace PVC
-    pipeline_log_retain.go      ← 走現有 LogRetentionWorker 擴充
+  router/
+    routes_cluster_pipeline.go  ← Pipeline + Run + Secret + Log 路由
+    routes_webhook.go           ← 公開 Webhook 端點（HMAC 驗證）
 ```
 
 ### 8.5 完成指標
@@ -1823,15 +1829,15 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 - [ ] 跨叢集執行路徑（ClusterInformerManager 整合）
 
 **Week 3：JobWatcher 與 Log**
-- [ ] JobWatcher（訂閱 Informer Job 事件）
-- [ ] Log 雙層儲存（SSE + pipeline_logs）
-- [ ] Log Scrubber（過濾 secret 值）
-- [ ] GC Worker（K8s Job + Workspace PVC）
+- [x] JobWatcher（訂閱 Informer Job 事件）
+- [x] Log 雙層儲存（SSE + pipeline_logs）
+- [x] Log Scrubber（過濾 secret 值）
+- [x] GC Worker（K8s Job + Workspace PVC + Run/Log retention）
 
 **Week 4：基本 Steps 與 API**
-- [ ] Step 類型：`build-image`（Kaniko）、`deploy`（kubectl apply）、`run-script`
-- [ ] Pipeline CRUD API + 手動觸發 API
-- [ ] Cancel / Rerun API
+- [x] Step 類型：`build-image`（Kaniko）、`deploy`（kubectl apply）、`run-script`
+- [x] Pipeline CRUD API + 手動觸發 API
+- [x] Cancel / Rerun API
 - [ ] OperationAudit 整合
 - [ ] M13a E2E 測試：手動觸發一條 build + deploy Pipeline 成功
 
@@ -1950,9 +1956,9 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | 優先序 | 任務 | 所屬 | 模型 | 風險說明 |
 |-------|------|------|------|---------|
 | ✅ P1-1 | Pipeline CRUD handler + service | M13a W4 | **Sonnet** | 有 CLAUDE.md §13 範本可循 |
-| P1-2 | 基本 Step 類型（build-image / deploy / run-script） | M13a W4 | **Sonnet** | Opus 出第一個範本後 Sonnet 複製 |
+| ✅ P1-2 | 基本 Step 類型（build-image / deploy / run-script） + Pipeline Run API | M13a W4 | **Opus** | Step type registry + validation + command gen + Run handler |
 | ✅ P1-3 | Log 雙層儲存（SSE + pipeline_logs）+ Log Scrubber | M13a W3 | **Sonnet**（儲存）/ **Opus**（Scrubber） | Scrubber 漏洩 = Secret 外洩 |
-| P1-4 | GC Worker（K8s Job + PVC + Log retention） | M13a W3 | **Sonnet** | 依 §7.12 策略實作 |
+| ✅ P1-4 | GC Worker（K8s Job + PVC + Log retention） | M13a W3 | **Opus** | 依 §7.12 策略實作：孤兒 Job 清理 + Run 90d + Log 30d |
 | P1-5 | Rollout 狀態機（deploy-rollout / rollout-status） | M13c | **Opus** | 灰度操作錯誤 = 生產事故 |
 | P1-6 | GitOps Diff 引擎 + Drift Detection | M16 | **Opus** | production drift 或反向 overwrite |
 | P1-7 | Promotion 狀態機 + Policy 引擎 | M17 | **Opus** | 跳關、反向 promote |

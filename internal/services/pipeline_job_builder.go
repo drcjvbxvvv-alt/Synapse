@@ -107,8 +107,12 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 	runAsNonRoot := true
 	var runAsUser, runAsGroup, fsGroup int64 = 1000, 1000, 1000
 	readOnlyRootFS := true
-	if cfg.ReadOnlyRootFS != nil && !*cfg.ReadOnlyRootFS {
-		readOnlyRootFS = false // Kaniko 例外
+	// Kaniko (build-image) 需要寫入 root filesystem → 自動設為 false
+	if input.StepRun.StepType == "build-image" {
+		readOnlyRootFS = false
+	}
+	if cfg.ReadOnlyRootFS != nil {
+		readOnlyRootFS = *cfg.ReadOnlyRootFS // 使用者明確設定覆蓋預設
 	}
 	allowPrivilegeEscalation := false
 
@@ -134,10 +138,18 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 		})
 	}
 
-	// Command
-	var command []string
-	if input.StepRun.Command != "" {
-		command = []string{"/bin/sh", "-c", input.StepRun.Command}
+	// Command：使用 Step 類型特定邏輯產生
+	stepDef := &StepDef{
+		Name:    input.StepRun.StepName,
+		Type:    input.StepRun.StepType,
+		Image:   input.StepRun.Image,
+		Command: input.StepRun.Command,
+		Config:  input.StepRun.ConfigJSON,
+	}
+	command, generatedArgs := GenerateCommand(stepDef)
+	// 合併：GenerateCommand 產生的 args + StepConfig 的 args
+	if len(generatedArgs) > 0 {
+		cfg.Args = append(generatedArgs, cfg.Args...)
 	}
 
 	// Resource limits

@@ -294,6 +294,21 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	// features.IsEnabled() reflects admin-managed flags at runtime.
 	features.SetStore(featureDBStore)
 
+	// ── Pipeline CI/CD subsystem (shared singletons) ─────────────────────
+	pipelineSvc := services.NewPipelineService(db)
+	pipelineSecretSvc := services.NewPipelineSecretService(db)
+	pipelineLogSvc := services.NewPipelineLogService(db)
+	pipelineJobBuilder := services.NewJobBuilder()
+	pipelineWatcherCfg := services.DefaultJobWatcherConfig()
+	pipelineWatcher := services.NewJobWatcher(db, k8sMgr, pipelineWatcherCfg)
+	pipelineWatcher.SetLogService(pipelineLogSvc)
+	pipelineScheduler := services.NewPipelineScheduler(
+		db, pipelineJobBuilder, pipelineSecretSvc, k8sMgr,
+		pipelineWatcher, services.DefaultSchedulerConfig(),
+	)
+	_ = pipelineSecretSvc // used by webhook routes below
+	_ = pipelineLogSvc    // used by pipeline routes below
+
 	deps := routeDeps{
 		db:               db,
 		cfg:              cfg,
@@ -317,6 +332,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		syncPolicySvc:    services.NewSyncPolicyService(db),
 		featureFlagSvc:   featureFlagSvc,
 		featureDBStore:   featureDBStore,
+		pipelineScheduler: pipelineScheduler,
+		pipelineSvc:       pipelineSvc,
 	}
 
 	// ── Webhook routes (public, HMAC-authenticated) ───────────────────────

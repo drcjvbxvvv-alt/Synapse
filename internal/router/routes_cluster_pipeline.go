@@ -7,15 +7,15 @@ import (
 	"github.com/shaia/Synapse/internal/services"
 )
 
-// registerClusterPipelineRoutes registers Pipeline + Secret + Log routes under /:clusterID.
+// registerClusterPipelineRoutes registers Pipeline + Run + Secret + Log routes under /:clusterID.
 func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
-	pipelineSvc := services.NewPipelineService(d.db)
 	secretSvc := services.NewPipelineSecretService(d.db)
 	logSvc := services.NewPipelineLogService(d.db)
 
-	pipelineHandler := handlers.NewPipelineHandler(pipelineSvc)
+	pipelineHandler := handlers.NewPipelineHandler(d.pipelineSvc)
 	secretHandler := handlers.NewPipelineSecretHandler(secretSvc)
-	logHandler := handlers.NewPipelineLogHandler(logSvc, pipelineSvc)
+	logHandler := handlers.NewPipelineLogHandler(logSvc, d.pipelineSvc)
+	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, d.pipelineScheduler)
 
 	// ── Pipelines ──────────────────────────────────────────────────────
 	pipelines := cluster.Group("/pipelines")
@@ -37,11 +37,21 @@ func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 				versions.GET("/:version", pipelineHandler.GetVersion)
 			}
 
-			// Runs → Step Logs
-			// GET /clusters/:clusterID/pipelines/:pipelineID/runs/:runID/steps/:stepRunID/logs?follow=true|false
+			// Runs
 			runs := pipeline.Group("/runs")
 			{
-				runs.GET("/:runID/steps/:stepRunID/logs", logHandler.GetStepLogs)
+				runs.GET("", runHandler.ListRuns)
+				runs.POST("", runHandler.TriggerRun)
+
+				run := runs.Group("/:runID")
+				{
+					run.GET("", runHandler.GetRun)
+					run.POST("/cancel", runHandler.CancelRun)
+					run.POST("/rerun", runHandler.RerunPipeline)
+
+					// Step Logs
+					run.GET("/steps/:stepRunID/logs", logHandler.GetStepLogs)
+				}
 			}
 		}
 	}

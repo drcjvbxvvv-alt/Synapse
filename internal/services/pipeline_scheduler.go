@@ -447,6 +447,16 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		return
 	}
 
+	// 驗證 Step 定義 + 解析預設 Image
+	for i := range steps {
+		if err := ValidateStepDef(&steps[i]); err != nil {
+			s.failRun(ctx, run, fmt.Sprintf("validate step: %v", err))
+			return
+		}
+		// 解析預設 image（使用者未指定時用 registry 預設值）
+		steps[i].Image = ResolveImage(&steps[i])
+	}
+
 	// 拓撲排序
 	sorted, err := topoSortSteps(steps)
 	if err != nil {
