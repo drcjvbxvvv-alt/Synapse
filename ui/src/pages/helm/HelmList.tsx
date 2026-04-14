@@ -42,6 +42,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import helmService from '../../services/helmService';
+import { getNamespaces } from '../../services/namespaceService';
 import { usePermission } from '../../hooks/usePermission';
 import type {
   HelmRelease,
@@ -93,6 +94,7 @@ const HelmList: React.FC = () => {
   const [repos, setRepos] = useState<HelmRepo[]>([]);
   const [charts, setCharts] = useState<ChartInfo[]>([]);
   const [chartKeyword, setChartKeyword] = useState('');
+  const [clusterNamespaces, setClusterNamespaces] = useState<string[]>([]);
   const [installForm] = Form.useForm<InstallReleaseRequest>();
 
   // Upgrade modal
@@ -166,6 +168,12 @@ const HelmList: React.FC = () => {
     setChartKeyword('');
     installForm.resetFields();
     setInstallVisible(true);
+    // 非阻塞，背景載入 namespace 清單
+    if (clusterId) {
+      getNamespaces(Number(clusterId))
+        .then((items) => setClusterNamespaces(items.map((n) => n.name)))
+        .catch(() => { /* 失敗時讓使用者手動輸入 */ });
+    }
   };
 
   const handleSearchCharts = async (keyword: string) => {
@@ -538,7 +546,15 @@ const HelmList: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item name="namespace" label={t('namespace')} rules={[{ required: true }]}>
-            <Input />
+            <Select
+              showSearch
+              allowClear
+              placeholder={t('selectNamespace')}
+              options={clusterNamespaces.map((n) => ({ label: n, value: n }))}
+              filterOption={(input, option) =>
+                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+            />
           </Form.Item>
           <Form.Item name="repo_name" label={t('repoName')} rules={[{ required: true }]}>
             <Select placeholder={t('selectRepo')} options={repos.map((r) => ({ label: r.name, value: r.name }))} />
