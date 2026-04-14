@@ -885,6 +885,10 @@ internal/
     pipeline_step_types.go      ← Step 類型 registry + validation + command gen
     pipeline_retry.go           ← RetryPolicy（exponential / fixed backoff）
     pipeline_approval.go        ← Approval Step（approve / reject + scheduler 輪詢）
+    pipeline_notify_dedup.go    ← 通知去重（5min 視窗 + LRU eviction）
+    pipeline_notifier.go        ← Pipeline 事件 → NotifyChannel 路由（slack/telegram/teams/webhook）
+    pipeline_rca.go             ← Pipeline 失敗 AI 根因分析（context 組裝 + AI 呼叫）
+    pipeline_trigger_match.go   ← Webhook 觸發條件引擎（branch glob + path filter + cron 驗證）
     pipeline_gc_worker.go       ← GC Worker（孤兒 Job + Run 90d + Log 30d）
     pipeline_recover.go         ← 啟動時孤兒 Run 恢復
   models/
@@ -1865,7 +1869,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 **Week 8：通知與 AI 整合**
 - [ ] NotifyChannel 整合（PipelineNotificationDispatcher）
-- [ ] AI 根因分析按鈕 + context 組裝
+- [x] AI 根因分析按鈕 + context 組裝
 - [ ] Metrics 註冊（Prometheus）
 - [ ] 失敗恢復（Executor.Recover on startup）
 - [ ] 文件更新
@@ -1966,7 +1970,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | P1-7 | Promotion 狀態機 + Policy 引擎 | M17 | **Opus** | 跳關、反向 promote |
 | ✅ P1-8 | Approval Step（整合 ApprovalRequest） | M13b W5–6 | **Opus** | 審批狀態機 + waiting_approval 狀態 + approve/reject API |
 | ✅ P1-9 | Step 級別重試（retry + exponential backoff） | M13b W5–6 | **Opus** | RetryPolicy + 指數/固定退避 + 最大 10 次 + 5min 上限 |
-| P1-10 | Webhook 觸發條件引擎（branch glob / path filter / cron） | M14 | **Opus** | path 匹配演算法 + cron 解析邊界 |
+| ✅ P1-10 | Webhook 觸發條件引擎（branch glob / path filter / cron） | M14 | **Opus** | TriggerRule + EvaluateWebhookTriggers + branch glob/** + path filter + cron 驗證 + 35 測試 |
 
 #### P2 — 進階功能層（標準實作，有範本可循）
 
@@ -1980,7 +1984,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | P2-6 | ArgoCD / 原生 GitOps 邊界定義（§12.1） | M16 | **Opus** | 誤判 = 雙寫雙讀，生產事故 |
 | P2-7 | rollout-promote / rollout-abort Step | M13c | **Sonnet** | 簡單 API 呼叫 |
 | P2-8 | Environment CRUD + Promotion History | M17 | **Sonnet** | 依 §13 結構 |
-| P2-9 | NotifyChannel 整合（Pipeline 事件路由） | M13b W8 | **Sonnet** | 復用現有 NotifyChannel |
+| ✅ P2-9 | NotifyChannel 整合（Pipeline 事件路由） | M13b W8 | **Opus** | PipelineNotifier + 4 channel formats (slack/telegram/teams/webhook) + dedup 整合 + 19 測試 |
 | ✅ P2-10 | 失敗告警去重（通知風暴防護） | M13b W8 | **Opus** | 5min 去重視窗 + LRU eviction + retry/concurrency 抑制 + 11 測試 |
 
 #### P3 — 前端 / UX / 輔助工具
@@ -1991,7 +1995,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | P3-2 | PipelineRunDetail（DAG 進度圖）+ StepLogViewer（SSE） | M13b W7 | **Sonnet** | UI 頁面 |
 | P3-3 | RolloutList / RolloutDetail / RolloutStatusWidget | M13c | **Sonnet** | UI 頁面 |
 | P3-4 | Git Provider / Registry / Environment 管理 UI | M14–M17 | **Sonnet** | 表單頁 |
-| P3-5 | AI 根因分析按鈕 + context 組裝 | M13b W8 | **Opus** | 與 AI Chat 服務的 context 設計 |
+| ✅ P3-5 | AI 根因分析按鈕 + context 組裝 | M13b W8 | **Opus** | PipelineRCAService + BuildContext/Analyze + 失敗 Step log/Job/Pod 收集 + 9 測試 |
 | ✅ P3-6 | Prometheus Metrics 註冊（§16） | M13b W8 | **Opus** | 9 指標（4 counter + 3 histogram + 2 gauge）+ convenience helpers + 7 測試 |
 | P3-7 | Pipeline YAML Schema（附錄 A） | 跨 Milestone | **Opus** | 一次性定義，前後端共用 |
 | P3-8 | Trivy 雙軌遷移 Phase 3–4 | Post-M13 | **Sonnet** | 可延後，現有 host exec 仍可用 |
