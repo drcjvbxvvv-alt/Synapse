@@ -319,6 +319,9 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		featureDBStore:   featureDBStore,
 	}
 
+	// ── Webhook routes (public, HMAC-authenticated) ───────────────────────
+	registerWebhookRoutes(api, &deps)
+
 	protected := api.Group("")
 	protected.Use(middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc))
 	protected.Use(middleware.APIRateLimit("api", 300)) // 300 req/min per user (P0-2)

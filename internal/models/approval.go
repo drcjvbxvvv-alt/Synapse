@@ -33,4 +33,9 @@ type ApprovalRequest struct {
 	Reason        string     // 審批人填寫的理由
 	ExpiresAt     time.Time
 	ApprovedAt    *time.Time
+
+	// Pipeline CI/CD 關聯（部署審批 Gate）
+	PipelineRunID   *uint  `json:"pipeline_run_id" gorm:"index"`
+	FromEnvironment string `json:"from_environment" gorm:"size:100"` // 來源環境（如 staging）
+	ToEnvironment   string `json:"to_environment" gorm:"size:100"`   // 目標環境（如 production）
 }

@@ -21,6 +21,11 @@ type ImageScanResult struct {
 	ScannedAt   *time.Time `json:"scanned_at"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+
+	// Pipeline CI/CD 關聯（由 trivy-scan Step 回寫）
+	ScanSource    string `json:"scan_source" gorm:"size:20;default:'manual'"` // manual / pipeline
+	PipelineRunID *uint  `json:"pipeline_run_id" gorm:"index"`
+	StepRunID     *uint  `json:"step_run_id"`
 }
 
 // BenchResult stores results of a CIS kube-bench security benchmark run.

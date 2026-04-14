@@ -61,6 +61,13 @@ const (
 	CodeClusterNotFound      = "CLUSTER_NOT_FOUND"
 	CodeClusterDuplicateName = "CLUSTER_DUPLICATE_NAME"
 
+	// Pipeline
+	CodePipelineNotFound      = "PIPELINE_NOT_FOUND"
+	CodePipelineDuplicateName = "PIPELINE_DUPLICATE_NAME"
+	CodePipelineVersionNotFound = "PIPELINE_VERSION_NOT_FOUND"
+	CodePipelineSecretNotFound      = "PIPELINE_SECRET_NOT_FOUND"
+	CodePipelineSecretDuplicateName = "PIPELINE_SECRET_DUPLICATE_NAME"
+
 	// Generic
 	CodeBadRequest         = "BAD_REQUEST"
 	CodeUnauthorized       = "UNAUTHORIZED"
@@ -163,6 +170,28 @@ func ErrClusterNotFound() *AppError {
 
 func ErrClusterDuplicateName() *AppError {
 	return &AppError{Code: CodeClusterDuplicateName, HTTPStatus: http.StatusConflict, Message: "叢集名稱已存在"}
+}
+
+// Pipeline errors
+
+func ErrPipelineNotFound() *AppError {
+	return &AppError{Code: CodePipelineNotFound, HTTPStatus: http.StatusNotFound, Message: "Pipeline 不存在"}
+}
+
+func ErrPipelineDuplicateName() *AppError {
+	return &AppError{Code: CodePipelineDuplicateName, HTTPStatus: http.StatusConflict, Message: "Pipeline 名稱已存在"}
+}
+
+func ErrPipelineVersionNotFound() *AppError {
+	return &AppError{Code: CodePipelineVersionNotFound, HTTPStatus: http.StatusNotFound, Message: "Pipeline 版本不存在"}
+}
+
+func ErrPipelineSecretNotFound() *AppError {
+	return &AppError{Code: CodePipelineSecretNotFound, HTTPStatus: http.StatusNotFound, Message: "Pipeline Secret 不存在"}
+}
+
+func ErrPipelineSecretDuplicateName() *AppError {
+	return &AppError{Code: CodePipelineSecretDuplicateName, HTTPStatus: http.StatusConflict, Message: "Pipeline Secret 名稱已存在"}
 }
 
 // Generic errors
