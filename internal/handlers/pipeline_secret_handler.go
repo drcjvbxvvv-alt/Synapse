@@ -96,9 +96,8 @@ func (h *PipelineSecretHandler) GetSecret(c *gin.Context) {
 func (h *PipelineSecretHandler) ListSecrets(c *gin.Context) {
 	scope := c.Query("scope")
 	var scopeRef *uint
-	if ref, err := parseUintParam(c, "clusterID"); err == nil && c.Query("scope_ref") != "" {
-		_ = ref
-		if v, err2 := parseClusterID(c.Query("scope_ref")); err2 == nil {
+	if scopeRefStr := c.Query("scope_ref"); scopeRefStr != "" {
+		if v, err := parseClusterID(scopeRefStr); err == nil {
 			scopeRef = &v
 		}
 	}

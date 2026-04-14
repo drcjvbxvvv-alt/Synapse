@@ -235,11 +235,13 @@ func (s *PipelineService) CreateVersion(ctx context.Context, pipelineID uint, re
 
 	// 取得下一個版本號
 	var maxVersion int
-	s.db.WithContext(ctx).
+	if err := s.db.WithContext(ctx).
 		Model(&models.PipelineVersion{}).
 		Where("pipeline_id = ?", pipelineID).
 		Select("COALESCE(MAX(version), 0)").
-		Scan(&maxVersion)
+		Scan(&maxVersion).Error; err != nil {
+		return nil, fmt.Errorf("query max version for pipeline %d: %w", pipelineID, err)
+	}
 
 	version := &models.PipelineVersion{
 		PipelineID:    pipelineID,

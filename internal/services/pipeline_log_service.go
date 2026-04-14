@@ -131,7 +131,7 @@ var secretPattern = regexp.MustCompile(
 )
 
 // ScrubSecrets 將 content 中出現的 secret 值替換為 ***REDACTED***。
-// 同時遮蔽常見 secret 模式。
+// 同時遮蔽常見 secret 模式（password=xxx, token=xxx 等）。
 func ScrubSecrets(content string, secrets []string) string {
 	result := content
 	for _, secret := range secrets {
@@ -140,5 +140,7 @@ func ScrubSecrets(content string, secrets []string) string {
 		}
 		result = strings.ReplaceAll(result, secret, "***REDACTED***")
 	}
+	// 模式比對：遮蔽 password=xxx, token=xxx 等常見格式
+	result = secretPattern.ReplaceAllString(result, "***REDACTED***")
 	return result
 }

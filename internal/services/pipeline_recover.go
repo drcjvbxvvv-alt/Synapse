@@ -208,9 +208,14 @@ func (r *PipelineRecover) expireStaleQueuedRuns(ctx context.Context) error {
 func (r *PipelineRecover) finalizeOrphanedRun(ctx context.Context, run *models.PipelineRun) {
 	// 檢查是否有任何 Step 失敗
 	var failedCount int64
-	r.db.WithContext(ctx).Model(&models.StepRun{}).
+	if err := r.db.WithContext(ctx).Model(&models.StepRun{}).
 		Where("pipeline_run_id = ? AND status = ?", run.ID, models.StepRunStatusFailed).
-		Count(&failedCount)
+		Count(&failedCount).Error; err != nil {
+		logger.Error("failed to count failed steps for orphaned run",
+			"run_id", run.ID, "error", err)
+		// 保守策略：查詢失敗時標記為 failed
+		failedCount = 1
+	}
 
 	now := time.Now()
 	run.FinishedAt = &now

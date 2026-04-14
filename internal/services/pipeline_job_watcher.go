@@ -254,6 +254,7 @@ func (w *JobWatcher) syncStepRunStatus(sr *models.StepRun, job *batchv1.Job) boo
 		return false
 	}
 
+	oldStatus := sr.Status
 	sr.Status = newStatus
 
 	if newStatus == models.StepRunStatusSuccess || newStatus == models.StepRunStatusFailed {
@@ -281,7 +282,7 @@ func (w *JobWatcher) syncStepRunStatus(sr *models.StepRun, job *batchv1.Job) boo
 	logger.Info("step run status updated",
 		"step_run_id", sr.ID,
 		"step_name", sr.StepName,
-		"old_status", sr.Status,
+		"old_status", oldStatus,
 		"new_status", newStatus,
 		"job_name", sr.JobName,
 	)

@@ -210,12 +210,14 @@ type nonceCache struct {
 	mu      sync.Mutex
 	entries map[string]nonceEntry
 	ttl     time.Duration
+	stopCh  chan struct{}
 }
 
 func newNonceCache(ttl time.Duration) *nonceCache {
 	nc := &nonceCache{
 		entries: make(map[string]nonceEntry),
 		ttl:     ttl,
+		stopCh:  make(chan struct{}),
 	}
 	// 背景清理過期 nonce
 	go nc.cleanupLoop()
@@ -241,15 +243,20 @@ func (nc *nonceCache) add(nonce string) {
 func (nc *nonceCache) cleanupLoop() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
-	for range ticker.C {
-		nc.mu.Lock()
-		now := time.Now()
-		for k, v := range nc.entries {
-			if now.Sub(v.addedAt) > nc.ttl {
-				delete(nc.entries, k)
+	for {
+		select {
+		case <-nc.stopCh:
+			return
+		case <-ticker.C:
+			nc.mu.Lock()
+			now := time.Now()
+			for k, v := range nc.entries {
+				if now.Sub(v.addedAt) > nc.ttl {
+					delete(nc.entries, k)
+				}
 			}
+			nc.mu.Unlock()
 		}
-		nc.mu.Unlock()
 	}
 }
 

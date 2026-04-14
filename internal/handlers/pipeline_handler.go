@@ -193,16 +193,13 @@ func (h *PipelineHandler) GetVersion(c *gin.Context) {
 		return
 	}
 
-	versionNum := parseIntQuery(c, "version", 0)
-	if vn, err2 := parseUintParam(c, "version"); err2 == nil {
-		versionNum = int(vn)
-	}
-	if versionNum <= 0 {
+	vn, err := parseUintParam(c, "version")
+	if err != nil || vn == 0 {
 		response.BadRequest(c, "invalid version number")
 		return
 	}
 
-	version, err := h.pipelineSvc.GetVersion(c.Request.Context(), pipelineID, versionNum)
+	version, err := h.pipelineSvc.GetVersion(c.Request.Context(), pipelineID, int(vn))
 	if err != nil {
 		if ae, ok := apierrors.As(err); ok {
 			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})

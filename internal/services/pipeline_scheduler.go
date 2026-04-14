@@ -244,7 +244,7 @@ func (s *PipelineScheduler) tick() error {
 		run := &queuedRuns[i]
 
 		// 三級並發檢查
-		if !s.canSchedule(run, counts) {
+		if !s.canSchedule(ctx, run, counts) {
 			continue
 		}
 
@@ -312,7 +312,7 @@ func (s *PipelineScheduler) loadConcurrencyCounts(ctx context.Context) (*concurr
 	return counts, nil
 }
 
-func (s *PipelineScheduler) canSchedule(run *models.PipelineRun, counts *concurrencyCounts) bool {
+func (s *PipelineScheduler) canSchedule(ctx context.Context, run *models.PipelineRun, counts *concurrencyCounts) bool {
 	// 系統級
 	if counts.system >= s.cfg.SystemMaxRuns {
 		return false
@@ -322,16 +322,16 @@ func (s *PipelineScheduler) canSchedule(run *models.PipelineRun, counts *concurr
 		return false
 	}
 	// Pipeline 級（從 Pipeline 定義取 max_concurrent_runs）
-	pipelineMax := s.getPipelineMaxConcurrent(run.PipelineID)
+	pipelineMax := s.getPipelineMaxConcurrent(ctx, run.PipelineID)
 	if counts.pipeline[run.PipelineID] >= pipelineMax {
 		return false
 	}
 	return true
 }
 
-func (s *PipelineScheduler) getPipelineMaxConcurrent(pipelineID uint) int {
+func (s *PipelineScheduler) getPipelineMaxConcurrent(ctx context.Context, pipelineID uint) int {
 	var pipeline models.Pipeline
-	if err := s.db.Select("max_concurrent_runs").First(&pipeline, pipelineID).Error; err != nil {
+	if err := s.db.WithContext(ctx).Select("max_concurrent_runs").First(&pipeline, pipelineID).Error; err != nil {
 		return 1 // fallback
 	}
 	if pipeline.MaxConcurrentRuns <= 0 {
