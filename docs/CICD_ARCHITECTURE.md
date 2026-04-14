@@ -896,6 +896,8 @@ internal/
     registry_service.go         ← Registry CRUD + 連線測試
     registry_adapter.go         ← RegistryAdapter 介面 + Harbor/DockerHub/DockerV2 實作
     environment_service.go      ← Environment CRUD + PromotionHistory 管理
+    rollout_service.go          ← Argo Rollouts 狀態機（CRD Discovery + 查詢 + promote/abort/retry）
+    promotion_service.go        ← 環境晉升狀態機 + Policy 引擎（auto/approval 策略）
     pipeline_gc_worker.go       ← GC Worker（孤兒 Job + Run 90d + Log 30d）
     pipeline_recover.go         ← 啟動時孤兒 Run 恢復
   models/
@@ -1916,19 +1918,19 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 ### M17 — 環境流水線（5 週）
 
 - [x] `environments` 資料表 + `promotion_history` 資料表
-- [ ] ApprovalRequest 擴充（Action=promote_environment/production_gate + pipeline_run_id）
-- [ ] Promotion 邏輯（自動 / 人工審核）
+- [x] ApprovalRequest 擴充（Action=promote_environment/production_gate + pipeline_run_id）
+- [x] Promotion 邏輯（自動 / 人工審核）— PromotionService + EvaluatePromotion + ExecutePromotion
 - [ ] 冒煙測試 Step 整合
 - [ ] Production Gate 通知
 
 ### M13c — Argo Rollouts 整合（2 週）
 
-- [ ] Rollout CRD Discovery 偵測（Observer Pattern）
+- [x] Rollout CRD Discovery 偵測（Observer Pattern）
 - [x] `deploy-rollout` Step 類型（動態客戶端更新 Rollout image）
 - [x] `rollout-status` Step 類型（等待 Rollout 狀態 + timeout 處理）
 - [x] `rollout-promote` / `rollout-abort` Step 類型
-- [ ] Rollout 狀態查詢 API（GET /rollouts）
-- [ ] Rollout 操作 API（promote / abort / retry）
+- [x] Rollout 狀態查詢 API（GET /rollouts）— RolloutService.ListRollouts / GetRollout
+- [x] Rollout 操作 API（promote / abort / retry）— PromoteRollout / AbortRollout / RetryRollout
 - [ ] `step_runs` 新增 `rollout_status` / `rollout_weight` 欄位
 - [ ] 前端：RolloutList / RolloutDetail / RolloutStatusWidget（嵌入 RunDetail）
 - [ ] 未安裝 Argo Rollouts 時顯示 NotInstalledCard
@@ -1975,9 +1977,9 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | ✅ P1-2 | 基本 Step 類型（build-image / deploy / run-script） + Pipeline Run API | M13a W4 | **Opus** | Step type registry + validation + command gen + Run handler |
 | ✅ P1-3 | Log 雙層儲存（SSE + pipeline_logs）+ Log Scrubber | M13a W3 | **Sonnet**（儲存）/ **Opus**（Scrubber） | Scrubber 漏洩 = Secret 外洩 |
 | ✅ P1-4 | GC Worker（K8s Job + PVC + Log retention） | M13a W3 | **Opus** | 依 §7.12 策略實作：孤兒 Job 清理 + Run 90d + Log 30d |
-| P1-5 | Rollout 狀態機（deploy-rollout / rollout-status） | M13c | **Opus** | 灰度操作錯誤 = 生產事故 |
+| ✅ P1-5 | Rollout 狀態機（deploy-rollout / rollout-status） | M13c | **Opus** | RolloutService + CRD Discovery + dynamic client 查詢/操作 + canary/blueGreen 解析 + 20 測試 |
 | P1-6 | GitOps Diff 引擎 + Drift Detection | M16 | **Opus** | production drift 或反向 overwrite |
-| P1-7 | Promotion 狀態機 + Policy 引擎 | M17 | **Opus** | 跳關、反向 promote |
+| ✅ P1-7 | Promotion 狀態機 + Policy 引擎 | M17 | **Opus** | PromotionService + EvaluatePromotion + 順序驗證 + auto/approval 策略 + ApprovalRequest 整合 + 12 測試 |
 | ✅ P1-8 | Approval Step（整合 ApprovalRequest） | M13b W5–6 | **Opus** | 審批狀態機 + waiting_approval 狀態 + approve/reject API |
 | ✅ P1-9 | Step 級別重試（retry + exponential backoff） | M13b W5–6 | **Opus** | RetryPolicy + 指數/固定退避 + 最大 10 次 + 5min 上限 |
 | ✅ P1-10 | Webhook 觸發條件引擎（branch glob / path filter / cron） | M14 | **Opus** | TriggerRule + EvaluateWebhookTriggers + branch glob/** + path filter + cron 驗證 + 35 測試 |
