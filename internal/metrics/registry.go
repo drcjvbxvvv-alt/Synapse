@@ -16,6 +16,7 @@ type Registry struct {
 	DB        *DBMetrics
 	Worker    *WorkerMetrics
 	K8s       *K8sMetrics
+	Pipeline  *PipelineMetrics
 }
 
 // New creates a Registry with all metric groups registered. It includes
@@ -33,6 +34,7 @@ func New() *Registry {
 		DB:        newDBMetrics(reg),
 		Worker:    newWorkerMetrics(reg),
 		K8s:       newK8sMetrics(reg),
+		Pipeline:  newPipelineMetrics(reg),
 	}
 }
 

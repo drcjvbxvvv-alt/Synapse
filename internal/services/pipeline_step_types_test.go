@@ -415,3 +415,408 @@ func TestGetStepTypeInfo_NotExists(t *testing.T) {
 		t.Error("expected nonexistent type to not be found")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// trivy-scan tests
+// ---------------------------------------------------------------------------
+
+func TestValidateStepDef_TrivyScan_Valid(t *testing.T) {
+	cfg := TrivyScanConfig{Image: "harbor.example.com/app:v1", Severity: "HIGH,CRITICAL"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: string(cfgJSON)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_TrivyScan_MissingImage(t *testing.T) {
+	cfg := TrivyScanConfig{Severity: "HIGH"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil {
+		t.Error("expected error for missing image")
+	}
+	if !strings.Contains(err.Error(), "config.image is required") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateStepDef_TrivyScan_NoConfig(t *testing.T) {
+	step := &StepDef{Name: "scan", Type: "trivy-scan"}
+	if err := ValidateStepDef(step); err == nil {
+		t.Error("expected error for missing config")
+	}
+}
+
+func TestGenerateCommand_TrivyScan(t *testing.T) {
+	cfg := TrivyScanConfig{
+		Image:    "harbor.example.com/app:v1",
+		Severity: "HIGH,CRITICAL",
+		ExitCode: 1,
+		Format:   "json",
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: string(cfgJSON)}
+	cmd, args := GenerateCommand(step)
+
+	if len(cmd) != 1 || cmd[0] != "trivy" {
+		t.Errorf("expected trivy command, got: %v", cmd)
+	}
+	argsStr := strings.Join(args, " ")
+	if !strings.Contains(argsStr, "image") {
+		t.Error("missing 'image' subcommand")
+	}
+	if !strings.Contains(argsStr, "--severity=HIGH,CRITICAL") {
+		t.Error("missing --severity arg")
+	}
+	if !strings.Contains(argsStr, "--exit-code=1") {
+		t.Error("missing --exit-code arg")
+	}
+	if !strings.Contains(argsStr, "--format=json") {
+		t.Error("missing --format arg")
+	}
+	if !strings.Contains(argsStr, "harbor.example.com/app:v1") {
+		t.Error("missing target image in args")
+	}
+}
+
+func TestGenerateCommand_TrivyScan_Defaults(t *testing.T) {
+	cfg := TrivyScanConfig{Image: "myapp:latest"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: string(cfgJSON)}
+	_, args := GenerateCommand(step)
+
+	argsStr := strings.Join(args, " ")
+	if !strings.Contains(argsStr, "--exit-code=1") {
+		t.Error("expected default exit-code=1")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// push-image tests
+// ---------------------------------------------------------------------------
+
+func TestValidateStepDef_PushImage_Valid(t *testing.T) {
+	cfg := PushImageConfig{Source: "app:build-123", Destination: "harbor.example.com/app:v1"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "push", Type: "push-image", Config: string(cfgJSON)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_PushImage_MissingSource(t *testing.T) {
+	cfg := PushImageConfig{Destination: "harbor.example.com/app:v1"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "push", Type: "push-image", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil || !strings.Contains(err.Error(), "source is required") {
+		t.Errorf("expected source required error, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_PushImage_MissingDestination(t *testing.T) {
+	cfg := PushImageConfig{Source: "app:build-123"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "push", Type: "push-image", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil || !strings.Contains(err.Error(), "destination is required") {
+		t.Errorf("expected destination required error, got: %v", err)
+	}
+}
+
+func TestGenerateCommand_PushImage(t *testing.T) {
+	cfg := PushImageConfig{Source: "app:build-123", Destination: "harbor.example.com/app:v1"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "push", Type: "push-image", Config: string(cfgJSON)}
+	cmd, args := GenerateCommand(step)
+
+	if len(cmd) != 1 || cmd[0] != "crane" {
+		t.Errorf("expected crane command, got: %v", cmd)
+	}
+	if len(args) != 3 || args[0] != "copy" || args[1] != "app:build-123" || args[2] != "harbor.example.com/app:v1" {
+		t.Errorf("unexpected args: %v", args)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// deploy-helm tests
+// ---------------------------------------------------------------------------
+
+func TestValidateStepDef_DeployHelm_Valid(t *testing.T) {
+	cfg := HelmDeployConfig{Release: "myapp", Chart: "bitnami/nginx", Namespace: "staging"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_DeployHelm_MissingRelease(t *testing.T) {
+	cfg := HelmDeployConfig{Chart: "bitnami/nginx"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil || !strings.Contains(err.Error(), "release is required") {
+		t.Errorf("expected release required error, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_DeployHelm_MissingChart(t *testing.T) {
+	cfg := HelmDeployConfig{Release: "myapp"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil || !strings.Contains(err.Error(), "chart is required") {
+		t.Errorf("expected chart required error, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_DeployHelm_WithCommand(t *testing.T) {
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Command: "helm upgrade --install myapp ./chart"}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid with user command, got: %v", err)
+	}
+}
+
+func TestGenerateCommand_DeployHelm(t *testing.T) {
+	cfg := HelmDeployConfig{
+		Release:   "myapp",
+		Chart:     "bitnami/nginx",
+		Namespace: "staging",
+		Values:    "values-staging.yaml",
+		Version:   "18.1.0",
+		Wait:      true,
+		Timeout:   "5m",
+		SetValues: map[string]string{"image.tag": "v1.2.3"},
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+
+	if len(cmd) != 3 || cmd[0] != "/bin/sh" {
+		t.Fatalf("expected shell command, got: %v", cmd)
+	}
+	helmCmd := cmd[2]
+	if !strings.Contains(helmCmd, "helm upgrade --install myapp bitnami/nginx") {
+		t.Errorf("missing base helm command, got: %s", helmCmd)
+	}
+	if !strings.Contains(helmCmd, "-n staging") {
+		t.Errorf("missing namespace, got: %s", helmCmd)
+	}
+	if !strings.Contains(helmCmd, "-f values-staging.yaml") {
+		t.Errorf("missing values file, got: %s", helmCmd)
+	}
+	if !strings.Contains(helmCmd, "--version 18.1.0") {
+		t.Errorf("missing version, got: %s", helmCmd)
+	}
+	if !strings.Contains(helmCmd, "--wait") {
+		t.Errorf("missing --wait, got: %s", helmCmd)
+	}
+	if !strings.Contains(helmCmd, "--timeout 5m") {
+		t.Errorf("missing --timeout, got: %s", helmCmd)
+	}
+	if !strings.Contains(helmCmd, "--set image.tag=v1.2.3") {
+		t.Errorf("missing --set, got: %s", helmCmd)
+	}
+}
+
+func TestGenerateCommand_DeployHelm_DryRun(t *testing.T) {
+	cfg := HelmDeployConfig{Release: "myapp", Chart: "./chart", DryRun: true}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+	if !strings.Contains(cmd[2], "--dry-run") {
+		t.Errorf("expected --dry-run, got: %s", cmd[2])
+	}
+}
+
+// ---------------------------------------------------------------------------
+// deploy-argocd-sync tests
+// ---------------------------------------------------------------------------
+
+func TestValidateStepDef_ArgoCDSync_Valid(t *testing.T) {
+	cfg := ArgoCDSyncConfig{AppName: "my-app", Server: "argocd.example.com"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: string(cfgJSON)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_ArgoCDSync_MissingAppName(t *testing.T) {
+	cfg := ArgoCDSyncConfig{Server: "argocd.example.com"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil || !strings.Contains(err.Error(), "app_name is required") {
+		t.Errorf("expected app_name required error, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_ArgoCDSync_WithCommand(t *testing.T) {
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Command: "argocd app sync my-app --prune"}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid with user command, got: %v", err)
+	}
+}
+
+func TestGenerateCommand_ArgoCDSync(t *testing.T) {
+	cfg := ArgoCDSyncConfig{
+		AppName:  "my-app",
+		Server:   "argocd.internal",
+		Revision: "main",
+		Prune:    true,
+		Insecure: true,
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: string(cfgJSON)}
+	cmd, args := GenerateCommand(step)
+
+	if len(cmd) != 1 || cmd[0] != "argocd" {
+		t.Errorf("expected argocd command, got: %v", cmd)
+	}
+	argsStr := strings.Join(args, " ")
+	if !strings.Contains(argsStr, "app sync my-app") {
+		t.Errorf("missing app sync subcommand, got: %s", argsStr)
+	}
+	if !strings.Contains(argsStr, "--server=argocd.internal") {
+		t.Errorf("missing --server, got: %s", argsStr)
+	}
+	if !strings.Contains(argsStr, "--revision=main") {
+		t.Errorf("missing --revision, got: %s", argsStr)
+	}
+	if !strings.Contains(argsStr, "--prune") {
+		t.Errorf("missing --prune, got: %s", argsStr)
+	}
+	if !strings.Contains(argsStr, "--plaintext") {
+		t.Errorf("missing --plaintext for insecure, got: %s", argsStr)
+	}
+	if !strings.Contains(argsStr, "--grpc-web") {
+		t.Errorf("missing --grpc-web, got: %s", argsStr)
+	}
+}
+
+func TestGenerateCommand_ArgoCDSync_DryRun(t *testing.T) {
+	cfg := ArgoCDSyncConfig{AppName: "my-app", DryRun: true}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: string(cfgJSON)}
+	_, args := GenerateCommand(step)
+	argsStr := strings.Join(args, " ")
+	if !strings.Contains(argsStr, "--dry-run") {
+		t.Errorf("expected --dry-run, got: %s", argsStr)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// notify tests
+// ---------------------------------------------------------------------------
+
+func TestValidateStepDef_Notify_Valid(t *testing.T) {
+	cfg := NotifyConfig{URL: "https://hooks.slack.com/services/xxx"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "notify", Type: "notify", Config: string(cfgJSON)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_Notify_MissingURL(t *testing.T) {
+	cfg := NotifyConfig{Method: "POST"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "notify", Type: "notify", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil || !strings.Contains(err.Error(), "url is required") {
+		t.Errorf("expected url required error, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_Notify_NoConfig(t *testing.T) {
+	step := &StepDef{Name: "notify", Type: "notify"}
+	if err := ValidateStepDef(step); err == nil {
+		t.Error("expected error for missing config")
+	}
+}
+
+func TestGenerateCommand_Notify(t *testing.T) {
+	cfg := NotifyConfig{
+		URL:     "https://hooks.slack.com/xxx",
+		Headers: map[string]string{"Authorization": "Bearer token"},
+		Body:    `{"text":"Deploy done"}`,
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "notify", Type: "notify", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+
+	if len(cmd) != 3 || cmd[0] != "/bin/sh" {
+		t.Fatalf("expected shell command, got: %v", cmd)
+	}
+	curlCmd := cmd[2]
+	if !strings.Contains(curlCmd, "curl") {
+		t.Errorf("expected curl in command, got: %s", curlCmd)
+	}
+	if !strings.Contains(curlCmd, "-X POST") {
+		t.Errorf("expected POST method, got: %s", curlCmd)
+	}
+	if !strings.Contains(curlCmd, "hooks.slack.com") {
+		t.Errorf("missing URL, got: %s", curlCmd)
+	}
+	if !strings.Contains(curlCmd, "Deploy done") {
+		t.Errorf("missing body, got: %s", curlCmd)
+	}
+}
+
+func TestGenerateCommand_Notify_DefaultBody(t *testing.T) {
+	cfg := NotifyConfig{URL: "https://example.com/webhook"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "notify", Type: "notify", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+	if !strings.Contains(cmd[2], "Pipeline step completed") {
+		t.Errorf("expected default body, got: %s", cmd[2])
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ResolveImage for new types
+// ---------------------------------------------------------------------------
+
+func TestResolveImage_TrivyScan_Default(t *testing.T) {
+	step := &StepDef{Name: "scan", Type: "trivy-scan"}
+	img := ResolveImage(step)
+	if !strings.Contains(img, "trivy") {
+		t.Errorf("expected trivy default image, got: %s", img)
+	}
+}
+
+func TestResolveImage_PushImage_Default(t *testing.T) {
+	step := &StepDef{Name: "push", Type: "push-image"}
+	img := ResolveImage(step)
+	if !strings.Contains(img, "crane") {
+		t.Errorf("expected crane default image, got: %s", img)
+	}
+}
+
+func TestResolveImage_DeployHelm_Default(t *testing.T) {
+	step := &StepDef{Name: "helm", Type: "deploy-helm"}
+	img := ResolveImage(step)
+	if !strings.Contains(img, "helm") {
+		t.Errorf("expected helm default image, got: %s", img)
+	}
+}
+
+func TestResolveImage_ArgoCDSync_Default(t *testing.T) {
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync"}
+	img := ResolveImage(step)
+	if !strings.Contains(img, "argocd") {
+		t.Errorf("expected argocd default image, got: %s", img)
+	}
+}
+
+func TestResolveImage_Notify_Default(t *testing.T) {
+	step := &StepDef{Name: "notify", Type: "notify"}
+	img := ResolveImage(step)
+	if !strings.Contains(img, "curl") {
+		t.Errorf("expected curl default image, got: %s", img)
+	}
+}

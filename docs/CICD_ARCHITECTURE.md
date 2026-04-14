@@ -1972,7 +1972,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 | 優先序 | 任務 | 所屬 | 模型 | 說明 |
 |-------|------|------|------|------|
-| P2-1 | 進階 Step 類型（build-jar / trivy-scan / push-image / deploy-helm / deploy-argocd-sync / notify） | M13b W5–6 | **Sonnet** | Opus 出第一個完整 Step 範本後 Sonnet 推廣 |
+| ✅ P2-1 | 進階 Step 類型（trivy-scan / push-image / deploy-helm / deploy-argocd-sync / notify） | M13b W5–6 | **Opus** | Config + validation + command gen，含 30 個測試 |
 | P2-2 | GitHub / GitLab / Gitea Provider adapter | M14 | **Sonnet** | Opus 出 GitHub 範本後 Sonnet 複製 |
 | P2-3 | Registry CRUD + Harbor / ECR / GCR adapter | M15 | **Sonnet** | API wrapper |
 | P2-4 | Credential 加密儲存（Registry） | M15 | **Opus** | 復用 PipelineSecret 加密，key rotation 一致性 |
@@ -1981,7 +1981,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | P2-7 | rollout-promote / rollout-abort Step | M13c | **Sonnet** | 簡單 API 呼叫 |
 | P2-8 | Environment CRUD + Promotion History | M17 | **Sonnet** | 依 §13 結構 |
 | P2-9 | NotifyChannel 整合（Pipeline 事件路由） | M13b W8 | **Sonnet** | 復用現有 NotifyChannel |
-| P2-10 | 失敗告警去重（通知風暴防護） | M13b W8 | **Opus** | 同一 Pipeline 短時間多次失敗的去重演算法 |
+| ✅ P2-10 | 失敗告警去重（通知風暴防護） | M13b W8 | **Opus** | 5min 去重視窗 + LRU eviction + retry/concurrency 抑制 + 11 測試 |
 
 #### P3 — 前端 / UX / 輔助工具
 
@@ -1992,7 +1992,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | P3-3 | RolloutList / RolloutDetail / RolloutStatusWidget | M13c | **Sonnet** | UI 頁面 |
 | P3-4 | Git Provider / Registry / Environment 管理 UI | M14–M17 | **Sonnet** | 表單頁 |
 | P3-5 | AI 根因分析按鈕 + context 組裝 | M13b W8 | **Opus** | 與 AI Chat 服務的 context 設計 |
-| P3-6 | Prometheus Metrics 註冊（§16） | M13b W8 | **Opus** | label cardinality 控制、histogram bucket 選擇 |
+| ✅ P3-6 | Prometheus Metrics 註冊（§16） | M13b W8 | **Opus** | 9 指標（4 counter + 3 histogram + 2 gauge）+ convenience helpers + 7 測試 |
 | P3-7 | Pipeline YAML Schema（附錄 A） | 跨 Milestone | **Opus** | 一次性定義，前後端共用 |
 | P3-8 | Trivy 雙軌遷移 Phase 3–4 | Post-M13 | **Sonnet** | 可延後，現有 host exec 仍可用 |
 
