@@ -4,11 +4,11 @@
 # 用法：./scripts/dev.sh [選項]
 #
 #   --backend-only   只啟動後端（跳過前端）
-#   --frontend-only  只啟動前端（MySQL 仍會啟動）
-#   --no-mysql       不啟動 MySQL（假設已在執行）
+#   --frontend-only  只啟動前端（PostgreSQL 仍會啟動）
+#   --no-pg          不啟動 PostgreSQL（假設已在執行）
 #   --build          啟動前先 go build（預設 go run）
 #   --stop           停止所有服務並退出
-#   --reset          清除 MySQL volume 並重新初始化
+#   --reset          清除 PostgreSQL volume 並重新初始化
 # =============================================================================
 set -euo pipefail
 
@@ -32,8 +32,8 @@ die()   { error "$*"; exit 1; }
 # ── 旗標解析 ──────────────────────────────────────────────────────────────────
 OPT_BACKEND_ONLY=0
 OPT_FRONTEND_ONLY=0
-OPT_MYSQL_ONLY=0
-OPT_NO_MYSQL=0
+OPT_PG_ONLY=0
+OPT_NO_PG=0
 OPT_BUILD=0
 OPT_STOP=0
 OPT_RESET=0
@@ -42,8 +42,8 @@ for arg in "$@"; do
   case "$arg" in
     --backend-only)  OPT_BACKEND_ONLY=1  ;;
     --frontend-only) OPT_FRONTEND_ONLY=1 ;;
-    --mysql-only)    OPT_MYSQL_ONLY=1    ;;
-    --no-mysql)      OPT_NO_MYSQL=1      ;;
+    --pg-only)       OPT_PG_ONLY=1       ;;
+    --no-pg)         OPT_NO_PG=1         ;;
     --build)         OPT_BUILD=1         ;;
     --stop)          OPT_STOP=1          ;;
     --reset)         OPT_RESET=1         ;;
@@ -76,11 +76,11 @@ fi
 
 # ── 重置 ──────────────────────────────────────────────────────────────────────
 if [ "$OPT_RESET" -eq 1 ]; then
-  warn "重置將清除 MySQL volume（synapse-mysql-dev-data），資料將遺失！"
+  warn "重置將清除 PostgreSQL volume（synapse-pg-dev-data），資料將遺失！"
   read -rp "確認重置？[y/N] " confirm
   [[ "$confirm" =~ ^[Yy]$ ]] || die "已取消"
   $COMPOSE down -v
-  ok "MySQL volume 已清除，重新啟動..."
+  ok "PostgreSQL volume 已清除，重新啟動..."
 fi
 
 # ── 前置檢查 ──────────────────────────────────────────────────────────────────
@@ -113,65 +113,49 @@ set +o allexport
 
 mkdir -p "$PID_DIR"
 
-# ── MySQL ─────────────────────────────────────────────────────────────────────
-if [ "$OPT_MYSQL_ONLY" -eq 1 ]; then
-  info "啟動 MySQL + Adminer..."
-  $COMPOSE up -d
-
-  info "等待 MySQL 就緒..."
+# ── PostgreSQL ────────────────────────────────────────────────────────────────
+wait_for_pg() {
+  info "等待 PostgreSQL 就緒..."
   MAX_WAIT=60
   ELAPSED=0
-  until $COMPOSE exec -T mysql mysqladmin ping \
-      -h 127.0.0.1 \
-      -u "${MYSQL_USER:-synapse}" \
-      -p"${MYSQL_PASSWORD:-Synapse@2026}" \
-      --silent 2>/dev/null; do
+  until $COMPOSE exec -T postgres pg_isready \
+      -U "${PG_USER:-synapse}" \
+      -d "${PG_DATABASE:-synapse}" \
+      -q 2>/dev/null; do
     ELAPSED=$((ELAPSED + 2))
     if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
-      error "MySQL 在 ${MAX_WAIT}s 內未就緒，查看日誌："
-      $COMPOSE logs --tail=20 mysql
+      error "PostgreSQL 在 ${MAX_WAIT}s 內未就緒，查看日誌："
+      $COMPOSE logs --tail=20 postgres
       die "啟動失敗"
     fi
     printf "  等待中... %ds\r" "$ELAPSED"
     sleep 2
   done
-  ok "MySQL 就緒"
+  ok "PostgreSQL 就緒"
+}
+
+if [ "$OPT_PG_ONLY" -eq 1 ]; then
+  info "啟動 PostgreSQL + Adminer..."
+  $COMPOSE up -d
+  wait_for_pg
 
   echo ""
-  echo -e "  ${G}MySQL${N}   → 127.0.0.1:${MYSQL_PORT:-3306}  (${MYSQL_USER:-synapse} / ${MYSQL_PASSWORD:-Synapse@2026})"
-  echo -e "  ${G}Adminer${N} → http://localhost:${ADMINER_PORT:-8080}"
+  echo -e "  ${G}PostgreSQL${N} → 127.0.0.1:${PG_PORT:-5432}  (${PG_USER:-synapse} / ${PG_PASSWORD:-Synapse@2026})"
+  echo -e "  ${G}Adminer${N}    → http://localhost:${ADMINER_PORT:-8080}"
   echo ""
   exit 0
 fi
 
-if [ "$OPT_NO_MYSQL" -eq 0 ]; then
-  info "啟動 MySQL + Adminer..."
+if [ "$OPT_NO_PG" -eq 0 ]; then
+  info "啟動 PostgreSQL + Adminer..."
   $COMPOSE up -d
+  wait_for_pg
 
-  info "等待 MySQL 就緒..."
-  MAX_WAIT=60
-  ELAPSED=0
-  until $COMPOSE exec -T mysql mysqladmin ping \
-      -h 127.0.0.1 \
-      -u "${MYSQL_USER:-synapse}" \
-      -p"${MYSQL_PASSWORD:-Synapse@2026}" \
-      --silent 2>/dev/null; do
-    ELAPSED=$((ELAPSED + 2))
-    if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
-      error "MySQL 在 ${MAX_WAIT}s 內未就緒，查看日誌："
-      $COMPOSE logs --tail=20 mysql
-      die "啟動失敗"
-    fi
-    printf "  等待中... %ds\r" "$ELAPSED"
-    sleep 2
-  done
-  ok "MySQL 就緒"
-
-  MYSQL_PORT_ACTUAL="${MYSQL_PORT:-3306}"
+  PG_PORT_ACTUAL="${PG_PORT:-5432}"
   ADMINER_PORT_ACTUAL="${ADMINER_PORT:-8080}"
   echo ""
-  echo -e "  ${G}MySQL${N}   → 127.0.0.1:${MYSQL_PORT_ACTUAL}  (${MYSQL_USER:-synapse} / ${MYSQL_PASSWORD:-Synapse@2026})"
-  echo -e "  ${G}Adminer${N} → http://localhost:${ADMINER_PORT_ACTUAL}"
+  echo -e "  ${G}PostgreSQL${N} → 127.0.0.1:${PG_PORT_ACTUAL}  (${PG_USER:-synapse} / ${PG_PASSWORD:-Synapse@2026})"
+  echo -e "  ${G}Adminer${N}    → http://localhost:${ADMINER_PORT_ACTUAL}"
   echo ""
 fi
 
@@ -188,12 +172,13 @@ start_backend() {
   fi
 
   # 匯出資料庫連線設定
-  export DB_DRIVER="${DB_DRIVER:-mysql}"
+  export DB_DRIVER="${DB_DRIVER:-postgres}"
   export DB_HOST="${DB_HOST:-127.0.0.1}"
-  export DB_PORT="${DB_PORT:-3306}"
+  export DB_PORT="${DB_PORT:-5432}"
   export DB_USERNAME="${DB_USERNAME:-synapse}"
-  export DB_PASSWORD="${DB_PASSWORD:-Synapse@2026}"
+  export DB_PASSWORD="${DB_PASSWORD:-${PG_PASSWORD:-Synapse@2026}}"
   export DB_DATABASE="${DB_DATABASE:-synapse}"
+  export DB_SSL_MODE="${DB_SSL_MODE:-disable}"
   export APP_ENV="${APP_ENV:-development}"
   export SERVER_MODE="${SERVER_MODE:-debug}"
   export LOG_LEVEL="${LOG_LEVEL:-info}"
