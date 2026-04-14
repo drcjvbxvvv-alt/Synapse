@@ -243,14 +243,16 @@ func (r *PipelineRecover) markRunFailed(ctx context.Context, run *models.Pipelin
 	run.FinishedAt = &now
 
 	// 同時標記所有 active steps 為 cancelled
-	r.db.WithContext(ctx).Model(&models.StepRun{}).
+	if err := r.db.WithContext(ctx).Model(&models.StepRun{}).
 		Where("pipeline_run_id = ? AND status IN ?",
 			run.ID,
 			[]string{models.StepRunStatusRunning, models.StepRunStatusPending},
 		).Updates(map[string]interface{}{
 		"status":      models.StepRunStatusCancelled,
 		"finished_at": now,
-	})
+	}).Error; err != nil {
+		logger.Error("failed to cancel active steps for run", "run_id", run.ID, "error", err)
+	}
 
 	if err := r.db.WithContext(ctx).Save(run).Error; err != nil {
 		logger.Error("failed to mark run as failed", "run_id", run.ID, "error", err)

@@ -209,54 +209,51 @@ func (s *PipelineService) CreateVersion(ctx context.Context, pipelineID uint, re
 	// 計算內容 hash
 	hash := computeVersionHash(req)
 
-	// Hash dedupe：若已存在相同內容版本，直接復用
-	var existing models.PipelineVersion
-	err := s.db.WithContext(ctx).
-		Where("pipeline_id = ? AND hash_sha256 = ?", pipelineID, hash).
-		First(&existing).Error
-	if err == nil {
-		// 確保 current_version_id 指向此版本
-		if err := s.db.WithContext(ctx).
-			Model(&models.Pipeline{}).
-			Where("id = ?", pipelineID).
-			Update("current_version_id", existing.ID).Error; err != nil {
-			return nil, fmt.Errorf("update current version pointer: %w", err)
+	// Transaction 保證 hash dedupe + 版本建立 + current_version_id 更新原子性
+	version := &models.PipelineVersion{}
+	deduplicated := false
+
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Hash dedupe：若已存在相同內容版本，直接復用
+		var existing models.PipelineVersion
+		hashErr := tx.Where("pipeline_id = ? AND hash_sha256 = ?", pipelineID, hash).
+			First(&existing).Error
+		if hashErr == nil {
+			// 確保 current_version_id 指向此版本
+			if err := tx.Model(&models.Pipeline{}).
+				Where("id = ?", pipelineID).
+				Update("current_version_id", existing.ID).Error; err != nil {
+				return fmt.Errorf("update current version pointer: %w", err)
+			}
+			*version = existing
+			deduplicated = true
+			return nil
 		}
-		logger.Info("pipeline version deduplicated",
-			"pipeline_id", pipelineID,
-			"version_id", existing.ID,
-			"hash", hash,
-		)
-		return &existing, nil
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, fmt.Errorf("check version hash: %w", err)
-	}
+		if !errors.Is(hashErr, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("check version hash: %w", hashErr)
+		}
 
-	// 取得下一個版本號
-	var maxVersion int
-	if err := s.db.WithContext(ctx).
-		Model(&models.PipelineVersion{}).
-		Where("pipeline_id = ?", pipelineID).
-		Select("COALESCE(MAX(version), 0)").
-		Scan(&maxVersion).Error; err != nil {
-		return nil, fmt.Errorf("query max version for pipeline %d: %w", pipelineID, err)
-	}
+		// 取得下一個版本號
+		var maxVersion int
+		if err := tx.Model(&models.PipelineVersion{}).
+			Where("pipeline_id = ?", pipelineID).
+			Select("COALESCE(MAX(version), 0)").
+			Scan(&maxVersion).Error; err != nil {
+			return fmt.Errorf("query max version for pipeline %d: %w", pipelineID, err)
+		}
 
-	version := &models.PipelineVersion{
-		PipelineID:    pipelineID,
-		Version:       maxVersion + 1,
-		StepsJSON:     req.StepsJSON,
-		TriggersJSON:  req.TriggersJSON,
-		EnvJSON:       req.EnvJSON,
-		RuntimeJSON:   req.RuntimeJSON,
-		WorkspaceJSON: req.WorkspaceJSON,
-		HashSHA256:    hash,
-		CreatedBy:     createdBy,
-	}
+		*version = models.PipelineVersion{
+			PipelineID:    pipelineID,
+			Version:       maxVersion + 1,
+			StepsJSON:     req.StepsJSON,
+			TriggersJSON:  req.TriggersJSON,
+			EnvJSON:       req.EnvJSON,
+			RuntimeJSON:   req.RuntimeJSON,
+			WorkspaceJSON: req.WorkspaceJSON,
+			HashSHA256:    hash,
+			CreatedBy:     createdBy,
+		}
 
-	// 用 Transaction 保證版本建立 + current_version_id 更新原子性
-	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(version).Error; err != nil {
 			return fmt.Errorf("create pipeline version: %w", err)
 		}
@@ -271,11 +268,19 @@ func (s *PipelineService) CreateVersion(ctx context.Context, pipelineID uint, re
 		return nil, err
 	}
 
-	logger.Info("pipeline version created",
-		"pipeline_id", pipelineID,
-		"version", version.Version,
-		"hash", hash,
-	)
+	if deduplicated {
+		logger.Info("pipeline version deduplicated",
+			"pipeline_id", pipelineID,
+			"version_id", version.ID,
+			"hash", hash,
+		)
+	} else {
+		logger.Info("pipeline version created",
+			"pipeline_id", pipelineID,
+			"version", version.Version,
+			"hash", hash,
+		)
+	}
 	return version, nil
 }
 

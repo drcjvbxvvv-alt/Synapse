@@ -505,7 +505,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		// 檢查依賴是否全部成功
 		if !s.allDependenciesMet(stepRuns, step.DependsOn) {
 			sr.Status = models.StepRunStatusSkipped
-			s.db.WithContext(ctx).Save(sr)
+			if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
+				logger.Error("failed to save skipped step run", "step_run_id", sr.ID, "error", err)
+			}
 			continue
 		}
 
@@ -516,7 +518,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 			sr.Error = fmt.Sprintf("resolve secrets: %v", err)
 			now := time.Now()
 			sr.FinishedAt = &now
-			s.db.WithContext(ctx).Save(sr)
+			if saveErr := s.db.WithContext(ctx).Save(sr).Error; saveErr != nil {
+				logger.Error("failed to save failed step run", "step_run_id", sr.ID, "error", saveErr)
+			}
 			anyFailed = true
 			continue
 		}
@@ -525,7 +529,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		now := time.Now()
 		sr.Status = models.StepRunStatusRunning
 		sr.StartedAt = &now
-		s.db.WithContext(ctx).Save(sr)
+		if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
+			logger.Error("failed to save running step run", "step_run_id", sr.ID, "error", err)
+		}
 
 		input := &BuildJobInput{
 			Run:       run,
@@ -539,7 +545,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 			sr.Error = fmt.Sprintf("submit k8s job: %v", err)
 			finishedNow := time.Now()
 			sr.FinishedAt = &finishedNow
-			s.db.WithContext(ctx).Save(sr)
+			if saveErr := s.db.WithContext(ctx).Save(sr).Error; saveErr != nil {
+				logger.Error("failed to save failed step run", "step_run_id", sr.ID, "error", saveErr)
+			}
 			anyFailed = true
 			logger.Error("step job submission failed",
 				"step_run_id", sr.ID,
@@ -550,7 +558,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		}
 
 		// 回寫 Job 資訊
-		s.db.WithContext(ctx).Save(sr)
+		if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
+			logger.Error("failed to save step run job info", "step_run_id", sr.ID, "error", err)
+		}
 
 		logger.Info("step job submitted",
 			"step_run_id", sr.ID,
@@ -582,7 +592,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 	} else {
 		run.Status = models.PipelineRunStatusSuccess
 	}
-	s.db.WithContext(ctx).Save(run)
+	if err := s.db.WithContext(ctx).Save(run).Error; err != nil {
+		logger.Error("failed to save completed run", "run_id", run.ID, "error", err)
+	}
 
 	logger.Info("pipeline run completed",
 		"run_id", run.ID,
