@@ -820,3 +820,243 @@ func TestResolveImage_Notify_Default(t *testing.T) {
 		t.Errorf("expected curl default image, got: %s", img)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Rollout step types (P2-7)
+// ---------------------------------------------------------------------------
+
+func TestValidateDeployRolloutStep_Valid(t *testing.T) {
+	cfg, _ := json.Marshal(DeployRolloutConfig{
+		RolloutName: "backend", Namespace: "prod", Image: "app:v2",
+	})
+	step := &StepDef{Name: "canary", Type: "deploy-rollout", Config: string(cfg)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateDeployRolloutStep_MissingFields(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  DeployRolloutConfig
+	}{
+		{"no rollout_name", DeployRolloutConfig{Namespace: "ns", Image: "img"}},
+		{"no namespace", DeployRolloutConfig{RolloutName: "r", Image: "img"}},
+		{"no image", DeployRolloutConfig{RolloutName: "r", Namespace: "ns"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, _ := json.Marshal(tt.cfg)
+			step := &StepDef{Name: "s", Type: "deploy-rollout", Config: string(cfg)}
+			if err := ValidateStepDef(step); err == nil {
+				t.Error("expected validation error")
+			}
+		})
+	}
+}
+
+func TestValidateDeployRolloutStep_NoConfig(t *testing.T) {
+	step := &StepDef{Name: "s", Type: "deploy-rollout"}
+	if err := ValidateStepDef(step); err == nil {
+		t.Error("expected error for missing config")
+	}
+}
+
+func TestValidateRolloutPromoteStep_Valid(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutPromoteConfig{RolloutName: "backend", Namespace: "prod"})
+	step := &StepDef{Name: "promote", Type: "rollout-promote", Config: string(cfg)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateRolloutPromoteStep_MissingFields(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutPromoteConfig{Namespace: "prod"})
+	step := &StepDef{Name: "s", Type: "rollout-promote", Config: string(cfg)}
+	if err := ValidateStepDef(step); err == nil {
+		t.Error("expected error for missing rollout_name")
+	}
+}
+
+func TestValidateRolloutAbortStep_Valid(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutAbortConfig{RolloutName: "backend", Namespace: "prod"})
+	step := &StepDef{Name: "abort", Type: "rollout-abort", Config: string(cfg)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateRolloutAbortStep_MissingFields(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutAbortConfig{RolloutName: "backend"})
+	step := &StepDef{Name: "s", Type: "rollout-abort", Config: string(cfg)}
+	if err := ValidateStepDef(step); err == nil {
+		t.Error("expected error for missing namespace")
+	}
+}
+
+func TestValidateRolloutStatusStep_Valid(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutStatusConfig{
+		RolloutName: "backend", Namespace: "prod",
+		ExpectedStatus: "healthy", Timeout: "30m", OnTimeout: "abort",
+	})
+	step := &StepDef{Name: "wait", Type: "rollout-status", Config: string(cfg)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateRolloutStatusStep_InvalidExpectedStatus(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutStatusConfig{
+		RolloutName: "backend", Namespace: "prod", ExpectedStatus: "invalid",
+	})
+	step := &StepDef{Name: "s", Type: "rollout-status", Config: string(cfg)}
+	if err := ValidateStepDef(step); err == nil {
+		t.Error("expected error for invalid expected_status")
+	}
+}
+
+func TestValidateRolloutStatusStep_InvalidOnTimeout(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutStatusConfig{
+		RolloutName: "backend", Namespace: "prod", OnTimeout: "retry",
+	})
+	step := &StepDef{Name: "s", Type: "rollout-status", Config: string(cfg)}
+	if err := ValidateStepDef(step); err == nil {
+		t.Error("expected error for invalid on_timeout")
+	}
+}
+
+// --- Command generation ---
+
+func TestGenerateDeployRolloutCommand(t *testing.T) {
+	cfg, _ := json.Marshal(DeployRolloutConfig{
+		RolloutName: "backend", Namespace: "prod", Image: "app:v2",
+	})
+	step := &StepDef{Name: "s", Type: "deploy-rollout", Config: string(cfg)}
+	cmd, args := GenerateCommand(step)
+	if cmd[0] != "kubectl-argo-rollouts" {
+		t.Errorf("expected kubectl-argo-rollouts, got %v", cmd)
+	}
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "set image") {
+		t.Error("expected 'set image' in args")
+	}
+	if !strings.Contains(joined, "backend") {
+		t.Error("expected rollout name in args")
+	}
+	if !strings.Contains(joined, "app:v2") {
+		t.Error("expected image in args")
+	}
+}
+
+func TestGenerateDeployRolloutCommand_WaitForReady(t *testing.T) {
+	cfg, _ := json.Marshal(DeployRolloutConfig{
+		RolloutName: "backend", Namespace: "prod", Image: "app:v2",
+		WaitForReady: true, Timeout: "10m",
+	})
+	step := &StepDef{Name: "s", Type: "deploy-rollout", Config: string(cfg)}
+	cmd, _ := GenerateCommand(step)
+	// Should use /bin/sh -c with chained commands
+	if cmd[0] != "/bin/sh" {
+		t.Errorf("expected /bin/sh for wait_for_ready, got %v", cmd)
+	}
+	if !strings.Contains(cmd[2], "set image") || !strings.Contains(cmd[2], "status") {
+		t.Error("expected chained set image + status command")
+	}
+	if !strings.Contains(cmd[2], "10m") {
+		t.Error("expected custom timeout in command")
+	}
+}
+
+func TestGenerateRolloutPromoteCommand(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutPromoteConfig{
+		RolloutName: "backend", Namespace: "prod",
+	})
+	step := &StepDef{Name: "s", Type: "rollout-promote", Config: string(cfg)}
+	cmd, args := GenerateCommand(step)
+	if cmd[0] != "kubectl-argo-rollouts" {
+		t.Errorf("expected kubectl-argo-rollouts, got %v", cmd)
+	}
+	if args[0] != "promote" {
+		t.Errorf("expected promote subcommand, got %s", args[0])
+	}
+}
+
+func TestGenerateRolloutPromoteCommand_Full(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutPromoteConfig{
+		RolloutName: "backend", Namespace: "prod", Full: true,
+	})
+	step := &StepDef{Name: "s", Type: "rollout-promote", Config: string(cfg)}
+	_, args := GenerateCommand(step)
+	found := false
+	for _, a := range args {
+		if a == "--full" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected --full flag")
+	}
+}
+
+func TestGenerateRolloutAbortCommand(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutAbortConfig{
+		RolloutName: "backend", Namespace: "prod",
+	})
+	step := &StepDef{Name: "s", Type: "rollout-abort", Config: string(cfg)}
+	cmd, args := GenerateCommand(step)
+	if cmd[0] != "kubectl-argo-rollouts" {
+		t.Errorf("expected kubectl-argo-rollouts, got %v", cmd)
+	}
+	if args[0] != "abort" {
+		t.Errorf("expected abort subcommand, got %s", args[0])
+	}
+}
+
+func TestGenerateRolloutStatusCommand(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutStatusConfig{
+		RolloutName: "backend", Namespace: "prod", Timeout: "15m",
+	})
+	step := &StepDef{Name: "s", Type: "rollout-status", Config: string(cfg)}
+	cmd, args := GenerateCommand(step)
+	if cmd[0] != "kubectl-argo-rollouts" {
+		t.Errorf("expected kubectl-argo-rollouts, got %v", cmd)
+	}
+	if args[0] != "status" {
+		t.Errorf("expected status subcommand, got %s", args[0])
+	}
+	if !strings.Contains(strings.Join(args, " "), "15m") {
+		t.Error("expected custom timeout")
+	}
+}
+
+func TestGenerateRolloutStatusCommand_OnTimeoutAbort(t *testing.T) {
+	cfg, _ := json.Marshal(RolloutStatusConfig{
+		RolloutName: "backend", Namespace: "prod",
+		Timeout: "20m", OnTimeout: "abort",
+	})
+	step := &StepDef{Name: "s", Type: "rollout-status", Config: string(cfg)}
+	cmd, _ := GenerateCommand(step)
+	// Should use /bin/sh -c with chained status || abort
+	if cmd[0] != "/bin/sh" {
+		t.Errorf("expected /bin/sh for on_timeout=abort, got %v", cmd)
+	}
+	if !strings.Contains(cmd[2], "status") || !strings.Contains(cmd[2], "abort") {
+		t.Error("expected status || abort in command")
+	}
+}
+
+func TestResolveImage_DeployRollout_Default(t *testing.T) {
+	step := &StepDef{Name: "s", Type: "deploy-rollout"}
+	img := ResolveImage(step)
+	if !strings.Contains(img, "argo-rollouts") {
+		t.Errorf("expected argo-rollouts image, got: %s", img)
+	}
+}
+
+func TestResolveImage_RolloutPromote_Default(t *testing.T) {
+	step := &StepDef{Name: "s", Type: "rollout-promote"}
+	img := ResolveImage(step)
+	if !strings.Contains(img, "argo-rollouts") {
+		t.Errorf("expected argo-rollouts image, got: %s", img)
+	}
+}

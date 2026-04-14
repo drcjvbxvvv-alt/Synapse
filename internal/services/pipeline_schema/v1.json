@@ -1,0 +1,423 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synapse.io/schemas/pipeline/v1",
+  "title": "Synapse Pipeline Definition",
+  "description": "Schema for Synapse CI/CD Pipeline YAML definition (apiVersion: synapse.io/v1)",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "synapse.io/v1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "Pipeline"
+    },
+    "metadata": {
+      "$ref": "#/$defs/Metadata"
+    },
+    "spec": {
+      "$ref": "#/$defs/PipelineSpec"
+    }
+  },
+  "$defs": {
+    "Metadata": {
+      "type": "object",
+      "required": ["name", "cluster", "namespace"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "pattern": "^[a-z0-9][a-z0-9\\-]*[a-z0-9]$",
+          "description": "Pipeline name (DNS-compatible)"
+        },
+        "cluster": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Target cluster name"
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^[a-z0-9][a-z0-9\\-]*[a-z0-9]$",
+          "description": "Target namespace"
+        }
+      }
+    },
+    "PipelineSpec": {
+      "type": "object",
+      "required": ["steps"],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "concurrency": {
+          "$ref": "#/$defs/Concurrency"
+        },
+        "max_concurrent_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 1
+        },
+        "runtime": {
+          "$ref": "#/$defs/Runtime"
+        },
+        "env": {
+          "$ref": "#/$defs/EnvMap"
+        },
+        "triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Trigger"
+          },
+          "maxItems": 20
+        },
+        "workspace": {
+          "$ref": "#/$defs/Workspace"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        },
+        "notifications": {
+          "$ref": "#/$defs/Notifications"
+        }
+      }
+    },
+    "Concurrency": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "group": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Concurrency group name (supports ${VAR} interpolation)"
+        },
+        "policy": {
+          "type": "string",
+          "enum": ["cancel_previous", "queue", "reject"],
+          "default": "cancel_previous"
+        }
+      }
+    },
+    "Runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service_account": {
+          "type": "string",
+          "maxLength": 253
+        },
+        "pod_security": {
+          "$ref": "#/$defs/PodSecurity"
+        },
+        "network_policy": {
+          "$ref": "#/$defs/NetworkPolicy"
+        }
+      }
+    },
+    "PodSecurity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run_as_non_root": {
+          "type": "boolean",
+          "default": true
+        },
+        "read_only_root_fs": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "NetworkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow_egress": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "maxItems": 100
+        }
+      }
+    },
+    "EnvMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "maxProperties": 100,
+      "description": "Key-value environment variables (supports ${{ secrets.NAME }} and ${VAR} interpolation)"
+    },
+    "Trigger": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["webhook", "schedule"]
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Git provider name (webhook type)"
+        },
+        "repo": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Repository path (e.g. company/backend-service)"
+        },
+        "branch": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Branch glob pattern (e.g. main, release/*, feature/**)"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["push", "merge_request", "pull_request", "tag_push", "release"]
+          },
+          "minItems": 1
+        },
+        "path_filter": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "maxItems": 50,
+          "description": "Glob patterns for changed file paths"
+        },
+        "cron": {
+          "type": "string",
+          "pattern": "^[0-9*/,\\-]+\\s+[0-9*/,\\-]+\\s+[0-9*/,\\-]+\\s+[0-9*/,\\-]+\\s+[0-9*/,\\-]+$",
+          "description": "Standard 5-field cron expression (schedule type)"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "webhook" } } },
+          "then": { "required": ["repo", "branch", "events"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "schedule" } } },
+          "then": { "required": ["cron"] }
+        }
+      ]
+    },
+    "Workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["pvc", "emptyDir"],
+          "default": "pvc"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+(Ki|Mi|Gi|Ti)$",
+          "description": "Storage size (e.g. 4Gi)"
+        },
+        "retention_hours": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 720,
+          "default": 0,
+          "description": "PVC retention after run (0 = delete immediately)"
+        }
+      }
+    },
+    "Step": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^[a-z0-9][a-z0-9\\-]*[a-z0-9]$",
+          "description": "Step name (DNS-compatible, unique within pipeline)"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "build-image",
+            "build-jar",
+            "deploy",
+            "run-script",
+            "shell",
+            "custom",
+            "trivy-scan",
+            "push-image",
+            "deploy-helm",
+            "deploy-argocd-sync",
+            "deploy-rollout",
+            "rollout-promote",
+            "rollout-abort",
+            "rollout-status",
+            "gitops-sync",
+            "notify",
+            "approval"
+          ]
+        },
+        "image": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Container image (optional — defaults per step type)"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Step names this step depends on (DAG edges)"
+        },
+        "env": {
+          "$ref": "#/$defs/EnvMap"
+        },
+        "command": {
+          "type": "string",
+          "maxLength": 10000,
+          "description": "Shell command to execute"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Step-type-specific configuration"
+        },
+        "cache": {
+          "$ref": "#/$defs/StepCache"
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StepOutput"
+          },
+          "maxItems": 20
+        },
+        "on_failure": {
+          "type": "string",
+          "enum": ["abort", "continue", "ignore"],
+          "default": "abort",
+          "description": "Behavior when step fails"
+        },
+        "retry": {
+          "$ref": "#/$defs/StepRetry"
+        },
+        "pod_security": {
+          "$ref": "#/$defs/PodSecurity"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(s|m|h)$",
+          "description": "Step timeout (e.g. 30m, 1h)"
+        }
+      }
+    },
+    "StepCache": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "maxItems": 20,
+          "description": "Paths to cache between runs"
+        }
+      }
+    },
+    "StepOutput": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "File path glob for output artifact"
+        },
+        "from": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Source reference (e.g. kaniko-output)"
+        }
+      }
+    },
+    "StepRetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 1
+        },
+        "backoff_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "default": 5,
+          "description": "Base backoff delay in seconds"
+        }
+      }
+    },
+    "Notifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "on_success": {
+          "$ref": "#/$defs/NotificationTarget"
+        },
+        "on_failure": {
+          "$ref": "#/$defs/NotificationTarget"
+        },
+        "on_scan_critical": {
+          "$ref": "#/$defs/NotificationTarget"
+        }
+      }
+    },
+    "NotificationTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "NotifyChannel IDs"
+        }
+      }
+    }
+  }
+}

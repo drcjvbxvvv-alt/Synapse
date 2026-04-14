@@ -122,6 +122,37 @@ type ArgoCDSyncConfig struct {
 	Insecure  bool   `json:"insecure"`   // 跳過 TLS 驗證（內部叢集用）
 }
 
+// DeployRolloutConfig deploy-rollout Step 的類型特定設定。
+type DeployRolloutConfig struct {
+	RolloutName  string `json:"rollout_name"`    // Argo Rollout 名稱（必填）
+	Namespace    string `json:"namespace"`        // Rollout 所在 namespace（必填）
+	Image        string `json:"image"`            // 更新的 image（必填）
+	WaitForReady bool   `json:"wait_for_ready"`   // 等待 Rollout 達到 Healthy/Paused
+	Timeout      string `json:"timeout"`          // 等待超時（如 "30m"）
+}
+
+// RolloutPromoteConfig rollout-promote Step 的類型特定設定。
+type RolloutPromoteConfig struct {
+	RolloutName string `json:"rollout_name"` // Argo Rollout 名稱（必填）
+	Namespace   string `json:"namespace"`    // Rollout 所在 namespace（必填）
+	Full        bool   `json:"full"`         // 是否全量 promote（跳過所有剩餘步驟）
+}
+
+// RolloutAbortConfig rollout-abort Step 的類型特定設定。
+type RolloutAbortConfig struct {
+	RolloutName string `json:"rollout_name"` // Argo Rollout 名稱（必填）
+	Namespace   string `json:"namespace"`    // Rollout 所在 namespace（必填）
+}
+
+// RolloutStatusConfig rollout-status Step 的類型特定設定。
+type RolloutStatusConfig struct {
+	RolloutName    string `json:"rollout_name"`    // Argo Rollout 名稱（必填）
+	Namespace      string `json:"namespace"`        // Rollout 所在 namespace（必填）
+	ExpectedStatus string `json:"expected_status"`  // 期望狀態：healthy / paused / progressing
+	Timeout        string `json:"timeout"`          // 等待超時（如 "30m"）
+	OnTimeout      string `json:"on_timeout"`       // timeout 行為：abort / fail（預設 fail）
+}
+
 // NotifyConfig notify Step 的類型特定設定。
 type NotifyConfig struct {
 	URL     string            `json:"url"`     // Webhook URL（必填）
@@ -179,6 +210,14 @@ func ValidateStepDef(step *StepDef) error {
 		return validateArgoCDSyncStep(step)
 	case "notify":
 		return validateNotifyStep(step)
+	case "deploy-rollout":
+		return validateDeployRolloutStep(step)
+	case "rollout-promote":
+		return validateRolloutPromoteStep(step)
+	case "rollout-abort":
+		return validateRolloutAbortStep(step)
+	case "rollout-status":
+		return validateRolloutStatusStep(step)
 	}
 
 	return nil
@@ -325,6 +364,14 @@ func GenerateCommand(step *StepDef) (command []string, args []string) {
 		return generateArgoCDSyncCommand(step)
 	case "notify":
 		return generateNotifyCommand(step)
+	case "deploy-rollout":
+		return generateDeployRolloutCommand(step)
+	case "rollout-promote":
+		return generateRolloutPromoteCommand(step)
+	case "rollout-abort":
+		return generateRolloutAbortCommand(step)
+	case "rollout-status":
+		return generateRolloutStatusCommand(step)
 	case "run-script", "shell":
 		// run-script 必須有 command（已在 validation 檢查）
 		return []string{"/bin/sh", "-c", "echo 'no command provided'"}, nil
@@ -498,6 +545,175 @@ func generateNotifyCommand(step *StepDef) ([]string, []string) {
 	cmd += fmt.Sprintf(" -H 'Content-Type: application/json' -d '%s' '%s'", body, cfg.URL)
 
 	return []string{"/bin/sh", "-c", cmd}, nil
+}
+
+// ---------------------------------------------------------------------------
+// Rollout validation
+// ---------------------------------------------------------------------------
+
+func validateDeployRolloutStep(step *StepDef) error {
+	if step.Config == "" {
+		return fmt.Errorf("step %q (deploy-rollout): config with rollout_name, namespace, image is required", step.Name)
+	}
+	var cfg DeployRolloutConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return fmt.Errorf("step %q (deploy-rollout): invalid config: %w", step.Name, err)
+	}
+	if cfg.RolloutName == "" {
+		return fmt.Errorf("step %q (deploy-rollout): config.rollout_name is required", step.Name)
+	}
+	if cfg.Namespace == "" {
+		return fmt.Errorf("step %q (deploy-rollout): config.namespace is required", step.Name)
+	}
+	if cfg.Image == "" {
+		return fmt.Errorf("step %q (deploy-rollout): config.image is required", step.Name)
+	}
+	return nil
+}
+
+func validateRolloutPromoteStep(step *StepDef) error {
+	if step.Config == "" {
+		return fmt.Errorf("step %q (rollout-promote): config with rollout_name and namespace is required", step.Name)
+	}
+	var cfg RolloutPromoteConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return fmt.Errorf("step %q (rollout-promote): invalid config: %w", step.Name, err)
+	}
+	if cfg.RolloutName == "" {
+		return fmt.Errorf("step %q (rollout-promote): config.rollout_name is required", step.Name)
+	}
+	if cfg.Namespace == "" {
+		return fmt.Errorf("step %q (rollout-promote): config.namespace is required", step.Name)
+	}
+	return nil
+}
+
+func validateRolloutAbortStep(step *StepDef) error {
+	if step.Config == "" {
+		return fmt.Errorf("step %q (rollout-abort): config with rollout_name and namespace is required", step.Name)
+	}
+	var cfg RolloutAbortConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return fmt.Errorf("step %q (rollout-abort): invalid config: %w", step.Name, err)
+	}
+	if cfg.RolloutName == "" {
+		return fmt.Errorf("step %q (rollout-abort): config.rollout_name is required", step.Name)
+	}
+	if cfg.Namespace == "" {
+		return fmt.Errorf("step %q (rollout-abort): config.namespace is required", step.Name)
+	}
+	return nil
+}
+
+func validateRolloutStatusStep(step *StepDef) error {
+	if step.Config == "" {
+		return fmt.Errorf("step %q (rollout-status): config with rollout_name and namespace is required", step.Name)
+	}
+	var cfg RolloutStatusConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return fmt.Errorf("step %q (rollout-status): invalid config: %w", step.Name, err)
+	}
+	if cfg.RolloutName == "" {
+		return fmt.Errorf("step %q (rollout-status): config.rollout_name is required", step.Name)
+	}
+	if cfg.Namespace == "" {
+		return fmt.Errorf("step %q (rollout-status): config.namespace is required", step.Name)
+	}
+	if cfg.ExpectedStatus != "" {
+		valid := map[string]bool{"healthy": true, "paused": true, "progressing": true}
+		if !valid[cfg.ExpectedStatus] {
+			return fmt.Errorf("step %q (rollout-status): config.expected_status must be healthy|paused|progressing, got %q", step.Name, cfg.ExpectedStatus)
+		}
+	}
+	if cfg.OnTimeout != "" {
+		valid := map[string]bool{"abort": true, "fail": true}
+		if !valid[cfg.OnTimeout] {
+			return fmt.Errorf("step %q (rollout-status): config.on_timeout must be abort|fail, got %q", step.Name, cfg.OnTimeout)
+		}
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Rollout command generation
+// ---------------------------------------------------------------------------
+
+func generateDeployRolloutCommand(step *StepDef) ([]string, []string) {
+	var cfg DeployRolloutConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return []string{"kubectl-argo-rollouts"}, []string{"--help"}
+	}
+
+	// kubectl-argo-rollouts set image ROLLOUT_NAME CONTAINER=IMAGE -n NAMESPACE
+	args := []string{
+		"set", "image", cfg.RolloutName,
+		"*=" + cfg.Image, // *=image updates all containers
+		"-n", cfg.Namespace,
+	}
+
+	if cfg.WaitForReady {
+		// Chain: set image + wait for status
+		timeout := defaultString(cfg.Timeout, "30m")
+		cmd := fmt.Sprintf(
+			"kubectl-argo-rollouts set image %s '*=%s' -n %s && kubectl-argo-rollouts status %s -n %s --timeout %s",
+			cfg.RolloutName, cfg.Image, cfg.Namespace,
+			cfg.RolloutName, cfg.Namespace, timeout,
+		)
+		return []string{"/bin/sh", "-c", cmd}, nil
+	}
+
+	return []string{"kubectl-argo-rollouts"}, args
+}
+
+func generateRolloutPromoteCommand(step *StepDef) ([]string, []string) {
+	var cfg RolloutPromoteConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return []string{"kubectl-argo-rollouts"}, []string{"--help"}
+	}
+
+	args := []string{"promote", cfg.RolloutName, "-n", cfg.Namespace}
+	if cfg.Full {
+		args = append(args, "--full")
+	}
+
+	return []string{"kubectl-argo-rollouts"}, args
+}
+
+func generateRolloutAbortCommand(step *StepDef) ([]string, []string) {
+	var cfg RolloutAbortConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return []string{"kubectl-argo-rollouts"}, []string{"--help"}
+	}
+
+	return []string{"kubectl-argo-rollouts"}, []string{
+		"abort", cfg.RolloutName, "-n", cfg.Namespace,
+	}
+}
+
+func generateRolloutStatusCommand(step *StepDef) ([]string, []string) {
+	var cfg RolloutStatusConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return []string{"kubectl-argo-rollouts"}, []string{"--help"}
+	}
+
+	timeout := defaultString(cfg.Timeout, "30m")
+	onTimeout := defaultString(cfg.OnTimeout, "fail")
+
+	// kubectl-argo-rollouts status ROLLOUT -n NS --timeout TIMEOUT
+	// If on_timeout=abort, chain with abort on failure
+	if onTimeout == "abort" {
+		cmd := fmt.Sprintf(
+			"kubectl-argo-rollouts status %s -n %s --timeout %s || kubectl-argo-rollouts abort %s -n %s",
+			cfg.RolloutName, cfg.Namespace, timeout,
+			cfg.RolloutName, cfg.Namespace,
+		)
+		return []string{"/bin/sh", "-c", cmd}, nil
+	}
+
+	return []string{"kubectl-argo-rollouts"}, []string{
+		"status", cfg.RolloutName, "-n", cfg.Namespace,
+		"--timeout", timeout,
+	}
 }
 
 // ResolveImage 解析 Step 的 image：使用者指定優先，否則使用預設。

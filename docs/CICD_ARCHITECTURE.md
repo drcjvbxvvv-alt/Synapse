@@ -889,6 +889,10 @@ internal/
     pipeline_notifier.go        ← Pipeline 事件 → NotifyChannel 路由（slack/telegram/teams/webhook）
     pipeline_rca.go             ← Pipeline 失敗 AI 根因分析（context 組裝 + AI 呼叫）
     pipeline_trigger_match.go   ← Webhook 觸發條件引擎（branch glob + path filter + cron 驗證）
+    pipeline_schema.go          ← YAML Schema 驗證 + 嵌入 JSON Schema
+    pipeline_schema/v1.json     ← JSON Schema Draft 2020-12（前後端共用）
+    git_provider_service.go     ← Git Provider CRUD + webhook token 生成
+    git_provider_webhook.go     ← Webhook payload parser（GitHub/GitLab/Gitea）
     pipeline_gc_worker.go       ← GC Worker（孤兒 Job + Run 90d + Log 30d）
     pipeline_recover.go         ← 啟動時孤兒 Run 恢復
   models/
@@ -896,6 +900,7 @@ internal/
     pipeline_secret.go
     pipeline_artifact.go
     pipeline_log.go
+    git_provider.go              ← GitProvider model（GitHub/GitLab/Gitea + AES 加密）
   router/
     routes_cluster_pipeline.go  ← Pipeline + Run + Secret + Log 路由
     routes_webhook.go           ← 公開 Webhook 端點（HMAC 驗證）
@@ -1914,9 +1919,9 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 ### M13c — Argo Rollouts 整合（2 週）
 
 - [ ] Rollout CRD Discovery 偵測（Observer Pattern）
-- [ ] `deploy-rollout` Step 類型（動態客戶端更新 Rollout image）
-- [ ] `rollout-status` Step 類型（等待 Rollout 狀態 + timeout 處理）
-- [ ] `rollout-promote` / `rollout-abort` Step 類型
+- [x] `deploy-rollout` Step 類型（動態客戶端更新 Rollout image）
+- [x] `rollout-status` Step 類型（等待 Rollout 狀態 + timeout 處理）
+- [x] `rollout-promote` / `rollout-abort` Step 類型
 - [ ] Rollout 狀態查詢 API（GET /rollouts）
 - [ ] Rollout 操作 API（promote / abort / retry）
 - [ ] `step_runs` 新增 `rollout_status` / `rollout_weight` 欄位
@@ -1977,12 +1982,12 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | 優先序 | 任務 | 所屬 | 模型 | 說明 |
 |-------|------|------|------|------|
 | ✅ P2-1 | 進階 Step 類型（trivy-scan / push-image / deploy-helm / deploy-argocd-sync / notify） | M13b W5–6 | **Opus** | Config + validation + command gen，含 30 個測試 |
-| P2-2 | GitHub / GitLab / Gitea Provider adapter | M14 | **Sonnet** | Opus 出 GitHub 範本後 Sonnet 複製 |
+| ✅ P2-2 | GitHub / GitLab / Gitea Provider adapter | M14 | **Opus** | GitProvider model + CRUD service + 3 webhook payload parsers + 17 測試 |
 | P2-3 | Registry CRUD + Harbor / ECR / GCR adapter | M15 | **Sonnet** | API wrapper |
 | P2-4 | Credential 加密儲存（Registry） | M15 | **Opus** | 復用 PipelineSecret 加密，key rotation 一致性 |
 | P2-5 | GitOps Application CRUD + Reconcile Loop | M16 | **Opus**（Reconcile）/ **Sonnet**（CRUD） | Reconciler 狀態機需 Opus |
 | P2-6 | ArgoCD / 原生 GitOps 邊界定義（§12.1） | M16 | **Opus** | 誤判 = 雙寫雙讀，生產事故 |
-| P2-7 | rollout-promote / rollout-abort Step | M13c | **Sonnet** | 簡單 API 呼叫 |
+| ✅ P2-7 | rollout-promote / rollout-abort Step | M13c | **Opus** | 4 rollout 類型 validation + command gen（deploy-rollout/promote/abort/status）+ 20 測試 |
 | P2-8 | Environment CRUD + Promotion History | M17 | **Sonnet** | 依 §13 結構 |
 | ✅ P2-9 | NotifyChannel 整合（Pipeline 事件路由） | M13b W8 | **Opus** | PipelineNotifier + 4 channel formats (slack/telegram/teams/webhook) + dedup 整合 + 19 測試 |
 | ✅ P2-10 | 失敗告警去重（通知風暴防護） | M13b W8 | **Opus** | 5min 去重視窗 + LRU eviction + retry/concurrency 抑制 + 11 測試 |
@@ -1997,7 +2002,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | P3-4 | Git Provider / Registry / Environment 管理 UI | M14–M17 | **Sonnet** | 表單頁 |
 | ✅ P3-5 | AI 根因分析按鈕 + context 組裝 | M13b W8 | **Opus** | PipelineRCAService + BuildContext/Analyze + 失敗 Step log/Job/Pod 收集 + 9 測試 |
 | ✅ P3-6 | Prometheus Metrics 註冊（§16） | M13b W8 | **Opus** | 9 指標（4 counter + 3 histogram + 2 gauge）+ convenience helpers + 7 測試 |
-| P3-7 | Pipeline YAML Schema（附錄 A） | 跨 Milestone | **Opus** | 一次性定義，前後端共用 |
+| ✅ P3-7 | Pipeline YAML Schema（附錄 A） | 跨 Milestone | **Opus** | JSON Schema v1 + 結構驗證 + DAG 環偵測 + embed + 19 測試 |
 | P3-8 | Trivy 雙軌遷移 Phase 3–4 | Post-M13 | **Sonnet** | 可延後，現有 host exec 仍可用 |
 
 #### 跨 Milestone 常駐任務
