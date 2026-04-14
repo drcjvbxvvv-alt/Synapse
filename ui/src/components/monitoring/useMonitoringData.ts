@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import api from '../../utils/api';
 import type { ClusterMetricsData, MonitoringChartsProps } from './types';
+import { useVisibilityInterval } from '../../hooks/useVisibilityInterval';
 
 const CACHE_DURATION = 30000; // 30 seconds
 
@@ -21,7 +22,6 @@ export function useMonitoringData({
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const metricsCacheRef = useRef<{ key: string; data: ClusterMetricsData; timestamp: number } | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const cacheKey = useMemo(() => {
     return `${clusterId}-${type}-${timeRange}-${step}-${clusterName || ''}-${nodeName || ''}-${namespace || ''}-${podName || ''}-${workloadName || ''}`;
@@ -92,6 +92,7 @@ export function useMonitoringData({
     }
   }, [clusterId, timeRange, step, clusterName, nodeName, namespace, podName, workloadName, type, cacheKey, getCachedData]);
 
+  // Effect 1: data fetch — runs when query params change, NOT when autoRefresh toggles
   useEffect(() => {
     if (lazyLoad && !hasLoaded) {
       const timer = setTimeout(() => {
@@ -115,20 +116,10 @@ export function useMonitoringData({
       }
       fetchMetrics();
     }
+  }, [fetchMetrics, lazyLoad, hasLoaded, getCachedData]);
 
-    if (autoRefresh) {
-      intervalRef.current = setInterval(() => {
-        if (!document.hidden) fetchMetrics(true);
-      }, 30000);
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [clusterId, timeRange, step, clusterName, nodeName, namespace, podName, fetchMetrics, autoRefresh, lazyLoad, hasLoaded, getCachedData]);
+  // Effect 2: auto-refresh interval — isolated so toggling autoRefresh never triggers a fetch
+  useVisibilityInterval(() => fetchMetrics(true), autoRefresh ? 30000 : null);
 
   return {
     metrics,

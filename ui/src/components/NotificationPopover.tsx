@@ -29,6 +29,70 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)} 天前`;
 }
 
+// ─── Notification list item ───────────────────────────────────────────────────
+
+interface ListItemProps {
+  item: NotificationItem;
+  onMarkRead: (id: number) => void;
+}
+
+const NotificationListItem = React.memo<ListItemProps>(({ item, onMarkRead }) => (
+  <List.Item
+    style={{
+      padding: '10px 8px',
+      background: item.isRead ? 'transparent' : '#f0f7ff',
+      borderRadius: 6,
+      marginBottom: 2,
+      cursor: 'pointer',
+      alignItems: 'flex-start',
+    }}
+    onClick={() => !item.isRead && onMarkRead(item.id)}
+  >
+    <Space align="start" style={{ width: '100%' }} size={10}>
+      {/* unread dot */}
+      <div style={{
+        width: 8, height: 8, borderRadius: '50%', marginTop: 6, flexShrink: 0,
+        background: item.isRead ? 'transparent' : '#1677ff',
+      }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
+          <Space size={4} wrap>
+            <Tag
+              icon={item.eventType === 'Warning' ? <WarningOutlined /> : <InfoCircleOutlined />}
+              color={eventTypeColor(item.eventType)}
+              style={{ margin: 0, fontSize: 11 }}
+            >
+              {item.eventReason || item.eventType}
+            </Tag>
+            {item.clusterName && (
+              <Tag color="geekblue" style={{ margin: 0, fontSize: 11 }}>{item.clusterName}</Tag>
+            )}
+          </Space>
+          <Text type="secondary" style={{ fontSize: 11, flexShrink: 0 }}>
+            {timeAgo(item.triggeredAt)}
+          </Text>
+        </div>
+        <Tooltip title={item.message}>
+          <Text
+            style={{
+              display: 'block', marginTop: 4, fontSize: 12,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}
+          >
+            {item.message || item.ruleName}
+          </Text>
+        </Tooltip>
+        {item.namespace && (
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            {item.namespace}{item.involvedObj ? ` · ${item.involvedObj}` : ''}
+          </Text>
+        )}
+      </div>
+    </Space>
+  </List.Item>
+));
+NotificationListItem.displayName = 'NotificationListItem';
+
 // ─── Popover content ────────────────────────────────────────────────────────
 
 interface ContentProps {
@@ -38,7 +102,7 @@ interface ContentProps {
   onMarkAllRead: () => void;
 }
 
-const PopoverContent: React.FC<ContentProps> = ({ items, loading, onMarkRead, onMarkAllRead }) => {
+const PopoverContent = React.memo<ContentProps>(({ items, loading, onMarkRead, onMarkAllRead }) => {
   const { t } = useTranslation('common');
   const unread = items.filter(n => !n.isRead).length;
 
@@ -82,65 +146,14 @@ const PopoverContent: React.FC<ContentProps> = ({ items, loading, onMarkRead, on
           dataSource={items}
           style={{ maxHeight: 420, overflowY: 'auto' }}
           renderItem={item => (
-            <List.Item
-              style={{
-                padding: '10px 8px',
-                background: item.isRead ? 'transparent' : '#f0f7ff',
-                borderRadius: 6,
-                marginBottom: 2,
-                cursor: 'pointer',
-                alignItems: 'flex-start',
-              }}
-              onClick={() => !item.isRead && onMarkRead(item.id)}
-            >
-              <Space align="start" style={{ width: '100%' }} size={10}>
-                {/* unread dot */}
-                <div style={{
-                  width: 8, height: 8, borderRadius: '50%', marginTop: 6, flexShrink: 0,
-                  background: item.isRead ? 'transparent' : '#1677ff',
-                }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
-                    <Space size={4} wrap>
-                      <Tag
-                        icon={item.eventType === 'Warning' ? <WarningOutlined /> : <InfoCircleOutlined />}
-                        color={eventTypeColor(item.eventType)}
-                        style={{ margin: 0, fontSize: 11 }}
-                      >
-                        {item.eventReason || item.eventType}
-                      </Tag>
-                      {item.clusterName && (
-                        <Tag color="geekblue" style={{ margin: 0, fontSize: 11 }}>{item.clusterName}</Tag>
-                      )}
-                    </Space>
-                    <Text type="secondary" style={{ fontSize: 11, flexShrink: 0 }}>
-                      {timeAgo(item.triggeredAt)}
-                    </Text>
-                  </div>
-                  <Tooltip title={item.message}>
-                    <Text
-                      style={{
-                        display: 'block', marginTop: 4, fontSize: 12,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {item.message || item.ruleName}
-                    </Text>
-                  </Tooltip>
-                  {item.namespace && (
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      {item.namespace}{item.involvedObj ? ` · ${item.involvedObj}` : ''}
-                    </Text>
-                  )}
-                </div>
-              </Space>
-            </List.Item>
+            <NotificationListItem key={item.id} item={item} onMarkRead={onMarkRead} />
           )}
         />
       )}
     </div>
   );
-};
+});
+PopoverContent.displayName = 'PopoverContent';
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
@@ -171,26 +184,27 @@ const NotificationPopover: React.FC = () => {
     }
   }, []);
 
-  // Initial load + polling — pauses when tab is hidden
+  // Initial load + polling — pauses when tab is hidden OR popover is open
+  // (when open, fetchList already retrieved fresh data; no need to also poll)
   useEffect(() => { fetchUnread(); }, [fetchUnread]);
-  useVisibilityInterval(fetchUnread, POLL_INTERVAL);
+  useVisibilityInterval(fetchUnread, open ? null : POLL_INTERVAL);
 
   const handleOpenChange = (v: boolean) => {
     setOpen(v);
     if (v) fetchList();
   };
 
-  const handleMarkRead = async (id: number) => {
+  const handleMarkRead = useCallback(async (id: number) => {
     setItems(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
     await notificationService.markRead(id);
-  };
+  }, []);
 
-  const handleMarkAllRead = async () => {
+  const handleMarkAllRead = useCallback(async () => {
     setItems(prev => prev.map(n => ({ ...n, isRead: true })));
     setUnreadCount(0);
     await notificationService.markAllRead();
-  };
+  }, []);
 
   return (
     <Popover

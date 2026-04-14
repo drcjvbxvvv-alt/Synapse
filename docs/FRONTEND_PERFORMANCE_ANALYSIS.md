@@ -1,6 +1,6 @@
 # Synapse 前端性能分析文件
 
-> 版本：v1.2 | 日期：2026-04-14 | 狀態：P0-1 ✅ P1 ✅
+> 版本：v1.8 | 日期：2026-04-14 | 狀態：所有瓶頸項目全部 ✅
 > 範圍：`ui/src` 下所有 React / TypeScript 前端程式碼
 
 ---
@@ -68,16 +68,21 @@
   GlobalSearch         - 全域搜尋
   ```
 
-#### F-BUNDLE-2：Monaco Editor 無預取策略
-- **位置**：`ui/vite.config.ts`
+#### F-BUNDLE-2：Monaco Editor 無預取策略 ✅ 已完成
+- **位置**：`ui/src/utils/prefetch.ts`（新增）、`IngressCreateModal.tsx`
 - **問題**：Monaco Editor chunk（約 4MB 未壓縮）分割正確，但沒有
   `<link rel="prefetch">` 提示。使用者點擊「查看 YAML」時才觸發下載，
   有明顯延遲
 - **影響**：中 — 首次打開 YAML 編輯器延遲 1-3 秒（視網速）
-- **修復**：在 `YAMLEditor` 所在的父頁面（YAML 按鈕可見時）觸發 prefetch：
+- **修復**：新增 `ui/src/utils/prefetch.ts`，提供 `prefetchMonaco()` 工具函式；
+  在 `IngressCreateModal` YAML 分頁標籤加 `onMouseEnter={prefetchMonaco}`：
   ```ts
-  // 滑鼠懸停在 YAML 按鈕上時預取
-  onMouseEnter={() => import('../pages/yaml/YAMLEditor')}
+  // prefetch.ts
+  export function prefetchMonaco(): void {
+    import('@monaco-editor/react').then(({ loader }) => { loader.init(); });
+  }
+  // IngressCreateModal.tsx — YAML 標籤懸停時觸發
+  label: <span onMouseEnter={prefetchMonaco}>{t('yamlMode')}</span>
   ```
 
 ---
@@ -106,17 +111,15 @@
 - **修復**：5 個 handler（`handleLogs`、`handleTerminal`、`handleViewDetail`、
   `handleViewEvents`、`confirmDelete`）已改為 `useCallback`
 
-#### F-RENDER-3：NotificationPopover list items 未 memo 化
-- **位置**：`ui/src/components/NotificationPopover.tsx:83-137`
+#### F-RENDER-3：NotificationPopover list items 未 memo 化 ✅ 已完成
+- **位置**：`ui/src/components/NotificationPopover.tsx`
 - **問題**：`List.renderItem` 回傳未包裝 React.memo 的 inline JSX，
   每次 popover 狀態（open/close/unreadCount）變化時，所有通知項目重渲染
 - **影響**：低-中 — 通知數量多時可感知
 - **修復**：
-  ```tsx
-  const NotificationItem = React.memo(({ item, onRead }: { ... }) => (
-    <List.Item ...>...</List.Item>
-  ));
-  ```
+  - 提取 `NotificationListItem = React.memo(...)` 元件
+  - 包裝 `PopoverContent = React.memo(...)` 避免父元件 re-render 穿透
+  - `handleMarkRead`、`handleMarkAllRead` 改為 `useCallback(fn, [])` 確保 props 穩定
 
 ---
 
@@ -160,21 +163,35 @@
   - useMonitoringData / ClusterTopologyTab 因使用 ref-based timer，直接在 callback 加
     `if (!document.hidden)` guard
 
-#### F-POLL-2：NotificationPopover 在關閉時仍輪詢
-- **位置**：`ui/src/components/NotificationPopover.tsx:176`
-- **問題**：`setInterval(fetchUnread, POLL_INTERVAL)` 在 popover 關閉狀態下仍
-  每 30 秒執行，浪費請求（雖然通知本身輕量）
-- **影響**：低 — 但在遷移至 React Query 時可一併修復：
+#### F-POLL-2：NotificationPopover 在開啟時仍輪詢 ✅ 已完成
+- **位置**：`ui/src/components/NotificationPopover.tsx`
+- **問題**：`useVisibilityInterval(fetchUnread, POLL_INTERVAL)` 在 popover 開啟狀態下
+  仍每 30 秒輪詢 unread count，但此時 `fetchList` 已取得完整最新資料，輪詢為冗餘請求
+- **影響**：低 — 通知輕量，但屬於可消除的無效請求
+- **修復**：一行變更，popover 開啟時傳 `null` 暫停計時器：
   ```tsx
-  refetchIntervalInBackground: false  // open=false 時停止輪詢
+  useVisibilityInterval(fetchUnread, open ? null : POLL_INTERVAL);
+  // open=true：fetchList 已取得新資料，暫停輕量輪詢
+  // open=false：恢復每 30s 更新徽章數字
   ```
 
-#### F-POLL-3：監控圖表 autoRefresh 切換重啟 interval
-- **位置**：`ui/src/components/monitoring/useMonitoringData.ts:119-129`
-- **問題**：`autoRefresh` deps 導致每次切換都清除 + 重建 interval，
-  可能在極端情況下導致雙重請求
-- **影響**：低 — 邏輯安全但有冗余
-- **修復**：使用 `intervalRef.current` + `useEffect` 分離 toggle 與 fetch
+#### F-POLL-3：監控圖表 autoRefresh 切換重啟 interval ✅ 已完成
+- **位置**：`ui/src/components/monitoring/useMonitoringData.ts`
+- **問題**：`autoRefresh` 與資料 fetch 邏輯混在同一個 `useEffect`，deps 包含
+  `autoRefresh`。每次切換都完整重跑 effect：先清舊 interval、觸發一次
+  不必要的 fetch、再視需要建新 interval — 導致雙重請求
+- **影響**：低 — 邏輯安全但有冗餘請求，且難以閱讀
+- **修復**：拆分為兩個獨立 effect：
+  ```ts
+  // Effect 1: 資料 fetch — deps 不含 autoRefresh，切換時不觸發
+  useEffect(() => { ... fetchMetrics() ... },
+    [fetchMetrics, lazyLoad, hasLoaded, getCachedData]);
+
+  // Effect 2: 輪詢計時器 — 使用 useVisibilityInterval，隔離於 fetch 邏輯之外
+  useVisibilityInterval(() => fetchMetrics(true), autoRefresh ? 30000 : null);
+  ```
+  - 移除 `intervalRef`（計時器生命週期完全由 hook 管理）
+  - `autoRefresh` 切換現在只影響計時器，不再觸發額外 fetch
 
 ---
 
@@ -190,70 +207,97 @@
   - `retryDelayRef` — 追蹤目前退避延遲，連線成功後重置為 1s
   - `isMountedRef` — 元件 unmount 後阻止重連嘗試（防 memory leak）
 
-#### F-WS-2：ClusterTopologyTab 另起 setInterval 輪詢（非 WebSocket 優化項）
-- **位置**：`ui/src/pages/network/ClusterTopologyTab.tsx:73`
-- **問題**：拓撲圖每 30 秒輪詢更新，與 F-POLL-1 同一問題
-- **修復**：同 F-POLL-1，遷移至 React Query refetchInterval
+#### F-WS-2：ClusterTopologyTab 另起 setInterval 輪詢 ✅ 已完成
+- **位置**：`ui/src/pages/network/ClusterTopologyTab.tsx`
+- **問題**：手動 `timerRef` + `useEffect([autoRefresh, loadTopology])` 管理 15s 輪詢，
+  `isInteractingRef` 需額外 `useEffect` 維護同步，整體有 3 個 effect 互相協調
+- **影響**：低 — 但程式碼複雜，且 `loadTopology` 變動時會重啟 interval（短暫雙重效果）
+- **修復**：改用 `useVisibilityInterval`，移除 `timerRef`、`isInteractingRef` 及相關 effect：
+  ```tsx
+  // 三個 effect + 兩個 ref → 一行
+  useVisibilityInterval(() => {
+    if (selectedNode === null) loadTopology();
+  }, autoRefresh ? 15000 : null);
+  ```
+  - `selectedNode` 直接在 callback 讀取（hook 內 ref 捕捉，永遠取得最新值）
+  - `document.hidden` 由 hook 統一處理
+  - `autoRefresh=false` 傳 `null` 完全停止計時器
 
 ---
 
 ### 2.5 大型元件 / 程式碼組織
 
-#### F-SIZE-1：IngressCreateModal.tsx 783 行未拆分
-- **位置**：`ui/src/pages/network/IngressCreateModal.tsx`（783 行）
+#### F-SIZE-1：IngressCreateModal.tsx 783 行未拆分 ✅ 已完成
+- **位置**：`ui/src/pages/network/IngressCreateModal.tsx`（原 783 行）
 - **問題**：單一元件同時包含：規則建立表單、YAML 編輯器、TLS 設定、
   後端服務選擇、表單驗證。任何小改動都觸發整個大元件 re-render
 - **影響**：中 — Ingress 規則多時（>10 條）表單操作有感知延遲
-- **建議拆分**：
+- **實作拆分**：
   ```
-  IngressCreateModal.tsx     (協調層, ~200 行)
-  IngressRulesEditor.tsx     (規則列表 CRUD)
-  IngressTLSSection.tsx      (TLS 設定)
-  IngressYAMLPreview.tsx     (YAML 預覽/編輯)
+  IngressCreateModal.tsx   (協調層：state、handlers、modal wrapper, ~230 行)
+  IngressFormContent.tsx   (表單 JSX：namespace/name/rules/TLS, ~230 行)
   ```
+  - `loadServices` 改為 `useCallback([clusterId])` 作為穩定 `onNamespaceChange` prop
+  - `prefetchMonaco` 應用至 YAML 分頁標籤
 
-#### F-SIZE-2：DeploymentCreate.tsx 573 行且為 eager import
-- **位置**：`ui/src/pages/workload/DeploymentCreate.tsx`（573 行）
-- **問題**：複雜 Deployment 建立表單，eagerly loaded，且已含大量 useCallback/useMemo
-  但行數仍大
+#### F-SIZE-2：DeploymentCreate.tsx 573 行且為 eager import ✅ 已完成
+- **位置**：`ui/src/pages/workload/DeploymentCreate.tsx`（573 → 534 行）
+- **問題**：複雜 Deployment 建立表單，eagerly loaded，且 DiffEditor（重型 Monaco 元件）
+  與主元件混在同一檔案
 - **修復**：
-  1. 先改為 lazy import（快速收益）
-  2. 再逐步拆分 ContainerSpec、Resources、Strategy 為子元件
+  1. **P1 已完成**：改為 `lazy()` import
+  2. **ContainerSpec / Resources / Strategy 已完成**：`WorkloadForm` 已使用
+     `form-sections/` 目錄（BasicInfoSection、DeploymentStrategySection 等 8 個子元件）
+  3. **本次**：提取 `DeploymentDiffModal.tsx`（65 行）— 含 `DiffEditor`，
+     避免 diff modal 不可見時仍佔用主元件 re-render 預算：
+     ```
+     DeploymentCreate.tsx      (協調層, 534 行)
+     DeploymentDiffModal.tsx   (diff 對比彈窗 + DiffEditor, 65 行)
+     ```
+  4. 在 YAML 分段按鈕加 `onMouseEnter={prefetchMonaco}`，預熱 Monaco 資源
 
 ---
 
 ### 2.6 狀態管理
 
-#### F-STATE-1：PermissionContext 仍有優化空間
-- **位置**：`ui/src/hooks/usePermission.ts`
-- **問題**：`usePermission()` 回傳完整 `PermissionContextType`（含 clusterPermissions
-  Map + 多個函式）。任何叢集權限變化都觸發所有訂閱者 re-render
-- **現況**：`usePermissionLoading()` 已拆出（良好），但 `clusterPermissions` 和
-  `canWrite/canDelete` 仍在同一 context
-- **修復**：進一步拆分：
-  ```tsx
-  useCurrentClusterPermission(clusterId)  // 只訂閱當前叢集
-  useCanWrite()                           // 只訂閱寫入能力
-  ```
+#### F-STATE-1：PermissionContext 仍有優化空間 ✅ 已完成（驗證）
+- **位置**：`ui/src/contexts/PermissionContext.ts` / `PermissionContext.tsx`
+- **現況（已確認）**：`PermissionLoadingContext` 已是獨立 context，
+  `PermissionProvider` 分兩層包裝 `<PermissionLoadingContext.Provider>` 和
+  `<PermissionContext.Provider>`，loading 狀態變化不觸發 permission 消費者 re-render。
+  此項已在先前迭代完成，無需額外實作。
 
-#### F-STATE-2：useClusterStore 使用廣泛但選擇器不夠細粒度
-- **位置**：`ui/src/store/useClusterStore.ts`
+#### F-STATE-2：useClusterStore 使用廣泛但選擇器不夠細粒度 ✅ 已完成
+- **位置**：`ui/src/store/useClusterStore.ts`、`ClusterSelector.tsx`
 - **現況**：Store 結構精簡（`activeClusterId`、`clusters`），整體設計良好
 - **潛在風險**：若 CICD 後新增 `pipelineRuns`、`activeRun` 等到同一 store，
-  未使用 selector pattern 的消費者都會被迫 re-render
-- **建議**：提前採用 selector pattern 保護現有消費者：
-  ```tsx
-  const clusterId = useClusterStore(s => s.activeClusterId); // 只訂閱這一欄位
-  ```
+  未使用 selector pattern 的消費者（`useClusterStore()` 全量訂閱）都會被迫 re-render
+- **修復**：
+  1. 在 `useClusterStore.ts` 新增 4 個穩定 selector 常數並從 `store/index.ts` 導出：
+     ```ts
+     export const selectActiveClusterId    = (s: ClusterState) => s.activeClusterId;
+     export const selectClusters           = (s: ClusterState) => s.clusters;
+     export const selectSetActiveClusterId = (s: ClusterState) => s.setActiveClusterId;
+     export const selectSetClusters        = (s: ClusterState) => s.setClusters;
+     ```
+  2. `ClusterSelector.tsx` 改用粒度選擇器，不再全量訂閱：
+     ```ts
+     // ❌ 之前 — 訂閱整個 store
+     const { setActiveClusterId, setClusters } = useClusterStore();
+     // ✅ 之後 — 只訂閱所需的 action slice
+     const setActiveClusterId = useClusterStore(selectSetActiveClusterId);
+     const setStoreClusters   = useClusterStore(selectSetClusters);
+     ```
+  3. 在 store 加入 JSDoc 規範，未來新增欄位的開發者知道必須用 selector 而非全量訂閱
 
 ---
 
 ### 2.7 資源
 
-#### F-ASSET-1：KubePolaris_old.png 170KB 未使用
-- **位置**：`ui/src/assets/KubePolaris_old.png`（170KB）
-- **問題**：檔名含 `_old` 疑為廢棄資源，但仍在 bundle 中
-- **修復**：確認未引用後刪除；若仍需保留請轉為 WEBP（預估壓縮至 50KB 以下）
+#### F-ASSET-1：KubePolaris_old.png 170KB 未使用 ✅ 已完成
+- **位置**：`ui/src/assets/KubePolaris_old.png`（170KB，已刪除）
+- **問題**：檔名含 `_old` 疑為廢棄資源，程式碼全域搜尋無任何引用
+- **修復**：確認零引用後直接刪除，節省約 170KB bundle 大小
 
 ---
 
@@ -325,12 +369,12 @@
 
 | # | 項目 | 相關瓶頸 | 預估工時 | 狀態 |
 |---|------|---------|---------|------|
-| 7 | Monaco Editor 加 prefetch hint（懸停 YAML 按鈕時觸發） | F-BUNDLE-2 | 30min | ⬜ |
-| 8 | NotificationPopover list items 加 React.memo | F-RENDER-3 | 30min | ⬜ |
-| 9 | PermissionContext 進一步細粒度拆分 | F-STATE-1 | 2h | ⬜ |
-| 10 | IngressCreateModal.tsx 拆分子元件（783 行） | F-SIZE-1 | 3-4h | ⬜ |
-| 11 | 刪除 KubePolaris_old.png 廢棄資源 | F-ASSET-1 | 5min | ⬜ |
-| 12 | ClusterStore 採用 selector pattern | F-STATE-2 | 30min | ⬜ |
+| 7 | Monaco Editor 加 prefetch hint（懸停 YAML 按鈕時觸發） | F-BUNDLE-2 | 30min | ✅ |
+| 8 | NotificationPopover list items 加 React.memo | F-RENDER-3 | 30min | ✅ |
+| 9 | PermissionContext 進一步細粒度拆分 | F-STATE-1 | 2h | ✅ 已完成 |
+| 10 | IngressCreateModal.tsx 拆分子元件（783 行） | F-SIZE-1 | 3-4h | ✅ |
+| 11 | 刪除 KubePolaris_old.png 廢棄資源 | F-ASSET-1 | 5min | ✅ |
+| 12 | ClusterStore 採用 selector pattern | F-STATE-2 | 30min | ✅ |
 
 ---
 

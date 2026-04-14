@@ -11,7 +11,7 @@ import type { Cluster } from '../types';
 import { clusterService } from '../services/clusterService';
 import { usePermission } from '../hooks/usePermission';
 import { getPermissionTypeColor } from '../services/permissionService';
-import { useClusterStore } from '../store';
+import { useClusterStore, selectSetActiveClusterId, selectSetClusters } from '../store';
 
 const { Option } = Select;
 
@@ -22,7 +22,8 @@ const ClusterSelector: React.FC = () => {
   const { t } = useTranslation(['permission', 'common']);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const { getPermissionType, setCurrentClusterId, canWrite, refreshPermissions } = usePermission();
-  const { setActiveClusterId, setClusters: setStoreClusters } = useClusterStore();
+  const setActiveClusterId = useClusterStore(selectSetActiveClusterId);
+  const setStoreClusters   = useClusterStore(selectSetClusters);
 
   const currentClusterId = clusterId || id;
 

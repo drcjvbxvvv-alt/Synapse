@@ -1,3 +1,9 @@
 export { useSessionStore } from './useSessionStore';
-export { useClusterStore } from './useClusterStore';
+export {
+  useClusterStore,
+  selectActiveClusterId,
+  selectClusters,
+  selectSetActiveClusterId,
+  selectSetClusters,
+} from './useClusterStore';
 export { useUIStore } from './useUIStore';

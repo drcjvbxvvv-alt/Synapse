@@ -8,8 +8,6 @@ import {
   App,
   Alert,
   Tooltip,
-  Modal,
-  Typography,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -18,23 +16,22 @@ import {
   CodeOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  DiffOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { WorkloadService } from '../../services/workloadService';
 import { parseApiError } from '../../utils/api';
+import { prefetchMonaco } from '../../utils/prefetch';
 import { useTranslation } from 'react-i18next';
 import { getNamespaces } from '../../services/namespaceService';
 import { secretService } from '../../services/configService';
 import WorkloadForm from '../../components/workload/WorkloadForm';
 import { workloadYamlService } from '../../services/workloadYamlService';
-import MonacoEditor, { DiffEditor } from '@monaco-editor/react';
+import MonacoEditor from '@monaco-editor/react';
+import DeploymentDiffModal from './DeploymentDiffModal';
 import * as YAML from 'yaml';
 import { Form } from 'antd';
 import type { WorkloadFormData } from '../../types/workload';
-
-const { Text } = Typography;
 
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Rollout' | 'Job' | 'CronJob';
 
@@ -434,7 +431,7 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
             onChange={handleModeChange}
             options={[
               { value: 'form', icon: <FormOutlined />, label: t('create.formMode') },
-              { value: 'yaml', icon: <CodeOutlined />, label: t('create.yamlMode') },
+              { value: 'yaml', icon: <CodeOutlined />, label: <span onMouseEnter={prefetchMonaco}>{t('create.yamlMode')}</span> },
             ]}
           />
         </Space>
@@ -523,49 +520,13 @@ const workloadType = (searchParams.get('type') || 'Deployment') as WorkloadType;
       )}
 
       {/* Diff 對比彈窗 */}
-      <Modal
-        title={
-          <Space>
-            <DiffOutlined />
-            <span>{t('create.diffTitle')}</span>
-          </Space>
-        }
+      <DeploymentDiffModal
         open={diffModalVisible}
+        originalYaml={originalYaml}
+        modifiedYaml={pendingYaml}
         onCancel={() => setDiffModalVisible(false)}
-        onOk={handleConfirmDiff}
-        width="90%"
-        style={{ top: 20 }}
-        okText={t("create.confirmUpdate")}
-        cancelText={t("create.cancel")}
-        destroyOnHidden
-      >
-        <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Text type="secondary">
-              {t('create.diffDesc')}
-            </Text>
-          </Space>
-        </div>
-        <div style={{ border: '1px solid #d9d9d9', borderRadius: 4 }}>
-          <DiffEditor
-            height="60vh"
-            language="yaml"
-            original={originalYaml}
-            modified={pendingYaml}
-            options={{
-              readOnly: true,
-              minimap: { enabled: false },
-              fontSize: 13,
-              lineNumbers: 'on',
-              wordWrap: 'on',
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-              renderSideBySide: true,
-              diffWordWrap: 'on',
-            }}
-          />
-        </div>
-      </Modal>
+        onConfirm={handleConfirmDiff}
+      />
     </div>
   );
 };

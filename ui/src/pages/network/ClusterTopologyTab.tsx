@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useVisibilityInterval } from '../../hooks/useVisibilityInterval';
 import EmptyState from '@/components/EmptyState';
 import { Button, Select, Spin, Tag, App, Space, Tooltip, Switch } from 'antd';
 import { ReloadOutlined, ApiOutlined, SyncOutlined } from '@ant-design/icons';
@@ -28,8 +29,6 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
   const [showPolicy, setShowPolicy] = useState(false);
   const [showHubble, setShowHubble] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isInteractingRef = useRef(false);
 
   // Load integration status
   useEffect(() => {
@@ -61,23 +60,11 @@ const ClusterTopologyTab: React.FC<ClusterTopologyTabProps> = ({ clusterId }) =>
     loadTopology();
   }, [loadTopology]);
 
-  // Pause auto-refresh when detail panel is open
-  useEffect(() => {
-    isInteractingRef.current = selectedNode !== null;
-  }, [selectedNode]);
-
-  // Auto-refresh every 15 seconds when enabled, skipped during interaction
-  useEffect(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (autoRefresh) {
-      timerRef.current = setInterval(() => {
-        if (!document.hidden && !isInteractingRef.current) loadTopology();
-      }, 15000);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [autoRefresh, loadTopology]);
+  // Auto-refresh every 15 seconds — pauses when tab hidden, detail panel open, or autoRefresh off
+  // Callback is always fresh (ref-captured by useVisibilityInterval), so selectedNode is never stale
+  useVisibilityInterval(() => {
+    if (selectedNode === null) loadTopology();
+  }, autoRefresh ? 15000 : null);
 
   // Dropdown options derived from loaded nodes
   const filterOptions = useMemo(() => [
