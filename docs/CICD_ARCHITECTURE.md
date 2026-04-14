@@ -898,6 +898,8 @@ internal/
     environment_service.go      ← Environment CRUD + PromotionHistory 管理
     rollout_service.go          ← Argo Rollouts 狀態機（CRD Discovery + 查詢 + promote/abort/retry）
     promotion_service.go        ← 環境晉升狀態機 + Policy 引擎（auto/approval 策略）
+    gitops_service.go           ← GitOps Application CRUD + 互斥邊界規則（§12.1）
+    gitops_diff.go              ← GitOps Diff 引擎 + Drift Detection（§12.3）
     pipeline_gc_worker.go       ← GC Worker（孤兒 Job + Run 90d + Log 30d）
     pipeline_recover.go         ← 啟動時孤兒 Run 恢復
   models/
@@ -908,6 +910,7 @@ internal/
     git_provider.go              ← GitProvider model（GitHub/GitLab/Gitea + AES 加密）
     registry.go                  ← Registry model（AES-256-GCM 加密 password + ca_bundle）
     environment.go               ← Environment + PromotionHistory model
+    gitops_app.go                ← GitOpsApp model（native / argocd source）
   router/
     routes_cluster_pipeline.go  ← Pipeline + Run + Secret + Log 路由
     routes_webhook.go           ← 公開 Webhook 端點（HMAC 驗證）
@@ -1908,12 +1911,12 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 ### M16 — 原生 GitOps（6 週）
 
-- [ ] `gitops_apps` 資料表（含 `source` 欄位區分 native / argocd）
-- [ ] Diff 引擎（YAML / Kustomize / Helm）
+- [x] `gitops_apps` 資料表（含 `source` 欄位區分 native / argocd）
+- [x] Diff 引擎（YAML / Kustomize / Helm）— GitOpsDiffEngine + GVR 解析 + resource 比對
 - [ ] Git clone 快取 PVC
 - [ ] Auto Sync / Drift 通知（NotifyChannel）
 - [ ] 前端整合：ArgoCD 代理 + 原生 App 合併列表
-- [ ] ArgoCD 代理保留並明確邊界
+- [x] ArgoCD 代理保留並明確邊界 — source 互斥規則 + deploy step exclusion
 
 ### M17 — 環境流水線（5 週）
 
@@ -1978,7 +1981,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | ✅ P1-3 | Log 雙層儲存（SSE + pipeline_logs）+ Log Scrubber | M13a W3 | **Sonnet**（儲存）/ **Opus**（Scrubber） | Scrubber 漏洩 = Secret 外洩 |
 | ✅ P1-4 | GC Worker（K8s Job + PVC + Log retention） | M13a W3 | **Opus** | 依 §7.12 策略實作：孤兒 Job 清理 + Run 90d + Log 30d |
 | ✅ P1-5 | Rollout 狀態機（deploy-rollout / rollout-status） | M13c | **Opus** | RolloutService + CRD Discovery + dynamic client 查詢/操作 + canary/blueGreen 解析 + 20 測試 |
-| P1-6 | GitOps Diff 引擎 + Drift Detection | M16 | **Opus** | production drift 或反向 overwrite |
+| ✅ P1-6 | GitOps Diff 引擎 + Drift Detection | M16 | **Opus** | GitOpsDiffEngine + GVR 解析 + resource 比對 + system annotation 排除 + drift summary + 17 測試 |
 | ✅ P1-7 | Promotion 狀態機 + Policy 引擎 | M17 | **Opus** | PromotionService + EvaluatePromotion + 順序驗證 + auto/approval 策略 + ApprovalRequest 整合 + 12 測試 |
 | ✅ P1-8 | Approval Step（整合 ApprovalRequest） | M13b W5–6 | **Opus** | 審批狀態機 + waiting_approval 狀態 + approve/reject API |
 | ✅ P1-9 | Step 級別重試（retry + exponential backoff） | M13b W5–6 | **Opus** | RetryPolicy + 指數/固定退避 + 最大 10 次 + 5min 上限 |
@@ -1992,8 +1995,8 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | ✅ P2-2 | GitHub / GitLab / Gitea Provider adapter | M14 | **Opus** | GitProvider model + CRUD service + 3 webhook payload parsers + 17 測試 |
 | ✅ P2-3 | Registry CRUD + Harbor / ECR / GCR adapter | M15 | **Sonnet** | Registry model + CRUD service + 4 adapter（Harbor/DockerHub/DockerV2/ECR/GCR）+ 15 測試 |
 | ✅ P2-4 | Credential 加密儲存（Registry） | M15 | **Opus** | 復用 encryptFields/decryptFields AES-256-GCM（password_enc + ca_bundle_enc）|
-| P2-5 | GitOps Application CRUD + Reconcile Loop | M16 | **Opus**（Reconcile）/ **Sonnet**（CRUD） | Reconciler 狀態機需 Opus |
-| P2-6 | ArgoCD / 原生 GitOps 邊界定義（§12.1） | M16 | **Opus** | 誤判 = 雙寫雙讀，生產事故 |
+| ✅ P2-5 | GitOps Application CRUD + Reconcile Loop | M16 | **Opus**（Reconcile）/ **Sonnet**（CRUD） | GitOpsApp model + CRUD service + sync status + auto-sync 查詢 + 22 測試 |
+| ✅ P2-6 | ArgoCD / 原生 GitOps 邊界定義（§12.1） | M16 | **Opus** | source 互斥規則 + deploy step exclusion 驗證 + 4 測試 |
 | ✅ P2-7 | rollout-promote / rollout-abort Step | M13c | **Opus** | 4 rollout 類型 validation + command gen（deploy-rollout/promote/abort/status）+ 20 測試 |
 | ✅ P2-8 | Environment CRUD + Promotion History | M17 | **Sonnet** | Environment + PromotionHistory model + CRUD service + validation + 14 測試 |
 | ✅ P2-9 | NotifyChannel 整合（Pipeline 事件路由） | M13b W8 | **Opus** | PipelineNotifier + 4 channel formats (slack/telegram/teams/webhook) + dedup 整合 + 19 測試 |
