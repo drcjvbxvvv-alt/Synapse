@@ -257,6 +257,63 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 	})
 }
 
+// ApproveStep 批准 Approval Step。
+// POST /clusters/:clusterID/pipelines/:pipelineID/runs/:runID/steps/:stepRunID/approve
+func (h *PipelineRunHandler) ApproveStep(c *gin.Context) {
+	stepRunID, err := parseUintParam(c, "stepRunID")
+	if err != nil {
+		response.BadRequest(c, "invalid step run ID")
+		return
+	}
+
+	username := c.GetString("username")
+	if username == "" {
+		username = "unknown"
+	}
+
+	if err := h.pipelineSvc.ApproveStepRun(c.Request.Context(), stepRunID, username); err != nil {
+		response.InternalError(c, "failed to approve step: "+err.Error())
+		return
+	}
+
+	logger.Info("approval step approved via API",
+		"step_run_id", stepRunID,
+		"approved_by", username,
+	)
+	response.OK(c, gin.H{"message": "step approved"})
+}
+
+// RejectStep 拒絕 Approval Step。
+// POST /clusters/:clusterID/pipelines/:pipelineID/runs/:runID/steps/:stepRunID/reject
+func (h *PipelineRunHandler) RejectStep(c *gin.Context) {
+	stepRunID, err := parseUintParam(c, "stepRunID")
+	if err != nil {
+		response.BadRequest(c, "invalid step run ID")
+		return
+	}
+
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&req) // reason is optional
+
+	username := c.GetString("username")
+	if username == "" {
+		username = "unknown"
+	}
+
+	if err := h.pipelineSvc.RejectStepRun(c.Request.Context(), stepRunID, username, req.Reason); err != nil {
+		response.InternalError(c, "failed to reject step: "+err.Error())
+		return
+	}
+
+	logger.Info("approval step rejected via API",
+		"step_run_id", stepRunID,
+		"rejected_by", username,
+	)
+	response.OK(c, gin.H{"message": "step rejected"})
+}
+
 // ListStepTypes 列出所有支援的 Step 類型。
 // GET /pipeline-step-types
 func (h *PipelineRunHandler) ListStepTypes(c *gin.Context) {

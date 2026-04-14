@@ -23,12 +23,13 @@ const (
 
 // Step Run 狀態
 const (
-	StepRunStatusPending   = "pending"
-	StepRunStatusRunning   = "running"
-	StepRunStatusSuccess   = "success"
-	StepRunStatusFailed    = "failed"
-	StepRunStatusCancelled = "cancelled"
-	StepRunStatusSkipped   = "skipped"
+	StepRunStatusPending          = "pending"
+	StepRunStatusRunning          = "running"
+	StepRunStatusSuccess          = "success"
+	StepRunStatusFailed           = "failed"
+	StepRunStatusCancelled        = "cancelled"
+	StepRunStatusSkipped          = "skipped"
+	StepRunStatusWaitingApproval  = "waiting_approval"
 )
 
 // Pipeline 觸發來源
@@ -154,4 +155,8 @@ type StepRun struct {
 	// Argo Rollouts 狀態（deploy-rollout Step 專用）
 	RolloutStatus string `json:"rollout_status,omitempty" gorm:"size:30"`
 	RolloutWeight *int   `json:"rollout_weight"`
+
+	// Approval Step 專用
+	ApprovedBy *string    `json:"approved_by,omitempty" gorm:"size:255"`
+	ApprovedAt *time.Time `json:"approved_at,omitempty"`
 }

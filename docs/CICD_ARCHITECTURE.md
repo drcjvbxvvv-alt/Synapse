@@ -883,6 +883,8 @@ internal/
     pipeline_secret_service.go  ← Secret CRUD + AES-256-GCM 加密
     pipeline_log_service.go     ← Log 雙層儲存 + Scrubber
     pipeline_step_types.go      ← Step 類型 registry + validation + command gen
+    pipeline_retry.go           ← RetryPolicy（exponential / fixed backoff）
+    pipeline_approval.go        ← Approval Step（approve / reject + scheduler 輪詢）
     pipeline_gc_worker.go       ← GC Worker（孤兒 Job + Run 90d + Log 30d）
     pipeline_recover.go         ← 啟動時孤兒 Run 恢復
   models/
@@ -1962,8 +1964,8 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | P1-5 | Rollout 狀態機（deploy-rollout / rollout-status） | M13c | **Opus** | 灰度操作錯誤 = 生產事故 |
 | P1-6 | GitOps Diff 引擎 + Drift Detection | M16 | **Opus** | production drift 或反向 overwrite |
 | P1-7 | Promotion 狀態機 + Policy 引擎 | M17 | **Opus** | 跳關、反向 promote |
-| P1-8 | Approval Step（整合 ApprovalRequest） | M13b W5–6 | **Opus** | 審批狀態機 + RBAC + 通知整合 |
-| P1-9 | Step 級別重試（retry + exponential backoff） | M13b W5–6 | **Opus** | 重試風暴、指數退避正確性 |
+| ✅ P1-8 | Approval Step（整合 ApprovalRequest） | M13b W5–6 | **Opus** | 審批狀態機 + waiting_approval 狀態 + approve/reject API |
+| ✅ P1-9 | Step 級別重試（retry + exponential backoff） | M13b W5–6 | **Opus** | RetryPolicy + 指數/固定退避 + 最大 10 次 + 5min 上限 |
 | P1-10 | Webhook 觸發條件引擎（branch glob / path filter / cron） | M14 | **Opus** | path 匹配演算法 + cron 解析邊界 |
 
 #### P2 — 進階功能層（標準實作，有範本可循）

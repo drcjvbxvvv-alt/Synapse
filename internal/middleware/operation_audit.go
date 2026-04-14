@@ -135,6 +135,19 @@ func init() {
 		{`^/api/v1/permissions/cluster-permissions/(\d+)$`, constants.ModulePermission, "", "cluster_permission", 1},
 		{`^/api/v1/permissions/cluster-permissions/batch-delete$`, constants.ModulePermission, constants.ActionDelete, "cluster_permission", -1},
 
+		// Pipeline 模組
+		{`^/api/v1/clusters/\d+/pipelines/(\d+)/runs/\d+/steps/\d+/approve$`, constants.ModulePipeline, "approve", "pipeline_step", 1},
+		{`^/api/v1/clusters/\d+/pipelines/(\d+)/runs/\d+/steps/\d+/reject$`, constants.ModulePipeline, "reject", "pipeline_step", 1},
+		{`^/api/v1/clusters/\d+/pipelines/(\d+)/runs/\d+/cancel$`, constants.ModulePipeline, constants.ActionCancel, "pipeline_run", 1},
+		{`^/api/v1/clusters/\d+/pipelines/(\d+)/runs/\d+/rerun$`, constants.ModulePipeline, constants.ActionRerun, "pipeline_run", 1},
+		{`^/api/v1/clusters/\d+/pipelines/(\d+)/runs$`, constants.ModulePipeline, constants.ActionTrigger, "pipeline_run", 1},
+		{`^/api/v1/clusters/\d+/pipelines/(\d+)/versions$`, constants.ModulePipeline, constants.ActionCreate, "pipeline_version", 1},
+		{`^/api/v1/clusters/\d+/pipelines$`, constants.ModulePipeline, constants.ActionCreate, "pipeline", -1},
+		{`^/api/v1/clusters/\d+/pipelines/(\d+)$`, constants.ModulePipeline, "", "pipeline", 1},
+		{`^/api/v1/clusters/\d+/pipeline-secrets$`, constants.ModulePipeline, constants.ActionCreate, "pipeline_secret", -1},
+		{`^/api/v1/clusters/\d+/pipeline-secrets/(\d+)$`, constants.ModulePipeline, "", "pipeline_secret", 1},
+		{`^/api/v1/webhooks/pipelines/(\d+)/trigger$`, constants.ModulePipeline, constants.ActionTrigger, "pipeline_webhook", 1},
+
 		// 系統設定模組
 		{`^/api/v1/system/ldap/config$`, constants.ModuleSystem, "", "ldap_config", -1},
 		{`^/api/v1/system/ldap/test-connection$`, constants.ModuleSystem, constants.ActionTest, "ldap_config", -1},
@@ -330,6 +343,7 @@ func guessResourceType(path string) string {
 		"daemonsets", "jobs", "cronjobs", "configmaps", "secrets",
 		"services", "ingresses", "namespaces", "pvcs", "pvs",
 		"storageclasses", "rollouts", "applications",
+		"pipelines", "pipeline-secrets",
 	}
 
 	for _, part := range parts {

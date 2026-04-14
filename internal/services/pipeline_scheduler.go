@@ -419,12 +419,14 @@ func (s *PipelineScheduler) applyConcurrencyPolicy(ctx context.Context, newRun *
 
 // StepDef 從 PipelineVersion.StepsJSON 解析的 Step 定義。
 type StepDef struct {
-	Name      string   `json:"name"`
-	Type      string   `json:"type"`
-	Image     string   `json:"image"`
-	Command   string   `json:"command"`
-	DependsOn []string `json:"depends_on"`
-	Config    string   `json:"config"` // raw JSON for StepConfig
+	Name         string   `json:"name"`
+	Type         string   `json:"type"`
+	Image        string   `json:"image"`
+	Command      string   `json:"command"`
+	DependsOn    []string `json:"depends_on"`
+	Config       string   `json:"config"`        // raw JSON for StepConfig
+	MaxRetries   int      `json:"max_retries"`   // 0 = no retry (default)
+	RetryBackoff string   `json:"retry_backoff"` // "fixed" or "exponential" (default: "exponential")
 }
 
 // executeRunAsync 非同步執行 Pipeline Run 的 Steps DAG。
@@ -478,6 +480,7 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 			Command:       step.Command,
 			ConfigJSON:    step.Config,
 			DependsOn:     string(dependsOnJSON),
+			MaxRetries:    step.MaxRetries,
 		}
 		if err := s.db.WithContext(ctx).Create(sr).Error; err != nil {
 			s.failRun(ctx, run, fmt.Sprintf("create step run %s: %v", step.Name, err))
@@ -491,9 +494,8 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		"step_count", len(sorted),
 	)
 
-	// 取得 K8s client
-	k8sClient := s.k8sProvider.GetK8sClientByID(run.ClusterID)
-	if k8sClient == nil {
+	// 驗證 K8s client 可用
+	if s.k8sProvider.GetK8sClientByID(run.ClusterID) == nil {
 		s.failRun(ctx, run, fmt.Sprintf("cluster %d: k8s client not available", run.ClusterID))
 		return
 	}
@@ -521,70 +523,16 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 			continue
 		}
 
-		// 解析 ${{ secrets.* }} → 查詢 PipelineSecretService
-		secrets, err := s.resolveSecrets(ctx, run.PipelineID, sr.ConfigJSON)
-		if err != nil {
-			sr.Status = models.StepRunStatusFailed
-			sr.Error = fmt.Sprintf("resolve secrets: %v", err)
-			now := time.Now()
-			sr.FinishedAt = &now
-			if saveErr := s.db.WithContext(ctx).Save(sr).Error; saveErr != nil {
-				logger.Error("failed to save failed step run", "step_run_id", sr.ID, "error", saveErr)
+		// Approval Step — 等待人工審核，不建立 K8s Job
+		if step.Type == "approval" {
+			if failed := s.executeApprovalStep(ctx, run, sr); failed {
+				anyFailed = true
 			}
-			anyFailed = true
 			continue
 		}
 
-		// 標記 running + 提交 K8s Job
-		now := time.Now()
-		sr.Status = models.StepRunStatusRunning
-		sr.StartedAt = &now
-		if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
-			logger.Error("failed to save running step run", "step_run_id", sr.ID, "error", err)
-		}
-
-		input := &BuildJobInput{
-			Run:       run,
-			StepRun:   sr,
-			Namespace: run.Namespace,
-			Secrets:   secrets,
-		}
-
-		if err := s.jobBuilder.SubmitJob(ctx, k8sClient, input); err != nil {
-			sr.Status = models.StepRunStatusFailed
-			sr.Error = fmt.Sprintf("submit k8s job: %v", err)
-			finishedNow := time.Now()
-			sr.FinishedAt = &finishedNow
-			if saveErr := s.db.WithContext(ctx).Save(sr).Error; saveErr != nil {
-				logger.Error("failed to save failed step run", "step_run_id", sr.ID, "error", saveErr)
-			}
-			anyFailed = true
-			logger.Error("step job submission failed",
-				"step_run_id", sr.ID,
-				"step_name", sr.StepName,
-				"error", err,
-			)
-			continue
-		}
-
-		// 回寫 Job 資訊
-		if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
-			logger.Error("failed to save step run job info", "step_run_id", sr.ID, "error", err)
-		}
-
-		logger.Info("step job submitted",
-			"step_run_id", sr.ID,
-			"step_name", sr.StepName,
-			"job_name", sr.JobName,
-			"run_id", run.ID,
-		)
-
-		// 等待此 Step 完成（輪詢 DB 狀態，由 Watcher 更新）
-		if err := s.waitForStep(ctx, sr); err != nil {
-			anyFailed = true
-			continue
-		}
-		if sr.Status == models.StepRunStatusFailed {
+		// 執行 Step（含 retry 邏輯）
+		if failed := s.executeStepWithRetry(ctx, run, sr, step); failed {
 			anyFailed = true
 		}
 	}
@@ -610,6 +558,141 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		"run_id", run.ID,
 		"status", run.Status,
 	)
+}
+
+// executeStepWithRetry 執行單一 Step，失敗時根據 RetryPolicy 重試。
+// 回傳 true 表示最終失敗。
+func (s *PipelineScheduler) executeStepWithRetry(
+	ctx context.Context,
+	run *models.PipelineRun,
+	sr *models.StepRun,
+	step StepDef,
+) bool {
+	policy := NewRetryPolicy(sr.MaxRetries, step.RetryBackoff)
+
+	for attempt := 0; ; attempt++ {
+		// 解析 ${{ secrets.* }} → 查詢 PipelineSecretService
+		secrets, err := s.resolveSecrets(ctx, run.PipelineID, sr.ConfigJSON)
+		if err != nil {
+			sr.Status = models.StepRunStatusFailed
+			sr.Error = fmt.Sprintf("resolve secrets: %v", err)
+			now := time.Now()
+			sr.FinishedAt = &now
+			if saveErr := s.db.WithContext(ctx).Save(sr).Error; saveErr != nil {
+				logger.Error("failed to save failed step run", "step_run_id", sr.ID, "error", saveErr)
+			}
+			return true // secret 解析失敗不重試
+		}
+
+		// 標記 running + 提交 K8s Job
+		now := time.Now()
+		sr.Status = models.StepRunStatusRunning
+		sr.StartedAt = &now
+		sr.RetryCount = attempt
+		sr.Error = ""
+		if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
+			logger.Error("failed to save running step run", "step_run_id", sr.ID, "error", err)
+		}
+
+		input := &BuildJobInput{
+			Run:       run,
+			StepRun:   sr,
+			Namespace: run.Namespace,
+			Secrets:   secrets,
+		}
+
+		submitErr := s.jobBuilder.SubmitJob(ctx, s.k8sProvider.GetK8sClientByID(run.ClusterID), input)
+		if submitErr != nil {
+			sr.Status = models.StepRunStatusFailed
+			sr.Error = fmt.Sprintf("submit k8s job: %v", submitErr)
+			finishedNow := time.Now()
+			sr.FinishedAt = &finishedNow
+			if saveErr := s.db.WithContext(ctx).Save(sr).Error; saveErr != nil {
+				logger.Error("failed to save failed step run", "step_run_id", sr.ID, "error", saveErr)
+			}
+			logger.Error("step job submission failed",
+				"step_run_id", sr.ID,
+				"step_name", sr.StepName,
+				"attempt", attempt,
+				"error", submitErr,
+			)
+			// 提交失敗可重試
+			if policy.ShouldRetry(attempt) {
+				delay := policy.Delay(attempt)
+				logger.Info("retrying step after backoff",
+					"step_run_id", sr.ID,
+					"step_name", sr.StepName,
+					"attempt", attempt+1,
+					"max_retries", policy.MaxRetries,
+					"delay", delay,
+				)
+				select {
+				case <-ctx.Done():
+					return true
+				case <-s.stopCh:
+					return true
+				case <-time.After(delay):
+				}
+				continue
+			}
+			return true
+		}
+
+		// 回寫 Job 資訊
+		if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
+			logger.Error("failed to save step run job info", "step_run_id", sr.ID, "error", err)
+		}
+
+		logger.Info("step job submitted",
+			"step_run_id", sr.ID,
+			"step_name", sr.StepName,
+			"job_name", sr.JobName,
+			"run_id", run.ID,
+			"attempt", attempt,
+		)
+
+		// 等待此 Step 完成（輪詢 DB 狀態，由 Watcher 更新）
+		if err := s.waitForStep(ctx, sr); err != nil {
+			return true
+		}
+
+		// Step 成功 → 結束
+		if sr.Status == models.StepRunStatusSuccess {
+			return false
+		}
+
+		// Step 失敗 → 檢查是否可重試
+		if sr.Status == models.StepRunStatusFailed && policy.ShouldRetry(attempt) {
+			delay := policy.Delay(attempt)
+			logger.Info("retrying failed step after backoff",
+				"step_run_id", sr.ID,
+				"step_name", sr.StepName,
+				"attempt", attempt+1,
+				"max_retries", policy.MaxRetries,
+				"delay", delay,
+			)
+			// 重置 step 狀態準備重試
+			sr.Status = models.StepRunStatusPending
+			sr.FinishedAt = nil
+			sr.JobName = ""
+			sr.JobNamespace = ""
+			sr.ExitCode = nil
+			if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
+				logger.Error("failed to reset step run for retry", "step_run_id", sr.ID, "error", err)
+			}
+			select {
+			case <-ctx.Done():
+				return true
+			case <-s.stopCh:
+				return true
+			case <-time.After(delay):
+			}
+			continue
+		}
+
+		// 最終失敗（無重試或重試用盡）
+		return sr.Status == models.StepRunStatusFailed
+	}
 }
 
 func (s *PipelineScheduler) failRun(ctx context.Context, run *models.PipelineRun, errMsg string) {

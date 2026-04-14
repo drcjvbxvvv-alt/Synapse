@@ -57,6 +57,7 @@ var stepTypeRegistry = map[string]StepTypeInfo{
 	"gitops-sync":        {Name: "gitops-sync", DefaultImage: "bitnami/git:2.47", RequiresCommand: false, Description: "Git commit + push for GitOps"},
 	"shell":              {Name: "shell", DefaultImage: "alpine:3.20", RequiresCommand: true, Description: "Run shell commands (alias for run-script)"},
 	"custom":             {Name: "custom", DefaultImage: "", RequiresCommand: true, Description: "Custom step with user-provided image and command"},
+	"approval":           {Name: "approval", DefaultImage: "", RequiresCommand: false, Description: "Manual approval gate — pauses pipeline until approved or rejected"},
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +97,11 @@ func ValidateStepDef(step *StepDef) error {
 	info, ok := stepTypeRegistry[step.Type]
 	if !ok {
 		return fmt.Errorf("step %q: unknown type %q", step.Name, step.Type)
+	}
+
+	// approval 類型不需要 image 和 command
+	if step.Type == "approval" {
+		return nil
 	}
 
 	// 如果使用者沒給 image，用預設值

@@ -49,6 +49,10 @@ func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 					run.POST("/cancel", runHandler.CancelRun)
 					run.POST("/rerun", runHandler.RerunPipeline)
 
+					// Step Approval
+					run.POST("/steps/:stepRunID/approve", runHandler.ApproveStep)
+					run.POST("/steps/:stepRunID/reject", runHandler.RejectStep)
+
 					// Step Logs
 					run.GET("/steps/:stepRunID/logs", logHandler.GetStepLogs)
 				}

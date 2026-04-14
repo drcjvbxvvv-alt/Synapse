@@ -388,6 +388,20 @@ func (s *PipelineService) ListStepRuns(ctx context.Context, runID uint) ([]model
 }
 
 // ---------------------------------------------------------------------------
+// Approval Step
+// ---------------------------------------------------------------------------
+
+// ApproveStepRun 批准 Approval Step。
+func (s *PipelineService) ApproveStepRun(ctx context.Context, stepRunID uint, approvedBy string) error {
+	return ApproveStep(ctx, s.db, stepRunID, approvedBy)
+}
+
+// RejectStepRun 拒絕 Approval Step。
+func (s *PipelineService) RejectStepRun(ctx context.Context, stepRunID uint, rejectedBy string, reason string) error {
+	return RejectStep(ctx, s.db, stepRunID, rejectedBy, reason)
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

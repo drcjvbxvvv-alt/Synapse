@@ -16,6 +16,7 @@ const (
 	ModuleMonitoring = "monitoring" // 監控：Prometheus、Grafana配置
 	ModuleAlert      = "alert"      // 告警：AlertManager、靜默規則
 	ModuleArgoCD     = "argocd"     // GitOps：ArgoCD應用
+	ModulePipeline   = "pipeline"   // CI/CD：Pipeline、Run、Secret
 	ModuleUnknown    = "unknown"    // 未知模組
 )
 
@@ -51,6 +52,11 @@ const (
 
 	// 匯入操作
 	ActionImport = "import"
+
+	// Pipeline 操作
+	ActionTrigger = "trigger"
+	ActionCancel  = "cancel"
+	ActionRerun   = "rerun"
 )
 
 // ModuleNames maps module codes to English display names (translated on frontend via i18n)
@@ -69,6 +75,7 @@ var ModuleNames = map[string]string{
 	ModuleMonitoring: "Monitoring",
 	ModuleAlert:      "Alert",
 	ModuleArgoCD:     "ArgoCD",
+	ModulePipeline:   "Pipeline",
 	ModuleUnknown:    "Unknown",
 }
 
@@ -91,4 +98,7 @@ var ActionNames = map[string]string{ // #nosec G101 -- action name mappings, not
 	ActionSync:           "Sync",
 	ActionTest:           "Test",
 	ActionImport:         "Import",
+	ActionTrigger:        "Trigger",
+	ActionCancel:         "Cancel",
+	ActionRerun:          "Rerun",
 }
