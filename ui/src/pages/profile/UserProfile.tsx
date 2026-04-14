@@ -217,7 +217,7 @@ const [user, setUser] = useState<User | null>(null);
         width={480}
         okText={t('common:actions.save')}
         cancelText={t('common:actions.cancel')}
-        destroyOnHide
+        destroyOnHidden
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
