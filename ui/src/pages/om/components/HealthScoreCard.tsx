@@ -9,11 +9,11 @@ import {
   Button,
   Spin,
   Space,
-  Badge,
   Typography,
-  List,
   Collapse,
-  Alert,
+  theme,
+  Flex,
+  Divider,
 } from 'antd';
 import {
   SyncOutlined,
@@ -21,18 +21,21 @@ import {
   CloseCircleOutlined,
   InfoCircleOutlined,
   ThunderboltOutlined,
-  DashboardOutlined,
   HddOutlined,
   CloudServerOutlined,
   NodeIndexOutlined,
   AppstoreOutlined,
+  DashboardOutlined,
+  CheckCircleFilled,
+  ExclamationCircleFilled,
+  CloseCircleFilled,
+  BulbOutlined,
 } from '@ant-design/icons';
 import type { TFunction } from 'i18next';
 import type { HealthDiagnosisResponse, RiskItem } from '../../../services/omService';
 import { formatTime, getHealthColor } from './omUtils';
 
-const { Title, Text, Paragraph } = Typography;
-const { Panel } = Collapse;
+const { Text, Paragraph } = Typography;
 
 interface HealthScoreCardProps {
   healthDiagnosis: HealthDiagnosisResponse | null;
@@ -41,16 +44,26 @@ interface HealthScoreCardProps {
   t: TFunction;
 }
 
-const getSeverityTag = (severity: string, t: TFunction) => {
+const getSeverityConfig = (severity: string, t: TFunction) => {
   switch (severity) {
     case 'critical':
-      return <Tag icon={<CloseCircleOutlined />} color="error">{t('om:health.severityCritical')}</Tag>;
+      return {
+        icon: <CloseCircleFilled />,
+        color: 'error' as const,
+        label: t('om:health.severityCritical'),
+      };
     case 'warning':
-      return <Tag icon={<WarningOutlined />} color="warning">{t('om:health.severityWarning')}</Tag>;
-    case 'info':
-      return <Tag icon={<InfoCircleOutlined />} color="processing">{t('om:health.severityInfo')}</Tag>;
+      return {
+        icon: <ExclamationCircleFilled />,
+        color: 'warning' as const,
+        label: t('om:health.severityWarning'),
+      };
     default:
-      return <Tag>{severity}</Tag>;
+      return {
+        icon: <InfoCircleOutlined />,
+        color: 'processing' as const,
+        label: t('om:health.severityInfo'),
+      };
   }
 };
 
@@ -77,171 +90,397 @@ const getCategoryName = (category: string, t: TFunction): string => {
   return names[category] || category;
 };
 
+const ScoreRing: React.FC<{ score: number; status: string; t: TFunction }> = ({ score, status, t }) => {
+  const { token } = theme.useToken();
+  const color = getHealthColor(status);
+
+  const statusLabel =
+    status === 'healthy'
+      ? t('om:health.statusHealthy')
+      : status === 'warning'
+      ? t('om:health.statusWarning')
+      : t('om:health.statusCritical');
+
+  const StatusIcon =
+    status === 'healthy'
+      ? CheckCircleFilled
+      : status === 'warning'
+      ? ExclamationCircleFilled
+      : CloseCircleFilled;
+
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <Progress
+        type="circle"
+        percent={score}
+        strokeColor={color}
+        trailColor={token.colorFillSecondary}
+        strokeWidth={8}
+        size={160}
+        format={(percent) => (
+          <div>
+            <div
+              style={{
+                fontSize: 38,
+                fontWeight: 700,
+                lineHeight: 1,
+                color,
+              }}
+            >
+              {percent}
+            </div>
+            <div
+              style={{
+                fontSize: token.fontSizeSM,
+                color: token.colorTextTertiary,
+                marginTop: token.marginXS,
+              }}
+            >
+              {t('om:health.healthScore')}
+            </div>
+          </div>
+        )}
+      />
+      <Flex
+        justify="center"
+        align="center"
+        gap={6}
+        style={{ marginTop: token.marginMD }}
+      >
+        <StatusIcon style={{ color, fontSize: token.fontSizeLG }} />
+        <Text style={{ color, fontWeight: 600 }}>{statusLabel}</Text>
+      </Flex>
+    </div>
+  );
+};
+
+const CategoryScores: React.FC<{
+  categoryScores: Record<string, number>;
+  t: TFunction;
+}> = ({ categoryScores, t }) => {
+  const { token } = theme.useToken();
+
+  return (
+    <div>
+      <Text
+        strong
+        style={{ display: 'block', marginBottom: token.marginMD, fontSize: token.fontSizeLG }}
+      >
+        {t('om:health.categoryScores')}
+      </Text>
+      <Row gutter={[token.marginSM, token.marginMD]}>
+        {Object.entries(categoryScores).map(([category, score]) => {
+          const color =
+            score >= 80
+              ? token.colorSuccess
+              : score >= 60
+              ? token.colorWarning
+              : token.colorError;
+          return (
+            <Col xs={12} key={category}>
+              <div
+                style={{
+                  padding: `${token.paddingSM}px ${token.padding}px`,
+                  background: token.colorFillAlter,
+                  borderRadius: token.borderRadius,
+                  borderLeft: `3px solid ${color}`,
+                }}
+              >
+                <Flex justify="space-between" align="center" style={{ marginBottom: 6 }}>
+                  <Flex align="center" gap={6}>
+                    <span style={{ color: token.colorTextSecondary }}>
+                      {getCategoryIcon(category)}
+                    </span>
+                    <Text style={{ fontSize: token.fontSizeSM }}>
+                      {getCategoryName(category, t)}
+                    </Text>
+                  </Flex>
+                  <Text strong style={{ color, fontSize: token.fontSizeSM }}>
+                    {score}
+                  </Text>
+                </Flex>
+                <Progress
+                  percent={score}
+                  showInfo={false}
+                  strokeColor={color}
+                  trailColor={token.colorFillSecondary}
+                  size={['100%', 4]}
+                />
+              </div>
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+};
+
+const SuggestionList: React.FC<{ suggestions: string[]; t: TFunction }> = ({
+  suggestions,
+  t,
+}) => {
+  const { token } = theme.useToken();
+
+  if (suggestions.length === 0) {
+    return (
+      <Flex
+        align="center"
+        gap={token.marginSM}
+        style={{
+          padding: token.padding,
+          background: token.colorSuccessBg,
+          borderRadius: token.borderRadius,
+          border: `1px solid ${token.colorSuccessBorder}`,
+        }}
+      >
+        <CheckCircleFilled style={{ color: token.colorSuccess }} />
+        <Text style={{ color: token.colorSuccess }}>{t('om:health.noSuggestions')}</Text>
+      </Flex>
+    );
+  }
+
+  return (
+    <div>
+      <Text
+        strong
+        style={{ display: 'block', marginBottom: token.marginMD, fontSize: token.fontSizeLG }}
+      >
+        <BulbOutlined style={{ marginRight: token.marginXS, color: token.colorWarning }} />
+        {t('om:health.suggestions')}
+      </Text>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: token.marginSM }}>
+        {suggestions.map((item, index) => (
+          <Flex key={index} gap={token.marginSM} align="flex-start">
+            <div
+              style={{
+                flexShrink: 0,
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                background: token.colorPrimaryBg,
+                border: `1px solid ${token.colorPrimaryBorder}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: token.fontSizeSM,
+                color: token.colorPrimary,
+                fontWeight: 600,
+                lineHeight: 1,
+              }}
+            >
+              {index + 1}
+            </div>
+            <Text style={{ fontSize: token.fontSizeSM, lineHeight: '22px' }}>{item}</Text>
+          </Flex>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const HealthScoreCard: React.FC<HealthScoreCardProps> = ({
   healthDiagnosis,
   healthLoading,
   onRefresh,
   t,
 }) => {
+  const { token } = theme.useToken();
+
   if (healthLoading) {
     return (
-      <Card title={t('om:health.title')} extra={<Button icon={<SyncOutlined spin />} disabled>{t('om:refreshing')}</Button>}>
-        <div style={{ textAlign: 'center', padding: 40 }}>
+      <Card variant="borderless">
+        <Flex justify="center" style={{ padding: token.paddingXL }}>
           <Spin size="large" />
-        </div>
+        </Flex>
       </Card>
     );
   }
 
   if (!healthDiagnosis) {
     return (
-      <Card title={t('om:health.title')}>
+      <Card variant="borderless">
         <EmptyState description={t('om:health.noDiagnosisData')} />
       </Card>
     );
   }
 
-  const { health_score, status, risk_items, suggestions, category_scores, diagnosis_time } = healthDiagnosis;
+  const { health_score, status, risk_items, suggestions, category_scores, diagnosis_time } =
+    healthDiagnosis;
 
-  const groupedRisks = risk_items.reduce((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = [];
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, RiskItem[]>);
+  const groupedRisks = risk_items.reduce(
+    (acc, item) => {
+      if (!acc[item.category]) acc[item.category] = [];
+      acc[item.category].push(item);
+      return acc;
+    },
+    {} as Record<string, RiskItem[]>,
+  );
+
+  const criticalCount = risk_items.filter((r) => r.severity === 'critical').length;
+  const warningCount = risk_items.filter((r) => r.severity === 'warning').length;
 
   return (
     <Card
+      variant="borderless"
       title={
-        <Space>
+        <Flex align="center" gap={token.marginSM}>
           <ThunderboltOutlined style={{ color: getHealthColor(status) }} />
           <span>{t('om:health.title')}</span>
-        </Space>
+        </Flex>
       }
       extra={
-        <Space>
-          <Text type="secondary">{t('om:health.diagnosisTime')}: {formatTime(diagnosis_time)}</Text>
-          <Button icon={<SyncOutlined />} onClick={onRefresh}>{t('common:actions.refresh')}</Button>
-        </Space>
+        <Flex align="center" gap={token.marginSM}>
+          <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+            {t('om:health.diagnosisTime')}: {formatTime(diagnosis_time)}
+          </Text>
+          <Button size="small" icon={<SyncOutlined />} onClick={onRefresh}>
+            {t('common:actions.refresh')}
+          </Button>
+        </Flex>
       }
     >
-      <Row gutter={[24, 24]}>
-        <Col xs={24} md={8}>
-          <div style={{ textAlign: 'center' }}>
-            <Progress
-              type="dashboard"
-              percent={health_score}
-              strokeColor={getHealthColor(status)}
-              format={(percent) => (
-                <div>
-                  <div style={{ fontSize: 32, fontWeight: 'bold', color: getHealthColor(status) }}>{percent}</div>
-                  <div style={{ fontSize: 14, color: '#666' }}>{t('om:health.healthScore')}</div>
-                </div>
-              )}
-              size={180}
-            />
-            <div style={{ marginTop: 16 }}>
-              <Tag color={getHealthColor(status)} style={{ fontSize: 14, padding: '4px 16px' }}>
-                {status === 'healthy' ? t('om:health.statusHealthy') : status === 'warning' ? t('om:health.statusWarning') : t('om:health.statusCritical')}
-              </Tag>
-            </div>
-          </div>
-        </Col>
+      <Row gutter={[token.marginXL, token.marginLG]}>
+        {/* Score */}
+        <Col xs={24} md={6}>
+          <ScoreRing score={health_score} status={status} t={t} />
 
-        <Col xs={24} md={8}>
-          <Title level={5}>{t('om:health.categoryScores')}</Title>
-          {Object.entries(category_scores).map(([category, score]) => (
-            <div key={category} style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <Space>
-                  {getCategoryIcon(category)}
-                  <span>{getCategoryName(category, t)}</span>
-                </Space>
-                <span style={{ color: score >= 80 ? '#52c41a' : score >= 60 ? '#faad14' : '#ff4d4f' }}>
-                  {score}{t('om:health.score')}
-                </span>
-              </div>
-              <Progress
-                percent={score}
-                showInfo={false}
-                strokeColor={score >= 80 ? '#52c41a' : score >= 60 ? '#faad14' : '#ff4d4f'}
-                size="small"
-              />
-            </div>
-          ))}
-        </Col>
-
-        <Col xs={24} md={8}>
-          <Title level={5}>{t('om:health.suggestions')}</Title>
-          {suggestions.length > 0 ? (
-            <List
-              size="small"
-              dataSource={suggestions}
-              renderItem={(item, index) => (
-                <List.Item style={{ padding: '8px 0' }}>
-                  <Space align="start">
-                    <Badge count={index + 1} style={{ backgroundColor: '#1890ff' }} />
-                    <Text>{item}</Text>
-                  </Space>
-                </List.Item>
+          {/* Risk summary pills */}
+          {risk_items.length > 0 && (
+            <Flex justify="center" gap={token.marginSM} style={{ marginTop: token.marginLG }}>
+              {criticalCount > 0 && (
+                <Tag
+                  icon={<CloseCircleOutlined />}
+                  color="error"
+                  style={{ margin: 0 }}
+                >
+                  {criticalCount} {t('om:health.severityCritical')}
+                </Tag>
               )}
-            />
-          ) : (
-            <Alert message={t('om:health.noSuggestions')} type="success" showIcon />
+              {warningCount > 0 && (
+                <Tag
+                  icon={<WarningOutlined />}
+                  color="warning"
+                  style={{ margin: 0 }}
+                >
+                  {warningCount} {t('om:health.severityWarning')}
+                </Tag>
+              )}
+            </Flex>
           )}
+        </Col>
+
+        {/* Category scores */}
+        <Col xs={24} md={10}>
+          <CategoryScores categoryScores={category_scores} t={t} />
+        </Col>
+
+        {/* Suggestions */}
+        <Col xs={24} md={8}>
+          <SuggestionList suggestions={suggestions} t={t} />
         </Col>
       </Row>
 
+      {/* Risk items */}
       {risk_items.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <Title level={5}>
-            <WarningOutlined style={{ marginRight: 8, color: '#faad14' }} />
-            {t('om:health.riskItems')} ({risk_items.length})
-          </Title>
-          <Collapse accordion>
-            {Object.entries(groupedRisks).map(([category, items]) => (
-              <Panel
-                header={
-                  <Space>
-                    {getCategoryIcon(category)}
-                    <span>{getCategoryName(category, t)}</span>
-                    <Badge count={items.length} style={{ backgroundColor: '#ff4d4f' }} />
-                  </Space>
-                }
-                key={category}
-              >
-                <List
-                  size="small"
-                  dataSource={items}
-                  renderItem={(item) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        avatar={getSeverityTag(item.severity, t)}
-                        title={item.title}
-                        description={
-                          <div>
-                            <Paragraph style={{ marginBottom: 8 }}>{item.description}</Paragraph>
-                            {item.namespace && (
-                              <Text type="secondary" style={{ marginRight: 16 }}>
-                                {t('om:health.namespace')}: {item.namespace}
-                              </Text>
-                            )}
-                            {item.resource && (
-                              <Text type="secondary">{t('om:health.resource')}: {item.resource}</Text>
-                            )}
-                            <div style={{ marginTop: 8 }}>
-                              <Text strong>{t('om:health.solution')}: </Text>
-                              <Text>{item.solution}</Text>
-                            </div>
+        <>
+          <Divider style={{ margin: `${token.marginLG}px 0 ${token.marginMD}px` }} />
+          <div>
+            <Text
+              strong
+              style={{ display: 'block', marginBottom: token.marginMD, fontSize: token.fontSizeLG }}
+            >
+              <WarningOutlined
+                style={{ marginRight: token.marginXS, color: token.colorWarning }}
+              />
+              {t('om:health.riskItems')} ({risk_items.length})
+            </Text>
+            <Collapse
+              size="small"
+              items={Object.entries(groupedRisks).map(([category, items]) => ({
+                key: category,
+                label: (
+                  <Flex align="center" gap={token.marginSM}>
+                    <span style={{ color: token.colorTextSecondary }}>
+                      {getCategoryIcon(category)}
+                    </span>
+                    <Text strong>{getCategoryName(category, t)}</Text>
+                    <Tag
+                      color={items.some((i) => i.severity === 'critical') ? 'error' : 'warning'}
+                      style={{ margin: 0 }}
+                    >
+                      {items.length}
+                    </Tag>
+                  </Flex>
+                ),
+                children: (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: token.marginSM }}>
+                    {items.map((item, i) => {
+                      const sev = getSeverityConfig(item.severity, t);
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            padding: token.padding,
+                            background: token.colorFillAlter,
+                            borderRadius: token.borderRadius,
+                            borderLeft: `3px solid ${
+                              item.severity === 'critical'
+                                ? token.colorError
+                                : item.severity === 'warning'
+                                ? token.colorWarning
+                                : token.colorInfo
+                            }`,
+                          }}
+                        >
+                          <Flex align="center" gap={token.marginSM} style={{ marginBottom: 6 }}>
+                            <Tag icon={sev.icon} color={sev.color} style={{ margin: 0 }}>
+                              {sev.label}
+                            </Tag>
+                            <Text strong style={{ fontSize: token.fontSizeSM }}>
+                              {item.title}
+                            </Text>
+                          </Flex>
+                          <Paragraph
+                            style={{
+                              margin: 0,
+                              fontSize: token.fontSizeSM,
+                              color: token.colorTextSecondary,
+                            }}
+                          >
+                            {item.description}
+                          </Paragraph>
+                          {(item.namespace || item.resource) && (
+                            <Flex gap={token.marginMD} style={{ marginTop: 6 }}>
+                              {item.namespace && (
+                                <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+                                  {t('om:health.namespace')}: {item.namespace}
+                                </Text>
+                              )}
+                              {item.resource && (
+                                <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
+                                  {t('om:health.resource')}: {item.resource}
+                                </Text>
+                              )}
+                            </Flex>
+                          )}
+                          <div style={{ marginTop: 8 }}>
+                            <Text
+                              type="secondary"
+                              style={{ fontSize: token.fontSizeSM }}
+                            >
+                              {t('om:health.solution')}:{' '}
+                            </Text>
+                            <Text style={{ fontSize: token.fontSizeSM }}>{item.solution}</Text>
                           </div>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
-              </Panel>
-            ))}
-          </Collapse>
-        </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ),
+              }))}
+            />
+          </div>
+        </>
       )}
     </Card>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
-import { App, Row, Col, Button, Typography } from 'antd';
-import { SyncOutlined, DashboardOutlined } from '@ant-design/icons';
+import { App, Row, Col, Button, Typography, theme, Flex } from 'antd';
+import { SyncOutlined, RadarChartOutlined } from '@ant-design/icons';
 import { useMonitoringCenter } from './hooks/useMonitoringCenter';
 import HealthScoreCard from './components/HealthScoreCard';
 import ResourceTopCard from './components/ResourceTopCard';
@@ -9,30 +9,33 @@ import ControlPlaneCard from './components/ControlPlaneCard';
 const { Title, Text } = Typography;
 
 const MonitoringCenterInner: React.FC = () => {
+  const { token } = theme.useToken();
   const state = useMonitoringCenter();
 
   return (
-    <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* Page header */}
-      <div style={{ marginBottom: 24 }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Title level={3} style={{ margin: 0 }}>
-              <DashboardOutlined style={{ marginRight: 12 }} />
+    <div
+      style={{
+        padding: token.paddingLG,
+        background: token.colorBgLayout,
+        minHeight: '100vh',
+      }}
+    >
+      <Flex justify="space-between" align="center" style={{ marginBottom: token.marginLG }}>
+        <div>
+          <Flex align="center" gap={token.marginSM} style={{ marginBottom: token.marginXS }}>
+            <RadarChartOutlined style={{ fontSize: token.fontSizeXL, color: token.colorPrimary }} />
+            <Title level={4} style={{ margin: 0 }}>
               {state.t('om:title')}
             </Title>
-            <Text type="secondary">{state.t('om:subtitle')}</Text>
-          </Col>
-          <Col>
-            <Button type="primary" icon={<SyncOutlined />} onClick={state.handleRefreshAll}>
-              {state.t('om:refreshAll')}
-            </Button>
-          </Col>
-        </Row>
-      </div>
+          </Flex>
+          <Text type="secondary">{state.t('om:subtitle')}</Text>
+        </div>
+        <Button icon={<SyncOutlined />} onClick={state.handleRefreshAll}>
+          {state.t('om:refreshAll')}
+        </Button>
+      </Flex>
 
-      {/* Main content */}
-      <Row gutter={[24, 24]}>
+      <Row gutter={[token.marginLG, token.marginLG]}>
         <Col span={24}>
           <HealthScoreCard
             healthDiagnosis={state.healthDiagnosis}
