@@ -1,6 +1,6 @@
 # Synapse 性能分析文件
 
-> 版本：v1.1 | 日期：2026-04-14 | 狀態：P1 已實作
+> 版本：v1.3 | 日期：2026-04-14 | 狀態：P0/P2 已實作（P0-3/4 待 CICD；P2-12 Config-only）
 > 範圍：現有系統瓶頸 + CICD 架構（M13-M17）引入後的衝擊評估
 
 ---
@@ -48,13 +48,16 @@ MySQL 連線池設定為 `MaxIdleConns=10`、`MaxOpenConns=100`。
 - **影響**：中 — 使用者數超過 1,000 筆時每次登入明顯變慢
 - **修復**：`gorm:"uniqueIndex"` 加在 `Username` 欄位
 
-#### B-DB-2：預設叢集權限 N+1 查詢
-- **位置**：`internal/services/permission_service.go:637-663`
-- **問題**：`GetUserPermissionsForAllClusters()` 對每個使用者在記憶體中
-  建構 N 個預設權限物件（N = 叢集總數）。50 個叢集 × 100 位使用者
-  = 5,000 個記憶體物件每次權限刷新
-- **影響**：中 — 叢集數量與使用者數增長時記憶體線性膨脹
-- **修復**：改用批次 JOIN 查詢，只取使用者有明確授權的叢集
+#### B-DB-2：預設叢集權限 N+1 查詢 ✅ 已修復（P2）
+- **位置**：`internal/services/permission_service.go`（`GetUserAllClusterPermissions()`）
+- **問題**：legacy DB path 執行 4 條 DB round-trip（userGroups、permissions、allClusters、user），
+  且 userGroups 查詢的 error 被靜默忽略；allClusters 拉取全部欄位
+- **影響**：中 — 叢集數量與使用者數增長時記憶體線性膨脹，且 4 條序列查詢累積延遲
+- **修復**：
+  - 使用 GORM subquery 將 userGroups + permissions 合併為單一查詢（4→3 round-trips）
+  - `allClusters` 改為 `Select("id, name, version, status, ...")` 減少資料傳輸
+  - 所有查詢加入 `WithContext(ctx)` 支援 tracing 與 cancellation
+  - 修復 userGroups 查詢 error 被靜默忽略的問題
 
 #### B-DB-3：Helm UpgradeRelease 逐 Repo 查詢
 - **位置**：`internal/services/helm_service.go:248-254`
@@ -88,12 +91,16 @@ MySQL 連線池設定為 `MaxIdleConns=10`、`MaxOpenConns=100`。
 - **修復**：`ReadTimeout=30s`、`WriteTimeout=120s`（配合 AI SSE 最長逾時）、
   `IdleTimeout=120s`
 
-#### B-HTTP-2：API 端點缺少 Rate Limit
-- **位置**：`internal/middleware/`
+#### B-HTTP-2：API 端點缺少 Rate Limit ✅ 已修復（P0）
+- **位置**：`internal/middleware/api_rate_limit.go`
 - **問題**：Rate Limit 僅保護登入失敗（暴力破解防護），
   所有 API 端點無流量保護，高頻請求無背壓
 - **影響**：中 — 惡意或異常客戶端可打爆昂貴端點（如 Overview、多叢集查詢）
-- **修復**：加入 per-user 或 per-IP 的全域 API Rate Limit 中介層
+- **修復**：
+  - 新增 `APIRateLimit(name, maxPerMin)` 滑動視窗中介層（1 分鐘視窗，per-user/per-IP）
+  - 全域保護：`protected` 群組套用 300 req/min（`internal/router/router.go`）
+  - AI 端點強化：`/:clusterID/ai` 群組額外套用 30 req/min（`routes_system_ai.go`）
+  - 待 CICD M14 Webhook 端點實作時，加入 per-repo 100 req/min 的獨立桶（沿用同框架）
 
 #### B-HTTP-3：Rate Limiter Memory backend 不支援多副本
 - **位置**：`internal/middleware/rate_limiter_memory.go:31-72`
@@ -104,12 +111,17 @@ MySQL 連線池設定為 `MaxIdleConns=10`、`MaxOpenConns=100`。
 
 ### 2.4 AI / 串流層
 
-#### B-AI-1：SSE channel buffer 過小 ✅ 已修復
-- **位置**：`internal/services/ai_provider.go:347`
+#### B-AI-1：SSE channel buffer 過小 ✅ 已修復（P0 完整修復）
+- **位置**：`internal/services/ai_provider.go`
 - **問題**：SSE 事件 channel buffer 固定為 64 個事件。
   工具呼叫回傳大型結果時 sender 阻塞，工具執行被迫暫停等待客戶端消費
 - **影響**：中 — 大型 Log 分析或 CI 即時 Log 串流場景下必定觸發
-- **修復**：buffer 從 64 提升至 512
+- **修復**：
+  - P1：buffer 從 64 提升至 512
+  - P0：buffer 進一步提升至 1024；加入背壓降級機制——
+    content-only chunk（無 FinishReason、無 ToolCalls）buffer 滿時以非阻塞 `default:` 跳過，
+    確保客戶端過慢時 goroutine 不死鎖；critical event（FinishReason、ToolCalls、Done、Error）
+    仍使用阻塞 select 保證必達
 
 #### B-AI-2：大型工具結果滯留記憶體 ✅ 已修復
 - **位置**：`internal/handlers/ai_chat.go`（`truncateToolResult()`）
@@ -134,19 +146,21 @@ MySQL 連線池設定為 `MaxIdleConns=10`、`MaxOpenConns=100`。
 - **影響**：中
 - **修復**：同 B-CONC-1，加入 worker pool
 
-#### B-CONC-3：Helm SearchCharts 串行 HTTP 請求
-- **位置**：`internal/services/helm_service.go:351-382`
+#### B-CONC-3：Helm SearchCharts 串行 HTTP 請求 ✅ 已修復（P2）
+- **位置**：`internal/services/helm_service.go`（`SearchCharts()`）
 - **問題**：搜尋 Chart 時對每個 Repo 串行拉取 `index.yaml`，
   N 個 Repo → N 個阻塞 HTTP 請求。10 個 Repo 時搜尋可能需要 5-10 秒
 - **影響**：中 — Repo 數量增加時體感明顯
-- **修復**：改為並行請求（`errgroup` 或 semaphore 控制並行度）
+- **修復**：改為並行 goroutine，semaphore 上限 5 個並發 HTTP 請求；
+  `sync.WaitGroup` 等待所有結果後合併，單一 Repo 失敗不影響其他
 
-#### B-CONC-4：Helm 每次請求建立新 HTTP Client
-- **位置**：`internal/services/helm_service.go:388`
-- **問題**：`fetchRepoIndex()` 每次建立新的 `&http.Client{}`，
+#### B-CONC-4：Helm 每次請求建立新 HTTP Client ✅ 已修復（P2）
+- **位置**：`internal/services/helm_service.go`（`fetchRepoIndex()`、`downloadChart()`）
+- **問題**：`fetchRepoIndex()` 和 `downloadChart()` 每次建立新的 `&http.Client{}`，
   無法複用連線池，產生不必要的 TLS handshake
 - **影響**：低 — Helm 操作低頻，影響有限
-- **修復**：改用 package-level singleton `http.Client`
+- **修復**：新增 package-level singleton `helmHTTPClient`（30s timeout、MaxIdleConnsPerHost=5），
+  兩處 HTTP 呼叫均改用此 singleton
 
 ---
 
@@ -296,12 +310,12 @@ CICD 後 goroutine 壓力（最壞情況）：
 
 ### P0 — CICD 上線前必須完成
 
-| # | 項目 | 相關瓶頸 | 預估工時 |
-|---|------|---------|---------|
-| 1 | SSE buffer 從 64 提升至 1024，加背壓降級 | B-AI-1 | 2h |
-| 2 | Webhook 端點加 Rate Limit（per-provider + per-repo） | B-HTTP-2 | 2h |
-| 3 | Pipeline goroutine 使用 worker pool（上限可設定，預設 20） | B-CONC-1 | 3-4h |
-| 4 | K8s Job 操作加入 retry with exponential backoff | 新增 | 2h |
+| # | 項目 | 相關瓶頸 | 預估工時 | 狀態 |
+|---|------|---------|---------|------|
+| 1 | SSE buffer 提升至 1024，加背壓降級（content chunk 可丟、critical event 阻塞保達） | B-AI-1 | 2h | ✅ 已實作 |
+| 2 | API Rate Limit 中介層（全域 300/min、AI 30/min；Webhook per-repo 100/min 待 M14） | B-HTTP-2 | 2h | ✅ 已實作（Webhook 待 M14） |
+| 3 | Pipeline goroutine 使用 worker pool（上限可設定，預設 20） | B-CONC-1 | 3-4h | ⏳ 待 CICD M13a 實作時加入 |
+| 4 | K8s Job 操作加入 retry with exponential backoff | 新增 | 2h | ⏳ 待 CICD M13a 實作時加入 |
 
 ### P1 — 上線後一個月內
 
@@ -316,12 +330,12 @@ CICD 後 goroutine 壓力（最壞情況）：
 
 ### P2 — 下一個迭代
 
-| # | 項目 | 相關瓶頸 | 預估工時 |
-|---|------|---------|---------|
-| 10 | Helm SearchCharts 改為並行 HTTP 請求 | B-CONC-3 | 2h |
-| 11 | 預設叢集權限改批次 JOIN 查詢 | B-DB-2 | 2h |
-| 12 | Rate Limiter 切換 Redis backend | B-HTTP-3 | Config |
-| 13 | Helm HTTP Client 改 singleton | B-CONC-4 | 30min |
+| # | 項目 | 相關瓶頸 | 預估工時 | 狀態 |
+|---|------|---------|---------|------|
+| 10 | Helm SearchCharts 改為並行 HTTP 請求（semaphore=5） | B-CONC-3 | 2h | ✅ 已實作 |
+| 11 | 預設叢集權限合併 userGroups subquery、WithContext、Select 最小欄位 | B-DB-2 | 2h | ✅ 已實作 |
+| 12 | Rate Limiter 切換 Redis backend | B-HTTP-3 | Config | ℹ️ Config-only：設定 `RATE_LIMITER_BACKEND=redis`（已支援） |
+| 13 | Helm HTTP Client 改 singleton（30s timeout） | B-CONC-4 | 30min | ✅ 已實作 |
 
 ---
 

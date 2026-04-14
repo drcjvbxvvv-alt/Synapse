@@ -27,6 +27,7 @@ func registerSystemAIRoutes(protected *gin.RouterGroup, clusters *gin.RouterGrou
 	aiNLQueryHandler := handlers.NewAINLQueryHandler(d.clusterSvc, aiConfigSvc, d.k8sMgr)
 	aiChat := clusters.Group("/:clusterID/ai")
 	aiChat.Use(d.permMiddleware.ClusterAccessRequired())
+	aiChat.Use(middleware.APIRateLimit("ai_chat", 30)) // 30 AI req/min per user (P0-2)
 	{
 		aiChat.POST("/chat", aiChatHandler.Chat)
 		aiChat.POST("/nl-query", aiNLQueryHandler.NLQuery)

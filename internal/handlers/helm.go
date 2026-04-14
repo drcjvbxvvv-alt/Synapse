@@ -64,7 +64,7 @@ func toReleaseResponse(r *release.Release) ReleaseResponse {
 // ListReleases 列出 Helm Releases
 // GET /clusters/:id/helm/releases?namespace=
 func (h *HelmHandler) ListReleases(c *gin.Context) {
-	clusterIDStr := c.Param("id")
+	clusterIDStr := c.Param("clusterID")
 	namespace := c.Query("namespace")
 
 	clusterID, err := parseClusterID(clusterIDStr)
@@ -97,7 +97,7 @@ func (h *HelmHandler) ListReleases(c *gin.Context) {
 // GetRelease 取得單一 Helm Release 詳情
 // GET /clusters/:id/helm/releases/:namespace/:name
 func (h *HelmHandler) GetRelease(c *gin.Context) {
-	clusterIDStr := c.Param("id")
+	clusterIDStr := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -142,7 +142,7 @@ func (h *HelmHandler) GetRelease(c *gin.Context) {
 // GetReleaseHistory 取得 Helm Release 歷史版本
 // GET /clusters/:id/helm/releases/:namespace/:name/history
 func (h *HelmHandler) GetReleaseHistory(c *gin.Context) {
-	clusterIDStr := c.Param("id")
+	clusterIDStr := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -206,7 +206,7 @@ func (h *HelmHandler) GetReleaseHistory(c *gin.Context) {
 // GetReleaseValues 取得 Helm Release 的 values
 // GET /clusters/:id/helm/releases/:namespace/:name/values?all=true
 func (h *HelmHandler) GetReleaseValues(c *gin.Context) {
-	clusterIDStr := c.Param("id")
+	clusterIDStr := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	allValues := c.Query("all") == "true"
@@ -236,7 +236,7 @@ func (h *HelmHandler) GetReleaseValues(c *gin.Context) {
 // InstallRelease 安裝 Helm Release
 // POST /clusters/:id/helm/releases
 func (h *HelmHandler) InstallRelease(c *gin.Context) {
-	clusterIDStr := c.Param("id")
+	clusterIDStr := c.Param("clusterID")
 
 	clusterID, err := parseClusterID(clusterIDStr)
 	if err != nil {
@@ -269,7 +269,7 @@ func (h *HelmHandler) InstallRelease(c *gin.Context) {
 // UpgradeRelease 升級 Helm Release
 // PUT /clusters/:id/helm/releases/:namespace/:name
 func (h *HelmHandler) UpgradeRelease(c *gin.Context) {
-	clusterIDStr := c.Param("id")
+	clusterIDStr := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -304,7 +304,7 @@ func (h *HelmHandler) UpgradeRelease(c *gin.Context) {
 // RollbackRelease 回滾 Helm Release
 // POST /clusters/:id/helm/releases/:namespace/:name/rollback
 func (h *HelmHandler) RollbackRelease(c *gin.Context) {
-	clusterIDStr := c.Param("id")
+	clusterIDStr := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -340,7 +340,7 @@ func (h *HelmHandler) RollbackRelease(c *gin.Context) {
 // UninstallRelease 解除安裝 Helm Release
 // DELETE /clusters/:id/helm/releases/:namespace/:name
 func (h *HelmHandler) UninstallRelease(c *gin.Context) {
-	clusterIDStr := c.Param("id")
+	clusterIDStr := c.Param("clusterID")
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 

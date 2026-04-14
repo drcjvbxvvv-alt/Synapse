@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/shaia/Synapse/internal/models"
 
@@ -24,6 +26,15 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/yaml"
 )
+
+// helmHTTPClient is a package-level singleton that reuses TCP/TLS connections
+// across all Helm repository index fetches (P2-13: avoid per-request TLS handshake).
+var helmHTTPClient = &http.Client{
+	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConnsPerHost: 5,
+	},
+}
 
 // restClientGetter 實作 genericclioptions.RESTClientGetter 介面，供 Helm action.Configuration 使用
 type restClientGetter struct {
@@ -347,37 +358,61 @@ func (s *HelmService) RemoveRepo(name string) error {
 	return nil
 }
 
-// SearchCharts 搜尋 Chart
+// SearchCharts 搜尋 Chart（P2-10：並行 HTTP 請求，最多 5 個 Repo 同時拉取 index.yaml）
 func (s *HelmService) SearchCharts(keyword string) ([]ChartInfo, error) {
 	var repos []models.HelmRepository
 	if err := s.db.Find(&repos).Error; err != nil {
 		return nil, err
 	}
-
-	var charts []ChartInfo
-	for _, r := range repos {
-		indexFile, err := s.fetchRepoIndex(&r)
-		if err != nil {
-			// 單一 repo 失敗不影響其他 repo
-			continue
-		}
-
-		for chartName, versions := range indexFile.Entries {
-			if keyword == "" || strings.Contains(strings.ToLower(chartName), strings.ToLower(keyword)) {
-				for _, v := range versions {
-					charts = append(charts, ChartInfo{
-						Name:        chartName,
-						Version:     v.Version,
-						Description: v.Description,
-						RepoName:    r.Name,
-					})
-					// 只取每個 chart 的最新版本
-					break
-				}
-			}
-		}
+	if len(repos) == 0 {
+		return nil, nil
 	}
 
+	type repoResult struct {
+		charts []ChartInfo
+	}
+
+	results := make([]repoResult, len(repos))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 5) // 最多 5 個並行 HTTP 請求
+
+	for i, r := range repos {
+		wg.Add(1)
+		i, r := i, r // 捕獲迴圈變數
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			indexFile, err := s.fetchRepoIndex(&r)
+			if err != nil {
+				// 單一 repo 失敗不影響其他 repo
+				return
+			}
+
+			var collected []ChartInfo
+			lowerKeyword := strings.ToLower(keyword)
+			for chartName, versions := range indexFile.Entries {
+				if keyword == "" || strings.Contains(strings.ToLower(chartName), lowerKeyword) {
+					if len(versions) > 0 {
+						collected = append(collected, ChartInfo{
+							Name:        chartName,
+							Version:     versions[0].Version,
+							Description: versions[0].Description,
+							RepoName:    r.Name,
+						})
+					}
+				}
+			}
+			results[i].charts = collected
+		}()
+	}
+	wg.Wait()
+
+	var charts []ChartInfo
+	for _, r := range results {
+		charts = append(charts, r.charts...)
+	}
 	return charts, nil
 }
 
@@ -385,7 +420,6 @@ func (s *HelmService) SearchCharts(keyword string) ([]ChartInfo, error) {
 func (s *HelmService) fetchRepoIndex(r *models.HelmRepository) (*repo.IndexFile, error) {
 	indexURL := strings.TrimRight(r.URL, "/") + "/index.yaml"
 
-	client := &http.Client{}
 	req, err := http.NewRequest("GET", indexURL, nil)
 	if err != nil {
 		return nil, err
@@ -395,7 +429,7 @@ func (s *HelmService) fetchRepoIndex(r *models.HelmRepository) (*repo.IndexFile,
 		req.SetBasicAuth(r.Username, r.Password)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := helmHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("無法取得 repo index: %w", err)
 	}
@@ -484,8 +518,7 @@ func (s *HelmService) downloadChart(repoName, chartName, version string) (string
 		downloadURL = strings.TrimRight(helmRepo.URL, "/") + "/" + downloadURL
 	}
 
-	// 下載 chart 壓縮包
-	client := &http.Client{}
+	// 下載 chart 壓縮包（使用 singleton helmHTTPClient，P2-13）
 	req, err := http.NewRequest("GET", downloadURL, nil)
 	if err != nil {
 		return "", err
@@ -494,7 +527,7 @@ func (s *HelmService) downloadChart(repoName, chartName, version string) (string
 		req.SetBasicAuth(helmRepo.Username, helmRepo.Password)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := helmHTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("下載 chart 失敗: %w", err)
 	}

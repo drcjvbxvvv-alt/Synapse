@@ -344,7 +344,7 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 		return nil, fmt.Errorf("LLM API 返回錯誤 (status=%d): %s", resp.StatusCode, string(respBody))
 	}
 
-	ch := make(chan ChatStreamEvent, 512)
+	ch := make(chan ChatStreamEvent, 1024)
 
 	isAnthropic := p.isAnthropic()
 
@@ -378,7 +378,10 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 
 			payload := strings.TrimPrefix(line, "data: ")
 			if payload == "[DONE]" {
-				ch <- ChatStreamEvent{Done: true}
+				select {
+				case ch <- ChatStreamEvent{Done: true}:
+				case <-ctx.Done():
+				}
 				return
 			}
 
@@ -396,10 +399,13 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 						continue
 					}
 					if delta.Delta.Type == "text_delta" && delta.Delta.Text != "" {
+						// Content chunks are non-critical: drop when buffer is full (backpressure degradation).
 						select {
 						case ch <- ChatStreamEvent{Content: delta.Delta.Text}:
 						case <-ctx.Done():
 							return
+						default:
+							// buffer full — drop this content chunk; client is too slow
 						}
 					}
 				case "message_stop":
@@ -429,10 +435,23 @@ func (p *AIProvider) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 				evt.FinishReason = *choice.FinishReason
 			}
 
-			select {
-			case ch <- evt:
-			case <-ctx.Done():
-				return
+			// Critical events (finish reason, tool calls, errors) must be delivered.
+			// Content-only events are non-critical: drop when buffer full (backpressure).
+			isCritical := evt.FinishReason != "" || len(evt.ToolCalls) > 0
+			if isCritical {
+				select {
+				case ch <- evt:
+				case <-ctx.Done():
+					return
+				}
+			} else {
+				select {
+				case ch <- evt:
+				case <-ctx.Done():
+					return
+				default:
+					// buffer full — drop content chunk; client consuming too slowly
+				}
 			}
 		}
 

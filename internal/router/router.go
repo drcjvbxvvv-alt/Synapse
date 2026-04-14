@@ -321,6 +321,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 
 	protected := api.Group("")
 	protected.Use(middleware.AuthRequired(cfg.JWT.Secret, tokenBlacklistSvc))
+	protected.Use(middleware.APIRateLimit("api", 300)) // 300 req/min per user (P0-2)
 	{
 		userSvc := services.NewUserService(db, userRepo)
 		userHandler := handlers.NewUserHandler(userSvc)

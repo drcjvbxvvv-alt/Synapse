@@ -632,22 +632,17 @@ func (s *PermissionService) GetUserAllClusterPermissions(userID uint) ([]models.
 			permissions[i] = *p
 		}
 	} else {
-		// 獲取使用者所在的使用者組
-		var userGroups []models.UserGroupMember
-		s.db.Where("user_id = ?", userID).Find(&userGroups)
+		// P2-11: 使用 GORM subquery 將「查 userGroups」與「查 permissions」合併為單一查詢，
+		// 避免原本 4 條 DB round-trip 的 N+1 問題。
+		groupSubquery := s.db.WithContext(ctx).
+			Model(&models.UserGroupMember{}).
+			Where("user_id = ?", userID).
+			Select("user_group_id")
 
-		groupIDs := make([]uint, len(userGroups))
-		for i, ug := range userGroups {
-			groupIDs[i] = ug.UserGroupID
-		}
-
-		// 查詢使用者直接權限和使用者組權限
-		query := s.db.Preload("Cluster").Where("user_id = ?", userID)
-		if len(groupIDs) > 0 {
-			query = s.db.Preload("Cluster").Where("user_id = ? OR user_group_id IN ?", userID, groupIDs)
-		}
-
-		if err := query.Find(&permissions).Error; err != nil {
+		if err := s.db.WithContext(ctx).
+			Preload("Cluster").
+			Where("user_id = ? OR user_group_id IN (?)", userID, groupSubquery).
+			Find(&permissions).Error; err != nil {
 			return nil, fmt.Errorf("獲取使用者權限失敗: %w", err)
 		}
 	}
@@ -658,15 +653,18 @@ func (s *PermissionService) GetUserAllClusterPermissions(userID uint) ([]models.
 		configuredClusterIDs[p.ClusterID] = true
 	}
 
-	// 獲取所有叢集，為未配置權限的叢集新增預設權限
+	// 獲取所有叢集，為未配置權限的叢集新增預設權限。
+	// Select 僅取必要欄位以減少資料傳輸（P2-11）。
 	var allClusters []models.Cluster
-	if err := s.db.Find(&allClusters).Error; err != nil {
+	if err := s.db.WithContext(ctx).
+		Select("id, name, version, status, created_at, updated_at").
+		Find(&allClusters).Error; err != nil {
 		return nil, fmt.Errorf("獲取叢集列表失敗: %w", err)
 	}
 
 	// 查詢使用者資訊（用於確定預設權限型別）
 	var user models.User
-	if err := s.db.First(&user, userID).Error; err != nil {
+	if err := s.db.WithContext(ctx).First(&user, userID).Error; err != nil {
 		return nil, fmt.Errorf("使用者不存在: %w", err)
 	}
 

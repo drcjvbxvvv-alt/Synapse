@@ -247,9 +247,9 @@ func setDefaults() {
 	viper.SetDefault("server.port", 8080)
 	viper.SetDefault("server.mode", "debug")
 
-	// 資料庫預設配置
-	viper.SetDefault("database.driver", "sqlite")
-	viper.SetDefault("database.dsn", "./data/synapse.db")
+	// 資料庫預設配置（SQLite 已棄用，生產環境強制使用 MySQL）
+	viper.SetDefault("database.driver", "mysql")
+	viper.SetDefault("database.dsn", "")
 	viper.SetDefault("database.host", "localhost")
 	viper.SetDefault("database.port", 3306)
 	viper.SetDefault("database.username", "root")
