@@ -116,7 +116,6 @@ func ensureDatabaseExists(cfg config.DatabaseConfig) error {
 func runSeeds(db *gorm.DB) {
 	backfillSystemRole(db)
 	createDefaultUser(db)
-	createTestClusters(db)
 	createDefaultSystemSettings(db)
 	createDefaultPermissions(db)
 }
@@ -135,41 +134,8 @@ func backfillSystemRole(db *gorm.DB) {
 	}
 }
 
-// createDefaultPermissions 建立預設權限配置
+// createDefaultPermissions 建立預設使用者組
 func createDefaultPermissions(db *gorm.DB) {
-	var count int64
-	db.Model(&models.ClusterPermission{}).Count(&count)
-	if count > 0 {
-		return
-	}
-
-	var adminUser models.User
-	if err := db.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
-		logger.Error("未找到管理員使用者，跳過權限配置: %v", err)
-		return
-	}
-
-	var clusters []models.Cluster
-	if err := db.Find(&clusters).Error; err != nil {
-		logger.Error("獲取叢集列表失敗: %v", err)
-		return
-	}
-
-	for _, cluster := range clusters {
-		permission := &models.ClusterPermission{
-			ClusterID:      cluster.ID,
-			UserID:         &adminUser.ID,
-			PermissionType: models.PermissionTypeAdmin,
-			Namespaces:     `["*"]`,
-		}
-
-		if err := db.Create(permission).Error; err != nil {
-			logger.Error("建立叢集權限失敗: cluster=%s, error=%v", cluster.Name, err)
-		} else {
-			logger.Info("建立預設管理員權限: user=%s, cluster=%s", adminUser.Username, cluster.Name)
-		}
-	}
-
 	defaultGroups := []models.UserGroup{
 		{Name: "運維組", Description: "運維團隊成員，擁有運維權限"},
 		{Name: "開發組", Description: "開發團隊成員，擁有開發權限"},
@@ -263,92 +229,3 @@ func createDefaultSystemSettings(db *gorm.DB) {
 	}
 }
 
-// createTestClusters 建立測試叢集資料
-func createTestClusters(db *gorm.DB) {
-	var count int64
-	db.Model(&models.Cluster{}).Count(&count)
-	if count == 0 {
-		testClusters := []*models.Cluster{
-			{
-				Name:      "dev-cluster",
-				APIServer: "https://dev-k8s-api.example.com:6443",
-				Version:   "v1.28.2",
-				Status:    "healthy",
-				Labels:    `{"env":"dev","team":"backend"}`,
-				KubeconfigEnc: `apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    server: https://dev-k8s-api.example.com:6443
-    insecure-skip-tls-verify: true
-  name: dev-cluster
-contexts:
-- context:
-    cluster: dev-cluster
-    user: dev-user
-  name: dev-context
-current-context: dev-context
-users:
-- name: dev-user
-  user:
-    token: fake-token-for-testing`,
-			},
-			{
-				Name:      "prod-cluster",
-				APIServer: "https://prod-k8s-api.example.com:6443",
-				Version:   "v1.28.1",
-				Status:    "healthy",
-				Labels:    `{"env":"prod","team":"ops"}`,
-				KubeconfigEnc: `apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    server: https://prod-k8s-api.example.com:6443
-    insecure-skip-tls-verify: true
-  name: prod-cluster
-contexts:
-- context:
-    cluster: prod-cluster
-    user: prod-user
-  name: prod-context
-current-context: prod-context
-users:
-- name: prod-user
-  user:
-    token: fake-token-for-testing`,
-			},
-			{
-				Name:      "test-cluster",
-				APIServer: "https://test-k8s-api.example.com:6443",
-				Version:   "v1.27.8",
-				Status:    "unhealthy",
-				Labels:    `{"env":"test","team":"qa"}`,
-				KubeconfigEnc: `apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    server: https://test-k8s-api.example.com:6443
-    insecure-skip-tls-verify: true
-  name: test-cluster
-contexts:
-- context:
-    cluster: test-cluster
-    user: test-user
-  name: test-context
-current-context: test-context
-users:
-- name: test-user
-  user:
-    token: fake-token-for-testing`,
-			},
-		}
-
-		for _, cluster := range testClusters {
-			if err := db.Create(cluster).Error; err != nil {
-				logger.Error("建立測試叢集失敗: %v", err)
-			} else {
-				logger.Info("測試叢集建立成功: %s", cluster.Name)
-			}
-		}
-	}
-}
