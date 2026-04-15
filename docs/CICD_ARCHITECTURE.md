@@ -1905,10 +1905,11 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 - [x] `registries` 資料表（insecure_tls + ca_bundle_enc）
 - [x] Harbor / DockerHub / DockerV2(ECR/GCR) API 整合 ✅ registry_adapter.go — 4 adapter + Ping/ListRepos/ListTags/GetManifest
 - [x] Registry CRUD service ✅ registry_service.go — AES-256-GCM 加密 password + ca_bundle
+- [x] Registry CRUD Handler + Routes ✅ registry_handler.go — List/Get/Create/Update/Delete/TestConnection + ListRepositories/ListTags, routes under /system/registries (PlatformAdminRequired)
 - [ ] Repository / Tag 瀏覽 UI
-- [ ] Tag 保留策略
-- [ ] `push-image` Step 從 pipeline_secrets 取憑證
-- [ ] imagePullSecret 自動注入
+- [x] Tag 保留策略 ✅ tag_retention_policy.go model + tag_retention_service.go (keep_last_n / keep_by_age / keep_by_regex) + tag_retention_handler.go CRUD + Evaluate dry-run + 22 tests
+- [x] `push-image` Step 從 Registry 取憑證 ✅ PipelineScheduler.injectRegistryCredentials — PushImageConfig.Registry field → 自動注入 DOCKER_USERNAME/DOCKER_PASSWORD/REGISTRY_URL env vars
+- [x] imagePullSecret 自動注入 ✅ PipelineScheduler.resolveImagePullSecret + JobBuilder.EnsureImagePullSecret — 比對 step image prefix 與 Registry URL, 自動建立 dockerconfigjson Secret
 
 ### M16 — 原生 GitOps（6 週）
 

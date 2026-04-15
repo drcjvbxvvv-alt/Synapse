@@ -95,6 +95,7 @@ type TrivyScanConfig struct {
 type PushImageConfig struct {
 	Source      string `json:"source"`      // 來源 image（必填）
 	Destination string `json:"destination"` // 目標 image（必填）
+	Registry    string `json:"registry"`    // Registry 名稱（可選，自動注入認證）
 }
 
 // HelmDeployConfig deploy-helm Step 的類型特定設定。

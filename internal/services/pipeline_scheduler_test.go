@@ -2,6 +2,8 @@ package services
 
 import (
 	"testing"
+
+	"github.com/shaia/Synapse/internal/models"
 )
 
 // ---------------------------------------------------------------------------
@@ -37,6 +39,102 @@ func TestParseSecretRef(t *testing.T) {
 				t.Errorf("parseSecretRef(%q) match = %v, want %v", tt.input, gotMatch, tt.wantMatch)
 			}
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// injectRegistryCredentials
+// ---------------------------------------------------------------------------
+
+func TestInjectRegistryCredentials_SkipNonPushImage(t *testing.T) {
+	s := &PipelineScheduler{}
+	secrets := map[string]string{}
+	s.injectRegistryCredentials(nil, "deploy", `{"registry":"my-harbor"}`, secrets)
+	if len(secrets) != 0 {
+		t.Errorf("expected no injection for deploy step, got %v", secrets)
+	}
+}
+
+func TestInjectRegistryCredentials_SkipEmptyConfig(t *testing.T) {
+	s := &PipelineScheduler{}
+	secrets := map[string]string{}
+	s.injectRegistryCredentials(nil, "push-image", "", secrets)
+	if len(secrets) != 0 {
+		t.Errorf("expected no injection for empty config, got %v", secrets)
+	}
+}
+
+func TestInjectRegistryCredentials_SkipNoRegistryField(t *testing.T) {
+	s := &PipelineScheduler{}
+	secrets := map[string]string{}
+	s.injectRegistryCredentials(nil, "push-image", `{"source":"a","destination":"b"}`, secrets)
+	if len(secrets) != 0 {
+		t.Errorf("expected no injection when registry field is empty, got %v", secrets)
+	}
+}
+
+func TestInjectRegistryCredentials_SkipNilRegistrySvc(t *testing.T) {
+	s := &PipelineScheduler{} // registrySvc is nil
+	secrets := map[string]string{}
+	s.injectRegistryCredentials(nil, "push-image", `{"registry":"my-harbor"}`, secrets)
+	if len(secrets) != 0 {
+		t.Errorf("expected no injection when registrySvc is nil, got %v", secrets)
+	}
+}
+
+func TestInjectRegistryCredentials_NoOverwrite(t *testing.T) {
+	// If DOCKER_USERNAME already exists in secrets, it should NOT be overwritten
+	s := &PipelineScheduler{} // registrySvc nil → won't reach inject
+	secrets := map[string]string{"DOCKER_USERNAME": "existing"}
+	s.injectRegistryCredentials(nil, "push-image", `{"registry":"x"}`, secrets)
+	if secrets["DOCKER_USERNAME"] != "existing" {
+		t.Errorf("expected existing value to be preserved, got %s", secrets["DOCKER_USERNAME"])
+	}
+}
+
+// ---------------------------------------------------------------------------
+// extractHost
+// ---------------------------------------------------------------------------
+
+func TestExtractHost(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"https://harbor.example.com", "harbor.example.com"},
+		{"https://harbor.example.com/v2", "harbor.example.com"},
+		{"http://registry.local:5000", "registry.local:5000"},
+		{"harbor.example.com", "harbor.example.com"},
+		{"harbor.example.com/v2/", "harbor.example.com"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := extractHost(tt.input)
+			if got != tt.want {
+				t.Errorf("extractHost(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// resolveImagePullSecret
+// ---------------------------------------------------------------------------
+
+func TestResolveImagePullSecret_NilRegistrySvc(t *testing.T) {
+	s := &PipelineScheduler{}
+	result := s.resolveImagePullSecret(nil, &models.PipelineRun{}, &models.StepRun{Image: "nginx:latest"})
+	if result != "" {
+		t.Errorf("expected empty, got %q", result)
+	}
+}
+
+func TestResolveImagePullSecret_EmptyImage(t *testing.T) {
+	s := &PipelineScheduler{registrySvc: &RegistryService{}}
+	result := s.resolveImagePullSecret(nil, &models.PipelineRun{}, &models.StepRun{Image: ""})
+	if result != "" {
+		t.Errorf("expected empty, got %q", result)
 	}
 }
 

@@ -163,6 +163,28 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		systemSettings.GET("/feature-flags", ffHandler.List)
 		systemSettings.PUT("/feature-flags/:key", ffHandler.Update)
 
+		// Registry 管理（M15）
+		registryHandler := handlers.NewRegistryHandler(d.registrySvc)
+		registries := systemSettings.Group("/registries")
+		{
+			registries.GET("", registryHandler.List)
+			registries.GET("/:id", registryHandler.Get)
+			registries.POST("", registryHandler.Create)
+			registries.PUT("/:id", registryHandler.Update)
+			registries.DELETE("/:id", registryHandler.Delete)
+			registries.POST("/:id/test-connection", registryHandler.TestConnection)
+			registries.GET("/:id/repositories", registryHandler.ListRepositories)
+			registries.GET("/:id/tags", registryHandler.ListTags)
+
+			// Tag 保留策略（M15）
+			retentionHandler := handlers.NewTagRetentionHandler(d.tagRetentionSvc)
+			registries.GET("/:id/retention-policies", retentionHandler.List)
+			registries.POST("/:id/retention-policies", retentionHandler.Create)
+			registries.PUT("/:id/retention-policies/:policyID", retentionHandler.Update)
+			registries.DELETE("/:id/retention-policies/:policyID", retentionHandler.Delete)
+			registries.POST("/:id/retention-policies/:policyID/evaluate", retentionHandler.Evaluate)
+		}
+
 		// Git Provider 管理（M14）
 		gitProviderHandler := handlers.NewGitProviderHandler(d.gitProviderSvc)
 		gitProviders := systemSettings.Group("/git-providers")

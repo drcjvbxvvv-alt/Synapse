@@ -240,3 +240,32 @@ func TestSanitizeK8sName(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildImagePullSecrets_Empty(t *testing.T) {
+	b := NewJobBuilder()
+	input := &BuildJobInput{ImagePullSecretName: ""}
+	result := b.buildImagePullSecrets(input)
+	if result != nil {
+		t.Errorf("expected nil, got %v", result)
+	}
+}
+
+func TestBuildImagePullSecrets_WithName(t *testing.T) {
+	b := NewJobBuilder()
+	input := &BuildJobInput{ImagePullSecretName: "my-pull-secret"}
+	result := b.buildImagePullSecrets(input)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(result))
+	}
+	if result[0].Name != "my-pull-secret" {
+		t.Errorf("expected 'my-pull-secret', got %q", result[0].Name)
+	}
+}
+
+func TestBase64Encode(t *testing.T) {
+	got := base64Encode("user:pass")
+	want := "dXNlcjpwYXNz"
+	if got != want {
+		t.Errorf("base64Encode('user:pass') = %q, want %q", got, want)
+	}
+}

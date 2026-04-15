@@ -54,6 +54,7 @@ type PipelineScheduler struct {
 	db            *gorm.DB
 	jobBuilder    *JobBuilder
 	secretSvc     *PipelineSecretService
+	registrySvc   *RegistryService
 	k8sProvider   PipelineK8sProvider
 	watcher       *JobWatcher
 	notifier      *PipelineNotifier
@@ -61,6 +62,11 @@ type PipelineScheduler struct {
 
 	stopCh chan struct{}
 	once   sync.Once
+}
+
+// SetRegistryService 設定 Registry 服務（用於 push-image 自動注入認證）。
+func (s *PipelineScheduler) SetRegistryService(svc *RegistryService) {
+	s.registrySvc = svc
 }
 
 // NewPipelineScheduler 建立排程器。
@@ -619,6 +625,9 @@ func (s *PipelineScheduler) executeStepWithRetry(
 			return true // secret 解析失敗不重試
 		}
 
+		// push-image / build-image: 自動注入 Registry 認證
+		s.injectRegistryCredentials(ctx, step.Type, sr.ConfigJSON, secrets)
+
 		// 標記 running + 提交 K8s Job
 		now := time.Now()
 		sr.Status = models.StepRunStatusRunning
@@ -629,11 +638,15 @@ func (s *PipelineScheduler) executeStepWithRetry(
 			logger.Error("failed to save running step run", "step_run_id", sr.ID, "error", err)
 		}
 
+		// 嘗試為私有 registry 建立 imagePullSecret
+		imagePullSecretName := s.resolveImagePullSecret(ctx, run, sr)
+
 		input := &BuildJobInput{
-			Run:       run,
-			StepRun:   sr,
-			Namespace: run.Namespace,
-			Secrets:   secrets,
+			Run:                 run,
+			StepRun:             sr,
+			Namespace:           run.Namespace,
+			Secrets:             secrets,
+			ImagePullSecretName: imagePullSecretName,
 		}
 
 		submitErr := s.jobBuilder.SubmitJob(ctx, s.k8sProvider.GetK8sClientByID(run.ClusterID), input)
@@ -795,6 +808,136 @@ func (s *PipelineScheduler) cancelRemainingSteps(ctx context.Context, stepRuns m
 
 // resolveSecrets 解析 Step 設定中的 ${{ secrets.* }} 引用，
 // 從 PipelineSecretService 查詢實際值。
+// injectRegistryCredentials 為 push-image / build-image Step 自動注入 Registry 認證。
+// 當 Step config 中指定了 registry 名稱，查詢 Registry model 並注入認證環境變數。
+// crane 使用 DOCKER_USERNAME + DOCKER_PASSWORD 環境變數進行認證。
+func (s *PipelineScheduler) injectRegistryCredentials(ctx context.Context, stepType, configJSON string, secrets map[string]string) {
+	if s.registrySvc == nil || configJSON == "" {
+		return
+	}
+	if stepType != "push-image" && stepType != "build-image" {
+		return
+	}
+
+	var cfg PushImageConfig
+	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil || cfg.Registry == "" {
+		return
+	}
+
+	registry, err := s.registrySvc.GetRegistryByName(ctx, cfg.Registry)
+	if err != nil {
+		logger.Warn("registry not found for push-image credential injection",
+			"registry", cfg.Registry,
+			"error", err,
+		)
+		return
+	}
+
+	// 注入 crane / kaniko 標準認證環境變數
+	if secrets == nil {
+		return
+	}
+	if registry.Username != "" {
+		if _, exists := secrets["DOCKER_USERNAME"]; !exists {
+			secrets["DOCKER_USERNAME"] = registry.Username
+		}
+	}
+	if registry.PasswordEnc != "" { // AfterFind 已解密
+		if _, exists := secrets["DOCKER_PASSWORD"]; !exists {
+			secrets["DOCKER_PASSWORD"] = registry.PasswordEnc
+		}
+	}
+	if registry.URL != "" {
+		if _, exists := secrets["REGISTRY_URL"]; !exists {
+			secrets["REGISTRY_URL"] = registry.URL
+		}
+	}
+
+	logger.Debug("registry credentials injected for step",
+		"step_type", stepType,
+		"registry", cfg.Registry,
+	)
+}
+
+// resolveImagePullSecret 檢查 step image 是否來自已註冊的私有 registry，
+// 如果是，則自動建立 imagePullSecret 供 K8s 拉取 image。
+func (s *PipelineScheduler) resolveImagePullSecret(ctx context.Context, run *models.PipelineRun, sr *models.StepRun) string {
+	if s.registrySvc == nil {
+		return ""
+	}
+
+	// 從 step image 提取 registry host（例如 "harbor.example.com/project/app:v1" → "harbor.example.com"）
+	image := sr.Image
+	if image == "" {
+		return ""
+	}
+
+	// 列出所有 registry，比對 image prefix
+	registries, err := s.registrySvc.ListRegistries(ctx)
+	if err != nil {
+		return ""
+	}
+
+	for _, reg := range registries {
+		if !reg.Enabled || reg.Username == "" {
+			continue
+		}
+		// 比對 registry URL 與 image 前綴
+		registryHost := extractHost(reg.URL)
+		if registryHost != "" && strings.HasPrefix(image, registryHost+"/") {
+			// 需要完整 registry（含密碼）
+			fullReg, err := s.registrySvc.GetRegistry(ctx, reg.ID)
+			if err != nil || fullReg.PasswordEnc == "" {
+				continue
+			}
+
+			k8sClient := s.k8sProvider.GetK8sClientByID(run.ClusterID)
+			if k8sClient == nil {
+				continue
+			}
+
+			secretName, err := s.jobBuilder.EnsureImagePullSecret(
+				ctx, k8sClient, run, sr, run.Namespace,
+				registryHost, fullReg.Username, fullReg.PasswordEnc,
+			)
+			if err != nil {
+				logger.Warn("failed to create imagePullSecret",
+					"registry", reg.Name,
+					"step_run_id", sr.ID,
+					"error", err,
+				)
+				continue
+			}
+			if secretName != "" {
+				logger.Debug("imagePullSecret created for step",
+					"secret_name", secretName,
+					"registry", reg.Name,
+					"step_run_id", sr.ID,
+				)
+				return secretName
+			}
+		}
+	}
+
+	return ""
+}
+
+// extractHost 從 URL 提取 host（去除 scheme 和 path）。
+func extractHost(rawURL string) string {
+	// 去除 scheme
+	host := rawURL
+	if idx := strings.Index(host, "://"); idx != -1 {
+		host = host[idx+3:]
+	}
+	// 去除 path
+	if idx := strings.Index(host, "/"); idx != -1 {
+		host = host[:idx]
+	}
+	// 去除尾端空白
+	host = strings.TrimSpace(host)
+	return host
+}
+
 func (s *PipelineScheduler) resolveSecrets(ctx context.Context, pipelineID uint, configJSON string) (map[string]string, error) {
 	if configJSON == "" || s.secretSvc == nil {
 		return nil, nil

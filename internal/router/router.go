@@ -312,6 +312,9 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	_ = pipelineSecretSvc // used by webhook routes below
 	_ = pipelineLogSvc    // used by pipeline routes below
 
+	// M15: wire registry service for push-image credential injection
+	pipelineScheduler.SetRegistryService(services.NewRegistryService(db))
+
 	// Pipeline startup: recover interrupted runs → start scheduler + watcher
 	pipelineRecoverer := services.NewPipelineRecover(db, pipelineWatcher, services.DefaultRecoverConfig())
 	recoverCtx, recoverCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -347,6 +350,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		pipelineScheduler: pipelineScheduler,
 		pipelineSvc:       pipelineSvc,
 		gitProviderSvc:    services.NewGitProviderService(db),
+		registrySvc:       services.NewRegistryService(db),
+		tagRetentionSvc:   services.NewTagRetentionService(db, services.NewRegistryService(db)),
 	}
 
 	// ── Webhook routes (public, HMAC-authenticated) ───────────────────────

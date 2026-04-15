@@ -41,4 +41,8 @@ type routeDeps struct {
 
 	// Git Provider (M14)
 	gitProviderSvc *services.GitProviderService
+
+	// Registry (M15)
+	registrySvc      *services.RegistryService
+	tagRetentionSvc  *services.TagRetentionService
 }

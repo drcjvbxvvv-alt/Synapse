@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -71,11 +72,12 @@ type StepConfig struct {
 
 // BuildJobInput 建構 Job 所需的全部輸入。
 type BuildJobInput struct {
-	Run         *models.PipelineRun
-	StepRun     *models.StepRun
-	Namespace   string            // Job 部署到的 namespace
-	Secrets     map[string]string // 已解析的 secret key→value
-	SecretName  string            // K8s Secret 名稱（由 EnsureRunSecret 建立），用 envFrom 掛載
+	Run                  *models.PipelineRun
+	StepRun              *models.StepRun
+	Namespace            string            // Job 部署到的 namespace
+	Secrets              map[string]string // 已解析的 secret key→value
+	SecretName           string            // K8s Secret 名稱（由 EnsureRunSecret 建立），用 envFrom 掛載
+	ImagePullSecretName  string            // imagePullSecret 名稱（可選，私有 registry 拉取 step image 用）
 }
 
 // BuildJob 將 StepRun 轉換為 K8s Job。
@@ -204,6 +206,7 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 					AutomountServiceAccountToken:     &automount,
 					ServiceAccountName:               saName,
 					NodeSelector:                     nodeSelector,
+					ImagePullSecrets:                 b.buildImagePullSecrets(input),
 					TerminationGracePeriodSeconds:    &terminationGracePeriod,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &runAsNonRoot,
@@ -362,6 +365,64 @@ func (b *JobBuilder) EnsureRunSecret(
 	return created.Name, nil
 }
 
+// EnsureImagePullSecret 建立 docker-registry 類型的 K8s Secret，
+// 用於從私有 registry 拉取 step image。
+func (b *JobBuilder) EnsureImagePullSecret(
+	ctx context.Context,
+	k8sClient *K8sClient,
+	run *models.PipelineRun,
+	stepRun *models.StepRun,
+	namespace string,
+	registryURL, username, password string,
+) (string, error) {
+	if username == "" || password == "" {
+		return "", nil
+	}
+
+	secretName := fmt.Sprintf("pr-%d-step-%d-pull",
+		run.ID, stepRun.ID)
+	if len(secretName) > 63 {
+		secretName = secretName[:63]
+	}
+
+	// 建立 .dockerconfigjson 格式
+	dockerConfig := fmt.Sprintf(
+		`{"auths":{%q:{"username":%q,"password":%q,"auth":"%s"}}}`,
+		registryURL, username, password,
+		base64Encode(username+":"+password),
+	)
+
+	k8sSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"synapse.io/pipeline-run-id": fmt.Sprintf("%d", run.ID),
+				"synapse.io/step-run-id":     fmt.Sprintf("%d", stepRun.ID),
+				"synapse.io/managed-by":      "synapse-pipeline",
+			},
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(dockerConfig),
+		},
+	}
+
+	created, err := k8sClient.GetClientset().CoreV1().
+		Secrets(namespace).
+		Create(ctx, k8sSecret, metav1.CreateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("create imagePullSecret %s: %w", secretName, err)
+	}
+
+	logger.Info("imagePullSecret created for step",
+		"secret_name", created.Name,
+		"namespace", namespace,
+		"step_run_id", stepRun.ID,
+	)
+	return created.Name, nil
+}
+
 // SetSecretOwnerRef 在 Job 建立後，將 K8s Secret 的 ownerRef 設為該 Job，
 // 使 Job 刪除時 Secret 自動 GC。
 func (b *JobBuilder) SetSecretOwnerRef(
@@ -451,6 +512,17 @@ func (b *JobBuilder) buildResources(cfg StepConfig) corev1.ResourceRequirements 
 	}
 }
 
+// buildImagePullSecrets 建立 imagePullSecrets 列表。
+// 當 input.ImagePullSecretName 不為空時，注入對應的 Secret 參考。
+func (b *JobBuilder) buildImagePullSecrets(input *BuildJobInput) []corev1.LocalObjectReference {
+	if input.ImagePullSecretName == "" {
+		return nil
+	}
+	return []corev1.LocalObjectReference{
+		{Name: input.ImagePullSecretName},
+	}
+}
+
 func (b *JobBuilder) buildEnvVars(cfg StepConfig, secrets map[string]string) []corev1.EnvVar {
 	envVars := make([]corev1.EnvVar, 0, len(cfg.Env)+len(secrets))
 
@@ -489,6 +561,10 @@ func (b *JobBuilder) isDeployStepType(stepType string) bool {
 }
 
 // sanitizeK8sName 將名稱轉為合法的 K8s 資源名稱片段。
+func base64Encode(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
 func sanitizeK8sName(name string) string {
 	name = strings.ToLower(name)
 	name = strings.Map(func(r rune) rune {
