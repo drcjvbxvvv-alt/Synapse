@@ -95,7 +95,7 @@ const EmptyState: React.FC<EmptyStateProps> = React.memo(function EmptyState({
     <Empty
       style={{ padding: '32px 0', ...style }}
       image={displayIcon}
-      imageStyle={typeof displayIcon !== 'string' ? { width: 124, height: 92, margin: '0 auto' } : undefined}
+      styles={{ image: typeof displayIcon !== 'string' ? { width: 124, height: 92, margin: '0 auto' } : undefined }}
       description={
         <Space direction="vertical" size={4}>
           <Text strong style={{ fontSize: 15, color: '#8a94b0' }}>{displayTitle}</Text>

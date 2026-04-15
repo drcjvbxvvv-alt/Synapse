@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import ErrorPage from '../../components/ErrorPage';
 import {
   Card,
   Tabs,
@@ -165,9 +166,15 @@ const [loading, setLoading] = useState(false);
 
   if (!deployment) {
     return (
-      <div style={{ textAlign: 'center', padding: `${token.paddingXL * 3}px 0` }}>
-        <Text type="secondary">{t("messages.notFound", { type: "Deployment" })}</Text>
-      </div>
+      <ErrorPage
+        status={404}
+        title={t("messages.notFound", { type: "Deployment" })}
+        subTitle="找不到對應的 Deployment，可能已被刪除或名稱有誤。"
+        showHome={false}
+        showBack={false}
+        onRetry={() => navigate(`/clusters/${clusterId}/autoscaling`)}
+        retryLabel="返回 HPA 列表"
+      />
     );
   }
 

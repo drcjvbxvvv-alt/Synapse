@@ -5,18 +5,19 @@ import {
 } from 'antd';
 import {
   ReloadOutlined, ThunderboltOutlined, NodeIndexOutlined,
-  ClusterOutlined, RocketOutlined,
+  ClusterOutlined, RocketOutlined, VerticalAlignMiddleOutlined,
 } from '@ant-design/icons';
 import EmptyState from '@/components/EmptyState';
 import NotInstalledCard from '../../components/NotInstalledCard';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   autoscalingService,
   type KEDAStatus, type KarpenterStatus,
   type ScaledObjectInfo, type ScaledJobInfo,
   type NodePoolInfo, type NodeClaimInfo, type CASStatus,
 } from '../../services/autoscalingService';
+import { WorkloadService } from '../../services/workloadService';
 
 const { Text, Title } = Typography;
 
@@ -40,18 +41,212 @@ const triggerColor = (type: string) => TRIGGER_COLORS[type.toLowerCase()] ?? 'de
 interface PanelProps { clusterId: string }
 
 // ─── HPA Tab ────────────────────────────────────────────────────────────────
-const HPATab: React.FC<PanelProps> = ({ clusterId: _clusterId }) => {
+interface HPAInfo {
+  name: string;
+  namespace: string;
+  targetKind: string;
+  targetName: string;
+  minReplicas: number;
+  maxReplicas: number;
+  currentReplicas: number;
+  desiredReplicas: number;
+  createdAt?: string;
+}
+
+const HPATab: React.FC<PanelProps> = ({ clusterId }) => {
   const { t } = useTranslation('workload');
+  const { message } = App.useApp();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [allItems, setAllItems] = useState<HPAInfo[]>([]);
+  const [ns, setNs] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await WorkloadService.listHPAs(clusterId);
+      setAllItems((res.items as HPAInfo[]) ?? []);
+    } catch (err) {
+      message.error('載入 HPA 列表失敗：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setLoading(false);
+    }
+  }, [clusterId, message]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const namespaceOptions = [...new Set(allItems.map(i => i.namespace))].map(n => ({ label: n, value: n }));
+  const items = ns ? allItems.filter(i => i.namespace === ns) : allItems;
+
+  const goToTarget = (r: HPAInfo) => {
+    const kind = r.targetKind.toLowerCase();
+    navigate(`/clusters/${clusterId}/workloads/${kind}/${r.namespace}/${r.targetName}`);
+  };
+
+  const columns = [
+    {
+      title: t('common.name'), dataIndex: 'name', key: 'name',
+      render: (v: string, r: HPAInfo) => (
+        <Typography.Link onClick={() => goToTarget(r)}>{v}</Typography.Link>
+      ),
+    },
+    {
+      title: t('common.namespace'), dataIndex: 'namespace', key: 'namespace',
+      render: (v: string) => <Tag color="blue">{v}</Tag>,
+    },
+    {
+      title: '目標', key: 'target',
+      render: (_: unknown, r: HPAInfo) => <Text>{r.targetKind} / {r.targetName}</Text>,
+    },
+    {
+      title: '副本範圍', key: 'replicas',
+      render: (_: unknown, r: HPAInfo) => (
+        <Space>
+          <Tooltip title="最小"><Tag>{r.minReplicas}</Tag></Tooltip>
+          <Text type="secondary">–</Text>
+          <Tooltip title="最大"><Tag>{r.maxReplicas}</Tag></Tooltip>
+          <Text type="secondary">（當前 {r.currentReplicas}{r.desiredReplicas > 0 ? ` / 期望 ${r.desiredReplicas}` : ''}）</Text>
+        </Space>
+      ),
+    },
+    {
+      title: t('common.createdAt'), dataIndex: 'createdAt', key: 'createdAt',
+      render: (v: string) => v ? new Date(v).toLocaleString() : '—',
+    },
+  ];
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', paddingTop: 48 }}>
-      <Alert
-        type="info"
-        showIcon
-        message={t('autoscaling.hpa.redirectHint')}
-        description={t('autoscaling.hpa.redirectDesc')}
-        style={{ width: '100%', maxWidth: 600 }}
+    <Space direction="vertical" style={{ width: '100%' }} size={16}>
+      <Space>
+        <Select
+          allowClear
+          placeholder={t('common.namespace')}
+          style={{ width: 200 }}
+          options={namespaceOptions}
+          value={ns || undefined}
+          onChange={v => setNs(v ?? '')}
+        />
+        <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>{t('common.refresh')}</Button>
+      </Space>
+      <Table
+        rowKey={r => `${r.namespace}/${r.name}`}
+        columns={columns}
+        dataSource={items}
+        loading={loading}
+        size="small"
+        scroll={{ x: 800 }}
+        pagination={{ pageSize: 20, showSizeChanger: true }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
       />
-    </div>
+    </Space>
+  );
+};
+
+// ─── VPA Tab ────────────────────────────────────────────────────────────────
+interface VPAInfo {
+  name: string;
+  namespace: string;
+  targetKind: string;
+  targetName: string;
+  updateMode: string;
+  containerPolicies?: unknown[];
+  createdAt?: string;
+}
+
+const VPATab: React.FC<PanelProps> = ({ clusterId }) => {
+  const { t } = useTranslation('workload');
+  const { message } = App.useApp();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [installed, setInstalled] = useState<boolean | null>(null);
+  const [allItems, setAllItems] = useState<VPAInfo[]>([]);
+  const [ns, setNs] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await WorkloadService.listVPAs(clusterId);
+      setInstalled(res.installed ?? true);
+      setAllItems((res.items as VPAInfo[]) ?? []);
+    } catch (err) {
+      message.error('載入 VPA 列表失敗：' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setLoading(false);
+    }
+  }, [clusterId, message]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const namespaceOptions = [...new Set(allItems.map(i => i.namespace))].map(n => ({ label: n, value: n }));
+  const items = ns ? allItems.filter(i => i.namespace === ns) : allItems;
+
+  const goToTarget = (r: VPAInfo) => {
+    const kind = r.targetKind.toLowerCase();
+    navigate(`/clusters/${clusterId}/workloads/${kind}/${r.namespace}/${r.targetName}`);
+  };
+
+  if (installed === false) {
+    return (
+      <NotInstalledCard
+        title="VPA 未安裝"
+        description="Vertical Pod Autoscaler（VPA）尚未安裝於此叢集。安裝後可自動調整容器的 CPU / Memory 請求。"
+        command="kubectl apply -f https://github.com/kubernetes/autoscaler/releases/latest/download/vertical-pod-autoscaler.yaml"
+        docsUrl="https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler"
+        onRecheck={load}
+        recheckLoading={loading}
+      />
+    );
+  }
+
+  const columns = [
+    {
+      title: t('common.name'), dataIndex: 'name', key: 'name',
+      render: (v: string, r: VPAInfo) => (
+        <Typography.Link onClick={() => goToTarget(r)}>{v}</Typography.Link>
+      ),
+    },
+    {
+      title: t('common.namespace'), dataIndex: 'namespace', key: 'namespace',
+      render: (v: string) => <Tag color="blue">{v}</Tag>,
+    },
+    {
+      title: '目標', key: 'target',
+      render: (_: unknown, r: VPAInfo) => <Text>{r.targetKind} / {r.targetName}</Text>,
+    },
+    {
+      title: '更新模式', dataIndex: 'updateMode', key: 'updateMode',
+      render: (v: string) => <Tag color="purple">{v || 'Auto'}</Tag>,
+    },
+    {
+      title: t('common.createdAt'), dataIndex: 'createdAt', key: 'createdAt',
+      render: (v: string) => v ? new Date(v).toLocaleString() : '—',
+    },
+  ];
+
+  return (
+    <Space direction="vertical" style={{ width: '100%' }} size={16}>
+      <Space>
+        <Select
+          allowClear
+          placeholder={t('common.namespace')}
+          style={{ width: 200 }}
+          options={namespaceOptions}
+          value={ns || undefined}
+          onChange={v => setNs(v ?? '')}
+        />
+        <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>{t('common.refresh')}</Button>
+      </Space>
+      <Table
+        rowKey={r => `${r.namespace}/${r.name}`}
+        columns={columns}
+        dataSource={items}
+        loading={loading}
+        size="small"
+        scroll={{ x: 800 }}
+        pagination={{ pageSize: 20, showSizeChanger: true }}
+        locale={{ emptyText: <EmptyState description={t('common:messages.noData')} /> }}
+      />
+    </Space>
   );
 };
 
@@ -366,6 +561,11 @@ const AutoscalingPage: React.FC = () => {
       key: 'hpa',
       label: <Space><RocketOutlined />{t('autoscaling.tabs.hpa')}</Space>,
       children: <HPATab clusterId={clusterId} />,
+    },
+    {
+      key: 'vpa',
+      label: <Space><VerticalAlignMiddleOutlined />VPA</Space>,
+      children: <VPATab clusterId={clusterId} />,
     },
     {
       key: 'keda',

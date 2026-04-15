@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import EmptyState from '@/components/EmptyState';
-import { App, Button, Card, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Spin, Select, Space, Tag, Alert } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { App, Button, Card, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Spin, Select, Space, Tag, Alert, Typography, theme, Tabs } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, LinkOutlined, ReloadOutlined } from '@ant-design/icons';
 import { WorkloadService } from '../../../services/workloadService';
 import { vpaService, type VPAInfo, type VPARequest } from '../../../services/vpaService';
 import { useTranslation } from 'react-i18next';
@@ -66,19 +66,22 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
 }) => {
   const { t } = useTranslation(['workload', 'common']);
   const { message } = App.useApp();
+  const { token } = theme.useToken();
   const { hasFeature } = usePermission();
+
   const [loading, setLoading] = useState(false);
   const [hpa, setHpa] = useState<HPAInfo | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<HPAFormValues>();
 
-  // VPA state
   const [vpa, setVpa] = useState<VPAInfo | null>(null);
   const [vpaInstalled, setVpaInstalled] = useState<boolean | null>(null);
   const [vpaModalOpen, setVpaModalOpen] = useState(false);
   const [vpaSaving, setVpaSaving] = useState(false);
   const [vpaForm] = Form.useForm<VPARequest>();
+
+  const [pageTab, setPageTab] = useState<'hpa' | 'vpa'>('hpa');
 
   const workloadName = deploymentName || rolloutName || statefulSetName || daemonSetName || jobName || cronJobName;
   const workloadType = deploymentName ? 'Deployment'
@@ -116,6 +119,8 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
   }, [clusterId, namespace, workloadName, workloadType]);
 
   useEffect(() => { loadVPA(); }, [loadVPA]);
+
+  // ── HPA handlers ──────────────────────────────────────────────────────────
 
   const openCreate = () => {
     form.resetFields();
@@ -178,13 +183,19 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px 0' }}>
-        <Spin tip={t('scaling.loading')} />
-      </div>
-    );
-  }
+  // ── VPA handlers ──────────────────────────────────────────────────────────
+
+  const openVPACreate = () => {
+    vpaForm.resetFields();
+    vpaForm.setFieldsValue({ updateMode: 'Auto' });
+    setVpaModalOpen(true);
+  };
+
+  const openVPAEdit = () => {
+    if (!vpa) return;
+    vpaForm.setFieldsValue({ updateMode: vpa.updateMode });
+    setVpaModalOpen(true);
+  };
 
   const handleVPASave = async () => {
     const values = await vpaForm.validateFields();
@@ -225,23 +236,21 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
     }
   };
 
-  const openVPACreate = () => {
-    vpaForm.resetFields();
-    vpaForm.setFieldsValue({ updateMode: 'Auto' });
-    setVpaModalOpen(true);
-  };
-
-  const openVPAEdit = () => {
-    if (!vpa) return;
-    vpaForm.setFieldsValue({ updateMode: vpa.updateMode });
-    setVpaModalOpen(true);
-  };
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px 0' }}>
+        <Spin tip={t('scaling.loading')} />
+      </div>
+    );
+  }
 
   const isHPASupported = ['Deployment', 'StatefulSet', 'Rollout'].includes(workloadType);
   const isVPASupported = ['Deployment', 'StatefulSet', 'DaemonSet'].includes(workloadType);
 
-  return (
-    <div>
+  // ── Tab content ───────────────────────────────────────────────────────────
+
+  const hpaTabContent = (
+    <div style={{ paddingTop: 8 }}>
       {!hpa ? (
         <div style={{ textAlign: 'center' }}>
           <EmptyState description={t('scaling.noHpa')} style={{ padding: '50px 0' }} />
@@ -325,7 +334,147 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
           )}
         </>
       )}
+    </div>
+  );
 
+  const vpaTabContent = (
+    <div style={{ paddingTop: 8 }}>
+      {vpaInstalled === false ? (
+        <div style={{ maxWidth: 640, margin: '0 auto' }}>
+          <Alert
+            type="warning"
+            showIcon
+            message="此叢集尚未安裝 Vertical Pod Autoscaler（VPA）"
+            description={
+              <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
+                <Typography.Text>
+                  VPA 可自動分析 Pod 的歷史資源使用量，並建議或直接調整 CPU / Memory Request，避免資源浪費或 OOMKill。
+                </Typography.Text>
+                <Typography.Text strong style={{ display: 'block', marginTop: 8 }}>安裝指令：</Typography.Text>
+                <pre style={{
+                  background: '#1e1e1e',
+                  color: '#d4d4d4',
+                  padding: '12px 16px',
+                  borderRadius: token.borderRadiusSM,
+                  fontSize: token.fontSizeSM,
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                }}>
+                  {'git clone https://github.com/kubernetes/autoscaler.git\ncd autoscaler/vertical-pod-autoscaler\n./hack/vpa-up.sh'}
+                </pre>
+                <Space style={{ marginTop: 8 }}>
+                  <Button
+                    icon={<CopyOutlined />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        'git clone https://github.com/kubernetes/autoscaler.git\ncd autoscaler/vertical-pod-autoscaler\n./hack/vpa-up.sh'
+                      ).then(() => message.success('已複製'));
+                    }}
+                  >
+                    複製安裝指令
+                  </Button>
+                  <Button
+                    icon={<LinkOutlined />}
+                    href="https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    查看官方文件
+                  </Button>
+                  <Button icon={<ReloadOutlined />} onClick={loadVPA}>
+                    重新偵測
+                  </Button>
+                </Space>
+              </Space>
+            }
+          />
+        </div>
+      ) : !vpa ? (
+        <div style={{ textAlign: 'center' }}>
+          <EmptyState description="尚未設定 VPA" style={{ padding: '32px 0' }} />
+          {hasFeature('workload:write') && (
+            <Button type="default" icon={<PlusOutlined />} onClick={openVPACreate}>
+              建立 VPA
+            </Button>
+          )}
+        </div>
+      ) : (
+        <Card
+          title="VPA（Vertical Pod Autoscaler）"
+          size="small"
+          extra={
+            <Space>
+              <Button size="small" icon={<EditOutlined />} onClick={openVPAEdit}>編輯</Button>
+              {hasFeature('workload:delete') && (
+                <Popconfirm title="確定刪除此 VPA？" onConfirm={handleVPADelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
+                  <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
+                </Popconfirm>
+              )}
+            </Space>
+          }
+        >
+          <Descriptions column={2} bordered size="small" style={{ marginBottom: vpa.recommendations?.length ? 12 : 0 }}>
+            <Descriptions.Item label="VPA 名稱">{vpa.name}</Descriptions.Item>
+            <Descriptions.Item label="更新模式"><Tag>{vpa.updateMode || 'Auto'}</Tag></Descriptions.Item>
+            <Descriptions.Item label="目標">{vpa.targetKind} / {vpa.targetName}</Descriptions.Item>
+          </Descriptions>
+
+          {vpa.recommendations && vpa.recommendations.length > 0 && (
+            <Card title="VPA 建議值" size="small" style={{ marginTop: 8 }}>
+              {vpa.recommendations.map((rec, i) => (
+                <Descriptions key={i} column={2} size="small" bordered style={{ marginBottom: 8 }}
+                  title={<span style={{ fontWeight: 'normal', fontSize: 12 }}>容器：{rec.containerName}</span>}
+                >
+                  {rec.target && (
+                    <>
+                      <Descriptions.Item label="建議 CPU">{rec.target.cpu ?? '-'}</Descriptions.Item>
+                      <Descriptions.Item label="建議記憶體">{rec.target.memory ?? '-'}</Descriptions.Item>
+                    </>
+                  )}
+                  {rec.lowerBound && (
+                    <>
+                      <Descriptions.Item label="下限 CPU">{rec.lowerBound.cpu ?? '-'}</Descriptions.Item>
+                      <Descriptions.Item label="下限記憶體">{rec.lowerBound.memory ?? '-'}</Descriptions.Item>
+                    </>
+                  )}
+                  {rec.upperBound && (
+                    <>
+                      <Descriptions.Item label="上限 CPU">{rec.upperBound.cpu ?? '-'}</Descriptions.Item>
+                      <Descriptions.Item label="上限記憶體">{rec.upperBound.memory ?? '-'}</Descriptions.Item>
+                    </>
+                  )}
+                </Descriptions>
+              ))}
+            </Card>
+          )}
+        </Card>
+      )}
+    </div>
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  return (
+    <div>
+      <Tabs
+        activeKey={pageTab}
+        onChange={(key) => setPageTab(key as 'hpa' | 'vpa')}
+        items={[
+          {
+            key: 'hpa',
+            label: 'HPA（水平自動擴縮）',
+            children: hpaTabContent,
+          },
+          ...(isVPASupported ? [{
+            key: 'vpa',
+            label: 'VPA（垂直自動擴縮）',
+            children: vpaTabContent,
+          }] : []),
+        ]}
+      />
+
+      {/* HPA Modal */}
       <Modal
         open={modalOpen}
         title={hpa ? '編輯 HPA' : '建立 HPA'}
@@ -334,7 +483,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
         confirmLoading={saving}
         okText="儲存"
         cancelText="取消"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
@@ -360,83 +509,6 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
         </Form>
       </Modal>
 
-      {/* VPA 區塊 */}
-      {isVPASupported && (
-        <div style={{ marginTop: 24 }}>
-          {vpaInstalled === false ? (
-            <Alert
-              type="info"
-              message="VPA 未安裝"
-              description="此叢集未偵測到 Vertical Pod Autoscaler Controller。請先在叢集安裝 VPA 方可使用此功能。"
-              showIcon
-            />
-          ) : (
-            <>
-              {!vpa ? (
-                <div style={{ textAlign: 'center' }}>
-                  <EmptyState description="尚未設定 VPA" style={{ padding: '32px 0' }} />
-                  {hasFeature('workload:write') && (
-                    <Button type="default" icon={<PlusOutlined />} onClick={openVPACreate}>
-                      建立 VPA
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <Card
-                  title="VPA（Vertical Pod Autoscaler）"
-                  size="small"
-                  extra={
-                    <Space>
-                      <Button size="small" icon={<EditOutlined />} onClick={openVPAEdit}>編輯</Button>
-                      {hasFeature('workload:delete') && (
-                        <Popconfirm title="確定刪除此 VPA？" onConfirm={handleVPADelete} okText="刪除" cancelText="取消" okButtonProps={{ danger: true }}>
-                          <Button size="small" danger icon={<DeleteOutlined />}>刪除</Button>
-                        </Popconfirm>
-                      )}
-                    </Space>
-                  }
-                >
-                  <Descriptions column={2} bordered size="small" style={{ marginBottom: vpa.recommendations?.length ? 12 : 0 }}>
-                    <Descriptions.Item label="VPA 名稱">{vpa.name}</Descriptions.Item>
-                    <Descriptions.Item label="更新模式"><Tag>{vpa.updateMode || 'Auto'}</Tag></Descriptions.Item>
-                    <Descriptions.Item label="目標">{vpa.targetKind} / {vpa.targetName}</Descriptions.Item>
-                  </Descriptions>
-
-                  {vpa.recommendations && vpa.recommendations.length > 0 && (
-                    <Card title="VPA 建議值" size="small" style={{ marginTop: 8 }}>
-                      {vpa.recommendations.map((rec, i) => (
-                        <Descriptions key={i} column={2} size="small" bordered style={{ marginBottom: 8 }}
-                          title={<span style={{ fontWeight: 'normal', fontSize: 12 }}>容器：{rec.containerName}</span>}
-                        >
-                          {rec.target && (
-                            <>
-                              <Descriptions.Item label="建議 CPU">{rec.target.cpu ?? '-'}</Descriptions.Item>
-                              <Descriptions.Item label="建議記憶體">{rec.target.memory ?? '-'}</Descriptions.Item>
-                            </>
-                          )}
-                          {rec.lowerBound && (
-                            <>
-                              <Descriptions.Item label="下限 CPU">{rec.lowerBound.cpu ?? '-'}</Descriptions.Item>
-                              <Descriptions.Item label="下限記憶體">{rec.lowerBound.memory ?? '-'}</Descriptions.Item>
-                            </>
-                          )}
-                          {rec.upperBound && (
-                            <>
-                              <Descriptions.Item label="上限 CPU">{rec.upperBound.cpu ?? '-'}</Descriptions.Item>
-                              <Descriptions.Item label="上限記憶體">{rec.upperBound.memory ?? '-'}</Descriptions.Item>
-                            </>
-                          )}
-                        </Descriptions>
-                      ))}
-                    </Card>
-                  )}
-                </Card>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
       {/* VPA Modal */}
       <Modal
         open={vpaModalOpen}
@@ -446,7 +518,7 @@ const ScalingTab: React.FC<ScalingTabProps> = ({
         confirmLoading={vpaSaving}
         okText="儲存"
         cancelText="取消"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={vpaForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="updateMode" label="更新模式">

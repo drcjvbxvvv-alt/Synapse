@@ -452,6 +452,16 @@ export class WorkloadService {
     return request.delete(`/clusters/${clusterId}/hpa/${namespace}/${name}`);
   }
 
+  static async listHPAs(clusterId: string, namespace?: string): Promise<{ items: unknown[]; total: number }> {
+    const params = namespace ? `?namespace=${encodeURIComponent(namespace)}` : '';
+    return request.get(`/clusters/${clusterId}/hpa${params}`);
+  }
+
+  static async listVPAs(clusterId: string, namespace?: string): Promise<{ items: unknown[]; total: number; installed: boolean }> {
+    const params = namespace ? `?namespace=${encodeURIComponent(namespace)}` : '';
+    return request.get(`/clusters/${clusterId}/vpa${params}`);
+  }
+
   // 獲取Deployment的ReplicaSets
   static async getWorkloadReplicaSets(
     clusterId: string,
