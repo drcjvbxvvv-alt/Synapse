@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
@@ -13,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	batchv1listers "k8s.io/client-go/listers/batch/v1"
+	"k8s.io/client-go/dynamic"
 
 	"gorm.io/gorm"
 
@@ -54,10 +56,11 @@ type JobsListerProvider interface {
 
 // JobWatcher 追蹤 Pipeline Run 的 K8s Job 狀態。
 type JobWatcher struct {
-	db       *gorm.DB
-	provider JobsListerProvider
-	logSvc   *PipelineLogService
-	cfg      JobWatcherConfig
+	db         *gorm.DB
+	provider   JobsListerProvider
+	logSvc     *PipelineLogService
+	rolloutSvc *RolloutService
+	cfg        JobWatcherConfig
 
 	// 正在追蹤的 Run（防止重複 watch）
 	mu       sync.Mutex
@@ -77,6 +80,11 @@ func NewJobWatcher(db *gorm.DB, provider JobsListerProvider, cfg JobWatcherConfi
 // SetLogService 設定 Log 服務（可選）。設定後 Watcher 會在 Step 完成時收集 Pod log。
 func (w *JobWatcher) SetLogService(logSvc *PipelineLogService) {
 	w.logSvc = logSvc
+}
+
+// SetRolloutService 設定 Rollout 服務（可選）。設定後 Watcher 會在 rollout Step 狀態變更時更新 rollout_status / rollout_weight。
+func (w *JobWatcher) SetRolloutService(rolloutSvc *RolloutService) {
+	w.rolloutSvc = rolloutSvc
 }
 
 // WatchRun 開始追蹤指定 Run 的所有 StepRun Job 狀態。
@@ -214,6 +222,9 @@ func (w *JobWatcher) pollRunStatus(ctx context.Context, run *models.PipelineRun)
 		// 更新 StepRun 狀態
 		changed := w.syncStepRunStatus(sr, job)
 		if changed {
+			// Rollout Step 額外更新 rollout_status / rollout_weight
+			w.enrichRolloutFields(ctx, sr, currentRun.ClusterID)
+
 			if err := w.db.WithContext(ctx).Save(sr).Error; err != nil {
 				logger.Error("failed to save step run status",
 					"step_run_id", sr.ID, "error", err)
@@ -512,6 +523,82 @@ func (w *JobWatcher) collectStepLogs(ctx context.Context, run *models.PipelineRu
 			)
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Rollout 狀態補充
+// ---------------------------------------------------------------------------
+
+// enrichRolloutFields 針對 deploy-rollout / rollout-status Step，查詢 Argo Rollout CRD
+// 並寫入 StepRun.RolloutStatus 和 StepRun.RolloutWeight。
+func (w *JobWatcher) enrichRolloutFields(ctx context.Context, sr *models.StepRun, clusterID uint) {
+	if w.rolloutSvc == nil {
+		return
+	}
+
+	// 從 ConfigJSON 解析 rollout_name + namespace
+	rolloutName, namespace := w.parseRolloutTarget(sr)
+	if rolloutName == "" || namespace == "" {
+		return
+	}
+
+	k8sClient := w.provider.GetK8sClientByID(clusterID)
+	if k8sClient == nil {
+		return
+	}
+
+	rolloutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	dynClient, err := dynamic.NewForConfig(k8sClient.GetRestConfig())
+	if err != nil {
+		logger.Warn("failed to create dynamic client for rollout enrichment",
+			"step_run_id", sr.ID, "error", err)
+		return
+	}
+
+	info, err := w.rolloutSvc.GetRollout(rolloutCtx, dynClient, namespace, rolloutName)
+	if err != nil {
+		logger.Warn("failed to enrich rollout fields",
+			"step_run_id", sr.ID,
+			"rollout", rolloutName,
+			"namespace", namespace,
+			"error", err,
+		)
+		return
+	}
+
+	sr.RolloutStatus = info.Status
+	weight := int(info.CanaryWeight)
+	sr.RolloutWeight = &weight
+
+	logger.Info("rollout fields enriched",
+		"step_run_id", sr.ID,
+		"rollout_status", info.Status,
+		"rollout_weight", weight,
+	)
+}
+
+// parseRolloutTarget 從 StepRun.ConfigJSON 解析 rollout 的 name 和 namespace。
+// 支援 deploy-rollout 和 rollout-status Step 類型。
+func (w *JobWatcher) parseRolloutTarget(sr *models.StepRun) (name, namespace string) {
+	if sr.ConfigJSON == "" {
+		return "", ""
+	}
+
+	switch sr.StepType {
+	case "deploy-rollout":
+		var cfg DeployRolloutConfig
+		if err := json.Unmarshal([]byte(sr.ConfigJSON), &cfg); err == nil {
+			return cfg.RolloutName, cfg.Namespace
+		}
+	case "rollout-status":
+		var cfg RolloutStatusConfig
+		if err := json.Unmarshal([]byte(sr.ConfigJSON), &cfg); err == nil {
+			return cfg.RolloutName, cfg.Namespace
+		}
+	}
+	return "", ""
 }
 
 // ---------------------------------------------------------------------------

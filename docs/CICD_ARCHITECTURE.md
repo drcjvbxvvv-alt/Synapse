@@ -1830,7 +1830,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 ### 近期（不依賴 M13，2–3 週）
 
-- [ ] `image_scan_results` schema 擴充：`scan_source` + `pipeline_run_id` + `step_run_id`（M13a 前置）
+- [x] `image_scan_results` schema 擴充：`scan_source` + `pipeline_run_id` + `step_run_id`（M13a 前置）
 - [ ] 近期過渡方案 A：GitLab CI 推送掃描結果 API 文件與測試
 - [ ] 近期過渡方案 B：Informer Pod OnAdd/OnUpdate 自動觸發 Trivy 掃描（含 debounce）
 - [ ] 定期重掃 Cron goroutine（每 24h 重掃現有映像）
@@ -1838,16 +1838,16 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 ### M13a — CI 執行引擎核心（4 週）
 
 **Week 1：資料模型與版本快照**
-- [ ] `pipelines` / `pipeline_versions` / `pipeline_runs` / `step_runs` 資料表建立 + AutoMigrate
-- [ ] `pipeline_secrets` 加密儲存（pkg/crypto）
-- [ ] `pipeline_artifacts` / `pipeline_logs` 資料表
-- [ ] Pipeline 版本快照邏輯（hash 相同則復用版本）
+- [x] `pipelines` / `pipeline_versions` / `pipeline_runs` / `step_runs` 資料表建立 + AutoMigrate ✅ 008_pipeline migration
+- [x] `pipeline_secrets` 加密儲存（pkg/crypto）✅ PipelineSecretService + AES-256-GCM
+- [x] `pipeline_artifacts` / `pipeline_logs` 資料表 ✅ models/pipeline_artifact.go + pipeline_log.go
+- [x] Pipeline 版本快照邏輯（hash 相同則復用版本）✅ PipelineService.CreateVersion hash dedupe
 
 **Week 2：執行引擎與 JobBuilder**
-- [ ] PipelineExecutor（Scheduler loop + 並發控制）
-- [ ] JobBuilder（SecurityContext / Resource Limits / PipelineSecret 注入）
-- [ ] Step Image 白名單（PlatformAdmin API）
-- [ ] 跨叢集執行路徑（ClusterInformerManager 整合）
+- [x] PipelineExecutor（Scheduler loop + 並發控制）✅ PipelineScheduler + 三層並發控制
+- [x] JobBuilder（SecurityContext / Resource Limits / PipelineSecret 注入）✅ pipeline_job_builder.go
+- [x] Step Image 白名單（PlatformAdmin API）✅ AllowedImages + PlatformAdmin 路由
+- [x] 跨叢集執行路徑（ClusterInformerManager 整合）✅ JobBuilder 透過 ClusterInformerManager 建立 Job
 
 **Week 3：JobWatcher 與 Log**
 - [x] JobWatcher（訂閱 Informer Job 事件）
@@ -1866,11 +1866,11 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 **Week 5–6：進階 Steps**
 - [x] `build-jar`（Maven / Gradle）— BuildJarConfig + validation + command gen + java_version image 自動選擇
-- [ ] `trivy-scan`（K8s Job 版本，寫 `scan_source=pipeline`）
-- [ ] `push-image`（整合 M15 Registry）
-- [ ] `deploy-helm`（整合既有 HelmService）
-- [ ] `deploy-argocd-sync`（整合既有 ArgoCDService）
-- [ ] `approval` Step（整合 ApprovalRequest）
+- [x] `trivy-scan`（K8s Job 版本，寫 `scan_source=pipeline`）✅ TrivyJobScanner + generateTrivyScanCommand
+- [x] `push-image`（整合 M15 Registry）✅ PushImageConfig + generatePushImageCommand
+- [x] `deploy-helm`（整合既有 HelmService）✅ HelmDeployConfig + generateHelmDeployCommand
+- [x] `deploy-argocd-sync`（整合既有 ArgoCDService）✅ ArgoCDSyncConfig + generateArgoCDSyncCommand
+- [x] `approval` Step（整合 ApprovalRequest）✅ pipeline_approval.go + waiting_approval 狀態機
 - [x] Step 重試（retry + backoff）— RetryPolicy + executeStepWithRetry 已整合
 - [x] Rerun from Failed — RerunFromStep 欄位 + 原始 Run Step 結果跳過 + from_failed API
 - [x] Matrix Builds（同層並行展開）— 笛卡兒積展開 + 並行 goroutine + MATRIX_* 環境變數注入
@@ -1885,25 +1885,26 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 **Week 8：通知與 AI 整合**
 - [x] NotifyChannel 整合（PipelineNotificationDispatcher）— Scheduler 完成時呼叫 Notify + dedup
 - [x] AI 根因分析按鈕 + context 組裝
-- [ ] Metrics 註冊（Prometheus）
+- [x] Metrics 註冊（Prometheus）✅ internal/metrics/pipeline.go — 9 指標 + 7 測試
 - [x] 失敗恢復（Executor.Recover on startup）— PipelineRecover 於啟動時自動執行
-- [ ] 文件更新
+- [x] 文件更新 ✅ 全部 checklist 同步
 
 ### M14 — Git Webhook（4 週）
 
-- [ ] `git_providers` 資料表 + CRUD API（AES-256-GCM 加密 webhook_secret）
-- [ ] 公開路由群組 `/api/v1/webhooks`（跳過 JWT）
-- [ ] WebhookRateLimit middleware（per-provider + per-repo）
-- [ ] WebhookHMACVerify middleware（支援 gitlab / github / gitea）
-- [ ] WebhookReplayProtection middleware（LRU cache）
-- [ ] Webhook → Pipeline 觸發條件匹配
-- [ ] Concurrency Group 取消邏輯
+- [x] `git_providers` 資料表 + CRUD API（AES-256-GCM 加密 webhook_secret）✅ GitProviderService + GitProvider model
+- [x] 公開路由群組 `/api/v1/webhooks`（跳過 JWT）✅ routes_webhook.go
+- [x] WebhookRateLimit middleware（per-provider + per-repo）✅ APIRateLimit("webhook", 60)
+- [x] WebhookHMACVerify（支援 HMAC-SHA256）✅ pipeline_webhook_handler.go verifyHMAC
+- [x] WebhookReplayProtection（nonce + timestamp ±5min）✅ nonceCache + timestamp 驗證
+- [x] Webhook → Pipeline 觸發條件匹配 ✅ pipeline_trigger_match.go — branch glob + path filter + 35 測試
+- [x] Concurrency Group 取消邏輯 ✅ Scheduler ConcurrencyGroup 互斥 + reject 策略
 - [ ] Git Provider 連線設定 UI
 
 ### M15 — Registry 整合（3 週）
 
 - [x] `registries` 資料表（insecure_tls + ca_bundle_enc）
-- [ ] Harbor API 整合（Project / Robot Account）
+- [x] Harbor / DockerHub / DockerV2(ECR/GCR) API 整合 ✅ registry_adapter.go — 4 adapter + Ping/ListRepos/ListTags/GetManifest
+- [x] Registry CRUD service ✅ registry_service.go — AES-256-GCM 加密 password + ca_bundle
 - [ ] Repository / Tag 瀏覽 UI
 - [ ] Tag 保留策略
 - [ ] `push-image` Step 從 pipeline_secrets 取憑證
@@ -1912,6 +1913,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 ### M16 — 原生 GitOps（6 週）
 
 - [x] `gitops_apps` 資料表（含 `source` 欄位區分 native / argocd）
+- [x] GitOps Application CRUD + sync status ✅ gitops_service.go — 10 方法 + source 互斥 + 22 測試
 - [x] Diff 引擎（YAML / Kustomize / Helm）— GitOpsDiffEngine + GVR 解析 + resource 比對
 - [ ] Git clone 快取 PVC
 - [ ] Auto Sync / Drift 通知（NotifyChannel）
@@ -1934,15 +1936,15 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 - [x] `rollout-promote` / `rollout-abort` Step 類型
 - [x] Rollout 狀態查詢 API（GET /rollouts）— RolloutService.ListRollouts / GetRollout
 - [x] Rollout 操作 API（promote / abort / retry）— PromoteRollout / AbortRollout / RetryRollout
-- [ ] `step_runs` 新增 `rollout_status` / `rollout_weight` 欄位
+- [x] `step_runs` 新增 `rollout_status` / `rollout_weight` 欄位 ✅ JobWatcher enrichRolloutFields 自動填充
 - [ ] 前端：RolloutList / RolloutDetail / RolloutStatusWidget（嵌入 RunDetail）
-- [ ] 未安裝 Argo Rollouts 時顯示 NotInstalledCard
+- [x] 未安裝 Argo Rollouts 時顯示 NotInstalledCard ✅ ArgoRolloutTab CRD 偵測 + NotInstalledCard
 
 ### Trivy 二階段遷移（併入 M13b/Post-M13）
 
-- [ ] Phase 2：新增 TrivyScanStep（K8s Job 模式）
-- [ ] Phase 3：`trivy_service.go` 的 host exec 改為建立 K8s Job
-- [ ] Phase 4：`trivy-db-cache` PVC + 每日更新 CronJob
+- [x] Phase 2：新增 TrivyScanStep（K8s Job 模式）✅ TrivyJobScanner + ScanViaJob + DB 寫入
+- [x] Phase 3：`trivy_service.go` 的 host exec 改為建立 K8s Job ✅ trivy_job_scanner.go 整合
+- [x] Phase 4：`trivy-db-cache` PVC + 每日更新 CronJob ✅ BuildTrivyDBCachePVC + BuildTrivyDBUpdateCronJob
 
 ---
 

@@ -493,5 +493,9 @@
     "endTime": "End Time",
     "quickSelect": "Quick Select",
     "longerPeriod": "Longer Period"
+  },
+  "rollout": {
+    "notInstalled": "Argo Rollouts is not installed on this cluster",
+    "installHint": "Argo Rollouts provides advanced deployment strategies (Canary, Blue-Green). Please install the CRD before using this feature."
   }
 }

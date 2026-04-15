@@ -493,5 +493,9 @@
     "endTime": "结束时间",
     "quickSelect": "快速选择",
     "longerPeriod": "更长时间"
+  },
+  "rollout": {
+    "notInstalled": "此集群尚未安装 Argo Rollouts",
+    "installHint": "Argo Rollouts 提供高级部署策略（Canary、Blue-Green），请先安装 CRD 再使用此功能。"
   }
 }

@@ -1,16 +1,19 @@
-import React, { useMemo } from 'react';
-import { Table, Button, Divider, App, theme } from 'antd';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { Table, Button, Divider, App, Spin, theme } from 'antd';
 import { PlusOutlined, ReloadOutlined, SettingOutlined, CloseOutlined, ExportOutlined } from '@ant-design/icons';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { WorkloadInfo } from '../../services/workloadService';
+import { WorkloadService } from '../../services/workloadService';
 import EmptyState from '@/components/EmptyState';
+import NotInstalledCard from '@/components/NotInstalledCard';
 import { MultiSearchBar } from '@/components/MultiSearchBar';
 import { useWorkloadTab } from './hooks/useWorkloadTab';
 import { createWorkloadColumns } from './columns';
 import { ScaleModal, WorkloadColumnSettingsDrawer } from './components';
 import WorkloadCreateModal from '../../components/workload/WorkloadCreateModal';
 import { usePermission } from '@/hooks/usePermission';
+import { useTranslation } from 'react-i18next';
 
 interface RolloutTabProps {
   clusterId: string;
@@ -20,6 +23,24 @@ interface RolloutTabProps {
 const RolloutTab: React.FC<RolloutTabProps> = ({ clusterId, onCountChange }) => {
   const { hasFeature } = usePermission();
   const { token } = theme.useToken();
+  const { t } = useTranslation(['workload', 'common']);
+  const [crdInstalled, setCrdInstalled] = useState<boolean | null>(null);
+  const [checkLoading, setCheckLoading] = useState(true);
+
+  const checkCRD = useCallback(async () => {
+    setCheckLoading(true);
+    try {
+      const res = await WorkloadService.checkRolloutCRD(clusterId);
+      setCrdInstalled(res.enabled ?? false);
+    } catch {
+      setCrdInstalled(false);
+    } finally {
+      setCheckLoading(false);
+    }
+  }, [clusterId]);
+
+  useEffect(() => { checkCRD(); }, [checkCRD]);
+
   const state = useWorkloadTab({
     clusterId,
     workloadType: 'ArgoRollout',
@@ -64,6 +85,23 @@ const RolloutTab: React.FC<RolloutTabProps> = ({ clusterId, onCountChange }) => 
       state.setSortOrder(null);
     }
   };
+
+  if (checkLoading) {
+    return <Spin style={{ display: 'block', marginTop: 60 }} />;
+  }
+
+  if (!crdInstalled) {
+    return (
+      <NotInstalledCard
+        title={t('workload:rollout.notInstalled')}
+        description={t('workload:rollout.installHint')}
+        command="kubectl create namespace argo-rollouts && kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml"
+        docsUrl="https://argoproj.github.io/argo-rollouts/installation/"
+        onRecheck={checkCRD}
+        recheckLoading={checkLoading}
+      />
+    );
+  }
 
   return (
     <App>

@@ -302,6 +302,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	pipelineWatcherCfg := services.DefaultJobWatcherConfig()
 	pipelineWatcher := services.NewJobWatcher(db, k8sMgr, pipelineWatcherCfg)
 	pipelineWatcher.SetLogService(pipelineLogSvc)
+	pipelineWatcher.SetRolloutService(services.NewRolloutService())
 	pipelineDedup := services.NewNotifyDedup(5 * time.Minute)
 	pipelineNotifier := services.NewPipelineNotifier(db, pipelineDedup)
 	pipelineScheduler := services.NewPipelineScheduler(
