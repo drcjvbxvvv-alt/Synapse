@@ -64,9 +64,9 @@ type Pipeline struct {
 	ConcurrencyGroup  string         `json:"concurrency_group" gorm:"size:255"`
 	ConcurrencyPolicy string         `json:"concurrency_policy" gorm:"size:30;default:'cancel_previous'"`
 	MaxConcurrentRuns int            `json:"max_concurrent_runs" gorm:"default:1"`
-	NotifyOnSuccess   string         `json:"notify_on_success" gorm:"type:jsonb"` // channel_id JSON 陣列
-	NotifyOnFailure   string         `json:"notify_on_failure" gorm:"type:jsonb"`
-	NotifyOnScan      string         `json:"notify_on_scan" gorm:"type:jsonb"`
+	NotifyOnSuccess   string         `json:"notify_on_success" gorm:"type:jsonb;default:'[]'"` // channel_id JSON 陣列
+	NotifyOnFailure   string         `json:"notify_on_failure" gorm:"type:jsonb;default:'[]'"`
+	NotifyOnScan      string         `json:"notify_on_scan" gorm:"type:jsonb;default:'[]'"`
 	CreatedBy         uint           `json:"created_by" gorm:"not null"`
 	CreatedAt         time.Time      `json:"created_at"`
 	UpdatedAt         time.Time      `json:"updated_at"`

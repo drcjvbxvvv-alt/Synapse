@@ -192,8 +192,11 @@ start_backend() {
       || die "編譯失敗"
     info "啟動後端（bin/synapse）..."
     bin/synapse &
+  elif command -v air &>/dev/null; then
+    info "啟動後端（air 熱重載）..."
+    air &
   else
-    info "啟動後端（go run）..."
+    info "啟動後端（go run）— 提示：執行 go install github.com/air-verse/air@latest 啟用熱重載"
     go run . &
   fi
 

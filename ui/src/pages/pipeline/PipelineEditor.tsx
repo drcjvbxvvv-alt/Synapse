@@ -30,6 +30,7 @@ import pipelineService, {
   type CreatePipelineRequest,
   type UpdatePipelineRequest,
 } from '../../services/pipelineService';
+import NamespaceSelector from '../../components/NamespaceSelector';
 
 const { Text } = Typography;
 
@@ -218,7 +219,14 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
             label={t('pipeline:form.namespace')}
             rules={[{ required: true, message: t('common:validation.required') }]}
           >
-            <Input placeholder={t('pipeline:form.namespacePlaceholder')} />
+            <NamespaceSelector
+              clusterId={clusterId}
+              allowAll={false}
+              showPermissionHint={false}
+              placeholder={t('pipeline:form.namespacePlaceholder')}
+              style={{ width: '100%', display: 'block' }}
+              selectStyle={{ width: '100%' }}
+            />
           </Form.Item>
         )}
 

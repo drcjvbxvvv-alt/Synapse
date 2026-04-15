@@ -42,7 +42,7 @@ func (s *PipelineService) DB() *gorm.DB {
 type CreatePipelineRequest struct {
 	Name              string `json:"name" binding:"required,max=255"`
 	Description       string `json:"description"`
-	ClusterID         uint   `json:"cluster_id" binding:"required"`
+	ClusterID         uint   `json:"cluster_id"` // set from path param by handler
 	Namespace         string `json:"namespace" binding:"required,max=253"`
 	ConcurrencyGroup  string `json:"concurrency_group"`
 	ConcurrencyPolicy string `json:"concurrency_policy" binding:"omitempty,oneof=cancel_previous queue reject"`
@@ -90,6 +90,9 @@ func (s *PipelineService) CreatePipeline(ctx context.Context, req *CreatePipelin
 		ConcurrencyPolicy: req.ConcurrencyPolicy,
 		MaxConcurrentRuns: req.MaxConcurrentRuns,
 		CreatedBy:         createdBy,
+		NotifyOnSuccess:   "[]",
+		NotifyOnFailure:   "[]",
+		NotifyOnScan:      "[]",
 	}
 
 	if pipeline.ConcurrencyPolicy == "" {

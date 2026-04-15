@@ -19,6 +19,7 @@ interface NamespaceSelectorProps {
   placeholder?: string;
   allowAll?: boolean; // 是否允許選擇"全部命名空間"
   style?: React.CSSProperties;
+  selectStyle?: React.CSSProperties; // 傳給內層 Select 的樣式
   disabled?: boolean;
   showPermissionHint?: boolean; // 是否顯示權限提示
 }
@@ -30,6 +31,7 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
   placeholder,
   allowAll = true,
   style,
+  selectStyle,
   disabled = false,
   showPermissionHint = true,
 }) => {
@@ -92,7 +94,7 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
         placeholder={placeholder || t('namespaceSelector.placeholder')}
         loading={loading}
         disabled={disabled}
-        style={{ minWidth: 180 }}
+        style={{ minWidth: 180, ...selectStyle }}
         allowClear={allowAll}
         showSearch
         filterOption={(input, option) =>
