@@ -1,0 +1,83 @@
+{
+  "page": {
+    "title": "Pipeline Management",
+    "subtitle": "Manage CI/CD Pipeline definitions and execution history"
+  },
+  "table": {
+    "name": "Name",
+    "namespace": "Namespace",
+    "version": "Version",
+    "concurrencyPolicy": "Concurrency Policy",
+    "maxConcurrentRuns": "Max Concurrent Runs",
+    "createdAt": "Created",
+    "updatedAt": "Updated"
+  },
+  "card": {
+    "version": "v{{version}}",
+    "noVersion": "Not published",
+    "runs": "Runs",
+    "namespace": "Namespace"
+  },
+  "form": {
+    "createTitle": "Create Pipeline",
+    "editTitle": "Edit Pipeline",
+    "name": "Name",
+    "namePlaceholder": "my-pipeline (lowercase, numbers, hyphens only)",
+    "nameTooltip": "Pipeline name must be DNS-compatible",
+    "namePattern": "Lowercase letters, numbers and hyphens only (e.g. my-pipeline)",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe the purpose of this pipeline",
+    "namespace": "Namespace",
+    "namespacePlaceholder": "Select namespace",
+    "concurrencyGroup": "Concurrency Group",
+    "concurrencyGroupPlaceholder": "Defaults to pipeline name",
+    "concurrencyGroupTooltip": "Runs in the same group are subject to the concurrency policy",
+    "concurrencyPolicy": "Concurrency Policy",
+    "maxConcurrentRuns": "Max Concurrent Runs",
+    "tabs": {
+      "form": "Form",
+      "yaml": "YAML"
+    }
+  },
+  "policy": {
+    "cancel_previous": "Cancel previous",
+    "queue": "Queue",
+    "reject": "Reject new"
+  },
+  "editor": {
+    "title": "Pipeline Definition Editor",
+    "yamlPlaceholder": "# Enter Pipeline YAML definition here\napiVersion: synapse.io/v1\nkind: Pipeline\nmetadata:\n  name: my-pipeline\n  cluster: production\n  namespace: default\nspec:\n  steps:\n    - name: build-image\n      type: build-image\n",
+    "unsavedChanges": "Unsaved YAML changes",
+    "saveVersion": "Save Version",
+    "versionSaved": "Version saved"
+  },
+  "run": {
+    "trigger": "Trigger",
+    "triggerConfirm": "Trigger Pipeline \"{{name}}\"?",
+    "triggered": "Pipeline triggered, Run ID: {{id}}",
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "success": "Success",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "waiting_approval": "Waiting Approval"
+    }
+  },
+  "view": {
+    "card": "Card",
+    "table": "Table"
+  },
+  "messages": {
+    "createSuccess": "Pipeline created",
+    "createFailed": "Failed to create pipeline",
+    "updateSuccess": "Pipeline updated",
+    "updateFailed": "Failed to update pipeline",
+    "deleteSuccess": "Pipeline deleted",
+    "deleteFailed": "Failed to delete pipeline",
+    "triggerSuccess": "Pipeline triggered",
+    "triggerFailed": "Failed to trigger pipeline",
+    "versionSaveSuccess": "Version saved",
+    "versionSaveFailed": "Failed to save version"
+  }
+}

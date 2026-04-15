@@ -30,7 +30,7 @@ i18n
     },
     fallbackLng: 'en-US', // 不支援的語系 fallback 到英文
     defaultNS: 'common',
-    ns: ['common', 'cluster', 'node', 'pod', 'overview', 'workload', 'namespace', 'yaml', 'search', 'terminal', 'storage', 'permission', 'nodeOps', 'settings', 'profile', 'om', 'plugins', 'logs', 'audit', 'alert', 'network', 'config', 'components', 'helm', 'cost', 'security', 'chaos', 'multicluster', 'slo'],
+    ns: ['common', 'cluster', 'node', 'pod', 'overview', 'workload', 'namespace', 'yaml', 'search', 'terminal', 'storage', 'permission', 'nodeOps', 'settings', 'profile', 'om', 'plugins', 'logs', 'audit', 'alert', 'network', 'config', 'components', 'helm', 'cost', 'security', 'chaos', 'multicluster', 'slo', 'pipeline'],
 // 語言檢測選項
     detection: {
       // 檢測順序

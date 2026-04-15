@@ -1,0 +1,83 @@
+{
+  "page": {
+    "title": "Pipeline 管理",
+    "subtitle": "管理 CI/CD Pipeline 定义与执行记录"
+  },
+  "table": {
+    "name": "名称",
+    "namespace": "命名空间",
+    "version": "版本",
+    "concurrencyPolicy": "并发策略",
+    "maxConcurrentRuns": "最大并发数",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间"
+  },
+  "card": {
+    "version": "v{{version}}",
+    "noVersion": "尚未发布",
+    "runs": "执行",
+    "namespace": "命名空间"
+  },
+  "form": {
+    "createTitle": "创建 Pipeline",
+    "editTitle": "编辑 Pipeline",
+    "name": "名称",
+    "namePlaceholder": "my-pipeline（仅限小写字母、数字、连字符）",
+    "nameTooltip": "Pipeline 名称，需符合 DNS 命名规范",
+    "namePattern": "仅限小写字母、数字与连字符（例如 my-pipeline）",
+    "description": "描述",
+    "descriptionPlaceholder": "描述此 Pipeline 的用途",
+    "namespace": "命名空间",
+    "namespacePlaceholder": "选择命名空间",
+    "concurrencyGroup": "并发分组",
+    "concurrencyGroupPlaceholder": "默认使用 Pipeline 名称",
+    "concurrencyGroupTooltip": "同一分组的 Run 会受并发策略约束",
+    "concurrencyPolicy": "并发策略",
+    "maxConcurrentRuns": "最大并发执行数",
+    "tabs": {
+      "form": "表单模式",
+      "yaml": "YAML 模式"
+    }
+  },
+  "policy": {
+    "cancel_previous": "取消上一个",
+    "queue": "排队等待",
+    "reject": "拒绝新触发"
+  },
+  "editor": {
+    "title": "Pipeline 定义编辑器",
+    "yamlPlaceholder": "# 在此输入 Pipeline YAML 定义\napiVersion: synapse.io/v1\nkind: Pipeline\nmetadata:\n  name: my-pipeline\n  cluster: production\n  namespace: default\nspec:\n  steps:\n    - name: build-image\n      type: build-image\n",
+    "unsavedChanges": "有未保存的 YAML 变更",
+    "saveVersion": "保存版本",
+    "versionSaved": "版本已保存"
+  },
+  "run": {
+    "trigger": "手动触发",
+    "triggerConfirm": "确认触发 Pipeline「{{name}}」？",
+    "triggered": "Pipeline 已触发，Run ID: {{id}}",
+    "status": {
+      "queued": "排队中",
+      "running": "执行中",
+      "success": "成功",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "waiting_approval": "待审核"
+    }
+  },
+  "view": {
+    "card": "卡片",
+    "table": "列表"
+  },
+  "messages": {
+    "createSuccess": "Pipeline 已创建",
+    "createFailed": "创建 Pipeline 失败",
+    "updateSuccess": "Pipeline 已更新",
+    "updateFailed": "更新 Pipeline 失败",
+    "deleteSuccess": "Pipeline 已删除",
+    "deleteFailed": "删除 Pipeline 失败",
+    "triggerSuccess": "Pipeline 已触发",
+    "triggerFailed": "触发 Pipeline 失败",
+    "versionSaveSuccess": "版本已保存",
+    "versionSaveFailed": "保存版本失败"
+  }
+}

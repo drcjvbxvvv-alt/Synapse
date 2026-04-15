@@ -28,6 +28,7 @@ import compliance from './compliance.json';
 import chaos from './chaos.json';
 import multicluster from './multicluster.json';
 import slo from './slo.json';
+import pipeline from './pipeline.json';
 export default {
   common,
   cluster,
@@ -59,4 +60,5 @@ export default {
   chaos,
   multicluster,
   slo,
+  pipeline,
 };
