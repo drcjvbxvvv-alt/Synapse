@@ -311,7 +311,7 @@ const RegistrySettings: React.FC = () => {
         okText={editing ? t('common:actions.save') : t('common:actions.create')}
         cancelText={t('common:actions.cancel')}
         confirmLoading={createMutation.isPending || updateMutation.isPending}
-        destroyOnHide
+        destroyOnHidden
         width={600}
       >
         <Form form={form} layout="vertical" style={{ marginTop: token.marginMD }}>
@@ -377,10 +377,10 @@ const RegistrySettings: React.FC = () => {
             </Form.Item>
           )}
 
-          {testResult?.id === editing?.id && !testResult.ok && (
+          {testResult?.id === editing?.id && !testResult?.ok && (
             <Alert
               type="error"
-              message={`${t('cicd:registry.testFailed')}: ${testResult.error}`}
+              message={`${t('cicd:registry.testFailed')}: ${testResult?.error}`}
               showIcon
             />
           )}

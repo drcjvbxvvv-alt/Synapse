@@ -318,7 +318,7 @@ const GitProviderSettings: React.FC = () => {
         okText={editing ? t('common:actions.save') : t('common:actions.create')}
         cancelText={t('common:actions.cancel')}
         confirmLoading={createMutation.isPending || updateMutation.isPending}
-        destroyOnHide
+        destroyOnHidden
         width={560}
       >
         <Form form={form} layout="vertical" style={{ marginTop: token.marginMD }}>
