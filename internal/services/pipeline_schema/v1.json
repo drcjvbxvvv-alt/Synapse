@@ -277,7 +277,8 @@
             "rollout-status",
             "gitops-sync",
             "notify",
-            "approval"
+            "approval",
+            "smoke-test"
           ]
         },
         "image": {

@@ -1229,3 +1229,212 @@ func TestResolveImage_BuildJar_UserImageOverride(t *testing.T) {
 		t.Errorf("user image should take priority, got: %s", img)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// smoke-test Step（M17）
+// ---------------------------------------------------------------------------
+
+func TestValidateStepDef_SmokeTest_Valid(t *testing.T) {
+	cfg := SmokeTestConfig{
+		URL:            "https://api.example.com/health",
+		Method:         "GET",
+		ExpectedStatus: 200,
+		Retries:        3,
+		Timeout:        10,
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{
+		Name:   "health-check",
+		Type:   "smoke-test",
+		Config: string(cfgJSON),
+	}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_SmokeTest_MinimalConfig(t *testing.T) {
+	cfg := SmokeTestConfig{URL: "http://svc.default.svc:8080/ready"}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{
+		Name:   "ready-check",
+		Type:   "smoke-test",
+		Config: string(cfgJSON),
+	}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid with minimal config, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_SmokeTest_MissingConfig(t *testing.T) {
+	step := &StepDef{Name: "check", Type: "smoke-test"}
+	err := ValidateStepDef(step)
+	if err == nil {
+		t.Error("expected error for missing config")
+	}
+	if !strings.Contains(err.Error(), "config with url is required") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateStepDef_SmokeTest_MissingURL(t *testing.T) {
+	cfg := SmokeTestConfig{Method: "GET"}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{Name: "check", Type: "smoke-test", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil {
+		t.Error("expected error for missing URL")
+	}
+	if !strings.Contains(err.Error(), "config.url is required") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateStepDef_SmokeTest_InvalidRetries(t *testing.T) {
+	cfg := SmokeTestConfig{URL: "http://example.com", Retries: 50}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{Name: "check", Type: "smoke-test", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil {
+		t.Error("expected error for retries > 30")
+	}
+}
+
+func TestValidateStepDef_SmokeTest_InvalidTimeout(t *testing.T) {
+	cfg := SmokeTestConfig{URL: "http://example.com", Timeout: 500}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{Name: "check", Type: "smoke-test", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil {
+		t.Error("expected error for timeout > 300")
+	}
+}
+
+func TestGenerateCommand_SmokeTest_Basic(t *testing.T) {
+	cfg := SmokeTestConfig{
+		URL:            "https://api.example.com/health",
+		Method:         "GET",
+		ExpectedStatus: 200,
+		Retries:        3,
+		Timeout:        10,
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{Name: "check", Type: "smoke-test", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+
+	if len(cmd) < 3 {
+		t.Fatalf("expected shell command, got %v", cmd)
+	}
+	if cmd[0] != "/bin/sh" || cmd[1] != "-c" {
+		t.Errorf("expected shell wrapper, got %v", cmd[:2])
+	}
+	script := cmd[2]
+	if !strings.Contains(script, "api.example.com/health") {
+		t.Error("script should contain target URL")
+	}
+	if !strings.Contains(script, "EXPECTED=200") {
+		t.Error("script should contain expected status")
+	}
+	if !strings.Contains(script, "RETRIES=3") {
+		t.Error("script should contain retries")
+	}
+	if !strings.Contains(script, "smoke-test PASSED") {
+		t.Error("script should contain PASSED marker")
+	}
+	if !strings.Contains(script, "smoke-test FAILED") {
+		t.Error("script should contain FAILED marker")
+	}
+}
+
+func TestGenerateCommand_SmokeTest_POST_WithBody(t *testing.T) {
+	cfg := SmokeTestConfig{
+		URL:            "https://api.example.com/test",
+		Method:         "POST",
+		ExpectedStatus: 201,
+		Body:           `{"key":"value"}`,
+		Headers:        map[string]string{"Authorization": "Bearer token123"},
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{Name: "post-test", Type: "smoke-test", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+
+	script := cmd[2]
+	if !strings.Contains(script, "-X POST") {
+		t.Error("script should contain POST method")
+	}
+	if !strings.Contains(script, `-d '{"key":"value"}'`) {
+		t.Error("script should contain body")
+	}
+	if !strings.Contains(script, "Authorization: Bearer token123") {
+		t.Error("script should contain Authorization header")
+	}
+	if !strings.Contains(script, "EXPECTED=201") {
+		t.Error("script should contain expected status 201")
+	}
+}
+
+func TestGenerateCommand_SmokeTest_Insecure(t *testing.T) {
+	cfg := SmokeTestConfig{
+		URL:      "https://self-signed.example.com/health",
+		Insecure: true,
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{Name: "insecure-check", Type: "smoke-test", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+
+	script := cmd[2]
+	if !strings.Contains(script, " -k") {
+		t.Error("script should contain -k flag for insecure")
+	}
+}
+
+func TestGenerateCommand_SmokeTest_Defaults(t *testing.T) {
+	cfg := SmokeTestConfig{URL: "http://svc:8080/ready"}
+	cfgJSON, _ := json.Marshal(cfg)
+
+	step := &StepDef{Name: "defaults", Type: "smoke-test", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+
+	script := cmd[2]
+	if !strings.Contains(script, "EXPECTED=200") {
+		t.Error("default expected status should be 200")
+	}
+	if !strings.Contains(script, "RETRIES=3") {
+		t.Error("default retries should be 3")
+	}
+	if !strings.Contains(script, "INTERVAL=5") {
+		t.Error("default retry interval should be 5")
+	}
+	if !strings.Contains(script, "--max-time 10") {
+		t.Error("default timeout should be 10")
+	}
+}
+
+func TestGenerateCommand_SmokeTest_UserCommandOverride(t *testing.T) {
+	step := &StepDef{
+		Name:    "custom-check",
+		Type:    "smoke-test",
+		Command: "wget -q --spider http://svc/health",
+	}
+	cmd, _ := GenerateCommand(step)
+
+	if cmd[2] != "wget -q --spider http://svc/health" {
+		t.Errorf("user command should take priority, got: %s", cmd[2])
+	}
+}
+
+func TestResolveImage_SmokeTest_Default(t *testing.T) {
+	step := &StepDef{Name: "check", Type: "smoke-test"}
+	img := ResolveImage(step)
+	if img != "curlimages/curl:8.11.0" {
+		t.Errorf("expected default curl image, got: %s", img)
+	}
+}

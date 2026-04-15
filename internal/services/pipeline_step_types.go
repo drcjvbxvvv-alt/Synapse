@@ -59,6 +59,7 @@ var stepTypeRegistry = map[string]StepTypeInfo{
 	"shell":              {Name: "shell", DefaultImage: "alpine:3.20", RequiresCommand: true, Description: "Run shell commands (alias for run-script)"},
 	"custom":             {Name: "custom", DefaultImage: "", RequiresCommand: true, Description: "Custom step with user-provided image and command"},
 	"approval":           {Name: "approval", DefaultImage: "", RequiresCommand: false, Description: "Manual approval gate — pauses pipeline until approved or rejected"},
+	"smoke-test":         {Name: "smoke-test", DefaultImage: "curlimages/curl:8.11.0", RequiresCommand: false, Description: "HTTP smoke test — verify endpoint returns expected status after deployment"},
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +176,19 @@ type NotifyConfig struct {
 	Body    string            `json:"body"`    // 自訂 body template（JSON 字串）
 }
 
+// SmokeTestConfig smoke-test Step 的類型特定設定。
+type SmokeTestConfig struct {
+	URL            string            `json:"url"`             // 目標 URL（必填）
+	Method         string            `json:"method"`          // HTTP method（預設 GET）
+	ExpectedStatus int               `json:"expected_status"` // 期望的 HTTP 狀態碼（預設 200）
+	Headers        map[string]string `json:"headers"`         // 自訂 headers
+	Body           string            `json:"body"`            // 請求 body（POST/PUT 用）
+	Timeout        int               `json:"timeout"`         // 單次請求超時秒數（預設 10）
+	Retries        int               `json:"retries"`         // 重試次數（預設 3）
+	RetryInterval  int               `json:"retry_interval"`  // 重試間隔秒數（預設 5）
+	Insecure       bool              `json:"insecure"`        // 跳過 TLS 驗證
+}
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -234,6 +248,8 @@ func ValidateStepDef(step *StepDef) error {
 		return validateRolloutAbortStep(step)
 	case "rollout-status":
 		return validateRolloutStatusStep(step)
+	case "smoke-test":
+		return validateSmokeTestStep(step)
 	}
 
 	return nil
@@ -390,6 +406,8 @@ func GenerateCommand(step *StepDef) (command []string, args []string) {
 		return generateRolloutAbortCommand(step)
 	case "rollout-status":
 		return generateRolloutStatusCommand(step)
+	case "smoke-test":
+		return generateSmokeTestCommand(step)
 	case "run-script", "shell":
 		// run-script 必須有 command（已在 validation 檢查）
 		return []string{"/bin/sh", "-c", "echo 'no command provided'"}, nil
@@ -810,6 +828,106 @@ func generateRolloutStatusCommand(step *StepDef) ([]string, []string) {
 		"status", cfg.RolloutName, "-n", cfg.Namespace,
 		"--timeout", timeout,
 	}
+}
+
+// ---------------------------------------------------------------------------
+// smoke-test Step（M17）
+// ---------------------------------------------------------------------------
+
+func validateSmokeTestStep(step *StepDef) error {
+	if step.Config == "" {
+		return fmt.Errorf("step %q (smoke-test): config with url is required", step.Name)
+	}
+	var cfg SmokeTestConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return fmt.Errorf("step %q (smoke-test): invalid config: %w", step.Name, err)
+	}
+	if cfg.URL == "" {
+		return fmt.Errorf("step %q (smoke-test): config.url is required", step.Name)
+	}
+	if cfg.ExpectedStatus < 0 || cfg.ExpectedStatus > 599 {
+		return fmt.Errorf("step %q (smoke-test): config.expected_status must be 100-599, got %d", step.Name, cfg.ExpectedStatus)
+	}
+	if cfg.Retries < 0 || cfg.Retries > 30 {
+		return fmt.Errorf("step %q (smoke-test): config.retries must be 0-30, got %d", step.Name, cfg.Retries)
+	}
+	if cfg.Timeout < 0 || cfg.Timeout > 300 {
+		return fmt.Errorf("step %q (smoke-test): config.timeout must be 0-300, got %d", step.Name, cfg.Timeout)
+	}
+	return nil
+}
+
+func generateSmokeTestCommand(step *StepDef) ([]string, []string) {
+	var cfg SmokeTestConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return []string{"curl"}, []string{"--help"}
+	}
+
+	method := defaultString(cfg.Method, "GET")
+	expectedStatus := cfg.ExpectedStatus
+	if expectedStatus == 0 {
+		expectedStatus = 200
+	}
+	timeout := cfg.Timeout
+	if timeout <= 0 {
+		timeout = 10
+	}
+	retries := cfg.Retries
+	if retries <= 0 {
+		retries = 3
+	}
+	retryInterval := cfg.RetryInterval
+	if retryInterval <= 0 {
+		retryInterval = 5
+	}
+
+	// 建構 curl 指令
+	curlCmd := fmt.Sprintf("curl -s -o /dev/null -w '%%{http_code}' -X %s", method)
+	curlCmd += fmt.Sprintf(" --max-time %d", timeout)
+
+	if cfg.Insecure {
+		curlCmd += " -k"
+	}
+
+	for k, v := range cfg.Headers {
+		curlCmd += fmt.Sprintf(" -H '%s: %s'", k, v)
+	}
+
+	if cfg.Body != "" && (method == "POST" || method == "PUT" || method == "PATCH") {
+		curlCmd += fmt.Sprintf(" -d '%s'", cfg.Body)
+	}
+
+	curlCmd += fmt.Sprintf(" '%s'", cfg.URL)
+
+	// 包裝為帶重試的 shell 腳本
+	script := fmt.Sprintf(`#!/bin/sh
+set -e
+
+URL=%q
+EXPECTED=%d
+RETRIES=%d
+INTERVAL=%d
+
+echo "[synapse] smoke-test: %s $URL (expect HTTP $EXPECTED)"
+
+for i in $(seq 1 $RETRIES); do
+  STATUS=$(%s)
+  echo "[synapse] attempt $i/$RETRIES: HTTP $STATUS"
+  if [ "$STATUS" = "$EXPECTED" ]; then
+    echo "[synapse] smoke-test PASSED"
+    exit 0
+  fi
+  if [ "$i" -lt "$RETRIES" ]; then
+    echo "[synapse] retrying in ${INTERVAL}s..."
+    sleep $INTERVAL
+  fi
+done
+
+echo "[synapse] smoke-test FAILED: expected HTTP $EXPECTED, last got HTTP $STATUS"
+exit 1
+`, cfg.URL, expectedStatus, retries, retryInterval, method, curlCmd)
+
+	return []string{"/bin/sh", "-c", script}, nil
 }
 
 // ResolveImage 解析 Step 的 image：使用者指定優先，否則使用預設。

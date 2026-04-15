@@ -24,13 +24,19 @@ import (
 
 // PromotionService 管理環境晉升流程。
 type PromotionService struct {
-	db     *gorm.DB
-	envSvc *EnvironmentService
+	db       *gorm.DB
+	envSvc   *EnvironmentService
+	notifier *PromotionNotifier // Production Gate 通知（可為 nil）
 }
 
 // NewPromotionService 建立 PromotionService。
 func NewPromotionService(db *gorm.DB, envSvc *EnvironmentService) *PromotionService {
 	return &PromotionService{db: db, envSvc: envSvc}
+}
+
+// SetNotifier 設定 Production Gate 通知器。
+func (s *PromotionService) SetNotifier(notifier *PromotionNotifier) {
+	s.notifier = notifier
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +224,9 @@ func (s *PromotionService) ExecutePromotion(ctx context.Context, req *PromotionR
 			"approval_id", approval.ID,
 		)
 
+		// Production Gate 通知
+		s.notifyProductionGate(ctx, req, decision, approval.ID)
+
 		return &PromotionResult{
 			Status:      "pending_approval",
 			Message:     decision.Reason,
@@ -325,6 +334,51 @@ type PromotionResult struct {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// notifyProductionGate 在建立審批請求後發送通知（如果目標環境設定了 notify_channel_ids）。
+func (s *PromotionService) notifyProductionGate(ctx context.Context, req *PromotionRequest, decision *PromotionDecision, approvalID uint) {
+	if s.notifier == nil {
+		return
+	}
+
+	// 查詢目標環境
+	envs, err := s.envSvc.ListEnvironments(ctx, req.PipelineID)
+	if err != nil {
+		logger.Warn("promotion notifier: failed to list environments", "error", err)
+		return
+	}
+
+	var toEnv *models.Environment
+	for i := range envs {
+		if envs[i].Name == decision.ToEnvironment {
+			toEnv = &envs[i]
+			break
+		}
+	}
+	if toEnv == nil {
+		return
+	}
+
+	// 查詢 Pipeline 名稱
+	pipelineName := fmt.Sprintf("pipeline-%d", req.PipelineID)
+	var pipeline models.Pipeline
+	if err := s.db.WithContext(ctx).Select("id, name").First(&pipeline, req.PipelineID).Error; err == nil {
+		pipelineName = pipeline.Name
+	}
+
+	event := &GateEvent{
+		PipelineID:      req.PipelineID,
+		PipelineName:    pipelineName,
+		PipelineRunID:   req.PipelineRunID,
+		FromEnvironment: decision.FromEnvironment,
+		ToEnvironment:   decision.ToEnvironment,
+		RequesterName:   req.TriggeredByName,
+		ApprovalID:      approvalID,
+		Reason:          decision.Reason,
+	}
+
+	s.notifier.NotifyProductionGate(ctx, event, toEnv)
+}
 
 func marshalPromotionPayload(req *PromotionRequest, decision *PromotionDecision) string {
 	payload := map[string]interface{}{

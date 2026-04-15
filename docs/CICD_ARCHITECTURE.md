@@ -1927,8 +1927,8 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 - [x] `environments` 資料表 + `promotion_history` 資料表
 - [x] ApprovalRequest 擴充（Action=promote_environment/production_gate + pipeline_run_id）
 - [x] Promotion 邏輯（自動 / 人工審核）— PromotionService + EvaluatePromotion + ExecutePromotion
-- [ ] 冒煙測試 Step 整合
-- [ ] Production Gate 通知
+- [x] 冒煙測試 Step 整合 ✅ smoke-test Step type — SmokeTestConfig (url/method/expected_status/retries/timeout/headers/body/insecure) + curl 重試腳本 + validateSmokeTestStep + 12 測試
+- [x] Production Gate 通知 ✅ PromotionNotifier — GateEvent → NotifyChannel (slack/telegram/teams/webhook) + Environment.notify_channel_ids 欄位 + PromotionService.SetNotifier 接線 + 11 測試
 
 ### M13c — Argo Rollouts 整合（2 週）
 

@@ -29,6 +29,7 @@ type Environment struct {
 	ApprovalRequired bool           `json:"approval_required" gorm:"default:false"`
 	ApproverIDs      string         `json:"approver_ids,omitempty" gorm:"type:text"` // JSON array of user IDs
 	SmokeTestStepName string        `json:"smoke_test_step_name,omitempty" gorm:"size:255"`
+	NotifyChannelIDs  string        `json:"notify_channel_ids,omitempty" gorm:"type:text"` // JSON array: Production Gate 通知 channel
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 	DeletedAt        gorm.DeletedAt `json:"-" gorm:"index"`
