@@ -20,5 +20,10 @@ func registerWebhookRoutes(api *gin.RouterGroup, d *routeDeps) {
 	webhooks.Use(middleware.APIRateLimit("webhook", 60)) // 60 req/min per IP
 	{
 		webhooks.POST("/pipelines/:pipelineID/trigger", webhookHandler.TriggerWebhook)
+
+		// Git Provider Webhook 接收端點（M14）
+		// POST /webhooks/git/:token — token 為 GitProvider.WebhookToken
+		gitWebhookHandler := handlers.NewGitWebhookHandler(d.gitProviderSvc, d.pipelineSvc, d.pipelineScheduler)
+		webhooks.POST("/git/:token", gitWebhookHandler.IngestWebhook)
 	}
 }

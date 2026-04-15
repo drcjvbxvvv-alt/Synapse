@@ -127,6 +127,40 @@ func (s *PipelineService) GetPipeline(ctx context.Context, id uint) (*models.Pip
 	return &pipeline, nil
 }
 
+// PipelineWithTriggers 包含 Pipeline 及其當前版本的觸發規則。
+type PipelineWithTriggers struct {
+	Pipeline     models.Pipeline
+	TriggersJSON string
+}
+
+// ListPipelinesWithTriggers 列出所有有 webhook 觸發規則的 Pipeline。
+// 透過 JOIN pipeline_versions 取得當前版本的 triggers_json。
+func (s *PipelineService) ListPipelinesWithTriggers(ctx context.Context) ([]PipelineWithTriggers, error) {
+	type row struct {
+		models.Pipeline
+		TriggersJSON string `gorm:"column:triggers_json"`
+	}
+	var rows []row
+	if err := s.db.WithContext(ctx).
+		Table("pipelines p").
+		Select("p.*, pv.triggers_json").
+		Joins("INNER JOIN pipeline_versions pv ON pv.id = p.current_version_id").
+		Where("p.deleted_at IS NULL AND p.current_version_id IS NOT NULL").
+		Where("pv.triggers_json IS NOT NULL AND pv.triggers_json != '' AND pv.triggers_json != '[]' AND pv.triggers_json != 'null'").
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list pipelines with triggers: %w", err)
+	}
+
+	result := make([]PipelineWithTriggers, 0, len(rows))
+	for _, r := range rows {
+		result = append(result, PipelineWithTriggers{
+			Pipeline:     r.Pipeline,
+			TriggersJSON: r.TriggersJSON,
+		})
+	}
+	return result, nil
+}
+
 // ListPipelines 列出 Pipeline（分頁、篩選、搜尋）。
 func (s *PipelineService) ListPipelines(ctx context.Context, params *ListPipelinesParams) ([]models.Pipeline, int64, error) {
 	query := s.db.WithContext(ctx).Model(&models.Pipeline{})

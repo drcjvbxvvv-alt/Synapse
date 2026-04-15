@@ -118,6 +118,27 @@ func (s *GitProviderService) DeleteProvider(ctx context.Context, id uint) error 
 	return nil
 }
 
+// RegenerateWebhookToken 重新生成 Git Provider 的 webhook token。
+func (s *GitProviderService) RegenerateWebhookToken(ctx context.Context, id uint) (string, error) {
+	newToken, err := generateWebhookToken()
+	if err != nil {
+		return "", fmt.Errorf("generate webhook token: %w", err)
+	}
+
+	result := s.db.WithContext(ctx).Model(&models.GitProvider{}).
+		Where("id = ?", id).
+		Update("webhook_token", newToken)
+	if result.Error != nil {
+		return "", fmt.Errorf("regenerate webhook token for provider %d: %w", id, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return "", fmt.Errorf("git provider %d not found", id)
+	}
+
+	logger.Info("webhook token regenerated", "provider_id", id)
+	return newToken, nil
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

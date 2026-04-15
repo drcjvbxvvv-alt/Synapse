@@ -346,6 +346,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		featureDBStore:   featureDBStore,
 		pipelineScheduler: pipelineScheduler,
 		pipelineSvc:       pipelineSvc,
+		gitProviderSvc:    services.NewGitProviderService(db),
 	}
 
 	// ── Webhook routes (public, HMAC-authenticated) ───────────────────────

@@ -1891,12 +1891,12 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 
 ### M14 — Git Webhook（4 週）
 
-- [x] `git_providers` 資料表 + CRUD API（AES-256-GCM 加密 webhook_secret）✅ GitProviderService + GitProvider model
-- [x] 公開路由群組 `/api/v1/webhooks`（跳過 JWT）✅ routes_webhook.go
+- [x] `git_providers` 資料表 + CRUD API（AES-256-GCM 加密 webhook_secret）✅ GitProviderService + GitProvider model + GitProviderHandler CRUD + RegenerateToken + routes under /system/git-providers (PlatformAdminRequired)
+- [x] 公開路由群組 `/api/v1/webhooks`（跳過 JWT）✅ routes_webhook.go + POST /webhooks/git/:token 端點
 - [x] WebhookRateLimit middleware（per-provider + per-repo）✅ APIRateLimit("webhook", 60)
-- [x] WebhookHMACVerify（支援 HMAC-SHA256）✅ pipeline_webhook_handler.go verifyHMAC
+- [x] WebhookHMACVerify（支援 HMAC-SHA256）✅ pipeline_webhook_handler.go verifyHMAC + git_webhook_handler.go provider-specific HMAC (GitHub X-Hub-Signature-256, GitLab X-Gitlab-Token, Gitea X-Gitea-Signature)
 - [x] WebhookReplayProtection（nonce + timestamp ±5min）✅ nonceCache + timestamp 驗證
-- [x] Webhook → Pipeline 觸發條件匹配 ✅ pipeline_trigger_match.go — branch glob + path filter + 35 測試
+- [x] Webhook → Pipeline 觸發條件匹配 ✅ pipeline_trigger_match.go — branch glob + path filter + 35 測試 + git_webhook_handler.go IngestWebhook → ListPipelinesWithTriggers → EvaluateWebhookTriggers → EnqueueRun
 - [x] Concurrency Group 取消邏輯 ✅ Scheduler ConcurrencyGroup 互斥 + reject 策略
 - [ ] Git Provider 連線設定 UI
 

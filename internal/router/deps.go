@@ -38,4 +38,7 @@ type routeDeps struct {
 	// Pipeline CI/CD subsystem (shared singletons)
 	pipelineScheduler *services.PipelineScheduler
 	pipelineSvc       *services.PipelineService
+
+	// Git Provider (M14)
+	gitProviderSvc *services.GitProviderService
 }

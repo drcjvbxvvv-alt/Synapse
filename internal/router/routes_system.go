@@ -162,6 +162,18 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 		ffHandler := handlers.NewFeatureFlagHandler(d.featureFlagSvc, d.featureDBStore)
 		systemSettings.GET("/feature-flags", ffHandler.List)
 		systemSettings.PUT("/feature-flags/:key", ffHandler.Update)
+
+		// Git Provider 管理（M14）
+		gitProviderHandler := handlers.NewGitProviderHandler(d.gitProviderSvc)
+		gitProviders := systemSettings.Group("/git-providers")
+		{
+			gitProviders.GET("", gitProviderHandler.List)
+			gitProviders.GET("/:id", gitProviderHandler.Get)
+			gitProviders.POST("", gitProviderHandler.Create)
+			gitProviders.PUT("/:id", gitProviderHandler.Update)
+			gitProviders.DELETE("/:id", gitProviderHandler.Delete)
+			gitProviders.POST("/:id/regenerate-token", gitProviderHandler.RegenerateToken)
+		}
 	}
 
 	// 消息通知（全域，跨叢集 Event Alert History）
