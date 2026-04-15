@@ -1916,9 +1916,10 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 - [x] `gitops_apps` 資料表（含 `source` 欄位區分 native / argocd）
 - [x] GitOps Application CRUD + sync status ✅ gitops_service.go — 10 方法 + source 互斥 + 22 測試
 - [x] Diff 引擎（YAML / Kustomize / Helm）— GitOpsDiffEngine + GVR 解析 + resource 比對
-- [ ] Git clone 快取 PVC
-- [ ] Auto Sync / Drift 通知（NotifyChannel）
-- [ ] 前端整合：ArgoCD 代理 + 原生 App 合併列表
+- [x] Git clone 快取 PVC ✅ gitops_git_cache.go — PVC hash-based 命名 + EnsureClonePVC + BuildGitCloneJob + git clone/pull 腳本 + token 注入 + multi-app repo 共享 + 18 測試
+- [x] Auto Sync / Drift 通知（NotifyChannel）✅ gitops_reconciler.go — GitOpsReconciler loop + findAppsNeedingReconcile + DriftEvent → NotifyChannel (slack/telegram/teams/webhook) + GitOpsApp.notify_channel_ids 欄位 + 16 測試
+- [x] ArgoCD 代理 + 原生 App 合併列表 API ✅ gitops_handler.go — ListMerged (native + argocd 統一 DTO) + CRUD + GetDiff + TriggerSync + routes under /clusters/:id/gitops/apps + 11 測試
+- [ ] 前端整合：GitOps 應用管理 UI
 - [x] ArgoCD 代理保留並明確邊界 — source 互斥規則 + deploy step exclusion
 
 ### M17 — 環境流水線（5 週）

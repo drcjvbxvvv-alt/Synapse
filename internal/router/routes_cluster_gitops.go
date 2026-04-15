@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// registerClusterGitopsRoutes registers ArgoCD, RBAC, and Helm release routes.
+// registerClusterGitopsRoutes registers ArgoCD, GitOps, RBAC, and Helm release routes.
 func registerClusterGitopsRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 	// ArgoCD
 	argoCDSvc := services.NewArgoCDService(d.db)
@@ -24,6 +24,20 @@ func registerClusterGitopsRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 		argocd.POST("/applications/:appName/sync", argoCDHandler.SyncApplication)
 		argocd.POST("/applications/:appName/rollback", argoCDHandler.RollbackApplication)
 		argocd.GET("/applications/:appName/resources", argoCDHandler.GetApplicationResources)
+	}
+
+	// GitOps（M16 — native + ArgoCD 合併列表）
+	gitopsSvc := services.NewGitOpsService(d.db)
+	gitopsHandler := handlers.NewGitOpsHandler(gitopsSvc, argoCDSvc)
+	gitops := cluster.Group("/gitops")
+	{
+		gitops.GET("/apps", gitopsHandler.ListMerged)
+		gitops.GET("/apps/:id", gitopsHandler.Get)
+		gitops.POST("/apps", gitopsHandler.Create)
+		gitops.PUT("/apps/:id", gitopsHandler.Update)
+		gitops.DELETE("/apps/:id", gitopsHandler.Delete)
+		gitops.GET("/apps/:id/diff", gitopsHandler.GetDiff)
+		gitops.POST("/apps/:id/sync", gitopsHandler.TriggerSync)
 	}
 
 	// RBAC

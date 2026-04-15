@@ -64,8 +64,9 @@ type GitOpsApp struct {
 	LastDiffAt    *time.Time     `json:"last_diff_at,omitempty"`
 	LastDiffResult string        `json:"last_diff_result,omitempty" gorm:"type:text"` // JSON diff summary
 	Status        string         `json:"status" gorm:"not null;size:50;default:'unknown';index"`
-	StatusMessage string         `json:"status_message,omitempty" gorm:"type:text"`
-	CreatedBy     uint           `json:"created_by" gorm:"not null"`
+	StatusMessage    string         `json:"status_message,omitempty" gorm:"type:text"`
+	NotifyChannelIDs string        `json:"notify_channel_ids,omitempty" gorm:"type:text"` // JSON 陣列: [1,2,3]
+	CreatedBy        uint          `json:"created_by" gorm:"not null"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
