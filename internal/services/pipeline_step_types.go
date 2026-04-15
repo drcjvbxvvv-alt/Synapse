@@ -45,7 +45,7 @@ var stepTypeRegistry = map[string]StepTypeInfo{
 	},
 
 	// ── M13b 進階類型 ────────────────────────────────────────────────────
-	"build-jar":          {Name: "build-jar", DefaultImage: "maven:3.9-eclipse-temurin-17", RequiresCommand: true, Description: "Build Java artifact with Maven/Gradle"},
+	"build-jar":          {Name: "build-jar", DefaultImage: "maven:3.9-eclipse-temurin-17", RequiresCommand: false, Description: "Build Java artifact with Maven/Gradle"},
 	"trivy-scan":         {Name: "trivy-scan", DefaultImage: "aquasec/trivy:0.58.0", RequiresCommand: false, Description: "Run Trivy vulnerability scan on container image"},
 	"push-image":         {Name: "push-image", DefaultImage: "gcr.io/go-containerregistry/crane:latest", RequiresCommand: false, Description: "Push/retag container image via crane"},
 	"deploy-helm":        {Name: "deploy-helm", DefaultImage: "alpine/helm:3.16", RequiresCommand: false, Description: "Deploy via Helm upgrade --install"},
@@ -153,6 +153,19 @@ type RolloutStatusConfig struct {
 	OnTimeout      string `json:"on_timeout"`       // timeout 行為：abort / fail（預設 fail）
 }
 
+// BuildJarConfig build-jar Step 的類型特定設定。
+type BuildJarConfig struct {
+	BuildTool string            `json:"build_tool"` // "maven" (default) | "gradle"
+	Goals     string            `json:"goals"`      // Maven goals（如 "clean package"，預設 "clean package -DskipTests"）
+	Tasks     string            `json:"tasks"`      // Gradle tasks（如 "clean build"，預設 "clean build -x test"）
+	PomFile   string            `json:"pom_file"`   // Maven POM 路徑（預設 "pom.xml"）
+	BuildFile string            `json:"build_file"` // Gradle build 檔路徑（預設 auto-detect）
+	Profiles  []string          `json:"profiles"`   // Maven profiles（如 ["prod", "docker"]）
+	Properties map[string]string `json:"properties"` // -D properties
+	JavaVersion string          `json:"java_version"` // 若指定，覆蓋 image（如 "21" → maven:3.9-eclipse-temurin-21）
+	CacheDir  string            `json:"cache_dir"`  // Maven/Gradle cache 目錄（預設 /workspace/.m2 或 /workspace/.gradle）
+}
+
 // NotifyConfig notify Step 的類型特定設定。
 type NotifyConfig struct {
 	URL     string            `json:"url"`     // Webhook URL（必填）
@@ -208,6 +221,8 @@ func ValidateStepDef(step *StepDef) error {
 		return validateHelmDeployStep(step)
 	case "deploy-argocd-sync":
 		return validateArgoCDSyncStep(step)
+	case "build-jar":
+		return validateBuildJarStep(step)
 	case "notify":
 		return validateNotifyStep(step)
 	case "deploy-rollout":
@@ -354,6 +369,8 @@ func GenerateCommand(step *StepDef) (command []string, args []string) {
 		return generateBuildImageCommand(step)
 	case "deploy":
 		return generateDeployCommand(step)
+	case "build-jar":
+		return generateBuildJarCommand(step)
 	case "trivy-scan":
 		return generateTrivyScanCommand(step)
 	case "push-image":
@@ -548,6 +565,84 @@ func generateNotifyCommand(step *StepDef) ([]string, []string) {
 }
 
 // ---------------------------------------------------------------------------
+// build-jar validation + command generation
+// ---------------------------------------------------------------------------
+
+func validateBuildJarStep(step *StepDef) error {
+	if step.Config == "" {
+		// 無 config 時使用 Maven 預設值，合法
+		return nil
+	}
+	var cfg BuildJarConfig
+	if err := parseJSON(step.Config, &cfg); err != nil {
+		return fmt.Errorf("step %q (build-jar): invalid config: %w", step.Name, err)
+	}
+	if cfg.BuildTool != "" && cfg.BuildTool != "maven" && cfg.BuildTool != "gradle" {
+		return fmt.Errorf("step %q (build-jar): build_tool must be maven|gradle, got %q", step.Name, cfg.BuildTool)
+	}
+	return nil
+}
+
+func generateBuildJarCommand(step *StepDef) ([]string, []string) {
+	var cfg BuildJarConfig
+	if step.Config != "" {
+		if err := parseJSON(step.Config, &cfg); err != nil {
+			// fallback: maven clean package
+			return []string{"/bin/sh", "-c", "mvn clean package -DskipTests -B"}, nil
+		}
+	}
+
+	tool := defaultString(cfg.BuildTool, "maven")
+
+	if tool == "gradle" {
+		return generateGradleCommand(&cfg), nil
+	}
+	return generateMavenCommand(&cfg), nil
+}
+
+func generateMavenCommand(cfg *BuildJarConfig) []string {
+	cmd := "mvn"
+	goals := defaultString(cfg.Goals, "clean package -DskipTests")
+	cmd += " " + goals
+	cmd += " -B" // batch mode (non-interactive)
+
+	if cfg.PomFile != "" {
+		cmd += " -f " + cfg.PomFile
+	}
+	for _, profile := range cfg.Profiles {
+		cmd += " -P" + profile
+	}
+	for k, v := range cfg.Properties {
+		cmd += fmt.Sprintf(" -D%s=%s", k, v)
+	}
+	if cfg.CacheDir != "" {
+		cmd += " -Dmaven.repo.local=" + cfg.CacheDir
+	}
+
+	return []string{"/bin/sh", "-c", cmd}
+}
+
+func generateGradleCommand(cfg *BuildJarConfig) []string {
+	// 使用 gradle wrapper 如果存在，否則 fallback gradle
+	cmd := "if [ -f ./gradlew ]; then GRADLE=./gradlew; else GRADLE=gradle; fi && $GRADLE"
+	tasks := defaultString(cfg.Tasks, "clean build -x test")
+	cmd += " " + tasks
+
+	if cfg.BuildFile != "" {
+		cmd += " -b " + cfg.BuildFile
+	}
+	for k, v := range cfg.Properties {
+		cmd += fmt.Sprintf(" -D%s=%s", k, v)
+	}
+	if cfg.CacheDir != "" {
+		cmd += " --project-cache-dir " + cfg.CacheDir
+	}
+	cmd += " --no-daemon" // CI 環境不使用 daemon
+
+	return []string{"/bin/sh", "-c", cmd}
+}
+
+// ---------------------------------------------------------------------------
 // Rollout validation
 // ---------------------------------------------------------------------------
 
@@ -717,10 +812,24 @@ func generateRolloutStatusCommand(step *StepDef) ([]string, []string) {
 }
 
 // ResolveImage 解析 Step 的 image：使用者指定優先，否則使用預設。
+// build-jar 類型支援 java_version 覆蓋（如 "21" → maven:3.9-eclipse-temurin-21）。
 func ResolveImage(step *StepDef) string {
 	if step.Image != "" {
 		return step.Image
 	}
+
+	// build-jar: 根據 config 中的 java_version 和 build_tool 選擇 image
+	if step.Type == "build-jar" && step.Config != "" {
+		var cfg BuildJarConfig
+		if err := parseJSON(step.Config, &cfg); err == nil {
+			javaVer := defaultString(cfg.JavaVersion, "17")
+			if cfg.BuildTool == "gradle" {
+				return "gradle:8.10-jdk" + javaVer
+			}
+			return "maven:3.9-eclipse-temurin-" + javaVer
+		}
+	}
+
 	if info, ok := stepTypeRegistry[step.Type]; ok && info.DefaultImage != "" {
 		return info.DefaultImage
 	}

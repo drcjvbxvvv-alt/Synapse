@@ -1865,15 +1865,15 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 ### M13b — 進階 Steps 與 UX（4 週）
 
 **Week 5–6：進階 Steps**
-- [ ] `build-jar`（Maven / Gradle）
+- [x] `build-jar`（Maven / Gradle）— BuildJarConfig + validation + command gen + java_version image 自動選擇
 - [ ] `trivy-scan`（K8s Job 版本，寫 `scan_source=pipeline`）
 - [ ] `push-image`（整合 M15 Registry）
 - [ ] `deploy-helm`（整合既有 HelmService）
 - [ ] `deploy-argocd-sync`（整合既有 ArgoCDService）
 - [ ] `approval` Step（整合 ApprovalRequest）
-- [ ] Step 重試（retry + backoff）
-- [ ] Rerun from Failed
-- [ ] Matrix Builds（同層並行展開）
+- [x] Step 重試（retry + backoff）— RetryPolicy + executeStepWithRetry 已整合
+- [x] Rerun from Failed — RerunFromStep 欄位 + 原始 Run Step 結果跳過 + from_failed API
+- [x] Matrix Builds（同層並行展開）— 笛卡兒積展開 + 並行 goroutine + MATRIX_* 環境變數注入
 
 **Week 7：前端**
 - [ ] `PipelineList.tsx` / `PipelineEditor.tsx`（卡片 + YAML 雙模式）
@@ -1883,10 +1883,10 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 - [ ] `PipelineAllowedImages.tsx`
 
 **Week 8：通知與 AI 整合**
-- [ ] NotifyChannel 整合（PipelineNotificationDispatcher）
+- [x] NotifyChannel 整合（PipelineNotificationDispatcher）— Scheduler 完成時呼叫 Notify + dedup
 - [x] AI 根因分析按鈕 + context 組裝
 - [ ] Metrics 註冊（Prometheus）
-- [ ] 失敗恢復（Executor.Recover on startup）
+- [x] 失敗恢復（Executor.Recover on startup）— PipelineRecover 於啟動時自動執行
 - [ ] 文件更新
 
 ### M14 — Git Webhook（4 週）
@@ -2001,6 +2001,11 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | ✅ P2-8 | Environment CRUD + Promotion History | M17 | **Sonnet** | Environment + PromotionHistory model + CRUD service + validation + 14 測試 |
 | ✅ P2-9 | NotifyChannel 整合（Pipeline 事件路由） | M13b W8 | **Opus** | PipelineNotifier + 4 channel formats (slack/telegram/teams/webhook) + dedup 整合 + 19 測試 |
 | ✅ P2-10 | 失敗告警去重（通知風暴防護） | M13b W8 | **Opus** | 5min 去重視窗 + LRU eviction + retry/concurrency 抑制 + 11 測試 |
+| ✅ P2-11 | build-jar Step（Maven / Gradle） | M13b W5–6 | **Opus** | BuildJarConfig + validation + Maven/Gradle command gen + java_version image 選擇 + 16 測試 |
+| ✅ P2-12 | Rerun from Failed Step | M13b W5–6 | **Opus** | RerunFromStep 欄位 + 原始 Run Step 結果跳過 + from_failed API + 6 測試 |
+| ✅ P2-13 | Matrix Builds（同層並行展開） | M13b W5–6 | **Opus** | 笛卡兒積展開 + 並行 goroutine + MATRIX_* env 注入 + parent/sub-step 聚合 + 10 測試 |
+| ✅ P2-14 | NotifyChannel Executor 接線 | M13b W8 | **Opus** | Scheduler 注入 PipelineNotifier + notifyRunCompletion() + run_success/run_failed 事件路由 |
+| ✅ P2-15 | 失敗恢復 Startup Wiring | M13b W8 | **Opus** | PipelineRecover 於 router.go 啟動時執行（30s timeout）→ Scheduler.Start() |
 
 #### P3 — 前端 / UX / 輔助工具
 

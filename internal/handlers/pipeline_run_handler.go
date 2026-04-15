@@ -219,7 +219,13 @@ func (h *PipelineRunHandler) GetRun(c *gin.Context) {
 	})
 }
 
+// RerunRequest rerun 的請求 body。
+type RerunRequest struct {
+	FromFailed bool `json:"from_failed"` // true = 從第一個失敗 Step 開始重跑，跳過已成功的
+}
+
 // RerunPipeline 從失敗的 Run 重跑（建立新 Run，繼承 snapshot_id）。
+// 若 from_failed=true，跳過原始 Run 中已成功的 Steps。
 // POST /clusters/:clusterID/pipelines/:pipelineID/runs/:runID/rerun
 func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 	pipelineID, err := parseUintParam(c, "pipelineID")
@@ -233,6 +239,9 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 		response.BadRequest(c, "invalid run ID")
 		return
 	}
+
+	var req RerunRequest
+	_ = c.ShouldBindJSON(&req) // body optional
 
 	// 取得原始 Run
 	originalRun, err := h.pipelineSvc.GetPipelineRun(c.Request.Context(), runID)
@@ -251,6 +260,20 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 		return
 	}
 
+	// from_failed: 找出第一個失敗的 Step 名稱
+	var rerunFromStep string
+	if req.FromFailed {
+		if originalRun.Status != models.PipelineRunStatusFailed {
+			response.BadRequest(c, "from_failed only works on failed runs")
+			return
+		}
+		rerunFromStep, err = h.findFirstFailedStep(c.Request.Context(), runID)
+		if err != nil {
+			response.InternalError(c, "failed to find failed step: "+err.Error())
+			return
+		}
+	}
+
 	userID := c.GetUint("user_id")
 
 	newRun := &models.PipelineRun{
@@ -262,6 +285,7 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 		TriggeredByUser:  userID,
 		ConcurrencyGroup: originalRun.ConcurrencyGroup,
 		RerunFromID:      &originalRun.ID,
+		RerunFromStep:    rerunFromStep,
 	}
 
 	if err := h.scheduler.EnqueueRun(c.Request.Context(), newRun); err != nil {
@@ -279,15 +303,30 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 		"original_run_id", runID,
 		"new_run_id", newRun.ID,
 		"user_id", userID,
+		"from_failed", req.FromFailed,
+		"rerun_from_step", rerunFromStep,
 	)
 	h.logRunAudit(c, constants.ActionRerun, fmt.Sprintf("pipeline:%d/from-run:%d/new-run:%d", pipelineID, runID, newRun.ID), "success")
 
 	c.JSON(http.StatusAccepted, gin.H{
-		"run_id":        newRun.ID,
-		"rerun_from_id": originalRun.ID,
-		"status":        newRun.Status,
-		"message":       "pipeline rerun triggered",
+		"run_id":          newRun.ID,
+		"rerun_from_id":   originalRun.ID,
+		"rerun_from_step": rerunFromStep,
+		"status":          newRun.Status,
+		"message":         "pipeline rerun triggered",
 	})
+}
+
+// findFirstFailedStep 找出 Run 中第一個失敗的 Step 名稱（按 step_index 排序）。
+func (h *PipelineRunHandler) findFirstFailedStep(ctx context.Context, runID uint) (string, error) {
+	var sr models.StepRun
+	if err := h.pipelineSvc.DB().WithContext(ctx).
+		Where("pipeline_run_id = ? AND status = ?", runID, models.StepRunStatusFailed).
+		Order("step_index ASC").
+		First(&sr).Error; err != nil {
+		return "", fmt.Errorf("find first failed step in run %d: %w", runID, err)
+	}
+	return sr.StepName, nil
 }
 
 // ApproveStep 批准 Approval Step。

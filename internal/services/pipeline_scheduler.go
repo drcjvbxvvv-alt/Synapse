@@ -56,6 +56,7 @@ type PipelineScheduler struct {
 	secretSvc     *PipelineSecretService
 	k8sProvider   PipelineK8sProvider
 	watcher       *JobWatcher
+	notifier      *PipelineNotifier
 	cfg           SchedulerConfig
 
 	stopCh chan struct{}
@@ -69,6 +70,7 @@ func NewPipelineScheduler(
 	secretSvc *PipelineSecretService,
 	k8sProvider PipelineK8sProvider,
 	watcher *JobWatcher,
+	notifier *PipelineNotifier,
 	cfg SchedulerConfig,
 ) *PipelineScheduler {
 	return &PipelineScheduler{
@@ -77,6 +79,7 @@ func NewPipelineScheduler(
 		secretSvc:   secretSvc,
 		k8sProvider: k8sProvider,
 		watcher:     watcher,
+		notifier:    notifier,
 		cfg:         cfg,
 		stopCh:      make(chan struct{}),
 	}
@@ -419,14 +422,15 @@ func (s *PipelineScheduler) applyConcurrencyPolicy(ctx context.Context, newRun *
 
 // StepDef 從 PipelineVersion.StepsJSON 解析的 Step 定義。
 type StepDef struct {
-	Name         string   `json:"name"`
-	Type         string   `json:"type"`
-	Image        string   `json:"image"`
-	Command      string   `json:"command"`
-	DependsOn    []string `json:"depends_on"`
-	Config       string   `json:"config"`        // raw JSON for StepConfig
-	MaxRetries   int      `json:"max_retries"`   // 0 = no retry (default)
-	RetryBackoff string   `json:"retry_backoff"` // "fixed" or "exponential" (default: "exponential")
+	Name         string              `json:"name"`
+	Type         string              `json:"type"`
+	Image        string              `json:"image"`
+	Command      string              `json:"command"`
+	DependsOn    []string            `json:"depends_on"`
+	Config       string              `json:"config"`        // raw JSON for StepConfig
+	MaxRetries   int                 `json:"max_retries"`   // 0 = no retry (default)
+	RetryBackoff string              `json:"retry_backoff"` // "fixed" or "exponential" (default: "exponential")
+	Matrix       map[string][]string `json:"matrix"`        // 矩陣展開（如 {"go_version":["1.21","1.22"], "os":["linux","darwin"]}）
 }
 
 // executeRunAsync 非同步執行 Pipeline Run 的 Steps DAG。
@@ -466,16 +470,31 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		return
 	}
 
+	// 載入原始 Run 的 Step 結果（rerun-from-failed 用）
+	originalStepResults := s.loadOriginalStepResults(ctx, run)
+
 	// 建立 StepRun 記錄
 	stepRuns := make(map[string]*models.StepRun, len(sorted))
 	for i, step := range sorted {
 		dependsOnJSON, _ := json.Marshal(step.DependsOn)
+
+		// rerun-from-failed: 原始 Run 中已成功的 Step 標記為 skipped（reuse）
+		initialStatus := models.StepRunStatusPending
+		if originalStepResults != nil {
+			if origStatus, ok := originalStepResults[step.Name]; ok && origStatus == models.StepRunStatusSuccess {
+				// 如果設定了 RerunFromStep，只跳過該 Step 之前已成功的
+				if run.RerunFromStep == "" || s.isBeforeStep(sorted, step.Name, run.RerunFromStep) {
+					initialStatus = models.StepRunStatusSkipped
+				}
+			}
+		}
+
 		sr := &models.StepRun{
 			PipelineRunID: run.ID,
 			StepName:      step.Name,
 			StepType:      step.Type,
 			StepIndex:     i,
-			Status:        models.StepRunStatusPending,
+			Status:        initialStatus,
 			Image:         step.Image,
 			Command:       step.Command,
 			ConfigJSON:    step.Config,
@@ -505,6 +524,11 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 	for _, step := range sorted {
 		sr := stepRuns[step.Name]
 
+		// rerun-from-failed: 已標記為 skipped（reuse）的 Step 直接跳過
+		if sr.Status == models.StepRunStatusSkipped {
+			continue
+		}
+
 		// 檢查 Run 是否被取消
 		if err := s.db.WithContext(ctx).First(run, run.ID).Error; err != nil {
 			return
@@ -514,7 +538,7 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 			return
 		}
 
-		// 檢查依賴是否全部成功
+		// 檢查依賴是否全部成功（skipped from rerun 也視為 met）
 		if !s.allDependenciesMet(stepRuns, step.DependsOn) {
 			sr.Status = models.StepRunStatusSkipped
 			if err := s.db.WithContext(ctx).Save(sr).Error; err != nil {
@@ -526,6 +550,14 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		// Approval Step — 等待人工審核，不建立 K8s Job
 		if step.Type == "approval" {
 			if failed := s.executeApprovalStep(ctx, run, sr); failed {
+				anyFailed = true
+			}
+			continue
+		}
+
+		// Matrix Step — 並行展開執行
+		if IsMatrixStep(step) {
+			if failed := s.executeMatrixStep(ctx, run, step, sr); failed {
 				anyFailed = true
 			}
 			continue
@@ -558,6 +590,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		"run_id", run.ID,
 		"status", run.Status,
 	)
+
+	// 發送通知
+	s.notifyRunCompletion(ctx, run)
 }
 
 // executeStepWithRetry 執行單一 Step，失敗時根據 RetryPolicy 重試。
@@ -695,6 +730,48 @@ func (s *PipelineScheduler) executeStepWithRetry(
 	}
 }
 
+// notifyRunCompletion 在 Run 完成後發送通知到配置的 channels。
+func (s *PipelineScheduler) notifyRunCompletion(ctx context.Context, run *models.PipelineRun) {
+	if s.notifier == nil {
+		return
+	}
+
+	var eventType string
+	switch run.Status {
+	case models.PipelineRunStatusSuccess:
+		eventType = "run_success"
+	case models.PipelineRunStatusFailed:
+		eventType = "run_failed"
+	default:
+		return // 其他狀態（cancelled 等）不通知
+	}
+
+	// 查詢 Pipeline 名稱和叢集名稱
+	var pipeline models.Pipeline
+	if err := s.db.WithContext(ctx).Select("id, name").First(&pipeline, run.PipelineID).Error; err != nil {
+		logger.Warn("notify: failed to load pipeline name", "pipeline_id", run.PipelineID, "error", err)
+		return
+	}
+
+	var duration time.Duration
+	if run.StartedAt != nil && run.FinishedAt != nil {
+		duration = run.FinishedAt.Sub(*run.StartedAt)
+	}
+
+	event := &PipelineEvent{
+		Type:         eventType,
+		PipelineName: pipeline.Name,
+		PipelineID:   run.PipelineID,
+		RunID:        run.ID,
+		Namespace:    run.Namespace,
+		TriggerType:  run.TriggerType,
+		Error:        run.Error,
+		Duration:     duration,
+	}
+
+	s.notifier.Notify(ctx, event)
+}
+
 func (s *PipelineScheduler) failRun(ctx context.Context, run *models.PipelineRun, errMsg string) {
 	now := time.Now()
 	run.Status = models.PipelineRunStatusFailed
@@ -824,11 +901,56 @@ func (s *PipelineScheduler) waitForStep(ctx context.Context, sr *models.StepRun)
 func (s *PipelineScheduler) allDependenciesMet(stepRuns map[string]*models.StepRun, deps []string) bool {
 	for _, dep := range deps {
 		sr, ok := stepRuns[dep]
-		if !ok || sr.Status != models.StepRunStatusSuccess {
+		if !ok {
+			return false
+		}
+		// success = 本次成功, skipped = rerun-from-failed 中原始 Run 已成功的 Step
+		if sr.Status != models.StepRunStatusSuccess && sr.Status != models.StepRunStatusSkipped {
 			return false
 		}
 	}
 	return true
+}
+
+// ---------------------------------------------------------------------------
+// Rerun-from-failed helpers
+// ---------------------------------------------------------------------------
+
+// loadOriginalStepResults 載入 rerun 原始 Run 的 Step 狀態對照表。
+// 僅在 RerunFromID 有值且 TriggerType=rerun 時載入。
+func (s *PipelineScheduler) loadOriginalStepResults(ctx context.Context, run *models.PipelineRun) map[string]string {
+	if run.RerunFromID == nil || run.TriggerType != models.TriggerTypeRerun {
+		return nil
+	}
+
+	var origSteps []models.StepRun
+	if err := s.db.WithContext(ctx).
+		Select("step_name, status").
+		Where("pipeline_run_id = ?", *run.RerunFromID).
+		Find(&origSteps).Error; err != nil {
+		logger.Warn("failed to load original run step results for rerun",
+			"rerun_from_id", *run.RerunFromID, "error", err)
+		return nil
+	}
+
+	results := make(map[string]string, len(origSteps))
+	for _, sr := range origSteps {
+		results[sr.StepName] = sr.Status
+	}
+	return results
+}
+
+// isBeforeStep 判斷 stepName 在拓撲排序中是否在 targetStep 之前。
+func (s *PipelineScheduler) isBeforeStep(sorted []StepDef, stepName, targetStep string) bool {
+	for _, step := range sorted {
+		if step.Name == targetStep {
+			return true // 到達 target 表示 stepName 在 target 之前
+		}
+		if step.Name == stepName {
+			return true // stepName 在 target 之前出現
+		}
+	}
+	return false
 }
 
 // ---------------------------------------------------------------------------

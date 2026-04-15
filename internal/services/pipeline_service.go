@@ -29,6 +29,11 @@ func NewPipelineService(db *gorm.DB) *PipelineService {
 	return &PipelineService{db: db}
 }
 
+// DB 回傳底層 gorm.DB（供 handler 查詢 StepRun 等附屬資料）。
+func (s *PipelineService) DB() *gorm.DB {
+	return s.db
+}
+
 // ---------------------------------------------------------------------------
 // DTOs
 // ---------------------------------------------------------------------------

@@ -1060,3 +1060,172 @@ func TestResolveImage_RolloutPromote_Default(t *testing.T) {
 		t.Errorf("expected argo-rollouts image, got: %s", img)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// build-jar validation tests
+// ---------------------------------------------------------------------------
+
+func TestValidateStepDef_BuildJar_DefaultMaven(t *testing.T) {
+	step := &StepDef{Name: "build", Type: "build-jar"}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid with no config (maven default), got: %v", err)
+	}
+}
+
+func TestValidateStepDef_BuildJar_MavenWithConfig(t *testing.T) {
+	cfg := BuildJarConfig{
+		BuildTool:  "maven",
+		Goals:      "clean install",
+		Profiles:   []string{"prod"},
+		Properties: map[string]string{"skipTests": "true"},
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_BuildJar_Gradle(t *testing.T) {
+	cfg := BuildJarConfig{BuildTool: "gradle", Tasks: "clean build"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	if err := ValidateStepDef(step); err != nil {
+		t.Errorf("expected valid, got: %v", err)
+	}
+}
+
+func TestValidateStepDef_BuildJar_InvalidBuildTool(t *testing.T) {
+	cfg := BuildJarConfig{BuildTool: "ant"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	err := ValidateStepDef(step)
+	if err == nil {
+		t.Error("expected error for invalid build_tool")
+	}
+	if !strings.Contains(err.Error(), "maven|gradle") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestValidateStepDef_BuildJar_InvalidJSON(t *testing.T) {
+	step := &StepDef{Name: "build", Type: "build-jar", Config: "{broken"}
+	err := ValidateStepDef(step)
+	if err == nil {
+		t.Error("expected error for invalid JSON config")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// build-jar command generation tests
+// ---------------------------------------------------------------------------
+
+func TestGenerateCommand_BuildJar_DefaultMaven(t *testing.T) {
+	step := &StepDef{Name: "build", Type: "build-jar"}
+	cmd, _ := GenerateCommand(step)
+	if len(cmd) < 3 {
+		t.Fatalf("expected shell command, got: %v", cmd)
+	}
+	fullCmd := cmd[2]
+	if !strings.Contains(fullCmd, "mvn") {
+		t.Errorf("expected mvn command, got: %s", fullCmd)
+	}
+	if !strings.Contains(fullCmd, "clean package") {
+		t.Errorf("expected default goals, got: %s", fullCmd)
+	}
+	if !strings.Contains(fullCmd, "-B") {
+		t.Errorf("expected batch mode flag, got: %s", fullCmd)
+	}
+}
+
+func TestGenerateCommand_BuildJar_MavenWithProfiles(t *testing.T) {
+	cfg := BuildJarConfig{
+		Goals:      "clean install",
+		Profiles:   []string{"prod", "docker"},
+		Properties: map[string]string{"version": "2.0"},
+		PomFile:    "submodule/pom.xml",
+	}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+	fullCmd := cmd[2]
+
+	if !strings.Contains(fullCmd, "clean install") {
+		t.Errorf("expected custom goals, got: %s", fullCmd)
+	}
+	if !strings.Contains(fullCmd, "-Pprod") {
+		t.Errorf("expected profile prod, got: %s", fullCmd)
+	}
+	if !strings.Contains(fullCmd, "-Pdocker") {
+		t.Errorf("expected profile docker, got: %s", fullCmd)
+	}
+	if !strings.Contains(fullCmd, "-f submodule/pom.xml") {
+		t.Errorf("expected custom pom, got: %s", fullCmd)
+	}
+}
+
+func TestGenerateCommand_BuildJar_Gradle(t *testing.T) {
+	cfg := BuildJarConfig{BuildTool: "gradle", Tasks: "clean assemble"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	cmd, _ := GenerateCommand(step)
+	fullCmd := cmd[2]
+
+	if !strings.Contains(fullCmd, "gradlew") {
+		t.Errorf("expected gradlew wrapper detection, got: %s", fullCmd)
+	}
+	if !strings.Contains(fullCmd, "clean assemble") {
+		t.Errorf("expected custom tasks, got: %s", fullCmd)
+	}
+	if !strings.Contains(fullCmd, "--no-daemon") {
+		t.Errorf("expected no-daemon flag, got: %s", fullCmd)
+	}
+}
+
+func TestGenerateCommand_BuildJar_UserCommandOverride(t *testing.T) {
+	step := &StepDef{Name: "build", Type: "build-jar", Command: "mvn -pl api clean verify"}
+	cmd, _ := GenerateCommand(step)
+	if cmd[2] != "mvn -pl api clean verify" {
+		t.Errorf("user command should take priority, got: %s", cmd[2])
+	}
+}
+
+// ---------------------------------------------------------------------------
+// build-jar ResolveImage tests
+// ---------------------------------------------------------------------------
+
+func TestResolveImage_BuildJar_DefaultMaven17(t *testing.T) {
+	step := &StepDef{Name: "build", Type: "build-jar"}
+	img := ResolveImage(step)
+	if img != "maven:3.9-eclipse-temurin-17" {
+		t.Errorf("expected maven:3.9-eclipse-temurin-17, got: %s", img)
+	}
+}
+
+func TestResolveImage_BuildJar_JavaVersion21(t *testing.T) {
+	cfg := BuildJarConfig{JavaVersion: "21"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	img := ResolveImage(step)
+	if img != "maven:3.9-eclipse-temurin-21" {
+		t.Errorf("expected maven:3.9-eclipse-temurin-21, got: %s", img)
+	}
+}
+
+func TestResolveImage_BuildJar_GradleWithVersion(t *testing.T) {
+	cfg := BuildJarConfig{BuildTool: "gradle", JavaVersion: "21"}
+	cfgJSON, _ := json.Marshal(cfg)
+	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	img := ResolveImage(step)
+	if img != "gradle:8.10-jdk21" {
+		t.Errorf("expected gradle:8.10-jdk21, got: %s", img)
+	}
+}
+
+func TestResolveImage_BuildJar_UserImageOverride(t *testing.T) {
+	step := &StepDef{Name: "build", Type: "build-jar", Image: "custom-jdk:latest"}
+	img := ResolveImage(step)
+	if img != "custom-jdk:latest" {
+		t.Errorf("user image should take priority, got: %s", img)
+	}
+}

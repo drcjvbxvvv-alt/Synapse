@@ -302,12 +302,23 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	pipelineWatcherCfg := services.DefaultJobWatcherConfig()
 	pipelineWatcher := services.NewJobWatcher(db, k8sMgr, pipelineWatcherCfg)
 	pipelineWatcher.SetLogService(pipelineLogSvc)
+	pipelineDedup := services.NewNotifyDedup(5 * time.Minute)
+	pipelineNotifier := services.NewPipelineNotifier(db, pipelineDedup)
 	pipelineScheduler := services.NewPipelineScheduler(
 		db, pipelineJobBuilder, pipelineSecretSvc, k8sMgr,
-		pipelineWatcher, services.DefaultSchedulerConfig(),
+		pipelineWatcher, pipelineNotifier, services.DefaultSchedulerConfig(),
 	)
 	_ = pipelineSecretSvc // used by webhook routes below
 	_ = pipelineLogSvc    // used by pipeline routes below
+
+	// Pipeline startup: recover interrupted runs → start scheduler + watcher
+	pipelineRecoverer := services.NewPipelineRecover(db, pipelineWatcher, services.DefaultRecoverConfig())
+	recoverCtx, recoverCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if err := pipelineRecoverer.Recover(recoverCtx); err != nil {
+		logger.Warn("pipeline recovery completed with errors", "error", err)
+	}
+	recoverCancel()
+	pipelineScheduler.Start()
 
 	deps := routeDeps{
 		db:               db,
