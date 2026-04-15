@@ -1,0 +1,81 @@
+{
+  "page": {
+    "title": "Argo Rollouts",
+    "subtitle": "Manage Canary / BlueGreen progressive deployments"
+  },
+  "table": {
+    "name": "Name",
+    "namespace": "Namespace",
+    "strategy": "Strategy",
+    "status": "Status",
+    "replicas": "Replicas",
+    "weight": "Canary Weight",
+    "step": "Step Progress",
+    "images": "Images",
+    "createdAt": "Created At"
+  },
+  "strategy": {
+    "Canary": "Canary",
+    "BlueGreen": "BlueGreen"
+  },
+  "status": {
+    "Healthy": "Healthy",
+    "Stopped": "Stopped",
+    "Degraded": "Degraded"
+  },
+  "actions": {
+    "promote": "Promote",
+    "promoteFull": "Promote Full",
+    "abort": "Abort",
+    "delete": "Delete"
+  },
+  "confirm": {
+    "promoteTitle": "Confirm Promote",
+    "promoteDesc": "Advance Rollout \"{{name}}\" to the next step.",
+    "promoteFullTitle": "Confirm Full Promotion",
+    "promoteFullDesc": "Immediately promote Rollout \"{{name}}\" to full traffic without further increments.",
+    "abortTitle": "Confirm Abort",
+    "abortDesc": "Abort Rollout \"{{name}}\" and roll back to the stable version."
+  },
+  "detail": {
+    "title": "Rollout Detail",
+    "overview": "Overview",
+    "canaryProgress": "Canary Step Progress",
+    "analysisRuns": "Analysis Runs",
+    "currentWeight": "Current Weight",
+    "desiredWeight": "Desired Weight",
+    "stableRS": "Stable RS",
+    "canaryRS": "Canary RS",
+    "activeSelector": "Active",
+    "previewSelector": "Preview",
+    "stepIndex": "Step",
+    "noAnalysis": "No analysis runs found"
+  },
+  "analysis": {
+    "name": "Name",
+    "status": "Status",
+    "successful": "Successful",
+    "failed": "Failed",
+    "error": "Error",
+    "startedAt": "Started At",
+    "completedAt": "Completed At"
+  },
+  "crd": {
+    "notInstalled": "Argo Rollouts CRD Not Installed",
+    "notInstalledDesc": "Argo Rollouts is not installed in this cluster. Please deploy it first."
+  },
+  "messages": {
+    "promoteSuccess": "Promoted successfully",
+    "promoteFailed": "Promote failed",
+    "promoteFullSuccess": "Full promotion successful",
+    "promoteFullFailed": "Full promotion failed",
+    "abortSuccess": "Aborted successfully",
+    "abortFailed": "Abort failed",
+    "deleteSuccess": "Rollout deleted",
+    "deleteFailed": "Failed to delete Rollout"
+  },
+  "widget": {
+    "title": "Rollout Status",
+    "noRollout": "No associated Rollout"
+  }
+}

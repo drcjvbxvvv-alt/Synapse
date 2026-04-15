@@ -29,6 +29,7 @@ import chaos from './chaos.json';
 import multicluster from './multicluster.json';
 import slo from './slo.json';
 import pipeline from './pipeline.json';
+import rollout from './rollout.json';
 export default {
   common,
   cluster,
@@ -61,4 +62,5 @@ export default {
   multicluster,
   slo,
   pipeline,
+  rollout,
 };

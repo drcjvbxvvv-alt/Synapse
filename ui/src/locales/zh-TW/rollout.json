@@ -1,0 +1,81 @@
+{
+  "page": {
+    "title": "Argo Rollout",
+    "subtitle": "管理 Canary / BlueGreen 漸進式發布"
+  },
+  "table": {
+    "name": "名稱",
+    "namespace": "命名空間",
+    "strategy": "策略",
+    "status": "狀態",
+    "replicas": "副本",
+    "weight": "Canary 權重",
+    "step": "步驟進度",
+    "images": "映像",
+    "createdAt": "建立時間"
+  },
+  "strategy": {
+    "Canary": "Canary",
+    "BlueGreen": "BlueGreen"
+  },
+  "status": {
+    "Healthy": "健康",
+    "Stopped": "已停止",
+    "Degraded": "降級"
+  },
+  "actions": {
+    "promote": "促進",
+    "promoteFull": "全量發布",
+    "abort": "中止",
+    "delete": "刪除"
+  },
+  "confirm": {
+    "promoteTitle": "確認促進",
+    "promoteDesc": "將 Rollout「{{name}}」推進到下一步。",
+    "promoteFullTitle": "確認全量發布",
+    "promoteFullDesc": "將 Rollout「{{name}}」立即全量切換，不再逐步遞增。",
+    "abortTitle": "確認中止",
+    "abortDesc": "中止 Rollout「{{name}}」並回滾到 stable 版本。"
+  },
+  "detail": {
+    "title": "Rollout 詳情",
+    "overview": "基本資訊",
+    "canaryProgress": "Canary 步驟進度",
+    "analysisRuns": "分析執行",
+    "currentWeight": "目前權重",
+    "desiredWeight": "目標權重",
+    "stableRS": "Stable RS",
+    "canaryRS": "Canary RS",
+    "activeSelector": "Active",
+    "previewSelector": "Preview",
+    "stepIndex": "步驟",
+    "noAnalysis": "暫無分析執行記錄"
+  },
+  "analysis": {
+    "name": "名稱",
+    "status": "狀態",
+    "successful": "成功",
+    "failed": "失敗",
+    "error": "錯誤",
+    "startedAt": "開始時間",
+    "completedAt": "完成時間"
+  },
+  "crd": {
+    "notInstalled": "未安裝 Argo Rollouts CRD",
+    "notInstalledDesc": "此叢集尚未安裝 Argo Rollouts，請先部署後再使用此功能。"
+  },
+  "messages": {
+    "promoteSuccess": "促進成功",
+    "promoteFailed": "促進失敗",
+    "promoteFullSuccess": "全量發布成功",
+    "promoteFullFailed": "全量發布失敗",
+    "abortSuccess": "中止成功",
+    "abortFailed": "中止失敗",
+    "deleteSuccess": "Rollout 已刪除",
+    "deleteFailed": "刪除 Rollout 失敗"
+  },
+  "widget": {
+    "title": "Rollout 狀態",
+    "noRollout": "無關聯 Rollout"
+  }
+}
