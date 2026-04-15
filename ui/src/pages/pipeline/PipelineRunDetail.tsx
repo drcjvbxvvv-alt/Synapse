@@ -15,8 +15,6 @@ import {
   Background,
   Controls,
   BackgroundVariant,
-  useNodesState,
-  useEdgesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {
@@ -178,13 +176,8 @@ const PipelineRunDetail: React.FC = () => {
     setLogDrawerOpen(true);
   }, []);
 
-  const initialNodes = useMemo(() => buildRunNodes(steps, handleClickStep), [steps, handleClickStep]);
-  const initialEdges = useMemo(() => buildRunEdges(steps), [steps]);
-
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
-
-  // Sync nodes/edges when data updates (rebuild from latest steps)
+  // Nodes and edges are server-driven (nodesDraggable=false).
+  // Rebuild on every query refresh — no ReactFlow internal state needed.
   const syncedNodes = useMemo(
     () => buildRunNodes(steps, handleClickStep),
     [steps, handleClickStep],
@@ -372,8 +365,6 @@ const PipelineRunDetail: React.FC = () => {
           <ReactFlow
             nodes={syncedNodes}
             edges={syncedEdges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
             nodeTypes={NODE_TYPES}
             fitView
             fitViewOptions={{ padding: 0.4 }}
