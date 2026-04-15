@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -45,6 +47,32 @@ func (h *SecurityHandler) TriggerScan(c *gin.Context) {
 	record, err := h.trivy.TriggerScan(clusterID, req.Namespace, req.PodName, req.ContainerName, req.Image)
 	if err != nil {
 		response.InternalError(c, "掃描觸發失敗："+err.Error())
+		return
+	}
+	response.OK(c, record)
+}
+
+// IngestScan POST /clusters/:clusterID/security/scans/ingest
+// 接收外部 CI（GitLab CI / GitHub Actions 等）推送的 Trivy 掃描結果。
+func (h *SecurityHandler) IngestScan(c *gin.Context) {
+	clusterID, err := parseClusterID(c.Param("clusterID"))
+	if err != nil {
+		response.BadRequest(c, "invalid cluster ID")
+		return
+	}
+
+	var req services.IngestScanRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "invalid request body: "+err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	record, err := h.trivy.IngestScanResult(ctx, clusterID, &req)
+	if err != nil {
+		response.InternalError(c, "ingest scan result failed: "+err.Error())
 		return
 	}
 	response.OK(c, record)

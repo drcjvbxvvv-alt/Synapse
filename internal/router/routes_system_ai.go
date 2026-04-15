@@ -45,6 +45,7 @@ func registerSystemAIRoutes(protected *gin.RouterGroup, clusters *gin.RouterGrou
 	securityGroup.Use(d.permMiddleware.ClusterAccessRequired())
 	{
 		securityGroup.POST("/scans", securityHandler.TriggerScan)
+		securityGroup.POST("/scans/ingest", securityHandler.IngestScan)
 		securityGroup.GET("/scans", securityHandler.GetScanResults)
 		securityGroup.GET("/scans/:scanID", securityHandler.GetScanDetail)
 		securityGroup.POST("/bench", securityHandler.TriggerBenchmark)

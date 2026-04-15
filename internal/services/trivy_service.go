@@ -186,6 +186,77 @@ func parseTrivyOutput(data []byte) (map[string]int, string) {
 	return counts, string(data)
 }
 
+// ---------------------------------------------------------------------------
+// IngestScanResult — 接收外部 CI 推送的掃描結果（CICD_ARCHITECTURE §5 方案 A）
+// ---------------------------------------------------------------------------
+
+// IngestScanRequest 代表外部 CI（GitLab / GitHub Actions 等）推送的掃描結果。
+type IngestScanRequest struct {
+	Image         string `json:"image" binding:"required"`
+	Namespace     string `json:"namespace"`
+	PodName       string `json:"pod_name"`
+	ContainerName string `json:"container_name"`
+	ScanSource    string `json:"scan_source"` // ci_push / jenkins / github_actions etc.
+	ResultJSON    string `json:"result_json"`  // Trivy JSON output (optional)
+	// 直接提供計數（若無 result_json 可手動填入）
+	Critical int `json:"critical"`
+	High     int `json:"high"`
+	Medium   int `json:"medium"`
+	Low      int `json:"low"`
+	Unknown  int `json:"unknown"`
+}
+
+// IngestScanResult 將外部 CI 推送的掃描結果寫入資料庫。
+// 若提供 result_json，自動解析覆蓋計數欄位。
+func (s *TrivyService) IngestScanResult(ctx context.Context, clusterID uint, req *IngestScanRequest) (*models.ImageScanResult, error) {
+	scanSource := req.ScanSource
+	if scanSource == "" {
+		scanSource = "ci_push"
+	}
+
+	now := time.Now()
+	record := &models.ImageScanResult{
+		ClusterID:     clusterID,
+		Namespace:     req.Namespace,
+		PodName:       req.PodName,
+		ContainerName: req.ContainerName,
+		Image:         req.Image,
+		Status:        "completed",
+		ScanSource:    scanSource,
+		ScannedAt:     &now,
+		Critical:      req.Critical,
+		High:          req.High,
+		Medium:        req.Medium,
+		Low:           req.Low,
+		Unknown:       req.Unknown,
+	}
+
+	// 若提供原始 Trivy JSON，解析計數並覆蓋
+	if req.ResultJSON != "" {
+		record.ResultJSON = req.ResultJSON
+		counts, _ := parseTrivyOutput([]byte(req.ResultJSON))
+		record.Critical = counts["CRITICAL"]
+		record.High = counts["HIGH"]
+		record.Medium = counts["MEDIUM"]
+		record.Low = counts["LOW"]
+		record.Unknown = counts["UNKNOWN"]
+	}
+
+	if err := s.db.WithContext(ctx).Create(record).Error; err != nil {
+		return nil, fmt.Errorf("create ingest scan record: %w", err)
+	}
+
+	logger.Info("external scan result ingested",
+		"cluster_id", clusterID,
+		"image", req.Image,
+		"scan_source", scanSource,
+		"critical", record.Critical,
+		"high", record.High,
+	)
+
+	return record, nil
+}
+
 // GetScanResults returns scan results for a cluster, optionally filtered by namespace.
 func (s *TrivyService) GetScanResults(clusterID uint, namespace string) ([]ScanResult, error) {
 	var records []models.ImageScanResult

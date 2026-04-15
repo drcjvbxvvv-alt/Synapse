@@ -1831,9 +1831,9 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 ### 近期（不依賴 M13，2–3 週）
 
 - [x] `image_scan_results` schema 擴充：`scan_source` + `pipeline_run_id` + `step_run_id`（M13a 前置）
-- [ ] 近期過渡方案 A：GitLab CI 推送掃描結果 API 文件與測試
-- [ ] 近期過渡方案 B：Informer Pod OnAdd/OnUpdate 自動觸發 Trivy 掃描（含 debounce）
-- [ ] 定期重掃 Cron goroutine（每 24h 重掃現有映像）
+- [x] 近期過渡方案 A：GitLab CI 推送掃描結果 API 文件與測試 ✅ POST /scans/ingest + IngestScanResult service + 16 tests
+- [x] 近期過渡方案 B：Informer Pod OnAdd/OnUpdate 自動觸發 Trivy 掃描（含 debounce）✅ TrivyPodWatcher + debounce + system NS skip + 10 tests
+- [x] 定期重掃 Cron goroutine（每 24h 重掃現有映像）✅ TrivyRescanCron + stale image query + 8 tests
 
 ### M13a — CI 執行引擎核心（4 週）
 

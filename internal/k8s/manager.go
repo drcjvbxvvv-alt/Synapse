@@ -462,6 +462,16 @@ func (m *ClusterInformerManager) RolloutsLister(clusterID uint) rolloutslisters.
 	return nil
 }
 
+// PodInformer 返回指定叢集的 Pod SharedIndexInformer（供 TrivyPodWatcher 註冊事件處理器）。
+func (m *ClusterInformerManager) PodInformer(clusterID uint) cache.SharedIndexInformer {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if rt, ok := m.clusters[clusterID]; ok {
+		return rt.factory.Core().V1().Pods().Informer()
+	}
+	return nil
+}
+
 // GetK8sClient 獲取指定叢集的快取 K8sClient（複用 Informer 管理器中已建立的客戶端，避免重複建立）
 func (m *ClusterInformerManager) GetK8sClient(cluster *models.Cluster) (*services.K8sClient, error) {
 	rt, err := m.EnsureForCluster(cluster)
