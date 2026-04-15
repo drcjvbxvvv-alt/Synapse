@@ -86,6 +86,7 @@ const ChaosPage               = lazy(() => import('../pages/chaos'));
 const CompliancePage          = lazy(() => import('../pages/compliance'));
 const PipelineRunDemo         = lazy(() => import('../pages/pipeline/PipelineRunDemo'));
 const PipelineList            = lazy(() => import('../pages/pipeline/PipelineList'));
+const PipelineRunDetail       = lazy(() => import('../pages/pipeline/PipelineRunDetail'));
 
 // ─── Lazy wrapper ──────────────────────────────────────────────────────────
 const S = ({ children }: { children: React.ReactNode }) => (
@@ -382,6 +383,7 @@ export function AppRoutes() {
 
         {/* ── Pipelines ────────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/pipelines" element={<S><PipelineList /></S>} />
+        <Route path="clusters/:clusterId/pipelines/:pipelineId/runs/:runId" element={<S><PipelineRunDetail /></S>} />
 
         {/* ── SLO / Chaos / Compliance ─────────────────────────────────── */}
         <Route path="clusters/:clusterId/slos" element={<S><SLOListPage /></S>} />

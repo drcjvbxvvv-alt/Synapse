@@ -55,6 +55,7 @@
     "trigger": "Trigger",
     "triggerConfirm": "Trigger Pipeline \"{{name}}\"?",
     "triggered": "Pipeline triggered, Run ID: {{id}}",
+    "viewRun": "View Run",
     "status": {
       "queued": "Queued",
       "running": "Running",
@@ -62,7 +63,27 @@
       "failed": "Failed",
       "cancelled": "Cancelled",
       "waiting_approval": "Waiting Approval"
+    },
+    "triggerType": {
+      "manual": "Manual",
+      "webhook": "Webhook",
+      "cron": "Scheduled",
+      "rerun": "Re-run"
     }
+  },
+  "runDetail": {
+    "title": "Run #{{id}}",
+    "stepLogs": "Step Logs",
+    "cancelRun": "Cancel Run",
+    "rerun": "Re-run",
+    "rerunFromFailed": "Re-run from failed",
+    "noSteps": "No steps recorded yet",
+    "elapsed": "Duration",
+    "queuedAt": "Queued at",
+    "startedAt": "Started at",
+    "finishedAt": "Finished at",
+    "cancelSuccess": "Run cancelled",
+    "cancelFailed": "Failed to cancel run"
   },
   "view": {
     "card": "Card",

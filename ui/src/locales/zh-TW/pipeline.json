@@ -55,6 +55,7 @@
     "trigger": "手動觸發",
     "triggerConfirm": "確認觸發 Pipeline「{{name}}」？",
     "triggered": "Pipeline 已觸發，Run ID: {{id}}",
+    "viewRun": "查看執行",
     "status": {
       "queued": "排隊中",
       "running": "執行中",
@@ -62,7 +63,27 @@
       "failed": "失敗",
       "cancelled": "已取消",
       "waiting_approval": "待審核"
+    },
+    "triggerType": {
+      "manual": "手動觸發",
+      "webhook": "Webhook",
+      "cron": "排程觸發",
+      "rerun": "重新執行"
     }
+  },
+  "runDetail": {
+    "title": "Run #{{id}}",
+    "stepLogs": "步驟日誌",
+    "cancelRun": "取消執行",
+    "rerun": "重新執行",
+    "rerunFromFailed": "從失敗步驟重跑",
+    "noSteps": "尚無步驟紀錄",
+    "elapsed": "執行時長",
+    "queuedAt": "排隊時間",
+    "startedAt": "開始時間",
+    "finishedAt": "結束時間",
+    "cancelSuccess": "執行已取消",
+    "cancelFailed": "取消執行失敗"
   },
   "view": {
     "card": "卡片",

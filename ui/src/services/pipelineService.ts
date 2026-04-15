@@ -1,5 +1,8 @@
 import { request } from '../utils/api';
 
+// Base URL for SSE streams (EventSource cannot use axios interceptors)
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api/v1';
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface Pipeline {
@@ -147,8 +150,9 @@ const pipelineService = {
       data ?? { trigger_type: 'manual' }
     ),
 
+  // GetRun returns both the run and its step runs (see pipeline_run_handler.go)
   getRun: (clusterId: number, pipelineId: number, runId: number) =>
-    request.get<PipelineRun>(
+    request.get<{ run: PipelineRun; steps: StepRun[] }>(
       `/clusters/${clusterId}/pipelines/${pipelineId}/runs/${runId}`
     ),
 
@@ -157,6 +161,24 @@ const pipelineService = {
       `/clusters/${clusterId}/pipelines/${pipelineId}/runs/${runId}/cancel`,
       {}
     ),
+
+  rerun: (clusterId: number, pipelineId: number, runId: number, fromFailed = false) =>
+    request.post<PipelineRun>(
+      `/clusters/${clusterId}/pipelines/${pipelineId}/runs/${runId}/rerun`,
+      { from_failed: fromFailed }
+    ),
+
+  /**
+   * Returns the SSE URL for streaming a step run's logs.
+   * Use with useSSELog hook — EventSource cannot go through axios.
+   */
+  getStepLogUrl: (
+    clusterId: number,
+    pipelineId: number,
+    runId: number,
+    stepRunId: number,
+  ): string =>
+    `${API_BASE}/clusters/${clusterId}/pipelines/${pipelineId}/runs/${runId}/steps/${stepRunId}/logs?follow=true`,
 };
 
 export default pipelineService;

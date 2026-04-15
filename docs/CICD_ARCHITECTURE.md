@@ -2016,7 +2016,7 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 | 優先序 | 任務 | 所屬 | 模型 | 說明 |
 |-------|------|------|------|------|
 | ✅ P3-1 | PipelineList / PipelineEditor（卡片 + YAML 雙模式） | M13b W7 | **Sonnet** | UI 頁面 |
-| P3-2 | PipelineRunDetail（DAG 進度圖）+ StepLogViewer（SSE） | M13b W7 | **Sonnet** | UI 頁面 |
+| ✅ P3-2 | PipelineRunDetail（DAG 進度圖）+ StepLogViewer（SSE） | M13b W7 | **Sonnet** | UI 頁面 |
 | P3-3 | RolloutList / RolloutDetail / RolloutStatusWidget | M13c | **Sonnet** | UI 頁面 |
 | P3-4 | Git Provider / Registry / Environment 管理 UI | M14–M17 | **Sonnet** | 表單頁 |
 | ✅ P3-5 | AI 根因分析按鈕 + context 組裝 | M13b W8 | **Opus** | PipelineRCAService + BuildContext/Analyze + 失敗 Step log/Job/Pod 收集 + 9 測試 |

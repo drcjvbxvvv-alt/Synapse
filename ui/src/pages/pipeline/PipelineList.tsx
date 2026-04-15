@@ -9,7 +9,7 @@
  *  - 開啟 YAML 編輯器（PipelineEditor）
  */
 import React, { useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
   Table,
@@ -59,6 +59,7 @@ const PipelineList: React.FC = () => {
   const { message } = App.useApp();
   const { t } = useTranslation(['pipeline', 'common']);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const cid = Number(clusterId ?? 0);
 
@@ -96,8 +97,21 @@ const PipelineList: React.FC = () => {
   const triggerMutation = useMutation({
     mutationFn: (pipeline: Pipeline) =>
       pipelineService.triggerRun(cid, pipeline.id),
-    onSuccess: (run) => {
-      message.success(t('pipeline:run.triggered', { id: run.id }));
+    onSuccess: (run, pipeline) => {
+      message.success({
+        content: (
+          <span>
+            {t('pipeline:run.triggered', { id: run.id })}{' '}
+            <a
+              onClick={() => navigate(`/clusters/${cid}/pipelines/${pipeline.id}/runs/${run.id}`)}
+              style={{ marginLeft: 4 }}
+            >
+              {t('pipeline:run.viewRun')}
+            </a>
+          </span>
+        ),
+        duration: 5,
+      });
       queryClient.invalidateQueries({ queryKey: ['pipelines', cid] });
     },
     onError: () => message.error(t('pipeline:messages.triggerFailed')),

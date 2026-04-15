@@ -289,7 +289,7 @@ const HealthScoreCard: React.FC<HealthScoreCardProps> = ({
       </Flex>
 
       {/* body: ring left, metrics right */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24 }}>
         {/* left — ring + suggestions */}
         <div>
           <HealthRing score={health_score} status={status} t={t} />
