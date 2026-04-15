@@ -1,0 +1,135 @@
+{
+  "gitProvider": {
+    "title": "Git Providers",
+    "subtitle": "Manage GitHub / GitLab / Gitea connection settings",
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "baseUrl": "Base URL",
+      "enabled": "Enabled",
+      "webhookUrl": "Webhook URL",
+      "createdAt": "Created At"
+    },
+    "form": {
+      "createTitle": "Add Git Provider",
+      "editTitle": "Edit Git Provider",
+      "name": "Name",
+      "namePlaceholder": "e.g. company-github",
+      "type": "Type",
+      "baseUrl": "Base URL",
+      "baseUrlPlaceholder": "https://github.com",
+      "accessToken": "Access Token",
+      "accessTokenPlaceholder": "Enter new token (leave blank to keep existing)",
+      "webhookSecret": "Webhook Secret",
+      "webhookSecretPlaceholder": "Enter new secret (leave blank to keep existing)",
+      "enabled": "Enabled"
+    },
+    "type": {
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "gitea": "Gitea"
+    },
+    "webhookInfo": "Webhook URL",
+    "regenerateToken": "Regenerate Token",
+    "regenerateTokenConfirm": "Regenerating the token will invalidate the existing Webhook URL. Continue?",
+    "messages": {
+      "createSuccess": "Git Provider created",
+      "createFailed": "Failed to create Git Provider",
+      "updateSuccess": "Git Provider updated",
+      "updateFailed": "Failed to update Git Provider",
+      "deleteSuccess": "Git Provider deleted",
+      "deleteFailed": "Failed to delete Git Provider",
+      "regenerateSuccess": "Webhook token regenerated",
+      "regenerateFailed": "Failed to regenerate token"
+    }
+  },
+  "registry": {
+    "title": "Image Registries",
+    "subtitle": "Manage Harbor / DockerHub / ECR / GCR / ACR connection settings",
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "url": "URL",
+      "username": "Username",
+      "defaultProject": "Default Project",
+      "enabled": "Enabled",
+      "createdAt": "Created At"
+    },
+    "form": {
+      "createTitle": "Add Registry",
+      "editTitle": "Edit Registry",
+      "name": "Name",
+      "namePlaceholder": "e.g. company-harbor",
+      "type": "Type",
+      "url": "Registry URL",
+      "urlPlaceholder": "https://registry.example.com",
+      "username": "Username",
+      "usernamePlaceholder": "robot$pipeline",
+      "password": "Password / Token",
+      "passwordPlaceholder": "Enter new password (leave blank to keep existing)",
+      "insecureTls": "Skip TLS Verification",
+      "insecureTlsTooltip": "For test environments only — use CA Bundle in production",
+      "caBundle": "CA Bundle (PEM)",
+      "caBundlePlaceholder": "Paste CA certificate in PEM format",
+      "defaultProject": "Default Project",
+      "defaultProjectPlaceholder": "Harbor project name",
+      "enabled": "Enabled"
+    },
+    "type": {
+      "harbor": "Harbor",
+      "dockerhub": "Docker Hub",
+      "acr": "Alibaba ACR",
+      "ecr": "AWS ECR",
+      "gcr": "GCR / GAR"
+    },
+    "testConnection": "Test Connection",
+    "testSuccess": "Connection successful",
+    "testFailed": "Connection failed",
+    "messages": {
+      "createSuccess": "Registry created",
+      "createFailed": "Failed to create Registry",
+      "updateSuccess": "Registry updated",
+      "updateFailed": "Failed to update Registry",
+      "deleteSuccess": "Registry deleted",
+      "deleteFailed": "Failed to delete Registry"
+    }
+  },
+  "environment": {
+    "title": "Deployment Environments",
+    "subtitle": "Manage Pipeline deployment environments and promotion flow",
+    "table": {
+      "name": "Environment",
+      "cluster": "Cluster",
+      "namespace": "Namespace",
+      "orderIndex": "Promotion Order",
+      "autoPromote": "Auto Promote",
+      "approvalRequired": "Approval Required"
+    },
+    "form": {
+      "createTitle": "Add Environment",
+      "editTitle": "Edit Environment",
+      "name": "Environment Name",
+      "namePlaceholder": "e.g. staging",
+      "cluster": "Target Cluster",
+      "namespace": "Deployment Namespace",
+      "namespacePlaceholder": "e.g. default",
+      "orderIndex": "Promotion Order",
+      "orderIndexTooltip": "Lower number promotes first (e.g. dev=1 → staging=2 → production=3)",
+      "autoPromote": "Auto-promote to next environment",
+      "approvalRequired": "Require manual approval",
+      "smokeTestStep": "Smoke Test Step",
+      "smokeTestStepPlaceholder": "Step name (optional)",
+      "smokeTestStepTooltip": "Name of the smoke test step to run before promotion"
+    },
+    "messages": {
+      "createSuccess": "Environment created",
+      "createFailed": "Failed to create environment",
+      "updateSuccess": "Environment updated",
+      "updateFailed": "Failed to update environment",
+      "deleteSuccess": "Environment deleted",
+      "deleteFailed": "Failed to delete environment"
+    },
+    "noEnvironments": "No deployment environments configured",
+    "manageButton": "Manage Environments"
+  }
+}

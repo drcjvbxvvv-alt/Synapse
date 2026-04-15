@@ -38,6 +38,7 @@ import {
   AppstoreOutlined,
   UnorderedListOutlined,
   CodeOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -46,6 +47,7 @@ import dayjs from 'dayjs';
 import pipelineService, { type Pipeline } from '../../services/pipelineService';
 import EmptyState from '../../components/EmptyState';
 import PipelineEditor from './PipelineEditor';
+import PipelineEnvironments from './components/PipelineEnvironments';
 
 const { Text } = Typography;
 
@@ -67,6 +69,7 @@ const PipelineList: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Pipeline | null>(null);
+  const [envPipeline, setEnvPipeline] = useState<Pipeline | null>(null);
 
   // ─── Query ────────────────────────────────────────────────────────────────
 
@@ -150,6 +153,10 @@ const PipelineList: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['pipelines', cid] });
   }, [queryClient, cid]);
 
+  const handleManageEnvs = useCallback((pipeline: Pipeline) => {
+    setEnvPipeline(pipeline);
+  }, []);
+
   // ─── Table columns ────────────────────────────────────────────────────────
 
   const columns: TableColumnsType<Pipeline> = [
@@ -216,7 +223,7 @@ const PipelineList: React.FC = () => {
       key: 'actions',
       width: 140,
       fixed: 'right',
-      render: (_, record) => <PipelineActions record={record} onEdit={handleEdit} onDelete={handleDelete} onTrigger={handleTrigger} />,
+      render: (_, record) => <PipelineActions record={record} onEdit={handleEdit} onDelete={handleDelete} onTrigger={handleTrigger} onManageEnvs={handleManageEnvs} />,
     },
   ];
 
@@ -279,6 +286,7 @@ const PipelineList: React.FC = () => {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onTrigger={handleTrigger}
+                    onManageEnvs={handleManageEnvs}
                   />
                 </Col>
               ))}
@@ -312,6 +320,16 @@ const PipelineList: React.FC = () => {
         onClose={handleEditorClose}
         onSuccess={handleEditorSuccess}
       />
+
+      {/* Environments Drawer */}
+      {envPipeline && (
+        <PipelineEnvironments
+          open={!!envPipeline}
+          onClose={() => setEnvPipeline(null)}
+          clusterId={cid}
+          pipeline={envPipeline}
+        />
+      )}
     </>
   );
 };
@@ -323,9 +341,10 @@ interface PipelineCardProps {
   onEdit: (p: Pipeline) => void;
   onDelete: (p: Pipeline) => void;
   onTrigger: (p: Pipeline) => void;
+  onManageEnvs: (p: Pipeline) => void;
 }
 
-const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete, onTrigger }) => {
+const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete, onTrigger, onManageEnvs }) => {
   const { token } = theme.useToken();
   const { t } = useTranslation(['pipeline', 'common']);
 
@@ -399,6 +418,14 @@ const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete,
               onClick={() => onEdit(pipeline)}
             />
           </Tooltip>
+          <Tooltip title={t('cicd:environment.manageButton')}>
+            <Button
+              type="link"
+              size="small"
+              icon={<ApartmentOutlined />}
+              onClick={() => onManageEnvs(pipeline)}
+            />
+          </Tooltip>
           <Popconfirm
             title={t('common:confirm.deleteTitle')}
             description={t('common:confirm.deleteDesc', { name: pipeline.name })}
@@ -424,10 +451,11 @@ interface PipelineActionsProps {
   onEdit: (p: Pipeline) => void;
   onDelete: (p: Pipeline) => void;
   onTrigger: (p: Pipeline) => void;
+  onManageEnvs: (p: Pipeline) => void;
 }
 
-const PipelineActions: React.FC<PipelineActionsProps> = ({ record, onEdit, onDelete, onTrigger }) => {
-  const { t } = useTranslation(['pipeline', 'common']);
+const PipelineActions: React.FC<PipelineActionsProps> = ({ record, onEdit, onDelete, onTrigger, onManageEnvs }) => {
+  const { t } = useTranslation(['pipeline', 'common', 'cicd']);
 
   return (
     <Space size={0}>
@@ -445,6 +473,14 @@ const PipelineActions: React.FC<PipelineActionsProps> = ({ record, onEdit, onDel
           size="small"
           icon={<EditOutlined />}
           onClick={() => onEdit(record)}
+        />
+      </Tooltip>
+      <Tooltip title={t('cicd:environment.manageButton')}>
+        <Button
+          type="link"
+          size="small"
+          icon={<ApartmentOutlined />}
+          onClick={() => onManageEnvs(record)}
         />
       </Tooltip>
       <Popconfirm

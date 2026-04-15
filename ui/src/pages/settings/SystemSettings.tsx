@@ -8,6 +8,8 @@ import {
   KeyOutlined,
   DashboardOutlined,
   RobotOutlined,
+  BranchesOutlined,
+  InboxOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import LDAPSettings from './LDAPSettings';
@@ -16,12 +18,14 @@ import GrafanaSettings from './GrafanaSettings';
 import AISettings from './AISettings';
 import SecuritySettings from './SecuritySettings';
 import NotificationSettings from './NotificationSettings';
+import GitProviderSettings from './GitProviderSettings';
+import RegistrySettings from './RegistrySettings';
 import { useTranslation } from 'react-i18next';
 
 const { Title } = Typography;
 
 const SystemSettings: React.FC = () => {
-const { t } = useTranslation(['settings', 'common']);
+const { t } = useTranslation(['settings', 'common', 'cicd']);
 const [activeTab, setActiveTab] = useState('ssh');
 
   const tabLabel = (icon: React.ReactNode, text: string) => (
@@ -61,6 +65,16 @@ const [activeTab, setActiveTab] = useState('ssh');
       key: 'notification',
       label: tabLabel(<BellOutlined />, t('settings:tabs.notification')),
       children: <NotificationSettings />,
+    },
+    {
+      key: 'git-providers',
+      label: tabLabel(<BranchesOutlined />, t('cicd:gitProvider.title')),
+      children: <GitProviderSettings />,
+    },
+    {
+      key: 'registries',
+      label: tabLabel(<InboxOutlined />, t('cicd:registry.title')),
+      children: <RegistrySettings />,
     },
   ];
 

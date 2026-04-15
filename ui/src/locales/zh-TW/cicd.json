@@ -1,0 +1,135 @@
+{
+  "gitProvider": {
+    "title": "Git Provider",
+    "subtitle": "管理 GitHub / GitLab / Gitea 連線設定",
+    "table": {
+      "name": "名稱",
+      "type": "類型",
+      "baseUrl": "Base URL",
+      "enabled": "啟用",
+      "webhookUrl": "Webhook URL",
+      "createdAt": "建立時間"
+    },
+    "form": {
+      "createTitle": "新增 Git Provider",
+      "editTitle": "編輯 Git Provider",
+      "name": "名稱",
+      "namePlaceholder": "例如：company-github",
+      "type": "類型",
+      "baseUrl": "Base URL",
+      "baseUrlPlaceholder": "https://github.com",
+      "accessToken": "Access Token",
+      "accessTokenPlaceholder": "輸入新 Token（留空保留現有）",
+      "webhookSecret": "Webhook Secret",
+      "webhookSecretPlaceholder": "輸入新 Secret（留空保留現有）",
+      "enabled": "啟用"
+    },
+    "type": {
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "gitea": "Gitea"
+    },
+    "webhookInfo": "Webhook URL",
+    "regenerateToken": "重新生成 Token",
+    "regenerateTokenConfirm": "重新生成 Token 後，舊 Webhook URL 將失效。確認繼續？",
+    "messages": {
+      "createSuccess": "Git Provider 已建立",
+      "createFailed": "建立 Git Provider 失敗",
+      "updateSuccess": "Git Provider 已更新",
+      "updateFailed": "更新 Git Provider 失敗",
+      "deleteSuccess": "Git Provider 已刪除",
+      "deleteFailed": "刪除 Git Provider 失敗",
+      "regenerateSuccess": "Webhook Token 已重新生成",
+      "regenerateFailed": "重新生成 Token 失敗"
+    }
+  },
+  "registry": {
+    "title": "映像 Registry",
+    "subtitle": "管理 Harbor / DockerHub / ECR / GCR / ACR 連線設定",
+    "table": {
+      "name": "名稱",
+      "type": "類型",
+      "url": "URL",
+      "username": "使用者名稱",
+      "defaultProject": "預設 Project",
+      "enabled": "啟用",
+      "createdAt": "建立時間"
+    },
+    "form": {
+      "createTitle": "新增 Registry",
+      "editTitle": "編輯 Registry",
+      "name": "名稱",
+      "namePlaceholder": "例如：company-harbor",
+      "type": "類型",
+      "url": "Registry URL",
+      "urlPlaceholder": "https://registry.example.com",
+      "username": "使用者名稱",
+      "usernamePlaceholder": "robot$pipeline",
+      "password": "密碼 / Token",
+      "passwordPlaceholder": "輸入新密碼（留空保留現有）",
+      "insecureTls": "略過 TLS 驗證",
+      "insecureTlsTooltip": "僅用於測試環境，正式環境請使用 CA Bundle",
+      "caBundle": "CA Bundle（PEM）",
+      "caBundlePlaceholder": "貼上 CA 憑證內容（PEM 格式）",
+      "defaultProject": "預設 Project",
+      "defaultProjectPlaceholder": "Harbor project 名稱",
+      "enabled": "啟用"
+    },
+    "type": {
+      "harbor": "Harbor",
+      "dockerhub": "Docker Hub",
+      "acr": "阿里雲 ACR",
+      "ecr": "AWS ECR",
+      "gcr": "GCR / GAR"
+    },
+    "testConnection": "測試連線",
+    "testSuccess": "連線成功",
+    "testFailed": "連線失敗",
+    "messages": {
+      "createSuccess": "Registry 已建立",
+      "createFailed": "建立 Registry 失敗",
+      "updateSuccess": "Registry 已更新",
+      "updateFailed": "更新 Registry 失敗",
+      "deleteSuccess": "Registry 已刪除",
+      "deleteFailed": "刪除 Registry 失敗"
+    }
+  },
+  "environment": {
+    "title": "部署環境",
+    "subtitle": "管理 Pipeline 的部署環境與晉升流程",
+    "table": {
+      "name": "環境名稱",
+      "cluster": "叢集",
+      "namespace": "命名空間",
+      "orderIndex": "晉升順序",
+      "autoPromote": "自動晉升",
+      "approvalRequired": "需要審核"
+    },
+    "form": {
+      "createTitle": "新增環境",
+      "editTitle": "編輯環境",
+      "name": "環境名稱",
+      "namePlaceholder": "例如：staging",
+      "cluster": "目標叢集",
+      "namespace": "部署命名空間",
+      "namespacePlaceholder": "例如：default",
+      "orderIndex": "晉升順序",
+      "orderIndexTooltip": "數字越小越先晉升（例如 dev=1 → staging=2 → production=3）",
+      "autoPromote": "自動晉升到下一環境",
+      "approvalRequired": "需要人工審核",
+      "smokeTestStep": "冒煙測試 Step",
+      "smokeTestStepPlaceholder": "Step 名稱（選填）",
+      "smokeTestStepTooltip": "晉升前執行的冒煙測試 Step 名稱"
+    },
+    "messages": {
+      "createSuccess": "環境已建立",
+      "createFailed": "建立環境失敗",
+      "updateSuccess": "環境已更新",
+      "updateFailed": "更新環境失敗",
+      "deleteSuccess": "環境已刪除",
+      "deleteFailed": "刪除環境失敗"
+    },
+    "noEnvironments": "尚未設定部署環境",
+    "manageButton": "管理環境"
+  }
+}

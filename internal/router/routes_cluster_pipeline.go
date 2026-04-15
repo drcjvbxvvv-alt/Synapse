@@ -11,11 +11,13 @@ import (
 func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 	secretSvc := services.NewPipelineSecretService(d.db)
 	logSvc := services.NewPipelineLogService(d.db)
+	envSvc := services.NewEnvironmentService(d.db)
 
 	pipelineHandler := handlers.NewPipelineHandler(d.pipelineSvc, d.auditSvc)
 	secretHandler := handlers.NewPipelineSecretHandler(secretSvc)
 	logHandler := handlers.NewPipelineLogHandler(logSvc, d.pipelineSvc)
 	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, d.pipelineScheduler, d.auditSvc)
+	envHandler := handlers.NewEnvironmentHandler(envSvc)
 
 	// ── Pipelines ──────────────────────────────────────────────────────
 	pipelines := cluster.Group("/pipelines")
@@ -56,6 +58,15 @@ func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 					// Step Logs
 					run.GET("/steps/:stepRunID/logs", logHandler.GetStepLogs)
 				}
+			}
+
+			// Environments (M17)
+			envs := pipeline.Group("/environments")
+			{
+				envs.GET("", envHandler.List)
+				envs.POST("", envHandler.Create)
+				envs.PUT("/:envID", envHandler.Update)
+				envs.DELETE("/:envID", envHandler.Delete)
 			}
 		}
 	}

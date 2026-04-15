@@ -30,6 +30,7 @@ import multicluster from './multicluster.json';
 import slo from './slo.json';
 import pipeline from './pipeline.json';
 import rollout from './rollout.json';
+import cicd from './cicd.json';
 export default {
   common,
   cluster,
@@ -63,4 +64,5 @@ export default {
   slo,
   pipeline,
   rollout,
+  cicd,
 };
