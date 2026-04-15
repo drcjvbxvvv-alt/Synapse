@@ -61,8 +61,13 @@
     "completedAt": "完成時間"
   },
   "crd": {
-    "notInstalled": "未安裝 Argo Rollouts CRD",
-    "notInstalledDesc": "此叢集尚未安裝 Argo Rollouts，請先部署後再使用此功能。"
+    "notInstalled": "此叢集尚未安裝 Argo Rollouts",
+    "notInstalledDesc": "Argo Rollouts 提供漸進式交付能力（Canary / BlueGreen），可在部署過程中自動分析指標並決定是否推進或回滾，是雲原生 CI/CD 的關鍵組件。",
+    "installCmd": "kubectl create namespace argo-rollouts\nkubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml",
+    "installLabel": "安裝指令：",
+    "copyCmd": "複製安裝指令",
+    "viewDocs": "查看官方文件",
+    "recheck": "重新偵測"
   },
   "messages": {
     "promoteSuccess": "促進成功",

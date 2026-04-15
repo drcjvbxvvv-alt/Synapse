@@ -57,20 +57,28 @@ func (h *RolloutHandler) CheckRolloutCRD(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-	defer cancel()
-
-	// 確保 informer 快取就緒
-	if _, err := h.k8sMgr.EnsureAndWait(ctx, cluster, 5*time.Second); err != nil {
-		response.ServiceUnavailable(c, "informer 未就緒: "+err.Error())
+	k8sClient, err := h.k8sMgr.GetK8sClient(cluster)
+	if err != nil {
+		response.InternalError(c, "failed to get K8s client: "+err.Error())
 		return
 	}
 
-	// 檢查 RolloutsLister 是否可用
-	lister := h.k8sMgr.RolloutsLister(cluster.ID)
-	enabled := lister != nil
+	// 清除 Discovery 快取，強制重新偵測
+	h.k8sMgr.InvalidateDiscoveryCache(cluster.ID)
 
-	response.OK(c, gin.H{"enabled": enabled})
+	clientset := k8sClient.GetClientset()
+	installed := false
+	version := ""
+	for _, v := range []string{"v1alpha1"} {
+		_, discErr := clientset.Discovery().ServerResourcesForGroupVersion("argoproj.io/" + v)
+		if discErr == nil {
+			installed = true
+			version = v
+			break
+		}
+	}
+
+	response.OK(c, gin.H{"installed": installed, "version": version})
 }
 
 // ListRollouts 獲取Rollout列表

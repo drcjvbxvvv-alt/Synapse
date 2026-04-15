@@ -57,6 +57,9 @@
     "slos": "SLO Management",
     "chaos": "Chaos Engineering",
     "compliance": "Compliance Management",
+    "cicd": "CI/CD",
+    "pipelines": "Pipelines",
+    "rollouts": "Rollouts",
     "language": "Language"
   },
   "actions": {

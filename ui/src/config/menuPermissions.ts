@@ -103,6 +103,11 @@ export const CLUSTER_MENU_PERMISSIONS: Record<string, {
   'cluster-chaos':            { requiredFeature: 'chaos:view' },
   'cluster-compliance':       { requiredFeature: 'compliance:view' },
 
+  // === CI/CD ===
+  'cicd':            {},
+  'cicd-pipelines':  { requiredPermission: 'dev' },
+  'cicd-rollouts':   { requiredPermission: 'dev' },
+
   // === 雲原生成本治理 - 需要運維權限 ===
   'cloud-native-cost': { requiredPermission: 'ops' },
   'cost-insights':     { requiredPermission: 'ops' },

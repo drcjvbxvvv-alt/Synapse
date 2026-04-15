@@ -61,8 +61,13 @@
     "completedAt": "Completed At"
   },
   "crd": {
-    "notInstalled": "Argo Rollouts CRD Not Installed",
-    "notInstalledDesc": "Argo Rollouts is not installed in this cluster. Please deploy it first."
+    "notInstalled": "Argo Rollouts Not Installed",
+    "notInstalledDesc": "Argo Rollouts provides progressive delivery capabilities (Canary / BlueGreen), automatically analyzing metrics during deployment to decide whether to proceed or rollback — a key component of cloud-native CI/CD.",
+    "installCmd": "kubectl create namespace argo-rollouts\nkubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml",
+    "installLabel": "Install command:",
+    "copyCmd": "Copy install command",
+    "viewDocs": "View documentation",
+    "recheck": "Re-detect"
   },
   "messages": {
     "promoteSuccess": "Promoted successfully",

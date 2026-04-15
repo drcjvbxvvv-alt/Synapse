@@ -36,6 +36,8 @@ import {
   FastForwardOutlined,
   StopOutlined,
   RocketOutlined,
+  CopyOutlined,
+  LinkOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -290,18 +292,54 @@ const RolloutList: React.FC = () => {
   }
 
   if (crdData && !crdData.installed) {
+    const installCmd = t('rollout:crd.installCmd');
+    const handleCopyCmd = () => {
+      navigator.clipboard.writeText(installCmd).then(() => {
+        message.success(t('common:messages.success'));
+      });
+    };
     return (
-      <div style={{ marginBottom: token.marginLG }}>
-        <Typography.Title level={4} style={{ margin: 0, marginBottom: token.marginXS }}>
-          {t('rollout:page.title')}
-        </Typography.Title>
-        <Text type="secondary">{t('rollout:page.subtitle')}</Text>
+      <div style={{ maxWidth: 640, margin: '48px auto', padding: '0 24px' }}>
         <Alert
-          style={{ marginTop: token.marginLG }}
           type="warning"
           showIcon
           message={t('rollout:crd.notInstalled')}
-          description={t('rollout:crd.notInstalledDesc')}
+          description={
+            <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
+              <Text>{t('rollout:crd.notInstalledDesc')}</Text>
+              <Text strong style={{ display: 'block', marginTop: 8 }}>{t('rollout:crd.installLabel')}</Text>
+              <pre
+                style={{
+                  background: '#1e1e1e',
+                  color: '#d4d4d4',
+                  padding: '12px 16px',
+                  borderRadius: 6,
+                  fontSize: 13,
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {installCmd}
+              </pre>
+              <Space style={{ marginTop: 8 }}>
+                <Button icon={<CopyOutlined />} onClick={handleCopyCmd}>
+                  {t('rollout:crd.copyCmd')}
+                </Button>
+                <Button
+                  icon={<LinkOutlined />}
+                  href="https://argoproj.github.io/argo-rollouts/installation/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('rollout:crd.viewDocs')}
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={() => queryClient.invalidateQueries({ queryKey: ['rollout-crd', cid] })}>
+                  {t('rollout:crd.recheck')}
+                </Button>
+              </Space>
+            </Space>
+          }
         />
       </div>
     );

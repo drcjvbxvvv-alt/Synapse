@@ -12,6 +12,7 @@ import {
   AlertOutlined,
   SettingOutlined,
   RocketOutlined,
+  BuildOutlined,
   ContainerOutlined,
   ApiOutlined,
   HddOutlined,
@@ -55,7 +56,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
   // ─── 選單展開 / 選取狀態 ────────────────────────────────────────────
   const getInitialOpenKeys = (): string[] => {
     if (isClusterDetail) {
-      return ['kubernetes-resources', 'cluster', 'cloud-native-observability'];
+      return ['kubernetes-resources', 'cluster', 'cloud-native-observability', 'cicd'];
     }
     if (location.pathname.startsWith('/access')) return ['access-control'];
     if (location.pathname.startsWith('/audit')) return ['audit-management'];
@@ -68,7 +69,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
   // 不跟蹤 pathname，保留使用者在同一情境下的折疊狀態。
   useEffect(() => {
     if (isClusterDetail) {
-      setOpenKeys(['kubernetes-resources', 'cluster', 'cloud-native-observability']);
+      setOpenKeys(['kubernetes-resources', 'cluster', 'cloud-native-observability', 'cicd']);
     } else {
       const path = location.pathname;
       if (path.startsWith('/access')) setOpenKeys(['access-control']);
@@ -103,6 +104,8 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     if (path.match(/\/clusters\/[^/]+\/slos/)) return ['cluster-slos'];
     if (path.match(/\/clusters\/[^/]+\/chaos/)) return ['cluster-chaos'];
     if (path.match(/\/clusters\/[^/]+\/compliance/)) return ['cluster-compliance'];
+    if (path.match(/\/clusters\/[^/]+\/pipelines/)) return ['cicd-pipelines'];
+    if (path.match(/\/clusters\/[^/]+\/rollouts/)) return ['cicd-rollouts'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
@@ -192,6 +195,13 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
         { key: 'cluster-slos', icon: <LineChartOutlined />, label: t('common:menu.slos', 'SLO 管理'), onClick: () => clusterNav('slos') },
         { key: 'cluster-chaos', icon: <ThunderboltOutlined />, label: t('common:menu.chaos', '混沌工程'), onClick: () => clusterNav('chaos') },
         { key: 'cluster-compliance', icon: <SafetyCertificateOutlined />, label: t('common:menu.compliance', '合規管理'), onClick: () => clusterNav('compliance') },
+      ],
+    },
+    {
+      key: 'cicd', label: t('common:menu.cicd', 'CI/CD'),
+      children: [
+        { key: 'cicd-pipelines', icon: <BuildOutlined />, label: t('common:menu.pipelines', 'Pipeline 管理'), onClick: () => clusterNav('pipelines') },
+        { key: 'cicd-rollouts', icon: <RocketOutlined />, label: t('common:menu.rollouts', 'Rollout 管理'), onClick: () => clusterNav('rollouts') },
       ],
     },
   ], [t, clusterNav]);

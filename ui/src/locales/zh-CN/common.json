@@ -57,6 +57,9 @@
     "slos": "SLO 管理",
     "chaos": "混沌工程",
     "compliance": "合规管理",
+    "cicd": "CI/CD",
+    "pipelines": "Pipeline 管理",
+    "rollouts": "Rollout 管理",
     "language": "语言"
   },
   "actions": {
