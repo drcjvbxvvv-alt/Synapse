@@ -1279,7 +1279,7 @@ metadata:
 - [ ] Redis-backed RateLimiter 在多實例環境驗證過
 - [ ] OpenTelemetry：`auth`、`cluster`、`workload` 三個 domain 的 trace 可在 Jaeger 看到完整 span
 - [ ] `golang-migrate` 取代 AutoMigrate，`migrations/` 目錄下至少有 5 份版本檔
-- [ ] Informer 健康檢查 metric 上線（`informer_last_sync_age_seconds`）
+- [x] Informer 健康檢查 metric 上線（`informer_last_sync_age_seconds`）✅（custom InformerAgeCollector, GetSyncAges(), RegisterInformerAgeCollector(), 5 unit tests，2026-04-15）
 
 **品質 Criteria：**
 

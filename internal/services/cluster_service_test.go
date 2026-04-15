@@ -236,6 +236,47 @@ func (s *ClusterServiceTestSuite) TestDeleteCluster_NotFound() {
 	assert.Contains(s.T(), err.Error(), "叢集不存在")
 }
 
+// TestGetClustersByIDs_Empty 空 ID 列表應直接回傳空切片
+func (s *ClusterServiceTestSuite) TestGetClustersByIDs_Empty() {
+	clusters, err := s.service.GetClustersByIDs(context.Background(), []uint{})
+	s.Require().NoError(err)
+	s.Empty(clusters)
+}
+
+// TestGetClustersByIDs_Found 正常查詢
+func (s *ClusterServiceTestSuite) TestGetClustersByIDs_Found() {
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "name", "status", "created_at", "updated_at", "deleted_at"}).
+		AddRow(1, "c1", "healthy", now, now, nil).
+		AddRow(2, "c2", "healthy", now, now, nil)
+	s.mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
+
+	clusters, err := s.service.GetClustersByIDs(context.Background(), []uint{1, 2})
+	s.Require().NoError(err)
+	s.Len(clusters, 2)
+}
+
+// TestGetConnectableClusters_Success 查詢可連線叢集
+func (s *ClusterServiceTestSuite) TestGetConnectableClusters_Success() {
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "name", "status", "created_at", "updated_at", "deleted_at"}).
+		AddRow(1, "healthy-c", "healthy", now, now, nil)
+	s.mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
+
+	clusters, err := s.service.GetConnectableClusters(context.Background())
+	s.Require().NoError(err)
+	s.Len(clusters, 1)
+	s.Equal("healthy-c", clusters[0].Name)
+}
+
+func (s *ClusterServiceTestSuite) TestGetConnectableClusters_DBError() {
+	s.mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrInvalidData)
+
+	_, err := s.service.GetConnectableClusters(context.Background())
+	s.Error(err)
+	s.Contains(err.Error(), "可連線叢集")
+}
+
 // TestClusterServiceSuite 執行測試套件
 func TestClusterServiceSuite(t *testing.T) {
 	suite.Run(t, new(ClusterServiceTestSuite))

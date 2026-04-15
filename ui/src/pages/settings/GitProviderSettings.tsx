@@ -33,6 +33,7 @@ import {
   ReloadOutlined,
   LinkOutlined,
   KeyOutlined,
+  FolderOpenOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -44,6 +45,7 @@ import gitProviderService, {
   type UpdateGitProviderRequest,
 } from '../../services/gitProviderService';
 import EmptyState from '../../components/EmptyState';
+import ProjectManager from './components/ProjectManager';
 
 const { Text } = Typography;
 
@@ -66,6 +68,7 @@ const GitProviderSettings: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<GitProvider | null>(null);
   const [webhookInfo, setWebhookInfo] = useState<{ token: string; url: string } | null>(null);
+  const [projectsProvider, setProjectsProvider] = useState<GitProvider | null>(null);
 
   const [form] = Form.useForm();
 
@@ -211,10 +214,18 @@ const GitProviderSettings: React.FC = () => {
     {
       title: t('common:table.actions'),
       key: 'actions',
-      width: 140,
+      width: 170,
       fixed: 'right',
       render: (_, record) => (
         <Space size={0}>
+          <Tooltip title={t('cicd:project.manageButton')}>
+            <Button
+              type="link"
+              size="small"
+              icon={<FolderOpenOutlined />}
+              onClick={() => setProjectsProvider(record)}
+            />
+          </Tooltip>
           <Tooltip title={t('cicd:gitProvider.webhookInfo')}>
             <Button
               type="link"
@@ -308,6 +319,14 @@ const GitProviderSettings: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Project Manager drawer */}
+      <ProjectManager
+        open={!!projectsProvider}
+        onClose={() => setProjectsProvider(null)}
+        providerId={projectsProvider?.id ?? 0}
+        providerName={projectsProvider?.name ?? ''}
+      />
 
       {/* Create / Edit modal */}
       <Modal

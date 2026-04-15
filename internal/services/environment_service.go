@@ -2,198 +2,292 @@ package services
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
+
+	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/pkg/logger"
-	"gorm.io/gorm"
 )
 
 // ---------------------------------------------------------------------------
-// EnvironmentService — Environment CRUD + Promotion History（CICD_ARCHITECTURE §13, P2-8）
+// EnvironmentService — Pipeline 環境 CRUD + 促進輔助
 // ---------------------------------------------------------------------------
 
-// EnvironmentService 管理 Environment 的 CRUD 操作。
+// EnvironmentService 管理 Pipeline 的執行目標環境。
 type EnvironmentService struct {
 	db *gorm.DB
 }
 
-// NewEnvironmentService 建立 Environment 服務。
+// NewEnvironmentService 建立 EnvironmentService。
 func NewEnvironmentService(db *gorm.DB) *EnvironmentService {
 	return &EnvironmentService{db: db}
 }
 
-// CreateEnvironment 建立新的 Environment。
-func (s *EnvironmentService) CreateEnvironment(ctx context.Context, env *models.Environment) error {
-	if err := validateEnvironment(env); err != nil {
-		return err
-	}
+// ---------------------------------------------------------------------------
+// DTOs
+// ---------------------------------------------------------------------------
 
-	if err := s.db.WithContext(ctx).Create(env).Error; err != nil {
-		return fmt.Errorf("create environment: %w", err)
-	}
-
-	logger.Info("environment created",
-		"environment_id", env.ID,
-		"name", env.Name,
-		"pipeline_id", env.PipelineID,
-		"cluster_id", env.ClusterID,
-	)
-	return nil
+// CreateEnvironmentRequest 建立 Environment 請求。
+type CreateEnvironmentRequest struct {
+	Name              string `json:"name" binding:"required,max=255"`
+	ClusterID         uint   `json:"cluster_id" binding:"required"`
+	Namespace         string `json:"namespace" binding:"required,max=253"`
+	OrderIndex        int    `json:"order_index"`
+	AutoPromote       bool   `json:"auto_promote"`
+	ApprovalRequired  bool   `json:"approval_required"`
+	ApproverIDs       string `json:"approver_ids"`
+	SmokeTestStepName string `json:"smoke_test_step_name"`
+	NotifyChannelIDs  string `json:"notify_channel_ids"`
+	VariablesJSON     string `json:"variables_json"`
 }
 
-// GetEnvironment 取得單一 Environment。
-func (s *EnvironmentService) GetEnvironment(ctx context.Context, id uint) (*models.Environment, error) {
-	var env models.Environment
-	if err := s.db.WithContext(ctx).First(&env, id).Error; err != nil {
-		return nil, fmt.Errorf("get environment %d: %w", id, err)
-	}
-	return &env, nil
+// UpdateEnvironmentRequest 更新 Environment 請求（所有欄位可選）。
+type UpdateEnvironmentRequest struct {
+	ClusterID         *uint   `json:"cluster_id"`
+	Namespace         *string `json:"namespace"`
+	OrderIndex        *int    `json:"order_index"`
+	AutoPromote       *bool   `json:"auto_promote"`
+	ApprovalRequired  *bool   `json:"approval_required"`
+	ApproverIDs       *string `json:"approver_ids"`
+	SmokeTestStepName *string `json:"smoke_test_step_name"`
+	NotifyChannelIDs  *string `json:"notify_channel_ids"`
+	VariablesJSON     *string `json:"variables_json"`
 }
 
-// ListEnvironments 列出指定 Pipeline 的所有 Environment（按 order_index 排序）。
+// EnvironmentWithCluster 包含 Environment 及其關聯 Cluster 的基本資訊。
+type EnvironmentWithCluster struct {
+	models.Environment
+	ClusterName   string `json:"cluster_name"`
+	ClusterStatus string `json:"cluster_status"`
+}
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
+
+// ListEnvironments 列出 Pipeline 的所有 Environment，按 OrderIndex 升序排列。
 func (s *EnvironmentService) ListEnvironments(ctx context.Context, pipelineID uint) ([]models.Environment, error) {
 	var envs []models.Environment
 	if err := s.db.WithContext(ctx).
 		Where("pipeline_id = ?", pipelineID).
-		Order("order_index ASC").
+		Order("order_index ASC, id ASC").
 		Find(&envs).Error; err != nil {
 		return nil, fmt.Errorf("list environments for pipeline %d: %w", pipelineID, err)
 	}
 	return envs, nil
 }
 
-// UpdateEnvironment 更新 Environment。
-func (s *EnvironmentService) UpdateEnvironment(ctx context.Context, id uint, updates map[string]interface{}) error {
-	result := s.db.WithContext(ctx).Model(&models.Environment{}).Where("id = ?", id).Updates(updates)
-	if result.Error != nil {
-		return fmt.Errorf("update environment %d: %w", id, result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("environment %d not found", id)
-	}
-
-	logger.Info("environment updated", "environment_id", id)
-	return nil
-}
-
-// DeleteEnvironment 刪除 Environment（soft delete）。
-func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, id uint) error {
-	result := s.db.WithContext(ctx).Delete(&models.Environment{}, id)
-	if result.Error != nil {
-		return fmt.Errorf("delete environment %d: %w", id, result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("environment %d not found", id)
-	}
-
-	logger.Info("environment deleted", "environment_id", id)
-	return nil
-}
-
-// GetNextEnvironment 取得指定 Environment 的下一個晉升目標。
-func (s *EnvironmentService) GetNextEnvironment(ctx context.Context, pipelineID uint, currentOrderIndex int) (*models.Environment, error) {
+// GetEnvironment 取得單一 Environment。
+func (s *EnvironmentService) GetEnvironment(ctx context.Context, envID uint) (*models.Environment, error) {
 	var env models.Environment
-	if err := s.db.WithContext(ctx).
-		Where("pipeline_id = ? AND order_index > ?", pipelineID, currentOrderIndex).
-		Order("order_index ASC").
-		First(&env).Error; err != nil {
-		return nil, fmt.Errorf("get next environment after index %d: %w", currentOrderIndex, err)
+	if err := s.db.WithContext(ctx).First(&env, envID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("environment %d not found: %w", envID, gorm.ErrRecordNotFound)
+		}
+		return nil, fmt.Errorf("get environment %d: %w", envID, err)
 	}
 	return &env, nil
 }
 
-// ---------------------------------------------------------------------------
-// Promotion History
-// ---------------------------------------------------------------------------
+// GetEnvironmentByPipelineAndID 取得屬於特定 Pipeline 的 Environment（防止跨 Pipeline 存取）。
+func (s *EnvironmentService) GetEnvironmentByPipelineAndID(ctx context.Context, pipelineID, envID uint) (*models.Environment, error) {
+	var env models.Environment
+	err := s.db.WithContext(ctx).
+		Where("id = ? AND pipeline_id = ?", envID, pipelineID).
+		First(&env).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("environment %d not found in pipeline %d: %w", envID, pipelineID, gorm.ErrRecordNotFound)
+		}
+		return nil, fmt.Errorf("get environment %d: %w", envID, err)
+	}
+	return &env, nil
+}
 
-// RecordPromotion 記錄一筆晉升歷史。
-func (s *EnvironmentService) RecordPromotion(ctx context.Context, history *models.PromotionHistory) error {
-	if err := s.db.WithContext(ctx).Create(history).Error; err != nil {
-		return fmt.Errorf("record promotion: %w", err)
+// CreateEnvironment 為指定 Pipeline 建立新 Environment。
+// 若 OrderIndex 未指定（<=0），自動使用最大值 + 1。
+func (s *EnvironmentService) CreateEnvironment(ctx context.Context, pipelineID uint, req *CreateEnvironmentRequest) (*models.Environment, error) {
+	orderIndex := req.OrderIndex
+	if orderIndex <= 0 {
+		var maxOrder int
+		s.db.WithContext(ctx).
+			Model(&models.Environment{}).
+			Where("pipeline_id = ?", pipelineID).
+			Select("COALESCE(MAX(order_index), 0)").
+			Scan(&maxOrder)
+		orderIndex = maxOrder + 1
 	}
 
-	logger.Info("promotion recorded",
-		"pipeline_id", history.PipelineID,
-		"from", history.FromEnvironment,
-		"to", history.ToEnvironment,
-		"status", history.Status,
+	env := &models.Environment{
+		Name:              req.Name,
+		PipelineID:        pipelineID,
+		ClusterID:         req.ClusterID,
+		Namespace:         req.Namespace,
+		OrderIndex:        orderIndex,
+		AutoPromote:       req.AutoPromote,
+		ApprovalRequired:  req.ApprovalRequired,
+		ApproverIDs:       req.ApproverIDs,
+		SmokeTestStepName: req.SmokeTestStepName,
+		NotifyChannelIDs:  req.NotifyChannelIDs,
+		VariablesJSON:     req.VariablesJSON,
+	}
+
+	if env.VariablesJSON == "" {
+		env.VariablesJSON = "{}"
+	}
+
+	if err := s.db.WithContext(ctx).Create(env).Error; err != nil {
+		if isDuplicateKeyError(err) {
+			return nil, fmt.Errorf("environment %q already exists in pipeline %d", req.Name, pipelineID)
+		}
+		return nil, fmt.Errorf("create environment: %w", err)
+	}
+
+	logger.Info("environment created",
+		"env_id", env.ID,
+		"pipeline_id", pipelineID,
+		"name", env.Name,
+		"cluster_id", env.ClusterID,
 	)
-	return nil
+	return env, nil
 }
 
-// ListPromotionHistory 列出指定 Pipeline 的晉升歷史。
-func (s *EnvironmentService) ListPromotionHistory(ctx context.Context, pipelineID uint) ([]models.PromotionHistory, error) {
-	var history []models.PromotionHistory
-	if err := s.db.WithContext(ctx).
-		Where("pipeline_id = ?", pipelineID).
-		Order("created_at DESC").
-		Find(&history).Error; err != nil {
-		return nil, fmt.Errorf("list promotion history for pipeline %d: %w", pipelineID, err)
+// UpdateEnvironment 更新 Environment 欄位（部分更新）。
+func (s *EnvironmentService) UpdateEnvironment(ctx context.Context, pipelineID, envID uint, req *UpdateEnvironmentRequest) (*models.Environment, error) {
+	env, err := s.GetEnvironmentByPipelineAndID(ctx, pipelineID, envID)
+	if err != nil {
+		return nil, err
 	}
-	return history, nil
+
+	if req.ClusterID != nil {
+		env.ClusterID = *req.ClusterID
+	}
+	if req.Namespace != nil {
+		env.Namespace = *req.Namespace
+	}
+	if req.OrderIndex != nil {
+		env.OrderIndex = *req.OrderIndex
+	}
+	if req.AutoPromote != nil {
+		env.AutoPromote = *req.AutoPromote
+	}
+	if req.ApprovalRequired != nil {
+		env.ApprovalRequired = *req.ApprovalRequired
+	}
+	if req.ApproverIDs != nil {
+		env.ApproverIDs = *req.ApproverIDs
+	}
+	if req.SmokeTestStepName != nil {
+		env.SmokeTestStepName = *req.SmokeTestStepName
+	}
+	if req.NotifyChannelIDs != nil {
+		env.NotifyChannelIDs = *req.NotifyChannelIDs
+	}
+	if req.VariablesJSON != nil {
+		env.VariablesJSON = *req.VariablesJSON
+	}
+
+	if err := s.db.WithContext(ctx).Save(env).Error; err != nil {
+		return nil, fmt.Errorf("update environment %d: %w", envID, err)
+	}
+
+	logger.Info("environment updated", "env_id", envID, "pipeline_id", pipelineID)
+	return env, nil
 }
 
-// UpdatePromotionStatus 更新晉升記錄的狀態。
-func (s *EnvironmentService) UpdatePromotionStatus(ctx context.Context, id uint, status string, promotedBy uint, reason string) error {
-	updates := map[string]interface{}{
-		"status":      status,
-		"promoted_by": promotedBy,
-		"reason":      reason,
-	}
-
-	result := s.db.WithContext(ctx).Model(&models.PromotionHistory{}).Where("id = ?", id).Updates(updates)
+// DeleteEnvironment 軟刪除指定 Environment。
+func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, pipelineID, envID uint) error {
+	result := s.db.WithContext(ctx).
+		Where("id = ? AND pipeline_id = ?", envID, pipelineID).
+		Delete(&models.Environment{})
 	if result.Error != nil {
-		return fmt.Errorf("update promotion status %d: %w", id, result.Error)
+		return fmt.Errorf("delete environment %d: %w", envID, result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("promotion record %d not found", id)
+		return fmt.Errorf("environment %d not found in pipeline %d: %w", envID, pipelineID, gorm.ErrRecordNotFound)
 	}
 
-	logger.Info("promotion status updated",
-		"promotion_id", id,
-		"status", status,
-	)
+	logger.Info("environment deleted", "env_id", envID, "pipeline_id", pipelineID)
 	return nil
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Promotion helpers
 // ---------------------------------------------------------------------------
 
-func validateEnvironment(env *models.Environment) error {
-	if env.Name == "" {
-		return fmt.Errorf("environment name is required")
-	}
-	if env.PipelineID == 0 {
-		return fmt.Errorf("environment pipeline_id is required")
-	}
-	if env.ClusterID == 0 {
-		return fmt.Errorf("environment cluster_id is required")
-	}
-	if env.Namespace == "" {
-		return fmt.Errorf("environment namespace is required")
-	}
-	if env.OrderIndex < 0 {
-		return fmt.Errorf("environment order_index must be non-negative")
-	}
-
-	// Validate approver_ids is valid JSON array if provided
-	if env.ApproverIDs != "" {
-		var ids []uint
-		if err := json.Unmarshal([]byte(env.ApproverIDs), &ids); err != nil {
-			return fmt.Errorf("approver_ids must be a valid JSON array of user IDs: %w", err)
+// GetDefaultEnvironment 取得 Pipeline 的預設環境（OrderIndex 最小者）。
+// 用於 Webhook 觸發時無指定 Environment 的情況。
+func (s *EnvironmentService) GetDefaultEnvironment(ctx context.Context, pipelineID uint) (*models.Environment, error) {
+	var env models.Environment
+	err := s.db.WithContext(ctx).
+		Where("pipeline_id = ?", pipelineID).
+		Order("order_index ASC, id ASC").
+		First(&env).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("pipeline %d has no environments: %w", pipelineID, gorm.ErrRecordNotFound)
 		}
+		return nil, fmt.Errorf("get default environment for pipeline %d: %w", pipelineID, err)
 	}
+	return &env, nil
+}
 
-	// Validate variables_json is valid JSON object if provided
-	if env.VariablesJSON != "" {
-		var vars map[string]string
-		if err := json.Unmarshal([]byte(env.VariablesJSON), &vars); err != nil {
-			return fmt.Errorf("variables_json must be a valid JSON object of string key-value pairs: %w", err)
+// GetNextEnvironment 取得下一個促進目標 Environment。
+// 依 OrderIndex 升序排列，取第一個 OrderIndex 大於當前環境的環境。
+// 若當前環境已是最後一個，回傳 nil, nil。
+func (s *EnvironmentService) GetNextEnvironment(ctx context.Context, pipelineID uint, currentOrderIndex int) (*models.Environment, error) {
+	var env models.Environment
+	err := s.db.WithContext(ctx).
+		Where("pipeline_id = ? AND order_index > ?", pipelineID, currentOrderIndex).
+		Order("order_index ASC").
+		First(&env).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil // 已是最後一個環境
 		}
+		return nil, fmt.Errorf("get next environment for pipeline %d: %w", pipelineID, err)
+	}
+	return &env, nil
+}
+
+// GetEnvironmentsForPipeline 取得 Pipeline 的所有 Environment 列表（含 Cluster 基本資訊）。
+// 使用 JOIN 一次取得 cluster_name 和 cluster_status，避免 N+1 查詢。
+func (s *EnvironmentService) GetEnvironmentsForPipeline(ctx context.Context, pipelineID uint) ([]EnvironmentWithCluster, error) {
+	type row struct {
+		models.Environment
+		ClusterName   string `gorm:"column:cluster_name"`
+		ClusterStatus string `gorm:"column:cluster_status"`
 	}
 
+	var rows []row
+	err := s.db.WithContext(ctx).
+		Table("environments e").
+		Select("e.*, COALESCE(c.name, '') AS cluster_name, COALESCE(c.status, '') AS cluster_status").
+		Joins("LEFT JOIN clusters c ON c.id = e.cluster_id AND c.deleted_at IS NULL").
+		Where("e.pipeline_id = ? AND e.deleted_at IS NULL", pipelineID).
+		Order("e.order_index ASC, e.id ASC").
+		Find(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("get environments for pipeline %d: %w", pipelineID, err)
+	}
+
+	result := make([]EnvironmentWithCluster, 0, len(rows))
+	for _, r := range rows {
+		result = append(result, EnvironmentWithCluster{
+			Environment:   r.Environment,
+			ClusterName:   r.ClusterName,
+			ClusterStatus: r.ClusterStatus,
+		})
+	}
+	return result, nil
+}
+
+// RecordPromotion 記錄環境晉升事件。
+func (s *EnvironmentService) RecordPromotion(ctx context.Context, h *models.PromotionHistory) error {
+	if err := s.db.WithContext(ctx).Create(h).Error; err != nil {
+		return fmt.Errorf("record promotion: %w", err)
+	}
 	return nil
 }

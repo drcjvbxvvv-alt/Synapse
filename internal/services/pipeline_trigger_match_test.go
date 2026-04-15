@@ -551,3 +551,97 @@ func TestIsValidWebhookEvent(t *testing.T) {
 		t.Error("expected unknown to be invalid")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// RepoURL precise matching (M14.1)
+// ---------------------------------------------------------------------------
+
+func TestEvaluateWebhookTriggers_RepoURLPreciseMatch(t *testing.T) {
+	rules := []TriggerRule{
+		{
+			Type:    "webhook",
+			RepoURL: "https://github.com/company/backend",
+			Branch:  "main",
+			Events:  []string{"push"},
+		},
+	}
+
+	t.Run("matches exact repo URL", func(t *testing.T) {
+		event := &WebhookEvent{
+			Provider:  "github",
+			Repo:      "company/backend",
+			RepoURL:   "https://github.com/company/backend",
+			Branch:    "main",
+			EventType: "push",
+		}
+		result := EvaluateWebhookTriggers(rules, event)
+		if !result.Matched {
+			t.Errorf("expected match, got: %s", result.Reason)
+		}
+	})
+
+	t.Run("rejects different repo URL", func(t *testing.T) {
+		event := &WebhookEvent{
+			Provider:  "github",
+			Repo:      "company/backend",
+			RepoURL:   "https://github.com/company/other-service",
+			Branch:    "main",
+			EventType: "push",
+		}
+		result := EvaluateWebhookTriggers(rules, event)
+		if result.Matched {
+			t.Error("expected no match for different repo URL")
+		}
+	})
+
+	t.Run("rejects when event has no RepoURL but rule requires it", func(t *testing.T) {
+		event := &WebhookEvent{
+			Provider:  "github",
+			Repo:      "company/backend",
+			RepoURL:   "", // not populated
+			Branch:    "main",
+			EventType: "push",
+		}
+		result := EvaluateWebhookTriggers(rules, event)
+		if result.Matched {
+			t.Error("expected no match when event has no RepoURL and rule requires it")
+		}
+	})
+
+	t.Run("case-insensitive URL match", func(t *testing.T) {
+		event := &WebhookEvent{
+			Provider:  "github",
+			Repo:      "company/backend",
+			RepoURL:   "HTTPS://GITHUB.COM/COMPANY/BACKEND",
+			Branch:    "main",
+			EventType: "push",
+		}
+		result := EvaluateWebhookTriggers(rules, event)
+		if !result.Matched {
+			t.Errorf("expected case-insensitive URL match, got: %s", result.Reason)
+		}
+	})
+}
+
+func TestEvaluateWebhookTriggers_LegacyRepoPatchMatchStillWorks(t *testing.T) {
+	// Rules without RepoURL should still use Repo path matching
+	rules := []TriggerRule{
+		{
+			Type:   "webhook",
+			Repo:   "company/backend",
+			Branch: "main",
+			Events: []string{"push"},
+		},
+	}
+	event := &WebhookEvent{
+		Provider:  "github",
+		Repo:      "company/backend",
+		RepoURL:   "https://github.com/company/backend",
+		Branch:    "main",
+		EventType: "push",
+	}
+	result := EvaluateWebhookTriggers(rules, event)
+	if !result.Matched {
+		t.Errorf("legacy repo path matching should still work, got: %s", result.Reason)
+	}
+}

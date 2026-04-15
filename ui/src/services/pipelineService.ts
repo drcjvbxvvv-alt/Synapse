@@ -36,7 +36,6 @@ export interface PipelineRun {
   id: number;
   pipeline_id: number;
   snapshot_id: number;
-  environment_id: number;
   cluster_id: number;
   namespace: string;
   status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled' | 'waiting_approval';
@@ -95,8 +94,9 @@ export interface CreateVersionRequest {
 }
 
 export interface TriggerRunRequest {
-  trigger_type?: 'manual';
-  environment_id?: number;
+  cluster_id: number;
+  namespace: string;
+  version_id?: number;
 }
 
 // ─── Service ───────────────────────────────────────────────────────────────
@@ -143,10 +143,10 @@ const pipelineService = {
       `/pipelines/${pipelineId}/runs`
     ),
 
-  triggerRun: (pipelineId: number, data?: TriggerRunRequest) =>
-    request.post<PipelineRun>(
+  triggerRun: (pipelineId: number, req: TriggerRunRequest) =>
+    request.post<{ run_id: number; status: string }>(
       `/pipelines/${pipelineId}/runs`,
-      data ?? { trigger_type: 'manual' }
+      req
     ),
 
   // GetRun returns both the run and its step runs (see pipeline_run_handler.go)
@@ -180,3 +180,12 @@ const pipelineService = {
 };
 
 export default pipelineService;
+
+// ─── Allowed Images ───────────────────────────────────────────────────────────
+
+export const pipelineAllowedImagesService = {
+  get: () =>
+    request.get<{ patterns: string[] }>('/system/pipeline/allowed-images'),
+  update: (patterns: string[]) =>
+    request.put<{ patterns: string[] }>('/system/pipeline/allowed-images', { patterns }),
+};

@@ -26,16 +26,20 @@ type TriggerRule struct {
 	Type       string   `json:"type"`                  // "webhook" | "schedule"
 	Provider   string   `json:"provider,omitempty"`     // git provider name
 	Repo       string   `json:"repo,omitempty"`         // full repo path (e.g. "company/backend")
+	RepoURL    string   `json:"repo_url,omitempty"`     // full repo URL for precise matching（M14.1）
 	Branch     string   `json:"branch,omitempty"`       // glob pattern (e.g. "main", "release/*")
 	Events     []string `json:"events,omitempty"`       // allowed event types (e.g. ["push", "merge_request"])
 	PathFilter []string `json:"path_filter,omitempty"`  // glob patterns for changed files
 	Cron       string   `json:"cron,omitempty"`         // cron expression (schedule type only)
+	ClusterID  uint     `json:"cluster_id,omitempty"`   // 目標叢集（git webhook 觸發時必填）
+	Namespace  string   `json:"namespace,omitempty"`    // 目標 namespace（git webhook 觸發時必填）
 }
 
 // WebhookEvent 從 Webhook payload 解析出的事件資訊。
 type WebhookEvent struct {
 	Provider     string   // "github", "gitlab", "gitea"
 	Repo         string   // "company/backend-service"
+	RepoURL      string   // full clone URL, e.g. "https://github.com/company/backend" (M14.1)
 	Branch       string   // "main", "feature/foo"
 	EventType    string   // "push", "merge_request", "pull_request"
 	ChangedFiles []string // list of changed file paths
@@ -143,8 +147,14 @@ func matchWebhookRule(rule *TriggerRule, event *WebhookEvent) (string, bool) {
 		return "", false
 	}
 
-	// 2. Repo match (exact, case-insensitive)
-	if !strings.EqualFold(rule.Repo, event.Repo) {
+	// 2. Repo match:
+	//    - If rule.RepoURL is set (M14.1 precise matching), compare full URL.
+	//    - Otherwise fall back to Repo path matching (legacy).
+	if rule.RepoURL != "" {
+		if event.RepoURL == "" || !strings.EqualFold(rule.RepoURL, event.RepoURL) {
+			return "", false
+		}
+	} else if !strings.EqualFold(rule.Repo, event.Repo) {
 		return "", false
 	}
 

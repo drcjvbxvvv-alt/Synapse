@@ -131,5 +131,162 @@
     },
     "noEnvironments": "尚未設定部署環境",
     "manageButton": "管理環境"
+  },
+  "secret": {
+    "title": "Pipeline Secrets",
+    "subtitle": "管理 Pipeline 使用的加密敏感資料（Token、密碼、API Key）",
+    "hidden": "已加密",
+    "usageHint": "在 Pipeline YAML 中引用方式",
+    "noSecrets": "尚未建立任何 Secret",
+    "manageButton": "管理 Secrets",
+    "scope": {
+      "pipeline": "Pipeline",
+      "global": "全域"
+    },
+    "table": {
+      "scope": "範圍",
+      "name": "名稱",
+      "value": "值",
+      "description": "說明",
+      "updatedAt": "更新時間"
+    },
+    "form": {
+      "createTitle": "新增 Secret",
+      "editTitle": "編輯 Secret — {{name}}",
+      "scope": "範圍",
+      "name": "名稱",
+      "nameTooltip": "僅允許大寫英文、數字、底線，且須以英文字母開頭",
+      "namePattern": "僅允許大寫英文、數字、底線（例如：HARBOR_PASSWORD）",
+      "value": "值",
+      "valuePlaceholder": "輸入 Secret 值",
+      "valueEdit": "新值（選填）",
+      "valueEditPlaceholder": "留空保留現有值",
+      "valueEditTooltip": "留空則保留現有加密值，填入新值則覆寫",
+      "description": "說明",
+      "descriptionPlaceholder": "例如：Harbor robot account 密碼"
+    },
+    "messages": {
+      "createSuccess": "Secret 已建立",
+      "createFailed": "建立 Secret 失敗",
+      "updateSuccess": "Secret 已更新",
+      "updateFailed": "更新 Secret 失敗",
+      "deleteSuccess": "Secret 已刪除",
+      "deleteFailed": "刪除 Secret 失敗"
+    }
+  },
+  "gitops": {
+    "page": {
+      "title": "GitOps 應用管理",
+      "subtitle": "管理原生 GitOps 應用並監控 ArgoCD 應用狀態"
+    },
+    "table": {
+      "name": "名稱",
+      "source": "來源",
+      "namespace": "命名空間",
+      "repoUrl": "Repository",
+      "branch": "分支",
+      "syncPolicy": "同步策略",
+      "status": "狀態",
+      "syncStatus": "同步",
+      "diffSummary": "漂移"
+    },
+    "source": { "native": "原生", "argocd": "ArgoCD" },
+    "renderType": { "raw": "Raw YAML", "kustomize": "Kustomize", "helm": "Helm" },
+    "syncPolicy": { "auto": "自動", "manual": "手動" },
+    "status": { "synced": "已同步", "drifted": "已漂移", "error": "錯誤", "pending": "等待中" },
+    "form": {
+      "createTitle": "新增 GitOps 應用",
+      "editTitle": "編輯 GitOps 應用",
+      "name": "名稱",
+      "repoUrl": "Repository URL",
+      "repoUrlPlaceholder": "https://github.com/org/repo",
+      "branch": "分支",
+      "branchPlaceholder": "main",
+      "path": "路徑",
+      "pathPlaceholder": "k8s/ 或 deploy/",
+      "renderType": "渲染類型",
+      "namespace": "目標命名空間",
+      "namespacePlaceholder": "default",
+      "syncPolicy": "同步策略",
+      "syncInterval": "同步間隔（秒）",
+      "helmValues": "Helm Values (YAML)",
+      "helmValuesPlaceholder": "replicaCount: 2\nimage:\n  tag: latest"
+    },
+    "diff": {
+      "title": "Diff — {{name}}",
+      "noChanges": "無漂移",
+      "action": { "added": "新增", "modified": "修改", "deleted": "刪除", "unchanged": "未變更" }
+    },
+    "messages": {
+      "createSuccess": "GitOps 應用已建立",
+      "createFailed": "建立 GitOps 應用失敗",
+      "updateSuccess": "GitOps 應用已更新",
+      "updateFailed": "更新 GitOps 應用失敗",
+      "deleteSuccess": "GitOps 應用已刪除",
+      "deleteFailed": "刪除 GitOps 應用失敗",
+      "syncTriggered": "已觸發同步",
+      "syncFailed": "觸發同步失敗"
+    },
+    "syncButton": "同步",
+    "diffButton": "查看 Diff"
+  },
+  "registryBrowser": {
+    "title": "瀏覽 — {{name}}",
+    "repositories": "Repository 列表",
+    "tags": "Tag 列表",
+    "selectRepo": "選擇 Repository 以查看 Tags",
+    "repoName": "Repository",
+    "tagCount": "Tag 數",
+    "pullCount": "Pull 次數",
+    "tagName": "Tag",
+    "digest": "Digest",
+    "size": "大小",
+    "createdAt": "建立時間",
+    "noRepos": "找不到任何 Repository",
+    "noTags": "找不到任何 Tag",
+    "browseButton": "瀏覽"
+  },
+  "run": {
+    "triggerTitle": "觸發執行 — {{name}}",
+    "trigger": "執行",
+    "triggered": "已觸發執行 #{{id}}",
+    "triggerFailed": "觸發執行失敗",
+    "targetCluster": "目標叢集",
+    "selectCluster": "選擇叢集",
+    "targetNamespace": "目標命名空間"
+  },
+  "project": {
+    "title": "Projects",
+    "subtitle": "管理此 Git Provider 下的程式碼倉庫",
+    "drawerTitle": "Projects — {{name}}",
+    "table": {
+      "name": "名稱",
+      "repoUrl": "Repository URL",
+      "defaultBranch": "預設分支",
+      "description": "說明",
+      "createdAt": "建立時間"
+    },
+    "form": {
+      "createTitle": "新增 Project",
+      "editTitle": "編輯 Project",
+      "name": "名稱",
+      "namePlaceholder": "例如：backend-service",
+      "repoUrl": "Repository URL",
+      "repoUrlPlaceholder": "https://github.com/org/repo",
+      "defaultBranch": "預設分支",
+      "defaultBranchPlaceholder": "main",
+      "description": "說明",
+      "descriptionPlaceholder": "選填說明"
+    },
+    "messages": {
+      "createSuccess": "Project 已建立",
+      "createFailed": "建立 Project 失敗",
+      "updateSuccess": "Project 已更新",
+      "updateFailed": "更新 Project 失敗",
+      "deleteSuccess": "Project 已刪除",
+      "deleteFailed": "刪除 Project 失敗"
+    },
+    "manageButton": "Projects",
+    "noProjects": "尚未設定任何 Project"
   }
 }

@@ -108,6 +108,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     if (path.match(/\/clusters\/[^/]+\/compliance/)) return ['cluster-compliance'];
     if (path.match(/\/clusters\/[^/]+\/pipelines/)) return ['cicd-pipelines'];
     if (path.match(/\/clusters\/[^/]+\/rollouts/)) return ['cicd-rollouts'];
+    if (path.match(/\/clusters\/[^/]+\/gitops/)) return ['cluster-gitops'];
     if (path.startsWith('/pipelines')) return ['cicd-pipelines-global'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
@@ -186,7 +187,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
         { key: 'cluster-nodes', icon: <DesktopOutlined />, label: t('common:menu.nodeManagement'), onClick: () => clusterNav('nodes') },
         { key: 'cluster-config', icon: <SettingOutlined />, label: t('common:menu.configCenter'), onClick: () => clusterNav('config-center') },
         { key: 'cluster-upgrade', icon: <UploadOutlined />, label: t('common:menu.clusterUpgrade'), onClick: () => clusterNav('upgrade') },
-        { key: 'cluster-plugins', icon: <BranchesOutlined />, label: t('common:menu.gitopsApps'), onClick: () => clusterNav('plugins') },
+        { key: 'cluster-gitops', icon: <BranchesOutlined />, label: t('common:menu.gitopsApps'), onClick: () => clusterNav('gitops/apps') },
         { key: 'cluster-helm', icon: <DeploymentUnitOutlined />, label: t('common:menu.helmReleases'), onClick: () => clusterNav('helm') },
         { key: 'cluster-crds', icon: <ApiOutlined />, label: t('common:menu.crdManagement', 'CRD 管理'), onClick: () => clusterNav('crds') },
       ],

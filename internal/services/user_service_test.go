@@ -189,6 +189,71 @@ func (s *UserServiceTestSuite) TestDeleteUser_CannotDeleteAdmin() {
 	assert.Contains(s.T(), err.Error(), "平台管理員")
 }
 
+// ---- UpdateUser ----
+
+func (s *UserServiceTestSuite) TestUpdateUser_Success() {
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{
+		"id", "username", "password_hash", "salt", "email", "display_name",
+		"auth_type", "status", "system_role", "last_login_at", "last_login_ip",
+		"created_at", "updated_at", "deleted_at",
+	}).AddRow(1, "alice", "hash", "salt", "old@example.com", "Alice",
+		"local", "active", "", now, "", now, now, nil)
+	s.mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
+	s.mock.ExpectBegin()
+	s.mock.ExpectExec(`UPDATE .users.`).WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectCommit()
+
+	email := "new@example.com"
+	user, err := s.service.UpdateUser(context.Background(), 1, &UpdateUserRequest{Email: &email})
+	s.Require().NoError(err)
+	s.Equal("new@example.com", user.Email)
+}
+
+func (s *UserServiceTestSuite) TestUpdateUser_NotFound() {
+	s.mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
+
+	email := "x@x.com"
+	_, err := s.service.UpdateUser(context.Background(), 999, &UpdateUserRequest{Email: &email})
+	s.Error(err)
+}
+
+// ---- ListUsers ----
+
+func (s *UserServiceTestSuite) TestListUsers_Success() {
+	now := time.Now()
+	s.mock.ExpectQuery(`SELECT count`).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+	rows := sqlmock.NewRows([]string{
+		"id", "username", "password_hash", "salt", "email", "display_name",
+		"auth_type", "status", "system_role", "last_login_at", "last_login_ip",
+		"created_at", "updated_at", "deleted_at",
+	}).AddRow(1, "alice", "hash", "salt", "alice@example.com", "Alice",
+		"local", "active", "", now, "", now, now, nil)
+	s.mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
+
+	users, total, err := s.service.ListUsers(context.Background(), &ListUsersParams{Page: 1, PageSize: 20})
+	s.Require().NoError(err)
+	s.Equal(int64(1), total)
+	s.Len(users, 1)
+	s.Equal("alice", users[0].Username)
+}
+
+func (s *UserServiceTestSuite) TestListUsers_Empty() {
+	s.mock.ExpectQuery(`SELECT count`).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	s.mock.ExpectQuery(`SELECT`).WillReturnRows(sqlmock.NewRows([]string{
+		"id", "username", "password_hash", "salt", "email", "display_name",
+		"auth_type", "status", "system_role", "last_login_at", "last_login_ip",
+		"created_at", "updated_at", "deleted_at",
+	}))
+
+	users, total, err := s.service.ListUsers(context.Background(), &ListUsersParams{Page: 1, PageSize: 20})
+	s.Require().NoError(err)
+	s.Equal(int64(0), total)
+	s.Empty(users)
+}
+
 func TestUserServiceSuite(t *testing.T) {
 	suite.Run(t, new(UserServiceTestSuite))
 }

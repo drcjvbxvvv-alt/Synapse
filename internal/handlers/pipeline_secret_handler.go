@@ -147,6 +147,140 @@ func (h *PipelineSecretHandler) UpdateSecret(c *gin.Context) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// 3-level scope convenience endpoints（H5）
+// ---------------------------------------------------------------------------
+
+// ListPipelineSecrets 列出 Pipeline 範疇的 Secrets。
+// GET /pipelines/:pipelineID/secrets
+func (h *PipelineSecretHandler) ListPipelineSecrets(c *gin.Context) {
+	pipelineID, err := parseUintParam(c, "pipelineID")
+	if err != nil {
+		response.BadRequest(c, "invalid pipeline ID")
+		return
+	}
+	secrets, err := h.secretSvc.ListSecrets(c.Request.Context(), "pipeline", &pipelineID)
+	if err != nil {
+		response.InternalError(c, "failed to list pipeline secrets: "+err.Error())
+		return
+	}
+	response.OK(c, secrets)
+}
+
+// scopedSecretBody is the request body for scope-convenience endpoints.
+// Scope and ScopeRef are determined by the URL — not required from the client.
+type scopedSecretBody struct {
+	Name        string `json:"name"        binding:"required,max=100"`
+	Value       string `json:"value"       binding:"required"`
+	Description string `json:"description" binding:"max=255"`
+}
+
+// CreatePipelineSecret 在 Pipeline 範疇建立 Secret。
+// POST /pipelines/:pipelineID/secrets
+func (h *PipelineSecretHandler) CreatePipelineSecret(c *gin.Context) {
+	pipelineID, err := parseUintParam(c, "pipelineID")
+	if err != nil {
+		response.BadRequest(c, "invalid pipeline ID")
+		return
+	}
+
+	var body scopedSecretBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "invalid request body: "+err.Error())
+		return
+	}
+	req := services.CreateSecretRequest{
+		Scope:       "pipeline",
+		ScopeRef:    &pipelineID,
+		Name:        body.Name,
+		Value:       body.Value,
+		Description: body.Description,
+	}
+
+	userID := c.GetUint("user_id")
+	secret, err := h.secretSvc.CreateSecret(c.Request.Context(), &req, userID)
+	if err != nil {
+		if ae, ok := apierrors.As(err); ok {
+			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
+			return
+		}
+		response.InternalError(c, "failed to create pipeline secret: "+err.Error())
+		return
+	}
+
+	logger.Info("pipeline-scoped secret created",
+		"secret_id", secret.ID,
+		"pipeline_id", pipelineID,
+		"name", secret.Name,
+	)
+	response.Created(c, gin.H{
+		"id": secret.ID, "scope": secret.Scope,
+		"scope_ref": secret.ScopeRef, "name": secret.Name,
+		"description": secret.Description, "created_at": secret.CreatedAt,
+	})
+}
+
+// ListEnvSecrets 列出 Environment 範疇的 Secrets。
+// GET /pipelines/:pipelineID/environments/:envID/secrets
+func (h *PipelineSecretHandler) ListEnvSecrets(c *gin.Context) {
+	envID, err := parseUintParam(c, "envID")
+	if err != nil {
+		response.BadRequest(c, "invalid environment ID")
+		return
+	}
+	secrets, err := h.secretSvc.ListSecrets(c.Request.Context(), "environment", &envID)
+	if err != nil {
+		response.InternalError(c, "failed to list environment secrets: "+err.Error())
+		return
+	}
+	response.OK(c, secrets)
+}
+
+// CreateEnvSecret 在 Environment 範疇建立 Secret。
+// POST /pipelines/:pipelineID/environments/:envID/secrets
+func (h *PipelineSecretHandler) CreateEnvSecret(c *gin.Context) {
+	envID, err := parseUintParam(c, "envID")
+	if err != nil {
+		response.BadRequest(c, "invalid environment ID")
+		return
+	}
+
+	var body scopedSecretBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.BadRequest(c, "invalid request body: "+err.Error())
+		return
+	}
+	req := services.CreateSecretRequest{
+		Scope:       "environment",
+		ScopeRef:    &envID,
+		Name:        body.Name,
+		Value:       body.Value,
+		Description: body.Description,
+	}
+
+	userID := c.GetUint("user_id")
+	secret, err := h.secretSvc.CreateSecret(c.Request.Context(), &req, userID)
+	if err != nil {
+		if ae, ok := apierrors.As(err); ok {
+			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
+			return
+		}
+		response.InternalError(c, "failed to create environment secret: "+err.Error())
+		return
+	}
+
+	logger.Info("environment-scoped secret created",
+		"secret_id", secret.ID,
+		"env_id", envID,
+		"name", secret.Name,
+	)
+	response.Created(c, gin.H{
+		"id": secret.ID, "scope": secret.Scope,
+		"scope_ref": secret.ScopeRef, "name": secret.Name,
+		"description": secret.Description, "created_at": secret.CreatedAt,
+	})
+}
+
 // DeleteSecret 刪除 Secret。
 // DELETE /clusters/:clusterID/pipeline-secrets/:secretID
 func (h *PipelineSecretHandler) DeleteSecret(c *gin.Context) {

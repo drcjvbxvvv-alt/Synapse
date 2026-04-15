@@ -9,7 +9,6 @@
  *  - 開啟 YAML 編輯器（PipelineEditor）
  */
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Card,
   Table,
@@ -38,7 +37,8 @@ import {
   AppstoreOutlined,
   UnorderedListOutlined,
   CodeOutlined,
-  ApartmentOutlined,
+  LockOutlined,
+  SafetyOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -47,7 +47,9 @@ import dayjs from 'dayjs';
 import pipelineService, { type Pipeline } from '../../services/pipelineService';
 import EmptyState from '../../components/EmptyState';
 import PipelineEditor from './PipelineEditor';
-import PipelineEnvironments from './components/PipelineEnvironments';
+import TriggerRunModal from './components/TriggerRunModal';
+import PipelineSecretManager from './components/PipelineSecretManager';
+import PipelineAllowedImages from './components/PipelineAllowedImages';
 
 const { Text } = Typography;
 
@@ -60,13 +62,15 @@ const PipelineList: React.FC = () => {
   const { message } = App.useApp();
   const { t } = useTranslation(['pipeline', 'common']);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Pipeline | null>(null);
-  const [envPipeline, setEnvPipeline] = useState<Pipeline | null>(null);
+  const [triggerOpen, setTriggerOpen] = useState(false);
+  const [triggerPipeline, setTriggerPipeline] = useState<Pipeline | null>(null);
+  const [secretOpen, setSecretOpen] = useState(false);
+  const [secretPipeline, setSecretPipeline] = useState<Pipeline | null>(null);
+  const [allowedImagesOpen, setAllowedImagesOpen] = useState(false);
 
   // ─── Query ────────────────────────────────────────────────────────────────
 
@@ -92,28 +96,6 @@ const PipelineList: React.FC = () => {
     onError: () => message.error(t('pipeline:messages.deleteFailed')),
   });
 
-  const triggerMutation = useMutation({
-    mutationFn: (pipeline: Pipeline) =>
-      pipelineService.triggerRun(pipeline.id),
-    onSuccess: (run, pipeline) => {
-      message.success({
-        content: (
-          <span>
-            {t('pipeline:run.triggered', { id: run.id })}{' '}
-            <a
-              onClick={() => navigate(`/pipelines/${pipeline.id}/runs/${run.id}`)}
-              style={{ marginLeft: 4 }}
-            >
-              {t('pipeline:run.viewRun')}
-            </a>
-          </span>
-        ),
-        duration: 5,
-      });
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-    },
-    onError: () => message.error(t('pipeline:messages.triggerFailed')),
-  });
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -132,10 +114,15 @@ const PipelineList: React.FC = () => {
     [deleteMutation]
   );
 
-  const handleTrigger = useCallback(
-    (pipeline: Pipeline) => { triggerMutation.mutate(pipeline); },
-    [triggerMutation]
-  );
+  const handleTrigger = useCallback((pipeline: Pipeline) => {
+    setTriggerPipeline(pipeline);
+    setTriggerOpen(true);
+  }, []);
+
+  const handleSecrets = useCallback((pipeline: Pipeline) => {
+    setSecretPipeline(pipeline);
+    setSecretOpen(true);
+  }, []);
 
   const handleEditorClose = useCallback(() => {
     setEditorOpen(false);
@@ -147,10 +134,6 @@ const PipelineList: React.FC = () => {
     setEditing(null);
     queryClient.invalidateQueries({ queryKey: ['pipelines'] });
   }, [queryClient]);
-
-  const handleManageEnvs = useCallback((pipeline: Pipeline) => {
-    setEnvPipeline(pipeline);
-  }, []);
 
   // ─── Table columns ────────────────────────────────────────────────────────
 
@@ -211,7 +194,7 @@ const PipelineList: React.FC = () => {
       key: 'actions',
       width: 140,
       fixed: 'right',
-      render: (_, record) => <PipelineActions record={record} onEdit={handleEdit} onDelete={handleDelete} onTrigger={handleTrigger} onManageEnvs={handleManageEnvs} />,
+      render: (_, record) => <PipelineActions record={record} onEdit={handleEdit} onDelete={handleDelete} onTrigger={handleTrigger} onSecrets={handleSecrets} />,
     },
   ];
 
@@ -237,6 +220,9 @@ const PipelineList: React.FC = () => {
             { value: 'table', icon: <UnorderedListOutlined />, label: t('pipeline:view.table') },
           ]}
         />
+        <Tooltip title={t('pipeline:allowedImages.manageButton')}>
+          <Button icon={<SafetyOutlined />} onClick={() => setAllowedImagesOpen(true)} />
+        </Tooltip>
         <Tooltip title={t('common:actions.refresh')}>
           <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isLoading} />
         </Tooltip>
@@ -274,7 +260,7 @@ const PipelineList: React.FC = () => {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onTrigger={handleTrigger}
-                    onManageEnvs={handleManageEnvs}
+                    onSecrets={handleSecrets}
                   />
                 </Col>
               ))}
@@ -308,14 +294,29 @@ const PipelineList: React.FC = () => {
         onSuccess={handleEditorSuccess}
       />
 
-      {/* Environments Drawer */}
-      {envPipeline && (
-        <PipelineEnvironments
-          open={!!envPipeline}
-          onClose={() => setEnvPipeline(null)}
-          pipeline={envPipeline}
+      {/* Trigger Run Modal */}
+      {triggerPipeline && (
+        <TriggerRunModal
+          open={triggerOpen}
+          onClose={() => { setTriggerOpen(false); setTriggerPipeline(null); }}
+          pipeline={triggerPipeline}
         />
       )}
+
+      {/* Secret Manager Drawer */}
+      {secretPipeline && (
+        <PipelineSecretManager
+          open={secretOpen}
+          onClose={() => { setSecretOpen(false); setSecretPipeline(null); }}
+          pipeline={secretPipeline}
+        />
+      )}
+
+      {/* Allowed Images Drawer */}
+      <PipelineAllowedImages
+        open={allowedImagesOpen}
+        onClose={() => setAllowedImagesOpen(false)}
+      />
     </>
   );
 };
@@ -327,12 +328,12 @@ interface PipelineCardProps {
   onEdit: (p: Pipeline) => void;
   onDelete: (p: Pipeline) => void;
   onTrigger: (p: Pipeline) => void;
-  onManageEnvs: (p: Pipeline) => void;
+  onSecrets: (p: Pipeline) => void;
 }
 
-const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete, onTrigger, onManageEnvs }) => {
+const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete, onTrigger, onSecrets }) => {
   const { token } = theme.useToken();
-  const { t } = useTranslation(['pipeline', 'common']);
+  const { t } = useTranslation(['pipeline', 'common', 'cicd']);
 
   return (
     <Card
@@ -388,20 +389,20 @@ const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete,
               onClick={() => onTrigger(pipeline)}
             />
           </Tooltip>
+          <Tooltip title={t('cicd:secret.manageButton')}>
+            <Button
+              type="link"
+              size="small"
+              icon={<LockOutlined />}
+              onClick={() => onSecrets(pipeline)}
+            />
+          </Tooltip>
           <Tooltip title={t('pipeline:form.editTitle')}>
             <Button
               type="link"
               size="small"
               icon={<CodeOutlined />}
               onClick={() => onEdit(pipeline)}
-            />
-          </Tooltip>
-          <Tooltip title={t('cicd:environment.manageButton')}>
-            <Button
-              type="link"
-              size="small"
-              icon={<ApartmentOutlined />}
-              onClick={() => onManageEnvs(pipeline)}
             />
           </Tooltip>
           <Popconfirm
@@ -429,10 +430,10 @@ interface PipelineActionsProps {
   onEdit: (p: Pipeline) => void;
   onDelete: (p: Pipeline) => void;
   onTrigger: (p: Pipeline) => void;
-  onManageEnvs: (p: Pipeline) => void;
+  onSecrets: (p: Pipeline) => void;
 }
 
-const PipelineActions: React.FC<PipelineActionsProps> = ({ record, onEdit, onDelete, onTrigger, onManageEnvs }) => {
+const PipelineActions: React.FC<PipelineActionsProps> = ({ record, onEdit, onDelete, onTrigger, onSecrets }) => {
   const { t } = useTranslation(['pipeline', 'common', 'cicd']);
 
   return (
@@ -445,20 +446,20 @@ const PipelineActions: React.FC<PipelineActionsProps> = ({ record, onEdit, onDel
           onClick={() => onTrigger(record)}
         />
       </Tooltip>
+      <Tooltip title={t('cicd:secret.manageButton')}>
+        <Button
+          type="link"
+          size="small"
+          icon={<LockOutlined />}
+          onClick={() => onSecrets(record)}
+        />
+      </Tooltip>
       <Tooltip title={t('pipeline:form.editTitle')}>
         <Button
           type="link"
           size="small"
           icon={<EditOutlined />}
           onClick={() => onEdit(record)}
-        />
-      </Tooltip>
-      <Tooltip title={t('cicd:environment.manageButton')}>
-        <Button
-          type="link"
-          size="small"
-          icon={<ApartmentOutlined />}
-          onClick={() => onManageEnvs(record)}
         />
       </Tooltip>
       <Popconfirm

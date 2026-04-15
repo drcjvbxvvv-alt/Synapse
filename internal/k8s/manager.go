@@ -35,9 +35,10 @@ type ClusterRuntime struct {
 	startedAt    time.Time // informer 啟動時間（偵測卡住用）
 	lastAccessAt time.Time // 最後存取時間，用於閒置 GC
 
-	startOnce sync.Once
-	started   bool
-	synced    bool
+	startOnce    sync.Once
+	started      bool
+	synced       bool
+	lastSyncedAt time.Time // 最後快取同步完成時間（用於 informer_last_sync_age_seconds 指標）
 
 	stopCh   chan struct{}
 	stopOnce sync.Once
@@ -80,6 +81,23 @@ func NewClusterInformerManager() *ClusterInformerManager {
 // SetMetrics attaches Prometheus K8s metrics to the manager.
 func (m *ClusterInformerManager) SetMetrics(km *metrics.K8sMetrics) {
 	m.k8sMetrics = km
+}
+
+// GetSyncAges 回傳各叢集距最後快取同步的秒數（供 Prometheus Collector 使用）。
+// 若叢集從未成功同步，回傳 -1。
+func (m *ClusterInformerManager) GetSyncAges() map[string]float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	result := make(map[string]float64, len(m.clusters))
+	for id, rt := range m.clusters {
+		key := fmt.Sprintf("%d", id)
+		if rt.lastSyncedAt.IsZero() {
+			result[key] = -1
+		} else {
+			result[key] = time.Since(rt.lastSyncedAt).Seconds()
+		}
+	}
+	return result
 }
 
 // SetSyncTimeout overrides the default cache-sync timeout.
@@ -193,6 +211,7 @@ func (m *ClusterInformerManager) waitForSync(ctx context.Context, rt *ClusterRun
 		ok := cache.WaitForCacheSync(rt.stopCh, syncedFuncs...)
 		if ok {
 			rt.synced = true
+			rt.lastSyncedAt = time.Now()
 			if m.k8sMetrics != nil {
 				m.k8sMetrics.InformerSynced.WithLabelValues(fmt.Sprintf("%d", rt.clusterID)).Set(1)
 			}

@@ -4,11 +4,12 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/shaia/Synapse/internal/handlers"
+	"github.com/shaia/Synapse/internal/middleware"
 	"github.com/shaia/Synapse/internal/services"
 )
 
 // registerPipelineRoutes registers top-level Pipeline routes under /pipelines.
-// Pipeline is a cluster-independent entity; cluster binding happens via Environment.
+// Pipeline is a cluster-independent entity; execution targets are bound via Environments.
 func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 	secretSvc := services.NewPipelineSecretService(d.db)
 	logSvc := services.NewPipelineLogService(d.db)
@@ -17,8 +18,10 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 	pipelineHandler := handlers.NewPipelineHandler(d.pipelineSvc, d.auditSvc)
 	secretHandler := handlers.NewPipelineSecretHandler(secretSvc)
 	logHandler := handlers.NewPipelineLogHandler(logSvc, d.pipelineSvc)
-	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, envSvc, d.pipelineScheduler, d.auditSvc)
 	envHandler := handlers.NewEnvironmentHandler(envSvc)
+
+	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, d.pipelineScheduler, d.auditSvc)
+	runHandler.SetEnvironmentService(envSvc)
 
 	// ── Pipelines ──────────────────────────────────────────────────────────
 	pipelines := protected.Group("/pipelines")
@@ -26,13 +29,15 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 		pipelines.GET("", pipelineHandler.ListPipelines)
 		pipelines.POST("", pipelineHandler.CreatePipeline)
 
+		// Single pipeline group — PipelineAccessRequired validates existence
 		pipeline := pipelines.Group("/:pipelineID")
+		pipeline.Use(middleware.PipelineAccessRequired(d.db))
 		{
 			pipeline.GET("", pipelineHandler.GetPipeline)
 			pipeline.PUT("", pipelineHandler.UpdatePipeline)
 			pipeline.DELETE("", pipelineHandler.DeletePipeline)
 
-			// Versions
+			// Versions (immutable snapshots)
 			versions := pipeline.Group("/versions")
 			{
 				versions.GET("", pipelineHandler.ListVersions)
@@ -40,10 +45,28 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				versions.GET("/:version", pipelineHandler.GetVersion)
 			}
 
-			// Runs
+			// Environments (cluster binding)
+			envs := pipeline.Group("/environments")
+			{
+				envs.GET("", envHandler.ListEnvironments)
+				envs.POST("", envHandler.CreateEnvironment)
+				envs.GET("/:envID", envHandler.GetEnvironment)
+				envs.PUT("/:envID", envHandler.UpdateEnvironment)
+				envs.DELETE("/:envID", envHandler.DeleteEnvironment)
+
+				// Env-based run trigger
+				envs.POST("/:envID/runs", runHandler.TriggerRunInEnvironment)
+
+				// Env-scoped secrets
+				envs.GET("/:envID/secrets", secretHandler.ListEnvSecrets)
+				envs.POST("/:envID/secrets", secretHandler.CreateEnvSecret)
+			}
+
+			// Runs (cross-environment view)
 			runs := pipeline.Group("/runs")
 			{
 				runs.GET("", runHandler.ListRuns)
+				// Legacy direct trigger (cluster_id + namespace in body)
 				runs.POST("", runHandler.TriggerRun)
 
 				run := runs.Group("/:runID")
@@ -51,8 +74,9 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 					run.GET("", runHandler.GetRun)
 					run.POST("/cancel", runHandler.CancelRun)
 					run.POST("/rerun", runHandler.RerunPipeline)
+					run.POST("/promote", runHandler.PromoteRun)
 
-					// Step Approval
+					// Step operations
 					run.POST("/steps/:stepRunID/approve", runHandler.ApproveStep)
 					run.POST("/steps/:stepRunID/reject", runHandler.RejectStep)
 
@@ -61,14 +85,9 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 				}
 			}
 
-			// Environments
-			envs := pipeline.Group("/environments")
-			{
-				envs.GET("", envHandler.List)
-				envs.POST("", envHandler.Create)
-				envs.PUT("/:envID", envHandler.Update)
-				envs.DELETE("/:envID", envHandler.Delete)
-			}
+			// Pipeline-scoped secrets
+			pipeline.GET("/secrets", secretHandler.ListPipelineSecrets)
+			pipeline.POST("/secrets", secretHandler.CreatePipelineSecret)
 		}
 	}
 
@@ -81,4 +100,7 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 		secrets.PUT("/:secretID", secretHandler.UpdateSecret)
 		secrets.DELETE("/:secretID", secretHandler.DeleteSecret)
 	}
+
+	// ── Step type registry ──────────────────────────────────────────────────
+	protected.GET("/pipeline-step-types", runHandler.ListStepTypes)
 }

@@ -216,6 +216,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	// Attach k8s metrics to manager if observability is on
 	if reg != nil {
 		k8sMgr.SetMetrics(reg.K8s)
+		// Register informer_last_sync_age_seconds — computed on each scrape
+		reg.RegisterInformerAgeCollector(k8sMgr.GetSyncAges)
 	}
 
 	// Pre-warm Informers for connectable clusters (background, non-blocking)
@@ -350,6 +352,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		pipelineScheduler: pipelineScheduler,
 		pipelineSvc:       pipelineSvc,
 		gitProviderSvc:    services.NewGitProviderService(db),
+		projectSvc:        services.NewProjectService(db),
 		registrySvc:       services.NewRegistryService(db),
 		tagRetentionSvc:   services.NewTagRetentionService(db, services.NewRegistryService(db)),
 	}

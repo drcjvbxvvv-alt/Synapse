@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -427,6 +428,61 @@ func (s *PipelineService) ApproveStepRun(ctx context.Context, stepRunID uint, ap
 // RejectStepRun 拒絕 Approval Step。
 func (s *PipelineService) RejectStepRun(ctx context.Context, stepRunID uint, rejectedBy string, reason string) error {
 	return RejectStep(ctx, s.db, stepRunID, rejectedBy, reason)
+}
+
+// ---------------------------------------------------------------------------
+// AllowedImages — Step 映像白名單（系統全域設定）
+// ---------------------------------------------------------------------------
+
+const pipelineAllowedImagesKey = "pipeline_allowed_images"
+
+// GetAllowedImages 返回 Step 映像白名單（glob pattern 列表）。
+func (s *PipelineService) GetAllowedImages(ctx context.Context) ([]string, error) {
+	var setting models.SystemSetting
+	err := s.db.WithContext(ctx).
+		Where("config_key = ?", pipelineAllowedImagesKey).
+		First(&setting).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []string{}, nil
+		}
+		return nil, fmt.Errorf("query allowed images: %w", err)
+	}
+	var patterns []string
+	if err := json.Unmarshal([]byte(setting.Value), &patterns); err != nil {
+		return nil, fmt.Errorf("parse allowed images: %w", err)
+	}
+	return patterns, nil
+}
+
+// UpdateAllowedImages 覆寫 Step 映像白名單。
+func (s *PipelineService) UpdateAllowedImages(ctx context.Context, patterns []string) error {
+	b, err := json.Marshal(patterns)
+	if err != nil {
+		return fmt.Errorf("marshal allowed images: %w", err)
+	}
+	value := string(b)
+
+	var existing models.SystemSetting
+	err = s.db.WithContext(ctx).
+		Where("config_key = ?", pipelineAllowedImagesKey).
+		First(&existing).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		record := models.SystemSetting{ConfigKey: pipelineAllowedImagesKey, Value: value, Type: "pipeline"}
+		if err := s.db.WithContext(ctx).Create(&record).Error; err != nil {
+			return fmt.Errorf("create allowed images setting: %w", err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("query allowed images: %w", err)
+	}
+	if err := s.db.WithContext(ctx).
+		Model(&existing).
+		Update("value", value).Error; err != nil {
+		return fmt.Errorf("update allowed images: %w", err)
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------

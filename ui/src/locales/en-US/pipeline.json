@@ -100,5 +100,16 @@
     "triggerFailed": "Failed to trigger pipeline",
     "versionSaveSuccess": "Version saved",
     "versionSaveFailed": "Failed to save version"
+  },
+  "allowedImages": {
+    "title": "Step Image Allowlist",
+    "hint": "Glob patterns for allowed Step images. Leave empty to allow all images. Example: docker.io/kaniko/*, harbor.example.com/ci/*",
+    "pattern": "Image Pattern",
+    "patternPlaceholder": "e.g. docker.io/kaniko/* or harbor.example.com/ci/*",
+    "empty": "No patterns — all images are allowed",
+    "duplicate": "Pattern already exists",
+    "saveSuccess": "Allowlist saved",
+    "saveFailed": "Failed to save allowlist",
+    "manageButton": "Image Allowlist"
   }
 }

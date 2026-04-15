@@ -185,6 +185,11 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 			registries.POST("/:id/retention-policies/:policyID/evaluate", retentionHandler.Evaluate)
 		}
 
+		// Pipeline 白名單（M13b）
+		pipelineSystemHandler := handlers.NewPipelineHandler(d.pipelineSvc, d.auditSvc)
+		systemSettings.GET("/pipeline/allowed-images", pipelineSystemHandler.GetAllowedImages)
+		systemSettings.PUT("/pipeline/allowed-images", pipelineSystemHandler.UpdateAllowedImages)
+
 		// Git Provider 管理（M14）
 		gitProviderHandler := handlers.NewGitProviderHandler(d.gitProviderSvc)
 		gitProviders := systemSettings.Group("/git-providers")
@@ -195,6 +200,14 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 			gitProviders.PUT("/:id", gitProviderHandler.Update)
 			gitProviders.DELETE("/:id", gitProviderHandler.Delete)
 			gitProviders.POST("/:id/regenerate-token", gitProviderHandler.RegenerateToken)
+
+			// Project 管理（M14.1）
+			projectHandler := handlers.NewProjectHandler(d.projectSvc)
+			gitProviders.GET("/:id/projects", projectHandler.List)
+			gitProviders.POST("/:id/projects", projectHandler.Create)
+			gitProviders.GET("/:id/projects/:projectID", projectHandler.Get)
+			gitProviders.PUT("/:id/projects/:projectID", projectHandler.Update)
+			gitProviders.DELETE("/:id/projects/:projectID", projectHandler.Delete)
 		}
 	}
 

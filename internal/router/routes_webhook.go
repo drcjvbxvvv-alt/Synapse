@@ -15,7 +15,7 @@ func registerWebhookRoutes(api *gin.RouterGroup, d *routeDeps) {
 	secretSvc := services.NewPipelineSecretService(d.db)
 	envSvc := services.NewEnvironmentService(d.db)
 
-	webhookHandler := handlers.NewPipelineWebhookHandler(d.pipelineSvc, envSvc, d.pipelineScheduler, secretSvc)
+	webhookHandler := handlers.NewPipelineWebhookHandler(d.pipelineSvc, d.pipelineScheduler, secretSvc, envSvc)
 
 	webhooks := api.Group("/webhooks")
 	webhooks.Use(middleware.APIRateLimit("webhook", 60)) // 60 req/min per IP
@@ -24,7 +24,7 @@ func registerWebhookRoutes(api *gin.RouterGroup, d *routeDeps) {
 
 		// Git Provider Webhook 接收端點（M14）
 		// POST /webhooks/git/:token — token 為 GitProvider.WebhookToken
-		gitWebhookHandler := handlers.NewGitWebhookHandler(d.gitProviderSvc, d.pipelineSvc, envSvc, d.pipelineScheduler)
+		gitWebhookHandler := handlers.NewGitWebhookHandler(d.gitProviderSvc, d.pipelineSvc, d.pipelineScheduler)
 		webhooks.POST("/git/:token", gitWebhookHandler.IngestWebhook)
 	}
 }

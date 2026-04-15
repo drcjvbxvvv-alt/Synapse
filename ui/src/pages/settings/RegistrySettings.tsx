@@ -35,6 +35,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   LoadingOutlined,
+  FolderOpenOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -46,6 +47,7 @@ import registryService, {
   type UpdateRegistryRequest,
 } from '../../services/registryService';
 import EmptyState from '../../components/EmptyState';
+import RegistryBrowser from './components/RegistryBrowser';
 
 const { Text } = Typography;
 
@@ -71,6 +73,8 @@ const RegistrySettings: React.FC = () => {
   const [editing, setEditing] = useState<Registry | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
   const [testResult, setTestResult] = useState<{ id: number; ok: boolean; error?: string } | null>(null);
+  const [browserOpen, setBrowserOpen] = useState(false);
+  const [browserRegistry, setBrowserRegistry] = useState<Registry | null>(null);
 
   const [form] = Form.useForm();
 
@@ -228,6 +232,15 @@ const RegistrySettings: React.FC = () => {
       fixed: 'right',
       render: (_, record) => (
         <Space size={0}>
+          {/* Browse repos */}
+          <Tooltip title={t('cicd:registryBrowser.browseButton')}>
+            <Button
+              type="link"
+              size="small"
+              icon={<FolderOpenOutlined />}
+              onClick={() => { setBrowserRegistry(record); setBrowserOpen(true); }}
+            />
+          </Tooltip>
           {/* Test connection */}
           <Tooltip title={t('cicd:registry.testConnection')}>
             <Button
@@ -386,6 +399,13 @@ const RegistrySettings: React.FC = () => {
           )}
         </Form>
       </Modal>
+
+      {/* Registry Browser Drawer */}
+      <RegistryBrowser
+        open={browserOpen}
+        registry={browserRegistry}
+        onClose={() => { setBrowserOpen(false); setBrowserRegistry(null); }}
+      />
     </>
   );
 };

@@ -100,5 +100,16 @@
     "triggerFailed": "觸發 Pipeline 失敗",
     "versionSaveSuccess": "版本已儲存",
     "versionSaveFailed": "儲存版本失敗"
+  },
+  "allowedImages": {
+    "title": "Step 映像白名單",
+    "hint": "允許使用的 Step 映像 glob pattern 列表。留空代表不限制映像。例如：docker.io/kaniko/*、harbor.example.com/ci/*",
+    "pattern": "映像 Pattern",
+    "patternPlaceholder": "例如：docker.io/kaniko/* 或 harbor.example.com/ci/*",
+    "empty": "尚無 Pattern — 允許所有映像",
+    "duplicate": "Pattern 已存在",
+    "saveSuccess": "白名單已儲存",
+    "saveFailed": "儲存白名單失敗",
+    "manageButton": "映像白名單"
   }
 }

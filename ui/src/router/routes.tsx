@@ -89,6 +89,7 @@ const PipelineList            = lazy(() => import('../pages/pipeline/PipelineLis
 const PipelineRunDetail       = lazy(() => import('../pages/pipeline/PipelineRunDetail'));
 const RolloutList             = lazy(() => import('../pages/rollout/RolloutList'));
 const CICDRolloutDetail       = lazy(() => import('../pages/rollout/RolloutDetail'));
+const GitOpsApps              = lazy(() => import('../pages/cluster/GitOpsApps'));
 
 // ─── Lazy wrapper ──────────────────────────────────────────────────────────
 const S = ({ children }: { children: React.ReactNode }) => (
@@ -394,6 +395,9 @@ export function AppRoutes() {
         {/* ── Argo Rollouts ────────────────────────────────────────────── */}
         <Route path="clusters/:clusterId/rollouts" element={<S><RolloutList /></S>} />
         <Route path="clusters/:clusterId/rollouts/:namespace/:name" element={<S><CICDRolloutDetail /></S>} />
+
+        {/* ── GitOps Apps ──────────────────────────────────────────────── */}
+        <Route path="clusters/:clusterId/gitops/apps" element={<S><GitOpsApps /></S>} />
 
         {/* ── SLO / Chaos / Compliance ─────────────────────────────────── */}
         <Route path="clusters/:clusterId/slos" element={<S><SLOListPage /></S>} />

@@ -1,12 +1,53 @@
 package services
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
+
+func newTagRetentionService(t *testing.T) (*TagRetentionService, sqlmock.Sqlmock, func()) {
+	t.Helper()
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
+	require.NoError(t, err)
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	require.NoError(t, err)
+	svc := NewTagRetentionService(gormDB, nil) // registrySvc not needed for CRUD tests
+	cleanup := func() {
+		if sqlDB, _ := gormDB.DB(); sqlDB != nil {
+			_ = sqlDB.Close()
+		}
+	}
+	return svc, mock, cleanup
+}
+
+var retentionCols = []string{
+	"id", "registry_id", "repository_match", "tag_match",
+	"retention_type", "keep_count", "keep_days", "keep_pattern",
+	"enabled", "cron_expr", "last_run_at", "last_run_result",
+	"created_by", "created_at", "updated_at", "deleted_at",
+}
+
+func retentionRow(id, registryID uint) *sqlmock.Rows {
+	now := time.Now()
+	return sqlmock.NewRows(retentionCols).AddRow(
+		id, registryID, "myapp/*", "*",
+		"keep_last_n", 10, 0, "",
+		true, "", nil, "",
+		1, now, now, nil,
+	)
+}
 
 func makeTags(names []string, ages []int) []RegistryTag {
 	tags := make([]RegistryTag, len(names))
@@ -200,4 +241,141 @@ func TestValidateRetentionPolicy(t *testing.T) {
 		})
 		assert.Error(t, err)
 	})
+}
+
+// ─── TagRetentionService DB CRUD ─────────────────────────────────────────────
+
+func TestTagRetentionService_CreatePolicy_Success(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(`INSERT INTO .tag_retention_policies.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectCommit()
+
+	policy := &models.TagRetentionPolicy{
+		RegistryID:      1,
+		RepositoryMatch: "myapp/*",
+		TagMatch:        "*",
+		RetentionType:   "keep_last_n",
+		KeepCount:       10,
+		Enabled:         true,
+		CreatedBy:       1,
+	}
+	err := svc.CreatePolicy(context.Background(), policy)
+	require.NoError(t, err)
+}
+
+func TestTagRetentionService_CreatePolicy_InvalidType(t *testing.T) {
+	svc, _, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	policy := &models.TagRetentionPolicy{
+		RegistryID:      1,
+		RepositoryMatch: "*",
+		RetentionType:   "invalid_type",
+		CreatedBy:       1,
+	}
+	err := svc.CreatePolicy(context.Background(), policy)
+	assert.Error(t, err)
+}
+
+func TestTagRetentionService_GetPolicy_Success(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnRows(retentionRow(1, 5))
+
+	policy, err := svc.GetPolicy(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, uint(5), policy.RegistryID)
+	assert.Equal(t, "keep_last_n", policy.RetentionType)
+}
+
+func TestTagRetentionService_GetPolicy_NotFound(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
+
+	_, err := svc.GetPolicy(context.Background(), 999)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "get tag retention policy")
+}
+
+func TestTagRetentionService_ListPolicies_Empty(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnRows(sqlmock.NewRows(retentionCols))
+
+	policies, err := svc.ListPolicies(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Empty(t, policies)
+}
+
+func TestTagRetentionService_ListPolicies_Multiple(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	now := time.Now()
+	rows := sqlmock.NewRows(retentionCols).
+		AddRow(1, 1, "myapp/*", "*", "keep_last_n", 10, 0, "", true, "", nil, "", 1, now, now, nil).
+		AddRow(2, 1, "legacy/*", "*", "keep_by_age", 0, 30, "", true, "", nil, "", 1, now, now, nil)
+	mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
+
+	policies, err := svc.ListPolicies(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Len(t, policies, 2)
+}
+
+func TestTagRetentionService_UpdatePolicy_Success(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE .tag_retention_policies.`).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	err := svc.UpdatePolicy(context.Background(), 1, map[string]interface{}{"keep_count": 20})
+	assert.NoError(t, err)
+}
+
+func TestTagRetentionService_UpdatePolicy_NotFound(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE .tag_retention_policies.`).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+
+	err := svc.UpdatePolicy(context.Background(), 999, map[string]interface{}{"keep_count": 5})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestTagRetentionService_DeletePolicy_Success(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE .tag_retention_policies.`).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	err := svc.DeletePolicy(context.Background(), 1)
+	assert.NoError(t, err)
+}
+
+func TestTagRetentionService_DeletePolicy_NotFound(t *testing.T) {
+	svc, mock, cleanup := newTagRetentionService(t)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE .tag_retention_policies.`).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+
+	err := svc.DeletePolicy(context.Background(), 999)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
 }

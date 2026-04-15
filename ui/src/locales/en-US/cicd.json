@@ -131,5 +131,150 @@
     },
     "noEnvironments": "No deployment environments configured",
     "manageButton": "Manage Environments"
+  },
+  "secret": {
+    "title": "Pipeline Secrets",
+    "subtitle": "Manage encrypted sensitive data used by Pipelines (Tokens, Passwords, API Keys)",
+    "hidden": "Encrypted",
+    "usageHint": "Reference in Pipeline YAML",
+    "noSecrets": "No secrets created yet",
+    "manageButton": "Manage Secrets",
+    "scope": { "pipeline": "Pipeline", "global": "Global" },
+    "table": { "scope": "Scope", "name": "Name", "value": "Value", "description": "Description", "updatedAt": "Updated" },
+    "form": {
+      "createTitle": "New Secret",
+      "editTitle": "Edit Secret — {{name}}",
+      "scope": "Scope",
+      "name": "Name",
+      "nameTooltip": "Uppercase letters, digits, and underscores only; must start with a letter",
+      "namePattern": "Uppercase letters, digits, underscores only (e.g. HARBOR_PASSWORD)",
+      "value": "Value",
+      "valuePlaceholder": "Enter secret value",
+      "valueEdit": "New Value (optional)",
+      "valueEditPlaceholder": "Leave blank to keep existing value",
+      "valueEditTooltip": "Leave blank to retain the existing encrypted value; fill in to overwrite",
+      "description": "Description",
+      "descriptionPlaceholder": "e.g. Harbor robot account password"
+    },
+    "messages": {
+      "createSuccess": "Secret created", "createFailed": "Failed to create secret",
+      "updateSuccess": "Secret updated", "updateFailed": "Failed to update secret",
+      "deleteSuccess": "Secret deleted", "deleteFailed": "Failed to delete secret"
+    }
+  },
+  "gitops": {
+    "page": {
+      "title": "GitOps Applications",
+      "subtitle": "Manage native GitOps apps and monitor ArgoCD applications"
+    },
+    "table": {
+      "name": "Name",
+      "source": "Source",
+      "namespace": "Namespace",
+      "repoUrl": "Repository",
+      "branch": "Branch",
+      "syncPolicy": "Sync Policy",
+      "status": "Status",
+      "syncStatus": "Sync",
+      "diffSummary": "Drift"
+    },
+    "source": { "native": "Native", "argocd": "ArgoCD" },
+    "renderType": { "raw": "Raw YAML", "kustomize": "Kustomize", "helm": "Helm" },
+    "syncPolicy": { "auto": "Auto", "manual": "Manual" },
+    "status": { "synced": "Synced", "drifted": "Drifted", "error": "Error", "pending": "Pending" },
+    "form": {
+      "createTitle": "Add GitOps App",
+      "editTitle": "Edit GitOps App",
+      "name": "Name",
+      "repoUrl": "Repository URL",
+      "repoUrlPlaceholder": "https://github.com/org/repo",
+      "branch": "Branch",
+      "branchPlaceholder": "main",
+      "path": "Path",
+      "pathPlaceholder": "k8s/ or deploy/",
+      "renderType": "Render Type",
+      "namespace": "Target Namespace",
+      "namespacePlaceholder": "default",
+      "syncPolicy": "Sync Policy",
+      "syncInterval": "Sync Interval (s)",
+      "helmValues": "Helm Values (YAML)",
+      "helmValuesPlaceholder": "replicaCount: 2\nimage:\n  tag: latest"
+    },
+    "diff": {
+      "title": "Diff — {{name}}",
+      "noChanges": "No drift detected",
+      "action": { "added": "Added", "modified": "Modified", "deleted": "Deleted", "unchanged": "Unchanged" }
+    },
+    "messages": {
+      "createSuccess": "GitOps app created",
+      "createFailed": "Failed to create GitOps app",
+      "updateSuccess": "GitOps app updated",
+      "updateFailed": "Failed to update GitOps app",
+      "deleteSuccess": "GitOps app deleted",
+      "deleteFailed": "Failed to delete GitOps app",
+      "syncTriggered": "Sync triggered",
+      "syncFailed": "Failed to trigger sync"
+    },
+    "syncButton": "Sync",
+    "diffButton": "View Diff"
+  },
+  "registryBrowser": {
+    "title": "Browse — {{name}}",
+    "repositories": "Repositories",
+    "tags": "Tags",
+    "selectRepo": "Select a repository to view tags",
+    "repoName": "Repository",
+    "tagCount": "Tags",
+    "pullCount": "Pulls",
+    "tagName": "Tag",
+    "digest": "Digest",
+    "size": "Size",
+    "createdAt": "Created At",
+    "noRepos": "No repositories found",
+    "noTags": "No tags found",
+    "browseButton": "Browse"
+  },
+  "run": {
+    "triggerTitle": "Trigger Run — {{name}}",
+    "trigger": "Run",
+    "triggered": "Run #{{id}} triggered",
+    "triggerFailed": "Failed to trigger run",
+    "targetCluster": "Target Cluster",
+    "selectCluster": "Select a cluster",
+    "targetNamespace": "Target Namespace"
+  },
+  "project": {
+    "title": "Projects",
+    "subtitle": "Manage repositories linked to this Git Provider",
+    "drawerTitle": "Projects — {{name}}",
+    "table": {
+      "name": "Name",
+      "repoUrl": "Repository URL",
+      "defaultBranch": "Default Branch",
+      "description": "Description",
+      "createdAt": "Created At"
+    },
+    "form": {
+      "createTitle": "Add Project",
+      "editTitle": "Edit Project",
+      "name": "Name",
+      "namePlaceholder": "e.g. backend-service",
+      "repoUrl": "Repository URL",
+      "repoUrlPlaceholder": "https://github.com/org/repo",
+      "defaultBranch": "Default Branch",
+      "defaultBranchPlaceholder": "main",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description"
+    },
+    "messages": {
+      "createSuccess": "Project created",
+      "createFailed": "Failed to create project",
+      "updateSuccess": "Project updated",
+      "updateFailed": "Failed to update project",
+      "deleteSuccess": "Project deleted",
+      "deleteFailed": "Failed to delete project"
+    },
+    "manageButton": "Projects",
+    "noProjects": "No projects configured"
   }
 }

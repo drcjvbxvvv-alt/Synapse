@@ -22,24 +22,27 @@ import (
 // PipelineRunHandler 管理 Pipeline Run 的 HTTP 端點。
 type PipelineRunHandler struct {
 	pipelineSvc *services.PipelineService
-	envSvc      *services.EnvironmentService
 	scheduler   *services.PipelineScheduler
+	envSvc      *services.EnvironmentService
 	auditSvc    *services.AuditService
 }
 
 // NewPipelineRunHandler 建立 PipelineRunHandler。
 func NewPipelineRunHandler(
 	pipelineSvc *services.PipelineService,
-	envSvc *services.EnvironmentService,
 	scheduler *services.PipelineScheduler,
 	auditSvc *services.AuditService,
 ) *PipelineRunHandler {
 	return &PipelineRunHandler{
 		pipelineSvc: pipelineSvc,
-		envSvc:      envSvc,
 		scheduler:   scheduler,
 		auditSvc:    auditSvc,
 	}
+}
+
+// SetEnvironmentService 設定 EnvironmentService（支援 env-based trigger 和 promote）。
+func (h *PipelineRunHandler) SetEnvironmentService(envSvc *services.EnvironmentService) {
+	h.envSvc = envSvc
 }
 
 // logRunAudit 非同步寫入 Pipeline Run 操作的 hash-chain audit log。
@@ -65,8 +68,9 @@ func (h *PipelineRunHandler) logRunAudit(c *gin.Context, action, resourceRef, re
 
 // TriggerRunRequest 手動觸發 Pipeline Run 的請求。
 type TriggerRunRequest struct {
-	VersionID     *uint `json:"version_id"`     // 指定版本（可選，預設用 current_version_id）
-	EnvironmentID uint  `json:"environment_id"` // 目標環境（必填）
+	VersionID *uint  `json:"version_id"`                          // 指定版本（可選，預設用 current_version_id）
+	ClusterID uint   `json:"cluster_id" binding:"required"`       // 目標叢集（必填）
+	Namespace string `json:"namespace" binding:"required"`         // 目標 namespace（必填）
 }
 
 // TriggerRun 手動觸發 Pipeline Run。
@@ -79,8 +83,10 @@ func (h *PipelineRunHandler) TriggerRun(c *gin.Context) {
 	}
 
 	var req TriggerRunRequest
-	// body 是可選的，空 body 也合法
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "invalid request body: "+err.Error())
+		return
+	}
 
 	pipeline, err := h.pipelineSvc.GetPipeline(c.Request.Context(), pipelineID)
 	if err != nil {
@@ -104,27 +110,11 @@ func (h *PipelineRunHandler) TriggerRun(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// Resolve environment → cluster + namespace
-	if req.EnvironmentID == 0 {
-		response.BadRequest(c, "environment_id is required")
-		return
-	}
-	env, err := h.envSvc.GetEnvironment(c.Request.Context(), req.EnvironmentID)
-	if err != nil {
-		response.NotFound(c, "environment not found")
-		return
-	}
-	if env.PipelineID != pipelineID {
-		response.BadRequest(c, "environment does not belong to this pipeline")
-		return
-	}
-
 	run := &models.PipelineRun{
 		PipelineID:       pipeline.ID,
-		EnvironmentID:    env.ID,
 		SnapshotID:       *snapshotID,
-		ClusterID:        env.ClusterID,
-		Namespace:        env.Namespace,
+		ClusterID:        req.ClusterID,
+		Namespace:        req.Namespace,
 		TriggerType:      models.TriggerTypeManual,
 		TriggeredByUser:  userID,
 		ConcurrencyGroup: pipeline.ConcurrencyGroup,
@@ -298,7 +288,6 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 
 	newRun := &models.PipelineRun{
 		PipelineID:       originalRun.PipelineID,
-		EnvironmentID:    originalRun.EnvironmentID,
 		SnapshotID:       originalRun.SnapshotID,
 		ClusterID:        originalRun.ClusterID,
 		Namespace:        originalRun.Namespace,
@@ -412,4 +401,172 @@ func (h *PipelineRunHandler) RejectStep(c *gin.Context) {
 func (h *PipelineRunHandler) ListStepTypes(c *gin.Context) {
 	types := services.ListStepTypes()
 	response.OK(c, types)
+}
+
+// ---------------------------------------------------------------------------
+// TriggerRunInEnvironment — env-based trigger（H2）
+// ---------------------------------------------------------------------------
+
+// TriggerRunInEnvironmentRequest env-based 手動觸發請求。
+type TriggerRunInEnvironmentRequest struct {
+	VersionID *uint `json:"version_id"` // 指定版本（可選，預設用 current_version_id）
+}
+
+// TriggerRunInEnvironment 以指定 Environment 為目標觸發 Pipeline Run。
+// POST /pipelines/:pipelineID/environments/:envID/runs
+func (h *PipelineRunHandler) TriggerRunInEnvironment(c *gin.Context) {
+	pipelineID, err := parseUintParam(c, "pipelineID")
+	if err != nil {
+		response.BadRequest(c, "invalid pipeline ID")
+		return
+	}
+	envID, err := parseUintParam(c, "envID")
+	if err != nil {
+		response.BadRequest(c, "invalid environment ID")
+		return
+	}
+
+	if h.envSvc == nil {
+		response.InternalError(c, "environment service not configured")
+		return
+	}
+
+	var req TriggerRunInEnvironmentRequest
+	_ = c.ShouldBindJSON(&req) // VersionID is optional
+
+	userID := c.GetUint("user_id")
+
+	run, err := h.scheduler.EnqueueRunInEnvironment(c.Request.Context(), h.envSvc, services.TriggerRunInput{
+		PipelineID:  pipelineID,
+		EnvID:       envID,
+		VersionID:   req.VersionID,
+		UserID:      userID,
+		TriggerType: models.TriggerTypeManual,
+	})
+	if err != nil {
+		h.logRunAudit(c, constants.ActionTrigger, fmt.Sprintf("pipeline:%d/env:%d", pipelineID, envID), "failed")
+		response.InternalError(c, "failed to trigger run: "+err.Error())
+		return
+	}
+
+	logger.Info("pipeline run triggered in environment",
+		"pipeline_id", pipelineID,
+		"env_id", envID,
+		"run_id", run.ID,
+		"user_id", userID,
+	)
+	h.logRunAudit(c, constants.ActionTrigger, fmt.Sprintf("pipeline:%d/env:%d/run:%d", pipelineID, envID, run.ID), "success")
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"run_id":  run.ID,
+		"status":  run.Status,
+		"message": "pipeline triggered in environment",
+	})
+}
+
+// ---------------------------------------------------------------------------
+// PromoteRun — 促進到下一個 Environment（H3）
+// ---------------------------------------------------------------------------
+
+// PromoteRun 以相同 SnapshotID 在下一個 Environment 建立新 Run。
+// POST /pipelines/:pipelineID/runs/:runID/promote
+func (h *PipelineRunHandler) PromoteRun(c *gin.Context) {
+	pipelineID, err := parseUintParam(c, "pipelineID")
+	if err != nil {
+		response.BadRequest(c, "invalid pipeline ID")
+		return
+	}
+	runID, err := parseUintParam(c, "runID")
+	if err != nil {
+		response.BadRequest(c, "invalid run ID")
+		return
+	}
+
+	if h.envSvc == nil {
+		response.InternalError(c, "environment service not configured")
+		return
+	}
+
+	// 取得原始 Run
+	origRun, err := h.pipelineSvc.GetPipelineRun(c.Request.Context(), runID)
+	if err != nil {
+		response.NotFound(c, "pipeline run not found")
+		return
+	}
+
+	if origRun.PipelineID != pipelineID {
+		response.NotFound(c, "run does not belong to this pipeline")
+		return
+	}
+
+	if origRun.Status != models.PipelineRunStatusSuccess {
+		response.BadRequest(c, "can only promote successful runs")
+		return
+	}
+
+	// 查找原始 Run 所在 Environment（透過 ClusterID+Namespace 反查）
+	// 取得 Pipeline 的所有 Environments，找到 ClusterID+Namespace 匹配者
+	envs, err := h.envSvc.ListEnvironments(c.Request.Context(), pipelineID)
+	if err != nil {
+		response.InternalError(c, "failed to list environments: "+err.Error())
+		return
+	}
+
+	var currentOrderIndex int
+	found := false
+	for _, env := range envs {
+		if env.ClusterID == origRun.ClusterID && env.Namespace == origRun.Namespace {
+			currentOrderIndex = env.OrderIndex
+			found = true
+			break
+		}
+	}
+	if !found {
+		response.BadRequest(c, "cannot determine promotion target: run environment not found in pipeline")
+		return
+	}
+
+	// 取得下一個 Environment
+	nextEnv, err := h.envSvc.GetNextEnvironment(c.Request.Context(), pipelineID, currentOrderIndex)
+	if err != nil {
+		response.InternalError(c, "failed to find next environment: "+err.Error())
+		return
+	}
+	if nextEnv == nil {
+		response.BadRequest(c, "no next environment: already at the last environment")
+		return
+	}
+
+	// 建立新 Run（使用相同 SnapshotID）
+	userID := c.GetUint("user_id")
+	snapshotID := origRun.SnapshotID
+
+	newRun, err := h.scheduler.EnqueueRunInEnvironment(c.Request.Context(), h.envSvc, services.TriggerRunInput{
+		PipelineID:  pipelineID,
+		EnvID:       nextEnv.ID,
+		VersionID:   &snapshotID,
+		UserID:      userID,
+		TriggerType: models.TriggerTypeManual,
+		Payload:     fmt.Sprintf("promoted_from_run:%d", runID),
+	})
+	if err != nil {
+		response.InternalError(c, "failed to promote run: "+err.Error())
+		return
+	}
+
+	logger.Info("pipeline run promoted to next environment",
+		"original_run_id", runID,
+		"new_run_id", newRun.ID,
+		"pipeline_id", pipelineID,
+		"next_env_id", nextEnv.ID,
+		"next_env_name", nextEnv.Name,
+	)
+
+	response.OK(c, gin.H{
+		"run_id":    newRun.ID,
+		"env_id":    nextEnv.ID,
+		"env_name":  nextEnv.Name,
+		"status":    newRun.Status,
+		"message":   "promoted to next environment",
+	})
 }

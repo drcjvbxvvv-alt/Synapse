@@ -1,206 +1,338 @@
 package services
 
 import (
-	"strings"
+	"context"
 	"testing"
+	"time"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/shaia/Synapse/internal/models"
 )
 
-// ---------------------------------------------------------------------------
-// validateEnvironment
-// ---------------------------------------------------------------------------
-
-func TestValidateEnvironment_Valid(t *testing.T) {
-	env := &models.Environment{
-		Name:       "dev",
-		PipelineID: 1,
-		ClusterID:  1,
-		Namespace:  "app-dev",
-		OrderIndex: 0,
-	}
-	if err := validateEnvironment(env); err != nil {
-		t.Errorf("expected valid: %v", err)
+// envCols returns the column list for SELECT queries on environments.
+func envCols() []string {
+	return []string{
+		"id", "name", "pipeline_id", "cluster_id", "namespace",
+		"order_index", "auto_promote", "approval_required",
+		"approver_ids", "smoke_test_step_name", "notify_channel_ids",
+		"variables_json", "created_at", "updated_at", "deleted_at",
 	}
 }
 
-func TestValidateEnvironment_WithApproverIDs(t *testing.T) {
-	env := &models.Environment{
-		Name:        "production",
-		PipelineID:  1,
-		ClusterID:   2,
-		Namespace:   "app-prod",
-		OrderIndex:  2,
-		ApproverIDs: "[1, 2, 3]",
-	}
-	if err := validateEnvironment(env); err != nil {
-		t.Errorf("expected valid: %v", err)
-	}
-}
+func newEnvSvcDB(t *testing.T) (*EnvironmentService, sqlmock.Sqlmock, func()) {
+	t.Helper()
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
+	require.NoError(t, err)
 
-func TestValidateEnvironment_MissingName(t *testing.T) {
-	env := &models.Environment{
-		PipelineID: 1,
-		ClusterID:  1,
-		Namespace:  "ns",
-		OrderIndex: 0,
-	}
-	err := validateEnvironment(env)
-	if err == nil {
-		t.Error("expected error for missing name")
-	}
-	if !strings.Contains(err.Error(), "name") {
-		t.Errorf("error should mention name: %v", err)
-	}
-}
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
+		Conn:                 db,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	require.NoError(t, err)
 
-func TestValidateEnvironment_MissingPipelineID(t *testing.T) {
-	env := &models.Environment{
-		Name:       "dev",
-		ClusterID:  1,
-		Namespace:  "ns",
-		OrderIndex: 0,
-	}
-	err := validateEnvironment(env)
-	if err == nil {
-		t.Error("expected error for missing pipeline_id")
-	}
-}
-
-func TestValidateEnvironment_MissingClusterID(t *testing.T) {
-	env := &models.Environment{
-		Name:       "dev",
-		PipelineID: 1,
-		Namespace:  "ns",
-		OrderIndex: 0,
-	}
-	err := validateEnvironment(env)
-	if err == nil {
-		t.Error("expected error for missing cluster_id")
-	}
-}
-
-func TestValidateEnvironment_MissingNamespace(t *testing.T) {
-	env := &models.Environment{
-		Name:       "dev",
-		PipelineID: 1,
-		ClusterID:  1,
-		OrderIndex: 0,
-	}
-	err := validateEnvironment(env)
-	if err == nil {
-		t.Error("expected error for missing namespace")
-	}
-}
-
-func TestValidateEnvironment_NegativeOrderIndex(t *testing.T) {
-	env := &models.Environment{
-		Name:       "dev",
-		PipelineID: 1,
-		ClusterID:  1,
-		Namespace:  "ns",
-		OrderIndex: -1,
-	}
-	err := validateEnvironment(env)
-	if err == nil {
-		t.Error("expected error for negative order_index")
-	}
-}
-
-func TestValidateEnvironment_InvalidApproverIDs(t *testing.T) {
-	env := &models.Environment{
-		Name:        "staging",
-		PipelineID:  1,
-		ClusterID:   1,
-		Namespace:   "ns",
-		OrderIndex:  1,
-		ApproverIDs: "not-json",
-	}
-	err := validateEnvironment(env)
-	if err == nil {
-		t.Error("expected error for invalid approver_ids JSON")
-	}
-	if !strings.Contains(err.Error(), "approver_ids") {
-		t.Errorf("error should mention approver_ids: %v", err)
-	}
-}
-
-// ---------------------------------------------------------------------------
-// NewEnvironmentService
-// ---------------------------------------------------------------------------
-
-func TestNewEnvironmentService(t *testing.T) {
-	svc := NewEnvironmentService(nil)
-	if svc == nil {
-		t.Fatal("expected non-nil service")
-	}
-}
-
-// ---------------------------------------------------------------------------
-// PromotionHistory status constants
-// ---------------------------------------------------------------------------
-
-func TestPromotionStatusConstants(t *testing.T) {
-	expected := map[string]string{
-		"pending":       models.PromotionStatusPending,
-		"approved":      models.PromotionStatusApproved,
-		"rejected":      models.PromotionStatusRejected,
-		"auto_promoted": models.PromotionStatusAutoPromoted,
-	}
-	for want, got := range expected {
-		if got != want {
-			t.Errorf("expected %q, got %q", want, got)
+	svc := NewEnvironmentService(gormDB)
+	cleanup := func() {
+		if sqlDB, _ := gormDB.DB(); sqlDB != nil {
+			_ = sqlDB.Close()
 		}
 	}
+	return svc, mock, cleanup
 }
 
-// ---------------------------------------------------------------------------
-// Environment model TableName
-// ---------------------------------------------------------------------------
-
-func TestEnvironmentTableName(t *testing.T) {
-	env := models.Environment{}
-	if env.TableName() != "environments" {
-		t.Errorf("expected environments, got %s", env.TableName())
-	}
+func envRow(id, pipelineID, clusterID uint, name, ns string, orderIdx int, now time.Time) *sqlmock.Rows {
+	return sqlmock.NewRows(envCols()).AddRow(
+		id, name, pipelineID, clusterID, ns,
+		orderIdx, false, false,
+		"", "", "",
+		"{}", now, now, nil,
+	)
 }
 
-func TestPromotionHistoryTableName(t *testing.T) {
-	ph := models.PromotionHistory{}
-	if ph.TableName() != "promotion_history" {
-		t.Errorf("expected promotion_history, got %s", ph.TableName())
-	}
+// ─── ListEnvironments ──────────────────────────────────────────────────────
+
+func TestEnvironmentService_ListEnvironments_Empty(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnRows(sqlmock.NewRows(envCols()))
+
+	envs, err := svc.ListEnvironments(context.Background(), 1)
+	assert.NoError(t, err)
+	assert.Empty(t, envs)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-// ---------------------------------------------------------------------------
-// Registry model TableName
-// ---------------------------------------------------------------------------
+func TestEnvironmentService_ListEnvironments_Multiple(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
 
-func TestRegistryTableName(t *testing.T) {
-	r := models.Registry{}
-	if r.TableName() != "registries" {
-		t.Errorf("expected registries, got %s", r.TableName())
-	}
+	now := time.Now()
+	rows := sqlmock.NewRows(envCols()).
+		AddRow(1, "dev", 10, 1, "app-dev", 1, false, false, "", "", "", "{}", now, now, nil).
+		AddRow(2, "staging", 10, 2, "app-staging", 2, true, false, "", "", "", "{}", now, now, nil).
+		AddRow(3, "prod", 10, 3, "app-prod", 3, false, true, "", "", "", "{}", now, now, nil)
+	mock.ExpectQuery(`SELECT`).WillReturnRows(rows)
+
+	envs, err := svc.ListEnvironments(context.Background(), 10)
+	assert.NoError(t, err)
+	assert.Len(t, envs, 3)
+	assert.Equal(t, "dev", envs[0].Name)
+	assert.Equal(t, "staging", envs[1].Name)
+	assert.Equal(t, "prod", envs[2].Name)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-// ---------------------------------------------------------------------------
-// Registry type constants
-// ---------------------------------------------------------------------------
+// ─── GetEnvironment ────────────────────────────────────────────────────────
 
-func TestRegistryTypeConstants(t *testing.T) {
-	if models.RegistryTypeHarbor != "harbor" {
-		t.Error("RegistryTypeHarbor mismatch")
+func TestEnvironmentService_GetEnvironment_Found(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	now := time.Now()
+	mock.ExpectQuery(`SELECT`).WillReturnRows(envRow(5, 10, 1, "dev", "app-dev", 1, now))
+
+	env, err := svc.GetEnvironment(context.Background(), 5)
+	assert.NoError(t, err)
+	assert.NotNil(t, env)
+	assert.Equal(t, uint(5), env.ID)
+	assert.Equal(t, "dev", env.Name)
+}
+
+func TestEnvironmentService_GetEnvironment_NotFound(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
+
+	env, err := svc.GetEnvironment(context.Background(), 999)
+	assert.Error(t, err)
+	assert.Nil(t, env)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+// ─── GetEnvironmentByPipelineAndID ─────────────────────────────────────────
+
+func TestEnvironmentService_GetEnvironmentByPipelineAndID_Found(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	now := time.Now()
+	mock.ExpectQuery(`SELECT`).WillReturnRows(envRow(5, 10, 1, "dev", "app-dev", 1, now))
+
+	env, err := svc.GetEnvironmentByPipelineAndID(context.Background(), 10, 5)
+	assert.NoError(t, err)
+	assert.NotNil(t, env)
+	assert.Equal(t, uint(10), env.PipelineID)
+}
+
+func TestEnvironmentService_GetEnvironmentByPipelineAndID_WrongPipeline(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
+
+	env, err := svc.GetEnvironmentByPipelineAndID(context.Background(), 99, 5)
+	assert.Error(t, err)
+	assert.Nil(t, env)
+}
+
+// ─── CreateEnvironment ─────────────────────────────────────────────────────
+
+func TestEnvironmentService_CreateEnvironment_Success(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	// Auto-compute order index: MAX query
+	mock.ExpectQuery(`SELECT`).
+		WillReturnRows(sqlmock.NewRows([]string{"coalesce"}).AddRow(2))
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(`INSERT INTO .environments.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(10))
+	mock.ExpectCommit()
+
+	req := &CreateEnvironmentRequest{
+		Name:      "dev",
+		ClusterID: 1,
+		Namespace: "app-dev",
+		// OrderIndex == 0 → auto-compute
 	}
-	if models.RegistryTypeDockerHub != "dockerhub" {
-		t.Error("RegistryTypeDockerHub mismatch")
+	env, err := svc.CreateEnvironment(context.Background(), 5, req)
+	assert.NoError(t, err)
+	assert.NotNil(t, env)
+	assert.Equal(t, uint(10), env.ID)
+	assert.Equal(t, "{}", env.VariablesJSON)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestEnvironmentService_CreateEnvironment_WithExplicitOrderIndex(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	// OrderIndex > 0, no auto-compute query
+	mock.ExpectBegin()
+	mock.ExpectQuery(`INSERT INTO .environments.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(11))
+	mock.ExpectCommit()
+
+	req := &CreateEnvironmentRequest{
+		Name:       "staging",
+		ClusterID:  2,
+		Namespace:  "app-staging",
+		OrderIndex: 2,
 	}
-	if models.RegistryTypeACR != "acr" {
-		t.Error("RegistryTypeACR mismatch")
+	env, err := svc.CreateEnvironment(context.Background(), 5, req)
+	assert.NoError(t, err)
+	assert.Equal(t, uint(11), env.ID)
+	assert.Equal(t, 2, env.OrderIndex)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// ─── UpdateEnvironment ─────────────────────────────────────────────────────
+
+func TestEnvironmentService_UpdateEnvironment_Success(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	now := time.Now()
+	mock.ExpectQuery(`SELECT`).WillReturnRows(envRow(5, 10, 1, "dev", "app-dev", 1, now))
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE .environments.`).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	newNs := "app-dev-v2"
+	updated, err := svc.UpdateEnvironment(context.Background(), 10, 5, &UpdateEnvironmentRequest{
+		Namespace: &newNs,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, updated)
+	assert.Equal(t, "app-dev-v2", updated.Namespace)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestEnvironmentService_UpdateEnvironment_NotFound(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
+
+	newNs := "app-dev"
+	updated, err := svc.UpdateEnvironment(context.Background(), 99, 5, &UpdateEnvironmentRequest{
+		Namespace: &newNs,
+	})
+	assert.Error(t, err)
+	assert.Nil(t, updated)
+}
+
+// ─── DeleteEnvironment ─────────────────────────────────────────────────────
+
+func TestEnvironmentService_DeleteEnvironment_Success(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE .environments.`).WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+
+	err := svc.DeleteEnvironment(context.Background(), 10, 5)
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestEnvironmentService_DeleteEnvironment_NotFound(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE .environments.`).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+
+	err := svc.DeleteEnvironment(context.Background(), 10, 999)
+	assert.Error(t, err)
+}
+
+// ─── GetDefaultEnvironment ─────────────────────────────────────────────────
+
+func TestEnvironmentService_GetDefaultEnvironment_Found(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	now := time.Now()
+	mock.ExpectQuery(`SELECT`).WillReturnRows(envRow(1, 10, 1, "dev", "app-dev", 1, now))
+
+	env, err := svc.GetDefaultEnvironment(context.Background(), 10)
+	assert.NoError(t, err)
+	assert.NotNil(t, env)
+	assert.Equal(t, "dev", env.Name)
+	assert.Equal(t, 1, env.OrderIndex)
+}
+
+func TestEnvironmentService_GetDefaultEnvironment_NoneExist(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
+
+	env, err := svc.GetDefaultEnvironment(context.Background(), 99)
+	assert.Error(t, err)
+	assert.Nil(t, env)
+	assert.Contains(t, err.Error(), "no environments")
+}
+
+// ─── GetNextEnvironment ─────────────────────────────────────────────────────
+
+func TestEnvironmentService_GetNextEnvironment_Found(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	now := time.Now()
+	// current order_index=1 → next is staging (order_index=2)
+	mock.ExpectQuery(`SELECT`).WillReturnRows(envRow(2, 10, 2, "staging", "app-staging", 2, now))
+
+	next, err := svc.GetNextEnvironment(context.Background(), 10, 1)
+	assert.NoError(t, err)
+	assert.NotNil(t, next)
+	assert.Equal(t, "staging", next.Name)
+	assert.Equal(t, 2, next.OrderIndex)
+}
+
+func TestEnvironmentService_GetNextEnvironment_LastEnv(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	// Already last environment — no record found
+	mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
+
+	next, err := svc.GetNextEnvironment(context.Background(), 10, 3)
+	assert.NoError(t, err) // not an error — just nil
+	assert.Nil(t, next)
+}
+
+// ─── RecordPromotion ───────────────────────────────────────────────────────
+
+func TestEnvironmentService_RecordPromotion_Success(t *testing.T) {
+	svc, mock, cleanup := newEnvSvcDB(t)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(`INSERT INTO .promotion_history.`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectCommit()
+
+	h := &models.PromotionHistory{
+		PipelineID:      10,
+		PipelineRunID:   5,
+		FromEnvironment: "dev",
+		ToEnvironment:   "staging",
+		Status:          models.PromotionStatusAutoPromoted,
 	}
-	if models.RegistryTypeECR != "ecr" {
-		t.Error("RegistryTypeECR mismatch")
-	}
-	if models.RegistryTypeGCR != "gcr" {
-		t.Error("RegistryTypeGCR mismatch")
-	}
+	err := svc.RecordPromotion(context.Background(), h)
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

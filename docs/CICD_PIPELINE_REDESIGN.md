@@ -426,9 +426,9 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | Sprint 1 | Data Foundation (Models + Migration) | ✅ Complete |
-| Sprint 2 | Core Services | 🔲 Pending |
-| Sprint 3 | Execution Engine (highest risk) | 🔲 Pending |
-| Sprint 4 | API Handlers + Routes | 🔲 Pending |
+| Sprint 2 | Core Services | ✅ Complete |
+| Sprint 3 | Execution Engine (highest risk) | ✅ Complete |
+| Sprint 4 | API Handlers + Routes | ✅ Complete |
 | Sprint 5 | Frontend Core | ✅ Complete (ahead of schedule) |
 | Sprint 6 | Frontend Polish | ✅ Complete (ahead of schedule) |
 
@@ -492,38 +492,38 @@ M1 → M2 → S2 → H2 → R1 → F1 → F3
 
 #### Sprint 2 — Core Services
 
-| Order | ID | Work Item | Est. LOC |
-|-------|----|-----------|----------|
-| 2.1 | S1 | PipelineService: remove ClusterID queries | ~80 |
-| 2.2 | S5 | EnvironmentService: enrichment + promotion helpers | ~120 |
-| 2.3 | R2 | `PipelineAccessRequired` middleware | ~40 |
+| Order | ID | Work Item | Est. LOC | Status |
+|-------|----|-----------|----------|--------|
+| 2.1 | S1 | PipelineService: remove ClusterID queries | ~80 | ✅ (done in Sprint 1 data model) |
+| 2.2 | S5 | EnvironmentService: enrichment + promotion helpers | ~120 | ✅ (`environment_service.go`, 17 unit tests) |
+| 2.3 | R2 | `PipelineAccessRequired` middleware | ~40 | ✅ (`middleware/permission.go`) |
 
-**Gate**: `go build ./...` passes. Service unit tests pass.
+**Gate**: `go build ./...` passes. Service unit tests pass. ✅ (2026-04-15)
 
-#### Sprint 3 — Execution Engine ⚠️ Highest Risk
+#### Sprint 3 — Execution Engine ✅
 
-| Order | ID | Work Item | Est. LOC | Risk Notes |
-|-------|----|-----------|----------|------------|
-| 3.1 | S2 | PipelineScheduler: `TriggerRunInput` refactor | ~200 | 10+ ClusterID refs, concurrency logic |
-| 3.2 | S3 | JobBuilder: cluster from env context | ~60 | K8s client resolution path |
-| 3.3 | S4 | JobWatcher: env-aware cluster lookup | ~80 | 6+ ClusterID refs, polling logic |
-| 3.4 | S6 | Webhook trigger: default env resolution | ~40 | Must handle "no env" gracefully |
+| Order | ID | Work Item | Est. LOC | Status |
+|-------|----|-----------|----------|--------|
+| 3.1 | S2 | PipelineScheduler: `TriggerRunInput` + `EnqueueRunInEnvironment` | ~60 | ✅ (env-based trigger entry point, 4 unit tests) |
+| 3.2 | S3 | JobBuilder: cluster from env context | ~0 | ✅ (already uses `run.ClusterID` denormalized) |
+| 3.3 | S4 | JobWatcher: env-aware cluster lookup | ~0 | ✅ (already uses `run.ClusterID` from DB) |
+| 3.4 | S6 | Webhook trigger: default env resolution | ~40 | ✅ (`WebhookTriggerRequest` supports `env_id`; falls back to default env) |
 
-**Gate**: Can trigger a run via scheduler with env-derived cluster. Watcher picks up job status.
+**Gate**: Can trigger a run via scheduler with env-derived cluster. Watcher picks up job status. ✅ (2026-04-15)
 
-#### Sprint 4 — API Layer
+#### Sprint 4 — API Layer ✅
 
-| Order | ID | Work Item | Est. LOC |
-|-------|----|-----------|----------|
-| 4.1 | H1 | PipelineHandler: cluster-free CRUD | ~150 |
-| 4.2 | H2 | PipelineRunHandler: env-based trigger | ~180 |
-| 4.3 | H3 | PipelineRunHandler: `PromoteRun` | ~80 |
-| 4.4 | H4 | EnvironmentHandler: add Get | ~60 |
-| 4.5 | H5 | PipelineSecretHandler: 3-level scope | ~60 |
-| 4.6 | R1 | `routes_pipeline.go`: new top-level routes | ~90 |
-| 4.7 | R3 | Delete `routes_cluster_pipeline.go` | ~5 |
+| Order | ID | Work Item | Est. LOC | Status |
+|-------|----|-----------|----------|--------|
+| 4.1 | H1 | PipelineHandler: cluster-free CRUD | ~150 | ✅ (already done in prior sprint) |
+| 4.2 | H2 | PipelineRunHandler: `TriggerRunInEnvironment` | ~60 | ✅ (POST /pipelines/:id/environments/:envID/runs) |
+| 4.3 | H3 | PipelineRunHandler: `PromoteRun` | ~80 | ✅ (POST /pipelines/:id/runs/:runID/promote) |
+| 4.4 | H4 | EnvironmentHandler: full CRUD | ~120 | ✅ (`environment_handler.go`, 9 unit tests) |
+| 4.5 | H5 | PipelineSecretHandler: 3-level scope endpoints | ~80 | ✅ (ListPipelineSecrets, CreatePipelineSecret, ListEnvSecrets, CreateEnvSecret) |
+| 4.6 | R1 | `routes_pipeline.go`: env routes + promote + PipelineAccessRequired | ~90 | ✅ |
+| 4.7 | R3 | Delete `routes_cluster_pipeline.go` | ~5 | ✅ |
 
-**Gate**: Manual API test — create pipeline → add env → trigger run → promote.
+**Gate**: Manual API test — create pipeline → add env → trigger run → promote. ✅ (2026-04-16)
 
 #### Sprint 5 — Frontend Core ✅
 

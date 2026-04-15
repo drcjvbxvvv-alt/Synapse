@@ -100,5 +100,16 @@
     "triggerFailed": "触发 Pipeline 失败",
     "versionSaveSuccess": "版本已保存",
     "versionSaveFailed": "保存版本失败"
+  },
+  "allowedImages": {
+    "title": "Step 镜像白名单",
+    "hint": "允许使用的 Step 镜像 glob pattern 列表。留空代表不限制镜像。例如：docker.io/kaniko/*、harbor.example.com/ci/*",
+    "pattern": "镜像 Pattern",
+    "patternPlaceholder": "例如：docker.io/kaniko/* 或 harbor.example.com/ci/*",
+    "empty": "暂无 Pattern — 允许所有镜像",
+    "duplicate": "Pattern 已存在",
+    "saveSuccess": "白名单已保存",
+    "saveFailed": "保存白名单失败",
+    "manageButton": "镜像白名单"
   }
 }

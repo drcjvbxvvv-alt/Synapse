@@ -42,3 +42,10 @@ func New() *Registry {
 func (r *Registry) Handler() http.Handler {
 	return promhttp.HandlerFor(r.reg, promhttp.HandlerOpts{EnableOpenMetrics: false})
 }
+
+// RegisterInformerAgeCollector 掛載 InformerAgeCollector，讓 Prometheus 能在 scrape 時
+// 即時計算各叢集距最後 Informer 同步的秒數。
+// 必須在 ClusterInformerManager 啟動後呼叫。
+func (r *Registry) RegisterInformerAgeCollector(getAges func() map[string]float64) {
+	r.reg.MustRegister(NewInformerAgeCollector(getAges))
+}

@@ -252,6 +252,40 @@ func (h *PipelineHandler) ListVersions(c *gin.Context) {
 	response.OK(c, versions)
 }
 
+// ─── AllowedImages ─────────────────────────────────────────────────────────
+
+// GetAllowedImages returns the global Step image whitelist.
+// GET /api/v1/system/pipeline/allowed-images
+func (h *PipelineHandler) GetAllowedImages(c *gin.Context) {
+	patterns, err := h.pipelineSvc.GetAllowedImages(c.Request.Context())
+	if err != nil {
+		response.InternalError(c, "failed to get allowed images: "+err.Error())
+		return
+	}
+	response.OK(c, gin.H{"patterns": patterns})
+}
+
+// UpdateAllowedImagesRequest is the PUT body for allowed images.
+type UpdateAllowedImagesRequest struct {
+	Patterns []string `json:"patterns" binding:"required"`
+}
+
+// UpdateAllowedImages overwrites the global Step image whitelist.
+// PUT /api/v1/system/pipeline/allowed-images
+func (h *PipelineHandler) UpdateAllowedImages(c *gin.Context) {
+	var req UpdateAllowedImagesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "invalid request body: "+err.Error())
+		return
+	}
+	if err := h.pipelineSvc.UpdateAllowedImages(c.Request.Context(), req.Patterns); err != nil {
+		response.InternalError(c, "failed to update allowed images: "+err.Error())
+		return
+	}
+	logger.Info("pipeline allowed images updated", "count", len(req.Patterns))
+	response.OK(c, gin.H{"patterns": req.Patterns})
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 func parseUintParam(c *gin.Context, key string) (uint, error) {

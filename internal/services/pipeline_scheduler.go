@@ -167,6 +167,75 @@ func (s *PipelineScheduler) EnqueueRun(ctx context.Context, run *models.Pipeline
 }
 
 // ---------------------------------------------------------------------------
+// EnqueueRunInEnvironment — 以 Environment 為執行目標建立 Run
+// ---------------------------------------------------------------------------
+
+// TriggerRunInput 攜帶 EnqueueRunInEnvironment 所需的觸發參數。
+type TriggerRunInput struct {
+	PipelineID  uint
+	EnvID       uint   // 執行目標 Environment ID（叢集 + Namespace 從此解析）
+	VersionID   *uint  // 指定版本（nil → 使用 Pipeline.CurrentVersionID）
+	UserID      uint
+	TriggerType string // TriggerTypeManual / TriggerTypeWebhook / TriggerTypeCron
+	Payload     string // webhook payload hash 等（可留空）
+	RerunFromID *uint  // 若為 rerun，指向原始 Run ID
+}
+
+// EnqueueRunInEnvironment 根據 Environment 解析目標叢集與 Namespace，建立並排入 PipelineRun。
+// 這是 Environment-based trigger 的統一入口，由 HTTP handler 呼叫。
+func (s *PipelineScheduler) EnqueueRunInEnvironment(ctx context.Context, envSvc *EnvironmentService, input TriggerRunInput) (*models.PipelineRun, error) {
+	// 解析 Environment → ClusterID + Namespace
+	env, err := envSvc.GetEnvironment(ctx, input.EnvID)
+	if err != nil {
+		return nil, fmt.Errorf("resolve environment %d: %w", input.EnvID, err)
+	}
+
+	// 取得 Pipeline 設定
+	var pipeline models.Pipeline
+	if err := s.db.WithContext(ctx).Select("id, current_version_id, concurrency_group, max_concurrent_runs").
+		First(&pipeline, input.PipelineID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("pipeline %d not found", input.PipelineID)
+		}
+		return nil, fmt.Errorf("get pipeline %d: %w", input.PipelineID, err)
+	}
+
+	// 決定版本
+	snapshotID := pipeline.CurrentVersionID
+	if input.VersionID != nil {
+		snapshotID = input.VersionID
+	}
+	if snapshotID == nil {
+		return nil, fmt.Errorf("pipeline %d has no active version; create a version first", input.PipelineID)
+	}
+
+	run := &models.PipelineRun{
+		PipelineID:       pipeline.ID,
+		SnapshotID:       *snapshotID,
+		ClusterID:        env.ClusterID, // denormalized from Environment
+		Namespace:        env.Namespace, // denormalized from Environment
+		TriggerType:      input.TriggerType,
+		TriggerPayload:   input.Payload,
+		TriggeredByUser:  input.UserID,
+		ConcurrencyGroup: pipeline.ConcurrencyGroup,
+		RerunFromID:      input.RerunFromID,
+	}
+
+	if err := s.EnqueueRun(ctx, run); err != nil {
+		return nil, err
+	}
+
+	logger.Info("pipeline run enqueued via environment",
+		"run_id", run.ID,
+		"pipeline_id", input.PipelineID,
+		"env_id", input.EnvID,
+		"cluster_id", env.ClusterID,
+		"namespace", env.Namespace,
+	)
+	return run, nil
+}
+
+// ---------------------------------------------------------------------------
 // CancelRun — 取消執行中或排隊中的 Run
 // ---------------------------------------------------------------------------
 
@@ -613,7 +682,7 @@ func (s *PipelineScheduler) executeStepWithRetry(
 
 	for attempt := 0; ; attempt++ {
 		// 解析 ${{ secrets.* }} → 查詢 PipelineSecretService
-		secrets, err := s.resolveSecrets(ctx, run.PipelineID, run.EnvironmentID, sr.ConfigJSON)
+		secrets, err := s.resolveSecrets(ctx, run.PipelineID, sr.ConfigJSON)
 		if err != nil {
 			sr.Status = models.StepRunStatusFailed
 			sr.Error = fmt.Sprintf("resolve secrets: %v", err)
@@ -938,7 +1007,7 @@ func extractHost(rawURL string) string {
 	return host
 }
 
-func (s *PipelineScheduler) resolveSecrets(ctx context.Context, pipelineID uint, environmentID uint, configJSON string) (map[string]string, error) {
+func (s *PipelineScheduler) resolveSecrets(ctx context.Context, pipelineID uint, configJSON string) (map[string]string, error) {
 	if configJSON == "" || s.secretSvc == nil {
 		return nil, nil
 	}
@@ -956,7 +1025,7 @@ func (s *PipelineScheduler) resolveSecrets(ctx context.Context, pipelineID uint,
 			continue
 		}
 		// 查詢 secret：pipeline → environment → global
-		secretVal, err := s.lookupSecret(ctx, pipelineID, environmentID, secretName)
+		secretVal, err := s.lookupSecret(ctx, pipelineID, secretName)
 		if err != nil {
 			return nil, fmt.Errorf("secret %q: %w", secretName, err)
 		}
@@ -984,7 +1053,7 @@ func parseSecretRef(value string) (string, bool) {
 }
 
 // lookupSecret 依優先順序查詢 secret：pipeline → environment → global。
-func (s *PipelineScheduler) lookupSecret(ctx context.Context, pipelineID uint, environmentID uint, name string) (string, error) {
+func (s *PipelineScheduler) lookupSecret(ctx context.Context, pipelineID uint, name string) (string, error) {
 	// 先查 pipeline scope
 	secrets, err := s.secretSvc.ListSecrets(ctx, "pipeline", &pipelineID)
 	if err != nil {
@@ -1001,24 +1070,7 @@ func (s *PipelineScheduler) lookupSecret(ctx context.Context, pipelineID uint, e
 		}
 	}
 
-	// 再查 environment scope
-	if environmentID != 0 {
-		secrets, err = s.secretSvc.ListSecrets(ctx, "environment", &environmentID)
-		if err != nil {
-			return "", fmt.Errorf("list environment secrets: %w", err)
-		}
-		for _, sec := range secrets {
-			if sec.Name == name {
-				full, err := s.secretSvc.GetSecret(ctx, sec.ID)
-				if err != nil {
-					return "", err
-				}
-				return full.ValueEnc, nil
-			}
-		}
-	}
-
-	// 最後查 global scope
+	// 再查 global scope
 	secrets, err = s.secretSvc.ListSecrets(ctx, "global", nil)
 	if err != nil {
 		return "", fmt.Errorf("list global secrets: %w", err)

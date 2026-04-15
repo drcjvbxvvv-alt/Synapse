@@ -34,7 +34,6 @@ const gitWebhookMaxBodySize = 1 << 20 // 1MB
 type GitWebhookHandler struct {
 	providerSvc *services.GitProviderService
 	pipelineSvc *services.PipelineService
-	envSvc      *services.EnvironmentService
 	scheduler   *services.PipelineScheduler
 }
 
@@ -42,13 +41,11 @@ type GitWebhookHandler struct {
 func NewGitWebhookHandler(
 	providerSvc *services.GitProviderService,
 	pipelineSvc *services.PipelineService,
-	envSvc *services.EnvironmentService,
 	scheduler *services.PipelineScheduler,
 ) *GitWebhookHandler {
 	return &GitWebhookHandler{
 		providerSvc: providerSvc,
 		pipelineSvc: pipelineSvc,
-		envSvc:      envSvc,
 		scheduler:   scheduler,
 	}
 }
@@ -154,8 +151,14 @@ func (h *GitWebhookHandler) IngestWebhook(c *gin.Context) {
 			continue
 		}
 
+		// 取得匹配規則的目標叢集資訊
+		var matchedRule *services.TriggerRule
+		if result.RuleIndex >= 0 && result.RuleIndex < len(rules) {
+			matchedRule = &rules[result.RuleIndex]
+		}
+
 		// 建立 PipelineRun
-		run, enqueueErr := h.enqueueRun(c, &pt.Pipeline, event)
+		run, enqueueErr := h.enqueueRun(c, &pt.Pipeline, event, matchedRule)
 		if enqueueErr != nil {
 			logger.Error("failed to enqueue pipeline run from git webhook",
 				"pipeline_id", pt.Pipeline.ID,
@@ -261,24 +264,21 @@ func (h *GitWebhookHandler) enqueueRun(
 	c *gin.Context,
 	pipeline *models.Pipeline,
 	event *services.WebhookEvent,
+	rule *services.TriggerRule,
 ) (*models.PipelineRun, error) {
 	if pipeline.CurrentVersionID == nil {
 		return nil, nil
 	}
 
-	// Resolve default environment (lowest OrderIndex) for git webhook triggers
-	envs, envErr := h.envSvc.ListEnvironments(c.Request.Context(), pipeline.ID)
-	if envErr != nil || len(envs) == 0 {
-		return nil, fmt.Errorf("no environment configured for pipeline %d", pipeline.ID)
+	if rule == nil || rule.ClusterID == 0 || rule.Namespace == "" {
+		return nil, fmt.Errorf("trigger rule for pipeline %d missing cluster_id or namespace", pipeline.ID)
 	}
-	env := &envs[0]
 
 	run := &models.PipelineRun{
 		PipelineID:       pipeline.ID,
-		EnvironmentID:    env.ID,
 		SnapshotID:       *pipeline.CurrentVersionID,
-		ClusterID:        env.ClusterID,
-		Namespace:        env.Namespace,
+		ClusterID:        rule.ClusterID,
+		Namespace:        rule.Namespace,
 		TriggerType:      models.TriggerTypeWebhook,
 		TriggerPayload:   event.Provider + ":" + event.Repo + "@" + event.Branch,
 		TriggeredByUser:  math.MaxUint32, // system user

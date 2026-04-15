@@ -52,13 +52,14 @@ const (
 // ---------------------------------------------------------------------------
 
 // Pipeline 是 CI/CD Pipeline 的頂層定義，不綁定任何叢集。
-// 叢集與命名空間由 Environment 提供（Pipeline → Environment → Cluster）。
+// 叢集與命名空間由 PipelineRun 的 cluster_id / namespace 直接攜帶。
 // 實際 Steps 定義儲存於 PipelineVersion（不可變快照），Pipeline 僅持有
 // current_version_id 指標。
 type Pipeline struct {
 	ID                uint           `json:"id" gorm:"primaryKey"`
 	Name              string         `json:"name" gorm:"not null;size:255;uniqueIndex:idx_pipeline_name"`
 	Description       string         `json:"description" gorm:"type:text"`
+	ProjectID         *uint          `json:"project_id,omitempty" gorm:"index"` // nullable FK → projects.id（M14.1）
 	CurrentVersionID  *uint          `json:"current_version_id"`
 	ConcurrencyGroup  string         `json:"concurrency_group" gorm:"size:255"`
 	ConcurrencyPolicy string         `json:"concurrency_policy" gorm:"size:30;default:'cancel_previous'"`
@@ -97,14 +98,13 @@ type PipelineVersion struct {
 // ---------------------------------------------------------------------------
 
 // PipelineRun 記錄一次 Pipeline 執行，含觸發來源、狀態、時間軸。
-// EnvironmentID 為執行目標環境；ClusterID/Namespace 為反正規化快取（來源：Environment）。
+// ClusterID/Namespace 由呼叫端直接提供，不再透過 Environment 間接解析。
 type PipelineRun struct {
 	ID               uint           `json:"id" gorm:"primaryKey"`
 	PipelineID       uint           `json:"pipeline_id" gorm:"not null;index"`
-	EnvironmentID    uint           `json:"environment_id" gorm:"not null;index"` // FK → environments.id
-	SnapshotID       uint           `json:"snapshot_id" gorm:"not null;index"`    // FK → pipeline_versions.id
-	ClusterID        uint           `json:"cluster_id" gorm:"not null;index"`     // denormalized from Environment
-	Namespace        string         `json:"namespace" gorm:"not null;size:253"`   // denormalized from Environment
+	SnapshotID       uint           `json:"snapshot_id" gorm:"not null;index"` // FK → pipeline_versions.id
+	ClusterID        uint           `json:"cluster_id" gorm:"not null;index"`  // 目標叢集
+	Namespace        string         `json:"namespace" gorm:"not null;size:253"` // 目標 namespace
 	Status           string         `json:"status" gorm:"not null;size:20;default:'queued';index"`
 	TriggerType      string         `json:"trigger_type" gorm:"not null;size:20"` // manual / webhook / cron / rerun
 	TriggerPayload   string         `json:"trigger_payload,omitempty" gorm:"type:text"` // webhook payload hash 等

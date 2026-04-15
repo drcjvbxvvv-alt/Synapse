@@ -198,7 +198,6 @@ func TestM13aE2E_EnqueueManualRun(t *testing.T) {
 	snapshotID := uint(1)
 	run := &models.PipelineRun{
 		PipelineID:      1,
-		EnvironmentID:   1,
 		SnapshotID:      snapshotID,
 		ClusterID:       1,
 		Namespace:       "production",
@@ -252,7 +251,6 @@ func TestM13aE2E_QueueOverflow(t *testing.T) {
 
 	run := &models.PipelineRun{
 		PipelineID:      1,
-		EnvironmentID:   1,
 		SnapshotID:      1,
 		ClusterID:       1,
 		TriggerType:     models.TriggerTypeManual,
@@ -306,17 +304,15 @@ func TestM13aE2E_RerunInheritsSnapshot(t *testing.T) {
 
 	// Simulate the rerun handler logic (as in PipelineRunHandler.RerunPipeline)
 	original := &models.PipelineRun{
-		PipelineID:    1,
-		EnvironmentID: 2,
-		SnapshotID:    originalSnapshotID,
-		ClusterID:     1,
-		Namespace:     "staging",
+		PipelineID: 1,
+		SnapshotID: originalSnapshotID,
+		ClusterID:  1,
+		Namespace:  "staging",
 	}
 
 	newRun := &models.PipelineRun{
 		PipelineID:      original.PipelineID,
-		EnvironmentID:   original.EnvironmentID, // inherited
-		SnapshotID:      original.SnapshotID,     // inherited
+		SnapshotID:      original.SnapshotID, // inherited
 		ClusterID:       original.ClusterID,
 		Namespace:       original.Namespace,
 		TriggerType:     models.TriggerTypeRerun,

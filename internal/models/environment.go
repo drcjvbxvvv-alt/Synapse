@@ -7,61 +7,60 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Environment — 環境管理（CICD_ARCHITECTURE §13）
-//
-// 設計：
-//   - 每個 Environment 屬於一個 Pipeline
-//   - order_index 決定晉升順序（dev=1 → staging=2 → production=3）
-//   - auto_promote 控制是否自動晉升到下一環境
-//   - approval_required 控制是否需要人工審核
-//   - approver_ids 為 JSON 陣列格式的 user ID 清單
+// Environment — Pipeline 執行目標（Cluster + Namespace 綁定）
 // ---------------------------------------------------------------------------
 
-// Environment 儲存部署環境設定。
+// Environment 是 Pipeline 的部署目標，唯一地映射到一個 Cluster + Namespace。
+// 每個 Pipeline 可以有多個 Environment，按 OrderIndex 排列促進順序。
 type Environment struct {
 	ID                uint           `json:"id" gorm:"primaryKey"`
-	Name              string         `json:"name" gorm:"not null;size:100;uniqueIndex:uq_pipeline_env"`
-	PipelineID        uint           `json:"pipeline_id" gorm:"not null;uniqueIndex:uq_pipeline_env"`
+	Name              string         `json:"name" gorm:"not null;size:255;uniqueIndex:uq_pipeline_env"`
+	PipelineID        uint           `json:"pipeline_id" gorm:"not null;uniqueIndex:uq_pipeline_env;index"`
 	ClusterID         uint           `json:"cluster_id" gorm:"not null;index"`
 	Namespace         string         `json:"namespace" gorm:"not null;size:253"`
-	OrderIndex        int            `json:"order_index" gorm:"not null;index:idx_env_order"`
+	OrderIndex        int            `json:"order_index" gorm:"not null"`
 	AutoPromote       bool           `json:"auto_promote" gorm:"default:false"`
 	ApprovalRequired  bool           `json:"approval_required" gorm:"default:false"`
-	ApproverIDs       string         `json:"approver_ids,omitempty" gorm:"type:text"`           // JSON array of user IDs
+	ApproverIDs       string         `json:"approver_ids,omitempty" gorm:"type:text"` // JSON 陣列，user ID 列表
 	SmokeTestStepName string         `json:"smoke_test_step_name,omitempty" gorm:"size:255"`
-	NotifyChannelIDs  string         `json:"notify_channel_ids,omitempty" gorm:"type:text"`     // JSON array: Production Gate 通知 channel
-	VariablesJSON     string         `json:"variables_json,omitempty" gorm:"type:text"`         // 環境特定變數覆寫（e.g. replicas, feature flags）
+	NotifyChannelIDs  string         `json:"notify_channel_ids,omitempty" gorm:"type:text"` // JSON 陣列
+	VariablesJSON     string         `json:"variables_json,omitempty" gorm:"type:text"`     // env-specific 變數覆寫
 	CreatedAt         time.Time      `json:"created_at"`
 	UpdatedAt         time.Time      `json:"updated_at"`
 	DeletedAt         gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
+// TableName 指定資料表名稱。
 func (Environment) TableName() string { return "environments" }
 
 // ---------------------------------------------------------------------------
-// PromotionHistory — 環境晉升歷史記錄
+// PromotionHistory — 環境促進記錄
 // ---------------------------------------------------------------------------
 
-// PromotionHistory 記錄環境間的晉升操作。
+// PromotionHistory 記錄 Pipeline Run 在環境間的晉升事件。
 type PromotionHistory struct {
-	ID              uint      `json:"id" gorm:"primaryKey"`
-	PipelineID      uint      `json:"pipeline_id" gorm:"not null;index"`
-	PipelineRunID   uint      `json:"pipeline_run_id" gorm:"not null;index"`
-	FromEnvironment string    `json:"from_environment" gorm:"not null;size:255"`
-	ToEnvironment   string    `json:"to_environment" gorm:"not null;size:255"`
-	Status          string    `json:"status" gorm:"not null;size:30"` // pending / approved / rejected / auto_promoted
-	PromotedBy      uint      `json:"promoted_by,omitempty"`
-	ApprovalID      *uint     `json:"approval_id,omitempty" gorm:"index"` // FK to approval_requests
-	Reason          string    `json:"reason,omitempty" gorm:"type:text"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID             uint      `json:"id" gorm:"primaryKey"`
+	PipelineID     uint      `json:"pipeline_id" gorm:"not null;index"`
+	PipelineRunID  uint      `json:"pipeline_run_id" gorm:"not null;index"`
+	FromEnvironment string   `json:"from_environment" gorm:"not null;size:255"`
+	ToEnvironment  string    `json:"to_environment" gorm:"not null;size:255"`
+	Status         string    `json:"status" gorm:"not null;size:30"` // pending / approved / rejected / auto_promoted
+	PromotedBy     *uint     `json:"promoted_by,omitempty"`
+	ApprovalID     *uint     `json:"approval_id,omitempty"`
+	Reason         string    `json:"reason,omitempty" gorm:"type:text"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
+// TableName 指定資料表名稱。
 func (PromotionHistory) TableName() string { return "promotion_history" }
 
-// PromotionHistory 狀態常數
+// ---------------------------------------------------------------------------
+// Promotion status constants
+// ---------------------------------------------------------------------------
+
 const (
-	PromotionStatusPending      = "pending"
-	PromotionStatusApproved     = "approved"
-	PromotionStatusRejected     = "rejected"
-	PromotionStatusAutoPromoted = "auto_promoted"
+	PromotionStatusPending       = "pending"
+	PromotionStatusApproved      = "approved"
+	PromotionStatusRejected      = "rejected"
+	PromotionStatusAutoPromoted  = "auto_promoted"
 )

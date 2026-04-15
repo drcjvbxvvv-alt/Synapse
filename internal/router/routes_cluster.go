@@ -104,7 +104,7 @@ func registerClusterRoutes(protected *gin.RouterGroup, d *routeDeps) {
 			registerClusterSLORoutes(cluster, d)
 		registerClusterChaosRoutes(cluster, d)
 		registerClusterComplianceRoutes(cluster, d)
-		registerClusterPipelineRoutes(cluster, d)
+		// Pipeline routes moved to top-level /pipelines (CICD_PIPELINE_REDESIGN Sprint 4 R3)
 		}
 	}
 }

@@ -13,6 +13,36 @@ import (
 	"github.com/shaia/Synapse/internal/services"
 )
 
+// PipelineAccessRequired 確認 Pipeline 存在並將 pipelineID 注入 context。
+// 目前採寬鬆策略：任何已驗證使用者均可存取任意 Pipeline（per-pipeline RBAC 留待後續擴充）。
+func PipelineAccessRequired(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pipelineIDU64, err := strconv.ParseUint(c.Param("pipelineID"), 10, 64)
+		if err != nil {
+			response.BadRequest(c, "invalid pipeline ID")
+			c.Abort()
+			return
+		}
+
+		var count int64
+		if err := db.Model(&models.Pipeline{}).
+			Where("id = ? AND deleted_at IS NULL", pipelineIDU64).
+			Count(&count).Error; err != nil {
+			response.InternalError(c, "pipeline lookup failed")
+			c.Abort()
+			return
+		}
+		if count == 0 {
+			response.NotFound(c, "pipeline not found")
+			c.Abort()
+			return
+		}
+
+		c.Set("pipelineID", uint(pipelineIDU64))
+		c.Next()
+	}
+}
+
 // PermissionMiddleware 權限中介軟體
 type PermissionMiddleware struct {
 	permissionService *services.PermissionService

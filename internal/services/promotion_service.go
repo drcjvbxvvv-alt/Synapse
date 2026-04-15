@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
-	"github.com/shaia/Synapse/internal/models"
-	"github.com/shaia/Synapse/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -23,15 +20,16 @@ import (
 // ---------------------------------------------------------------------------
 
 // PromotionService 管理環境晉升流程。
+// 注意：Environment 抽象層已移除，此服務的晉升邏輯已停用。
+// PipelineRun 現在直接攜帶 cluster_id + namespace。
 type PromotionService struct {
 	db       *gorm.DB
-	envSvc   *EnvironmentService
 	notifier *PromotionNotifier // Production Gate 通知（可為 nil）
 }
 
 // NewPromotionService 建立 PromotionService。
-func NewPromotionService(db *gorm.DB, envSvc *EnvironmentService) *PromotionService {
-	return &PromotionService{db: db, envSvc: envSvc}
+func NewPromotionService(db *gorm.DB) *PromotionService {
+	return &PromotionService{db: db}
 }
 
 // SetNotifier 設定 Production Gate 通知器。
@@ -54,258 +52,40 @@ type PromotionDecision struct {
 	ApproverIDs      []uint `json:"approver_ids,omitempty"`
 }
 
-// EvaluatePromotion 評估是否可以從指定環境晉升到下一個環境。
+// EvaluatePromotion 評估是否可以晉升。
+// 注意：Environment 抽象層已移除，此方法目前停用，固定回傳 blocked。
 func (s *PromotionService) EvaluatePromotion(ctx context.Context, pipelineID uint, fromEnvName string) (*PromotionDecision, error) {
-	// 取得所有環境（按 order_index 排序）
-	envs, err := s.envSvc.ListEnvironments(ctx, pipelineID)
-	if err != nil {
-		return nil, fmt.Errorf("list environments: %w", err)
-	}
-
-	if len(envs) == 0 {
-		return &PromotionDecision{
-			Allowed: false,
-			Action:  "blocked",
-			Reason:  "no environments configured for this pipeline",
-		}, nil
-	}
-
-	// 找到來源環境
-	var fromEnv *models.Environment
-	var fromIdx int
-	for i := range envs {
-		if envs[i].Name == fromEnvName {
-			fromEnv = &envs[i]
-			fromIdx = i
-			break
-		}
-	}
-	if fromEnv == nil {
-		return &PromotionDecision{
-			Allowed: false,
-			Action:  "blocked",
-			Reason:  fmt.Sprintf("environment %q not found", fromEnvName),
-		}, nil
-	}
-
-	// 檢查是否有下一個環境
-	if fromIdx >= len(envs)-1 {
-		return &PromotionDecision{
-			Allowed:         false,
-			Action:          "blocked",
-			Reason:          fmt.Sprintf("%q is the last environment, nowhere to promote", fromEnvName),
-			FromEnvironment: fromEnvName,
-		}, nil
-	}
-
-	toEnv := &envs[fromIdx+1]
-
-	// 解析 approver IDs
-	var approverIDs []uint
-	if toEnv.ApproverIDs != "" {
-		if err := json.Unmarshal([]byte(toEnv.ApproverIDs), &approverIDs); err != nil {
-			logger.Warn("failed to parse approver_ids", "environment", toEnv.Name, "error", err)
-		}
-	}
-
-	decision := &PromotionDecision{
+	return &PromotionDecision{
+		Allowed:         false,
+		Action:          "blocked",
+		Reason:          "environment-based promotion has been removed; use direct cluster_id + namespace on each run",
 		FromEnvironment: fromEnvName,
-		ToEnvironment:   toEnv.Name,
-		ApproverIDs:     approverIDs,
-	}
-
-	// Policy: 目標環境需要審核
-	if toEnv.ApprovalRequired {
-		decision.Allowed = true
-		decision.Action = "require_approval"
-		decision.Reason = fmt.Sprintf("promotion to %q requires approval", toEnv.Name)
-		decision.ApprovalRequired = true
-		return decision, nil
-	}
-
-	// Policy: 來源環境設定自動晉升
-	if fromEnv.AutoPromote {
-		decision.Allowed = true
-		decision.Action = "auto_promote"
-		decision.Reason = fmt.Sprintf("auto-promote from %q to %q", fromEnvName, toEnv.Name)
-		decision.ApprovalRequired = false
-		return decision, nil
-	}
-
-	// 預設：需要審核
-	decision.Allowed = true
-	decision.Action = "require_approval"
-	decision.Reason = fmt.Sprintf("promotion from %q to %q requires approval (default policy)", fromEnvName, toEnv.Name)
-	decision.ApprovalRequired = true
-	return decision, nil
+	}, nil
 }
 
 // ---------------------------------------------------------------------------
 // Promotion 執行
 // ---------------------------------------------------------------------------
 
-// ExecutePromotion 執行環境晉升（根據 policy 決定自動或建立審核請求）。
+// ExecutePromotion 執行環境晉升。
+// 注意：Environment 抽象層已移除，此方法固定回傳 blocked。
 func (s *PromotionService) ExecutePromotion(ctx context.Context, req *PromotionRequest) (*PromotionResult, error) {
-	// 評估策略
-	decision, err := s.EvaluatePromotion(ctx, req.PipelineID, req.FromEnvironment)
-	if err != nil {
-		return nil, fmt.Errorf("evaluate promotion: %w", err)
-	}
-
-	if !decision.Allowed {
-		return &PromotionResult{
-			Status:  "blocked",
-			Message: decision.Reason,
-		}, nil
-	}
-
-	// 記錄晉升歷史
-	history := &models.PromotionHistory{
-		PipelineID:      req.PipelineID,
-		PipelineRunID:   req.PipelineRunID,
-		FromEnvironment: decision.FromEnvironment,
-		ToEnvironment:   decision.ToEnvironment,
-		PromotedBy:      req.TriggeredBy,
-	}
-
-	switch decision.Action {
-	case "auto_promote":
-		history.Status = models.PromotionStatusAutoPromoted
-		history.Reason = decision.Reason
-
-		if err := s.envSvc.RecordPromotion(ctx, history); err != nil {
-			return nil, fmt.Errorf("record auto promotion: %w", err)
-		}
-
-		logger.Info("auto-promotion executed",
-			"pipeline_id", req.PipelineID,
-			"from", decision.FromEnvironment,
-			"to", decision.ToEnvironment,
-		)
-
-		return &PromotionResult{
-			Status:      "auto_promoted",
-			Message:     decision.Reason,
-			PromotionID: history.ID,
-		}, nil
-
-	case "require_approval":
-		history.Status = models.PromotionStatusPending
-
-		if err := s.envSvc.RecordPromotion(ctx, history); err != nil {
-			return nil, fmt.Errorf("record pending promotion: %w", err)
-		}
-
-		// 建立 ApprovalRequest
-		approval := &models.ApprovalRequest{
-			ClusterID:       req.ClusterID,
-			Namespace:       req.Namespace,
-			ResourceKind:    "Pipeline",
-			ResourceName:    fmt.Sprintf("pipeline-%d", req.PipelineID),
-			Action:          "promote_environment",
-			RequesterID:     req.TriggeredBy,
-			RequesterName:   req.TriggeredByName,
-			Status:          "pending",
-			Payload:         marshalPromotionPayload(req, decision),
-			PipelineRunID:   &req.PipelineRunID,
-			FromEnvironment: decision.FromEnvironment,
-			ToEnvironment:   decision.ToEnvironment,
-			ExpiresAt:       time.Now().Add(24 * time.Hour), // 24h expiry
-		}
-
-		if err := s.db.WithContext(ctx).Create(approval).Error; err != nil {
-			return nil, fmt.Errorf("create approval request: %w", err)
-		}
-
-		logger.Info("promotion approval requested",
-			"pipeline_id", req.PipelineID,
-			"from", decision.FromEnvironment,
-			"to", decision.ToEnvironment,
-			"approval_id", approval.ID,
-		)
-
-		// Production Gate 通知
-		s.notifyProductionGate(ctx, req, decision, approval.ID)
-
-		return &PromotionResult{
-			Status:      "pending_approval",
-			Message:     decision.Reason,
-			PromotionID: history.ID,
-			ApprovalID:  approval.ID,
-		}, nil
-
-	default:
-		return &PromotionResult{
-			Status:  "blocked",
-			Message: fmt.Sprintf("unknown action: %s", decision.Action),
-		}, nil
-	}
+	return &PromotionResult{
+		Status:  "blocked",
+		Message: "environment-based promotion has been removed; use direct cluster_id + namespace on each run",
+	}, nil
 }
 
 // ApprovePromotion 批准晉升請求。
+// 注意：Environment 抽象層已移除，此方法暫無作用。
 func (s *PromotionService) ApprovePromotion(ctx context.Context, promotionID uint, approverID uint, reason string) error {
-	return s.envSvc.UpdatePromotionStatus(ctx, promotionID, models.PromotionStatusApproved, approverID, reason)
+	return fmt.Errorf("environment-based promotion has been removed")
 }
 
 // RejectPromotion 拒絕晉升請求。
+// 注意：Environment 抽象層已移除，此方法暫無作用。
 func (s *PromotionService) RejectPromotion(ctx context.Context, promotionID uint, approverID uint, reason string) error {
-	return s.envSvc.UpdatePromotionStatus(ctx, promotionID, models.PromotionStatusRejected, approverID, reason)
-}
-
-// ---------------------------------------------------------------------------
-// Policy validation helpers
-// ---------------------------------------------------------------------------
-
-// ValidatePromotionOrder 驗證晉升是否按照正確的順序（不可跳關）。
-func ValidatePromotionOrder(envs []models.Environment, fromName, toName string) error {
-	var fromIdx, toIdx int
-	fromFound, toFound := false, false
-
-	for i, env := range envs {
-		if env.Name == fromName {
-			fromIdx = i
-			fromFound = true
-		}
-		if env.Name == toName {
-			toIdx = i
-			toFound = true
-		}
-	}
-
-	if !fromFound {
-		return fmt.Errorf("source environment %q not found", fromName)
-	}
-	if !toFound {
-		return fmt.Errorf("target environment %q not found", toName)
-	}
-
-	if toIdx != fromIdx+1 {
-		return fmt.Errorf("cannot promote from %q (index %d) to %q (index %d): must promote to the next environment in order",
-			fromName, fromIdx, toName, toIdx)
-	}
-
-	return nil
-}
-
-// ValidateNotReversePromotion 驗證不允許反向晉升（降級）。
-func ValidateNotReversePromotion(envs []models.Environment, fromName, toName string) error {
-	var fromIdx, toIdx int
-
-	for i, env := range envs {
-		if env.Name == fromName {
-			fromIdx = i
-		}
-		if env.Name == toName {
-			toIdx = i
-		}
-	}
-
-	if toIdx <= fromIdx {
-		return fmt.Errorf("reverse promotion not allowed: %q (index %d) → %q (index %d)",
-			fromName, fromIdx, toName, toIdx)
-	}
-
-	return nil
+	return fmt.Errorf("environment-based promotion has been removed")
 }
 
 // ---------------------------------------------------------------------------
@@ -335,49 +115,9 @@ type PromotionResult struct {
 // Helpers
 // ---------------------------------------------------------------------------
 
-// notifyProductionGate 在建立審批請求後發送通知（如果目標環境設定了 notify_channel_ids）。
+// notifyProductionGate は Environment 抽象層削除により無効化されました。
 func (s *PromotionService) notifyProductionGate(ctx context.Context, req *PromotionRequest, decision *PromotionDecision, approvalID uint) {
-	if s.notifier == nil {
-		return
-	}
-
-	// 查詢目標環境
-	envs, err := s.envSvc.ListEnvironments(ctx, req.PipelineID)
-	if err != nil {
-		logger.Warn("promotion notifier: failed to list environments", "error", err)
-		return
-	}
-
-	var toEnv *models.Environment
-	for i := range envs {
-		if envs[i].Name == decision.ToEnvironment {
-			toEnv = &envs[i]
-			break
-		}
-	}
-	if toEnv == nil {
-		return
-	}
-
-	// 查詢 Pipeline 名稱
-	pipelineName := fmt.Sprintf("pipeline-%d", req.PipelineID)
-	var pipeline models.Pipeline
-	if err := s.db.WithContext(ctx).Select("id, name").First(&pipeline, req.PipelineID).Error; err == nil {
-		pipelineName = pipeline.Name
-	}
-
-	event := &GateEvent{
-		PipelineID:      req.PipelineID,
-		PipelineName:    pipelineName,
-		PipelineRunID:   req.PipelineRunID,
-		FromEnvironment: decision.FromEnvironment,
-		ToEnvironment:   decision.ToEnvironment,
-		RequesterName:   req.TriggeredByName,
-		ApprovalID:      approvalID,
-		Reason:          decision.Reason,
-	}
-
-	s.notifier.NotifyProductionGate(ctx, event, toEnv)
+	// Environment 抽象層削除により、通知機能は無効です。
 }
 
 func marshalPromotionPayload(req *PromotionRequest, decision *PromotionDecision) string {

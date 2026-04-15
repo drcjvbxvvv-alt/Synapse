@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -40,24 +41,24 @@ const (
 // PipelineWebhookHandler 處理外部 Webhook 觸發 Pipeline。
 type PipelineWebhookHandler struct {
 	pipelineSvc *services.PipelineService
-	envSvc      *services.EnvironmentService
 	scheduler   *services.PipelineScheduler
 	secretSvc   *services.PipelineSecretService
+	envSvc      *services.EnvironmentService
 	nonceCache  *nonceCache
 }
 
 // NewPipelineWebhookHandler 建立 Webhook handler。
 func NewPipelineWebhookHandler(
 	pipelineSvc *services.PipelineService,
-	envSvc *services.EnvironmentService,
 	scheduler *services.PipelineScheduler,
 	secretSvc *services.PipelineSecretService,
+	envSvc *services.EnvironmentService,
 ) *PipelineWebhookHandler {
 	return &PipelineWebhookHandler{
 		pipelineSvc: pipelineSvc,
-		envSvc:      envSvc,
 		scheduler:   scheduler,
 		secretSvc:   secretSvc,
+		envSvc:      envSvc,
 		nonceCache:  newNonceCache(webhookNonceTTL),
 	}
 }
@@ -154,8 +155,13 @@ func (h *PipelineWebhookHandler) TriggerWebhook(c *gin.Context) {
 	}
 	h.nonceCache.add(nonce)
 
+	// ── 解析 cluster_id + namespace ────────────────────────────
+	var triggerReq WebhookTriggerRequest
+	// best-effort JSON parse; validation happens inside createWebhookRun
+	_ = json.Unmarshal(body, &triggerReq)
+
 	// ── 建立 Pipeline Run ───────────────────────────────────────
-	run, err := h.createWebhookRun(c, pipeline, body)
+	run, err := h.createWebhookRun(c, pipeline, body, triggerReq)
 	if err != nil {
 		logger.Error("webhook trigger failed",
 			"pipeline_id", pipelineID, "error", err)
@@ -303,32 +309,66 @@ func (h *PipelineWebhookHandler) lookupWebhookSecret(ctx context.Context, pipeli
 	return "", fmt.Errorf("WEBHOOK_SECRET not found for pipeline %d", pipelineID)
 }
 
+// WebhookTriggerRequest 攜帶 Webhook 觸發所需的目標叢集資訊。
+// 解析優先順序：
+//  1. env_id 指定環境 → 從 Environment 解析 ClusterID + Namespace
+//  2. cluster_id + namespace 直接指定（向前相容）
+//  3. 兩者均未提供 → 使用 Pipeline 的預設環境（OrderIndex 最低者）
+type WebhookTriggerRequest struct {
+	EnvID     *uint  `json:"env_id"`    // 目標環境 ID（優先）
+	ClusterID uint   `json:"cluster_id"` // 目標叢集（向前相容）
+	Namespace string `json:"namespace"`  // 目標 namespace（向前相容）
+}
+
 func (h *PipelineWebhookHandler) createWebhookRun(
 	c *gin.Context,
 	pipeline *models.Pipeline,
 	payload []byte,
+	triggerReq WebhookTriggerRequest,
 ) (*models.PipelineRun, error) {
 	// 確認有 current version
 	if pipeline.CurrentVersionID == nil {
 		return nil, fmt.Errorf("pipeline %d has no active version", pipeline.ID)
 	}
 
+	clusterID := triggerReq.ClusterID
+	namespace := triggerReq.Namespace
+
+	// 若指定 EnvID → 從 Environment 解析叢集資訊
+	if triggerReq.EnvID != nil {
+		env, err := h.envSvc.GetEnvironment(c.Request.Context(), *triggerReq.EnvID)
+		if err != nil {
+			return nil, fmt.Errorf("resolve environment %d: %w", *triggerReq.EnvID, err)
+		}
+		clusterID = env.ClusterID
+		namespace = env.Namespace
+	}
+
+	// 若 cluster_id + namespace 均未指定 → 解析預設環境（OrderIndex 最低者）
+	if clusterID == 0 || namespace == "" {
+		defaultEnv, err := h.envSvc.GetDefaultEnvironment(c.Request.Context(), pipeline.ID)
+		if err != nil {
+			return nil, fmt.Errorf("resolve default environment for pipeline %d: %w", pipeline.ID, err)
+		}
+		clusterID = defaultEnv.ClusterID
+		namespace = defaultEnv.Namespace
+		logger.Info("webhook using default environment",
+			"pipeline_id", pipeline.ID,
+			"env_id", defaultEnv.ID,
+			"cluster_id", clusterID,
+			"namespace", namespace,
+		)
+	}
+
 	// 計算 payload hash（避免儲存完整 payload）
 	payloadHash := sha256.Sum256(payload)
 	payloadRef := hex.EncodeToString(payloadHash[:16]) // 前 16 bytes 作為參考
 
-	// Resolve default environment (lowest OrderIndex) for webhook triggers
-	env, envErr := h.resolveDefaultEnvironment(c.Request.Context(), pipeline.ID)
-	if envErr != nil {
-		return nil, fmt.Errorf("no environment configured for pipeline %d: %w", pipeline.ID, envErr)
-	}
-
 	run := &models.PipelineRun{
 		PipelineID:       pipeline.ID,
-		EnvironmentID:    env.ID,
 		SnapshotID:       *pipeline.CurrentVersionID,
-		ClusterID:        env.ClusterID,
-		Namespace:        env.Namespace,
+		ClusterID:        clusterID,
+		Namespace:        namespace,
 		TriggerType:      models.TriggerTypeWebhook,
 		TriggerPayload:   payloadRef,
 		TriggeredByUser:  math.MaxUint32, // system user for webhook triggers
@@ -340,18 +380,4 @@ func (h *PipelineWebhookHandler) createWebhookRun(
 	}
 
 	return run, nil
-}
-
-// resolveDefaultEnvironment returns the environment with the lowest OrderIndex
-// for the given pipeline. This is used by webhook triggers to determine the
-// default deployment target when Pipeline no longer carries ClusterID/Namespace.
-func (h *PipelineWebhookHandler) resolveDefaultEnvironment(ctx context.Context, pipelineID uint) (*models.Environment, error) {
-	envs, err := h.envSvc.ListEnvironments(ctx, pipelineID)
-	if err != nil {
-		return nil, fmt.Errorf("list environments for pipeline %d: %w", pipelineID, err)
-	}
-	if len(envs) == 0 {
-		return nil, fmt.Errorf("pipeline %d has no environments configured", pipelineID)
-	}
-	return &envs[0], nil // ListEnvironments returns ordered by order_index ASC
 }

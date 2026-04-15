@@ -51,9 +51,9 @@ type GateEvent struct {
 }
 
 // NotifyProductionGate 在 production gate 觸發審批時發送通知。
-// toEnv 是目標環境（包含 notify_channel_ids）。
-func (n *PromotionNotifier) NotifyProductionGate(ctx context.Context, event *GateEvent, toEnv *models.Environment) {
-	channelIDs := parseGateChannelIDs(toEnv.NotifyChannelIDs)
+// notifyChannelIDsJSON 是 JSON 陣列格式的 notify channel ID 清單。
+func (n *PromotionNotifier) NotifyProductionGate(ctx context.Context, event *GateEvent, notifyChannelIDsJSON string) {
+	channelIDs := parseGateChannelIDs(notifyChannelIDsJSON)
 	if len(channelIDs) == 0 {
 		return
 	}

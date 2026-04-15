@@ -43,6 +43,19 @@ export interface TestConnectionResponse {
   error?: string;
 }
 
+export interface RegistryRepository {
+  name: string;
+  tag_count?: number;
+  pull_count?: number;
+}
+
+export interface RegistryTag {
+  name: string;
+  digest?: string;
+  size?: number;
+  created_at?: string;
+}
+
 // ─── Service ───────────────────────────────────────────────────────────────
 
 const registryService = {
@@ -68,6 +81,15 @@ const registryService = {
 
   testConnection(id: number): Promise<TestConnectionResponse> {
     return request.post(`/system/registries/${id}/test-connection`);
+  },
+
+  listRepositories(id: number, project?: string): Promise<{ items: RegistryRepository[]; total: number }> {
+    const params = project ? `?project=${encodeURIComponent(project)}` : '';
+    return request.get(`/system/registries/${id}/repositories${params}`);
+  },
+
+  listTags(id: number, repository: string): Promise<{ items: RegistryTag[]; total: number }> {
+    return request.get(`/system/registries/${id}/tags?repository=${encodeURIComponent(repository)}`);
   },
 };
 
