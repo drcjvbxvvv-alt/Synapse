@@ -7,8 +7,9 @@ import (
 	"github.com/shaia/Synapse/internal/services"
 )
 
-// registerClusterPipelineRoutes registers Pipeline + Run + Secret + Log routes under /:clusterID.
-func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
+// registerPipelineRoutes registers top-level Pipeline routes under /pipelines.
+// Pipeline is a cluster-independent entity; cluster binding happens via Environment.
+func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 	secretSvc := services.NewPipelineSecretService(d.db)
 	logSvc := services.NewPipelineLogService(d.db)
 	envSvc := services.NewEnvironmentService(d.db)
@@ -19,8 +20,8 @@ func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, envSvc, d.pipelineScheduler, d.auditSvc)
 	envHandler := handlers.NewEnvironmentHandler(envSvc)
 
-	// ── Pipelines ──────────────────────────────────────────────────────
-	pipelines := cluster.Group("/pipelines")
+	// ── Pipelines ──────────────────────────────────────────────────────────
+	pipelines := protected.Group("/pipelines")
 	{
 		pipelines.GET("", pipelineHandler.ListPipelines)
 		pipelines.POST("", pipelineHandler.CreatePipeline)
@@ -55,12 +56,12 @@ func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 					run.POST("/steps/:stepRunID/approve", runHandler.ApproveStep)
 					run.POST("/steps/:stepRunID/reject", runHandler.RejectStep)
 
-					// Step Logs
+					// Step Logs (SSE)
 					run.GET("/steps/:stepRunID/logs", logHandler.GetStepLogs)
 				}
 			}
 
-			// Environments (M17)
+			// Environments
 			envs := pipeline.Group("/environments")
 			{
 				envs.GET("", envHandler.List)
@@ -71,8 +72,8 @@ func registerClusterPipelineRoutes(cluster *gin.RouterGroup, d *routeDeps) {
 		}
 	}
 
-	// ── Pipeline Secrets ───────────────────────────────────────────────
-	secrets := cluster.Group("/pipeline-secrets")
+	// ── Pipeline Secrets (global scope) ────────────────────────────────────
+	secrets := protected.Group("/pipeline-secrets")
 	{
 		secrets.GET("", secretHandler.ListSecrets)
 		secrets.POST("", secretHandler.CreateSecret)

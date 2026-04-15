@@ -41,10 +41,11 @@ type PipelineYAMLDoc struct {
 }
 
 // PipelineYAMLMetadata 文件 metadata。
+// Cluster 和 Namespace 已移至 Environment 層級，不再由 Pipeline 定義。
 type PipelineYAMLMetadata struct {
 	Name      string `json:"name" yaml:"name"`
-	Cluster   string `json:"cluster" yaml:"cluster"`
-	Namespace string `json:"namespace" yaml:"namespace"`
+	Cluster   string `json:"cluster,omitempty" yaml:"cluster,omitempty"`     // deprecated: use Environment
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"` // deprecated: use Environment
 }
 
 // PipelineYAMLSpec 文件 spec 區塊。
@@ -115,12 +116,8 @@ func ValidatePipelineYAML(doc *PipelineYAMLDoc) []string {
 	} else if len(doc.Metadata.Name) > 255 {
 		errs = append(errs, "metadata.name exceeds 255 characters")
 	}
-	if doc.Metadata.Cluster == "" {
-		errs = append(errs, "metadata.cluster is required")
-	}
-	if doc.Metadata.Namespace == "" {
-		errs = append(errs, "metadata.namespace is required")
-	}
+	// metadata.cluster and metadata.namespace are now optional (deprecated).
+	// Cluster and namespace are determined by Environment, not the Pipeline definition.
 
 	// spec.steps
 	if len(doc.Spec.Steps) == 0 {

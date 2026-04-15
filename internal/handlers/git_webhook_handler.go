@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -33,6 +34,7 @@ const gitWebhookMaxBodySize = 1 << 20 // 1MB
 type GitWebhookHandler struct {
 	providerSvc *services.GitProviderService
 	pipelineSvc *services.PipelineService
+	envSvc      *services.EnvironmentService
 	scheduler   *services.PipelineScheduler
 }
 
@@ -40,11 +42,13 @@ type GitWebhookHandler struct {
 func NewGitWebhookHandler(
 	providerSvc *services.GitProviderService,
 	pipelineSvc *services.PipelineService,
+	envSvc *services.EnvironmentService,
 	scheduler *services.PipelineScheduler,
 ) *GitWebhookHandler {
 	return &GitWebhookHandler{
 		providerSvc: providerSvc,
 		pipelineSvc: pipelineSvc,
+		envSvc:      envSvc,
 		scheduler:   scheduler,
 	}
 }
@@ -262,11 +266,19 @@ func (h *GitWebhookHandler) enqueueRun(
 		return nil, nil
 	}
 
+	// Resolve default environment (lowest OrderIndex) for git webhook triggers
+	envs, envErr := h.envSvc.ListEnvironments(c.Request.Context(), pipeline.ID)
+	if envErr != nil || len(envs) == 0 {
+		return nil, fmt.Errorf("no environment configured for pipeline %d", pipeline.ID)
+	}
+	env := &envs[0]
+
 	run := &models.PipelineRun{
 		PipelineID:       pipeline.ID,
+		EnvironmentID:    env.ID,
 		SnapshotID:       *pipeline.CurrentVersionID,
-		ClusterID:        pipeline.ClusterID,
-		Namespace:        pipeline.Namespace,
+		ClusterID:        env.ClusterID,
+		Namespace:        env.Namespace,
 		TriggerType:      models.TriggerTypeWebhook,
 		TriggerPayload:   event.Provider + ":" + event.Repo + "@" + event.Branch,
 		TriggeredByUser:  math.MaxUint32, // system user

@@ -46,6 +46,10 @@ export const MAIN_MENU_PERMISSIONS: Record<string, {
   'alert-center':  { adminOpsOnly: true },
   'system-settings': { adminOpsOnly: true },
 
+  // CI/CD — 所有已登入的使用者皆可見（對應叢集層級的 dev 權限）
+  'cicd-global':           {},
+  'cicd-pipelines-global': {},
+
   // 叢集管理（叢集列表）僅平臺管理員可見；非管理員直接進入已分配叢集
   'cluster-management': { platformAdminOnly: true },
 

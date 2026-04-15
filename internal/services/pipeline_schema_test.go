@@ -96,8 +96,8 @@ func TestValidatePipelineYAML_MissingMetadata(t *testing.T) {
 		Spec:       PipelineYAMLSpec{Steps: []PipelineYAMLStep{{Name: "a", Type: "shell"}}},
 	}
 	errs := ValidatePipelineYAML(doc)
-	if len(errs) != 3 { // name, cluster, namespace
-		t.Errorf("expected 3 metadata errors, got %d: %v", len(errs), errs)
+	if len(errs) != 1 { // only name is required (cluster/namespace moved to Environment)
+		t.Errorf("expected 1 metadata error, got %d: %v", len(errs), errs)
 	}
 }
 

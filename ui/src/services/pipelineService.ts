@@ -9,8 +9,6 @@ export interface Pipeline {
   id: number;
   name: string;
   description: string;
-  cluster_id: number;
-  namespace: string;
   current_version_id: number | null;
   concurrency_group: string;
   concurrency_policy: 'cancel_previous' | 'queue' | 'reject';
@@ -38,6 +36,7 @@ export interface PipelineRun {
   id: number;
   pipeline_id: number;
   snapshot_id: number;
+  environment_id: number;
   cluster_id: number;
   namespace: string;
   status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled' | 'waiting_approval';
@@ -75,7 +74,6 @@ export interface StepRun {
 export interface CreatePipelineRequest {
   name: string;
   description?: string;
-  namespace: string;
   concurrency_group?: string;
   concurrency_policy?: 'cancel_previous' | 'queue' | 'reject';
   max_concurrent_runs?: number;
@@ -98,73 +96,74 @@ export interface CreateVersionRequest {
 
 export interface TriggerRunRequest {
   trigger_type?: 'manual';
+  environment_id?: number;
 }
 
 // ─── Service ───────────────────────────────────────────────────────────────
 
 const pipelineService = {
   // Pipelines
-  list: (clusterId: number, namespace?: string) =>
+  list: (namespace?: string) =>
     request.get<{ items: Pipeline[]; total: number }>(
-      `/clusters/${clusterId}/pipelines${namespace ? `?namespace=${namespace}` : ''}`
+      `/pipelines${namespace ? `?namespace=${namespace}` : ''}`
     ),
 
-  get: (clusterId: number, pipelineId: number) =>
-    request.get<Pipeline>(`/clusters/${clusterId}/pipelines/${pipelineId}`),
+  get: (pipelineId: number) =>
+    request.get<Pipeline>(`/pipelines/${pipelineId}`),
 
-  create: (clusterId: number, data: CreatePipelineRequest) =>
-    request.post<Pipeline>(`/clusters/${clusterId}/pipelines`, data),
+  create: (data: CreatePipelineRequest) =>
+    request.post<Pipeline>(`/pipelines`, data),
 
-  update: (clusterId: number, pipelineId: number, data: UpdatePipelineRequest) =>
-    request.put<Pipeline>(`/clusters/${clusterId}/pipelines/${pipelineId}`, data),
+  update: (pipelineId: number, data: UpdatePipelineRequest) =>
+    request.put<Pipeline>(`/pipelines/${pipelineId}`, data),
 
-  delete: (clusterId: number, pipelineId: number) =>
-    request.delete<void>(`/clusters/${clusterId}/pipelines/${pipelineId}`),
+  delete: (pipelineId: number) =>
+    request.delete<void>(`/pipelines/${pipelineId}`),
 
   // Versions
-  listVersions: (clusterId: number, pipelineId: number) =>
+  listVersions: (pipelineId: number) =>
     request.get<{ items: PipelineVersion[]; total: number }>(
-      `/clusters/${clusterId}/pipelines/${pipelineId}/versions`
+      `/pipelines/${pipelineId}/versions`
     ),
 
-  createVersion: (clusterId: number, pipelineId: number, data: CreateVersionRequest) =>
+  createVersion: (pipelineId: number, data: CreateVersionRequest) =>
     request.post<PipelineVersion>(
-      `/clusters/${clusterId}/pipelines/${pipelineId}/versions`,
+      `/pipelines/${pipelineId}/versions`,
       data
     ),
 
-  getVersion: (clusterId: number, pipelineId: number, version: number) =>
+  getVersion: (pipelineId: number, version: number) =>
     request.get<PipelineVersion>(
-      `/clusters/${clusterId}/pipelines/${pipelineId}/versions/${version}`
+      `/pipelines/${pipelineId}/versions/${version}`
     ),
 
   // Runs
-  listRuns: (clusterId: number, pipelineId: number) =>
+  listRuns: (pipelineId: number) =>
     request.get<{ items: PipelineRun[]; total: number }>(
-      `/clusters/${clusterId}/pipelines/${pipelineId}/runs`
+      `/pipelines/${pipelineId}/runs`
     ),
 
-  triggerRun: (clusterId: number, pipelineId: number, data?: TriggerRunRequest) =>
+  triggerRun: (pipelineId: number, data?: TriggerRunRequest) =>
     request.post<PipelineRun>(
-      `/clusters/${clusterId}/pipelines/${pipelineId}/runs`,
+      `/pipelines/${pipelineId}/runs`,
       data ?? { trigger_type: 'manual' }
     ),
 
   // GetRun returns both the run and its step runs (see pipeline_run_handler.go)
-  getRun: (clusterId: number, pipelineId: number, runId: number) =>
+  getRun: (pipelineId: number, runId: number) =>
     request.get<{ run: PipelineRun; steps: StepRun[] }>(
-      `/clusters/${clusterId}/pipelines/${pipelineId}/runs/${runId}`
+      `/pipelines/${pipelineId}/runs/${runId}`
     ),
 
-  cancelRun: (clusterId: number, pipelineId: number, runId: number) =>
+  cancelRun: (pipelineId: number, runId: number) =>
     request.post<void>(
-      `/clusters/${clusterId}/pipelines/${pipelineId}/runs/${runId}/cancel`,
+      `/pipelines/${pipelineId}/runs/${runId}/cancel`,
       {}
     ),
 
-  rerun: (clusterId: number, pipelineId: number, runId: number, fromFailed = false) =>
+  rerun: (pipelineId: number, runId: number, fromFailed = false) =>
     request.post<PipelineRun>(
-      `/clusters/${clusterId}/pipelines/${pipelineId}/runs/${runId}/rerun`,
+      `/pipelines/${pipelineId}/runs/${runId}/rerun`,
       { from_failed: fromFailed }
     ),
 
@@ -173,12 +172,11 @@ const pipelineService = {
    * Use with useSSELog hook — EventSource cannot go through axios.
    */
   getStepLogUrl: (
-    clusterId: number,
     pipelineId: number,
     runId: number,
     stepRunId: number,
   ): string =>
-    `${API_BASE}/clusters/${clusterId}/pipelines/${pipelineId}/runs/${runId}/steps/${stepRunId}/logs?follow=true`,
+    `${API_BASE}/pipelines/${pipelineId}/runs/${runId}/steps/${stepRunId}/logs?follow=true`,
 };
 
 export default pipelineService;

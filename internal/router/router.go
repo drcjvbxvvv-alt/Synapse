@@ -381,6 +381,9 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		mcTopoHandler := handlers.NewMultiClusterTopologyHandler(deps.clusterSvc, deps.k8sMgr)
 		protected.GET("/network/multi-cluster-topology", mcTopoHandler.GetMultiClusterTopology)
 
+		// Top-level Pipeline routes (cluster-independent)
+		registerPipelineRoutes(protected, &deps)
+
 		clusters := protected.Group("/clusters")
 		registerSystemRoutes(protected, clusters, &deps)
 	}

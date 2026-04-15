@@ -37,28 +37,30 @@ func NewEnvironmentHandler(envSvc *services.EnvironmentService) *EnvironmentHand
 
 // CreateEnvironmentRequest 建立 Environment 的請求。
 type CreateEnvironmentRequest struct {
-	Name              string `json:"name"               binding:"required,max=255"`
-	ClusterID         uint   `json:"cluster_id"         binding:"required"`
-	Namespace         string `json:"namespace"          binding:"required,max=253"`
-	OrderIndex        int    `json:"order_index"`
-	AutoPromote       bool   `json:"auto_promote"`
-	ApprovalRequired  bool   `json:"approval_required"`
-	ApproverIDs       []uint `json:"approver_ids"`
-	SmokeTestStepName string `json:"smoke_test_step_name"`
-	NotifyChannelIDs  []uint `json:"notify_channel_ids"`
+	Name              string            `json:"name"               binding:"required,max=100"`
+	ClusterID         uint              `json:"cluster_id"         binding:"required"`
+	Namespace         string            `json:"namespace"          binding:"required,max=253"`
+	OrderIndex        int               `json:"order_index"`
+	AutoPromote       bool              `json:"auto_promote"`
+	ApprovalRequired  bool              `json:"approval_required"`
+	ApproverIDs       []uint            `json:"approver_ids"`
+	SmokeTestStepName string            `json:"smoke_test_step_name"`
+	NotifyChannelIDs  []uint            `json:"notify_channel_ids"`
+	Variables         map[string]string `json:"variables,omitempty"` // 環境特定變數覆寫
 }
 
 // UpdateEnvironmentRequest 更新 Environment 的請求。
 type UpdateEnvironmentRequest struct {
-	Name              *string `json:"name,omitempty"`
-	ClusterID         *uint   `json:"cluster_id,omitempty"`
-	Namespace         *string `json:"namespace,omitempty"`
-	OrderIndex        *int    `json:"order_index,omitempty"`
-	AutoPromote       *bool   `json:"auto_promote,omitempty"`
-	ApprovalRequired  *bool   `json:"approval_required,omitempty"`
-	ApproverIDs       []uint  `json:"approver_ids,omitempty"`
-	SmokeTestStepName *string `json:"smoke_test_step_name,omitempty"`
-	NotifyChannelIDs  []uint  `json:"notify_channel_ids,omitempty"`
+	Name              *string           `json:"name,omitempty"`
+	ClusterID         *uint             `json:"cluster_id,omitempty"`
+	Namespace         *string           `json:"namespace,omitempty"`
+	OrderIndex        *int              `json:"order_index,omitempty"`
+	AutoPromote       *bool             `json:"auto_promote,omitempty"`
+	ApprovalRequired  *bool             `json:"approval_required,omitempty"`
+	ApproverIDs       []uint            `json:"approver_ids,omitempty"`
+	SmokeTestStepName *string           `json:"smoke_test_step_name,omitempty"`
+	NotifyChannelIDs  []uint            `json:"notify_channel_ids,omitempty"`
+	Variables         map[string]string `json:"variables,omitempty"` // 環境特定變數覆寫
 }
 
 // ─── Handlers ──────────────────────────────────────────────────────────────
@@ -109,6 +111,12 @@ func (h *EnvironmentHandler) Create(c *gin.Context) {
 		notifyJSON = string(b)
 	}
 
+	variablesJSON := "{}"
+	if len(req.Variables) > 0 {
+		b, _ := json.Marshal(req.Variables)
+		variablesJSON = string(b)
+	}
+
 	env := &models.Environment{
 		Name:              req.Name,
 		PipelineID:        uint(pipelineID),
@@ -120,6 +128,7 @@ func (h *EnvironmentHandler) Create(c *gin.Context) {
 		ApproverIDs:       approverJSON,
 		SmokeTestStepName: req.SmokeTestStepName,
 		NotifyChannelIDs:  notifyJSON,
+		VariablesJSON:     variablesJSON,
 	}
 
 	if err := h.envSvc.CreateEnvironment(c.Request.Context(), env); err != nil {
@@ -181,6 +190,10 @@ func (h *EnvironmentHandler) Update(c *gin.Context) {
 	if req.NotifyChannelIDs != nil {
 		b, _ := json.Marshal(req.NotifyChannelIDs)
 		updates["notify_channel_ids"] = string(b)
+	}
+	if req.Variables != nil {
+		b, _ := json.Marshal(req.Variables)
+		updates["variables_json"] = string(b)
 	}
 
 	if len(updates) == 0 {

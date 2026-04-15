@@ -53,20 +53,13 @@ func (h *PipelineHandler) logPipelineAudit(c *gin.Context, action, resourceType,
 // ─── Pipeline CRUD ─────────────────────────────────────────────────────────
 
 // CreatePipeline 建立 Pipeline。
-// POST /clusters/:clusterID/pipelines
+// POST /pipelines
 func (h *PipelineHandler) CreatePipeline(c *gin.Context) {
-	clusterID, err := parseClusterID(c.Param("clusterID"))
-	if err != nil {
-		response.BadRequest(c, "invalid cluster ID")
-		return
-	}
-
 	var req services.CreatePipelineRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "invalid request body: "+err.Error())
 		return
 	}
-	req.ClusterID = clusterID
 
 	userID := c.GetUint("user_id")
 	pipeline, err := h.pipelineSvc.CreatePipeline(c.Request.Context(), &req, userID)
@@ -85,7 +78,7 @@ func (h *PipelineHandler) CreatePipeline(c *gin.Context) {
 }
 
 // GetPipeline 取得單一 Pipeline。
-// GET /clusters/:clusterID/pipelines/:pipelineID
+// GET /pipelines/:pipelineID
 func (h *PipelineHandler) GetPipeline(c *gin.Context) {
 	pipelineID, err := parseUintParam(c, "pipelineID")
 	if err != nil {
@@ -107,20 +100,12 @@ func (h *PipelineHandler) GetPipeline(c *gin.Context) {
 }
 
 // ListPipelines 列出 Pipeline。
-// GET /clusters/:clusterID/pipelines
+// GET /pipelines
 func (h *PipelineHandler) ListPipelines(c *gin.Context) {
-	clusterID, err := parseClusterID(c.Param("clusterID"))
-	if err != nil {
-		response.BadRequest(c, "invalid cluster ID")
-		return
-	}
-
 	params := &services.ListPipelinesParams{
-		ClusterID: clusterID,
-		Namespace: c.Query("namespace"),
-		Search:    c.Query("search"),
-		Page:      parsePage(c),
-		PageSize:  parsePageSize(c, 20),
+		Search:   c.Query("search"),
+		Page:     parsePage(c),
+		PageSize: parsePageSize(c, 20),
 	}
 
 	pipelines, total, err := h.pipelineSvc.ListPipelines(c.Request.Context(), params)
@@ -133,7 +118,7 @@ func (h *PipelineHandler) ListPipelines(c *gin.Context) {
 }
 
 // UpdatePipeline 更新 Pipeline。
-// PUT /clusters/:clusterID/pipelines/:pipelineID
+// PUT /pipelines/:pipelineID
 func (h *PipelineHandler) UpdatePipeline(c *gin.Context) {
 	pipelineID, err := parseUintParam(c, "pipelineID")
 	if err != nil {
@@ -163,7 +148,7 @@ func (h *PipelineHandler) UpdatePipeline(c *gin.Context) {
 }
 
 // DeletePipeline 刪除 Pipeline。
-// DELETE /clusters/:clusterID/pipelines/:pipelineID
+// DELETE /pipelines/:pipelineID
 func (h *PipelineHandler) DeletePipeline(c *gin.Context) {
 	pipelineID, err := parseUintParam(c, "pipelineID")
 	if err != nil {
@@ -189,7 +174,7 @@ func (h *PipelineHandler) DeletePipeline(c *gin.Context) {
 // ─── Version 快照 ──────────────────────────────────────────────────────────
 
 // CreateVersion 建立不可變版本快照。
-// POST /clusters/:clusterID/pipelines/:pipelineID/versions
+// POST /pipelines/:pipelineID/versions
 func (h *PipelineHandler) CreateVersion(c *gin.Context) {
 	pipelineID, err := parseUintParam(c, "pipelineID")
 	if err != nil {
@@ -218,7 +203,7 @@ func (h *PipelineHandler) CreateVersion(c *gin.Context) {
 }
 
 // GetVersion 取得指定版本。
-// GET /clusters/:clusterID/pipelines/:pipelineID/versions/:version
+// GET /pipelines/:pipelineID/versions/:version
 func (h *PipelineHandler) GetVersion(c *gin.Context) {
 	pipelineID, err := parseUintParam(c, "pipelineID")
 	if err != nil {
@@ -246,7 +231,7 @@ func (h *PipelineHandler) GetVersion(c *gin.Context) {
 }
 
 // ListVersions 列出 Pipeline 所有版本。
-// GET /clusters/:clusterID/pipelines/:pipelineID/versions
+// GET /pipelines/:pipelineID/versions
 func (h *PipelineHandler) ListVersions(c *gin.Context) {
 	pipelineID, err := parseUintParam(c, "pipelineID")
 	if err != nil {

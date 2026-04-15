@@ -11,11 +11,11 @@ import (
 // ---------------------------------------------------------------------------
 
 // PipelineSecret 儲存 Pipeline 使用的敏感憑證（如 Harbor 密碼、Git Token）。
-// 支援三種 Scope：global（全域）、cluster（叢集級）、pipeline（Pipeline 級）。
+// 支援三種 Scope：global（全域）、environment（環境級）、pipeline（Pipeline 級）。
 type PipelineSecret struct {
 	ID          uint           `json:"id" gorm:"primaryKey"`
-	Scope       string         `json:"scope" gorm:"not null;size:20;uniqueIndex:uq_scope_name"` // global / cluster / pipeline
-	ScopeRef    *uint          `json:"scope_ref" gorm:"uniqueIndex:uq_scope_name"`              // cluster_id 或 pipeline_id
+	Scope       string         `json:"scope" gorm:"not null;size:20;uniqueIndex:uq_scope_name"` // global / environment / pipeline
+	ScopeRef    *uint          `json:"scope_ref" gorm:"uniqueIndex:uq_scope_name"`              // environment_id 或 pipeline_id
 	Name        string         `json:"name" gorm:"not null;size:100;uniqueIndex:uq_scope_name"` // 例：HARBOR_PASSWORD
 	ValueEnc    string         `json:"-" gorm:"type:text;not null"`                              // AES-256-GCM 加密
 	Description string         `json:"description" gorm:"size:255"`

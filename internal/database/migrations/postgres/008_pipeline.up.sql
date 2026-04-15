@@ -7,8 +7,6 @@ CREATE TABLE IF NOT EXISTS pipelines (
     id                  BIGSERIAL PRIMARY KEY,
     name                VARCHAR(255)  NOT NULL,
     description         TEXT,
-    cluster_id          BIGINT        NOT NULL,
-    namespace           VARCHAR(253)  NOT NULL,
     current_version_id  BIGINT,
     concurrency_group   VARCHAR(255),
     concurrency_policy  VARCHAR(30)   DEFAULT 'cancel_previous',
@@ -23,8 +21,7 @@ CREATE TABLE IF NOT EXISTS pipelines (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_name
-    ON pipelines (name, cluster_id, namespace) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_pipelines_cluster_id   ON pipelines (cluster_id);
+    ON pipelines (name) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_pipelines_deleted_at   ON pipelines (deleted_at);
 
 -- ---------------------------------------------------------------------------
@@ -59,6 +56,7 @@ ALTER TABLE pipelines
 CREATE TABLE IF NOT EXISTS pipeline_runs (
     id                 BIGSERIAL PRIMARY KEY,
     pipeline_id        BIGINT       NOT NULL REFERENCES pipelines(id) ON DELETE CASCADE,
+    environment_id     BIGINT       NOT NULL DEFAULT 0,
     snapshot_id        BIGINT       NOT NULL REFERENCES pipeline_versions(id),
     cluster_id         BIGINT       NOT NULL,
     namespace          VARCHAR(253) NOT NULL,
@@ -79,6 +77,7 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_pipeline_id      ON pipeline_runs (pipeline_id);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_env              ON pipeline_runs (environment_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_snapshot_id       ON pipeline_runs (snapshot_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_cluster_id        ON pipeline_runs (cluster_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_status            ON pipeline_runs (status);
@@ -119,6 +118,8 @@ CREATE INDEX IF NOT EXISTS idx_step_runs_status          ON step_runs (status);
 
 -- ---------------------------------------------------------------------------
 -- pipeline_secrets — CI/CD 專用密鑰（AES-256-GCM 加密）
+-- scope: global / environment / pipeline
+-- scope_ref: NULL(global) / environment_id / pipeline_id
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pipeline_secrets (
     id          BIGSERIAL PRIMARY KEY,

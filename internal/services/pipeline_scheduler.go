@@ -613,7 +613,7 @@ func (s *PipelineScheduler) executeStepWithRetry(
 
 	for attempt := 0; ; attempt++ {
 		// 解析 ${{ secrets.* }} → 查詢 PipelineSecretService
-		secrets, err := s.resolveSecrets(ctx, run.PipelineID, sr.ConfigJSON)
+		secrets, err := s.resolveSecrets(ctx, run.PipelineID, run.EnvironmentID, sr.ConfigJSON)
 		if err != nil {
 			sr.Status = models.StepRunStatusFailed
 			sr.Error = fmt.Sprintf("resolve secrets: %v", err)
@@ -938,7 +938,7 @@ func extractHost(rawURL string) string {
 	return host
 }
 
-func (s *PipelineScheduler) resolveSecrets(ctx context.Context, pipelineID uint, configJSON string) (map[string]string, error) {
+func (s *PipelineScheduler) resolveSecrets(ctx context.Context, pipelineID uint, environmentID uint, configJSON string) (map[string]string, error) {
 	if configJSON == "" || s.secretSvc == nil {
 		return nil, nil
 	}
@@ -955,8 +955,8 @@ func (s *PipelineScheduler) resolveSecrets(ctx context.Context, pipelineID uint,
 			resolved[k] = v
 			continue
 		}
-		// 查詢 secret：先查 pipeline scope，再查 global scope
-		secretVal, err := s.lookupSecret(ctx, pipelineID, secretName)
+		// 查詢 secret：pipeline → environment → global
+		secretVal, err := s.lookupSecret(ctx, pipelineID, environmentID, secretName)
 		if err != nil {
 			return nil, fmt.Errorf("secret %q: %w", secretName, err)
 		}
@@ -983,8 +983,8 @@ func parseSecretRef(value string) (string, bool) {
 	return name, true
 }
 
-// lookupSecret 依優先順序查詢 secret：pipeline → cluster → global。
-func (s *PipelineScheduler) lookupSecret(ctx context.Context, pipelineID uint, name string) (string, error) {
+// lookupSecret 依優先順序查詢 secret：pipeline → environment → global。
+func (s *PipelineScheduler) lookupSecret(ctx context.Context, pipelineID uint, environmentID uint, name string) (string, error) {
 	// 先查 pipeline scope
 	secrets, err := s.secretSvc.ListSecrets(ctx, "pipeline", &pipelineID)
 	if err != nil {
@@ -1001,7 +1001,24 @@ func (s *PipelineScheduler) lookupSecret(ctx context.Context, pipelineID uint, n
 		}
 	}
 
-	// 再查 global scope
+	// 再查 environment scope
+	if environmentID != 0 {
+		secrets, err = s.secretSvc.ListSecrets(ctx, "environment", &environmentID)
+		if err != nil {
+			return "", fmt.Errorf("list environment secrets: %w", err)
+		}
+		for _, sec := range secrets {
+			if sec.Name == name {
+				full, err := s.secretSvc.GetSecret(ctx, sec.ID)
+				if err != nil {
+					return "", err
+				}
+				return full.ValueEnc, nil
+			}
+		}
+	}
+
+	// 最後查 global scope
 	secrets, err = s.secretSvc.ListSecrets(ctx, "global", nil)
 	if err != nil {
 		return "", fmt.Errorf("list global secrets: %w", err)
@@ -1016,7 +1033,7 @@ func (s *PipelineScheduler) lookupSecret(ctx context.Context, pipelineID uint, n
 		}
 	}
 
-	return "", fmt.Errorf("secret %q not found in pipeline or global scope", name)
+	return "", fmt.Errorf("secret %q not found in pipeline, environment, or global scope", name)
 }
 
 // waitForStep 輪詢等待 Step 完成（由 Watcher 更新 DB 狀態）。

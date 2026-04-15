@@ -383,7 +383,11 @@ export function AppRoutes() {
         <Route path="clusters/:id/security" element={<S><SecurityDashboard /></S>} />
         <Route path="clusters/:id/certificates" element={<S><CertificateList /></S>} />
 
-        {/* ── Pipelines ────────────────────────────────────────────────── */}
+        {/* ── Pipelines (top-level, cluster-free) ──────────────────────── */}
+        <Route path="pipelines" element={<S><PipelineList /></S>} />
+        <Route path="pipelines/:pipelineId/runs/:runId" element={<S><PipelineRunDetail /></S>} />
+
+        {/* ── Pipelines (legacy cluster-scoped, kept until Sprint 4 R3) ── */}
         <Route path="clusters/:clusterId/pipelines" element={<S><PipelineList /></S>} />
         <Route path="clusters/:clusterId/pipelines/:pipelineId/runs/:runId" element={<S><PipelineRunDetail /></S>} />
 

@@ -42,8 +42,6 @@ func (s *PipelineService) DB() *gorm.DB {
 type CreatePipelineRequest struct {
 	Name              string `json:"name" binding:"required,max=255"`
 	Description       string `json:"description"`
-	ClusterID         uint   `json:"cluster_id"` // set from path param by handler
-	Namespace         string `json:"namespace" binding:"required,max=253"`
 	ConcurrencyGroup  string `json:"concurrency_group"`
 	ConcurrencyPolicy string `json:"concurrency_policy" binding:"omitempty,oneof=cancel_previous queue reject"`
 	MaxConcurrentRuns int    `json:"max_concurrent_runs"`
@@ -68,11 +66,9 @@ type CreateVersionRequest struct {
 
 // ListPipelinesParams Pipeline 列表查詢參數。
 type ListPipelinesParams struct {
-	ClusterID uint
-	Namespace string
-	Search    string
-	Page      int
-	PageSize  int
+	Search   string
+	Page     int
+	PageSize int
 }
 
 // ---------------------------------------------------------------------------
@@ -84,8 +80,6 @@ func (s *PipelineService) CreatePipeline(ctx context.Context, req *CreatePipelin
 	pipeline := &models.Pipeline{
 		Name:              req.Name,
 		Description:       req.Description,
-		ClusterID:         req.ClusterID,
-		Namespace:         req.Namespace,
 		ConcurrencyGroup:  req.ConcurrencyGroup,
 		ConcurrencyPolicy: req.ConcurrencyPolicy,
 		MaxConcurrentRuns: req.MaxConcurrentRuns,
@@ -112,8 +106,6 @@ func (s *PipelineService) CreatePipeline(ctx context.Context, req *CreatePipelin
 	logger.Info("pipeline created",
 		"pipeline_id", pipeline.ID,
 		"name", pipeline.Name,
-		"cluster_id", pipeline.ClusterID,
-		"namespace", pipeline.Namespace,
 	)
 	return pipeline, nil
 }
@@ -168,12 +160,6 @@ func (s *PipelineService) ListPipelinesWithTriggers(ctx context.Context) ([]Pipe
 func (s *PipelineService) ListPipelines(ctx context.Context, params *ListPipelinesParams) ([]models.Pipeline, int64, error) {
 	query := s.db.WithContext(ctx).Model(&models.Pipeline{})
 
-	if params.ClusterID > 0 {
-		query = query.Where("cluster_id = ?", params.ClusterID)
-	}
-	if params.Namespace != "" {
-		query = query.Where("namespace = ?", params.Namespace)
-	}
 	if params.Search != "" {
 		search := "%" + params.Search + "%"
 		query = query.Where("name LIKE ? OR description LIKE ?", search, search)

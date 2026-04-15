@@ -9,7 +9,7 @@
  *  - 開啟 YAML 編輯器（PipelineEditor）
  */
 import React, { useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   Table,
@@ -56,14 +56,11 @@ type ViewMode = 'card' | 'table';
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 const PipelineList: React.FC = () => {
-  const { clusterId } = useParams<{ clusterId: string }>();
   const { token } = theme.useToken();
   const { message } = App.useApp();
   const { t } = useTranslation(['pipeline', 'common']);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
-  const cid = Number(clusterId ?? 0);
 
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
@@ -74,39 +71,37 @@ const PipelineList: React.FC = () => {
   // ─── Query ────────────────────────────────────────────────────────────────
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['pipelines', cid],
-    queryFn: () => pipelineService.list(cid),
-    enabled: cid > 0,
+    queryKey: ['pipelines'],
+    queryFn: () => pipelineService.list(),
     staleTime: 15_000,
   });
 
   const items: Pipeline[] = (data?.items ?? []).filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.description?.toLowerCase().includes(search.toLowerCase()) ||
-    p.namespace.toLowerCase().includes(search.toLowerCase())
+    p.description?.toLowerCase().includes(search.toLowerCase())
   );
 
   // ─── Mutations ────────────────────────────────────────────────────────────
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => pipelineService.delete(cid, id),
+    mutationFn: (id: number) => pipelineService.delete(id),
     onSuccess: () => {
       message.success(t('pipeline:messages.deleteSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['pipelines', cid] });
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
     },
     onError: () => message.error(t('pipeline:messages.deleteFailed')),
   });
 
   const triggerMutation = useMutation({
     mutationFn: (pipeline: Pipeline) =>
-      pipelineService.triggerRun(cid, pipeline.id),
+      pipelineService.triggerRun(pipeline.id),
     onSuccess: (run, pipeline) => {
       message.success({
         content: (
           <span>
             {t('pipeline:run.triggered', { id: run.id })}{' '}
             <a
-              onClick={() => navigate(`/clusters/${cid}/pipelines/${pipeline.id}/runs/${run.id}`)}
+              onClick={() => navigate(`/pipelines/${pipeline.id}/runs/${run.id}`)}
               style={{ marginLeft: 4 }}
             >
               {t('pipeline:run.viewRun')}
@@ -115,7 +110,7 @@ const PipelineList: React.FC = () => {
         ),
         duration: 5,
       });
-      queryClient.invalidateQueries({ queryKey: ['pipelines', cid] });
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
     },
     onError: () => message.error(t('pipeline:messages.triggerFailed')),
   });
@@ -150,8 +145,8 @@ const PipelineList: React.FC = () => {
   const handleEditorSuccess = useCallback(() => {
     setEditorOpen(false);
     setEditing(null);
-    queryClient.invalidateQueries({ queryKey: ['pipelines', cid] });
-  }, [queryClient, cid]);
+    queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+  }, [queryClient]);
 
   const handleManageEnvs = useCallback((pipeline: Pipeline) => {
     setEnvPipeline(pipeline);
@@ -174,13 +169,6 @@ const PipelineList: React.FC = () => {
           {name}
         </Button>
       ),
-    },
-    {
-      title: t('pipeline:table.namespace'),
-      dataIndex: 'namespace',
-      key: 'namespace',
-      width: 160,
-      render: (ns: string) => <Tag>{ns}</Tag>,
     },
     {
       title: t('pipeline:table.version'),
@@ -315,7 +303,6 @@ const PipelineList: React.FC = () => {
       {/* Editor Drawer */}
       <PipelineEditor
         open={editorOpen}
-        clusterId={cid}
         pipeline={editing}
         onClose={handleEditorClose}
         onSuccess={handleEditorSuccess}
@@ -326,7 +313,6 @@ const PipelineList: React.FC = () => {
         <PipelineEnvironments
           open={!!envPipeline}
           onClose={() => setEnvPipeline(null)}
-          clusterId={cid}
           pipeline={envPipeline}
         />
       )}
@@ -373,14 +359,6 @@ const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete,
         ) : (
           <Tag style={{ flexShrink: 0 }}>{t('pipeline:card.noVersion')}</Tag>
         )}
-      </Flex>
-
-      {/* Namespace */}
-      <Flex align="center" gap={token.marginXS} style={{ marginBottom: token.marginXS }}>
-        <Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-          {t('pipeline:card.namespace')}:
-        </Text>
-        <Tag style={{ margin: 0 }}>{pipeline.namespace}</Tag>
       </Flex>
 
       {/* Description */}

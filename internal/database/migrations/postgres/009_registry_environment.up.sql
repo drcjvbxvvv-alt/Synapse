@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS environments (
     approval_required    BOOLEAN       DEFAULT FALSE,
     approver_ids         TEXT,                        -- JSON array of user IDs
     smoke_test_step_name VARCHAR(255),
+    notify_channel_ids   TEXT,                        -- JSON array of channel IDs
+    variables_json       TEXT          DEFAULT '{}',  -- env-specific variable overrides
     created_at           TIMESTAMPTZ   DEFAULT now(),
     updated_at           TIMESTAMPTZ   DEFAULT now(),
     deleted_at           TIMESTAMPTZ

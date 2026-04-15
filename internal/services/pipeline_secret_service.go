@@ -28,7 +28,7 @@ func NewPipelineSecretService(db *gorm.DB) *PipelineSecretService {
 
 // CreateSecretRequest 建立 Secret 請求。
 type CreateSecretRequest struct {
-	Scope       string `json:"scope" binding:"required,oneof=global cluster pipeline"`
+	Scope       string `json:"scope" binding:"required,oneof=global environment pipeline"`
 	ScopeRef    *uint  `json:"scope_ref"`
 	Name        string `json:"name" binding:"required,max=100"`
 	Value       string `json:"value" binding:"required"`

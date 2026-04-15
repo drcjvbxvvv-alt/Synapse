@@ -130,8 +130,7 @@ function formatDuration(startedAt: string | null, finishedAt: string | null): st
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const PipelineRunDetail: React.FC = () => {
-  const { clusterId, pipelineId, runId } = useParams<{
-    clusterId: string;
+  const { pipelineId, runId } = useParams<{
     pipelineId: string;
     runId: string;
   }>();
@@ -141,7 +140,6 @@ const PipelineRunDetail: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const cid = Number(clusterId ?? 0);
   const pid = Number(pipelineId ?? 0);
   const rid = Number(runId ?? 0);
 
@@ -158,9 +156,9 @@ const PipelineRunDetail: React.FC = () => {
   );
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['pipeline-run', cid, pid, rid],
-    queryFn: () => pipelineService.getRun(cid, pid, rid),
-    enabled: cid > 0 && pid > 0 && rid > 0,
+    queryKey: ['pipeline-run', pid, rid],
+    queryFn: () => pipelineService.getRun(pid, rid),
+    enabled: pid > 0 && rid > 0,
     refetchInterval: (query) =>
       isActive(query.state.data?.run) ? 3000 : false,
     staleTime: 2000,
@@ -187,25 +185,25 @@ const PipelineRunDetail: React.FC = () => {
   // ─── SSE log URL ─────────────────────────────────────────────────────────────
 
   const logUrl = selectedStep
-    ? pipelineService.getStepLogUrl(cid, pid, rid, selectedStep.id)
+    ? pipelineService.getStepLogUrl(pid, rid, selectedStep.id)
     : null;
 
   // ─── Mutations ───────────────────────────────────────────────────────────────
 
   const cancelMutation = useMutation({
-    mutationFn: () => pipelineService.cancelRun(cid, pid, rid),
+    mutationFn: () => pipelineService.cancelRun(pid, rid),
     onSuccess: () => {
       message.success(t('pipeline:runDetail.cancelSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['pipeline-run', cid, pid, rid] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline-run', pid, rid] });
     },
     onError: () => message.error(t('pipeline:runDetail.cancelFailed')),
   });
 
   const rerunMutation = useMutation({
-    mutationFn: (fromFailed: boolean) => pipelineService.rerun(cid, pid, rid, fromFailed),
+    mutationFn: (fromFailed: boolean) => pipelineService.rerun(pid, rid, fromFailed),
     onSuccess: (newRun) => {
       message.success(t('pipeline:run.triggered', { id: newRun.id }));
-      navigate(`/clusters/${cid}/pipelines/${pid}/runs/${newRun.id}`);
+      navigate(`/pipelines/${pid}/runs/${newRun.id}`);
     },
     onError: () => message.error(t('pipeline:messages.triggerFailed')),
   });
@@ -262,7 +260,7 @@ const PipelineRunDetail: React.FC = () => {
                   size="small"
                   icon={<ArrowLeftOutlined />}
                   style={{ padding: 0 }}
-                  onClick={() => navigate(`/clusters/${cid}/pipelines`)}
+                  onClick={() => navigate('/pipelines')}
                 >
                   {t('pipeline:page.title')}
                 </Button>

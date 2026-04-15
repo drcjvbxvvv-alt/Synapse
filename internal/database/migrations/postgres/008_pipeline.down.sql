@@ -22,6 +22,7 @@ DROP TABLE IF EXISTS step_runs;
 
 -- Drop FK before dropping referenced table
 ALTER TABLE pipelines DROP CONSTRAINT IF EXISTS fk_pipelines_current_version;
+DROP INDEX IF EXISTS idx_pipeline_runs_env;
 DROP TABLE IF EXISTS pipeline_runs;
 DROP TABLE IF EXISTS pipeline_versions;
 DROP TABLE IF EXISTS pipelines;

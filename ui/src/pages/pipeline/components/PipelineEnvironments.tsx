@@ -51,7 +51,6 @@ const { Text } = Typography;
 interface PipelineEnvironmentsProps {
   open: boolean;
   onClose: () => void;
-  clusterId: number;
   pipeline: Pipeline;
   /** Cluster list for the cluster selector */
   clusters?: { id: number; name: string }[];
@@ -60,7 +59,7 @@ interface PipelineEnvironmentsProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const PipelineEnvironments: React.FC<PipelineEnvironmentsProps> = ({
-  open, onClose, clusterId, pipeline, clusters = [],
+  open, onClose, pipeline, clusters = [],
 }) => {
   const { token } = theme.useToken();
   const { message } = App.useApp();
@@ -74,9 +73,9 @@ const PipelineEnvironments: React.FC<PipelineEnvironmentsProps> = ({
   // ─── Query ──────────────────────────────────────────────────────────────────
 
   const { data, isLoading } = useQuery({
-    queryKey: ['environments', clusterId, pipeline.id],
-    queryFn: () => environmentService.list(clusterId, pipeline.id),
-    enabled: open && clusterId > 0 && pipeline.id > 0,
+    queryKey: ['environments', pipeline.id],
+    queryFn: () => environmentService.list(pipeline.id),
+    enabled: open && pipeline.id > 0,
     staleTime: 15_000,
   });
 
@@ -86,32 +85,32 @@ const PipelineEnvironments: React.FC<PipelineEnvironmentsProps> = ({
 
   const createMutation = useMutation({
     mutationFn: (req: CreateEnvironmentRequest) =>
-      environmentService.create(clusterId, pipeline.id, req),
+      environmentService.create(pipeline.id, req),
     onSuccess: () => {
       message.success(t('cicd:environment.messages.createSuccess'));
       setFormOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['environments', clusterId, pipeline.id] });
+      queryClient.invalidateQueries({ queryKey: ['environments', pipeline.id] });
     },
     onError: () => message.error(t('cicd:environment.messages.createFailed')),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ envId, data }: { envId: number; data: UpdateEnvironmentRequest }) =>
-      environmentService.update(clusterId, pipeline.id, envId, data),
+      environmentService.update(pipeline.id, envId, data),
     onSuccess: () => {
       message.success(t('cicd:environment.messages.updateSuccess'));
       setFormOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['environments', clusterId, pipeline.id] });
+      queryClient.invalidateQueries({ queryKey: ['environments', pipeline.id] });
     },
     onError: () => message.error(t('cicd:environment.messages.updateFailed')),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (envId: number) =>
-      environmentService.delete(clusterId, pipeline.id, envId),
+      environmentService.delete(pipeline.id, envId),
     onSuccess: () => {
       message.success(t('cicd:environment.messages.deleteSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['environments', clusterId, pipeline.id] });
+      queryClient.invalidateQueries({ queryKey: ['environments', pipeline.id] });
     },
     onError: () => message.error(t('cicd:environment.messages.deleteFailed')),
   });
@@ -122,13 +121,12 @@ const PipelineEnvironments: React.FC<PipelineEnvironmentsProps> = ({
     setEditing(null);
     form.resetFields();
     form.setFieldsValue({
-      cluster_id: clusterId,
       order_index: environments.length + 1,
       auto_promote: false,
       approval_required: false,
     });
     setFormOpen(true);
-  }, [form, clusterId, environments.length]);
+  }, [form, environments.length]);
 
   const handleEdit = useCallback((env: Environment) => {
     setEditing(env);

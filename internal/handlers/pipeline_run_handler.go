@@ -22,6 +22,7 @@ import (
 // PipelineRunHandler 管理 Pipeline Run 的 HTTP 端點。
 type PipelineRunHandler struct {
 	pipelineSvc *services.PipelineService
+	envSvc      *services.EnvironmentService
 	scheduler   *services.PipelineScheduler
 	auditSvc    *services.AuditService
 }
@@ -29,11 +30,13 @@ type PipelineRunHandler struct {
 // NewPipelineRunHandler 建立 PipelineRunHandler。
 func NewPipelineRunHandler(
 	pipelineSvc *services.PipelineService,
+	envSvc *services.EnvironmentService,
 	scheduler *services.PipelineScheduler,
 	auditSvc *services.AuditService,
 ) *PipelineRunHandler {
 	return &PipelineRunHandler{
 		pipelineSvc: pipelineSvc,
+		envSvc:      envSvc,
 		scheduler:   scheduler,
 		auditSvc:    auditSvc,
 	}
@@ -62,11 +65,12 @@ func (h *PipelineRunHandler) logRunAudit(c *gin.Context, action, resourceRef, re
 
 // TriggerRunRequest 手動觸發 Pipeline Run 的請求。
 type TriggerRunRequest struct {
-	VersionID *uint `json:"version_id"` // 指定版本（可選，預設用 current_version_id）
+	VersionID     *uint `json:"version_id"`     // 指定版本（可選，預設用 current_version_id）
+	EnvironmentID uint  `json:"environment_id"` // 目標環境（必填）
 }
 
 // TriggerRun 手動觸發 Pipeline Run。
-// POST /clusters/:clusterID/pipelines/:pipelineID/runs
+// POST /pipelines/:pipelineID/runs (or legacy /clusters/:clusterID/pipelines/:pipelineID/runs)
 func (h *PipelineRunHandler) TriggerRun(c *gin.Context) {
 	pipelineID, err := parseUintParam(c, "pipelineID")
 	if err != nil {
@@ -100,11 +104,27 @@ func (h *PipelineRunHandler) TriggerRun(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
+	// Resolve environment → cluster + namespace
+	if req.EnvironmentID == 0 {
+		response.BadRequest(c, "environment_id is required")
+		return
+	}
+	env, err := h.envSvc.GetEnvironment(c.Request.Context(), req.EnvironmentID)
+	if err != nil {
+		response.NotFound(c, "environment not found")
+		return
+	}
+	if env.PipelineID != pipelineID {
+		response.BadRequest(c, "environment does not belong to this pipeline")
+		return
+	}
+
 	run := &models.PipelineRun{
 		PipelineID:       pipeline.ID,
+		EnvironmentID:    env.ID,
 		SnapshotID:       *snapshotID,
-		ClusterID:        pipeline.ClusterID,
-		Namespace:        pipeline.Namespace,
+		ClusterID:        env.ClusterID,
+		Namespace:        env.Namespace,
 		TriggerType:      models.TriggerTypeManual,
 		TriggeredByUser:  userID,
 		ConcurrencyGroup: pipeline.ConcurrencyGroup,
@@ -278,6 +298,7 @@ func (h *PipelineRunHandler) RerunPipeline(c *gin.Context) {
 
 	newRun := &models.PipelineRun{
 		PipelineID:       originalRun.PipelineID,
+		EnvironmentID:    originalRun.EnvironmentID,
 		SnapshotID:       originalRun.SnapshotID,
 		ClusterID:        originalRun.ClusterID,
 		Namespace:        originalRun.Namespace,

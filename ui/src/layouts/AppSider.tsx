@@ -60,6 +60,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     }
     if (location.pathname.startsWith('/access')) return ['access-control'];
     if (location.pathname.startsWith('/audit')) return ['audit-management'];
+    if (location.pathname.startsWith('/pipelines')) return ['cicd-global'];
     return [];
   };
 
@@ -74,6 +75,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
       const path = location.pathname;
       if (path.startsWith('/access')) setOpenKeys(['access-control']);
       else if (path.startsWith('/audit')) setOpenKeys(['audit-management']);
+      else if (path.startsWith('/pipelines')) setOpenKeys(['cicd-global']);
       else setOpenKeys([]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,6 +108,7 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     if (path.match(/\/clusters\/[^/]+\/compliance/)) return ['cluster-compliance'];
     if (path.match(/\/clusters\/[^/]+\/pipelines/)) return ['cicd-pipelines'];
     if (path.match(/\/clusters\/[^/]+\/rollouts/)) return ['cicd-rollouts'];
+    if (path.startsWith('/pipelines')) return ['cicd-pipelines-global'];
     if (path.match(/\/clusters\/[^/]+\/monitoring/)) return ['observability-monitoring'];
     if (path.match(/\/clusters\/[^/]+\/logs/)) return ['observability-logs'];
     if (path.match(/\/clusters\/[^/]+\/alerts/)) return ['observability-alerts'];
@@ -152,6 +155,12 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
       ],
     },
     { key: 'cost-insights', icon: <DollarOutlined />, label: t('common:menu.costInsights'), onClick: () => navigate('/cost-insights') },
+    {
+      key: 'cicd-global', icon: <BuildOutlined />, label: t('common:menu.cicd', 'CI/CD'),
+      children: [
+        { key: 'cicd-pipelines-global', icon: <BuildOutlined />, label: t('common:menu.pipelines', 'Pipeline 管理'), onClick: () => navigate('/pipelines') },
+      ],
+    },
     { key: 'multicluster', icon: <BranchesOutlined />, label: t('common:menu.multiCluster', '多叢集工作流程'), onClick: () => navigate('/multicluster') },
     { key: 'alert-center', icon: <AlertOutlined />, label: t('common:menu.alerts'), onClick: () => navigate('/alerts') },
     { key: 'system-settings', icon: <SettingOutlined />, label: t('common:menu.settings'), onClick: () => navigate('/settings') },
@@ -200,7 +209,6 @@ const AppSider: React.FC<AppSiderProps> = ({ isClusterDetail }) => {
     {
       key: 'cicd', label: t('common:menu.cicd', 'CI/CD'),
       children: [
-        { key: 'cicd-pipelines', icon: <BuildOutlined />, label: t('common:menu.pipelines', 'Pipeline 管理'), onClick: () => clusterNav('pipelines') },
         { key: 'cicd-rollouts', icon: <RocketOutlined />, label: t('common:menu.rollouts', 'Rollout 管理'), onClick: () => clusterNav('rollouts') },
       ],
     },

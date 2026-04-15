@@ -40,6 +40,7 @@ const (
 // PipelineWebhookHandler 處理外部 Webhook 觸發 Pipeline。
 type PipelineWebhookHandler struct {
 	pipelineSvc *services.PipelineService
+	envSvc      *services.EnvironmentService
 	scheduler   *services.PipelineScheduler
 	secretSvc   *services.PipelineSecretService
 	nonceCache  *nonceCache
@@ -48,11 +49,13 @@ type PipelineWebhookHandler struct {
 // NewPipelineWebhookHandler 建立 Webhook handler。
 func NewPipelineWebhookHandler(
 	pipelineSvc *services.PipelineService,
+	envSvc *services.EnvironmentService,
 	scheduler *services.PipelineScheduler,
 	secretSvc *services.PipelineSecretService,
 ) *PipelineWebhookHandler {
 	return &PipelineWebhookHandler{
 		pipelineSvc: pipelineSvc,
+		envSvc:      envSvc,
 		scheduler:   scheduler,
 		secretSvc:   secretSvc,
 		nonceCache:  newNonceCache(webhookNonceTTL),
@@ -314,11 +317,18 @@ func (h *PipelineWebhookHandler) createWebhookRun(
 	payloadHash := sha256.Sum256(payload)
 	payloadRef := hex.EncodeToString(payloadHash[:16]) // 前 16 bytes 作為參考
 
+	// Resolve default environment (lowest OrderIndex) for webhook triggers
+	env, envErr := h.resolveDefaultEnvironment(c.Request.Context(), pipeline.ID)
+	if envErr != nil {
+		return nil, fmt.Errorf("no environment configured for pipeline %d: %w", pipeline.ID, envErr)
+	}
+
 	run := &models.PipelineRun{
 		PipelineID:       pipeline.ID,
+		EnvironmentID:    env.ID,
 		SnapshotID:       *pipeline.CurrentVersionID,
-		ClusterID:        pipeline.ClusterID,
-		Namespace:        pipeline.Namespace,
+		ClusterID:        env.ClusterID,
+		Namespace:        env.Namespace,
 		TriggerType:      models.TriggerTypeWebhook,
 		TriggerPayload:   payloadRef,
 		TriggeredByUser:  math.MaxUint32, // system user for webhook triggers
@@ -330,4 +340,18 @@ func (h *PipelineWebhookHandler) createWebhookRun(
 	}
 
 	return run, nil
+}
+
+// resolveDefaultEnvironment returns the environment with the lowest OrderIndex
+// for the given pipeline. This is used by webhook triggers to determine the
+// default deployment target when Pipeline no longer carries ClusterID/Namespace.
+func (h *PipelineWebhookHandler) resolveDefaultEnvironment(ctx context.Context, pipelineID uint) (*models.Environment, error) {
+	envs, err := h.envSvc.ListEnvironments(ctx, pipelineID)
+	if err != nil {
+		return nil, fmt.Errorf("list environments for pipeline %d: %w", pipelineID, err)
+	}
+	if len(envs) == 0 {
+		return nil, fmt.Errorf("pipeline %d has no environments configured", pipelineID)
+	}
+	return &envs[0], nil // ListEnvironments returns ordered by order_index ASC
 }

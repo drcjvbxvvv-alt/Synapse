@@ -30,7 +30,6 @@ import pipelineService, {
   type CreatePipelineRequest,
   type UpdatePipelineRequest,
 } from '../../services/pipelineService';
-import NamespaceSelector from '../../components/NamespaceSelector';
 
 const { Text } = Typography;
 
@@ -68,7 +67,6 @@ workspace:
 
 interface PipelineEditorProps {
   open: boolean;
-  clusterId: number;
   pipeline: Pipeline | null;
   onClose: () => void;
   onSuccess: () => void;
@@ -78,7 +76,6 @@ interface PipelineEditorProps {
 
 const PipelineEditor: React.FC<PipelineEditorProps> = ({
   open,
-  clusterId,
   pipeline,
   onClose,
   onSuccess,
@@ -114,9 +111,9 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
   // ─── Load existing version ────────────────────────────────────────────────
 
   const { isLoading: versionLoading } = useQuery({
-    queryKey: ['pipeline-version', clusterId, pipeline?.id, pipeline?.current_version_id],
+    queryKey: ['pipeline-version', pipeline?.id, pipeline?.current_version_id],
     queryFn: () =>
-      pipelineService.getVersion(clusterId, pipeline!.id, pipeline!.current_version_id!),
+      pipelineService.getVersion(pipeline!.id, pipeline!.current_version_id!),
     enabled: isEdit && pipeline?.current_version_id != null && activeTab === 'yaml',
     staleTime: 60_000,
     select: (data) => {
@@ -129,7 +126,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
   // ─── Mutations ────────────────────────────────────────────────────────────
 
   const createMutation = useMutation({
-    mutationFn: (data: CreatePipelineRequest) => pipelineService.create(clusterId, data),
+    mutationFn: (data: CreatePipelineRequest) => pipelineService.create(data),
     onSuccess: () => {
       message.success(t('pipeline:messages.createSuccess'));
       onSuccess();
@@ -139,7 +136,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
 
   const updateMutation = useMutation({
     mutationFn: (data: UpdatePipelineRequest) =>
-      pipelineService.update(clusterId, pipeline!.id, data),
+      pipelineService.update(pipeline!.id, data),
     onSuccess: () => {
       message.success(t('pipeline:messages.updateSuccess'));
       onSuccess();
@@ -149,7 +146,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
 
   const createVersionMutation = useMutation({
     mutationFn: () =>
-      pipelineService.createVersion(clusterId, pipeline!.id, {
+      pipelineService.createVersion(pipeline!.id, {
         steps_json: yamlContent,
       }),
     onSuccess: () => {
@@ -212,23 +209,6 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
             placeholder={t('pipeline:form.descriptionPlaceholder')}
           />
         </Form.Item>
-
-        {!isEdit && (
-          <Form.Item
-            name="namespace"
-            label={t('pipeline:form.namespace')}
-            rules={[{ required: true, message: t('common:validation.required') }]}
-          >
-            <NamespaceSelector
-              clusterId={clusterId}
-              allowAll={false}
-              showPermissionHint={false}
-              placeholder={t('pipeline:form.namespacePlaceholder')}
-              style={{ width: '100%', display: 'block' }}
-              selectStyle={{ width: '100%' }}
-            />
-          </Form.Item>
-        )}
 
         <Form.Item
           name="concurrency_group"

@@ -45,20 +45,20 @@ export interface UpdateEnvironmentRequest {
 // ─── Service ───────────────────────────────────────────────────────────────
 
 const environmentService = {
-  list(clusterId: number, pipelineId: number): Promise<{ items: Environment[]; total: number }> {
-    return request.get(`/clusters/${clusterId}/pipelines/${pipelineId}/environments`);
+  list(pipelineId: number): Promise<{ items: Environment[]; total: number }> {
+    return request.get(`/pipelines/${pipelineId}/environments`);
   },
 
-  create(clusterId: number, pipelineId: number, data: CreateEnvironmentRequest): Promise<Environment> {
-    return request.post(`/clusters/${clusterId}/pipelines/${pipelineId}/environments`, data);
+  create(pipelineId: number, data: CreateEnvironmentRequest): Promise<Environment> {
+    return request.post(`/pipelines/${pipelineId}/environments`, data);
   },
 
-  update(clusterId: number, pipelineId: number, envId: number, data: UpdateEnvironmentRequest): Promise<void> {
-    return request.put(`/clusters/${clusterId}/pipelines/${pipelineId}/environments/${envId}`, data);
+  update(pipelineId: number, envId: number, data: UpdateEnvironmentRequest): Promise<void> {
+    return request.put(`/pipelines/${pipelineId}/environments/${envId}`, data);
   },
 
-  delete(clusterId: number, pipelineId: number, envId: number): Promise<void> {
-    return request.delete(`/clusters/${clusterId}/pipelines/${pipelineId}/environments/${envId}`);
+  delete(pipelineId: number, envId: number): Promise<void> {
+    return request.delete(`/pipelines/${pipelineId}/environments/${envId}`);
   },
 };
 

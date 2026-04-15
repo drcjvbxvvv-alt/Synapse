@@ -19,20 +19,21 @@ import (
 
 // Environment 儲存部署環境設定。
 type Environment struct {
-	ID               uint           `json:"id" gorm:"primaryKey"`
-	Name             string         `json:"name" gorm:"not null;size:255"`
-	PipelineID       uint           `json:"pipeline_id" gorm:"not null;uniqueIndex:uq_pipeline_env"`
-	ClusterID        uint           `json:"cluster_id" gorm:"not null;index"`
-	Namespace        string         `json:"namespace" gorm:"not null;size:253"`
-	OrderIndex       int            `json:"order_index" gorm:"not null;index:idx_env_order"`
-	AutoPromote      bool           `json:"auto_promote" gorm:"default:false"`
-	ApprovalRequired bool           `json:"approval_required" gorm:"default:false"`
-	ApproverIDs      string         `json:"approver_ids,omitempty" gorm:"type:text"` // JSON array of user IDs
-	SmokeTestStepName string        `json:"smoke_test_step_name,omitempty" gorm:"size:255"`
-	NotifyChannelIDs  string        `json:"notify_channel_ids,omitempty" gorm:"type:text"` // JSON array: Production Gate 通知 channel
-	CreatedAt        time.Time      `json:"created_at"`
-	UpdatedAt        time.Time      `json:"updated_at"`
-	DeletedAt        gorm.DeletedAt `json:"-" gorm:"index"`
+	ID                uint           `json:"id" gorm:"primaryKey"`
+	Name              string         `json:"name" gorm:"not null;size:100;uniqueIndex:uq_pipeline_env"`
+	PipelineID        uint           `json:"pipeline_id" gorm:"not null;uniqueIndex:uq_pipeline_env"`
+	ClusterID         uint           `json:"cluster_id" gorm:"not null;index"`
+	Namespace         string         `json:"namespace" gorm:"not null;size:253"`
+	OrderIndex        int            `json:"order_index" gorm:"not null;index:idx_env_order"`
+	AutoPromote       bool           `json:"auto_promote" gorm:"default:false"`
+	ApprovalRequired  bool           `json:"approval_required" gorm:"default:false"`
+	ApproverIDs       string         `json:"approver_ids,omitempty" gorm:"type:text"`           // JSON array of user IDs
+	SmokeTestStepName string         `json:"smoke_test_step_name,omitempty" gorm:"size:255"`
+	NotifyChannelIDs  string         `json:"notify_channel_ids,omitempty" gorm:"type:text"`     // JSON array: Production Gate 通知 channel
+	VariablesJSON     string         `json:"variables_json,omitempty" gorm:"type:text"`         // 環境特定變數覆寫（e.g. replicas, feature flags）
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	DeletedAt         gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 func (Environment) TableName() string { return "environments" }

@@ -187,5 +187,13 @@ func validateEnvironment(env *models.Environment) error {
 		}
 	}
 
+	// Validate variables_json is valid JSON object if provided
+	if env.VariablesJSON != "" {
+		var vars map[string]string
+		if err := json.Unmarshal([]byte(env.VariablesJSON), &vars); err != nil {
+			return fmt.Errorf("variables_json must be a valid JSON object of string key-value pairs: %w", err)
+		}
+	}
+
 	return nil
 }
