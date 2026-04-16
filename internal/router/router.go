@@ -387,6 +387,9 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 		// Top-level Pipeline routes (cluster-independent)
 		registerPipelineRoutes(protected, &deps)
 
+		// CI Engine Adapter configuration (M18a, ADR-015)
+		registerCIEngineRoutes(protected, &deps)
+
 		clusters := protected.Group("/clusters")
 		registerSystemRoutes(protected, clusters, &deps)
 	}

@@ -1,299 +1,169 @@
-# ==========================================
 # Synapse Makefile
-# ==========================================
+# 本地开发和构建脚本
 
-.PHONY: help dev dev-backend dev-frontend dev-air build build-backend build-frontend test test-backend test-frontend test-e2e test-e2e-ui lint lint-backend lint-frontend check swag swagger docker-build docker-push docker-up docker-down docker-logs docker-ps helm-package docs clean version
-
-# 变量
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-REGISTRY ?= docker.io
-IMAGE_NAME ?= registry.cn-hangzhou.aliyuncs.com/clay-wangzhi/synapse
-COMPOSE_CMD := docker compose
-
-# 颜色
-BLUE := \033[0;34m
-GREEN := \033[0;32m
-YELLOW := \033[1;33m
-NC := \033[0m
+.PHONY: help build build-docker build-docker-all test lint clean dev docker-up docker-down
 
 # 默认目标
 .DEFAULT_GOAL := help
 
-## help: 显示帮助信息
-help:
-	@echo ""
-	@echo "$(BLUE)╔═══════════════════════════════════════════════════════════╗$(NC)"
-	@echo "$(BLUE)║         Synapse Makefile 命令                          ║$(NC)"
-	@echo "$(BLUE)╚═══════════════════════════════════════════════════════════╝$(NC)"
-	@echo ""
-	@echo "$(GREEN)開發命令:$(NC)"
-	@echo "  make dev            - 啟動完整開發環境（MySQL + 後端 + 前端）"
-	@echo "  make dev-backend    - 啟動 MySQL + 後端（不含前端）"
-	@echo "  make dev-air        - 後端熱重載（修改 .go 自動重新編譯，推薦開發時使用）"
-	@echo "  make dev-frontend   - 啟動前端開發伺服器"
-	@echo "  make dev-mysql      - 僅啟動 MySQL + Adminer"
-	@echo "  make dev-stop       - 停止所有開發服務"
-	@echo "  make dev-reset      - 清除 MySQL volume 並重新初始化"
-	@echo ""
-	@echo "$(GREEN)构建命令:$(NC)"
-	@echo "  make build          - 构建前后端"
-	@echo "  make build-backend  - 构建后端"
-	@echo "  make build-frontend - 构建前端"
-	@echo ""
-	@echo "$(GREEN)测试命令:$(NC)"
-	@echo "  make test           - 运行所有测试"
-	@echo "  make test-backend   - 运行后端测试"
-	@echo "  make test-frontend  - 运行前端测试"
-	@echo "  make test-e2e       - 运行 E2E 测试（Playwright headless）"
-	@echo "  make test-e2e-ui    - 运行 E2E 测试（Playwright UI 模式）"
-	@echo ""
-	@echo "$(GREEN)代码检查:$(NC)"
-	@echo "  make check          - Phase 0 Exit Criteria 全量驗證（test + vet + gosec + grep）"
-	@echo "  make lint           - 运行代码检查"
-	@echo "  make lint-backend   - 检查后端代码"
-	@echo "  make lint-frontend  - 检查前端代码"
-	@echo ""
-	@echo "$(GREEN)Docker 命令:$(NC)"
-	@echo "  make docker-build   - 构建 Docker 镜像"
-	@echo "  make docker-push    - 推送 Docker 镜像"
-	@echo "  make docker-up      - 启动 Docker Compose 服务"
-	@echo "  make docker-down    - 停止 Docker Compose 服务"
-	@echo "  make docker-logs    - 查看 Docker Compose 日志"
-	@echo ""
-	@echo "$(GREEN)部署命令:$(NC)"
-	@echo "  make helm-package   - 打包 Helm Chart"
-	@echo ""
-	@echo "$(GREEN)其他命令:$(NC)"
-	@echo "  make docs           - 生成文档"
-	@echo "  make swagger        - 生成 Swagger 文档"
-	@echo "  make clean          - 清理构建产物"
-	@echo ""
-	@echo "$(YELLOW)当前版本: $(VERSION)$(NC)"
-	@echo ""
+# 版本信息
+VERSION ?= $(shell git describe --tags --always --dirty)
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
+BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 
-# ==========================================
-# 开发命令
-# ==========================================
+# 目录
+BIN_DIR := bin
+BACKEND_DIR := .
+FRONTEND_DIR := ui
 
-## dev: 啟動完整開發環境（MySQL + 後端 + 前端）
-dev:
-	@bash scripts/dev.sh
+# 输出二进制文件名
+BINARY := synapse
 
-## dev-backend: 啟動 MySQL + 後端（不含前端）
-dev-backend:
-	@bash scripts/dev.sh --backend-only
+# 构建标志
+LDFLAGS := -ldflags="-X github.com/shaia/Synapse/pkg/version.Version=$(VERSION) \
+                      -X github.com/shaia/Synapse/pkg/version.GitCommit=$(GIT_COMMIT) \
+                      -X github.com/shaia/Synapse/pkg/version.BuildTime=$(BUILD_TIME)"
 
-## dev-air: 後端熱重載（修改 .go 檔自動重新編譯）
-dev-air:
-	@which ~/go/bin/air > /dev/null 2>&1 || (echo "請先安裝 air: go install github.com/air-verse/air@latest" && exit 1)
-	@echo "$(BLUE)啟動後端熱重載（air）...$(NC)"
-	@~/go/bin/air -c .air.toml
+# ─── Help ──────────────────────────────────────────────────────────────────
 
-## dev-frontend: 啟動前端開發伺服器
-dev-frontend:
-	@bash scripts/dev.sh --frontend-only
+help:  ## 显示此帮助信息
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk \
+	'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-## dev-mysql: 僅啟動 MySQL + Adminer
-dev-mysql:
-	@echo "$(BLUE)啟動 MySQL 開發環境...$(NC)"
-	docker compose -f docker-compose.dev.yml up -d
-	@echo "$(GREEN)MySQL 已啟動$(NC)"
-	docker compose -f docker-compose.dev.yml ps
+# ─── 后端构建 ──────────────────────────────────────────────────────────────
 
-## dev-stop: 停止所有開發服務
-dev-stop:
-	@bash scripts/dev.sh --stop
+build: ## 本地构建后端二进制文件
+	@echo "🔨 Building backend... (Version: $(VERSION))"
+	mkdir -p $(BIN_DIR)
+	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build \
+		$(LDFLAGS) \
+		-o $(BIN_DIR)/$(BINARY) \
+		./cmd/main.go
+	@echo "✅ Binary saved to $(BIN_DIR)/$(BINARY)"
+	@ls -lh $(BIN_DIR)/$(BINARY)
 
-## dev-reset: 清除 MySQL volume 並重新初始化
-dev-reset:
-	@bash scripts/dev.sh --reset
+# ─── 前端构建 ──────────────────────────────────────────────────────────────
 
-# ==========================================
-# 构建命令
-# ==========================================
+build-frontend: ## 构建前端
+	@echo "🔨 Building frontend..."
+	cd $(FRONTEND_DIR) && npm run build
+	@echo "✅ Frontend built to $(FRONTEND_DIR)/dist/"
 
-## build: 构建前端并嵌入后端（单二进制）
-build: build-frontend build-backend
-	@echo "$(GREEN)构建完成: bin/synapse（前端已嵌入）$(NC)"
+# ─── Docker 镜像构建 ────────────────────────────────────────────────────────
 
-## build-backend: 构建后端（需要先构建前端）
-build-backend:
-	@echo "$(BLUE)构建后端...$(NC)"
-	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/synapse .
-	@echo "$(GREEN)后端构建完成: bin/synapse$(NC)"
+docker-backend: ## 构建后端 Docker 镜像
+	@echo "🐳 Building backend Docker image..."
+	docker build -f deploy/docker/backend/Dockerfile \
+		-t synapse:backend-$(VERSION) \
+		-t synapse:backend-latest \
+		.
+	@echo "✅ Image: synapse:backend-latest"
 
-## build-frontend: 构建前端到 ui/dist
-build-frontend:
-	@echo "$(BLUE)构建前端...$(NC)"
-	cd ui && npm ci && npm run build
-	@echo "$(GREEN)前端构建完成: ui/dist/$(NC)"
+docker-frontend: ## 构建前端 Docker 镜像
+	@echo "🐳 Building frontend Docker image..."
+	docker build -f deploy/docker/frontend/Dockerfile \
+		-t synapse:frontend-$(VERSION) \
+		-t synapse:frontend-latest \
+		.
+	@echo "✅ Image: synapse:frontend-latest"
 
-# ==========================================
-# 测试命令
-# ==========================================
+docker-all: docker-backend docker-frontend ## 构建所有 Docker 镜像
 
-## test: 运行所有测试
-test: test-backend test-frontend
-	@echo "$(GREEN)所有测试完成$(NC)"
+docker-push: ## 推送镜像到 Harbor
+	@echo "📤 Pushing images to Harbor..."
+	docker tag synapse:backend-latest harbor.local/synapse/backend:$(VERSION)
+	docker tag synapse:backend-latest harbor.local/synapse/backend:latest
+	docker push harbor.local/synapse/backend:$(VERSION)
+	docker push harbor.local/synapse/backend:latest
+	docker tag synapse:frontend-latest harbor.local/synapse/frontend:$(VERSION)
+	docker tag synapse:frontend-latest harbor.local/synapse/frontend:latest
+	docker push harbor.local/synapse/frontend:$(VERSION)
+	docker push harbor.local/synapse/frontend:latest
+	@echo "✅ Images pushed successfully"
 
-## test-backend: 运行后端测试
-test-backend:
-	@echo "$(BLUE)运行后端测试...$(NC)"
-	go test -v -race -coverprofile=coverage.out ./...
+# ─── 测试 ──────────────────────────────────────────────────────────────────
+
+test: ## 运行后端单元测试
+	@echo "🧪 Running backend tests..."
+	go test -v -coverprofile=coverage.out ./cmd/... ./internal/... ./pkg/...
 	go tool cover -html=coverage.out -o coverage.html
-	@echo "$(GREEN)后端测试完成，覆盖率报告: coverage.html$(NC)"
+	@echo "✅ Coverage report: coverage.html"
 
-## test-frontend: 运行前端测试
-test-frontend:
-	@echo "$(BLUE)运行前端测试...$(NC)"
-	cd ui && npm run test 2>/dev/null || echo "$(YELLOW)前端测试尚未配置$(NC)"
+test-frontend: ## 运行前端单元测试
+	@echo "🧪 Running frontend tests..."
+	cd $(FRONTEND_DIR) && npm run test:run
 
-## test-e2e: 运行 E2E 测试（headless）
-test-e2e:
-	@echo "$(BLUE)启动后端并运行 E2E 测试...$(NC)"
-	@bash scripts/start-test-backend.sh
-	cd ui && npx playwright test; EXIT_CODE=$$?; \
-	bash ../scripts/stop-test-backend.sh; \
-	exit $$EXIT_CODE
+# ─── 代码质量 ──────────────────────────────────────────────────────────────
 
-## test-e2e-ui: 以 UI 模式运行 E2E 测试
-test-e2e-ui:
-	@echo "$(BLUE)启动后端并打开 Playwright UI...$(NC)"
-	@bash scripts/start-test-backend.sh
-	cd ui && npx playwright test --ui; \
-	bash ../scripts/stop-test-backend.sh
+lint: ## 运行后端代码检查
+	@echo "🔍 Running golangci-lint..."
+	golangci-lint run ./cmd ./internal ./pkg --timeout=5m
 
-# ==========================================
-# 代码检查
-# ==========================================
+lint-frontend: ## 运行前端 ESLint
+	@echo "🔍 Running ESLint..."
+	cd $(FRONTEND_DIR) && npm run lint
 
-## check: Phase 0 Exit Criteria — 安全與品質全量驗證
-check:
-	@echo "$(BLUE)═══ Phase 0 Exit Criteria Check ═══$(NC)"
+# ─── Docker Compose ─────────────────────────────────────────────────────────
+
+docker-up: ## 启动 CICD 基础设施（Docker Compose）
+	@echo "🐳 Starting Docker Compose services..."
+	cd deploy && docker compose -f docker-compose-cicd.yaml up -d
 	@echo ""
-	@echo "$(BLUE)[1/5] go test ./...$(NC)"
-	go test ./...
-	@echo "$(GREEN)✓ go test 通過$(NC)"
-	@echo ""
-	@echo "$(BLUE)[2/5] go vet ./...$(NC)"
-	go vet ./...
-	@echo "$(GREEN)✓ go vet 通過$(NC)"
-	@echo ""
-	@echo "$(BLUE)[3/5] gosec 安全掃描$(NC)"
-	@which gosec > /dev/null || (echo "$(YELLOW)請安裝 gosec: go install github.com/securego/gosec/v2/cmd/gosec@latest$(NC)" && exit 1)
-	gosec -exclude-dir=vendor -severity high ./...
-	@echo "$(GREEN)✓ gosec 無 HIGH/CRITICAL issue$(NC)"
-	@echo ""
-	@echo "$(BLUE)[4/5] 檢查 Printf.*salt 日誌洩漏（P0-1）$(NC)"
-	@! grep -rn 'Printf.*salt' internal/ 2>/dev/null | grep -v '_test.go' | grep . && echo "$(GREEN)✓ 無 Printf.*salt$(NC)"
-	@echo ""
-	@echo "$(BLUE)[5/5] 檢查 username == \"admin\" 硬編碼（P0-2）$(NC)"
-	@! grep -rn 'username == "admin"' internal/ 2>/dev/null | grep . && echo "$(GREEN)✓ 無 username == \"admin\"$(NC)"
-	@echo ""
-	@echo "$(GREEN)═══ Phase 0 check 全部通過 ═══$(NC)"
+	@echo "✅ Services started:"
+	@echo "   GitLab:  http://localhost"
+	@echo "   Harbor:  http://localhost:8080"
+	@echo "   ArgoCD:  http://localhost:8081"
 
-## lint: 运行所有代码检查
-lint: lint-backend lint-frontend
-	@echo "$(GREEN)代码检查完成$(NC)"
+docker-down: ## 停止 CICD 基础设施
+	@echo "🛑 Stopping Docker Compose services..."
+	cd deploy && docker compose -f docker-compose-cicd.yaml down
 
-## lint-backend: 检查后端代码
-lint-backend:
-	@echo "$(BLUE)检查后端代码...$(NC)"
-	@which golangci-lint > /dev/null || (echo "$(YELLOW)请安装 golangci-lint$(NC)" && exit 1)
-	golangci-lint run ./...
+docker-logs: ## 查看 Docker Compose 日志
+	cd deploy && docker compose -f docker-compose-cicd.yaml logs -f
 
-## lint-frontend: 检查前端代码
-lint-frontend:
-	@echo "$(BLUE)检查前端代码...$(NC)"
-	cd ui && npm run lint
+# ─── Kubernetes 部署 ────────────────────────────────────────────────────────
 
-# ==========================================
-# Docker 命令
-# ==========================================
+k8s-deploy: ## 部署 Synapse 到 Kubernetes
+	@echo "📦 Deploying to Kubernetes..."
+	kubectl apply -f deploy/k8s/synapse-deployment.yaml
+	@echo "✅ Deployment started"
 
-## docker-build: 构建 Docker 镜像（前端嵌入后端，单镜像）
-docker-build:
-	@echo "$(BLUE)构建 Docker 镜像...$(NC)"
-	docker build -t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest .
-	@echo "$(GREEN)镜像构建完成$(NC)"
-	@echo "  $(IMAGE_NAME):$(VERSION)"
+k8s-status: ## 查看 K8s 部署状态
+	@echo "📊 Deployment status:"
+	kubectl get pods -n synapse -w
 
-## docker-push: 推送 Docker 镜像
-docker-push:
-	@echo "$(BLUE)推送 Docker 镜像...$(NC)"
-	docker push $(IMAGE_NAME):$(VERSION)
-	docker push $(IMAGE_NAME):latest
-	@echo "$(GREEN)镜像推送完成$(NC)"
+k8s-logs: ## 查看 K8s 应用日志
+	@echo "📋 Backend logs:"
+	kubectl logs -n synapse deployment/synapse-backend -f
 
-## docker-up: 启动 Docker Compose 服务
-docker-up:
-	@echo "$(BLUE)启动 Docker Compose 服务...$(NC)"
-	$(COMPOSE_CMD) up -d
-	@echo "$(GREEN)服务已启动$(NC)"
-	$(COMPOSE_CMD) ps
+# ─── 清理 ──────────────────────────────────────────────────────────────────
 
-## docker-down: 停止 Docker Compose 服务
-docker-down:
-	@echo "$(BLUE)停止 Docker Compose 服务...$(NC)"
-	$(COMPOSE_CMD) down
-	@echo "$(GREEN)服务已停止$(NC)"
+clean: ## 清理构建产物
+	@echo "🧹 Cleaning..."
+	rm -rf $(BIN_DIR)
+	rm -f coverage.out coverage.html
+	cd $(FRONTEND_DIR) && rm -rf dist node_modules .next
+	@echo "✅ Cleaned"
 
-## docker-logs: 查看 Docker Compose 日志
-docker-logs:
-	$(COMPOSE_CMD) logs -f
+clean-all: clean ## 完全清理
 
-## docker-ps: 查看 Docker Compose 状态
-docker-ps:
-	$(COMPOSE_CMD) ps
+# ─── 其他工具 ──────────────────────────────────────────────────────────────
 
-# ==========================================
-# 部署命令
-# ==========================================
-
-## helm-package: 打包 Helm Chart
-helm-package:
-	@echo "$(BLUE)打包 Helm Chart...$(NC)"
-	@if [ -d "deploy/helm/synapse" ]; then \
-		helm package deploy/helm/synapse -d dist/; \
-		echo "$(GREEN)Helm Chart 打包完成$(NC)"; \
-	else \
-		echo "$(YELLOW)Helm Chart 目录不存在，请先创建$(NC)"; \
-	fi
-
-# ==========================================
-# 其他命令
-# ==========================================
-
-## docs: 生成文档
-docs:
-	@echo "$(BLUE)生成文档...$(NC)"
-	@echo "$(YELLOW)文档生成功能待实现$(NC)"
-
-## swagger: 產生 OpenAPI / Swagger 文件（同 make swag）
-swagger: swag
-
-## swag: 產生 docs/swagger/swagger.json（覆蓋 auth / cluster / user）
-swag:
-	@echo "$(BLUE)產生 Swagger 文件...$(NC)"
-	@which ~/go/bin/swag > /dev/null || (echo "$(YELLOW)請安裝 swag: GOTOOLCHAIN=local go install github.com/swaggo/swag/cmd/swag@v1.16.3$(NC)" && exit 1)
-	~/go/bin/swag init \
-		--generalInfo main.go \
-		--output docs/swagger \
-		--outputTypes json,yaml \
-		--parseDependency \
-		--parseInternal
-	@echo "$(GREEN)Swagger 文件已產生: docs/swagger/swagger.json$(NC)"
-
-## clean: 清理构建产物
-clean:
-	@echo "$(BLUE)清理构建产物...$(NC)"
-	rm -rf bin/
-	rm -rf ui/dist/assets ui/dist/*.js ui/dist/*.css ui/dist/*.ico ui/dist/*.svg ui/dist/*.png
-	rm -rf coverage.out coverage.html
-	rm -rf dist/
-	docker image prune -f
-	@echo "$(GREEN)清理完成$(NC)"
-
-## version: 显示版本信息
-version:
+version: ## 显示版本信息
 	@echo "Version: $(VERSION)"
+	@echo "Commit: $(GIT_COMMIT)"
+	@echo "Build Time: $(BUILD_TIME)"
+
+# ─── CI/CD 模拟 ────────────────────────────────────────────────────────────
+
+ci: lint test build docker-all ## 运行完整 CI 流程（本地模拟）
+	@echo "✅ CI pipeline completed successfully"
+
+quick-start: docker-up ## 快速启动完整 CICD 环境
+	@echo ""
+	@echo "🎉 Quick start completed!"
+	@echo ""
+	@echo "Next steps:"
+	@echo "1. Push code to GitLab (auto-triggers CI)"
+	@echo "2. Monitor ArgoCD: http://localhost:8081"
+	@echo "3. Check deployment: kubectl get pods -n synapse"

@@ -10,6 +10,7 @@ import {
   RobotOutlined,
   BranchesOutlined,
   InboxOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import LDAPSettings from './LDAPSettings';
@@ -20,6 +21,7 @@ import SecuritySettings from './SecuritySettings';
 import NotificationSettings from './NotificationSettings';
 import GitProviderSettings from './GitProviderSettings';
 import RegistrySettings from './RegistrySettings';
+import CIEngineSettings from './CIEngineSettings';
 import { useTranslation } from 'react-i18next';
 
 const { Title } = Typography;
@@ -75,6 +77,11 @@ const [activeTab, setActiveTab] = useState('ssh');
       key: 'registries',
       label: tabLabel(<InboxOutlined />, t('cicd:registry.title')),
       children: <RegistrySettings />,
+    },
+    {
+      key: 'ci-engines',
+      label: tabLabel(<ThunderboltOutlined />, t('cicd:ciEngine.title')),
+      children: <CIEngineSettings />,
     },
   ];
 

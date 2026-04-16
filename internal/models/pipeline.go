@@ -67,10 +67,19 @@ type Pipeline struct {
 	NotifyOnSuccess   string         `json:"notify_on_success" gorm:"type:jsonb;default:'[]'"` // channel_id JSON 陣列
 	NotifyOnFailure   string         `json:"notify_on_failure" gorm:"type:jsonb;default:'[]'"`
 	NotifyOnScan      string         `json:"notify_on_scan" gorm:"type:jsonb;default:'[]'"`
-	CreatedBy         uint           `json:"created_by" gorm:"not null"`
-	CreatedAt         time.Time      `json:"created_at"`
-	UpdatedAt         time.Time      `json:"updated_at"`
-	DeletedAt         gorm.DeletedAt `json:"-" gorm:"index"`
+
+	// CI engine selection (M18a, ADR-015).
+	// EngineType identifies which CIEngineAdapter executes this pipeline. A
+	// value of "native" (default) means the built-in Synapse K8s Job engine;
+	// any other value dispatches to the adapter registered for that type and
+	// references the external connection via EngineConfigID.
+	EngineType     string `json:"engine_type" gorm:"size:20;not null;default:'native';index"`
+	EngineConfigID *uint  `json:"engine_config_id,omitempty" gorm:"index"` // FK → ci_engine_configs.id; required when EngineType != "native"
+
+	CreatedBy uint           `json:"created_by" gorm:"not null"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // ---------------------------------------------------------------------------

@@ -276,5 +276,149 @@
     },
     "manageButton": "Projects",
     "noProjects": "No projects configured"
+  },
+  "ciEngine": {
+    "title": "CI Engines",
+    "subtitle": "Manage external CI engine connections (GitLab CI, Jenkins, Tekton, Argo Workflows, GitHub Actions)",
+    "table": {
+      "name": "Name",
+      "engineType": "Engine Type",
+      "endpoint": "Endpoint",
+      "enabled": "Enabled",
+      "health": "Health",
+      "version": "Version",
+      "lastChecked": "Last Checked",
+      "createdAt": "Created At"
+    },
+    "engineType": {
+      "native": "Native",
+      "gitlab": "GitLab CI",
+      "jenkins": "Jenkins",
+      "tekton": "Tekton",
+      "argo": "Argo Workflows",
+      "github": "GitHub Actions"
+    },
+    "health": {
+      "healthy": "Healthy",
+      "unhealthy": "Unhealthy",
+      "unknown": "Unknown"
+    },
+    "form": {
+      "createTitle": "Add CI Engine",
+      "editTitle": "Edit CI Engine — {{name}}",
+      "name": "Name",
+      "namePlaceholder": "e.g. company-gitlab",
+      "engineType": "Engine Type",
+      "engineTypeTooltip": "Engine type cannot be changed after creation",
+      "enabled": "Enabled",
+      "endpoint": "Endpoint URL",
+      "endpointPlaceholder": "https://gitlab.example.com",
+      "authType": "Auth Type",
+      "username": "Username",
+      "usernamePlaceholder": "admin",
+      "token": "API Token / PAT",
+      "tokenPlaceholder": "Enter new token (leave blank to keep existing)",
+      "password": "Password",
+      "passwordPlaceholder": "Enter new password (leave blank to keep existing)",
+      "clusterId": "Target Cluster",
+      "clusterIdTooltip": "Tekton / Argo require a Synapse-managed cluster",
+      "selectCluster": "Select cluster",
+      "insecureSkipVerify": "Skip TLS Verification",
+      "insecureSkipVerifyTooltip": "For testing only — use CA Bundle in production",
+      "caBundle": "CA Bundle (PEM)",
+      "caBundlePlaceholder": "Paste CA certificate content (PEM format)",
+      "extraSection": "Engine-specific Settings",
+      "gitlabProjectId": "GitLab Project ID",
+      "gitlabProjectIdPlaceholder": "42",
+      "gitlabDefaultRef": "Default Branch / Tag",
+      "gitlabDefaultRefPlaceholder": "main",
+      "jenkinsJobPath": "Job Path",
+      "jenkinsJobPathPlaceholder": "folder/my-job",
+      "jenkinsJobPathTooltip": "Job path relative to Jenkins root, nested folders separated by /",
+      "tektonPipelineName": "Pipeline Name",
+      "tektonPipelineNamePlaceholder": "my-pipeline",
+      "tektonNamespace": "Namespace",
+      "tektonNamespacePlaceholder": "default",
+      "tektonServiceAccount": "Service Account",
+      "tektonServiceAccountPlaceholder": "pipeline",
+      "argoNamespace": "Workflow Namespace",
+      "argoNamespacePlaceholder": "argo",
+      "argoTemplateName": "WorkflowTemplate Name",
+      "argoTemplateNamePlaceholder": "my-workflow-template",
+      "argoServiceAccount": "Service Account",
+      "argoServiceAccountPlaceholder": "argo",
+      "githubOwner": "Owner (User / Org)",
+      "githubOwnerPlaceholder": "my-org",
+      "githubRepo": "Repository",
+      "githubRepoPlaceholder": "my-repo",
+      "githubWorkflowId": "Workflow File / ID",
+      "githubWorkflowIdPlaceholder": "ci.yml",
+      "githubRef": "Default Branch",
+      "githubRefPlaceholder": "main",
+      "tlsSection": "TLS Settings"
+    },
+    "authType": {
+      "token": "API Token / PAT",
+      "basic": "Basic Auth (username + password)",
+      "kubeconfig": "Kubeconfig (cluster access)",
+      "service_acct": "Service Account Token"
+    },
+    "messages": {
+      "createSuccess": "CI engine created",
+      "createFailed": "Failed to create CI engine",
+      "updateSuccess": "CI engine updated",
+      "updateFailed": "Failed to update CI engine",
+      "deleteSuccess": "CI engine deleted",
+      "deleteFailed": "Failed to delete CI engine"
+    },
+    "nativeNotice": "The native engine is built into Synapse and requires no connection configuration.",
+    "viewRun": "View Run",
+    "runViewer": {
+      "title": "Run — {{runId}}",
+      "phase": {
+        "pending": "Pending",
+        "running": "Running",
+        "success": "Success",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "unknown": "Unknown"
+      },
+      "tabs": {
+        "logs": "Logs",
+        "steps": "Steps",
+        "artifacts": "Artifacts"
+      },
+      "steps": {
+        "name": "Step",
+        "phase": "Status",
+        "startedAt": "Started At",
+        "finishedAt": "Finished At"
+      },
+      "artifacts": {
+        "name": "Name",
+        "kind": "Type",
+        "size": "Size",
+        "createdAt": "Created At"
+      },
+      "noLogs": "No logs yet",
+      "noSteps": "No steps",
+      "noArtifacts": "No artifacts",
+      "pollingLogs": "Auto-refreshing…",
+      "cancel": "Cancel Run",
+      "cancelConfirm": "Cancel this run?",
+      "cancelSuccess": "Run cancelled",
+      "cancelFailed": "Failed to cancel run"
+    },
+    "triggerRun": {
+      "title": "Trigger Run — {{name}}",
+      "ref": "Branch / Tag / Commit",
+      "refPlaceholder": "main",
+      "variables": "Variables (optional)",
+      "variablesPlaceholder": "KEY=VALUE (one per line)",
+      "variablesParseError": "Invalid format — use KEY=VALUE, one per line",
+      "trigger": "Trigger Run",
+      "triggerSuccess": "Run triggered ({{runId}})",
+      "triggerFailed": "Failed to trigger run"
+    }
   }
 }

@@ -288,5 +288,149 @@
     },
     "manageButton": "Projects",
     "noProjects": "尚未設定任何 Project"
+  },
+  "ciEngine": {
+    "title": "CI 引擎",
+    "subtitle": "管理外部 CI 引擎連線設定（GitLab CI、Jenkins、Tekton、Argo Workflows、GitHub Actions）",
+    "table": {
+      "name": "名稱",
+      "engineType": "引擎類型",
+      "endpoint": "端點",
+      "enabled": "啟用",
+      "health": "健康狀態",
+      "version": "版本",
+      "lastChecked": "最後探測",
+      "createdAt": "建立時間"
+    },
+    "engineType": {
+      "native": "原生",
+      "gitlab": "GitLab CI",
+      "jenkins": "Jenkins",
+      "tekton": "Tekton",
+      "argo": "Argo Workflows",
+      "github": "GitHub Actions"
+    },
+    "health": {
+      "healthy": "健康",
+      "unhealthy": "異常",
+      "unknown": "未知"
+    },
+    "form": {
+      "createTitle": "新增 CI 引擎",
+      "editTitle": "編輯 CI 引擎 — {{name}}",
+      "name": "名稱",
+      "namePlaceholder": "例如：company-gitlab",
+      "engineType": "引擎類型",
+      "engineTypeTooltip": "建立後無法更改引擎類型",
+      "enabled": "啟用",
+      "endpoint": "端點 URL",
+      "endpointPlaceholder": "https://gitlab.example.com",
+      "authType": "認證方式",
+      "username": "使用者名稱",
+      "usernamePlaceholder": "admin",
+      "token": "API Token / PAT",
+      "tokenPlaceholder": "輸入新 Token（留空保留現有）",
+      "password": "密碼",
+      "passwordPlaceholder": "輸入新密碼（留空保留現有）",
+      "clusterId": "目標叢集",
+      "clusterIdTooltip": "Tekton / Argo 需要指定 Synapse 管理的叢集",
+      "selectCluster": "選擇叢集",
+      "insecureSkipVerify": "略過 TLS 驗證",
+      "insecureSkipVerifyTooltip": "僅用於測試環境，正式環境請使用 CA Bundle",
+      "caBundle": "CA Bundle（PEM）",
+      "caBundlePlaceholder": "貼上 CA 憑證內容（PEM 格式）",
+      "extraSection": "引擎特定設定",
+      "gitlabProjectId": "GitLab Project ID",
+      "gitlabProjectIdPlaceholder": "42",
+      "gitlabDefaultRef": "預設分支 / 標籤",
+      "gitlabDefaultRefPlaceholder": "main",
+      "jenkinsJobPath": "Job 路徑",
+      "jenkinsJobPathPlaceholder": "folder/my-job",
+      "jenkinsJobPathTooltip": "相對於 Jenkins 根目錄的 Job 路徑，巢狀 folder 用 / 分隔",
+      "tektonPipelineName": "Pipeline 名稱",
+      "tektonPipelineNamePlaceholder": "my-pipeline",
+      "tektonNamespace": "命名空間",
+      "tektonNamespacePlaceholder": "default",
+      "tektonServiceAccount": "Service Account",
+      "tektonServiceAccountPlaceholder": "pipeline",
+      "argoNamespace": "Workflow 命名空間",
+      "argoNamespacePlaceholder": "argo",
+      "argoTemplateName": "WorkflowTemplate 名稱",
+      "argoTemplateNamePlaceholder": "my-workflow-template",
+      "argoServiceAccount": "Service Account",
+      "argoServiceAccountPlaceholder": "argo",
+      "githubOwner": "Owner（使用者 / 組織）",
+      "githubOwnerPlaceholder": "my-org",
+      "githubRepo": "Repository",
+      "githubRepoPlaceholder": "my-repo",
+      "githubWorkflowId": "Workflow 檔案名稱 / ID",
+      "githubWorkflowIdPlaceholder": "ci.yml",
+      "githubRef": "預設分支",
+      "githubRefPlaceholder": "main",
+      "tlsSection": "TLS 設定"
+    },
+    "authType": {
+      "token": "API Token / PAT",
+      "basic": "Basic Auth（使用者名稱 + 密碼）",
+      "kubeconfig": "Kubeconfig（叢集存取）",
+      "service_acct": "Service Account Token"
+    },
+    "messages": {
+      "createSuccess": "CI 引擎已建立",
+      "createFailed": "建立 CI 引擎失敗",
+      "updateSuccess": "CI 引擎已更新",
+      "updateFailed": "更新 CI 引擎失敗",
+      "deleteSuccess": "CI 引擎已刪除",
+      "deleteFailed": "刪除 CI 引擎失敗"
+    },
+    "nativeNotice": "原生引擎（Native）為 Synapse 內建，無需設定連線。",
+    "viewRun": "查看執行",
+    "runViewer": {
+      "title": "執行紀錄 — {{runId}}",
+      "phase": {
+        "pending": "等待中",
+        "running": "執行中",
+        "success": "成功",
+        "failed": "失敗",
+        "cancelled": "已取消",
+        "unknown": "未知"
+      },
+      "tabs": {
+        "logs": "Logs",
+        "steps": "Steps",
+        "artifacts": "Artifacts"
+      },
+      "steps": {
+        "name": "Step",
+        "phase": "狀態",
+        "startedAt": "開始時間",
+        "finishedAt": "結束時間"
+      },
+      "artifacts": {
+        "name": "名稱",
+        "kind": "類型",
+        "size": "大小",
+        "createdAt": "建立時間"
+      },
+      "noLogs": "尚無 Logs",
+      "noSteps": "尚無 Steps",
+      "noArtifacts": "尚無 Artifacts",
+      "pollingLogs": "自動更新中…",
+      "cancel": "取消執行",
+      "cancelConfirm": "確認取消此執行？",
+      "cancelSuccess": "執行已取消",
+      "cancelFailed": "取消失敗"
+    },
+    "triggerRun": {
+      "title": "觸發執行 — {{name}}",
+      "ref": "Branch / Tag / Commit",
+      "refPlaceholder": "main",
+      "variables": "環境變數（選填）",
+      "variablesPlaceholder": "KEY=VALUE（每行一個）",
+      "variablesParseError": "格式錯誤，請使用 KEY=VALUE 每行一個",
+      "trigger": "觸發執行",
+      "triggerSuccess": "執行已觸發（{{runId}}）",
+      "triggerFailed": "觸發執行失敗"
+    }
   }
 }
