@@ -167,6 +167,18 @@ const pipelineService = {
       { from_failed: fromFailed }
     ),
 
+  approveStep: (pipelineId: number, runId: number, stepRunId: number) =>
+    request.post<void>(
+      `/pipelines/${pipelineId}/runs/${runId}/steps/${stepRunId}/approve`,
+      {}
+    ),
+
+  rejectStep: (pipelineId: number, runId: number, stepRunId: number, reason?: string) =>
+    request.post<void>(
+      `/pipelines/${pipelineId}/runs/${runId}/steps/${stepRunId}/reject`,
+      { reason }
+    ),
+
   /**
    * Returns the SSE URL for streaming a step run's logs.
    * Use with useSSELog hook — EventSource cannot go through axios.

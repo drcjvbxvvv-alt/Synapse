@@ -83,7 +83,19 @@
     "startedAt": "開始時間",
     "finishedAt": "結束時間",
     "cancelSuccess": "執行已取消",
-    "cancelFailed": "取消執行失敗"
+    "cancelFailed": "取消執行失敗",
+    "approval": {
+      "waiting": "步驟「{{step}}」等待人工審核",
+      "approveConfirm": "確認核准此步驟，Pipeline 將繼續執行？",
+      "approve": "核准",
+      "reject": "拒絕",
+      "rejectTitle": "拒絕原因",
+      "rejectReasonPlaceholder": "輸入拒絕原因（選填）",
+      "approveSuccess": "步驟已核准，Pipeline 繼續執行",
+      "approveFailed": "核准失敗",
+      "rejectSuccess": "步驟已拒絕，Pipeline 中止",
+      "rejectFailed": "拒絕失敗"
+    }
   },
   "view": {
     "card": "卡片",

@@ -83,7 +83,19 @@
     "startedAt": "开始时间",
     "finishedAt": "结束时间",
     "cancelSuccess": "执行已取消",
-    "cancelFailed": "取消执行失败"
+    "cancelFailed": "取消执行失败",
+    "approval": {
+      "waiting": "步骤「{{step}}」等待人工审核",
+      "approveConfirm": "确认核准此步骤，Pipeline 将继续执行？",
+      "approve": "核准",
+      "reject": "拒绝",
+      "rejectTitle": "拒绝原因",
+      "rejectReasonPlaceholder": "输入拒绝原因（选填）",
+      "approveSuccess": "步骤已核准，Pipeline 继续执行",
+      "approveFailed": "核准失败",
+      "rejectSuccess": "步骤已拒绝，Pipeline 中止",
+      "rejectFailed": "拒绝失败"
+    }
   },
   "view": {
     "card": "卡片",

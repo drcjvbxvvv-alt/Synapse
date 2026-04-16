@@ -83,7 +83,19 @@
     "startedAt": "Started at",
     "finishedAt": "Finished at",
     "cancelSuccess": "Run cancelled",
-    "cancelFailed": "Failed to cancel run"
+    "cancelFailed": "Failed to cancel run",
+    "approval": {
+      "waiting": "Step \"{{step}}\" is waiting for manual approval",
+      "approveConfirm": "Approve this step and continue the pipeline?",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectTitle": "Reject Reason",
+      "rejectReasonPlaceholder": "Enter rejection reason (optional)",
+      "approveSuccess": "Step approved — pipeline will continue",
+      "approveFailed": "Failed to approve step",
+      "rejectSuccess": "Step rejected — pipeline stopped",
+      "rejectFailed": "Failed to reject step"
+    }
   },
   "view": {
     "card": "Card",

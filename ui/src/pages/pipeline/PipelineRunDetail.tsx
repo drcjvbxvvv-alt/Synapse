@@ -30,6 +30,8 @@ import {
   Flex,
   Tooltip,
   Popconfirm,
+  Modal,
+  Input,
 } from 'antd';
 import type { Node, Edge } from '@xyflow/react';
 import {
@@ -41,6 +43,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -147,6 +150,8 @@ const PipelineRunDetail: React.FC = () => {
 
   const [selectedStep, setSelectedStep] = useState<StepRun | null>(null);
   const [logDrawerOpen, setLogDrawerOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   // ─── Query ──────────────────────────────────────────────────────────────────
 
@@ -208,6 +213,27 @@ const PipelineRunDetail: React.FC = () => {
     onError: () => message.error(t('pipeline:messages.triggerFailed')),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: (stepRunId: number) => pipelineService.approveStep(pid, rid, stepRunId),
+    onSuccess: () => {
+      message.success(t('pipeline:runDetail.approval.approveSuccess'));
+      queryClient.invalidateQueries({ queryKey: ['pipeline-run', pid, rid] });
+    },
+    onError: () => message.error(t('pipeline:runDetail.approval.approveFailed')),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ stepRunId, reason }: { stepRunId: number; reason: string }) =>
+      pipelineService.rejectStep(pid, rid, stepRunId, reason || undefined),
+    onSuccess: () => {
+      message.success(t('pipeline:runDetail.approval.rejectSuccess'));
+      setRejectModalOpen(false);
+      setRejectReason('');
+      queryClient.invalidateQueries({ queryKey: ['pipeline-run', pid, rid] });
+    },
+    onError: () => message.error(t('pipeline:runDetail.approval.rejectFailed')),
+  });
+
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   if (isLoading) {
@@ -224,6 +250,7 @@ const PipelineRunDetail: React.FC = () => {
 
   const hasFailed = steps.some(s => s.status === 'failed');
   const isMutating = cancelMutation.isPending || rerunMutation.isPending;
+  const waitingStep = steps.find(s => s.status === 'waiting_approval') ?? null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -352,6 +379,68 @@ const PipelineRunDetail: React.FC = () => {
           </Descriptions.Item>
         </Descriptions>
       </div>
+
+      {/* ── Approval Banner ─────────────────────────────────────────────────── */}
+      {waitingStep && (
+        <div style={{
+          background: '#fffbeb',
+          borderBottom: `1px solid #fcd34d`,
+          padding: `${token.paddingSM}px ${token.paddingLG}px`,
+        }}>
+          <Flex justify="space-between" align="center">
+            <Space>
+              <AuditOutlined style={{ color: '#d97706', fontSize: 16 }} />
+              <Text style={{ color: '#92400e' }}>
+                {t('pipeline:runDetail.approval.waiting', { step: waitingStep.step_name })}
+              </Text>
+            </Space>
+            <Space>
+              <Popconfirm
+                title={t('pipeline:runDetail.approval.approveConfirm')}
+                onConfirm={() => approveMutation.mutate(waitingStep.id)}
+                okText={t('common:actions.confirm')}
+                cancelText={t('common:actions.cancel')}
+              >
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={approveMutation.isPending}
+                >
+                  {t('pipeline:runDetail.approval.approve')}
+                </Button>
+              </Popconfirm>
+              <Button
+                danger
+                size="small"
+                onClick={() => setRejectModalOpen(true)}
+              >
+                {t('pipeline:runDetail.approval.reject')}
+              </Button>
+            </Space>
+          </Flex>
+        </div>
+      )}
+
+      {/* ── Reject Reason Modal ──────────────────────────────────────────────── */}
+      <Modal
+        title={t('pipeline:runDetail.approval.rejectTitle')}
+        open={rejectModalOpen}
+        onCancel={() => { setRejectModalOpen(false); setRejectReason(''); }}
+        onOk={() => waitingStep && rejectMutation.mutate({ stepRunId: waitingStep.id, reason: rejectReason })}
+        okText={t('pipeline:runDetail.approval.reject')}
+        okButtonProps={{ danger: true, loading: rejectMutation.isPending }}
+        cancelText={t('common:actions.cancel')}
+        destroyOnHidden
+        width={480}
+      >
+        <Input.TextArea
+          value={rejectReason}
+          onChange={e => setRejectReason(e.target.value)}
+          placeholder={t('pipeline:runDetail.approval.rejectReasonPlaceholder')}
+          rows={3}
+          style={{ marginTop: 8 }}
+        />
+      </Modal>
 
       {/* ── DAG Canvas ──────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
