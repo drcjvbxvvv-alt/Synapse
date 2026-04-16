@@ -160,6 +160,10 @@
     "exportCount": "Successfully exported {{count}} records",
     "cannotDeleteSystem": "Cannot delete system resources"
   },
+  "confirm": {
+    "deleteTitle": "Confirm Delete",
+    "deleteDesc": "This will permanently delete \"{{name}}\". This action cannot be undone."
+  },
   "time": {
     "justNow": "Just now",
     "minutesAgo": "{{count}} minutes ago",

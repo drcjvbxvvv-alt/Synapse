@@ -89,7 +89,7 @@ const MigrationWizard: React.FC<Props> = ({ open, onClose, onMigrated }) => {
     if (!cid || !ns) return;
     try {
       const { WorkloadService } = await import('../../services/workloadService');
-      const res = await WorkloadService.getWorkloads(cid, ns, kind.toLowerCase() + 's', 1, 200);
+      const res = await WorkloadService.getWorkloads(cid, ns, kind, 1, 200);
       setWorkloads((res?.items ?? []).map((w) => ({ name: w.name, kind, namespace: w.namespace, replicas: w.replicas })));
     } catch {
       setWorkloads([]);

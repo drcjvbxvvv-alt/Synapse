@@ -161,6 +161,10 @@
     "exportCount": "成功匯出 {{count}} 筆資料",
     "cannotDeleteSystem": "不能刪除系統資源"
   },
+  "confirm": {
+    "deleteTitle": "確認刪除",
+    "deleteDesc": "此操作將永久刪除「{{name}}」，無法復原。"
+  },
   "time": {
     "justNow": "剛剛",
     "minutesAgo": "{{count}} 分鐘前",

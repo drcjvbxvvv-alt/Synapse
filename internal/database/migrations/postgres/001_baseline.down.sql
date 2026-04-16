@@ -1,6 +1,22 @@
 -- Migration 001 rollback: drop all tables in reverse dependency order.
 -- WARNING: This permanently deletes ALL data. Use only in development.
 
+DROP TABLE IF EXISTS pipeline_logs;
+DROP TABLE IF EXISTS pipeline_artifacts;
+DROP TABLE IF EXISTS pipeline_secrets;
+DROP TABLE IF EXISTS step_runs;
+DROP TABLE IF EXISTS pipeline_runs;
+ALTER TABLE pipelines DROP CONSTRAINT IF EXISTS fk_pipelines_current_version;
+DROP TABLE IF EXISTS pipeline_versions;
+DROP TABLE IF EXISTS pipelines;
+DROP TABLE IF EXISTS gitops_apps;
+DROP TABLE IF EXISTS ci_engine_configs;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS git_providers;
+DROP TABLE IF EXISTS registries;
+DROP TABLE IF EXISTS slos;
+DROP TABLE IF EXISTS namespace_budgets;
+DROP TABLE IF EXISTS feature_flags;
 DROP TABLE IF EXISTS token_blacklists;
 DROP TABLE IF EXISTS image_indices;
 DROP TABLE IF EXISTS log_source_configs;

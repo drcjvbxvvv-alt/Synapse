@@ -261,12 +261,52 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 ---
 
-### 🔄 GitOps — ArgoCD 整合
+### 🔄 GitOps
+
+#### ArgoCD 整合
 
 - **連線設定**：ArgoCD Server URL + Token 設定，連線測試
 - **應用列表**：健康狀態 / 同步狀態 / 最後部署時間
 - **操作**：Sync（同步）/ Rollback（回滾）/ Delete（刪除）
 - **應用詳情**：資源樹狀結構、同步歷史
+
+#### 原生 GitOps 應用（Native GitOps）
+
+- **應用管理**：CRUD，支援 raw / kustomize / helm 渲染方式
+- **Git 來源**：綁定 Git Provider，設定 repo / branch / path
+- **Diff 預覽**：定期比對 Git 與叢集現況，即時顯示差異
+- **同步策略**：auto（自動同步）/ manual（手動觸發）
+
+---
+
+### 🚀 CI/CD Pipeline
+
+#### Synapse 原生 CI 引擎
+
+- **Pipeline YAML 定義**（`apiVersion: synapse.io/v1`）：版本快照、不可變，支援 DAG `depends_on`
+- **Step 類型**：`build-jar` / `build-image` / `trivy-scan` / `push-image` / `gitops-sync` / `smoke-test` / `approval`
+- **並發控制**：`cancel_previous` / `queue` / `reject` 三種策略，可設定最大並發數
+- **人工審核閘道**（`approval` step）：Pipeline 暫停等待審核，管理員可在 Run 詳情頁直接核准或拒絕
+- **觸發方式**：手動 / Webhook / Cron 排程 / Re-run（含從失敗步驟重跑）
+- **DAG 流程視覺化**：React Flow 有向圖即時呈現各 Step 執行狀態，3 秒輪詢自動更新
+- **步驟日誌**：Drawer 側滑查看每個 Step 的完整執行日誌
+
+#### 多 CI 引擎支援（M18a–M18e Adapter Pattern）
+
+- **統一 Adapter 介面**（`CIEngineAdapter`）：Native / GitLab CI / Jenkins / Tekton / Argo Workflows / GitHub Actions 均透過同一介面驅動
+- **CI 引擎管理**（Settings）：CRUD 連線設定，依引擎類型動態顯示欄位（endpoint / token / basic auth / kubeconfig），健康狀態追蹤
+- **跨引擎觸發**：從 Synapse UI 統一觸發外部 CI Pipeline 並查看 Run 狀態
+
+#### Pipeline 安全
+
+- **Pipeline Secret 管理**：pipeline scope（單一 Pipeline）與 global scope（所有 Pipeline），值以 AES-256-GCM 加密儲存；YAML 中以 `${{ secrets.NAME }}` 語法引用
+- **Image Allowlist**：glob pattern 白名單限制 Step 可用映像（如 `docker.io/kaniko/*`、`harbor.example.com/ci/*`）
+
+#### 相關基礎設施管理（Settings）
+
+- **Git Provider**：GitHub / GitLab / Gitea 連線設定（API Token + Webhook Secret 加密）
+- **Project**：Git repo → Pipeline 對應，實現 Webhook 精確匹配路由
+- **Registry**：Harbor / DockerHub / ACR / ECR / GCR 映像倉庫憑證管理（密碼 AES-256-GCM 加密）
 
 ---
 
@@ -325,7 +365,7 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 ##### 前端操作權限矩陣
 
-> 最後更新：2026-04-13
+> 最後更新：2026-04-16
 > 實作位置：`ui/src/contexts/PermissionContext.tsx`（`canWrite` / `canDelete`）、`ui/src/config/menuPermissions.ts`（路由 / 選單 / 操作按鈕）
 
 | 角色 | 查看 | 新增 / 編輯 | 刪除 | 說明 |
@@ -344,7 +384,7 @@ Synapse 是一個開源的企業級 Kubernetes 多叢集管理平台，前端基
 
 ##### 前端路由訪問權限矩陣
 
-> 最後更新：2026-04-13
+> 最後更新：2026-04-16
 > 實作位置：`ui/src/router/routes.tsx`（`TopLevelGuard` / `PermissionGuard` / `ClusterListRoute`）
 
 ###### 頂層路由（非叢集上下文，`/path`）
@@ -702,14 +742,14 @@ Synapse/
 
 ## 系統分析報告
 
-> 基於原始碼深度審查，涵蓋九個維度，誠實呈現優勢與已知缺陷。分析日期：2026-04-12。
+> 基於原始碼深度審查，涵蓋九個維度，誠實呈現優勢與已知缺陷。分析日期：2026-04-16。
 
 ### 總覽評分
 
 | 維度 | 評分 | 核心結論 |
 |------|------|----------|
 | 可靠度 | 8/10 | 主路徑錯誤處理完整；已修復 runbooks panic、kubectl terminal panic、Mesh 指標 stub |
-| 實用性 | 9/10 | 覆蓋 95% 日常 K8s 操作；新增資源治理、多叢集遷移、Service Mesh 視覺化、Gateway API 完整 CRUD、叢集網路拓樸圖 |
+| 實用性 | 9/10 | 覆蓋 95% 日常 K8s 操作；新增資源治理、多叢集遷移、Service Mesh 視覺化、Gateway API 完整 CRUD、叢集網路拓樸圖、CI/CD Pipeline 原生引擎 + 多 CI 引擎 Adapter |
 | 可用性 | 9/10 | Design Token 統一、MainLayout 重構、空狀態元件標準化；i18n 全面覆蓋三語言；API 回應格式一致 |
 | 誠實性 | 9/10 | 功能與實作高度一致；i18n 前後端架構分層明確；後端回應中立資料，前端負責完整翻譯 |
 | 系統架構 | 8/10 | Handler → Service → K8s Manager 分層清晰；`K8sInformerManager` 介面解除循環依賴 |
@@ -745,12 +785,12 @@ Synapse/
 - 資源治理：佔用分析（K8s API）+ 效率分析（Prometheus）+ 容量預測 + Right-sizing + 雲端帳單
 - 多叢集：工作負載遷移精靈 + ConfigMap/Secret 跨叢集同步策略
 - 網路：NetworkPolicy 策略模擬 + Service Mesh（Istio）流量拓撲 + Gateway API（GatewayClass / Gateway / HTTPRoute / GRPCRoute / ReferenceGrant）+ 叢集網路拓樸圖（靜態 + Istio/Cilium 條件整合）
+- CI/CD：原生 CI 引擎（DAG Step / approval 閘道 / Secret / Image Allowlist）+ 多引擎 Adapter（GitLab / Jenkins / Tekton / Argo / GitHub Actions）+ Git Provider / Project / Registry 管理
 - 稽核：操作日誌 + Terminal 回放 + 部署審批 + SIEM 推送
 - 通知：Webhook / DingTalk（HMAC 加簽）/ Slack / Teams / Email（SMTP）集中渠道管理
 
 **殘餘限制**
-- CI/CD Pipeline 引擎（M13–M17）尚未實作，依賴外部 ArgoCD
-- 備份（Velero 整合）延後至 M16 後評估
+- 備份（Velero 整合）尚未實作
 
 ---
 
@@ -886,6 +926,12 @@ Synapse/
 [x] GlobalCostInsights.tsx 硬編碼中文 + 樣式值 → i18n + Design Token（已修復 2026-04-12）
 [x] 稽核 / 成本模組三語言翻譯缺漏 → 補齊 audit:modules、audit:actions、cost:global 等 key（已修復 2026-04-12）
 [x] 後端 Go 原始碼中文註釋 → 全部更新為英文（已修復 2026-04-12）
+[x] CI/CD Pipeline 原生引擎實作（M13–M17）：DAG Step 執行、approval 閘道、Pipeline Secret、Image Allowlist（已完成 2026-04-16）
+[x] CI 引擎 Adapter 框架（M18a）：CIEngineAdapter 介面 + Factory + NativeAdapter + 76 單元測試（已完成 2026-04-16）
+[x] CI 引擎 Settings UI（M18b–M18e）：GitLab / Jenkins / Tekton / Argo / GitHub Actions 連線設定 CRUD（已完成 2026-04-16）
+[x] Git Provider / Project / Registry 管理頁（Settings）（已完成 2026-04-16）
+[x] DB 遷移整合：001–013 合併為單一 001_baseline.up.sql；修復 audit_logs.resource_ref jsonb→text（已完成 2026-04-16）
+[x] Pipeline Run approval 審核 UI：amber banner + Approve/Reject 按鈕（已完成 2026-04-16）
 ```
 
 ---
