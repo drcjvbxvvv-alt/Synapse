@@ -339,6 +339,108 @@ func (h *PipelineRunHandler) findFirstFailedStep(ctx context.Context, runID uint
 	return sr.StepName, nil
 }
 
+// RollbackRequest 回滾 Pipeline Run 的請求。
+type RollbackRequest struct {
+	// 可選：覆蓋回滾執行的目標叢集（空 = 沿用來源 Run 的叢集）
+	ClusterID *uint  `json:"cluster_id,omitempty"`
+	// 可選：覆蓋回滾執行的目標 namespace（空 = 沿用來源 Run 的 namespace）
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// RollbackRun 回滾到指定成功 Run 的版本。
+// 跳過所有 build/scan 類型的 Step，僅重新執行 deploy 類型的 Step。
+// POST /pipelines/:pipelineID/runs/:runID/rollback
+func (h *PipelineRunHandler) RollbackRun(c *gin.Context) {
+	pipelineID, err := parseUintParam(c, "pipelineID")
+	if err != nil {
+		response.BadRequest(c, "invalid pipeline ID")
+		return
+	}
+
+	runID, err := parseUintParam(c, "runID")
+	if err != nil {
+		response.BadRequest(c, "invalid run ID")
+		return
+	}
+
+	var req RollbackRequest
+	_ = c.ShouldBindJSON(&req) // body 為選填
+
+	// 取得來源 Run
+	sourceRun, err := h.pipelineSvc.GetPipelineRun(c.Request.Context(), runID)
+	if err != nil {
+		if ae, ok := apierrors.As(err); ok {
+			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
+			return
+		}
+		response.InternalError(c, "failed to get source run: "+err.Error())
+		return
+	}
+
+	// 確認是同一個 Pipeline
+	if sourceRun.PipelineID != pipelineID {
+		response.BadRequest(c, "run does not belong to this pipeline")
+		return
+	}
+
+	// 只允許回滾成功的 Run
+	if sourceRun.Status != models.PipelineRunStatusSuccess {
+		response.BadRequest(c, fmt.Sprintf("can only rollback successful runs (current status: %s)", sourceRun.Status))
+		return
+	}
+
+	// 確定回滾目標叢集與 Namespace
+	clusterID := sourceRun.ClusterID
+	if req.ClusterID != nil {
+		clusterID = *req.ClusterID
+	}
+	namespace := sourceRun.Namespace
+	if req.Namespace != "" {
+		namespace = req.Namespace
+	}
+
+	userID := c.GetUint("user_id")
+
+	newRun := &models.PipelineRun{
+		PipelineID:       sourceRun.PipelineID,
+		SnapshotID:       sourceRun.SnapshotID, // 使用原始 Run 的不可變版本快照
+		ClusterID:        clusterID,
+		Namespace:        namespace,
+		TriggerType:      models.TriggerTypeRollback,
+		TriggeredByUser:  userID,
+		ConcurrencyGroup: sourceRun.ConcurrencyGroup,
+		RollbackOfRunID:  &sourceRun.ID,
+	}
+
+	if err := h.scheduler.EnqueueRun(c.Request.Context(), newRun); err != nil {
+		h.logRunAudit(c, constants.ActionRollback, fmt.Sprintf("pipeline:%d/from-run:%d", pipelineID, runID), "failed")
+		if ae, ok := apierrors.As(err); ok {
+			c.JSON(ae.HTTPStatus, gin.H{"error": ae.Message})
+			return
+		}
+		response.InternalError(c, "failed to rollback pipeline: "+err.Error())
+		return
+	}
+
+	logger.Info("pipeline rollback triggered",
+		"pipeline_id", pipelineID,
+		"source_run_id", runID,
+		"new_run_id", newRun.ID,
+		"user_id", userID,
+		"cluster_id", clusterID,
+		"namespace", namespace,
+	)
+	h.logRunAudit(c, constants.ActionRollback, fmt.Sprintf("pipeline:%d/from-run:%d/new-run:%d", pipelineID, runID, newRun.ID), "success")
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"run_id":           newRun.ID,
+		"rollback_of_run":  sourceRun.ID,
+		"snapshot_id":      newRun.SnapshotID,
+		"status":           newRun.Status,
+		"message":          "pipeline rollback triggered",
+	})
+}
+
 // ApproveStep 批准 Approval Step。
 // POST /clusters/:clusterID/pipelines/:pipelineID/runs/:runID/steps/:stepRunID/approve
 func (h *PipelineRunHandler) ApproveStep(c *gin.Context) {

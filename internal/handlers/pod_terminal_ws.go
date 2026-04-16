@@ -42,6 +42,29 @@ func (h *PodTerminalHandler) HandlePodTerminal(c *gin.Context) {
 		terminalType = services.TerminalTypeKubectl
 	}
 
+	// ── 並行上限檢查（必須在 WS 升級前，之後無法再寫 HTTP 回應）──────────────
+	// 全局 semaphore
+	select {
+	case h.sem <- struct{}{}:
+		defer func() { <-h.sem }()
+	default:
+		response.ServiceUnavailable(c, "terminal capacity reached, please try again later")
+		return
+	}
+	// 每用戶上限
+	h.sessionsMutex.RLock()
+	userCount := 0
+	for _, s := range h.sessions {
+		if s.UserID == userID {
+			userCount++
+		}
+	}
+	h.sessionsMutex.RUnlock()
+	if userCount >= h.maxPerUser {
+		response.TooManyRequests(c, fmt.Sprintf("exceeded per-user terminal limit (%d)", h.maxPerUser))
+		return
+	}
+
 	// 升級到WebSocket連線
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -88,6 +111,7 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 
 	session := &PodTerminalSession{
 		ID:             sessionID,
+		UserID:         userID,
 		AuditSessionID: auditSessionID,
 		ClusterID:      clusterIDStr,
 		Namespace:      namespace,
@@ -96,6 +120,7 @@ func (h *PodTerminalHandler) RunPodTerminalWithConn(
 		Conn:           conn,
 		Context:        ctx,
 		Cancel:         cancel,
+		lastActivityAt: time.Now(),
 	}
 
 	h.sessionsMutex.Lock()

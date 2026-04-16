@@ -34,10 +34,11 @@ const (
 
 // Pipeline 觸發來源
 const (
-	TriggerTypeManual  = "manual"
-	TriggerTypeWebhook = "webhook"
-	TriggerTypeCron    = "cron"
-	TriggerTypeRerun   = "rerun"
+	TriggerTypeManual   = "manual"
+	TriggerTypeWebhook  = "webhook"
+	TriggerTypeCron     = "cron"
+	TriggerTypeRerun    = "rerun"
+	TriggerTypeRollback = "rollback" // 回滾至指定歷史 Run 的映像版本
 )
 
 // Concurrency Group 策略
@@ -121,6 +122,7 @@ type PipelineRun struct {
 	ConcurrencyGroup string         `json:"concurrency_group" gorm:"size:255;index"`
 	RerunFromID      *uint          `json:"rerun_from_id"`      // 若為 rerun，指向原始 RunID
 	RerunFromStep    string         `json:"rerun_from_step,omitempty" gorm:"size:255"` // 從此 Step 開始重跑（空 = 全部重跑）
+	RollbackOfRunID  *uint          `json:"rollback_of_run_id,omitempty"` // 若為 rollback，指向被回滾的成功 RunID
 	Error            string         `json:"error,omitempty" gorm:"type:text"`
 	QueuedAt         time.Time      `json:"queued_at"`
 	StartedAt        *time.Time     `json:"started_at"`

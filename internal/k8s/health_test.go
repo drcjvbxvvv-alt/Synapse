@@ -156,6 +156,112 @@ func TestRestartStuckInformers_DoesNotRestartFreshUnsyncedCluster(t *testing.T) 
 	assert.True(t, stillPresent, "recently-started cluster must not be restarted yet")
 }
 
+// ─── LRU eviction ────────────────────────────────────────────────────────────
+
+func TestEvictLRU_RemovesOldestCluster(t *testing.T) {
+	m := NewClusterInformerManager()
+
+	now := time.Now()
+	for i, id := range []uint{1, 2, 3} {
+		rt := &ClusterRuntime{
+			clusterID:    id,
+			started:      true,
+			synced:       true,
+			lastAccessAt: now.Add(-time.Duration(i+1) * time.Minute), // id=1 newest, id=3 oldest
+			stopCh:       make(chan struct{}),
+		}
+		m.mu.Lock()
+		m.clusters[id] = rt
+		m.mu.Unlock()
+	}
+
+	m.mu.Lock()
+	m.evictLRU()
+	m.mu.Unlock()
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	assert.Len(t, m.clusters, 2, "one cluster must be evicted")
+	_, id3present := m.clusters[3]
+	assert.False(t, id3present, "oldest cluster (id=3) must be evicted")
+	_, id1present := m.clusters[1]
+	assert.True(t, id1present, "newest cluster (id=1) must remain")
+}
+
+func TestEvictLRU_StopsEvictedInformer(t *testing.T) {
+	m := NewClusterInformerManager()
+
+	stopCh := make(chan struct{})
+	rt := &ClusterRuntime{
+		clusterID:    99,
+		lastAccessAt: time.Now().Add(-10 * time.Minute),
+		stopCh:       stopCh,
+	}
+	m.mu.Lock()
+	m.clusters[99] = rt
+	m.mu.Unlock()
+
+	m.mu.Lock()
+	m.evictLRU()
+	m.mu.Unlock()
+
+	// stopCh must be closed after eviction
+	select {
+	case <-stopCh:
+		// expected: channel closed
+	default:
+		t.Fatal("evictLRU must close stopCh of evicted runtime")
+	}
+}
+
+func TestSetMaxActiveClusters_TriggersEviction(t *testing.T) {
+	m := NewClusterInformerManager()
+	m.SetMaxActiveClusters(2)
+
+	now := time.Now()
+	// Pre-populate two runtimes (oldest = id=1)
+	for i, id := range []uint{1, 2} {
+		rt := &ClusterRuntime{
+			clusterID:    id,
+			lastAccessAt: now.Add(-time.Duration(i+1) * time.Minute),
+			stopCh:       make(chan struct{}),
+		}
+		m.mu.Lock()
+		m.clusters[id] = rt
+		m.mu.Unlock()
+	}
+
+	// Simulate EnsureForCluster for a 3rd cluster: threshold exceeded → evictLRU called
+	m.mu.Lock()
+	if m.maxActiveClusters > 0 && len(m.clusters) >= m.maxActiveClusters {
+		m.evictLRU()
+	}
+	rt3 := &ClusterRuntime{
+		clusterID:    3,
+		lastAccessAt: now,
+		stopCh:       make(chan struct{}),
+	}
+	m.clusters[3] = rt3
+	m.mu.Unlock()
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	assert.Len(t, m.clusters, 2, "must stay at maxActiveClusters=2 after adding 3rd")
+	// id=1: lastAccessAt = now-1min (newer), id=2: lastAccessAt = now-2min (oldest)
+	_, id2present := m.clusters[2]
+	assert.False(t, id2present, "oldest (id=2) must have been evicted")
+	_, id3present := m.clusters[3]
+	assert.True(t, id3present, "newly added (id=3) must be present")
+}
+
+func TestEvictLRU_EmptyMap_NoPanic(t *testing.T) {
+	m := NewClusterInformerManager()
+	// Must not panic on empty map
+	m.mu.Lock()
+	assert.NotPanics(t, func() { m.evictLRU() })
+	m.mu.Unlock()
+}
+
 func TestHealthCheck_MultipleClusterCounts(t *testing.T) {
 	m := NewClusterInformerManager()
 

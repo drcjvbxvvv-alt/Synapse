@@ -68,7 +68,8 @@
       "manual": "手動觸發",
       "webhook": "Webhook",
       "cron": "排程觸發",
-      "rerun": "重新執行"
+      "rerun": "重新執行",
+      "rollback": "回滾"
     }
   },
   "runDetail": {
@@ -84,6 +85,12 @@
     "finishedAt": "結束時間",
     "cancelSuccess": "執行已取消",
     "cancelFailed": "取消執行失敗",
+    "rollback": "回滾至此版本",
+    "rollbackConfirmTitle": "確認回滾至 Run #{{id}}？",
+    "rollbackSuccess": "回滾已觸發，Run ID: {{id}}",
+    "rollbackFailed": "觸發回滾失敗",
+    "rollbackSource": "回滾來源",
+    "rollbackSourceRun": "Run #{{id}}",
     "approval": {
       "waiting": "步驟「{{step}}」等待人工審核",
       "approveConfirm": "確認核准此步驟，Pipeline 將繼續執行？",

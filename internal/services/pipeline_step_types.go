@@ -955,6 +955,17 @@ func ResolveImage(step *StepDef) string {
 	return ""
 }
 
+// IsDeployStepType 判斷 stepType 是否為需要叢集 API 存取的 deploy 類型。
+// Deploy 類型在回滾執行時會被保留（非 deploy 類型在回滾時跳過）。
+func IsDeployStepType(stepType string) bool {
+	switch stepType {
+	case "deploy", "deploy-helm", "deploy-argocd-sync", "deploy-rollout",
+		"rollout-promote", "rollout-abort", "rollout-status", "gitops-sync":
+		return true
+	}
+	return false
+}
+
 // GetStepTypeInfo 取得 Step 類型資訊（供 API 回傳可用類型清單）。
 func GetStepTypeInfo(stepType string) (StepTypeInfo, bool) {
 	info, ok := stepTypeRegistry[stepType]

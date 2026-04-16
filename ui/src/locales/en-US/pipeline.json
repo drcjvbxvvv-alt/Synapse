@@ -68,7 +68,8 @@
       "manual": "Manual",
       "webhook": "Webhook",
       "cron": "Scheduled",
-      "rerun": "Re-run"
+      "rerun": "Re-run",
+      "rollback": "Rollback"
     }
   },
   "runDetail": {
@@ -84,6 +85,12 @@
     "finishedAt": "Finished at",
     "cancelSuccess": "Run cancelled",
     "cancelFailed": "Failed to cancel run",
+    "rollback": "Rollback to this version",
+    "rollbackConfirmTitle": "Rollback to Run #{{id}}?",
+    "rollbackSuccess": "Rollback triggered, Run ID: {{id}}",
+    "rollbackFailed": "Failed to trigger rollback",
+    "rollbackSource": "Rollback Source",
+    "rollbackSourceRun": "Run #{{id}}",
     "approval": {
       "waiting": "Step \"{{step}}\" is waiting for manual approval",
       "approveConfirm": "Approve this step and continue the pipeline?",

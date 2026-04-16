@@ -548,6 +548,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 	// 載入原始 Run 的 Step 結果（rerun-from-failed 用）
 	originalStepResults := s.loadOriginalStepResults(ctx, run)
 
+	// 載入回滾來源 Run 的映像 Artifacts（rollback 用）
+	rollbackArtifacts := s.loadRollbackArtifacts(ctx, run)
+
 	// 建立 StepRun 記錄
 	stepRuns := make(map[string]*models.StepRun, len(sorted))
 	for i, step := range sorted {
@@ -564,13 +567,29 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 			}
 		}
 
+		// rollback: 非 deploy Step 一律跳過（僅重新執行 deploy 類型）
+		if rollbackArtifacts != nil && initialStatus == models.StepRunStatusPending {
+			if !IsDeployStepType(step.Type) {
+				initialStatus = models.StepRunStatusSkipped
+			}
+		}
+
+		// rollback: 若來源 Run 有此 Step 的映像 artifact，注入到 StepRun.Image
+		// 讓 deploy 工具可透過 $ROLLBACK_IMAGE_REF 環境變數取用（由 JobBuilder 注入）
+		imageRef := step.Image
+		if rollbackArtifacts != nil {
+			if oldImage, ok := rollbackArtifacts[step.Name]; ok && oldImage != "" {
+				imageRef = oldImage
+			}
+		}
+
 		sr := &models.StepRun{
 			PipelineRunID: run.ID,
 			StepName:      step.Name,
 			StepType:      step.Type,
 			StepIndex:     i,
 			Status:        initialStatus,
-			Image:         step.Image,
+			Image:         imageRef,
 			Command:       step.Command,
 			ConfigJSON:    step.Config,
 			DependsOn:     string(dependsOnJSON),
@@ -664,7 +683,13 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 	logger.Info("pipeline run completed",
 		"run_id", run.ID,
 		"status", run.Status,
+		"trigger_type", run.TriggerType,
 	)
+
+	// rollback: 成功完成後，將來源 Run 的 artifacts 複製到此 Run（審計追蹤）
+	if run.TriggerType == models.TriggerTypeRollback && run.Status == models.PipelineRunStatusSuccess {
+		s.copyArtifactsToRollbackRun(ctx, run, stepRuns)
+	}
 
 	// 發送通知
 	s.notifyRunCompletion(ctx, run)
@@ -1150,6 +1175,96 @@ func (s *PipelineScheduler) loadOriginalStepResults(ctx context.Context, run *mo
 		results[sr.StepName] = sr.Status
 	}
 	return results
+}
+
+// ---------------------------------------------------------------------------
+// Rollback helpers
+// ---------------------------------------------------------------------------
+
+// loadRollbackArtifacts 載入回滾來源 Run 的映像 Artifacts（rollback 用）。
+// 回傳 map[step_name]image_reference，僅包含 kind="image" 的 artifacts。
+// 若 run 不是 rollback 類型或找不到 artifacts，回傳 nil（不影響執行）。
+func (s *PipelineScheduler) loadRollbackArtifacts(ctx context.Context, run *models.PipelineRun) map[string]string {
+	if run.RollbackOfRunID == nil || run.TriggerType != models.TriggerTypeRollback {
+		return nil
+	}
+
+	// 取得來源 Run 的 StepRun id → step_name 對應
+	var stepRuns []models.StepRun
+	if err := s.db.WithContext(ctx).
+		Select("id, step_name").
+		Where("pipeline_run_id = ?", *run.RollbackOfRunID).
+		Find(&stepRuns).Error; err != nil {
+		logger.Warn("failed to load step runs for rollback source",
+			"rollback_of_run_id", *run.RollbackOfRunID, "error", err)
+		return nil
+	}
+	stepNameByID := make(map[uint]string, len(stepRuns))
+	for _, sr := range stepRuns {
+		stepNameByID[sr.ID] = sr.StepName
+	}
+
+	// 載入 kind=image 的 artifacts
+	var artifacts []models.PipelineArtifact
+	if err := s.db.WithContext(ctx).
+		Where("pipeline_run_id = ? AND kind = ?", *run.RollbackOfRunID, "image").
+		Find(&artifacts).Error; err != nil {
+		logger.Warn("failed to load artifacts for rollback source",
+			"rollback_of_run_id", *run.RollbackOfRunID, "error", err)
+		return nil
+	}
+
+	result := make(map[string]string, len(artifacts))
+	for _, a := range artifacts {
+		if stepName, ok := stepNameByID[a.StepRunID]; ok && a.Reference != "" {
+			result[stepName] = a.Reference
+		}
+	}
+	return result
+}
+
+// copyArtifactsToRollbackRun 將來源 Run 的 artifacts 複製到回滾 Run（供審計追蹤）。
+// 複製後的 artifacts 不建立新 StepRun 關聯（StepRunID = 0），以 metadata 標記為 rollback 複製。
+func (s *PipelineScheduler) copyArtifactsToRollbackRun(ctx context.Context, rollbackRun *models.PipelineRun, stepRuns map[string]*models.StepRun) {
+	if rollbackRun.RollbackOfRunID == nil {
+		return
+	}
+
+	var srcArtifacts []models.PipelineArtifact
+	if err := s.db.WithContext(ctx).
+		Where("pipeline_run_id = ?", *rollbackRun.RollbackOfRunID).
+		Find(&srcArtifacts).Error; err != nil {
+		logger.Warn("failed to load source artifacts for copy",
+			"rollback_of_run_id", *rollbackRun.RollbackOfRunID, "error", err)
+		return
+	}
+
+	for _, src := range srcArtifacts {
+		// 找到 rollback run 中對應的 StepRun ID（若 deploy step 存在）
+		var stepRunID uint
+		// 需要找到原始 stepRun 的 step_name
+		var origSR models.StepRun
+		if err := s.db.WithContext(ctx).
+			Select("step_name").First(&origSR, src.StepRunID).Error; err == nil {
+			if sr, ok := stepRuns[origSR.StepName]; ok {
+				stepRunID = sr.ID
+			}
+		}
+
+		copied := models.PipelineArtifact{
+			PipelineRunID: rollbackRun.ID,
+			StepRunID:     stepRunID,
+			Kind:          src.Kind,
+			Name:          src.Name,
+			Reference:     src.Reference,
+			SizeBytes:     src.SizeBytes,
+			MetadataJSON:  src.MetadataJSON,
+		}
+		if err := s.db.WithContext(ctx).Create(&copied).Error; err != nil {
+			logger.Warn("failed to copy artifact for rollback run",
+				"src_artifact_id", src.ID, "rollback_run_id", rollbackRun.ID, "error", err)
+		}
+	}
 }
 
 // isBeforeStep 判斷 stepName 在拓撲排序中是否在 targetStep 之前。

@@ -34,13 +34,14 @@ func newRunHandlerWithRouter(t *testing.T) (*PipelineRunHandler, sqlmock.Sqlmock
 	require.NoError(t, err)
 
 	pipelineSvc := services.NewPipelineService(gormDB)
-	// scheduler is nil — only tests that don't call scheduler methods are safe
-	h := NewPipelineRunHandler(pipelineSvc, nil, nil)
+	scheduler := services.NewPipelineScheduler(gormDB, nil, nil, nil, nil, nil, services.SchedulerConfig{})
+	h := NewPipelineRunHandler(pipelineSvc, scheduler, nil)
 
 	r := gin.New()
 	r.GET("/pipelines/:pipelineID/runs", h.ListRuns)
 	r.GET("/pipelines/:pipelineID/runs/:runID", h.GetRun)
 	r.POST("/pipelines/:pipelineID/runs/:runID/cancel", h.CancelRun)
+	r.POST("/pipelines/:pipelineID/runs/:runID/rollback", h.RollbackRun)
 	r.GET("/pipeline-step-types", h.ListStepTypes)
 
 	cleanup := func() {
@@ -201,4 +202,107 @@ func TestPipelineRunHandler_ListStepTypes(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.NotEmpty(t, w.Body.Bytes())
+}
+
+// ─── RollbackRun ──────────────────────────────────────────────────────────────
+
+func TestPipelineRunHandler_Rollback_InvalidRunID(t *testing.T) {
+	_, _, r, cleanup := newRunHandlerWithRouter(t)
+	defer cleanup()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/pipelines/1/runs/bad/rollback", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestPipelineRunHandler_Rollback_SourceNotFound(t *testing.T) {
+	_, mock, r, cleanup := newRunHandlerWithRouter(t)
+	defer cleanup()
+
+	mock.ExpectQuery(`SELECT`).WillReturnError(gorm.ErrRecordNotFound)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/pipelines/1/runs/999/rollback", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestPipelineRunHandler_Rollback_WrongPipeline(t *testing.T) {
+	_, mock, r, cleanup := newRunHandlerWithRouter(t)
+	defer cleanup()
+
+	// Source run belongs to pipeline 2, but request targets pipeline 1
+	now := time.Now()
+	wrongPipelineRow := sqlmock.NewRows(runCols).AddRow(
+		42, 2, 1, 1, "default", // pipeline_id=2
+		"success", "manual", "", 1,
+		"", nil, "", "",
+		now, nil, nil,
+		now, now, nil, "",
+	)
+	mock.ExpectQuery(`SELECT`).WillReturnRows(wrongPipelineRow)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/pipelines/1/runs/42/rollback", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestPipelineRunHandler_Rollback_SourceNotSuccess(t *testing.T) {
+	_, mock, r, cleanup := newRunHandlerWithRouter(t)
+	defer cleanup()
+
+	// Source run is failed — cannot rollback
+	now := time.Now()
+	failedRunRow := sqlmock.NewRows(runCols).AddRow(
+		10, 1, 1, 1, "default",
+		"failed", "manual", "", 1, // status=failed
+		"", nil, "", "",
+		now, nil, nil,
+		now, now, nil, "",
+	)
+	mock.ExpectQuery(`SELECT`).WillReturnRows(failedRunRow)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/pipelines/1/runs/10/rollback", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	errObj, ok := body["error"].(map[string]any)
+	require.True(t, ok, "expected error object in response")
+	assert.Contains(t, errObj["message"], "success")
+}
+
+func TestPipelineRunHandler_Rollback_Success(t *testing.T) {
+	_, mock, r, cleanup := newRunHandlerWithRouter(t)
+	defer cleanup()
+
+	// GetPipelineRun → success run belonging to pipeline 1
+	mock.ExpectQuery(`SELECT`).WillReturnRows(newRunRow(5, 1))
+
+	// EnqueueRun: queue overflow COUNT
+	mock.ExpectQuery(`SELECT count`).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+	// EnqueueRun: INSERT new rollback run
+	mock.ExpectBegin()
+	mock.ExpectQuery(`INSERT`).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(99))
+	mock.ExpectCommit()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/pipelines/1/runs/5/rollback", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.Equal(t, float64(5), body["rollback_of_run"])
+	assert.NotNil(t, body["run_id"])
 }

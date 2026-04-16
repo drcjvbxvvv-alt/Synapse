@@ -63,11 +63,12 @@ const discoveryTTL = 5 * time.Minute
 
 // ClusterInformerManager 統一管理各叢集的 Informer 生命週期與快取訪問
 type ClusterInformerManager struct {
-	mu             sync.RWMutex
-	clusters       map[uint]*ClusterRuntime
-	syncTimeout    time.Duration        // configurable cache-sync timeout (default 30s)
-	k8sMetrics     *metrics.K8sMetrics // optional; nil = disabled
-	discoveryCache map[uint]discoveryEntry // Discovery API 結果快取（TTL 5 分鐘）
+	mu                sync.RWMutex
+	clusters          map[uint]*ClusterRuntime
+	syncTimeout       time.Duration        // configurable cache-sync timeout (default 30s)
+	k8sMetrics        *metrics.K8sMetrics // optional; nil = disabled
+	discoveryCache    map[uint]discoveryEntry // Discovery API 結果快取（TTL 5 分鐘）
+	maxActiveClusters int                  // 0 = 無上限；>0 時超過則驅逐最久未存取的叢集
 }
 
 func NewClusterInformerManager() *ClusterInformerManager {
@@ -76,6 +77,39 @@ func NewClusterInformerManager() *ClusterInformerManager {
 		syncTimeout:    30 * time.Second,
 		discoveryCache: make(map[uint]discoveryEntry),
 	}
+}
+
+// SetMaxActiveClusters 設定同時活躍的 Informer 上限。
+// 超過上限時，EnsureForCluster 會自動驅逐最久未存取的叢集（LRU）。
+// 必須在第一個叢集被 Ensure 前呼叫。0 = 無上限（預設）。
+func (m *ClusterInformerManager) SetMaxActiveClusters(n int) {
+	m.maxActiveClusters = n
+}
+
+// evictLRU 驅逐最久未存取的叢集，釋放其 Informer 資源。
+// 呼叫端必須已持有 m.mu 寫鎖。
+func (m *ClusterInformerManager) evictLRU() {
+	var oldestID uint
+	var oldestTime time.Time
+	for id, rt := range m.clusters {
+		if oldestTime.IsZero() || rt.lastAccessAt.Before(oldestTime) {
+			oldestID = id
+			oldestTime = rt.lastAccessAt
+		}
+	}
+	rt, ok := m.clusters[oldestID]
+	if !ok {
+		return
+	}
+	rt.stopOnce.Do(func() { close(rt.stopCh) })
+	delete(m.clusters, oldestID)
+	if m.k8sMetrics != nil {
+		m.k8sMetrics.ClustersActive.Set(float64(len(m.clusters)))
+	}
+	logger.Info("informer LRU evict: active capacity reached",
+		"evicted_cluster_id", oldestID,
+		"idle_since", oldestTime,
+	)
 }
 
 // SetMetrics attaches Prometheus K8s metrics to the manager.
@@ -116,6 +150,11 @@ func (m *ClusterInformerManager) EnsureForCluster(cluster *models.Cluster) (*Clu
 	if rt, ok := m.clusters[cluster.ID]; ok {
 		rt.lastAccessAt = time.Now()
 		return rt, nil
+	}
+
+	// 超過活躍上限時驅逐最久未存取的叢集（LRU）
+	if m.maxActiveClusters > 0 && len(m.clusters) >= m.maxActiveClusters {
+		m.evictLRU()
 	}
 
 	// 使用統一入口建立 K8s 客戶端（複用認證/容錯邏輯）

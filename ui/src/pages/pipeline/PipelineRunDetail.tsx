@@ -39,6 +39,7 @@ import {
   ReloadOutlined,
   StopOutlined,
   RedoOutlined,
+  RollbackOutlined,
   LoadingOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -234,6 +235,15 @@ const PipelineRunDetail: React.FC = () => {
     onError: () => message.error(t('pipeline:runDetail.approval.rejectFailed')),
   });
 
+  const rollbackMutation = useMutation({
+    mutationFn: () => pipelineService.rollbackRun(pid, rid),
+    onSuccess: (res) => {
+      message.success(t('pipeline:runDetail.rollbackSuccess', { id: res.run_id }));
+      navigate(`/pipelines/${pid}/runs/${res.run_id}`);
+    },
+    onError: () => message.error(t('pipeline:runDetail.rollbackFailed')),
+  });
+
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   if (isLoading) {
@@ -303,7 +313,9 @@ const PipelineRunDetail: React.FC = () => {
               {t('pipeline:runDetail.title', { id: run.id })}
             </Title>
             <RunStatusTag status={run.status} />
-            <Tag>{t(`pipeline:run.triggerType.${run.trigger_type}`)}</Tag>
+            <Tag color={run.trigger_type === 'rollback' ? 'orange' : undefined}>
+              {t(`pipeline:run.triggerType.${run.trigger_type}`)}
+            </Tag>
           </Flex>
 
           <Space>
@@ -344,6 +356,18 @@ const PipelineRunDetail: React.FC = () => {
                 )}
               </Space>
             )}
+            {run.status === 'success' && (
+              <Popconfirm
+                title={t('pipeline:runDetail.rollbackConfirmTitle', { id: run.id })}
+                onConfirm={() => rollbackMutation.mutate()}
+                okText={t('common:actions.confirm')}
+                cancelText={t('common:actions.cancel')}
+              >
+                <Button icon={<RollbackOutlined />} loading={rollbackMutation.isPending}>
+                  {t('pipeline:runDetail.rollback')}
+                </Button>
+              </Popconfirm>
+            )}
           </Space>
         </Flex>
 
@@ -377,6 +401,18 @@ const PipelineRunDetail: React.FC = () => {
               {formatDuration(run.started_at, run.finished_at)}
             </Text>
           </Descriptions.Item>
+          {run.rollback_of_run_id && (
+            <Descriptions.Item label={t('pipeline:runDetail.rollbackSource')}>
+              <Button
+                type="link"
+                size="small"
+                style={{ padding: 0, fontSize: token.fontSizeSM, height: 'auto' }}
+                onClick={() => navigate(`/pipelines/${pid}/runs/${run.rollback_of_run_id}`)}
+              >
+                {t('pipeline:runDetail.rollbackSourceRun', { id: run.rollback_of_run_id })}
+              </Button>
+            </Descriptions.Item>
+          )}
         </Descriptions>
       </div>
 

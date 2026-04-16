@@ -74,6 +74,7 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 					run.GET("", runHandler.GetRun)
 					run.POST("/cancel", runHandler.CancelRun)
 					run.POST("/rerun", runHandler.RerunPipeline)
+					run.POST("/rollback", runHandler.RollbackRun)
 					run.POST("/promote", runHandler.PromoteRun)
 
 					// Step operations

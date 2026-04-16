@@ -551,13 +551,7 @@ func (b *JobBuilder) shouldDisableIstioRedirection(stepType string, cfg StepConf
 
 // isDeployStepType 判斷是否為需要叢集 API 存取的 deploy 類型。
 func (b *JobBuilder) isDeployStepType(stepType string) bool {
-	switch stepType {
-	case "deploy", "deploy-helm", "deploy-argocd-sync", "deploy-rollout",
-		"rollout-promote", "rollout-abort", "rollout-status", "gitops-sync":
-		return true
-	default:
-		return false
-	}
+	return IsDeployStepType(stepType)
 }
 
 // sanitizeK8sName 將名稱轉為合法的 K8s 資源名稱片段。

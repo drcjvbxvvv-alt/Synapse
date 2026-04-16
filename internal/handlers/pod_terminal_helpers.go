@@ -3,6 +3,7 @@ package handlers
 import (
 	"math"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"k8s.io/client-go/tools/remotecommand"
@@ -14,6 +15,9 @@ import (
 func (h *PodTerminalHandler) handleInput(session *PodTerminalSession, input string) {
 	session.Mutex.Lock()
 	defer session.Mutex.Unlock()
+
+	// 更新最後活動時間（閒置超時計算用）
+	session.lastActivityAt = time.Now()
 
 	if session.stdinWriter != nil {
 		_, err := session.stdinWriter.Write([]byte(input))

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"k8s.io/client-go/tools/remotecommand"
@@ -13,6 +14,14 @@ import (
 	"github.com/shaia/Synapse/internal/k8s"
 	"github.com/shaia/Synapse/internal/middleware"
 	"github.com/shaia/Synapse/internal/services"
+	"github.com/shaia/Synapse/pkg/logger"
+)
+
+const (
+	// defaultTerminalMaxGlobal 全局並行 terminal 上限（pod + kubectl 合計）
+	defaultTerminalMaxGlobal = 200
+	// defaultTerminalMaxPerUser 每用戶並行 terminal 上限
+	defaultTerminalMaxPerUser = 5
 )
 
 // PodTerminalHandler Pod終端WebSocket處理器
@@ -23,12 +32,16 @@ type PodTerminalHandler struct {
 	upgrader       websocket.Upgrader
 	sessions       map[string]*PodTerminalSession
 	sessionsMutex  sync.RWMutex
+	sem            chan struct{} // 全局並行 semaphore
+	maxPerUser     int          // 每用戶上限
 }
 
 // PodTerminalSession Pod終端會話
 type PodTerminalSession struct {
 	ID             string
-	AuditSessionID uint // 審計會話ID
+	UserID         uint      // 建立此 session 的用戶 ID
+	AuditSessionID uint      // 審計會話ID
+	lastActivityAt time.Time // 最後 stdin/stdout 活動時間（閒置超時用）
 	ClusterID      string
 	Namespace      string
 	PodName        string
@@ -60,9 +73,12 @@ type PodTerminalMessage struct {
 	Rows int    `json:"rows,omitempty"`
 }
 
+// terminalIdleTimeout 閒置超過此時間的 session 會被自動關閉
+const terminalIdleTimeout = 15 * time.Minute
+
 // NewPodTerminalHandler 建立Pod終端處理器
 func NewPodTerminalHandler(clusterService *services.ClusterService, auditService *services.AuditService, k8sMgr *k8s.ClusterInformerManager) *PodTerminalHandler {
-	return &PodTerminalHandler{
+	h := &PodTerminalHandler{
 		clusterService: clusterService,
 		auditService:   auditService,
 		k8sMgr:         k8sMgr,
@@ -79,5 +95,29 @@ func NewPodTerminalHandler(clusterService *services.ClusterService, auditService
 		},
 		sessions:      make(map[string]*PodTerminalSession),
 		sessionsMutex: sync.RWMutex{},
+		sem:           make(chan struct{}, defaultTerminalMaxGlobal),
+		maxPerUser:    defaultTerminalMaxPerUser,
+	}
+	go h.idleCleanup()
+	return h
+}
+
+// idleCleanup 定期掃描並關閉閒置超過 terminalIdleTimeout 的 session。
+func (h *PodTerminalHandler) idleCleanup() {
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		h.sessionsMutex.Lock()
+		for id, s := range h.sessions {
+			if !s.lastActivityAt.IsZero() && time.Since(s.lastActivityAt) > terminalIdleTimeout {
+				s.Cancel()
+				delete(h.sessions, id)
+				logger.Info("pod terminal idle timeout: session closed",
+					"session_id", id,
+					"user_id", s.UserID,
+				)
+			}
+		}
+		h.sessionsMutex.Unlock()
 	}
 }

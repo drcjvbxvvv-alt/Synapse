@@ -181,6 +181,65 @@ func computeAuditHash(prevHash string, e *models.AuditLog) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// ── Partition management (Phase 2 / C1-C2) ───────────────────────────────────
+
+// auditPartitionTableName returns the child partition table name for the month
+// that contains t (e.g. "audit_logs_2026_04").
+func auditPartitionTableName(t time.Time) string {
+	return fmt.Sprintf("audit_logs_%d_%02d", t.Year(), int(t.Month()))
+}
+
+// EnsureNextMonthPartition creates the next calendar month's audit_logs
+// partition if it does not already exist. The call is idempotent — it uses
+// CREATE TABLE IF NOT EXISTS so running it multiple times is safe.
+//
+// Call on application startup and monthly via a scheduled job so the partition
+// always exists before the month begins.
+func (s *AuditService) EnsureNextMonthPartition(ctx context.Context) error {
+	if s.db == nil {
+		return nil // no-op when DB is not configured (e.g. test stubs)
+	}
+	next := time.Now().UTC().AddDate(0, 1, 0)
+	tableName := auditPartitionTableName(next)
+	start := time.Date(next.Year(), next.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end := start.AddDate(0, 1, 0)
+
+	sql := fmt.Sprintf(
+		`CREATE TABLE IF NOT EXISTS %s PARTITION OF audit_logs`+
+			` FOR VALUES FROM ('%s') TO ('%s')`,
+		tableName,
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	)
+	if err := s.db.WithContext(ctx).Exec(sql).Error; err != nil {
+		return fmt.Errorf("ensure audit partition %s: %w", tableName, err)
+	}
+	logger.Info("audit partition ensured", "table", tableName)
+	return nil
+}
+
+// DropOldPartitions drops the audit_logs partition that is exactly
+// retainMonths before the current month. Uses DROP TABLE IF EXISTS so the
+// call is idempotent. Call monthly to advance the retention window.
+//
+// Example: retainMonths=3 called in April 2026 drops audit_logs_2026_01.
+func (s *AuditService) DropOldPartitions(ctx context.Context, retainMonths int) error {
+	if retainMonths <= 0 {
+		return fmt.Errorf("drop old partitions: retainMonths must be positive, got %d", retainMonths)
+	}
+	if s.db == nil {
+		return nil
+	}
+	cutoff := time.Now().UTC().AddDate(0, -retainMonths, 0)
+	tableName := auditPartitionTableName(cutoff)
+	sql := fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName)
+	if err := s.db.WithContext(ctx).Exec(sql).Error; err != nil {
+		return fmt.Errorf("drop audit partition %s: %w", tableName, err)
+	}
+	logger.Info("audit partition dropped", "table", tableName, "retain_months", retainMonths)
+	return nil
+}
+
 // TerminalType 終端型別
 type TerminalType string
 

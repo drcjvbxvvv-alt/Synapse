@@ -49,6 +49,29 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		}
 	}
 
+	// ── 並行上限檢查（必須在 WS 升級前，之後無法再寫 HTTP 回應）──────────────
+	// 全局 semaphore
+	select {
+	case h.sem <- struct{}{}:
+		defer func() { <-h.sem }()
+	default:
+		response.ServiceUnavailable(c, "terminal capacity reached, please try again later")
+		return
+	}
+	// 每用戶上限
+	h.sessionsMutex.RLock()
+	userCount := 0
+	for _, s := range h.sessions {
+		if s.UserID == userID {
+			userCount++
+		}
+	}
+	h.sessionsMutex.RUnlock()
+	if userCount >= h.maxPerUser {
+		response.TooManyRequests(c, fmt.Sprintf("exceeded per-user terminal limit (%d)", h.maxPerUser))
+		return
+	}
+
 	// 升級到WebSocket連線
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -69,6 +92,7 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 
 	session := &KubectlSession{
 		ID:             sessionID,
+		UserID:         userID,
 		AuditSessionID: auditSessionID,
 		ClusterID:      clusterID,
 		Namespace:      namespace,
@@ -76,6 +100,7 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 		Context:        ctx,
 		Cancel:         cancel,
 		History:        make([]string, 0),
+		lastActivityAt: time.Now(),
 	}
 
 	// 註冊會話
@@ -143,6 +168,9 @@ func (h *KubectlTerminalHandler) HandleKubectlTerminal(c *gin.Context) {
 func (h *KubectlTerminalHandler) handleInput(session *KubectlSession, input string) {
 	session.Mutex.Lock()
 	defer session.Mutex.Unlock()
+
+	// 更新最後活動時間（閒置超時計算用）
+	session.lastActivityAt = time.Now()
 
 	if input == "\u007f" { // 退格鍵
 		if len(session.LastCommand) > 0 {

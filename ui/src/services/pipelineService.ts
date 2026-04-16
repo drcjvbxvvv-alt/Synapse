@@ -39,10 +39,11 @@ export interface PipelineRun {
   cluster_id: number;
   namespace: string;
   status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled' | 'waiting_approval';
-  trigger_type: 'manual' | 'webhook' | 'cron' | 'rerun';
+  trigger_type: 'manual' | 'webhook' | 'cron' | 'rerun' | 'rollback';
   triggered_by_user: number;
   concurrency_group: string;
   rerun_from_id: number | null;
+  rollback_of_run_id?: number | null;
   rerun_from_step: string;
   error: string;
   queued_at: string;
@@ -165,6 +166,16 @@ const pipelineService = {
     request.post<PipelineRun>(
       `/pipelines/${pipelineId}/runs/${runId}/rerun`,
       { from_failed: fromFailed }
+    ),
+
+  rollbackRun: (
+    pipelineId: number,
+    runId: number,
+    req?: { cluster_id?: number; namespace?: string },
+  ) =>
+    request.post<{ run_id: number; rollback_of_run: number; snapshot_id: number; status: string; message: string }>(
+      `/pipelines/${pipelineId}/runs/${runId}/rollback`,
+      req ?? {},
     ),
 
   approveStep: (pipelineId: number, runId: number, stepRunId: number) =>

@@ -188,6 +188,15 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	clusterSvc := services.NewClusterService(db, clusterRepo)
 	prometheusSvc := services.NewPrometheusService()
 	auditSvc := services.NewAuditService(db)
+	// Ensure next month's audit_logs partition exists on startup.
+	// Non-blocking best-effort; a missing partition is logged as a warning.
+	go func() {
+		pCtx, pCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer pCancel()
+		if err := auditSvc.EnsureNextMonthPartition(pCtx); err != nil {
+			logger.Warn("audit partition: startup ensure failed", "error", err)
+		}
+	}()
 	permissionSvc := services.NewPermissionService(db, permissionRepo)
 	tokenBlacklistSvc := services.NewTokenBlacklistService(db)
 
@@ -263,6 +272,8 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	certExpiryWorker.Start()
 	imageIndexWorker.Start()
 
+	// LRU 上限：同時活躍叢集超過 50 時驅逐最久未存取的
+	k8sMgr.SetMaxActiveClusters(50)
 	k8sMgr.StartGC(30*time.Minute, 2*time.Hour)
 	// P2-8: restart informers stuck in un-synced state for > 5 minutes
 	k8sMgr.StartHealthWatcher(1*time.Minute, 5*time.Minute)

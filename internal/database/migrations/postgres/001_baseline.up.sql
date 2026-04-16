@@ -872,6 +872,7 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
   concurrency_group varchar(255),
   rerun_from_id     bigint,
   rerun_from_step   varchar(255),
+  rollback_of_run_id bigint,                                   -- 回滾至指定歷史 Run（trigger_type='rollback'）
   error             text,
   queued_at         timestamptz   DEFAULT now(),
   started_at        timestamptz,
@@ -885,8 +886,9 @@ CREATE INDEX IF NOT EXISTS idx_pipeline_runs_pipeline_id       ON pipeline_runs 
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_snapshot_id       ON pipeline_runs (snapshot_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_cluster_id        ON pipeline_runs (cluster_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_runs_status            ON pipeline_runs (status);
-CREATE INDEX IF NOT EXISTS idx_pipeline_runs_concurrency_group ON pipeline_runs (concurrency_group);
-CREATE INDEX IF NOT EXISTS idx_pipeline_runs_deleted_at        ON pipeline_runs (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_concurrency_group  ON pipeline_runs (concurrency_group);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_deleted_at         ON pipeline_runs (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_rollback_of_run_id ON pipeline_runs (rollback_of_run_id) WHERE rollback_of_run_id IS NOT NULL;
 
 -- ── step_runs ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS step_runs (

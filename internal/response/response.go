@@ -108,6 +108,11 @@ func ServiceUnavailable(c *gin.Context, msg string) {
 	Error(c, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", msg)
 }
 
+// TooManyRequests 429
+func TooManyRequests(c *gin.Context, msg string) {
+	Error(c, http.StatusTooManyRequests, "TOO_MANY_REQUESTS", msg)
+}
+
 // FromError converts an error into a JSON response.
 // If err is an *apierrors.AppError the response uses its HTTPStatus and Code;
 // otherwise it falls back to 500 INTERNAL_ERROR.
