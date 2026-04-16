@@ -1,0 +1,197 @@
+# 示例 GitLab CI/CD 流程配置
+# 复制到项目根目录并命名为 .gitlab-ci.yml
+
+stages:
+  - build
+  - test
+  - push
+  - deploy
+
+variables:
+  HARBOR_REGISTRY: "harbor.local"
+  HARBOR_USERNAME: "admin"
+  HARBOR_PASSWORD: "Harbor@2026"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+# ─── Build Stage ──────────────────────────────────────────────────────────────
+
+build:maven:java-a:
+  stage: build
+  image: maven:3.8-openjdk-11-slim
+  only:
+    - main
+    - tags
+  script:
+    - cd saas-java-a
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - saas-java-a/target/*.jar
+    expire_in: 1 day
+  cache:
+    paths:
+      - saas-java-a/.m2/repository
+
+build:maven:java-b:
+  stage: build
+  image: maven:3.8-openjdk-11-slim
+  only:
+    - main
+    - tags
+  script:
+    - cd saas-java-b
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - saas-java-b/target/*.jar
+    expire_in: 1 day
+  cache:
+    paths:
+      - saas-java-b/.m2/repository
+
+# ─── Test Stage ───────────────────────────────────────────────────────────────
+
+test:unit:java-a:
+  stage: test
+  image: maven:3.8-openjdk-11-slim
+  only:
+    - merge_requests
+    - main
+  script:
+    - cd saas-java-a
+    - mvn clean test
+  coverage: '/^.*?([0-9]{1,3})%.*?/'
+
+test:unit:java-b:
+  stage: test
+  image: maven:3.8-openjdk-11-slim
+  only:
+    - merge_requests
+    - main
+  script:
+    - cd saas-java-b
+    - mvn clean test
+  coverage: '/^.*?([0-9]{1,3})%.*?/'
+
+# ─── Push to Harbor ───────────────────────────────────────────────────────────
+
+push:docker:java-a:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  only:
+    - main
+    - tags
+  dependencies:
+    - build:maven:java-a
+  before_script:
+    - docker login -u $HARBOR_USERNAME -p $HARBOR_PASSWORD $HARBOR_REGISTRY
+  script:
+    - export IMAGE_TAG="${CI_COMMIT_SHORT_SHA}"
+    - export FULL_IMAGE_NAME="${HARBOR_REGISTRY}/saas/java-a:${IMAGE_TAG}"
+    - docker build -f deploy/docker/saas-java-a/Dockerfile -t $FULL_IMAGE_NAME saas-java-a/
+    - docker push $FULL_IMAGE_NAME
+    - docker tag $FULL_IMAGE_NAME "${HARBOR_REGISTRY}/saas/java-a:latest"
+    - docker push "${HARBOR_REGISTRY}/saas/java-a:latest"
+  after_script:
+    - docker logout
+
+push:docker:java-b:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  only:
+    - main
+    - tags
+  dependencies:
+    - build:maven:java-b
+  before_script:
+    - docker login -u $HARBOR_USERNAME -p $HARBOR_PASSWORD $HARBOR_REGISTRY
+  script:
+    - export IMAGE_TAG="${CI_COMMIT_SHORT_SHA}"
+    - export FULL_IMAGE_NAME="${HARBOR_REGISTRY}/saas/java-b:${IMAGE_TAG}"
+    - docker build -f deploy/docker/saas-java-b/Dockerfile -t $FULL_IMAGE_NAME saas-java-b/
+    - docker push $FULL_IMAGE_NAME
+    - docker tag $FULL_IMAGE_NAME "${HARBOR_REGISTRY}/saas/java-b:latest"
+    - docker push "${HARBOR_REGISTRY}/saas/java-b:latest"
+  after_script:
+    - docker logout
+
+# ─── Deploy Stage ─────────────────────────────────────────────────────────────
+
+deploy:k8s:java-a:
+  stage: deploy
+  image: alpine/k8s:1.24.0
+  only:
+    - main
+    - tags
+  script:
+    # 设置 kubeconfig
+    - mkdir -p $HOME/.kube
+    - echo $KUBE_CONFIG_BASE64 | base64 -d > $HOME/.kube/config
+    - chmod 600 $HOME/.kube/config
+
+    # 更新镜像
+    - export IMAGE_TAG="${CI_COMMIT_SHORT_SHA}"
+    - export FULL_IMAGE_NAME="${HARBOR_REGISTRY}/saas/java-a:${IMAGE_TAG}"
+    - kubectl set image deployment/saas-java-a app=$FULL_IMAGE_NAME -n saas-java-a
+
+    # 等待滚动更新完成
+    - kubectl rollout status deployment/saas-java-a -n saas-java-a --timeout=5m
+  environment:
+    name: production
+    kubernetes:
+      namespace: saas-java-a
+  only:
+    - main
+
+deploy:k8s:java-b:
+  stage: deploy
+  image: alpine/k8s:1.24.0
+  only:
+    - main
+    - tags
+  script:
+    # 设置 kubeconfig
+    - mkdir -p $HOME/.kube
+    - echo $KUBE_CONFIG_BASE64 | base64 -d > $HOME/.kube/config
+    - chmod 600 $HOME/.kube/config
+
+    # 更新镜像
+    - export IMAGE_TAG="${CI_COMMIT_SHORT_SHA}"
+    - export FULL_IMAGE_NAME="${HARBOR_REGISTRY}/saas/java-b:${IMAGE_TAG}"
+    - kubectl set image deployment/saas-java-b app=$FULL_IMAGE_NAME -n saas-java-b
+
+    # 等待滚动更新完成
+    - kubectl rollout status deployment/saas-java-b -n saas-java-b --timeout=5m
+  environment:
+    name: production
+    kubernetes:
+      namespace: saas-java-b
+  only:
+    - main
+
+# ─── Notification 触发 ArgoCD Webhook ──────────────────────────────────────────
+
+notify:argocd:
+  stage: deploy
+  image: alpine:latest
+  only:
+    - main
+  script:
+    - apk add --no-cache curl
+    - |
+      curl -X POST \
+        -H "Authorization: Bearer ${ARGOCD_TOKEN}" \
+        -H "Content-Type: application/json" \
+        "http://argocd.local:8081/api/v1/applications/saas-java-a/sync" \
+        -d '{
+          "strategy": "auto",
+          "syncOptions": ["CreateNamespace=true"],
+          "dryRun": false,
+          "prune": true
+        }'
+  allow_failure: true

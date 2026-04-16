@@ -1,0 +1,134 @@
+# 示例 ArgoCD Application 配置
+# 用于自动部署 K8s 应用
+
+---
+# ─── Application for saas-java-a ──────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: saas-java-a
+  namespace: argocd
+spec:
+  # ── Project 和 Source ─────────────────────────────────────────────────────
+  project: default
+  source:
+    repoURL: https://github.com/your-org/Synapse.git
+    targetRevision: main
+    path: deploy/k8s
+
+    # 如果使用 Helm
+    # helm:
+    #   parameters:
+    #   - name: image.tag
+    #     value: latest
+    #   - name: replicaCount
+    #     value: "2"
+
+  # ── Destination ──────────────────────────────────────────────────────────────
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: saas-java-a
+
+  # ── Sync Policy ───────────────────────────────────────────────────────────────
+  syncPolicy:
+    # 自动同步策略
+    automated:
+      prune: true      # 删除 Git 中不存在的资源
+      selfHeal: true   # 检测到漂移时自动同步
+
+    # 同步选项
+    syncOptions:
+    - CreateNamespace=true
+    - PruneLast=true
+
+    # 重试策略
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # ── Health Assessment ─────────────────────────────────────────────────────────
+  ignoreDifferences:
+  - group: "apps"
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas  # 忽略副本数差异（由 HPA 管理）
+
+---
+# ─── Application for saas-java-b ──────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: saas-java-b
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/Synapse.git
+    targetRevision: main
+    path: deploy/k8s
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: saas-java-b
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+  - group: "apps"
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas
+
+---
+# ─── AppProject ───────────────────────────────────────────────────────────────
+# 定义 ArgoCD 项目和权限
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: saas
+  namespace: argocd
+spec:
+  description: SaaS Applications Project
+
+  # 允许部署到的集群
+  destinations:
+  - namespace: 'saas-*'
+    server: https://kubernetes.default.svc
+
+  # 允许的源仓库
+  sourceRepos:
+  - 'https://github.com/your-org/Synapse.git'
+
+  # 允许的资源
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  - group: 'apps'
+    kind: Deployment
+  - group: ''
+    kind: Service
+  - group: ''
+    kind: ConfigMap
+  - group: 'autoscaling'
+    kind: HorizontalPodAutoscaler
+  - group: 'rbac.authorization.k8s.io'
+    kind: Role
+  - group: 'rbac.authorization.k8s.io'
+    kind: RoleBinding
+  - group: 'rbac.authorization.k8s.io'
+    kind: ServiceAccount

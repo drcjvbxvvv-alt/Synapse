@@ -1,0 +1,230 @@
+---
+# ─── Namespace ───────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: saas-java-b
+
+---
+# ─── ConfigMap for application properties ───────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: saas-java-b-config
+  namespace: saas-java-b
+data:
+  application.properties: |
+    spring.application.name=saas-java-b
+    spring.profiles.active=prod
+    server.port=8080
+    logging.level.root=INFO
+    app.version=1.0.0
+    app.tenant=tenant-b
+
+---
+# ─── Service ─────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: saas-java-b
+  namespace: saas-java-b
+  labels:
+    app: saas-java-b
+    tier: application
+spec:
+  type: ClusterIP
+  selector:
+    app: saas-java-b
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+
+---
+# ─── Deployment ──────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: saas-java-b
+  namespace: saas-java-b
+  labels:
+    app: saas-java-b
+    tier: application
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: saas-java-b
+  template:
+    metadata:
+      labels:
+        app: saas-java-b
+        tier: application
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: saas-java-b
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+      - name: app
+        image: harbor.local/saas/java-b:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+
+        # ── Environment Variables ─────────────────────────────────────────
+        env:
+        - name: APP_NAME
+          value: "saas-java-b"
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx512m -XX:+UseG1GC"
+        - name: LOG_LEVEL
+          value: "INFO"
+
+        # ── ConfigMap Volume Mount ────────────────────────────────────────
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: logs
+          mountPath: /var/log/app
+
+        # ── Health Checks ─────────────────────────────────────────────────
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+
+        # ── Resource Limits ───────────────────────────────────────────────
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        # ── Security Context ──────────────────────────────────────────────
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+
+      # ── Volumes ───────────────────────────────────────────────────────────
+      volumes:
+      - name: config
+        configMap:
+          name: saas-java-b-config
+          defaultMode: 0444
+      - name: logs
+        emptyDir: {}
+
+      # ── Affinity & Topology ───────────────────────────────────────────────
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - saas-java-b
+              topologyKey: kubernetes.io/hostname
+
+---
+# ─── ServiceAccount ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: saas-java-b
+  namespace: saas-java-b
+
+---
+# ─── Role for basic permissions ──────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: saas-java-b
+  namespace: saas-java-b
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ─── RoleBinding ─────────────────────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: saas-java-b
+  namespace: saas-java-b
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: saas-java-b
+subjects:
+- kind: ServiceAccount
+  name: saas-java-b
+  namespace: saas-java-b
+
+---
+# ─── HorizontalPodAutoscaler ────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: saas-java-b
+  namespace: saas-java-b
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: saas-java-b
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

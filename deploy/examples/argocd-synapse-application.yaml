@@ -1,0 +1,199 @@
+# ArgoCD Application 配置：自动部署 Synapse 本体
+
+---
+# ─── Synapse Application ──────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: synapse
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  # ── Project ────────────────────────────────────────────────────────────────
+  project: default
+
+  # ── Source: Git 仓库配置 ────────────────────────────────────────────────────
+  source:
+    repoURL: https://github.com/your-org/Synapse.git
+    targetRevision: main
+    path: deploy/k8s
+
+    # Kustomize 配置（可选）
+    # kustomize:
+    #   commonLabels:
+    #     app.kubernetes.io/managed-by: argocd
+    #   commonAnnotations:
+    #     argocd.argoproj.io/compare-result: "true"
+
+  # ── Destination: 部署目标集群 ────────────────────────────────────────────────
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: synapse
+
+  # ── Sync Policy: 自动同步策略 ──────────────────────────────────────────────
+  syncPolicy:
+    # 自动同步：当 Git 仓库更新时自动同步
+    automated:
+      prune: true      # 删除 Git 中移除的资源
+      selfHeal: true   # 检测到集群漂移时自动修复
+      # allow_empty: false  # 禁止删除所有资源
+
+    # 同步选项
+    syncOptions:
+    - CreateNamespace=true        # 自动创建 namespace
+    - PruneLast=true              # 最后执行 prune（避免删除正在运行的资源）
+    - RespectIgnoreDifferences=true # 忽略特定差异
+
+    # 重试策略：失败自动重试
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # ── Ignore Differences: 忽略自动生成的差异 ────────────────────────────────
+  ignoreDifferences:
+  # HPA 管理副本数，忽略 spec.replicas 的差异
+  - group: apps
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas
+
+  # 忽略 status 字段的所有差异
+  - group: "*"
+    kind: "*"
+    jsonPointers:
+    - /status
+
+  # ── Health Assessment: 健康状态判断 ───────────────────────────────────────
+  # （默认配置，通常不需要修改）
+
+---
+# ─── 通知：应用同步事件 ────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notification-cm
+  namespace: argocd
+data:
+  # 同步成功通知
+  trigger.on-sync-succeeded: |
+    - when: app.status.operationState.phase in ['Succeeded'] and app.status.operationState.finishedAt != ''
+      oncePer: app.status.operationState.finishedAt
+      send: [app-sync-succeeded]
+
+  # 同步失败通知
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-sync-failed]
+
+  # 健康状态恶化通知
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+
+  # 消息模板：同步成功
+  template.app-sync-succeeded: |
+    message: |
+      Synapse deployment succeeded on {{.app.metadata.name}}
+      Sync Result:
+        Revision: {{.app.status.operationState.operation.sync.revision}}
+        Author: {{(call .repo.GetCommitMetadata .app.status.operationState.operation.sync.revision).Author}}
+      {{if eq .app.status.operationState.phase 'Succeeded'}}✓{{end}}
+    deliveryPolicy: Post
+    notifyOnSync: true
+
+  # 消息模板：同步失败
+  template.app-sync-failed: |
+    message: |
+      ❌ Synapse deployment FAILED on {{.app.metadata.name}}
+      Sync Result:
+        Revision: {{.app.status.operationState.operation.sync.revision}}
+      Message: {{.app.status.operationState.syncResult.resources}}
+    deliveryPolicy: Post
+    notifyOnSync: true
+
+  # 消息模板：健康状态恶化
+  template.app-health-degraded: |
+    message: |
+      ⚠️ Synapse health degraded
+      Application: {{.app.metadata.name}}
+      Health Status: {{.app.status.health.status}}
+      Resources: {{range .app.status.resources}}{{.name}}({{.health.status}}) {{end}}
+    deliveryPolicy: Post
+    notifyOnSync: true
+
+---
+# ─── 通知：Slack 集成（可选） ──────────────────────────────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-notifications-secret
+  namespace: argocd
+stringData:
+  slack-token: $SLACK_BOT_TOKEN  # 从 GitLab CI 变量注入
+  slack-channel: "#deployments"  # Slack 频道名
+
+---
+# ─── Project: 限制应用部署范围 ────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: Platform Applications (Synapse, saas-apps)
+
+  # 允许部署到的命名空间和集群
+  destinations:
+  - namespace: 'synapse'
+    server: https://kubernetes.default.svc
+  - namespace: 'saas-*'
+    server: https://kubernetes.default.svc
+
+  # 允许的源仓库
+  sourceRepos:
+  - 'https://github.com/your-org/Synapse.git'
+
+  # 允许创建的资源类型（白名单）
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  - group: 'apps'
+    kind: Deployment
+  - group: 'apps'
+    kind: StatefulSet
+  - group: ''
+    kind: Service
+  - group: 'networking.k8s.io'
+    kind: Ingress
+  - group: ''
+    kind: ConfigMap
+  - group: ''
+    kind: Secret
+  - group: 'autoscaling'
+    kind: HorizontalPodAutoscaler
+  - group: 'policy'
+    kind: PodDisruptionBudget
+  - group: 'rbac.authorization.k8s.io'
+    kind: Role
+  - group: 'rbac.authorization.k8s.io'
+    kind: RoleBinding
+  - group: 'rbac.authorization.k8s.io'
+    kind: ServiceAccount
+
+  # 禁止的资源类型（黑名单）
+  clusterResourceBlacklist:
+  - group: ''
+    kind: ResourceQuota
+  - group: ''
+    kind: LimitRange
+  - group: 'policy'
+    kind: PodSecurityPolicy
+
+  # 命名空间级别的黑名单（可选）
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'

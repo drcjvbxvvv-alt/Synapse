@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # ─── GitLab ──────────────────────────────────────────────────────────────
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    hostname: gitlab.local
+    container_name: gitlab
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2222:22"
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab.local'
+        gitlab_rails['initial_root_password'] = 'Gitlab@2026'
+        nginx['listen_port'] = 80
+        registry_external_url 'http://harbor.local'
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+    networks:
+      - cicd
+
+  # ─── Harbor (Docker Registry) ─────────────────────────────────────────────
+  harbor:
+    image: goharbor/harbor-core:latest
+    container_name: harbor
+    restart: always
+    environment:
+      HARBOR_ADMIN_PASSWORD: "Harbor@2026"
+      POSTGRESQL_HOST: harbor-postgres
+      POSTGRESQL_PORT: 5432
+      POSTGRESQL_USERNAME: postgres
+      POSTGRESQL_PASSWORD: "postgres123"
+      POSTGRESQL_DATABASE: registry
+      CORE_SECRET: "Harborsecret123"
+      JOBSERVICE_SECRET: "Harborsecret123"
+    ports:
+      - "5000:5000"
+      - "8080:8080"
+    depends_on:
+      - harbor-postgres
+      - harbor-redis
+    volumes:
+      - harbor-data:/data
+    networks:
+      - cicd
+
+  harbor-postgres:
+    image: postgres:13
+    container_name: harbor-postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: "postgres123"
+      POSTGRES_DB: registry
+    volumes:
+      - harbor-postgres-data:/var/lib/postgresql/data
+    networks:
+      - cicd
+
+  harbor-redis:
+    image: redis:7-alpine
+    container_name: harbor-redis
+    restart: always
+    volumes:
+      - harbor-redis-data:/data
+    networks:
+      - cicd
+
+  # ─── ArgoCD ──────────────────────────────────────────────────────────────
+  argocd:
+    image: argoproj/argocd:latest
+    container_name: argocd
+    restart: always
+    ports:
+      - "8081:8080"
+      - "8443:443"
+    environment:
+      ARGOCD_SERVER_INSECURE: "true"
+      ARGO_WORKFLOWS_CONTROLLER_PARALLELISM: "10"
+    volumes:
+      - argocd-data:/var/lib/argocd
+    networks:
+      - cicd
+    command:
+      - argocd-server
+      - --insecure
+      - --loglevel
+      - info
+
+  # ─── GitLab Runner ───────────────────────────────────────────────────────
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - gitlab-runner-config:/etc/gitlab-runner
+    networks:
+      - cicd
+    environment:
+      GITLAB_HOST: "http://gitlab.local"
+      RUNNER_REGISTRATION_TOKEN: "glrt_test_token"
+
+networks:
+  cicd:
+    driver: bridge
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+  harbor-data:
+  harbor-postgres-data:
+  harbor-redis-data:
+  argocd-data:
+  gitlab-runner-config:

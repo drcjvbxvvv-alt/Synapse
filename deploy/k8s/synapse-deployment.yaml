@@ -1,0 +1,623 @@
+---
+# ─── Namespace ────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: synapse
+  labels:
+    app: synapse
+
+---
+# ─── ConfigMap: Backend 配置 ──────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: synapse-backend-config
+  namespace: synapse
+data:
+  config.yaml: |
+    server:
+      port: 8080
+      mode: release
+
+    database:
+      driver: mysql
+      host: synapse-mysql
+      port: 3306
+      username: synapse
+      password: synapse123
+      database: synapse
+      charset: utf8mb4
+      tls_enabled: false
+
+    jwt:
+      secret: "change-me-in-production-use-secrets"
+      expire_time: 24
+
+    log:
+      level: info
+      format: json
+
+    k8s:
+      default_namespace: default
+      informer_sync_timeout: 30
+
+    app:
+      env: production
+
+    security:
+      encryption_key_file: /etc/synapse/secrets/encryption.key
+      k8s_tls_policy: warn
+
+    observability:
+      enabled: true
+      metrics_path: /metrics
+      metrics_token: ""
+      health_path: /healthz
+      ready_path: /readyz
+
+---
+# ─── ConfigMap: Frontend 配置 ─────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: synapse-frontend-config
+  namespace: synapse
+data:
+  .env.production: |
+    VITE_API_BASE_URL=http://synapse-backend:8080
+    VITE_ENV=production
+
+---
+# ─── Secret: 加密密钥 ─────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: synapse-secrets
+  namespace: synapse
+type: Opaque
+stringData:
+  encryption.key: "change-me-in-production-generate-with-openssl-rand-hex-32"
+  jwt.secret: "change-me-in-production-strong-random-secret"
+  mysql.password: "synapse123"
+
+---
+# ─── MySQL StatefulSet ────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: synapse-mysql
+  namespace: synapse
+  labels:
+    app: synapse-mysql
+spec:
+  serviceName: synapse-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: synapse-mysql
+  template:
+    metadata:
+      labels:
+        app: synapse-mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: synapse-secrets
+              key: mysql.password
+        - name: MYSQL_DATABASE
+          value: synapse
+        - name: MYSQL_USER
+          value: synapse
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: synapse-secrets
+              key: mysql.password
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+
+---
+# ─── MySQL Service ────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: synapse-mysql
+  namespace: synapse
+  labels:
+    app: synapse-mysql
+spec:
+  clusterIP: None
+  selector:
+    app: synapse-mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+
+---
+# ─── Backend Deployment ───────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synapse-backend
+  namespace: synapse
+  labels:
+    app: synapse
+    tier: backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: synapse
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: synapse
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: synapse
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      initContainers:
+      # 等待 MySQL 就绪
+      - name: wait-for-mysql
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z synapse-mysql 3306; do
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+          echo "MySQL is ready!"
+
+      containers:
+      - name: backend
+        image: harbor.local/synapse/backend:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: metrics
+          containerPort: 8080
+          protocol: TCP
+
+        env:
+        - name: SERVER_PORT
+          value: "8080"
+        - name: DB_HOST
+          value: synapse-mysql
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_USERNAME
+          value: synapse
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: synapse-secrets
+              key: mysql.password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: synapse-secrets
+              key: jwt.secret
+        - name: ENCRYPTION_KEY_FILE
+          value: /etc/synapse/secrets/encryption.key
+        - name: LOG_LEVEL
+          value: "info"
+        - name: LOG_FORMAT
+          value: "json"
+
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: secrets
+          mountPath: /etc/synapse/secrets
+          readOnly: true
+
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+
+      volumes:
+      - name: config
+        configMap:
+          name: synapse-backend-config
+          defaultMode: 0444
+      - name: secrets
+        secret:
+          secretName: synapse-secrets
+          defaultMode: 0400
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - synapse
+                - key: tier
+                  operator: In
+                  values:
+                  - backend
+              topologyKey: kubernetes.io/hostname
+
+---
+# ─── Frontend Deployment ──────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synapse-frontend
+  namespace: synapse
+  labels:
+    app: synapse
+    tier: frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: synapse
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: synapse
+        tier: frontend
+    spec:
+      serviceAccountName: synapse
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101  # nginx user
+        fsGroup: 101
+
+      containers:
+      - name: frontend
+        image: harbor.local/synapse/frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+
+        volumeMounts:
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+
+      volumes:
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-logs
+        emptyDir: {}
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - synapse
+                - key: tier
+                  operator: In
+                  values:
+                  - frontend
+              topologyKey: kubernetes.io/hostname
+
+---
+# ─── Backend Service ──────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: synapse-backend
+  namespace: synapse
+  labels:
+    app: synapse
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: synapse
+    tier: backend
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 8080
+    targetPort: metrics
+    protocol: TCP
+
+---
+# ─── Frontend Service ─────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: synapse-frontend
+  namespace: synapse
+  labels:
+    app: synapse
+    tier: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: synapse
+    tier: frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+
+---
+# ─── Ingress ──────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: synapse
+  namespace: synapse
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod  # 可选，需要 cert-manager
+spec:
+  rules:
+  - host: synapse.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: synapse-backend
+            port:
+              number: 8080
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: synapse-frontend
+            port:
+              number: 80
+
+---
+# ─── ServiceAccount ───────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: synapse
+  namespace: synapse
+
+---
+# ─── ClusterRole ──────────────────────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: synapse
+rules:
+# Pod 和资源查询权限
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "pods/exec", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+  verbs: ["get", "list", "watch"]
+
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers", "verticalpodautoscalers"]
+  verbs: ["get", "list", "watch"]
+
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs: ["get", "list", "watch"]
+
+# 更新部署的权限
+- apiGroups: ["apps"]
+  resources: ["deployments", "deployments/scale"]
+  verbs: ["get", "list", "patch", "update"]
+
+# RBAC 查询权限
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list", "watch"]
+
+# 持久卷权限
+- apiGroups: [""]
+  resources: ["persistentvolumes", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+
+# 网络策略权限
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies", "ingresses"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ─── ClusterRoleBinding ───────────────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: synapse
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: synapse
+subjects:
+- kind: ServiceAccount
+  name: synapse
+  namespace: synapse
+
+---
+# ─── HorizontalPodAutoscaler: Backend ──────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: synapse-backend
+  namespace: synapse
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: synapse-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+
+---
+# ─── HorizontalPodAutoscaler: Frontend ─────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: synapse-frontend
+  namespace: synapse
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: synapse-frontend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
