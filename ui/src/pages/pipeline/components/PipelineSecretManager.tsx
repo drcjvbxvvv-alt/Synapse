@@ -45,7 +45,7 @@ import pipelineSecretService, {
 import EmptyState from '../../../components/EmptyState';
 import { type Pipeline } from '../../../services/pipelineService';
 
-const { Text, Typography: Typo } = Typography;
+const { Text } = Typography;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 

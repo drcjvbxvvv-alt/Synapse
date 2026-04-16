@@ -47,7 +47,8 @@ import ciEngineService, {
   type CIEngineType,
   type CreateCIEngineRequest,
 } from '../../services/ciEngineService';
-import clusterService from '../../services/clusterService';
+import type { Cluster } from '../../types';
+import { clusterService } from '../../services/clusterService';
 import EmptyState from '../../components/EmptyState';
 import TriggerRunModal from './components/TriggerRunModal';
 import CIEngineRunViewer from './components/CIEngineRunViewer';
@@ -612,7 +613,7 @@ const CIEngineSettings: React.FC = () => {
             >
               <Select
                 placeholder={t('cicd:ciEngine.form.selectCluster')}
-                options={clusters.map((c) => ({ label: c.name, value: Number(c.id) }))}
+                options={clusters.map((c: Cluster) => ({ label: c.name, value: Number(c.id) }))}
                 showSearch
                 filterOption={(input, option) =>
                   String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -673,13 +674,13 @@ const CIEngineSettings: React.FC = () => {
             </>
           )}
 
-          {!editing && selectedType !== 'native' && (
+          {!editing && selectedType === ('native' as CIEngineType) && (
             <Alert
               type="info"
               showIcon
               icon={<ThunderboltOutlined />}
               message={t('cicd:ciEngine.nativeNotice')}
-              style={{ marginTop: token.marginSM, display: selectedType === 'native' ? 'block' : 'none' }}
+              style={{ marginTop: token.marginSM }}
             />
           )}
         </Form>
