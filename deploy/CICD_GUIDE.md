@@ -9,11 +9,12 @@
 
 1. [前置需求](#1-前置需求)
 2. [Dockerfile](#2-dockerfile)
-3. [GitLab CI 設定](#3-gitlab-ci-設定)
-4. [Kubernetes 部署規格](#4-kubernetes-部署規格)
-5. [Harbor 映像倉庫](#5-harbor-映像倉庫)
-6. [GitOps（ArgoCD）](#6-gitopsargocd)
-7. [故障排查](#7-故障排查)
+3. [Synapse 原生 CI（推薦）](#3-synapse-原生-ci推薦)
+4. [GitLab CI 設定（外部引擎）](#4-gitlab-ci-設定外部引擎)
+5. [Kubernetes 部署規格](#5-kubernetes-部署規格)
+6. [Harbor 映像倉庫](#6-harbor-映像倉庫)
+7. [GitOps（ArgoCD）](#7-gitopsargocd)
+8. [故障排查](#8-故障排查)
 
 ---
 
@@ -83,7 +84,191 @@ ENTRYPOINT ["java", \
 
 ---
 
-## 3. GitLab CI 設定
+## 3. Synapse 原生 CI（推薦）
+
+Synapse 內建 CI 引擎，不需要外部 GitLab Runner 或 Jenkins。
+Pipeline 以 YAML 定義，由 Synapse 排程並以 **Kubernetes Job** 執行每個步驟。
+
+### 3.1 與外部引擎的差異
+
+| | Synapse 原生 CI | GitLab CI / Jenkins |
+|--|-----------------|---------------------|
+| 需要額外元件 | 否（內建） | 需要 Runner / Agent |
+| Pipeline 存放 | Synapse DB（版本快照） | `.gitlab-ci.yml` / Jenkinsfile |
+| 執行環境 | K8s Job（Kaniko 無需 Docker Daemon） | Docker-in-Docker / Agent |
+| 適合場景 | 新專案、無現有 CI 基礎設施 | 已有 GitLab / Jenkins 的組織 |
+
+### 3.2 Pipeline YAML 格式
+
+```yaml
+apiVersion: synapse.io/v1
+kind: Pipeline
+metadata:
+  name: saas-java-a-build         # Pipeline 名稱，DNS 相容
+spec:
+  description: Build and deploy SaaS Java A
+
+  # 並發控制：同分支只跑一個，舊的自動取消
+  concurrency:
+    group: build-${BRANCH}
+    policy: cancel_previous         # cancel_previous | queue | reject
+
+  # 所有步驟共用的環境變數
+  env:
+    HARBOR_REGISTRY: "harbor.local"
+    HARBOR_PROJECT: "saas"
+    APP_NAME: "java-a"
+    NAMESPACE: "saas-java-a"
+
+  # 觸發條件
+  triggers:
+    - type: webhook
+      provider: gitlab              # gitlab | github
+      repo: your-org/saas-java-a
+      branch: main
+      events:
+        - push
+      path_filter:                  # 只有這些路徑變更才觸發
+        - "src/**"
+        - "pom.xml"
+        - "Dockerfile"
+
+    - type: schedule
+      cron: "0 2 * * *"            # 每日凌晨 2 點夜間構建
+
+  # 共用工作目錄（步驟間共享原始碼與產出物）
+  workspace:
+    type: pvc
+    size: "4Gi"
+    retention_hours: 24
+
+  steps:
+    # ── 步驟 1：Maven 編譯打包 ────────────────────────────
+    - name: build-jar
+      type: build-jar
+      image: maven:3.9-eclipse-temurin-17
+      timeout: "20m"
+      config:
+        build_tool: maven
+        goals: clean package -DskipTests
+        java_version: "17"
+      env:
+        MAVEN_OPTS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+
+    # ── 步驟 2：Kaniko 構建映像（無需 Docker Daemon）─────
+    - name: build-image
+      type: build-image
+      depends_on:
+        - build-jar
+      timeout: "20m"
+      config:
+        context: .
+        dockerfile: deploy/docker/saas-java-a/Dockerfile
+        destination: "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/${APP_NAME}:${CI_COMMIT_SHA}"
+        cache: true
+        cache_repo: "${HARBOR_REGISTRY}/cache"
+
+    # ── 步驟 3：Trivy 漏洞掃描 ───────────────────────────
+    - name: scan-image
+      type: trivy-scan
+      depends_on:
+        - build-image
+      config:
+        image: "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/${APP_NAME}:${CI_COMMIT_SHA}"
+        severity: "HIGH,CRITICAL"
+        ignore_unfixed: true
+      on_failure: abort             # 有 CRITICAL 漏洞就停止
+
+    # ── 步驟 4：推送到 Harbor ────────────────────────────
+    - name: push-image
+      type: push-image
+      depends_on:
+        - scan-image
+      config:
+        source: "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/${APP_NAME}:${CI_COMMIT_SHA}"
+        tags:
+          - "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/${APP_NAME}:latest"
+      env:
+        REGISTRY_USERNAME: ${{ secrets.HARBOR_USERNAME }}
+        REGISTRY_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
+
+    # ── 步驟 5：更新 GitOps YAML（image tag）────────────
+    - name: gitops-sync
+      type: gitops-sync
+      depends_on:
+        - push-image
+      config:
+        repo: "https://gitlab.local/your-org/Synapse.git"
+        branch: main
+        files:
+          - path: deploy/k8s/saas-java-a-deployment.yaml
+            replacements:
+              - pattern: "image: harbor.local/saas/java-a:.*"
+                value: "image: harbor.local/saas/java-a:${CI_COMMIT_SHA}"
+        commit_message: "ci: update java-a to ${CI_COMMIT_SHA} [skip ci]"
+      env:
+        GIT_USERNAME: ${{ secrets.GIT_USERNAME }}
+        GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
+
+    # ── 步驟 6：部署後 Smoke Test ────────────────────────
+    - name: smoke-test
+      type: smoke-test
+      depends_on:
+        - gitops-sync
+      timeout: "5m"
+      config:
+        url: "https://saas-java-a.example.com/actuator/health"
+        method: GET
+        expected_status: 200
+        retries: 10
+        retry_interval: 15          # 等待 ArgoCD 同步完成
+
+  # 通知（Slack / Teams / Webhook）
+  notifications:
+    on_success:
+      channels: [1]
+    on_failure:
+      channels: [1, 2]
+    on_scan_critical:
+      channels: [3]
+```
+
+### 3.3 步驟類型速查
+
+| 步驟類型 | 用途 | 預設映像 |
+|----------|------|----------|
+| `build-jar` | Maven / Gradle 打包 | `maven:3.9-eclipse-temurin-17` |
+| `build-image` | 構建容器映像（Kaniko） | `gcr.io/kaniko-project/executor:v1.23` |
+| `trivy-scan` | 漏洞掃描 | `aquasec/trivy:latest` |
+| `push-image` | 推送 / Retag 映像 | `gcr.io/go-containerregistry/crane` |
+| `gitops-sync` | Git commit + push 更新 YAML | `alpine/git` |
+| `deploy` | `kubectl apply` 直接部署 | `bitnami/kubectl` |
+| `smoke-test` | HTTP 健康檢查 | `curlimages/curl` |
+| `approval` | 人工審核閘道 | — |
+| `run-script` | 自訂 shell 腳本 | 自行指定 |
+| `notify` | 發送通知（Slack / Teams） | — |
+
+### 3.4 Secret 引用
+
+Pipeline YAML 中使用 `${{ secrets.NAME }}` 引用 Secrets（在 Synapse → Pipeline → Secrets 管理）：
+
+```yaml
+env:
+  HARBOR_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
+  GIT_TOKEN:       ${{ secrets.GITLAB_CI_TOKEN }}
+```
+
+### 3.5 在 Synapse 建立 Pipeline
+
+1. Synapse → Pipeline → 新增
+2. 選擇引擎類型：**原生（Native）**
+3. 貼上上方 YAML → 儲存
+4. 進入 Pipeline → Secrets → 新增 `HARBOR_USERNAME`、`HARBOR_PASSWORD`、`GIT_USERNAME`、`GIT_PASSWORD`
+5. 手動觸發第一次執行驗證，或等待 Webhook 觸發
+
+---
+
+## 4. GitLab CI 設定（外部引擎）
 
 ### 完整 `.gitlab-ci.yml`
 
@@ -232,7 +417,7 @@ deploy:update-gitops:
 
 ---
 
-## 4. Kubernetes 部署規格
+## 5. Kubernetes 部署規格
 
 ```yaml
 # deploy/k8s/saas-java-a-deployment.yaml
@@ -344,7 +529,7 @@ management:
 
 ---
 
-## 5. Harbor 映像倉庫
+## 6. Harbor 映像倉庫
 
 ### 建立 imagePullSecret
 
@@ -370,7 +555,7 @@ done
 
 ---
 
-## 6. GitOps（ArgoCD）
+## 7. GitOps（ArgoCD）
 
 ```yaml
 # deploy/examples/argocd-java-a-application.yaml
@@ -411,7 +596,7 @@ argocd app get saas-java-a
 
 ---
 
-## 7. 故障排查
+## 8. 故障排查
 
 ### Pod 啟動失敗（ImagePullBackOff）
 
