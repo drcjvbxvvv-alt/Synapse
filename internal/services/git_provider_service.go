@@ -5,6 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -137,6 +142,110 @@ func (s *GitProviderService) RegenerateWebhookToken(ctx context.Context, id uint
 
 	logger.Info("webhook token regenerated", "provider_id", id)
 	return newToken, nil
+}
+
+// ---------------------------------------------------------------------------
+// ValidateRepoConnection — 驗證 Git repo URL 可連線
+// ---------------------------------------------------------------------------
+
+// ValidateRepoConnection 透過 Git Provider API 驗證 repo URL 是否存在且可存取。
+// 回傳 nil 表示連線成功；回傳 error 時包含具體原因（repo 不存在、token 無權限等）。
+func (s *GitProviderService) ValidateRepoConnection(ctx context.Context, provider *models.GitProvider, repoURL string) error {
+	repoPath, err := extractRepoPath(provider.BaseURL, repoURL)
+	if err != nil {
+		return fmt.Errorf("parse repo URL: %w", err)
+	}
+
+	var apiURL string
+	switch provider.Type {
+	case models.GitProviderTypeGitLab:
+		encoded := url.PathEscape(repoPath)
+		apiURL = strings.TrimSuffix(provider.BaseURL, "/") + "/api/v4/projects/" + encoded
+	case models.GitProviderTypeGitHub:
+		base := strings.TrimSuffix(provider.BaseURL, "/")
+		if base == "https://github.com" {
+			base = "https://api.github.com"
+		}
+		apiURL = base + "/repos/" + repoPath
+	case models.GitProviderTypeGitea:
+		apiURL = strings.TrimSuffix(provider.BaseURL, "/") + "/api/v1/repos/" + repoPath
+	default:
+		return fmt.Errorf("unsupported provider type: %s", provider.Type)
+	}
+
+	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+
+	// Set auth header
+	token := provider.AccessTokenEnc // GORM AfterFind hook already decrypted it
+	switch provider.Type {
+	case models.GitProviderTypeGitLab:
+		req.Header.Set("PRIVATE-TOKEN", token)
+	default:
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("git API request failed: %w", err)
+	}
+	defer func() { _, _ = io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		logger.Info("git repo validated", "repo_url", repoURL, "provider", provider.Name)
+		return nil
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return fmt.Errorf("access denied: token has no permission to access %q", repoPath)
+	case http.StatusNotFound:
+		return fmt.Errorf("repository %q not found on %s", repoPath, provider.Name)
+	default:
+		return fmt.Errorf("unexpected response from git API: HTTP %d", resp.StatusCode)
+	}
+}
+
+// extractRepoPath 從 repo URL 中解析出 owner/repo 路徑。
+// 支援格式：
+//
+//	https://gitlab.com/root/my-repo.git  → root/my-repo
+//	https://gitlab.com/root/my-repo      → root/my-repo
+//	http://localhost:8929/root/my-repo    → root/my-repo
+func extractRepoPath(baseURL, repoURL string) (string, error) {
+	repoURL = strings.TrimSuffix(repoURL, ".git")
+	repoURL = strings.TrimSuffix(repoURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/")
+
+	// Try to remove baseURL prefix
+	lower := strings.ToLower(repoURL)
+	lowerBase := strings.ToLower(baseURL)
+	var path string
+	if strings.HasPrefix(lower, lowerBase) {
+		path = repoURL[len(baseURL):]
+		path = strings.TrimPrefix(path, "/")
+	} else {
+		// Fallback: parse URL and extract path
+		u, err := url.Parse(repoURL)
+		if err != nil {
+			return "", fmt.Errorf("invalid repo URL %q: %w", repoURL, err)
+		}
+		path = strings.Trim(u.Path, "/")
+	}
+
+	if path == "" {
+		return "", fmt.Errorf("no repo path found in URL %q", repoURL)
+	}
+
+	// Remove GitLab sub-paths like "/-/tree/...", "/-/commits/..."
+	if idx := strings.Index(path, "/-/"); idx > 0 {
+		path = path[:idx]
+	}
+
+	return path, nil
 }
 
 // ---------------------------------------------------------------------------

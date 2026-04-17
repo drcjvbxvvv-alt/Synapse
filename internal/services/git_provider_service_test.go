@@ -313,6 +313,39 @@ func TestGitProviderService_RegenerateToken_NotFound(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// extractRepoPath
+// ---------------------------------------------------------------------------
+
+func TestExtractRepoPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		baseURL  string
+		repoURL  string
+		expected string
+		wantErr  bool
+	}{
+		{"GitLab standard", "http://localhost:8929", "http://localhost:8929/root/my-repo.git", "root/my-repo", false},
+		{"without .git suffix", "http://localhost:8929", "http://localhost:8929/root/my-repo", "root/my-repo", false},
+		{"with tree path", "http://localhost:8929", "http://localhost:8929/root/saas-uat/-/tree/main", "root/saas-uat", false},
+		{"GitHub HTTPS", "https://github.com", "https://github.com/org/service.git", "org/service", false},
+		{"nested group", "https://gitlab.com", "https://gitlab.com/company/team/project.git", "company/team/project", false},
+		{"case insensitive", "HTTP://LOCALHOST:8929", "http://localhost:8929/root/app", "root/app", false},
+		{"empty path", "http://localhost:8929", "http://localhost:8929/", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := extractRepoPath(tt.baseURL, tt.repoURL)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // fixture
 // ---------------------------------------------------------------------------
 

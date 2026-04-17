@@ -19,12 +19,13 @@ import (
 
 // ProjectHandler 管理 Project CRUD API。
 type ProjectHandler struct {
-	projectSvc *services.ProjectService
+	projectSvc     *services.ProjectService
+	gitProviderSvc *services.GitProviderService
 }
 
 // NewProjectHandler 建立 ProjectHandler。
-func NewProjectHandler(projectSvc *services.ProjectService) *ProjectHandler {
-	return &ProjectHandler{projectSvc: projectSvc}
+func NewProjectHandler(projectSvc *services.ProjectService, gitProviderSvc *services.GitProviderService) *ProjectHandler {
+	return &ProjectHandler{projectSvc: projectSvc, gitProviderSvc: gitProviderSvc}
 }
 
 // ─── DTOs ──────────────────────────────────────────────────────────────────
@@ -100,6 +101,17 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 	defaultBranch := req.DefaultBranch
 	if defaultBranch == "" {
 		defaultBranch = "main"
+	}
+
+	// Validate git repo is reachable via the provider's API
+	provider, err := h.gitProviderSvc.GetProvider(c.Request.Context(), uint(providerID))
+	if err != nil {
+		response.NotFound(c, "git provider not found")
+		return
+	}
+	if err := h.gitProviderSvc.ValidateRepoConnection(c.Request.Context(), provider, req.RepoURL); err != nil {
+		response.BadRequest(c, "git repo validation failed: "+err.Error())
+		return
 	}
 
 	project := &models.Project{

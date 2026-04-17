@@ -39,7 +39,8 @@ func newProjectHandlerWithRouter(t *testing.T) (*ProjectHandler, sqlmock.Sqlmock
 	require.NoError(t, err)
 
 	svc := services.NewProjectService(gormDB)
-	h := NewProjectHandler(svc)
+	gitSvc := services.NewGitProviderService(gormDB)
+	h := NewProjectHandler(svc, gitSvc)
 
 	r := gin.New()
 	r.GET("/system/git-providers/:id/projects", h.List)

@@ -202,7 +202,7 @@ func registerSystemRoutes(protected *gin.RouterGroup, clusters *gin.RouterGroup,
 			gitProviders.POST("/:id/regenerate-token", gitProviderHandler.RegenerateToken)
 
 			// Project 管理（M14.1）
-			projectHandler := handlers.NewProjectHandler(d.projectSvc)
+			projectHandler := handlers.NewProjectHandler(d.projectSvc, d.gitProviderSvc)
 			gitProviders.GET("/:id/projects", projectHandler.List)
 			gitProviders.POST("/:id/projects", projectHandler.Create)
 			gitProviders.GET("/:id/projects/:projectID", projectHandler.Get)
