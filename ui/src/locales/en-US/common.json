@@ -60,7 +60,8 @@
     "cicd": "CI/CD",
     "pipelines": "Pipelines",
     "rollouts": "Rollouts",
-    "language": "Language"
+    "language": "Language",
+    "home": "Home"
   },
   "actions": {
     "create": "Create",
@@ -158,7 +159,9 @@
     "batchRedeploySuccess": "Successfully redeployed {{count}} items",
     "batchRedeployPartial": "Completed: {{success}} succeeded, {{fail}} failed",
     "exportCount": "Successfully exported {{count}} records",
-    "cannotDeleteSystem": "Cannot delete system resources"
+    "cannotDeleteSystem": "Cannot delete system resources",
+    "clickToView": "Click to view",
+    "failed": "Operation failed"
   },
   "confirm": {
     "deleteTitle": "Confirm Delete",
@@ -192,7 +195,9 @@
     "selectedCount": "{{count}} selected",
     "version": "Version",
     "image": "Image",
-    "images": "Images"
+    "images": "Images",
+    "columnSettings": "Column Settings",
+    "selectColumns": "Select Columns"
   },
   "language": {
     "switch": "Switch Language",
@@ -243,7 +248,8 @@
     "fieldCpuLimit": "CPU Limit",
     "fieldCpuRequest": "CPU Request",
     "fieldMemoryLimit": "Memory Limit",
-    "fieldMemoryRequest": "Memory Request"
+    "fieldMemoryRequest": "Memory Request",
+    "all": "All"
   },
   "resources": {
     "cpu": "CPU",
@@ -262,7 +268,10 @@
     "minute1": "1 min",
     "minute5": "5 min",
     "last7Days": "Last 7 days",
-    "last30Days": "Last 30 days"
+    "last30Days": "Last 30 days",
+    "last": "Last",
+    "minute": "min",
+    "second": "s"
   },
   "info": {
     "basicInfo": "Basic Info",
@@ -315,6 +324,12 @@
     }
   },
   "validation": {
-    "required": "This field is required"
+    "required": "This field is required",
+    "invalid": "Invalid format"
+  },
+  "cancel": "Cancel",
+  "unknown": "Unknown",
+  "pagination": {
+    "total": "Total {{total}} items"
   }
 }

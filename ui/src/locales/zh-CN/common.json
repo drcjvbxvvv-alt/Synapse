@@ -60,7 +60,8 @@
     "cicd": "CI/CD",
     "pipelines": "Pipeline 管理",
     "rollouts": "Rollout 管理",
-    "language": "语言"
+    "language": "语言",
+    "home": "首页"
   },
   "actions": {
     "create": "创建",
@@ -158,7 +159,9 @@
     "batchRedeploySuccess": "成功重新部署 {{count}} 个",
     "batchRedeployPartial": "重新部署完成：成功 {{success}} 个，失败 {{fail}} 个",
     "exportCount": "成功导出 {{count}} 条数据",
-    "cannotDeleteSystem": "不能删除系统资源"
+    "cannotDeleteSystem": "不能删除系统资源",
+    "clickToView": "点击查看",
+    "failed": "操作失败"
   },
   "confirm": {
     "deleteTitle": "确认删除",
@@ -192,7 +195,9 @@
     "selectedCount": "已选择 {{count}} 项",
     "version": "版本",
     "image": "镜像",
-    "images": "镜像"
+    "images": "镜像",
+    "columnSettings": "列设置",
+    "selectColumns": "选择列"
   },
   "language": {
     "switch": "切换语言",
@@ -242,7 +247,8 @@
     "fieldCpuLimit": "CPU限制值",
     "fieldCpuRequest": "CPU申请值",
     "fieldMemoryLimit": "内存限制值",
-    "fieldMemoryRequest": "内存申请值"
+    "fieldMemoryRequest": "内存申请值",
+    "all": "全部"
   },
   "resources": {
     "cpu": "CPU",
@@ -261,7 +267,10 @@
     "minute1": "1分钟",
     "minute5": "5分钟",
     "last7Days": "最近7天",
-    "last30Days": "最近30天"
+    "last30Days": "最近30天",
+    "last": "最近",
+    "minute": "分钟",
+    "second": "秒"
   },
   "info": {
     "basicInfo": "基本信息",
@@ -314,6 +323,12 @@
     }
   },
   "validation": {
-    "required": "此字段为必填"
+    "required": "此字段为必填",
+    "invalid": "格式不正确"
+  },
+  "cancel": "取消",
+  "unknown": "未知",
+  "pagination": {
+    "total": "共 {{total}} 条"
   }
 }

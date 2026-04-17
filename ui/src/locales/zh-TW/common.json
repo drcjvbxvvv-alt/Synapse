@@ -60,7 +60,8 @@
     "cicd": "CI/CD",
     "pipelines": "Pipeline 管理",
     "rollouts": "Rollout 管理",
-    "language": "語言"
+    "language": "語言",
+    "home": "首頁"
   },
   "actions": {
     "create": "建立",
@@ -158,7 +159,9 @@
     "batchRedeploySuccess": "成功重新部署 {{count}} 個",
     "batchRedeployPartial": "重新部署完成：成功 {{success}} 個，失敗 {{fail}} 個",
     "exportCount": "成功匯出 {{count}} 筆資料",
-    "cannotDeleteSystem": "不能刪除系統資源"
+    "cannotDeleteSystem": "不能刪除系統資源",
+    "clickToView": "點擊查看",
+    "failed": "操作失敗"
   },
   "confirm": {
     "deleteTitle": "確認刪除",
@@ -192,7 +195,9 @@
     "selectedCount": "已選擇 {{count}} 項",
     "version": "版本",
     "image": "映像",
-    "images": "映像"
+    "images": "映像",
+    "columnSettings": "欄位設定",
+    "selectColumns": "選擇欄位"
   },
   "language": {
     "switch": "切換語言",
@@ -242,7 +247,8 @@
     "fieldCpuLimit": "CPU 限制值",
     "fieldCpuRequest": "CPU 申請值",
     "fieldMemoryLimit": "記憶體限制值",
-    "fieldMemoryRequest": "記憶體申請值"
+    "fieldMemoryRequest": "記憶體申請值",
+    "all": "全部"
   },
   "resources": {
     "cpu": "CPU",
@@ -261,7 +267,10 @@
     "minute1": "1 分鐘",
     "minute5": "5 分鐘",
     "last7Days": "最近 7 天",
-    "last30Days": "最近 30 天"
+    "last30Days": "最近 30 天",
+    "last": "最近",
+    "minute": "分鐘",
+    "second": "秒"
   },
   "info": {
     "basicInfo": "基本資訊",
@@ -314,6 +323,12 @@
     }
   },
   "validation": {
-    "required": "此欄位為必填"
+    "required": "此欄位為必填",
+    "invalid": "格式不正確"
+  },
+  "cancel": "取消",
+  "unknown": "未知",
+  "pagination": {
+    "total": "共 {{total}} 筆"
   }
 }
