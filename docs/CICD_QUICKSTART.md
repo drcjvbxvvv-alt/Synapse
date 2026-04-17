@@ -48,7 +48,124 @@ docker compose -f deploy/docker-compose-cicd.yaml down
 
 ---
 
-## 前置條件
+## Synapse 原生 CI 設定流程（本地 GitLab）
+
+> 以下以本地 docker-compose 環境為例，依序完成 5 個步驟。
+
+### Step 1：匯入 Cluster
+
+前往 **叢集管理 → 匯入叢集**，貼上目標 K8s 叢集的 kubeconfig。
+
+- Pipeline Run 的 Steps 以 K8s Job 形式跑在此 cluster 上
+- 沒有 Cluster 無法執行任何 Pipeline Run
+
+### Step 2：新增 Git Provider
+
+前往 **設定 → Git Providers → 新增**
+
+| 欄位 | 值 |
+|------|-----|
+| 類型 | GitLab |
+| Base URL | `http://localhost:8929` |
+| Access Token | GitLab root → User Settings → Access Tokens → 建立（勾選 `api` scope） |
+
+### Step 3：新增 Registry
+
+前往 **設定 → Registries → 新增**
+
+| 欄位 | 值 |
+|------|-----|
+| URL | `localhost:5001` |
+| Insecure TLS | ✓（本地 registry 無 TLS） |
+
+### Step 4：建立 Project
+
+前往 **設定 → Projects → 新增**
+
+| 欄位 | 值 |
+|------|-----|
+| Git Provider | 剛才建立的 GitLab |
+| Repo URL | `http://localhost:8929/root/<repo-name>.git` |
+
+Project 是 Webhook 路由的關鍵：git push 進來時，系統依 `repo_url` 找到對應 Project，再觸發訂閱它的 Pipeline。
+
+### Step 5：建立 Pipeline
+
+前往 **Pipelines → 建立**，綁定上面的 Project，以 `examples/java-demo` 為例：
+
+```json
+{
+  "steps": [
+    {
+      "name": "build",
+      "type": "build-image",
+      "config": {
+        "context": ".",
+        "dockerfile": "Dockerfile",
+        "destination": "localhost:5001/java-demo:${GIT_SHA}"
+      }
+    },
+    {
+      "name": "deploy",
+      "type": "deploy",
+      "depends_on": ["build"],
+      "config": {
+        "manifests": ["k8s/deployment.yaml", "k8s/service.yaml"],
+        "namespace": "default"
+      }
+    }
+  ]
+}
+```
+
+### Step 6：設定 Webhook（自動觸發）
+
+GitLab repo → Settings → Webhooks → 新增：
+
+```
+URL:    http://<synapse-host>/api/webhook/git
+Events: Push events
+```
+
+> 若只用手動觸發測試，可跳過此步驟，直接在 Pipeline 頁面點擊 **手動執行**。
+
+---
+
+## 準備 Git Repo 內容（前置條件）
+
+在建立 Pipeline 之前，需要依序完成以下設定。
+
+Synapse CICD **不會自動生成 K8s 資源**，以下檔案需自行準備並放入 git repo：
+
+| 用途 | 需要的檔案 |
+|------|-----------|
+| 建立 image | `Dockerfile` |
+| `deploy` Step | `k8s/deployment.yaml`、`k8s/service.yaml`（含 namespace） |
+| `deploy-helm` Step | Helm Chart 目錄或 chart repo |
+| `gitops-sync` Step | GitOps manifest repo（獨立 repo 存放 yaml） |
+| `deploy-argocd-sync` | ArgoCD Application 需已存在於叢集 |
+
+> **Namespace 也需要預先建立**，或在 yaml 中包含 `kind: Namespace`。
+>
+> 可直接使用 `examples/java-demo/` 作為測試起點。
+
+### 推送範例應用
+
+```bash
+cp -r examples/java-demo /tmp/java-demo
+cd /tmp/java-demo
+git init
+git remote add origin http://localhost:8929/root/java-demo.git
+git add .
+git commit -m "init"
+git push -u origin main
+```
+
+> 先在 GitLab 建立空白 repo：http://localhost:8929/projects/new
+
+---
+
+## 前置條件（通用）
 
 在建立第一條 Pipeline 之前，需要依序完成以下設定。
 
