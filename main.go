@@ -129,7 +129,7 @@ func main() {
 	}
 
 	// 初始化路由
-	r, k8sMgr := router.Setup(db, cfg, staticFS)
+	r, k8sMgr, workers := router.Setup(db, cfg, staticFS)
 
 	// 建立 HTTP 伺服器
 	srv := &http.Server{
@@ -166,6 +166,12 @@ func main() {
 	if err := tracing.Shutdown(ctx); err != nil {
 		logger.Warn("tracing: shutdown error", "error", err)
 	}
+
+	// 關閉背景 Worker（逆啟動順序，確保依賴關係正確釋放）
+	for i := len(workers) - 1; i >= 0; i-- {
+		workers[i].Stop()
+	}
+	logger.Info("背景 Worker 已全部關閉")
 
 	// 關閉 K8s Informer 管理器
 	k8sMgr.Stop()

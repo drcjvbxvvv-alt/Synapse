@@ -23,6 +23,7 @@ type CertExpiryWorker struct {
 	metrics *metrics.WorkerMetrics
 	// notified 記錄已通知的 key（"clusterID-days"），避免同一天重複送出
 	notified map[string]time.Time
+	stopCh   chan struct{}
 }
 
 // NewCertExpiryWorker 建立 CertExpiryWorker。
@@ -30,6 +31,7 @@ func NewCertExpiryWorker(db *gorm.DB) *CertExpiryWorker {
 	return &CertExpiryWorker{
 		db:       db,
 		notified: make(map[string]time.Time),
+		stopCh:   make(chan struct{}),
 	}
 }
 
@@ -47,7 +49,12 @@ func (w *CertExpiryWorker) Start() {
 		if now.After(next) {
 			next = next.Add(24 * time.Hour)
 		}
-		time.Sleep(time.Until(next))
+		// 可中斷的初始等待
+		select {
+		case <-time.After(time.Until(next)):
+		case <-w.stopCh:
+			return
+		}
 
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
@@ -55,10 +62,21 @@ func (w *CertExpiryWorker) Start() {
 		// 啟動後立即掃描一次（補上今天）
 		w.scan()
 
-		for range ticker.C {
-			w.scan()
+		for {
+			select {
+			case <-ticker.C:
+				w.scan()
+			case <-w.stopCh:
+				logger.Info("cert expiry worker stopped")
+				return
+			}
 		}
 	}()
+}
+
+// Stop 停止背景掃描 goroutine。
+func (w *CertExpiryWorker) Stop() {
+	close(w.stopCh)
 }
 
 // scan 掃描所有 CertExpireAt != nil 的叢集，觸發門檻則通知。

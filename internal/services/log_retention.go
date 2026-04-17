@@ -12,8 +12,9 @@ import (
 // LogRetentionWorker 定期清理超過保留期限的操作日誌
 type LogRetentionWorker struct {
 	db        *gorm.DB
-	retention time.Duration  // 保留時長（預設 90 天）
+	retention time.Duration // 保留時長（預設 90 天）
 	metrics   *metrics.WorkerMetrics
+	stopCh    chan struct{}
 }
 
 // SetMetrics attaches Prometheus worker metrics.
@@ -24,7 +25,7 @@ func NewLogRetentionWorker(db *gorm.DB, retention time.Duration) *LogRetentionWo
 	if retention <= 0 {
 		retention = 90 * 24 * time.Hour
 	}
-	return &LogRetentionWorker{db: db, retention: retention}
+	return &LogRetentionWorker{db: db, retention: retention, stopCh: make(chan struct{})}
 }
 
 // Start 啟動後臺清理 Goroutine（每天 00:05 UTC 執行一次）
@@ -36,15 +37,31 @@ func (w *LogRetentionWorker) Start() {
 		if !next.After(now) {
 			next = next.Add(24 * time.Hour)
 		}
-		time.Sleep(time.Until(next))
+		// 可中斷的初始等待
+		select {
+		case <-time.After(time.Until(next)):
+		case <-w.stopCh:
+			return
+		}
 
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 		w.cleanup()
-		for range ticker.C {
-			w.cleanup()
+		for {
+			select {
+			case <-ticker.C:
+				w.cleanup()
+			case <-w.stopCh:
+				logger.Info("log retention worker stopped")
+				return
+			}
 		}
 	}()
+}
+
+// Stop 停止背景清理 goroutine。
+func (w *LogRetentionWorker) Stop() {
+	close(w.stopCh)
 }
 
 func (w *LogRetentionWorker) cleanup() {

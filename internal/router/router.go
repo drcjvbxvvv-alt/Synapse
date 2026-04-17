@@ -31,7 +31,7 @@ import (
 // staticFS 儲存嵌入的前端靜態檔案系統，由 Setup 注入
 var staticFS embed.FS
 
-func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *k8s.ClusterInformerManager) {
+func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *k8s.ClusterInformerManager, []Stoppable) {
 	staticFS = frontendFS
 	r := gin.New()
 
@@ -409,7 +409,20 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 
 	setupStatic(r)
 
-	return r, k8sMgr
+	// Collect all background workers that require graceful shutdown.
+	// main.go will call Stop() on each in reverse order when SIGTERM is received.
+	workers := []Stoppable{
+		eventAlertWorker,
+		costWorker,
+		logRetentionWorker,
+		certExpiryWorker,
+		imageIndexWorker,
+		pipelineWatcher,
+		pipelineDedup,
+		pipelineScheduler,
+	}
+
+	return r, k8sMgr, workers
 }
 
 // buildRateLimiter constructs the appropriate RateLimiter backend based on

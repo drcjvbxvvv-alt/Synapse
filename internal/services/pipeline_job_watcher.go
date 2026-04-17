@@ -117,6 +117,11 @@ func (w *JobWatcher) StopWatchRun(runID uint) {
 	}
 }
 
+// Stop 實作 Stoppable 介面，停止所有追蹤（優雅關閉用）。
+func (w *JobWatcher) Stop() {
+	w.StopAll()
+}
+
 // StopAll 停止所有追蹤。
 func (w *JobWatcher) StopAll() {
 	w.mu.Lock()
