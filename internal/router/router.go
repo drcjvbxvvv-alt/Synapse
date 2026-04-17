@@ -35,10 +35,12 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	staticFS = frontendFS
 	r := gin.New()
 
-	// Declare k8sMgr early so the /readyz closure can capture it by reference.
-	// It is assigned below after the K8s section; by the time any HTTP request
-	// arrives (after Setup returns and the server starts) the value is set.
+	// Declare k8sMgr and pipelineScheduler early so the /readyz closure can
+	// capture them by reference. They are assigned further below; by the time
+	// any HTTP request arrives (after Setup returns and the server starts) both
+	// values are fully initialised.
 	var k8sMgr *k8s.ClusterInformerManager
+	var pipelineScheduler *services.PipelineScheduler
 
 	// ── Distributed tracing (OTel) ─────────────────────────────────────────
 	if _, err := tracing.Setup(context.Background(), cfg.Tracing); err != nil {
@@ -134,6 +136,30 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 				"total":  total,
 				"synced": synced,
 			}
+		}
+
+		// ── Pipeline Scheduler ────────────────────────────────────────────
+		// A dead scheduler loop means no pipeline runs will be dispatched.
+		// Mark the pod degraded (503) so the orchestrator can restart it.
+		if pipelineScheduler != nil {
+			isAlive := pipelineScheduler.IsAlive()
+			qCtx, qCancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+			queueDepth, qErr := pipelineScheduler.QueueDepth(qCtx)
+			qCancel()
+			psCheck := gin.H{
+				"alive":       isAlive,
+				"queue_depth": queueDepth,
+			}
+			if qErr != nil {
+				psCheck["queue_depth_error"] = qErr.Error()
+			}
+			if !isAlive {
+				psCheck["status"] = "error"
+				overallOK = false
+			} else {
+				psCheck["status"] = "ok"
+			}
+			checks["pipeline_scheduler"] = psCheck
 		}
 
 		status := "ok"
@@ -318,7 +344,7 @@ func Setup(db *gorm.DB, cfg *config.Config, frontendFS embed.FS) (*gin.Engine, *
 	pipelineWatcher.SetRolloutService(services.NewRolloutService())
 	pipelineDedup := services.NewNotifyDedup(5 * time.Minute)
 	pipelineNotifier := services.NewPipelineNotifier(db, pipelineDedup)
-	pipelineScheduler := services.NewPipelineScheduler(
+	pipelineScheduler = services.NewPipelineScheduler(
 		db, pipelineJobBuilder, pipelineSecretSvc, k8sMgr,
 		pipelineWatcher, pipelineNotifier, services.DefaultSchedulerConfig(),
 	)

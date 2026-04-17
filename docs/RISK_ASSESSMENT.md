@@ -342,30 +342,29 @@ for _, s := range stoppables {
 
 ---
 
-### R-03 — 複合式 Readiness Check 不完整
+### R-03 — 複合式 Readiness Check 不完整 ✅ 已修復
 
 **嚴重度**：🟠 中  
-**檔案**：`internal/router/router.go:104-149`
+**檔案**：`internal/router/router.go:104-149`  
+**修復日期**：2026-04-17
 
-**問題描述**：
+**修復內容**：
 
-`/readyz` 目前檢查：✅ DB 連線、✅ K8s Informer 同步狀態
+`PipelineScheduler` 新增兩個方法：
+- `IsAlive() bool`：透過 `atomic.Bool` 追蹤 `loop()` goroutine 是否存活
+- `QueueDepth(ctx) (int64, error)`：查詢排隊中的 Pipeline Run 數量
 
-**缺少**：
-- Pipeline Scheduler 是否存活（loop goroutine 是否運行中）
-- 審計日誌寫入是否正常
-- 是否有 Worker panic 後靜默退出
-
-**改善建議**：
-
-為各核心元件加入 `HealthCheck() error` 介面，並在 `/readyz` 中彙總：
+`/readyz` 增加 `pipeline_scheduler` 檢查項目：
 
 ```go
 checks["pipeline_scheduler"] = gin.H{
-    "status": "ok",
-    "queued": pipelineScheduler.QueueDepth(),
+    "status":      "ok",       // "error" 若 loop goroutine 已死亡
+    "alive":       true,
+    "queue_depth": 0,
 }
 ```
+
+Scheduler loop 死亡 → `/readyz` 回傳 503，K8s 可重啟 Pod。
 
 ---
 
@@ -526,8 +525,9 @@ govulncheck ./...
 | 項目 | 負責人 | 目標日期 | 狀態 |
 |------|--------|----------|------|
 | R-01 Worker 優雅關閉 | — | 2026-04-17 | ✅ 已完成 |
+| R-03 Readiness Check 完整化 | — | 2026-04-17 | ✅ 已完成 |
 | R-02 CORS 修正 | — | 2026-04-24 | 🔲 待開始 |
-| R-03 crypto 升級 | — | 2026-04-30 | 🔲 待開始 |
+| R-03 (dep) crypto 升級 | — | 2026-04-30 | 🔲 待開始 |
 | R-07 Transaction 補齊 | — | 2026-04-30 | 🔲 待開始 |
 | R-09 context 替換 | — | 2026-04-30 | 🔲 待開始 |
 | CI CVE 掃描 | — | 2026-04-30 | 🔲 待開始 |

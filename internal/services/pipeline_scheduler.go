@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gorm.io/gorm"
@@ -60,8 +61,9 @@ type PipelineScheduler struct {
 	notifier      *PipelineNotifier
 	cfg           SchedulerConfig
 
-	stopCh chan struct{}
-	once   sync.Once
+	stopCh    chan struct{}
+	once      sync.Once
+	loopAlive atomic.Bool
 }
 
 // SetRegistryService 設定 Registry 服務（用於 push-image 自動注入認證）。
@@ -93,6 +95,7 @@ func NewPipelineScheduler(
 
 // Start 啟動排程迴圈（background goroutine）。
 func (s *PipelineScheduler) Start() {
+	s.loopAlive.Store(true)
 	go s.loop()
 	logger.Info("pipeline scheduler started",
 		"tick_interval", s.cfg.TickInterval,
@@ -279,7 +282,28 @@ func (s *PipelineScheduler) CancelRun(ctx context.Context, runID uint) error {
 // Scheduler Loop
 // ---------------------------------------------------------------------------
 
+// IsAlive reports whether the scheduler loop goroutine is still running.
+// A false return after Start() indicates the goroutine exited unexpectedly (e.g. panic+recover).
+func (s *PipelineScheduler) IsAlive() bool {
+	return s.loopAlive.Load()
+}
+
+// QueueDepth returns the number of pipeline runs currently in the queued state.
+func (s *PipelineScheduler) QueueDepth(ctx context.Context) (int64, error) {
+	if s.db == nil {
+		return 0, nil
+	}
+	var count int64
+	if err := s.db.WithContext(ctx).Model(&models.PipelineRun{}).
+		Where("status = ?", models.PipelineRunStatusQueued).
+		Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("queue depth: %w", err)
+	}
+	return count, nil
+}
+
 func (s *PipelineScheduler) loop() {
+	defer s.loopAlive.Store(false)
 	ticker := time.NewTicker(s.cfg.TickInterval)
 	defer ticker.Stop()
 
