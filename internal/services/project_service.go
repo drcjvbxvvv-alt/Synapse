@@ -30,6 +30,15 @@ func NewProjectService(db *gorm.DB) *ProjectService {
 
 // ─── Read ──────────────────────────────────────────────────────────────────
 
+// ListAllProjects 列出所有 Projects（跨 Provider）。
+func (s *ProjectService) ListAllProjects(ctx context.Context) ([]models.Project, error) {
+	var projects []models.Project
+	if err := s.db.WithContext(ctx).Order("name ASC").Find(&projects).Error; err != nil {
+		return nil, fmt.Errorf("list all projects: %w", err)
+	}
+	return projects, nil
+}
+
 // ListProjects 列出某 Git Provider 下的所有 Projects。
 func (s *ProjectService) ListProjects(ctx context.Context, providerID uint) ([]models.Project, error) {
 	var projects []models.Project

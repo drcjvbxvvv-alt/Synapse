@@ -49,6 +49,17 @@ type UpdateProjectRequest struct {
 
 // ─── Handlers ──────────────────────────────────────────────────────────────
 
+// ListAll 列出所有 Projects（跨 Provider，供 Pipeline 關聯用）。
+// GET /projects
+func (h *ProjectHandler) ListAll(c *gin.Context) {
+	projects, err := h.projectSvc.ListAllProjects(c.Request.Context())
+	if err != nil {
+		response.InternalError(c, "failed to list projects: "+err.Error())
+		return
+	}
+	response.List(c, projects, int64(len(projects)))
+}
+
 // List 列出某 Git Provider 下的所有 Projects。
 // GET /system/git-providers/:id/projects
 func (h *ProjectHandler) List(c *gin.Context) {

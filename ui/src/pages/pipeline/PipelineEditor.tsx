@@ -29,7 +29,9 @@ import pipelineService, {
   type CreatePipelineRequest,
   type UpdatePipelineRequest,
 } from '../../services/pipelineService';
+import { request } from '../../utils/api';
 import { parseApiError } from '../../utils/api';
+import type { Project } from '../../services/projectService';
 
 const { Text } = Typography;
 
@@ -84,6 +86,18 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const [stepsJson, setStepsJson] = useState(STEPS_TEMPLATE);
   const [saving, setSaving] = useState(false);
 
+  // Load all projects for the selector
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects-all'],
+    queryFn: () => request.get<{ items: Project[]; total: number }>('/projects'),
+    staleTime: 60_000,
+    enabled: open,
+  });
+  const projectOptions = (projectsData?.items ?? []).map((p) => ({
+    label: `${p.name} (${p.repo_url})`,
+    value: p.id,
+  }));
+
   // ─── Reset on open/close ─────────────────────────────────────────────────
 
   useEffect(() => {
@@ -91,6 +105,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
     if (pipeline) {
       form.setFieldsValue({
         description: pipeline.description,
+        project_id: pipeline.project_id ?? undefined,
         concurrency_group: pipeline.concurrency_group,
         concurrency_policy: pipeline.concurrency_policy,
         max_concurrent_runs: pipeline.max_concurrent_runs,
@@ -189,6 +204,22 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
             <Input placeholder={t('pipeline:form.namePlaceholder')} />
           </Form.Item>
         )}
+
+        <Form.Item
+          name="project_id"
+          label={t('pipeline:form.project', { defaultValue: '關聯 Project（Git Repo）' })}
+          tooltip={t('pipeline:form.projectTooltip', { defaultValue: '選擇 Git 倉庫，Pipeline 執行時會自動 clone 原始碼' })}
+        >
+          <Select
+            options={projectOptions}
+            allowClear
+            showSearch
+            placeholder={t('pipeline:form.projectPlaceholder', { defaultValue: '選擇 Project' })}
+            filterOption={(input, opt) =>
+              String(opt?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+          />
+        </Form.Item>
 
         <Form.Item name="description" label={t('pipeline:form.description')}>
           <Input.TextArea

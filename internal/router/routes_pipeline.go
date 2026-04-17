@@ -23,6 +23,10 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, d.pipelineScheduler, d.auditSvc)
 	runHandler.SetEnvironmentService(envSvc)
 
+	// ── Projects (global list for Pipeline association) ────────────────────
+	projectHandler := handlers.NewProjectHandler(d.projectSvc, d.gitProviderSvc)
+	protected.GET("/projects", projectHandler.ListAll)
+
 	// ── Pipelines ──────────────────────────────────────────────────────────
 	pipelines := protected.Group("/pipelines")
 	{

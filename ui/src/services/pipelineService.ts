@@ -9,6 +9,7 @@ export interface Pipeline {
   id: number;
   name: string;
   description: string;
+  project_id?: number | null;
   current_version_id: number | null;
   concurrency_group: string;
   concurrency_policy: 'cancel_previous' | 'queue' | 'reject';
@@ -74,6 +75,7 @@ export interface StepRun {
 export interface CreatePipelineRequest {
   name: string;
   description?: string;
+  project_id?: number;
   concurrency_group?: string;
   concurrency_policy?: 'cancel_previous' | 'queue' | 'reject';
   max_concurrent_runs?: number;
@@ -81,6 +83,7 @@ export interface CreatePipelineRequest {
 
 export interface UpdatePipelineRequest {
   description?: string;
+  project_id?: number;
   concurrency_group?: string;
   concurrency_policy?: 'cancel_previous' | 'queue' | 'reject';
   max_concurrent_runs?: number;

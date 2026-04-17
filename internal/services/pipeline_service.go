@@ -43,6 +43,7 @@ func (s *PipelineService) DB() *gorm.DB {
 type CreatePipelineRequest struct {
 	Name              string `json:"name" binding:"required,max=255"`
 	Description       string `json:"description"`
+	ProjectID         *uint  `json:"project_id"`       // 關聯 Project（可選）
 	ConcurrencyGroup  string `json:"concurrency_group"`
 	ConcurrencyPolicy string `json:"concurrency_policy" binding:"omitempty,oneof=cancel_previous queue reject"`
 	MaxConcurrentRuns int    `json:"max_concurrent_runs"`
@@ -51,6 +52,7 @@ type CreatePipelineRequest struct {
 // UpdatePipelineRequest 更新 Pipeline 請求。
 type UpdatePipelineRequest struct {
 	Description       *string `json:"description"`
+	ProjectID         *uint   `json:"project_id"`
 	ConcurrencyGroup  *string `json:"concurrency_group"`
 	ConcurrencyPolicy *string `json:"concurrency_policy"`
 	MaxConcurrentRuns *int    `json:"max_concurrent_runs"`
@@ -81,6 +83,7 @@ func (s *PipelineService) CreatePipeline(ctx context.Context, req *CreatePipelin
 	pipeline := &models.Pipeline{
 		Name:              req.Name,
 		Description:       req.Description,
+		ProjectID:         req.ProjectID,
 		ConcurrencyGroup:  req.ConcurrencyGroup,
 		ConcurrencyPolicy: req.ConcurrencyPolicy,
 		MaxConcurrentRuns: req.MaxConcurrentRuns,
@@ -190,6 +193,9 @@ func (s *PipelineService) UpdatePipeline(ctx context.Context, id uint, req *Upda
 
 	if req.Description != nil {
 		pipeline.Description = *req.Description
+	}
+	if req.ProjectID != nil {
+		pipeline.ProjectID = req.ProjectID
 	}
 	if req.ConcurrencyGroup != nil {
 		pipeline.ConcurrencyGroup = *req.ConcurrencyGroup
