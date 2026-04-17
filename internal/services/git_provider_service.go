@@ -109,18 +109,25 @@ func (s *GitProviderService) UpdateProvider(ctx context.Context, id uint, update
 	return nil
 }
 
-// DeleteProvider 刪除 Git Provider（soft delete）。
+// DeleteProvider 硬刪除 Git Provider（同時刪除關聯的 Projects）。
 func (s *GitProviderService) DeleteProvider(ctx context.Context, id uint) error {
-	result := s.db.WithContext(ctx).Delete(&models.GitProvider{}, id)
-	if result.Error != nil {
-		return fmt.Errorf("delete git provider %d: %w", id, result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("git provider %d not found", id)
-	}
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 先刪除關聯的 Projects（硬刪除）
+		if err := tx.Unscoped().Where("git_provider_id = ?", id).Delete(&models.Project{}).Error; err != nil {
+			return fmt.Errorf("delete projects for provider %d: %w", id, err)
+		}
 
-	logger.Info("git provider deleted", "provider_id", id)
-	return nil
+		result := tx.Unscoped().Delete(&models.GitProvider{}, id)
+		if result.Error != nil {
+			return fmt.Errorf("delete git provider %d: %w", id, result.Error)
+		}
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("git provider %d not found", id)
+		}
+
+		logger.Info("git provider hard deleted", "provider_id", id)
+		return nil
+	})
 }
 
 // RegenerateWebhookToken 重新生成 Git Provider 的 webhook token。
@@ -254,6 +261,8 @@ func (s *GitProviderService) ValidateRepoConnection(ctx context.Context, provide
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
+	logger.Info("validating git repo", "api_url", apiURL, "repo_path", repoPath, "provider", provider.Name)
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("git API request failed: %w", err)
@@ -262,7 +271,7 @@ func (s *GitProviderService) ValidateRepoConnection(ctx context.Context, provide
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		logger.Info("git repo validated", "repo_url", repoURL, "provider", provider.Name)
+		logger.Info("git repo validated OK", "repo_url", repoURL, "provider", provider.Name)
 		return nil
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("access denied: token has no permission to access %q", repoPath)

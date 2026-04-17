@@ -100,10 +100,10 @@ func (s *ProjectService) UpdateProject(ctx context.Context, id uint, updates map
 	return &project, nil
 }
 
-// DeleteProject 軟刪除 Project。
+// DeleteProject 硬刪除 Project。
 func (s *ProjectService) DeleteProject(ctx context.Context, id uint) error {
-	logger.Info("deleting project", "id", id)
-	if err := s.db.WithContext(ctx).Delete(&models.Project{}, id).Error; err != nil {
+	logger.Info("deleting project (hard)", "id", id)
+	if err := s.db.WithContext(ctx).Unscoped().Delete(&models.Project{}, id).Error; err != nil {
 		return fmt.Errorf("delete project %d: %w", id, err)
 	}
 	return nil
