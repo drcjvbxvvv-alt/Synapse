@@ -52,12 +52,18 @@ func (s *PipelineScheduler) executeStepWithRetry(
 
 		imagePullSecretName := s.resolveImagePullSecret(ctx, run, sr)
 
+		// Resolve git repo info from Pipeline → Project → GitProvider
+		gitRepoURL, gitBranch, gitToken := s.resolveGitInfo(ctx, run.PipelineID)
+
 		input := &BuildJobInput{
 			Run:                 run,
 			StepRun:             sr,
 			Namespace:           run.Namespace,
 			Secrets:             secrets,
 			ImagePullSecretName: imagePullSecretName,
+			GitRepoURL:          gitRepoURL,
+			GitBranch:           gitBranch,
+			GitToken:            gitToken,
 		}
 
 		submitErr := s.jobBuilder.SubmitJob(ctx, s.k8sProvider.GetK8sClientByID(run.ClusterID), input)

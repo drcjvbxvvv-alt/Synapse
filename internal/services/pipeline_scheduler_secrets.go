@@ -207,6 +207,33 @@ func (s *PipelineScheduler) resolveImagePullSecret(ctx context.Context, run *mod
 	return ""
 }
 
+// resolveGitInfo 從 Pipeline → Project → GitProvider 解析 git clone 所需的資訊。
+// 回傳 (repoURL, branch, token)。任何步驟失敗回傳空字串（不阻塞 Pipeline 執行）。
+func (s *PipelineScheduler) resolveGitInfo(ctx context.Context, pipelineID uint) (string, string, string) {
+	var pipeline models.Pipeline
+	if err := s.db.WithContext(ctx).First(&pipeline, pipelineID).Error; err != nil || pipeline.ProjectID == nil {
+		return "", "", ""
+	}
+
+	var project models.Project
+	if err := s.db.WithContext(ctx).First(&project, *pipeline.ProjectID).Error; err != nil {
+		return "", "", ""
+	}
+
+	var provider models.GitProvider
+	if err := s.db.WithContext(ctx).First(&provider, project.GitProviderID).Error; err != nil {
+		return "", "", ""
+	}
+
+	token := provider.AccessTokenEnc // GORM AfterFind hook decrypts
+	logger.Debug("resolved git info for pipeline",
+		"pipeline_id", pipelineID,
+		"repo_url", project.RepoURL,
+		"branch", project.DefaultBranch,
+	)
+	return project.RepoURL, project.DefaultBranch, token
+}
+
 // extractHost 從 URL 提取 host（去除 scheme 和 path）。
 func extractHost(rawURL string) string {
 	host := rawURL

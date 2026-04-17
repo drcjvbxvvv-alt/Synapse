@@ -78,6 +78,11 @@ type BuildJobInput struct {
 	Secrets              map[string]string // 已解析的 secret key→value
 	SecretName           string            // K8s Secret 名稱（由 EnsureRunSecret 建立），用 envFrom 掛載
 	ImagePullSecretName  string            // imagePullSecret 名稱（可選，私有 registry 拉取 step image 用）
+
+	// Git clone（由 scheduler 從 Pipeline → Project → GitProvider 解析）
+	GitRepoURL   string // e.g. "http://localhost:8929/root/my-repo"
+	GitBranch    string // e.g. "main"
+	GitToken     string // Git Provider access token（明文，用於 clone 認證）
 }
 
 // BuildJob 將 StepRun 轉換為 K8s Job。
@@ -186,6 +191,36 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 	// TTL: auto-cleanup completed Jobs (10 min)
 	ttlAfterFinished := int32(600)
 
+	// Init container: git clone (if Pipeline has a Project with repo URL)
+	var initContainers []corev1.Container
+	if input.GitRepoURL != "" {
+		branch := input.GitBranch
+		if branch == "" {
+			branch = "main"
+		}
+		// Build clone URL with embedded token for auth
+		cloneURL := input.GitRepoURL
+		if input.GitToken != "" {
+			cloneURL = injectGitToken(input.GitRepoURL, input.GitToken)
+		}
+		cloneScript := fmt.Sprintf(
+			`git clone --depth 1 --single-branch --branch %s %s /workspace && echo "--- git clone done ---"`,
+			branch, cloneURL,
+		)
+		initContainers = append(initContainers, corev1.Container{
+			Name:    "git-clone",
+			Image:   "alpine/git:2.45.2",
+			Command: []string{"/bin/sh", "-c", cloneScript},
+			VolumeMounts: []corev1.VolumeMount{
+				{Name: "workspace", MountPath: "/workspace"},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+				ReadOnlyRootFilesystem:   &readOnlyRootFS,
+			},
+		})
+	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        jobName,
@@ -206,6 +241,7 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 					AutomountServiceAccountToken:     &automount,
 					ServiceAccountName:               saName,
 					NodeSelector:                     nodeSelector,
+					InitContainers:                   initContainers,
 					ImagePullSecrets:                 b.buildImagePullSecrets(input),
 					TerminationGracePeriodSeconds:    &terminationGracePeriod,
 					SecurityContext: &corev1.PodSecurityContext{
@@ -568,6 +604,8 @@ func (b *JobBuilder) isDeployStepType(stepType string) bool {
 func base64Encode(s string) string {
 	return base64.StdEncoding.EncodeToString([]byte(s))
 }
+
+// injectGitToken is defined in gitops_git_cache.go — reused here for git clone init container.
 
 func sanitizeK8sName(name string) string {
 	name = strings.ToLower(name)
