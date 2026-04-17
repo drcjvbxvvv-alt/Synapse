@@ -78,9 +78,20 @@ type BuildImageConfig struct {
 
 // DeployConfig deploy Step 的類型特定設定。
 type DeployConfig struct {
-	Manifest  string `json:"manifest"`  // YAML 檔案路徑（必填）
-	Namespace string `json:"namespace"` // 部署目標 namespace
-	DryRun    bool   `json:"dry_run"`   // 是否 dry-run
+	Manifest  string   `json:"manifest"`            // 單一 YAML 檔案路徑（向下相容）
+	Manifests []string `json:"manifests,omitempty"`  // 多個 YAML 檔案路徑
+	Namespace string   `json:"namespace"`            // 部署目標 namespace
+	DryRun    bool     `json:"dry_run"`              // 是否 dry-run
+}
+
+// GetManifests 回傳所有 manifest 路徑（合併 manifest + manifests）。
+func (c *DeployConfig) GetManifests() []string {
+	var result []string
+	if c.Manifest != "" {
+		result = append(result, c.Manifest)
+	}
+	result = append(result, c.Manifests...)
+	return result
 }
 
 // TrivyScanConfig trivy-scan Step 的類型特定設定。
@@ -281,8 +292,8 @@ func validateDeployStep(step *StepDef) error {
 	if err := parseJSON(step.Config, &cfg); err != nil {
 		return fmt.Errorf("step %q (deploy): invalid config: %w", step.Name, err)
 	}
-	if cfg.Manifest == "" && step.Command == "" {
-		return fmt.Errorf("step %q (deploy): config.manifest or command is required", step.Name)
+	if len(cfg.GetManifests()) == 0 && step.Command == "" {
+		return fmt.Errorf("step %q (deploy): config.manifest/manifests or command is required", step.Name)
 	}
 	return nil
 }

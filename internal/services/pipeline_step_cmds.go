@@ -88,8 +88,16 @@ func generateDeployCommand(step *StepDef) ([]string, []string) {
 		return []string{"/bin/sh", "-c", "kubectl apply -f /workspace"}, nil
 	}
 
-	manifest := defaultString(cfg.Manifest, "/workspace/deployment.yaml")
-	cmd := "kubectl apply -f " + manifest
+	manifests := cfg.GetManifests()
+	if len(manifests) == 0 {
+		manifests = []string{"/workspace/deployment.yaml"}
+	}
+
+	// Build: kubectl apply -f f1 -f f2 ...
+	cmd := "kubectl apply"
+	for _, m := range manifests {
+		cmd += " -f " + m
+	}
 
 	if cfg.Namespace != "" {
 		cmd += " -n " + cfg.Namespace
