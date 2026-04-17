@@ -116,7 +116,7 @@ func (h *MultiClusterHandler) TriggerSync(c *gin.Context) {
 	now := time.Now()
 	policy.LastSyncAt = &now
 
-	status, message, details := h.executeSync(policy)
+	status, message, details := h.executeSync(ctx, policy)
 	finished := time.Now()
 	hist := models.SyncHistory{
 		PolicyID:    policy.ID,

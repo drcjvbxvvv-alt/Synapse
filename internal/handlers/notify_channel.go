@@ -140,7 +140,7 @@ func (h *NotifyChannelHandler) TestNotifyChannel(c *gin.Context) {
 		response.InternalError(c, err.Error()); return
 	}
 
-	if err := sendTestNotification(channel); err != nil {
+	if err := sendTestNotification(c.Request.Context(), channel); err != nil {
 		logger.Error("測試通知失敗", "channel", channel.Name, "error", err)
 		response.BadRequest(c, "測試通知傳送失敗: "+err.Error())
 		return
@@ -149,7 +149,7 @@ func (h *NotifyChannelHandler) TestNotifyChannel(c *gin.Context) {
 }
 
 // sendTestNotification 傳送測試通知
-func sendTestNotification(ch *models.NotifyChannel) error {
+func sendTestNotification(ctx context.Context, ch *models.NotifyChannel) error {
 	var payload interface{}
 
 	testMsg := fmt.Sprintf("[Synapse] 通知渠道「%s」測試訊息，傳送時間：%s", ch.Name, time.Now().Format("2006-01-02 15:04:05"))
@@ -181,10 +181,10 @@ func sendTestNotification(ch *models.NotifyChannel) error {
 
 	data, _ := json.Marshal(payload)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", ch.WebhookURL, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(timeoutCtx, "POST", ch.WebhookURL, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}

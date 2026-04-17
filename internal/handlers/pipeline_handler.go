@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -44,7 +45,11 @@ func (h *PipelineHandler) logPipelineAudit(c *gin.Context, action, resourceType,
 		UserAgent:    c.Request.UserAgent(),
 	}
 	go func() {
-		if err := h.auditSvc.LogAudit(context.Background(), req); err != nil {
+		// Use an independent context: request context is cancelled when the handler
+		// returns (before this goroutine runs), so we bound it with its own timeout.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := h.auditSvc.LogAudit(ctx, req); err != nil {
 			logger.Warn("pipeline audit log failed", "error", err, "action", action)
 		}
 	}()

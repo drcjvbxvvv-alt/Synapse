@@ -57,7 +57,7 @@ func (h *PodTerminalHandler) tryExecShell(client *kubernetes.Clientset, k8sConfi
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(session.Context, 3*time.Second)
 	defer cancel()
 
 	var buf bytes.Buffer

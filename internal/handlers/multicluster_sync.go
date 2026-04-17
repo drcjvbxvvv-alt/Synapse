@@ -127,7 +127,7 @@ func (h *MultiClusterHandler) migrateWorkload(ctx context.Context, src, dst kube
 }
 
 // executeSync 執行配置同步策略，回傳 status / message / details JSON
-func (h *MultiClusterHandler) executeSync(policy *models.SyncPolicy) (status, message, details string) {
+func (h *MultiClusterHandler) executeSync(ctx context.Context, policy *models.SyncPolicy) (status, message, details string) {
 	var targetIDs []uint
 	if err := json.Unmarshal([]byte(policy.TargetClusters), &targetIDs); err != nil {
 		return "failed", "解析目標叢集列表失敗: " + err.Error(), ""
@@ -140,7 +140,6 @@ func (h *MultiClusterHandler) executeSync(policy *models.SyncPolicy) (status, me
 		return "failed", "取得來源叢集客戶端失敗: " + err.Error(), ""
 	}
 
-	ctx := context.Background()
 	results := make([]syncDetailItem, 0, len(targetIDs))
 	successCount := 0
 

@@ -145,22 +145,28 @@ func (h *KubectlPodTerminalHandler) HandleKubectlPodTerminal(c *gin.Context) {
 
 	h.sendKubectlPrep(conn, "正在準備 kubectl 終端 Pod，請稍候…")
 
+	// setupCtx bounds the pod creation + readiness wait. It inherits the
+	// request context so server shutdown propagates; the 3-minute ceiling
+	// covers image pulls on slow networks.
+	setupCtx, setupCancel := context.WithTimeout(c.Request.Context(), 3*time.Minute)
+	defer setupCancel()
+
 	beforeCreate := func() {
 		h.sendKubectlPrep(conn, "正在叢集中建立 kubectl 終端 Pod（首次連線可能需要拉取映像，耗時取決於網路）…")
 	}
-	if err := h.ensureKubectlPod(client, podName, userID, serviceAccount, permissionType, beforeCreate); err != nil {
+	if err := h.ensureKubectlPod(setupCtx, client, podName, userID, serviceAccount, permissionType, beforeCreate); err != nil {
 		logger.Error("建立kubectl Pod失敗", "error", err, "podName", podName)
 		h.sendTerminalJSON(conn, "error", fmt.Sprintf("建立 kubectl Pod 失敗: %v", err))
 		return
 	}
 
-	if err := h.waitForPodRunningWithProgress(client, podName, conn); err != nil {
+	if err := h.waitForPodRunningWithProgress(setupCtx, client, podName, conn); err != nil {
 		logger.Error("等待Pod執行失敗", "error", err, "podName", podName)
 		h.sendTerminalJSON(conn, "error", fmt.Sprintf("等待 Pod 就緒失敗: %v", err))
 		return
 	}
 
-	h.updateLastActivity(client, podName)
+	h.updateLastActivity(setupCtx, client, podName)
 
 	h.sessionsMutex.Lock()
 	h.activeSessions[sessionKey]++
@@ -234,8 +240,7 @@ func describeKubectlPodProgress(pod *corev1.Pod) string {
 }
 
 // ensureKubectlPod 確保 kubectl Pod 存在；即將在叢集中新建 Pod 時會呼叫 beforeCreate（用於向前端推送提示）
-func (h *KubectlPodTerminalHandler) ensureKubectlPod(client *kubernetes.Clientset, podName string, userID uint, serviceAccount string, permissionType string, beforeCreate func()) error {
-	ctx := context.Background()
+func (h *KubectlPodTerminalHandler) ensureKubectlPod(ctx context.Context, client *kubernetes.Clientset, podName string, userID uint, serviceAccount string, permissionType string, beforeCreate func()) error {
 
 	// 確保命名空間存在
 	if err := ensureNamespace(ctx, client, kubectlPodNamespace); err != nil {
@@ -314,9 +319,7 @@ func (h *KubectlPodTerminalHandler) ensureKubectlPod(client *kubernetes.Clientse
 }
 
 // waitForPodRunningWithProgress 等待 Pod 進入 Running，並透過 WebSocket 推送與上次不同的進度摘要（含映像拉取、容器 Waiting 原因等）
-func (h *KubectlPodTerminalHandler) waitForPodRunningWithProgress(client *kubernetes.Clientset, podName string, conn *websocket.Conn) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
+func (h *KubectlPodTerminalHandler) waitForPodRunningWithProgress(ctx context.Context, client *kubernetes.Clientset, podName string, conn *websocket.Conn) error {
 
 	lastSent := ""
 	for {
@@ -348,8 +351,7 @@ func (h *KubectlPodTerminalHandler) waitForPodRunningWithProgress(client *kubern
 }
 
 // updateLastActivity 更新 Pod 最後活動時間
-func (h *KubectlPodTerminalHandler) updateLastActivity(client *kubernetes.Clientset, podName string) {
-	ctx := context.Background()
+func (h *KubectlPodTerminalHandler) updateLastActivity(ctx context.Context, client *kubernetes.Clientset, podName string) {
 	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"synapse.io/last-activity":"%s"}}}`,
 		time.Now().Format(time.RFC3339)))
 

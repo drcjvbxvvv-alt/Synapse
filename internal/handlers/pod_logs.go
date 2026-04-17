@@ -181,7 +181,7 @@ func (h *PodHandler) StreamPodLogs(c *gin.Context) {
 	}
 
 	req := k8sClient.GetClientset().CoreV1().Pods(namespace).GetLogs(name, logOptions)
-	logStream, err := req.Stream(context.Background())
+	logStream, err := req.Stream(ctx)
 	if err != nil {
 		_ = conn.WriteJSON(map[string]interface{}{
 			"type":    "error",
