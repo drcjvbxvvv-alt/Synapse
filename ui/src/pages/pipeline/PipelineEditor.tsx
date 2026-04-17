@@ -35,33 +35,19 @@ const { Text } = Typography;
 
 // ─── YAML Template ──────────────────────────────────────────────────────────
 
-const PIPELINE_YAML_TEMPLATE = `# Pipeline Definition
-# Define steps, triggers and runtime settings for this pipeline.
-
-steps:
-  - name: checkout
-    type: git_clone
-    ref: main
-
-  - name: build
-    type: docker_build
-    image: docker:24
-    commands:
-      - docker build -t app:latest .
-
-triggers:
-  - type: manual
-
-env: {}
-
-runtime:
-  resources:
-    cpu: "500m"
-    memory: "512Mi"
-
-workspace:
-  path: /workspace
-`;
+const PIPELINE_YAML_TEMPLATE = `[
+  {
+    "name": "build",
+    "type": "build-image",
+    "config": "{\"context\":\".\",\"dockerfile\":\"Dockerfile\",\"destination\":\"localhost:5001/myapp:latest\"}"
+  },
+  {
+    "name": "deploy",
+    "type": "deploy",
+    "depends_on": ["build"],
+    "config": "{\"manifests\":[\"k8s/deployment.yaml\",\"k8s/service.yaml\"],\"namespace\":\"default\"}"
+  }
+]`;
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -265,7 +251,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
       <Spin spinning={versionLoading}>
         <Editor
           height="480px"
-          defaultLanguage="yaml"
+          defaultLanguage="json"
           value={yamlContent}
           onChange={(val) => setYamlContent(val ?? '')}
           options={{
