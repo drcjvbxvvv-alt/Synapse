@@ -4,6 +4,50 @@
 
 ---
 
+## 本地開發環境快速啟動
+
+使用 `deploy/docker-compose-cicd.yaml` 一鍵啟動本地 CI/CD 基礎設施：
+
+```bash
+docker compose -f deploy/docker-compose-cicd.yaml up -d
+```
+
+> GitLab 初始化需要約 2–3 分鐘，請耐心等待。
+
+### 服務清單
+
+| 服務 | URL | 帳號 | 密碼 |
+|------|-----|------|------|
+| GitLab | http://localhost:8929 | root | Gitlab@2026 |
+| Container Registry | http://localhost:5001 | — | — |
+| ArgoCD | http://localhost:8081 | admin | 見下方 |
+| GitLab SSH | `ssh://localhost:2222` | — | — |
+
+> GitLab 首次啟動約需 3–5 分鐘完成初始化，看到頁面前請耐心等候。
+
+### ArgoCD 初始密碼
+
+```bash
+docker exec argocd argocd admin initial-password 2>/dev/null | head -1
+```
+
+### Push Image 到本地 Registry
+
+```bash
+docker tag myapp:latest localhost:5001/myapp:latest
+docker push localhost:5001/myapp:latest
+```
+
+> **注意**：若 port 已被佔用，修改 `deploy/docker-compose-cicd.yaml` 中對應的 host port。
+
+### 停止環境
+
+```bash
+docker compose -f deploy/docker-compose-cicd.yaml down
+```
+
+---
+
 ## 前置條件
 
 在建立第一條 Pipeline 之前，需要依序完成以下設定。

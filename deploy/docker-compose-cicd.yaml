@@ -8,15 +8,15 @@ services:
     container_name: gitlab
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "8929:80"
+      - "8443:443"
       - "2222:22"
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://gitlab.local'
+        external_url 'http://localhost:8929'
         gitlab_rails['initial_root_password'] = 'Gitlab@2026'
         nginx['listen_port'] = 80
-        registry_external_url 'http://harbor.local'
+        registry_external_url 'http://localhost:5001'
     volumes:
       - gitlab-config:/etc/gitlab
       - gitlab-logs:/var/log/gitlab
@@ -24,49 +24,22 @@ services:
     networks:
       - cicd
 
-  # ─── Harbor (Docker Registry) ─────────────────────────────────────────────
-  harbor:
-    image: goharbor/harbor-core:latest
-    container_name: harbor
+  # ─── Container Registry (Docker Registry v2) ─────────────────────────────
+  # Note: Harbor requires 8+ microservices and cannot be run as a single
+  # container. Use the official Harbor installer for production deployments:
+  # https://github.com/goharbor/harbor/releases
+  # For local CI/CD development, Docker Registry v2 is a simpler alternative.
+  registry:
+    image: registry:2
+    container_name: registry
     restart: always
-    environment:
-      HARBOR_ADMIN_PASSWORD: "Harbor@2026"
-      POSTGRESQL_HOST: harbor-postgres
-      POSTGRESQL_PORT: 5432
-      POSTGRESQL_USERNAME: postgres
-      POSTGRESQL_PASSWORD: "postgres123"
-      POSTGRESQL_DATABASE: registry
-      CORE_SECRET: "Harborsecret123"
-      JOBSERVICE_SECRET: "Harborsecret123"
     ports:
-      - "5000:5000"
-      - "8080:8080"
-    depends_on:
-      - harbor-postgres
-      - harbor-redis
-    volumes:
-      - harbor-data:/data
-    networks:
-      - cicd
-
-  harbor-postgres:
-    image: postgres:13
-    container_name: harbor-postgres
-    restart: always
+      - "5001:5000"
     environment:
-      POSTGRES_PASSWORD: "postgres123"
-      POSTGRES_DB: registry
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+      REGISTRY_HTTP_ADDR: 0.0.0.0:5000
     volumes:
-      - harbor-postgres-data:/var/lib/postgresql/data
-    networks:
-      - cicd
-
-  harbor-redis:
-    image: redis:7-alpine
-    container_name: harbor-redis
-    restart: always
-    volumes:
-      - harbor-redis-data:/data
+      - registry-data:/var/lib/registry
     networks:
       - cicd
 
@@ -77,7 +50,7 @@ services:
     restart: always
     ports:
       - "8081:8080"
-      - "8443:443"
+      - "8444:443"
     environment:
       ARGOCD_SERVER_INSECURE: "true"
       ARGO_WORKFLOWS_CONTROLLER_PARALLELISM: "10"
@@ -113,8 +86,6 @@ volumes:
   gitlab-config:
   gitlab-logs:
   gitlab-data:
-  harbor-data:
-  harbor-postgres-data:
-  harbor-redis-data:
+  registry-data:
   argocd-data:
   gitlab-runner-config:

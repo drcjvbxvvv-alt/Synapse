@@ -134,24 +134,42 @@ CREATE TABLE IF NOT EXISTS terminal_commands (
 );
 CREATE INDEX IF NOT EXISTS idx_terminal_commands_session_id ON terminal_commands (session_id);
 
--- ── audit_logs ───────────────────────────────────────────────────────────────
+-- ── audit_logs (monthly range-partitioned) ───────────────────────────────────
 -- resource_ref is TEXT (not jsonb) — code inserts plain string identifiers.
+-- Partitioned by created_at for efficient pruning and query performance.
+-- EnsureNextMonthPartition() must be called on startup to extend partitions.
+CREATE SEQUENCE IF NOT EXISTS audit_logs_id_seq;
+
 CREATE TABLE IF NOT EXISTS audit_logs (
-  id            bigserial       PRIMARY KEY,
-  user_id       bigint          NOT NULL,
-  action        varchar(100)    NOT NULL,
-  resource_type varchar(50)     NOT NULL,
-  resource_ref  text            DEFAULT NULL,
-  result        varchar(20)     NOT NULL,
-  ip            varchar(45)     NOT NULL DEFAULT '',
-  user_agent    varchar(500)    NOT NULL DEFAULT '',
+  id            bigint       NOT NULL DEFAULT nextval('audit_logs_id_seq'),
+  user_id       bigint       NOT NULL,
+  action        varchar(100) NOT NULL,
+  resource_type varchar(50)  NOT NULL DEFAULT '',
+  resource_ref  text         DEFAULT NULL,
+  result        varchar(10)  DEFAULT NULL,
+  ip            varchar(45)  DEFAULT NULL,
+  user_agent    text,
   details       text,
-  prev_hash     varchar(64)     NOT NULL DEFAULT '',
-  hash          varchar(64)     NOT NULL DEFAULT '',
-  created_at    timestamptz(3)  NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs (user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_hash    ON audit_logs (hash);
+  prev_hash     varchar(64)  NOT NULL DEFAULT '',
+  hash          varchar(64)  NOT NULL DEFAULT '',
+  created_at    timestamptz  NOT NULL DEFAULT now(),
+  PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
+
+ALTER SEQUENCE audit_logs_id_seq OWNED BY audit_logs.id;
+
+CREATE TABLE IF NOT EXISTS audit_logs_2026_03 PARTITION OF audit_logs
+    FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+CREATE TABLE IF NOT EXISTS audit_logs_2026_04 PARTITION OF audit_logs
+    FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+CREATE TABLE IF NOT EXISTS audit_logs_2026_05 PARTITION OF audit_logs
+    FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+CREATE TABLE IF NOT EXISTS audit_logs_2026_06 PARTITION OF audit_logs
+    FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+CREATE TABLE IF NOT EXISTS audit_logs_default  PARTITION OF audit_logs DEFAULT;
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_created ON audit_logs (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_hash         ON audit_logs (hash);
 
 -- ── operation_logs ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS operation_logs (
