@@ -434,19 +434,20 @@ GORM 的 `DeletedAt gorm.DeletedAt` 欄位會自動加上 `WHERE deleted_at IS N
 
 ## 7. 相依套件風險
 
-### R-03 — `golang.org/x/crypto` 版本過舊
+### R-03 — `golang.org/x/crypto` 版本過舊 ✅ 已修復
 
 **嚴重度**：🟠 中  
-**目前版本**：`v0.49.0`  
-**最新版本**：`v0.36.0+`（含多項 TLS/HKDF 修正）
+**修復日期**：2026-04-17
 
-**改善方式**：
+| 套件 | 修復前 | 修復後 |
+|------|--------|--------|
+| golang.org/x/crypto | v0.49.0 | **v0.50.0** |
+| golang.org/x/net | v0.52.0 | **v0.53.0** |
+| golang.org/x/sys | v0.42.0 | **v0.43.0** |
+| golang.org/x/text | v0.35.0 | **v0.36.0** |
+| golang.org/x/term | v0.41.0 | **v0.42.0** |
 
-```bash
-go get golang.org/x/crypto@latest
-go mod tidy
-go test ./...
-```
+> 升級前實際版本 v0.49.0 為最新前一版，風險較原始評估描述為低。一次性升至最新，`go build ./...` 及全套測試零錯誤。
 
 ---
 
@@ -525,7 +526,7 @@ govulncheck ./...
 | R-01 Worker 優雅關閉 | — | 2026-04-17 | ✅ 已完成 |
 | R-03 Readiness Check 完整化 | — | 2026-04-17 | ✅ 已完成 |
 | R-02 CORS 修正 | — | 2026-04-24 | 🔲 待開始 |
-| R-03 (dep) crypto 升級 | — | 2026-04-30 | 🔲 待開始 |
+| R-03 (dep) crypto 升級 | — | 2026-04-17 | ✅ 已完成 (x/crypto v0.50.0) |
 | R-07 Transaction 補齊 | — | 2026-04-17 | ✅ 已完成 |
 | R-09 context 替換 | — | 2026-04-30 | 🔲 待開始 |
 | CI CVE 掃描 | — | 2026-04-30 | 🔲 待開始 |
