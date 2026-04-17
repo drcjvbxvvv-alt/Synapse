@@ -145,6 +145,70 @@ func (s *GitProviderService) RegenerateWebhookToken(ctx context.Context, id uint
 }
 
 // ---------------------------------------------------------------------------
+// TestConnection — 驗證 Git Provider 的 Base URL + Token 可連線
+// ---------------------------------------------------------------------------
+
+// TestConnection 透過 Git Provider API 驗證 Base URL 和 Access Token 是否有效。
+// 回傳 nil 表示連線成功。
+func (s *GitProviderService) TestConnection(ctx context.Context, providerType, baseURL, accessToken string) error {
+	if baseURL == "" {
+		return fmt.Errorf("base_url is required")
+	}
+	if accessToken == "" {
+		return fmt.Errorf("access_token is required")
+	}
+
+	var apiURL string
+	base := strings.TrimSuffix(baseURL, "/")
+	switch providerType {
+	case models.GitProviderTypeGitLab:
+		apiURL = base + "/api/v4/user"
+	case models.GitProviderTypeGitHub:
+		if base == "https://github.com" {
+			base = "https://api.github.com"
+		}
+		apiURL = base + "/user"
+	case models.GitProviderTypeGitea:
+		apiURL = base + "/api/v1/user"
+	default:
+		return fmt.Errorf("unsupported provider type: %s", providerType)
+	}
+
+	reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+
+	switch providerType {
+	case models.GitProviderTypeGitLab:
+		req.Header.Set("PRIVATE-TOKEN", accessToken)
+	default:
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("cannot reach %s: %w", baseURL, err)
+	}
+	defer func() { _, _ = io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		logger.Info("git provider connection verified", "type", providerType, "base_url", baseURL)
+		return nil
+	case http.StatusUnauthorized:
+		return fmt.Errorf("authentication failed: invalid access token")
+	case http.StatusForbidden:
+		return fmt.Errorf("access denied: token lacks required permissions")
+	default:
+		return fmt.Errorf("unexpected response from %s: HTTP %d", baseURL, resp.StatusCode)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // ValidateRepoConnection — 驗證 Git repo URL 可連線
 // ---------------------------------------------------------------------------
 

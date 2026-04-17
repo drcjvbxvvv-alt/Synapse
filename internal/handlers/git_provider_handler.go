@@ -92,6 +92,12 @@ func (h *GitProviderHandler) Create(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	uid, _ := userID.(uint)
 
+	// Validate connection before saving
+	if err := h.providerSvc.TestConnection(c.Request.Context(), req.Type, req.BaseURL, req.AccessToken); err != nil {
+		response.BadRequest(c, "git provider connection failed: "+err.Error())
+		return
+	}
+
 	provider := &models.GitProvider{
 		Name:             req.Name,
 		Type:             req.Type,
@@ -158,6 +164,27 @@ func (h *GitProviderHandler) Update(c *gin.Context) {
 	if len(updates) == 0 {
 		response.BadRequest(c, "no fields to update")
 		return
+	}
+
+	// If base_url or access_token changed, re-validate connection
+	if req.BaseURL != nil || req.AccessToken != nil {
+		existing, err := h.providerSvc.GetProvider(c.Request.Context(), uint(id))
+		if err != nil {
+			response.NotFound(c, "git provider not found")
+			return
+		}
+		baseURL := existing.BaseURL
+		token := existing.AccessTokenEnc // already decrypted by AfterFind
+		if req.BaseURL != nil {
+			baseURL = *req.BaseURL
+		}
+		if req.AccessToken != nil {
+			token = *req.AccessToken
+		}
+		if err := h.providerSvc.TestConnection(c.Request.Context(), existing.Type, baseURL, token); err != nil {
+			response.BadRequest(c, "git provider connection failed: "+err.Error())
+			return
+		}
 	}
 
 	if err := h.providerSvc.UpdateProvider(c.Request.Context(), uint(id), updates); err != nil {
