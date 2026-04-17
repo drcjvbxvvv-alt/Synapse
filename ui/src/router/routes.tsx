@@ -86,6 +86,7 @@ const ChaosPage               = lazy(() => import('../pages/chaos'));
 const CompliancePage          = lazy(() => import('../pages/compliance'));
 const PipelineRunDemo         = lazy(() => import('../pages/pipeline/PipelineRunDemo'));
 const PipelineList            = lazy(() => import('../pages/pipeline/PipelineList'));
+const PipelineRunList         = lazy(() => import('../pages/pipeline/PipelineRunList'));
 const PipelineRunDetail       = lazy(() => import('../pages/pipeline/PipelineRunDetail'));
 const RolloutList             = lazy(() => import('../pages/rollout/RolloutList'));
 const CICDRolloutDetail       = lazy(() => import('../pages/rollout/RolloutDetail'));
@@ -386,6 +387,7 @@ export function AppRoutes() {
 
         {/* ── Pipelines (top-level, cluster-free) ──────────────────────── */}
         <Route path="pipelines" element={<S><PipelineList /></S>} />
+        <Route path="pipelines/:pipelineId/runs" element={<S><PipelineRunList /></S>} />
         <Route path="pipelines/:pipelineId/runs/:runId" element={<S><PipelineRunDetail /></S>} />
 
         {/* ── Pipelines (legacy cluster-scoped, kept until Sprint 4 R3) ── */}

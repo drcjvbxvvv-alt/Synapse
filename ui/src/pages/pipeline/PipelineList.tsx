@@ -127,21 +127,9 @@ const PipelineList: React.FC = () => {
   }, []);
 
   const navigate = useNavigate();
-  const handleViewRuns = useCallback(async (pipeline: Pipeline) => {
-    try {
-      const runs = await pipelineService.listRuns(pipeline.id);
-      const items = runs.items ?? runs;
-      if (Array.isArray(items) && items.length > 0) {
-        // Navigate to the latest run
-        const latest = items[0];
-        navigate(`/pipelines/${pipeline.id}/runs/${latest.id}`);
-      } else {
-        message.info(t('pipeline:run.noRuns', { defaultValue: '尚無執行紀錄，請先手動觸發' }));
-      }
-    } catch {
-      message.error(t('common:messages.failed'));
-    }
-  }, [navigate, message, t]);
+  const handleViewRuns = useCallback((pipeline: Pipeline) => {
+    navigate(`/pipelines/${pipeline.id}/runs`);
+  }, [navigate]);
 
   const handleEditorClose = useCallback(() => {
     setEditorOpen(false);
