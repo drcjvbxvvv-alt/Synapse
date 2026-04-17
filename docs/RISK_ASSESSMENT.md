@@ -368,16 +368,23 @@ Scheduler loop 死亡 → `/readyz` 回傳 503，K8s 可重啟 Pod。
 
 ---
 
-### R-04 — K8s API 無重試機制
+### R-04 — K8s API 無重試機制 ✅ 已修復
 
 **嚴重度**：🟡 低  
-**檔案**：`internal/services/k8s_client.go`、`pipeline_job_watcher.go`
+**檔案**：`internal/services/k8s_client.go`、`pipeline_job_watcher.go`  
+**修復日期**：2026-04-17
 
-**問題描述**：
+**修復內容**：
 
-K8s API 呼叫（尤其是 Job/Pod 建立）在網路短暫異常時直接回傳錯誤，沒有指數退避重試。`go.mod` 中已有 `cenkalti/backoff` 套件，但未在 K8s 路徑使用。
+新增 `internal/services/k8s_retry.go`，提供：
+- `isRetryableK8sError(err)` — 判斷是否為可重試的暫時性錯誤（ServerTimeout / TooManyRequests / ServiceUnavailable / InternalError / net.Timeout）
+- `k8sRetry[T](ctx, opName, func)` — 使用 `cenkalti/backoff/v5` 指數退避，最多 4 次嘗試（初始 200ms，最大 5s，30s 硬上限）；非可重試錯誤立即回傳（`backoff.Permanent`）
 
-**影響範圍**：Pipeline 執行在叢集 API Server 短暫繁忙時可能意外失敗。
+套用至 `pipeline_job_builder.go` 的四個 K8s 寫入呼叫：
+- `EnsureRunSecret` → `Secrets.Create`
+- `SubmitJob` → `Jobs.Create`
+- `EnsureImagePullSecret` → `Secrets.Create`
+- `SetSecretOwnerRef` → `Secrets.Get` + `Secrets.Update`
 
 ---
 
@@ -532,7 +539,8 @@ govulncheck ./...
 | R-09 context 替換 | — | 2026-04-30 | 🔲 待開始 |
 | CI CVE 掃描 | — | 2026-04-30 | 🔲 待開始 |
 | R-05 Scheduler 分拆 | — | 2026-05-15 | 🔲 待開始 |
-| R-04 k8s 升級 | — | 2026-05-15 | 🔲 待開始 |
+| R-04 K8s API 重試 | — | 2026-04-17 | ✅ 已完成 |
+| R-04 (dep) k8s 版本升級 | — | 2026-05-15 | 🔲 待開始 |
 | R-11 Soft Delete 稽核 | — | 2026-05-15 | 🔲 待開始 |
 
 **下次複查日期**：2026-05-01

@@ -278,9 +278,11 @@ func (b *JobBuilder) SubmitJob(ctx context.Context, k8sClient *K8sClient, input 
 		return fmt.Errorf("build job for step %s: %w", input.StepRun.StepName, err)
 	}
 
-	created, err := k8sClient.GetClientset().BatchV1().
-		Jobs(job.Namespace).
-		Create(ctx, job, metav1.CreateOptions{})
+	created, err := k8sRetry(ctx, "create-pipeline-job", func() (*batchv1.Job, error) {
+		return k8sClient.GetClientset().BatchV1().
+			Jobs(job.Namespace).
+			Create(ctx, job, metav1.CreateOptions{})
+	})
 	if err != nil {
 		return fmt.Errorf("submit k8s job %s: %w", job.Name, err)
 	}
@@ -349,9 +351,11 @@ func (b *JobBuilder) EnsureRunSecret(
 		StringData: stringData,
 	}
 
-	created, err := k8sClient.GetClientset().CoreV1().
-		Secrets(namespace).
-		Create(ctx, k8sSecret, metav1.CreateOptions{})
+	created, err := k8sRetry(ctx, "create-run-secret", func() (*corev1.Secret, error) {
+		return k8sClient.GetClientset().CoreV1().
+			Secrets(namespace).
+			Create(ctx, k8sSecret, metav1.CreateOptions{})
+	})
 	if err != nil {
 		return "", fmt.Errorf("create k8s secret %s: %w", secretName, err)
 	}
@@ -408,9 +412,11 @@ func (b *JobBuilder) EnsureImagePullSecret(
 		},
 	}
 
-	created, err := k8sClient.GetClientset().CoreV1().
-		Secrets(namespace).
-		Create(ctx, k8sSecret, metav1.CreateOptions{})
+	created, err := k8sRetry(ctx, "create-image-pull-secret", func() (*corev1.Secret, error) {
+		return k8sClient.GetClientset().CoreV1().
+			Secrets(namespace).
+			Create(ctx, k8sSecret, metav1.CreateOptions{})
+	})
 	if err != nil {
 		return "", fmt.Errorf("create imagePullSecret %s: %w", secretName, err)
 	}
@@ -435,9 +441,11 @@ func (b *JobBuilder) SetSecretOwnerRef(
 		return nil
 	}
 
-	secret, err := k8sClient.GetClientset().CoreV1().
-		Secrets(namespace).
-		Get(ctx, secretName, metav1.GetOptions{})
+	secret, err := k8sRetry(ctx, "get-secret-for-ownerref", func() (*corev1.Secret, error) {
+		return k8sClient.GetClientset().CoreV1().
+			Secrets(namespace).
+			Get(ctx, secretName, metav1.GetOptions{})
+	})
 	if err != nil {
 		return fmt.Errorf("get secret %s for ownerRef: %w", secretName, err)
 	}
@@ -453,9 +461,11 @@ func (b *JobBuilder) SetSecretOwnerRef(
 		},
 	}
 
-	_, err = k8sClient.GetClientset().CoreV1().
-		Secrets(namespace).
-		Update(ctx, secret, metav1.UpdateOptions{})
+	_, err = k8sRetry(ctx, "update-secret-ownerref", func() (*corev1.Secret, error) {
+		return k8sClient.GetClientset().CoreV1().
+			Secrets(namespace).
+			Update(ctx, secret, metav1.UpdateOptions{})
+	})
 	if err != nil {
 		return fmt.Errorf("set ownerRef on secret %s: %w", secretName, err)
 	}
