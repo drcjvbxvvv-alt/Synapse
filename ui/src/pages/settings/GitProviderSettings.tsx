@@ -44,6 +44,7 @@ import gitProviderService, {
   type CreateGitProviderRequest,
   type UpdateGitProviderRequest,
 } from '../../services/gitProviderService';
+import { parseApiError } from '../../utils/api';
 import EmptyState from '../../components/EmptyState';
 import ProjectManager from './components/ProjectManager';
 
@@ -92,7 +93,7 @@ const GitProviderSettings: React.FC = () => {
       setFormOpen(false);
       queryClient.invalidateQueries({ queryKey: ['git-providers'] });
     },
-    onError: () => message.error(t('cicd:gitProvider.messages.createFailed')),
+    onError: (err) => message.error(parseApiError(err) || t('cicd:gitProvider.messages.createFailed')),
   });
 
   const updateMutation = useMutation({
@@ -103,7 +104,7 @@ const GitProviderSettings: React.FC = () => {
       setFormOpen(false);
       queryClient.invalidateQueries({ queryKey: ['git-providers'] });
     },
-    onError: () => message.error(t('cicd:gitProvider.messages.updateFailed')),
+    onError: (err) => message.error(parseApiError(err) || t('cicd:gitProvider.messages.updateFailed')),
   });
 
   const deleteMutation = useMutation({
