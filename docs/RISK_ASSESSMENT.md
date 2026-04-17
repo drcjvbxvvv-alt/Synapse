@@ -48,7 +48,7 @@ Synapse 是一個多叢集 Kubernetes 管理平台，整體安全控制相對成
 | R-01 | 背景 Worker 無優雅關閉 | 🔴 高 | 高 | **P0** | ✅ 已修復 |
 | R-02 | CORS 萬用字元 + 憑證 | 🟠 中 | 中 | **P1** | 待修 |
 | R-03 | `golang.org/x/crypto` 過舊 | 🟠 中 | 低 | **P1** | 待修 |
-| R-04 | `k8s.io/*` 版本落後 | 🟡 低 | 低 | P2 | 待評估 |
+| R-04 | `k8s.io/*` 版本落後 | 🟡 低 | 低 | P2 | ✅ 已修復 |
 | R-05 | Pipeline Scheduler 過大（1338 行）| 🟠 中 | 高 | **P1** | 架構債 |
 | R-06 | 多個服務檔案超過 600 行 | 🟡 低 | 中 | P2 | 架構債 |
 | R-07 | 多表寫入缺少 Transaction | 🟠 中 | 中 | **P1** | 待修 |
@@ -368,7 +368,7 @@ Scheduler loop 死亡 → `/readyz` 回傳 503，K8s 可重啟 Pod。
 
 ---
 
-### R-04 — K8s API 無重試機制 ✅ 已修復
+### R-04a — K8s API 無重試機制 ✅ 已修復
 
 **嚴重度**：🟡 低  
 **檔案**：`internal/services/k8s_client.go`、`pipeline_job_watcher.go`  
@@ -463,23 +463,27 @@ go test ./...
 
 ---
 
-### R-04 — `k8s.io/*` 版本落後
+### R-04 — `k8s.io/*` 版本落後 ✅ 已修復
 
 **嚴重度**：🟡 低  
-**目前版本**：`k8s.io/api v0.29.3`、`k8s.io/client-go v0.29.3`  
-**最新穩定版**：v0.31.x
+**修復日期**：2026-04-17
 
-**影響**：可能缺少部分 K8s API 新功能（如 Gateway API v1 穩定化），但核心功能無 Breaking Change。
+**版本對比**：
 
-**改善方式**：
+| 套件 | 修復前 | 修復後 | 最新穩定 |
+|------|--------|--------|---------|
+| k8s.io/api | v0.29.3 | **v0.32.13** | v0.35.4 |
+| k8s.io/apimachinery | v0.29.3 | **v0.32.13** | v0.35.4 |
+| k8s.io/client-go | v0.29.3 | **v0.32.13** | v0.35.4 |
+| k8s.io/apiextensions-apiserver | v0.29.3 | **v0.32.13** | v0.35.4 |
+| k8s.io/apiserver | v0.29.3 | **v0.32.13** | v0.35.4 |
+| k8s.io/cli-runtime | v0.29.3 | **v0.32.13** | v0.35.4 |
+| k8s.io/component-base | v0.29.3 | **v0.32.13** | v0.35.4 |
+| k8s.io/kubectl | v0.29.3 | **v0.32.13** | v0.35.4 |
 
-```bash
-go get k8s.io/api@v0.31.0 k8s.io/client-go@v0.31.0 k8s.io/apimachinery@v0.31.0
-go mod tidy
-go test ./...
-```
+**選擇 v0.32.13 理由**：13 個 patch release，對應 Kubernetes 1.32（2024/12 發布），是當前最穩定的 minor 版本。v0.35.x 是最新但僅 4 個 patch；可於下次升級週期評估 v0.33–v0.35。
 
-> ⚠ **注意**：升級 k8s.io 套件可能有 API 相容性問題，需在 staging 環境完整測試。
+**升級結果**：`go build ./...` 零錯誤，`go test ./internal/services/ ./internal/handlers/` 全數通過，零 API 破壞性變更。
 
 ---
 
@@ -540,7 +544,7 @@ govulncheck ./...
 | CI CVE 掃描 | — | 2026-04-30 | 🔲 待開始 |
 | R-05 Scheduler 分拆 | — | 2026-05-15 | 🔲 待開始 |
 | R-04 K8s API 重試 | — | 2026-04-17 | ✅ 已完成 |
-| R-04 (dep) k8s 版本升級 | — | 2026-05-15 | 🔲 待開始 |
+| R-04 (dep) k8s 版本升級 | — | 2026-04-17 | ✅ 已完成 (v0.32.13) |
 | R-11 Soft Delete 稽核 | — | 2026-05-15 | 🔲 待開始 |
 
 **下次複查日期**：2026-05-01
