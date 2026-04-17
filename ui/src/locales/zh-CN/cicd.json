@@ -462,6 +462,7 @@
     "repoUrlGitlabPath": "Repo URL 包含 GitLab 页面路径（/-/tree 等），请使用根目录 URL",
     "repoUrlFilePath": "Repo URL 包含文件/分支路径，请使用根目录 URL",
     "duplicateRepo": "此 Repo URL 已存在于其他 Project",
-    "unexpectedStatus": "远端响应异常（HTTP {{status}}），请确认服务是否正常"
+    "unexpectedStatus": "远端响应异常（HTTP {{status}}），请确认服务是否正常",
+    "duplicateName": "名称已存在，请使用其他名称"
   }
 }

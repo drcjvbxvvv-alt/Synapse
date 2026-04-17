@@ -462,6 +462,7 @@
     "repoUrlGitlabPath": "Repo URL contains GitLab page path (/-/tree etc.), use the repo root URL",
     "repoUrlFilePath": "Repo URL contains file/branch path, use the repo root URL",
     "duplicateRepo": "A project with this repo URL already exists",
-    "unexpectedStatus": "Unexpected response (HTTP {{status}}), please verify the service"
+    "unexpectedStatus": "Unexpected response (HTTP {{status}}), please verify the service",
+    "duplicateName": "Name already exists, please use a different name"
   }
 }

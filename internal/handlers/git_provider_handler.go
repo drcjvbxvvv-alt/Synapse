@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -109,6 +110,10 @@ func (h *GitProviderHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.providerSvc.CreateProvider(c.Request.Context(), provider); err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "UNIQUE constraint") {
+			response.BadRequest(c, "git provider name already exists")
+			return
+		}
 		logger.Error("failed to create git provider", "error", err)
 		response.InternalError(c, "failed to create git provider: "+err.Error())
 		return

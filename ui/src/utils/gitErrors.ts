@@ -41,6 +41,11 @@ export function translateGitError(error: unknown, t: TFunction): string {
     return t('cicd:connectionErrors.repoUrlFilePath');
   }
 
+  // duplicate name
+  if (raw.includes('name already exists')) {
+    return t('cicd:connectionErrors.duplicateName');
+  }
+
   // duplicate repo
   if (raw.includes('already exists')) {
     return t('cicd:connectionErrors.duplicateRepo');
