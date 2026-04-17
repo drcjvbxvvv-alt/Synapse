@@ -207,9 +207,9 @@ const PipelineRunDetail: React.FC = () => {
 
   const rerunMutation = useMutation({
     mutationFn: (fromFailed: boolean) => pipelineService.rerun(pid, rid, fromFailed),
-    onSuccess: (newRun) => {
-      message.success(t('pipeline:run.triggered', { id: newRun.id }));
-      navigate(`/pipelines/${pid}/runs/${newRun.id}`);
+    onSuccess: (data) => {
+      message.success(t('pipeline:run.triggered', { id: data.run_id }));
+      navigate(`/pipelines/${pid}/runs/${data.run_id}`);
     },
     onError: () => message.error(t('pipeline:messages.triggerFailed')),
   });

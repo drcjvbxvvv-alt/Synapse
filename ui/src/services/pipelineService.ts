@@ -163,7 +163,7 @@ const pipelineService = {
     ),
 
   rerun: (pipelineId: number, runId: number, fromFailed = false) =>
-    request.post<PipelineRun>(
+    request.post<{ run_id: number; status: string }>(
       `/pipelines/${pipelineId}/runs/${runId}/rerun`,
       { from_failed: fromFailed }
     ),
