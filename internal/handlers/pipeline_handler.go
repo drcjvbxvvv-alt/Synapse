@@ -254,7 +254,7 @@ func (h *PipelineHandler) ListVersions(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, versions)
+	response.List(c, versions, int64(len(versions)))
 }
 
 // ─── AllowedImages ─────────────────────────────────────────────────────────
