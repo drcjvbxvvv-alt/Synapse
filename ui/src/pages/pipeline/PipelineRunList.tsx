@@ -6,7 +6,7 @@
  *  - 狀態篩選 + 手動取消
  *  - 點擊 Run 進入 DAG 詳情頁
  */
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Table,
@@ -37,6 +37,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import pipelineService, { type PipelineRun } from '../../services/pipelineService';
+import TriggerRunModal from './components/TriggerRunModal';
 
 const { Text } = Typography;
 
@@ -60,6 +61,14 @@ const PipelineRunList: React.FC = () => {
   const { message } = App.useApp();
   const { t } = useTranslation(['pipeline', 'common']);
   const queryClient = useQueryClient();
+
+  const [triggerOpen, setTriggerOpen] = useState(false);
+
+  const { data: pipeline } = useQuery({
+    queryKey: ['pipeline', pid],
+    queryFn: () => pipelineService.get(pid),
+    enabled: pid > 0,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['pipeline-runs', pid],
@@ -103,7 +112,7 @@ const PipelineRunList: React.FC = () => {
       render: (status: string) => <RunStatusTag status={status} />,
     },
     {
-      title: t('pipeline:run.triggerType', { defaultValue: '觸發方式' }),
+      title: t('pipeline:run.triggerTypeLabel'),
       dataIndex: 'trigger_type',
       key: 'trigger_type',
       width: 100,
@@ -166,8 +175,9 @@ const PipelineRunList: React.FC = () => {
     <div style={{ padding: token.paddingLG }}>
       <Flex justify="space-between" align="center" style={{ marginBottom: token.marginMD }}>
         <Breadcrumb
+          style={{ display: 'flex', alignItems: 'center' }}
           items={[
-            { title: <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/pipelines')}>Pipelines</Button> },
+            { title: <Button type="link" icon={<ArrowLeftOutlined />} style={{ padding: 0, height: 'auto' }} onClick={() => navigate('/pipelines')}>Pipelines</Button> },
             { title: `Pipeline #${pid}` },
             { title: t('pipeline:run.history', { defaultValue: '執行紀錄' }) },
           ]}
@@ -175,7 +185,7 @@ const PipelineRunList: React.FC = () => {
         <Button
           type="primary"
           icon={<PlayCircleOutlined />}
-          onClick={() => navigate(`/pipelines`)}
+          onClick={() => setTriggerOpen(true)}
         >
           {t('pipeline:run.trigger', { defaultValue: '手動觸發' })}
         </Button>
@@ -190,6 +200,14 @@ const PipelineRunList: React.FC = () => {
         scroll={{ x: 'max-content' }}
         pagination={{ pageSize: 20, showSizeChanger: true }}
       />
+
+      {pipeline && (
+        <TriggerRunModal
+          open={triggerOpen}
+          onClose={() => setTriggerOpen(false)}
+          pipeline={pipeline}
+        />
+      )}
     </div>
   );
 };

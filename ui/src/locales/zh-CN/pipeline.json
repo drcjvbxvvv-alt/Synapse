@@ -64,6 +64,7 @@
       "cancelled": "已取消",
       "waiting_approval": "待审核"
     },
+    "triggerTypeLabel": "触发方式",
     "triggerType": {
       "manual": "手动触发",
       "webhook": "Webhook",

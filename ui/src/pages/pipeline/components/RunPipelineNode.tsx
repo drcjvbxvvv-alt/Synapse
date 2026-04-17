@@ -55,10 +55,10 @@ function stepTypeIcon(stepType: string): React.ReactNode {
 
 // ─── Duration helper ──────────────────────────────────────────────────────────
 
-function formatDuration(startedAt: string | null, finishedAt: string | null): string | undefined {
+function formatDuration(startedAt: string | null, finishedAt: string | null, now?: number): string | undefined {
   if (!startedAt) return undefined;
   const start = new Date(startedAt).getTime();
-  const end = finishedAt ? new Date(finishedAt).getTime() : Date.now();
+  const end = finishedAt ? new Date(finishedAt).getTime() : (now ?? Date.now());
   const ms = end - start;
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
@@ -72,15 +72,16 @@ function formatDuration(startedAt: string | null, finishedAt: string | null): st
 export interface RunPipelineNodeData extends Record<string, unknown> {
   stepRun: StepRun;
   onClick: (sr: StepRun) => void;
+  now?: number;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const RunPipelineNode: React.FC<{ data: RunPipelineNodeData }> = ({ data }) => {
-  const { stepRun, onClick } = data;
+  const { stepRun, onClick, now } = data;
   const vStatus = toVisualStatus(stepRun.status);
   const style = STATUS_STYLES[vStatus];
-  const elapsed = formatDuration(stepRun.started_at, stepRun.finished_at);
+  const elapsed = formatDuration(stepRun.started_at, stepRun.finished_at, now);
   const isActive = vStatus !== 'idle';
   const isWaitingApproval = stepRun.status === 'waiting_approval';
 

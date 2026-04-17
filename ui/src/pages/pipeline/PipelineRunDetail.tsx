@@ -8,7 +8,7 @@
  *  - 取消 / 重跑操作
  *  - Breadcrumb 導航回 Pipeline 列表
  */
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
@@ -68,6 +68,7 @@ const Y_CENTER = 120;
 function buildRunNodes(
   steps: StepRun[],
   onClickStep: (sr: StepRun) => void,
+  now: number,
 ): Node<RunPipelineNodeData>[] {
   return [...steps]
     .sort((a, b) => a.step_index - b.step_index)
@@ -75,7 +76,7 @@ function buildRunNodes(
       id: String(sr.id),
       type: 'runStep',
       position: { x: 60 + i * X_GAP, y: Y_CENTER },
-      data: { stepRun: sr, onClick: onClickStep },
+      data: { stepRun: sr, onClick: onClickStep, now },
     }));
 }
 
@@ -120,10 +121,10 @@ function RunStatusTag({ status }: { status: PipelineRun['status'] }) {
 
 // ─── Duration helper ──────────────────────────────────────────────────────────
 
-function formatDuration(startedAt: string | null, finishedAt: string | null): string {
+function formatDuration(startedAt: string | null, finishedAt: string | null, now?: number): string {
   if (!startedAt) return '—';
   const start = new Date(startedAt).getTime();
-  const end = finishedAt ? new Date(finishedAt).getTime() : Date.now();
+  const end = finishedAt ? new Date(finishedAt).getTime() : (now ?? Date.now());
   const ms = end - start;
   if (ms < 60_000) return `${(ms / 1000).toFixed(0)}s`;
   const m = Math.floor(ms / 60_000);
@@ -172,6 +173,16 @@ const PipelineRunDetail: React.FC = () => {
 
   const run = data?.run;
   const steps = data?.steps ?? [];
+  const runActive = isActive(run);
+
+  // ─── Live tick (1s) for duration sync ──────────────────────────────────────
+
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!runActive) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [runActive]);
 
   // ─── ReactFlow graph ─────────────────────────────────────────────────────────
 
@@ -183,8 +194,8 @@ const PipelineRunDetail: React.FC = () => {
   // Nodes and edges are server-driven (nodesDraggable=false).
   // Rebuild on every query refresh — no ReactFlow internal state needed.
   const syncedNodes = useMemo(
-    () => buildRunNodes(steps, handleClickStep),
-    [steps, handleClickStep],
+    () => buildRunNodes(steps, handleClickStep, now),
+    [steps, handleClickStep, now],
   );
   const syncedEdges = useMemo(() => buildRunEdges(steps), [steps]);
 
@@ -398,7 +409,7 @@ const PipelineRunDetail: React.FC = () => {
           )}
           <Descriptions.Item label={t('pipeline:runDetail.elapsed')}>
             <Text style={{ fontSize: token.fontSizeSM }}>
-              {formatDuration(run.started_at, run.finished_at)}
+              {formatDuration(run.started_at, run.finished_at, now)}
             </Text>
           </Descriptions.Item>
           {run.rollback_of_run_id && (

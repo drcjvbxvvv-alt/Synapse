@@ -213,6 +213,29 @@ func (w *JobWatcher) pollRunStatus(ctx context.Context, run *models.PipelineRun)
 		// 從 Informer cache 查找 Job
 		job, err := w.findJob(lister, sr)
 		if err != nil {
+			// Job 已從叢集消失（被回收或手動刪除）→ 嘗試 live API 確認
+			k8sClient := w.provider.GetK8sClientByID(currentRun.ClusterID)
+			if k8sClient != nil && sr.JobNamespace != "" {
+				liveCtx, liveCancel := context.WithTimeout(ctx, 5*time.Second)
+				_, liveErr := k8sClient.GetClientset().BatchV1().
+					Jobs(sr.JobNamespace).Get(liveCtx, sr.JobName, metav1.GetOptions{})
+				liveCancel()
+				if liveErr != nil {
+					// Job 確實不存在 → 標記 step 為 failed
+					logger.Warn("job disappeared from cluster, marking step as failed",
+						"job_name", sr.JobName, "step_run_id", sr.ID)
+					sr.Status = models.StepRunStatusFailed
+					now := time.Now()
+					sr.FinishedAt = &now
+					sr.Error = "job not found in cluster (deleted or garbage collected)"
+					if err := w.db.WithContext(ctx).Save(sr).Error; err != nil {
+						logger.Error("failed to save orphaned step run",
+							"step_run_id", sr.ID, "error", err)
+					}
+					anyFailed = true
+					continue
+				}
+			}
 			logger.Warn("job not found in cache, may be pending",
 				"job_name", sr.JobName, "step_run_id", sr.ID)
 			allDone = false
@@ -272,7 +295,7 @@ func (w *JobWatcher) handleCancellation(ctx context.Context, run *models.Pipelin
 	}
 
 	propagation := metav1.DeletePropagationBackground
-	gracePeriod := w.cfg.TerminationGracePeriod
+	var gracePeriod int64 // 0 = immediate termination on cancel
 
 	for i := range stepRuns {
 		sr := &stepRuns[i]
