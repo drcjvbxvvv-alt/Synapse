@@ -7,7 +7,7 @@
     "overview": "概覽",
     "clusters": "叢集管理",
     "nodes": "節點管理",
-    "pods": "Pod 管理",
+    "pods": "容器組",
     "workloads": "工作負載",
     "namespaces": "命名空間",
     "configs": "設定與密鑰",
@@ -52,7 +52,6 @@
     "readonlyNoTerminal": "唯讀權限無法使用終端機",
     "kubectlTerminal": "kubectl 終端機",
     "cannotGetClusterId": "無法取得叢集 ID",
-    "pods": "容器組",
     "autoscaling": "彈性伸縮",
     "certificates": "憑證管理",
     "slos": "SLO 管理",
@@ -313,5 +312,8 @@
       "goBack": "返回上一頁",
       "goHome": "返回首頁"
     }
+  },
+  "validation": {
+    "required": "此欄位為必填"
   }
 }

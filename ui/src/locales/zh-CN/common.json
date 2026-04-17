@@ -312,5 +312,8 @@
       "goBack": "返回上一页",
       "goHome": "返回首页"
     }
+  },
+  "validation": {
+    "required": "此字段为必填"
   }
 }
