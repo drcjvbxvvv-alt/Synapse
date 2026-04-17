@@ -256,7 +256,7 @@ func ValidateStepDef(step *StepDef) error {
 }
 
 func validateBuildImageStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (build-image): config with destination is required", step.Name)
 	}
 	var cfg BuildImageConfig
@@ -270,7 +270,7 @@ func validateBuildImageStep(step *StepDef) error {
 }
 
 func validateDeployStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		// deploy 可以直接用 command 模式（如自訂 kubectl 指令）
 		if step.Command != "" {
 			return nil
@@ -288,7 +288,7 @@ func validateDeployStep(step *StepDef) error {
 }
 
 func validateTrivyScanStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (trivy-scan): config with image is required", step.Name)
 	}
 	var cfg TrivyScanConfig
@@ -302,7 +302,7 @@ func validateTrivyScanStep(step *StepDef) error {
 }
 
 func validatePushImageStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (push-image): config with source and destination is required", step.Name)
 	}
 	var cfg PushImageConfig
@@ -319,7 +319,7 @@ func validatePushImageStep(step *StepDef) error {
 }
 
 func validateHelmDeployStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		if step.Command != "" {
 			return nil
 		}
@@ -339,7 +339,7 @@ func validateHelmDeployStep(step *StepDef) error {
 }
 
 func validateArgoCDSyncStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		if step.Command != "" {
 			return nil
 		}
@@ -356,7 +356,7 @@ func validateArgoCDSyncStep(step *StepDef) error {
 }
 
 func validateNotifyStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (notify): config with url is required", step.Name)
 	}
 	var cfg NotifyConfig
@@ -374,7 +374,7 @@ func validateNotifyStep(step *StepDef) error {
 // ---------------------------------------------------------------------------
 
 func validateBuildJarStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		// 無 config 時使用 Maven 預設值，合法
 		return nil
 	}
@@ -393,7 +393,7 @@ func validateBuildJarStep(step *StepDef) error {
 // ---------------------------------------------------------------------------
 
 func validateDeployRolloutStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (deploy-rollout): config with rollout_name, namespace, image is required", step.Name)
 	}
 	var cfg DeployRolloutConfig
@@ -413,7 +413,7 @@ func validateDeployRolloutStep(step *StepDef) error {
 }
 
 func validateRolloutPromoteStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (rollout-promote): config with rollout_name and namespace is required", step.Name)
 	}
 	var cfg RolloutPromoteConfig
@@ -430,7 +430,7 @@ func validateRolloutPromoteStep(step *StepDef) error {
 }
 
 func validateRolloutAbortStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (rollout-abort): config with rollout_name and namespace is required", step.Name)
 	}
 	var cfg RolloutAbortConfig
@@ -447,7 +447,7 @@ func validateRolloutAbortStep(step *StepDef) error {
 }
 
 func validateRolloutStatusStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (rollout-status): config with rollout_name and namespace is required", step.Name)
 	}
 	var cfg RolloutStatusConfig
@@ -480,7 +480,7 @@ func validateRolloutStatusStep(step *StepDef) error {
 // ---------------------------------------------------------------------------
 
 func validateSmokeTestStep(step *StepDef) error {
-	if step.Config == "" {
+	if len(step.Config) == 0 {
 		return fmt.Errorf("step %q (smoke-test): config with url is required", step.Name)
 	}
 	var cfg SmokeTestConfig
@@ -510,7 +510,7 @@ func ResolveImage(step *StepDef) string {
 	}
 
 	// build-jar: 根據 config 中的 java_version 和 build_tool 選擇 image
-	if step.Type == "build-jar" && step.Config != "" {
+	if step.Type == "build-jar" && len(step.Config) > 0 {
 		var cfg BuildJarConfig
 		if err := parseJSON(step.Config, &cfg); err == nil {
 			javaVer := defaultString(cfg.JavaVersion, "17")
@@ -564,9 +564,18 @@ func defaultString(val, def string) string {
 	return val
 }
 
-func parseJSON(raw string, out interface{}) error {
-	if raw == "" {
+func parseJSON(raw json.RawMessage, out interface{}) error {
+	if len(raw) == 0 {
 		return fmt.Errorf("empty JSON")
 	}
-	return json.Unmarshal([]byte(raw), out)
+	// If the value is a JSON string (e.g. "{\"key\":\"val\"}"), unwrap it first.
+	if raw[0] == '"' {
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return err
+		}
+		return json.Unmarshal([]byte(s), out)
+	}
+	// Otherwise it's a direct JSON object/array — unmarshal as-is.
+	return json.Unmarshal(raw, out)
 }

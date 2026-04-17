@@ -146,7 +146,7 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 		Type:    input.StepRun.StepType,
 		Image:   input.StepRun.Image,
 		Command: input.StepRun.Command,
-		Config:  input.StepRun.ConfigJSON,
+		Config:  json.RawMessage(input.StepRun.ConfigJSON),
 	}
 	command, generatedArgs := GenerateCommand(stepDef)
 	// 合併：GenerateCommand 產生的 args + StepConfig 的 args

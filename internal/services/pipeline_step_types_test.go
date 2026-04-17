@@ -48,7 +48,7 @@ func TestValidateStepDef_BuildImage_Valid(t *testing.T) {
 	step := &StepDef{
 		Name:   "build",
 		Type:   "build-image",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
@@ -65,7 +65,7 @@ func TestValidateStepDef_BuildImage_MissingDestination(t *testing.T) {
 	step := &StepDef{
 		Name:   "build",
 		Type:   "build-image",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	err := ValidateStepDef(step)
 	if err == nil {
@@ -97,7 +97,7 @@ func TestValidateStepDef_Deploy_WithManifest(t *testing.T) {
 	step := &StepDef{
 		Name:   "deploy",
 		Type:   "deploy",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
@@ -221,7 +221,7 @@ func TestGenerateCommand_BuildImage_KanikoArgs(t *testing.T) {
 	step := &StepDef{
 		Name:   "build",
 		Type:   "build-image",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	cmd, args := GenerateCommand(step)
 	if len(cmd) != 1 || cmd[0] != "/kaniko/executor" {
@@ -255,7 +255,7 @@ func TestGenerateCommand_BuildImage_Defaults(t *testing.T) {
 	step := &StepDef{
 		Name:   "build",
 		Type:   "build-image",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	_, args := GenerateCommand(step)
 
@@ -276,7 +276,7 @@ func TestGenerateCommand_BuildImage_UserCommandOverride(t *testing.T) {
 		Name:    "build",
 		Type:    "build-image",
 		Command: "/kaniko/executor --custom-flag",
-		Config:  string(cfgJSON),
+		Config:  cfgJSON,
 	}
 	cmd, _ := GenerateCommand(step)
 	if cmd[2] != "/kaniko/executor --custom-flag" {
@@ -294,7 +294,7 @@ func TestGenerateCommand_Deploy_WithManifest(t *testing.T) {
 	step := &StepDef{
 		Name:   "deploy",
 		Type:   "deploy",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	cmd, _ := GenerateCommand(step)
 	if len(cmd) != 3 {
@@ -318,7 +318,7 @@ func TestGenerateCommand_Deploy_DryRun(t *testing.T) {
 	step := &StepDef{
 		Name:   "deploy",
 		Type:   "deploy",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	cmd, _ := GenerateCommand(step)
 	if !strings.Contains(cmd[2], "--dry-run=server") {
@@ -423,7 +423,7 @@ func TestGetStepTypeInfo_NotExists(t *testing.T) {
 func TestValidateStepDef_TrivyScan_Valid(t *testing.T) {
 	cfg := TrivyScanConfig{Image: "harbor.example.com/app:v1", Severity: "HIGH,CRITICAL"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: string(cfgJSON)}
+	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: cfgJSON}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
 	}
@@ -432,7 +432,7 @@ func TestValidateStepDef_TrivyScan_Valid(t *testing.T) {
 func TestValidateStepDef_TrivyScan_MissingImage(t *testing.T) {
 	cfg := TrivyScanConfig{Severity: "HIGH"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: string(cfgJSON)}
+	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil {
 		t.Error("expected error for missing image")
@@ -457,7 +457,7 @@ func TestGenerateCommand_TrivyScan(t *testing.T) {
 		Format:   "json",
 	}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: string(cfgJSON)}
+	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: cfgJSON}
 	cmd, args := GenerateCommand(step)
 
 	if len(cmd) != 1 || cmd[0] != "trivy" {
@@ -484,7 +484,7 @@ func TestGenerateCommand_TrivyScan(t *testing.T) {
 func TestGenerateCommand_TrivyScan_Defaults(t *testing.T) {
 	cfg := TrivyScanConfig{Image: "myapp:latest"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: string(cfgJSON)}
+	step := &StepDef{Name: "scan", Type: "trivy-scan", Config: cfgJSON}
 	_, args := GenerateCommand(step)
 
 	argsStr := strings.Join(args, " ")
@@ -500,7 +500,7 @@ func TestGenerateCommand_TrivyScan_Defaults(t *testing.T) {
 func TestValidateStepDef_PushImage_Valid(t *testing.T) {
 	cfg := PushImageConfig{Source: "app:build-123", Destination: "harbor.example.com/app:v1"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "push", Type: "push-image", Config: string(cfgJSON)}
+	step := &StepDef{Name: "push", Type: "push-image", Config: cfgJSON}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
 	}
@@ -509,7 +509,7 @@ func TestValidateStepDef_PushImage_Valid(t *testing.T) {
 func TestValidateStepDef_PushImage_MissingSource(t *testing.T) {
 	cfg := PushImageConfig{Destination: "harbor.example.com/app:v1"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "push", Type: "push-image", Config: string(cfgJSON)}
+	step := &StepDef{Name: "push", Type: "push-image", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil || !strings.Contains(err.Error(), "source is required") {
 		t.Errorf("expected source required error, got: %v", err)
@@ -519,7 +519,7 @@ func TestValidateStepDef_PushImage_MissingSource(t *testing.T) {
 func TestValidateStepDef_PushImage_MissingDestination(t *testing.T) {
 	cfg := PushImageConfig{Source: "app:build-123"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "push", Type: "push-image", Config: string(cfgJSON)}
+	step := &StepDef{Name: "push", Type: "push-image", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil || !strings.Contains(err.Error(), "destination is required") {
 		t.Errorf("expected destination required error, got: %v", err)
@@ -529,7 +529,7 @@ func TestValidateStepDef_PushImage_MissingDestination(t *testing.T) {
 func TestGenerateCommand_PushImage(t *testing.T) {
 	cfg := PushImageConfig{Source: "app:build-123", Destination: "harbor.example.com/app:v1"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "push", Type: "push-image", Config: string(cfgJSON)}
+	step := &StepDef{Name: "push", Type: "push-image", Config: cfgJSON}
 	cmd, args := GenerateCommand(step)
 
 	if len(cmd) != 1 || cmd[0] != "crane" {
@@ -547,7 +547,7 @@ func TestGenerateCommand_PushImage(t *testing.T) {
 func TestValidateStepDef_DeployHelm_Valid(t *testing.T) {
 	cfg := HelmDeployConfig{Release: "myapp", Chart: "bitnami/nginx", Namespace: "staging"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: cfgJSON}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
 	}
@@ -556,7 +556,7 @@ func TestValidateStepDef_DeployHelm_Valid(t *testing.T) {
 func TestValidateStepDef_DeployHelm_MissingRelease(t *testing.T) {
 	cfg := HelmDeployConfig{Chart: "bitnami/nginx"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil || !strings.Contains(err.Error(), "release is required") {
 		t.Errorf("expected release required error, got: %v", err)
@@ -566,7 +566,7 @@ func TestValidateStepDef_DeployHelm_MissingRelease(t *testing.T) {
 func TestValidateStepDef_DeployHelm_MissingChart(t *testing.T) {
 	cfg := HelmDeployConfig{Release: "myapp"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil || !strings.Contains(err.Error(), "chart is required") {
 		t.Errorf("expected chart required error, got: %v", err)
@@ -592,7 +592,7 @@ func TestGenerateCommand_DeployHelm(t *testing.T) {
 		SetValues: map[string]string{"image.tag": "v1.2.3"},
 	}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 
 	if len(cmd) != 3 || cmd[0] != "/bin/sh" {
@@ -625,7 +625,7 @@ func TestGenerateCommand_DeployHelm(t *testing.T) {
 func TestGenerateCommand_DeployHelm_DryRun(t *testing.T) {
 	cfg := HelmDeployConfig{Release: "myapp", Chart: "./chart", DryRun: true}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: string(cfgJSON)}
+	step := &StepDef{Name: "helm", Type: "deploy-helm", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 	if !strings.Contains(cmd[2], "--dry-run") {
 		t.Errorf("expected --dry-run, got: %s", cmd[2])
@@ -639,7 +639,7 @@ func TestGenerateCommand_DeployHelm_DryRun(t *testing.T) {
 func TestValidateStepDef_ArgoCDSync_Valid(t *testing.T) {
 	cfg := ArgoCDSyncConfig{AppName: "my-app", Server: "argocd.example.com"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: string(cfgJSON)}
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: cfgJSON}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
 	}
@@ -648,7 +648,7 @@ func TestValidateStepDef_ArgoCDSync_Valid(t *testing.T) {
 func TestValidateStepDef_ArgoCDSync_MissingAppName(t *testing.T) {
 	cfg := ArgoCDSyncConfig{Server: "argocd.example.com"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: string(cfgJSON)}
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil || !strings.Contains(err.Error(), "app_name is required") {
 		t.Errorf("expected app_name required error, got: %v", err)
@@ -671,7 +671,7 @@ func TestGenerateCommand_ArgoCDSync(t *testing.T) {
 		Insecure: true,
 	}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: string(cfgJSON)}
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: cfgJSON}
 	cmd, args := GenerateCommand(step)
 
 	if len(cmd) != 1 || cmd[0] != "argocd" {
@@ -701,7 +701,7 @@ func TestGenerateCommand_ArgoCDSync(t *testing.T) {
 func TestGenerateCommand_ArgoCDSync_DryRun(t *testing.T) {
 	cfg := ArgoCDSyncConfig{AppName: "my-app", DryRun: true}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: string(cfgJSON)}
+	step := &StepDef{Name: "sync", Type: "deploy-argocd-sync", Config: cfgJSON}
 	_, args := GenerateCommand(step)
 	argsStr := strings.Join(args, " ")
 	if !strings.Contains(argsStr, "--dry-run") {
@@ -716,7 +716,7 @@ func TestGenerateCommand_ArgoCDSync_DryRun(t *testing.T) {
 func TestValidateStepDef_Notify_Valid(t *testing.T) {
 	cfg := NotifyConfig{URL: "https://hooks.slack.com/services/xxx"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "notify", Type: "notify", Config: string(cfgJSON)}
+	step := &StepDef{Name: "notify", Type: "notify", Config: cfgJSON}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
 	}
@@ -725,7 +725,7 @@ func TestValidateStepDef_Notify_Valid(t *testing.T) {
 func TestValidateStepDef_Notify_MissingURL(t *testing.T) {
 	cfg := NotifyConfig{Method: "POST"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "notify", Type: "notify", Config: string(cfgJSON)}
+	step := &StepDef{Name: "notify", Type: "notify", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil || !strings.Contains(err.Error(), "url is required") {
 		t.Errorf("expected url required error, got: %v", err)
@@ -746,7 +746,7 @@ func TestGenerateCommand_Notify(t *testing.T) {
 		Body:    `{"text":"Deploy done"}`,
 	}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "notify", Type: "notify", Config: string(cfgJSON)}
+	step := &StepDef{Name: "notify", Type: "notify", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 
 	if len(cmd) != 3 || cmd[0] != "/bin/sh" {
@@ -770,7 +770,7 @@ func TestGenerateCommand_Notify(t *testing.T) {
 func TestGenerateCommand_Notify_DefaultBody(t *testing.T) {
 	cfg := NotifyConfig{URL: "https://example.com/webhook"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "notify", Type: "notify", Config: string(cfgJSON)}
+	step := &StepDef{Name: "notify", Type: "notify", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 	if !strings.Contains(cmd[2], "Pipeline step completed") {
 		t.Errorf("expected default body, got: %s", cmd[2])
@@ -829,7 +829,7 @@ func TestValidateDeployRolloutStep_Valid(t *testing.T) {
 	cfg, _ := json.Marshal(DeployRolloutConfig{
 		RolloutName: "backend", Namespace: "prod", Image: "app:v2",
 	})
-	step := &StepDef{Name: "canary", Type: "deploy-rollout", Config: string(cfg)}
+	step := &StepDef{Name: "canary", Type: "deploy-rollout", Config: cfg}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -847,7 +847,7 @@ func TestValidateDeployRolloutStep_MissingFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg, _ := json.Marshal(tt.cfg)
-			step := &StepDef{Name: "s", Type: "deploy-rollout", Config: string(cfg)}
+			step := &StepDef{Name: "s", Type: "deploy-rollout", Config: cfg}
 			if err := ValidateStepDef(step); err == nil {
 				t.Error("expected validation error")
 			}
@@ -864,7 +864,7 @@ func TestValidateDeployRolloutStep_NoConfig(t *testing.T) {
 
 func TestValidateRolloutPromoteStep_Valid(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutPromoteConfig{RolloutName: "backend", Namespace: "prod"})
-	step := &StepDef{Name: "promote", Type: "rollout-promote", Config: string(cfg)}
+	step := &StepDef{Name: "promote", Type: "rollout-promote", Config: cfg}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -872,7 +872,7 @@ func TestValidateRolloutPromoteStep_Valid(t *testing.T) {
 
 func TestValidateRolloutPromoteStep_MissingFields(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutPromoteConfig{Namespace: "prod"})
-	step := &StepDef{Name: "s", Type: "rollout-promote", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-promote", Config: cfg}
 	if err := ValidateStepDef(step); err == nil {
 		t.Error("expected error for missing rollout_name")
 	}
@@ -880,7 +880,7 @@ func TestValidateRolloutPromoteStep_MissingFields(t *testing.T) {
 
 func TestValidateRolloutAbortStep_Valid(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutAbortConfig{RolloutName: "backend", Namespace: "prod"})
-	step := &StepDef{Name: "abort", Type: "rollout-abort", Config: string(cfg)}
+	step := &StepDef{Name: "abort", Type: "rollout-abort", Config: cfg}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -888,7 +888,7 @@ func TestValidateRolloutAbortStep_Valid(t *testing.T) {
 
 func TestValidateRolloutAbortStep_MissingFields(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutAbortConfig{RolloutName: "backend"})
-	step := &StepDef{Name: "s", Type: "rollout-abort", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-abort", Config: cfg}
 	if err := ValidateStepDef(step); err == nil {
 		t.Error("expected error for missing namespace")
 	}
@@ -899,7 +899,7 @@ func TestValidateRolloutStatusStep_Valid(t *testing.T) {
 		RolloutName: "backend", Namespace: "prod",
 		ExpectedStatus: "healthy", Timeout: "30m", OnTimeout: "abort",
 	})
-	step := &StepDef{Name: "wait", Type: "rollout-status", Config: string(cfg)}
+	step := &StepDef{Name: "wait", Type: "rollout-status", Config: cfg}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -909,7 +909,7 @@ func TestValidateRolloutStatusStep_InvalidExpectedStatus(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutStatusConfig{
 		RolloutName: "backend", Namespace: "prod", ExpectedStatus: "invalid",
 	})
-	step := &StepDef{Name: "s", Type: "rollout-status", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-status", Config: cfg}
 	if err := ValidateStepDef(step); err == nil {
 		t.Error("expected error for invalid expected_status")
 	}
@@ -919,7 +919,7 @@ func TestValidateRolloutStatusStep_InvalidOnTimeout(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutStatusConfig{
 		RolloutName: "backend", Namespace: "prod", OnTimeout: "retry",
 	})
-	step := &StepDef{Name: "s", Type: "rollout-status", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-status", Config: cfg}
 	if err := ValidateStepDef(step); err == nil {
 		t.Error("expected error for invalid on_timeout")
 	}
@@ -931,7 +931,7 @@ func TestGenerateDeployRolloutCommand(t *testing.T) {
 	cfg, _ := json.Marshal(DeployRolloutConfig{
 		RolloutName: "backend", Namespace: "prod", Image: "app:v2",
 	})
-	step := &StepDef{Name: "s", Type: "deploy-rollout", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "deploy-rollout", Config: cfg}
 	cmd, args := GenerateCommand(step)
 	if cmd[0] != "kubectl-argo-rollouts" {
 		t.Errorf("expected kubectl-argo-rollouts, got %v", cmd)
@@ -953,7 +953,7 @@ func TestGenerateDeployRolloutCommand_WaitForReady(t *testing.T) {
 		RolloutName: "backend", Namespace: "prod", Image: "app:v2",
 		WaitForReady: true, Timeout: "10m",
 	})
-	step := &StepDef{Name: "s", Type: "deploy-rollout", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "deploy-rollout", Config: cfg}
 	cmd, _ := GenerateCommand(step)
 	// Should use /bin/sh -c with chained commands
 	if cmd[0] != "/bin/sh" {
@@ -971,7 +971,7 @@ func TestGenerateRolloutPromoteCommand(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutPromoteConfig{
 		RolloutName: "backend", Namespace: "prod",
 	})
-	step := &StepDef{Name: "s", Type: "rollout-promote", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-promote", Config: cfg}
 	cmd, args := GenerateCommand(step)
 	if cmd[0] != "kubectl-argo-rollouts" {
 		t.Errorf("expected kubectl-argo-rollouts, got %v", cmd)
@@ -985,7 +985,7 @@ func TestGenerateRolloutPromoteCommand_Full(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutPromoteConfig{
 		RolloutName: "backend", Namespace: "prod", Full: true,
 	})
-	step := &StepDef{Name: "s", Type: "rollout-promote", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-promote", Config: cfg}
 	_, args := GenerateCommand(step)
 	found := false
 	for _, a := range args {
@@ -1002,7 +1002,7 @@ func TestGenerateRolloutAbortCommand(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutAbortConfig{
 		RolloutName: "backend", Namespace: "prod",
 	})
-	step := &StepDef{Name: "s", Type: "rollout-abort", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-abort", Config: cfg}
 	cmd, args := GenerateCommand(step)
 	if cmd[0] != "kubectl-argo-rollouts" {
 		t.Errorf("expected kubectl-argo-rollouts, got %v", cmd)
@@ -1016,7 +1016,7 @@ func TestGenerateRolloutStatusCommand(t *testing.T) {
 	cfg, _ := json.Marshal(RolloutStatusConfig{
 		RolloutName: "backend", Namespace: "prod", Timeout: "15m",
 	})
-	step := &StepDef{Name: "s", Type: "rollout-status", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-status", Config: cfg}
 	cmd, args := GenerateCommand(step)
 	if cmd[0] != "kubectl-argo-rollouts" {
 		t.Errorf("expected kubectl-argo-rollouts, got %v", cmd)
@@ -1034,7 +1034,7 @@ func TestGenerateRolloutStatusCommand_OnTimeoutAbort(t *testing.T) {
 		RolloutName: "backend", Namespace: "prod",
 		Timeout: "20m", OnTimeout: "abort",
 	})
-	step := &StepDef{Name: "s", Type: "rollout-status", Config: string(cfg)}
+	step := &StepDef{Name: "s", Type: "rollout-status", Config: cfg}
 	cmd, _ := GenerateCommand(step)
 	// Should use /bin/sh -c with chained status || abort
 	if cmd[0] != "/bin/sh" {
@@ -1080,7 +1080,7 @@ func TestValidateStepDef_BuildJar_MavenWithConfig(t *testing.T) {
 		Properties: map[string]string{"skipTests": "true"},
 	}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	step := &StepDef{Name: "build", Type: "build-jar", Config: cfgJSON}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
 	}
@@ -1089,7 +1089,7 @@ func TestValidateStepDef_BuildJar_MavenWithConfig(t *testing.T) {
 func TestValidateStepDef_BuildJar_Gradle(t *testing.T) {
 	cfg := BuildJarConfig{BuildTool: "gradle", Tasks: "clean build"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	step := &StepDef{Name: "build", Type: "build-jar", Config: cfgJSON}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
 	}
@@ -1098,7 +1098,7 @@ func TestValidateStepDef_BuildJar_Gradle(t *testing.T) {
 func TestValidateStepDef_BuildJar_InvalidBuildTool(t *testing.T) {
 	cfg := BuildJarConfig{BuildTool: "ant"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	step := &StepDef{Name: "build", Type: "build-jar", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil {
 		t.Error("expected error for invalid build_tool")
@@ -1109,7 +1109,7 @@ func TestValidateStepDef_BuildJar_InvalidBuildTool(t *testing.T) {
 }
 
 func TestValidateStepDef_BuildJar_InvalidJSON(t *testing.T) {
-	step := &StepDef{Name: "build", Type: "build-jar", Config: "{broken"}
+	step := &StepDef{Name: "build", Type: "build-jar", Config: json.RawMessage(`{broken}`)}
 	err := ValidateStepDef(step)
 	if err == nil {
 		t.Error("expected error for invalid JSON config")
@@ -1146,7 +1146,7 @@ func TestGenerateCommand_BuildJar_MavenWithProfiles(t *testing.T) {
 		PomFile:    "submodule/pom.xml",
 	}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	step := &StepDef{Name: "build", Type: "build-jar", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 	fullCmd := cmd[2]
 
@@ -1167,7 +1167,7 @@ func TestGenerateCommand_BuildJar_MavenWithProfiles(t *testing.T) {
 func TestGenerateCommand_BuildJar_Gradle(t *testing.T) {
 	cfg := BuildJarConfig{BuildTool: "gradle", Tasks: "clean assemble"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	step := &StepDef{Name: "build", Type: "build-jar", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 	fullCmd := cmd[2]
 
@@ -1205,7 +1205,7 @@ func TestResolveImage_BuildJar_DefaultMaven17(t *testing.T) {
 func TestResolveImage_BuildJar_JavaVersion21(t *testing.T) {
 	cfg := BuildJarConfig{JavaVersion: "21"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	step := &StepDef{Name: "build", Type: "build-jar", Config: cfgJSON}
 	img := ResolveImage(step)
 	if img != "maven:3.9-eclipse-temurin-21" {
 		t.Errorf("expected maven:3.9-eclipse-temurin-21, got: %s", img)
@@ -1215,7 +1215,7 @@ func TestResolveImage_BuildJar_JavaVersion21(t *testing.T) {
 func TestResolveImage_BuildJar_GradleWithVersion(t *testing.T) {
 	cfg := BuildJarConfig{BuildTool: "gradle", JavaVersion: "21"}
 	cfgJSON, _ := json.Marshal(cfg)
-	step := &StepDef{Name: "build", Type: "build-jar", Config: string(cfgJSON)}
+	step := &StepDef{Name: "build", Type: "build-jar", Config: cfgJSON}
 	img := ResolveImage(step)
 	if img != "gradle:8.10-jdk21" {
 		t.Errorf("expected gradle:8.10-jdk21, got: %s", img)
@@ -1247,7 +1247,7 @@ func TestValidateStepDef_SmokeTest_Valid(t *testing.T) {
 	step := &StepDef{
 		Name:   "health-check",
 		Type:   "smoke-test",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid, got: %v", err)
@@ -1261,7 +1261,7 @@ func TestValidateStepDef_SmokeTest_MinimalConfig(t *testing.T) {
 	step := &StepDef{
 		Name:   "ready-check",
 		Type:   "smoke-test",
-		Config: string(cfgJSON),
+		Config: cfgJSON,
 	}
 	if err := ValidateStepDef(step); err != nil {
 		t.Errorf("expected valid with minimal config, got: %v", err)
@@ -1283,7 +1283,7 @@ func TestValidateStepDef_SmokeTest_MissingURL(t *testing.T) {
 	cfg := SmokeTestConfig{Method: "GET"}
 	cfgJSON, _ := json.Marshal(cfg)
 
-	step := &StepDef{Name: "check", Type: "smoke-test", Config: string(cfgJSON)}
+	step := &StepDef{Name: "check", Type: "smoke-test", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil {
 		t.Error("expected error for missing URL")
@@ -1297,7 +1297,7 @@ func TestValidateStepDef_SmokeTest_InvalidRetries(t *testing.T) {
 	cfg := SmokeTestConfig{URL: "http://example.com", Retries: 50}
 	cfgJSON, _ := json.Marshal(cfg)
 
-	step := &StepDef{Name: "check", Type: "smoke-test", Config: string(cfgJSON)}
+	step := &StepDef{Name: "check", Type: "smoke-test", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil {
 		t.Error("expected error for retries > 30")
@@ -1308,7 +1308,7 @@ func TestValidateStepDef_SmokeTest_InvalidTimeout(t *testing.T) {
 	cfg := SmokeTestConfig{URL: "http://example.com", Timeout: 500}
 	cfgJSON, _ := json.Marshal(cfg)
 
-	step := &StepDef{Name: "check", Type: "smoke-test", Config: string(cfgJSON)}
+	step := &StepDef{Name: "check", Type: "smoke-test", Config: cfgJSON}
 	err := ValidateStepDef(step)
 	if err == nil {
 		t.Error("expected error for timeout > 300")
@@ -1325,7 +1325,7 @@ func TestGenerateCommand_SmokeTest_Basic(t *testing.T) {
 	}
 	cfgJSON, _ := json.Marshal(cfg)
 
-	step := &StepDef{Name: "check", Type: "smoke-test", Config: string(cfgJSON)}
+	step := &StepDef{Name: "check", Type: "smoke-test", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 
 	if len(cmd) < 3 {
@@ -1362,7 +1362,7 @@ func TestGenerateCommand_SmokeTest_POST_WithBody(t *testing.T) {
 	}
 	cfgJSON, _ := json.Marshal(cfg)
 
-	step := &StepDef{Name: "post-test", Type: "smoke-test", Config: string(cfgJSON)}
+	step := &StepDef{Name: "post-test", Type: "smoke-test", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 
 	script := cmd[2]
@@ -1387,7 +1387,7 @@ func TestGenerateCommand_SmokeTest_Insecure(t *testing.T) {
 	}
 	cfgJSON, _ := json.Marshal(cfg)
 
-	step := &StepDef{Name: "insecure-check", Type: "smoke-test", Config: string(cfgJSON)}
+	step := &StepDef{Name: "insecure-check", Type: "smoke-test", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 
 	script := cmd[2]
@@ -1400,7 +1400,7 @@ func TestGenerateCommand_SmokeTest_Defaults(t *testing.T) {
 	cfg := SmokeTestConfig{URL: "http://svc:8080/ready"}
 	cfgJSON, _ := json.Marshal(cfg)
 
-	step := &StepDef{Name: "defaults", Type: "smoke-test", Config: string(cfgJSON)}
+	step := &StepDef{Name: "defaults", Type: "smoke-test", Config: cfgJSON}
 	cmd, _ := GenerateCommand(step)
 
 	script := cmd[2]

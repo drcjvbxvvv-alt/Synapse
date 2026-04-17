@@ -23,10 +23,15 @@ type StepDef struct {
 	Image        string              `json:"image"`
 	Command      string              `json:"command"`
 	DependsOn    []string            `json:"depends_on"`
-	Config       string              `json:"config"`        // raw JSON for StepConfig
+	Config       json.RawMessage     `json:"config"`        // raw JSON for StepConfig (object or string)
 	MaxRetries   int                 `json:"max_retries"`   // 0 = no retry (default)
 	RetryBackoff string              `json:"retry_backoff"` // "fixed" or "exponential" (default: "exponential")
 	Matrix       map[string][]string `json:"matrix"`        // 矩陣展開
+}
+
+// ConfigString returns Config as a JSON string for DB storage.
+func (s *StepDef) ConfigString() string {
+	return string(s.Config)
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +108,7 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 				Status:        initialStatus,
 				Image:         imageRef,
 				Command:       step.Command,
-				ConfigJSON:    step.Config,
+				ConfigJSON:    step.ConfigString(),
 				DependsOn:     string(dependsOnJSON),
 				MaxRetries:    step.MaxRetries,
 			}

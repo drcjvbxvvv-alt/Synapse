@@ -39,13 +39,20 @@ const PIPELINE_YAML_TEMPLATE = `[
   {
     "name": "build",
     "type": "build-image",
-    "config": "{\"context\":\".\",\"dockerfile\":\"Dockerfile\",\"destination\":\"localhost:5001/myapp:latest\"}"
+    "config": {
+      "context": ".",
+      "dockerfile": "Dockerfile",
+      "destination": "localhost:5001/myapp:latest"
+    }
   },
   {
     "name": "deploy",
     "type": "deploy",
     "depends_on": ["build"],
-    "config": "{\"manifests\":[\"k8s/deployment.yaml\",\"k8s/service.yaml\"],\"namespace\":\"default\"}"
+    "config": {
+      "manifests": ["k8s/deployment.yaml", "k8s/service.yaml"],
+      "namespace": "default"
+    }
   }
 ]`;
 

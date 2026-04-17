@@ -222,7 +222,7 @@ func generateNotifyCommand(step *StepDef) ([]string, []string) {
 
 func generateBuildJarCommand(step *StepDef) ([]string, []string) {
 	var cfg BuildJarConfig
-	if step.Config != "" {
+	if len(step.Config) > 0 {
 		if err := parseJSON(step.Config, &cfg); err != nil {
 			// fallback: maven clean package
 			return []string{"/bin/sh", "-c", "mvn clean package -DskipTests -B"}, nil

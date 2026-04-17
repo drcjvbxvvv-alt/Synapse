@@ -132,7 +132,7 @@ func (s *PipelineScheduler) executeMatrixStep(
 			dependsOnJSON, _ := json.Marshal(step.DependsOn)
 
 			// 將 matrix params 注入 config 的 env
-			subConfig := injectMatrixEnv(step.Config, combo.Values)
+			subConfig := injectMatrixEnv(step.ConfigString(), combo.Values)
 
 			subSR := &models.StepRun{
 				PipelineRunID: run.ID,
