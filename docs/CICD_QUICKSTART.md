@@ -165,6 +165,102 @@ git push -u origin main
 
 ---
 
+## Monorepo 微服務架構（多 Pipeline + Path Filter）
+
+> 適用場景：一個 Git repo 包含多個微服務，推送時只觸發變動服務的 Pipeline。
+
+### Repo 目錄結構
+
+```
+saas-uat-repo/
+├── services/
+│   ├── user-service/
+│   │   ├── Dockerfile
+│   │   ├── k8s/
+│   │   └── src/
+│   ├── order-service/
+│   │   ├── Dockerfile
+│   │   ├── k8s/
+│   │   └── src/
+│   └── gateway/
+│       ├── Dockerfile
+│       ├── k8s/
+│       └── src/
+└── shared/              ← 公共程式庫，變動時觸發所有 Pipeline
+```
+
+### 設定方式
+
+1. 建立 **一個 Project**，綁定整個 monorepo URL
+2. 為每個微服務建立 **獨立 Pipeline**
+3. 在每個 Pipeline 的 Trigger 中設定 `path_filter` 精確限定觸發範圍
+
+### Pipeline Steps 範例（user-service）
+
+```json
+[
+  {
+    "name": "build",
+    "type": "build-image",
+    "config": {
+      "context": "services/user-service",
+      "dockerfile": "services/user-service/Dockerfile",
+      "destination": "localhost:5001/user-service:latest"
+    }
+  },
+  {
+    "name": "deploy",
+    "type": "deploy",
+    "depends_on": ["build"],
+    "config": {
+      "manifests": ["services/user-service/k8s/deployment.yaml"],
+      "namespace": "default"
+    }
+  }
+]
+```
+
+### Trigger 設定（triggers_json）
+
+```json
+[
+  {
+    "type": "webhook",
+    "repo": "root/saas-uat-repo",
+    "branch": "main",
+    "events": ["push"],
+    "path_filter": ["services/user-service/**", "shared/**"],
+    "cluster_id": 1,
+    "namespace": "default"
+  }
+]
+```
+
+### Path Filter 匹配規則
+
+| Pattern | 匹配範例 | 說明 |
+|---------|---------|------|
+| `services/user-service/**` | `services/user-service/src/main.go` | 遞迴匹配子目錄 |
+| `shared/**` | `shared/lib/auth.go` | 公共程式庫變動 |
+| `**/*.go` | `pkg/util/helper.go` | 任意層級的 .go 檔案 |
+| `Dockerfile` | `Dockerfile` | 完全匹配 |
+
+### 觸發隔離效果
+
+| 推送的變更 | 觸發的 Pipeline |
+|-----------|----------------|
+| `services/user-service/src/main.go` | 只觸發 user-service |
+| `services/order-service/pom.xml` | 只觸發 order-service |
+| `shared/lib/auth.go` | 觸發 **所有** Pipeline |
+| `README.md` | 不觸發任何 Pipeline |
+
+### Git Repo 連線驗證
+
+建立 Project 時，Synapse 會自動透過 Git Provider 的 API 驗證 repo URL 是否可連線。
+若 token 無權限或 repo 不存在，會回傳錯誤並阻止建立。
+
+---
+
 ## 前置條件（通用）
 
 在建立第一條 Pipeline 之前，需要依序完成以下設定。
