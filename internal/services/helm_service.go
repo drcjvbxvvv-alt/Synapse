@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,10 +14,11 @@ import (
 	"github.com/shaia/Synapse/internal/models"
 
 	"gorm.io/gorm"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/repo"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart/loader"
+	"helm.sh/helm/v4/pkg/release"
+	v1release "helm.sh/helm/v4/pkg/release/v1"
+	"helm.sh/helm/v4/pkg/repo/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
@@ -141,7 +143,7 @@ func (s *HelmService) newActionConfig(cluster *models.Cluster, namespace string)
 	}
 
 	actionConfig := new(action.Configuration)
-	if err := actionConfig.Init(getter, namespace, "secret", func(format string, v ...interface{}) {}); err != nil {
+	if err := actionConfig.Init(getter, namespace, "secret"); err != nil {
 		return nil, fmt.Errorf("初始化 Helm action 配置失敗: %w", err)
 	}
 
@@ -149,7 +151,7 @@ func (s *HelmService) newActionConfig(cluster *models.Cluster, namespace string)
 }
 
 // ListReleases 列出 Helm Releases
-func (s *HelmService) ListReleases(cluster *models.Cluster, namespace string) ([]*release.Release, error) {
+func (s *HelmService) ListReleases(ctx context.Context, cluster *models.Cluster, namespace string) ([]*v1release.Release, error) {
 	cfg, err := s.newActionConfig(cluster, namespace)
 	if err != nil {
 		return nil, err
@@ -159,22 +161,30 @@ func (s *HelmService) ListReleases(cluster *models.Cluster, namespace string) ([
 	listAction.AllNamespaces = namespace == ""
 	listAction.All = true
 
-	return listAction.Run()
+	rels, err := listAction.Run()
+	if err != nil {
+		return nil, err
+	}
+	return toReleases(rels)
 }
 
 // GetRelease 取得單一 Helm Release 詳情
-func (s *HelmService) GetRelease(cluster *models.Cluster, namespace, name string) (*release.Release, error) {
+func (s *HelmService) GetRelease(ctx context.Context, cluster *models.Cluster, namespace, name string) (*v1release.Release, error) {
 	cfg, err := s.newActionConfig(cluster, namespace)
 	if err != nil {
 		return nil, err
 	}
 
 	statusAction := action.NewStatus(cfg)
-	return statusAction.Run(name)
+	rel, err := statusAction.Run(name)
+	if err != nil {
+		return nil, err
+	}
+	return toRelease(rel)
 }
 
 // GetHistory 取得 Helm Release 歷史版本
-func (s *HelmService) GetHistory(cluster *models.Cluster, namespace, name string) ([]*release.Release, error) {
+func (s *HelmService) GetHistory(ctx context.Context, cluster *models.Cluster, namespace, name string) ([]*v1release.Release, error) {
 	cfg, err := s.newActionConfig(cluster, namespace)
 	if err != nil {
 		return nil, err
@@ -182,11 +192,15 @@ func (s *HelmService) GetHistory(cluster *models.Cluster, namespace, name string
 
 	historyAction := action.NewHistory(cfg)
 	historyAction.Max = 256
-	return historyAction.Run(name)
+	rels, err := historyAction.Run(name)
+	if err != nil {
+		return nil, err
+	}
+	return toReleases(rels)
 }
 
 // GetValues 取得 Helm Release 的 values
-func (s *HelmService) GetValues(cluster *models.Cluster, namespace, name string, allValues bool) (map[string]interface{}, error) {
+func (s *HelmService) GetValues(ctx context.Context, cluster *models.Cluster, namespace, name string, allValues bool) (map[string]interface{}, error) {
 	cfg, err := s.newActionConfig(cluster, namespace)
 	if err != nil {
 		return nil, err
@@ -198,14 +212,14 @@ func (s *HelmService) GetValues(cluster *models.Cluster, namespace, name string,
 }
 
 // InstallRelease 安裝 Helm Release
-func (s *HelmService) InstallRelease(cluster *models.Cluster, req InstallRequest) (*release.Release, error) {
+func (s *HelmService) InstallRelease(ctx context.Context, cluster *models.Cluster, req InstallRequest) (*v1release.Release, error) {
 	cfg, err := s.newActionConfig(cluster, req.Namespace)
 	if err != nil {
 		return nil, err
 	}
 
 	// 下載 chart
-	chartPath, err := s.downloadChart(req.RepoName, req.ChartName, req.Version)
+	chartPath, err := s.downloadChart(ctx, req.RepoName, req.ChartName, req.Version)
 	if err != nil {
 		return nil, fmt.Errorf("下載 Chart 失敗: %w", err)
 	}
@@ -230,11 +244,15 @@ func (s *HelmService) InstallRelease(cluster *models.Cluster, req InstallRequest
 	installAction.Namespace = req.Namespace
 	installAction.CreateNamespace = true
 
-	return installAction.Run(chrt, vals)
+	rel, err := installAction.Run(chrt, vals)
+	if err != nil {
+		return nil, err
+	}
+	return toRelease(rel)
 }
 
 // UpgradeRelease 升級 Helm Release
-func (s *HelmService) UpgradeRelease(cluster *models.Cluster, namespace, name string, req UpgradeRequest) (*release.Release, error) {
+func (s *HelmService) UpgradeRelease(ctx context.Context, cluster *models.Cluster, namespace, name string, req UpgradeRequest) (*v1release.Release, error) {
 	cfg, err := s.newActionConfig(cluster, namespace)
 	if err != nil {
 		return nil, err
@@ -242,9 +260,13 @@ func (s *HelmService) UpgradeRelease(cluster *models.Cluster, namespace, name st
 
 	// 取得目前 release 以找出 chart 資訊
 	statusAction := action.NewStatus(cfg)
-	currentRelease, err := statusAction.Run(name)
+	currentRel, err := statusAction.Run(name)
 	if err != nil {
 		return nil, fmt.Errorf("取得目前 Release 失敗: %w", err)
+	}
+	currentRelease, err := toRelease(currentRel)
+	if err != nil {
+		return nil, fmt.Errorf("轉換 Release 型別失敗: %w", err)
 	}
 
 	// 從 chart metadata 中取得 chart 名稱
@@ -256,7 +278,7 @@ func (s *HelmService) UpgradeRelease(cluster *models.Cluster, namespace, name st
 	// 嘗試找 repo（從現有 repos 中搜尋 chart 名稱）
 	repoName := ""
 	var repos []models.HelmRepository
-	s.db.Find(&repos)
+	s.db.WithContext(ctx).Find(&repos)
 	for _, r := range repos {
 		if s.chartExistsInRepo(&r, chartName) {
 			repoName = r.Name
@@ -273,7 +295,7 @@ func (s *HelmService) UpgradeRelease(cluster *models.Cluster, namespace, name st
 		version = currentRelease.Chart.Metadata.Version
 	}
 
-	chartPath, err := s.downloadChart(repoName, chartName, version)
+	chartPath, err := s.downloadChart(ctx, repoName, chartName, version)
 	if err != nil {
 		return nil, fmt.Errorf("下載 Chart 失敗: %w", err)
 	}
@@ -296,11 +318,15 @@ func (s *HelmService) UpgradeRelease(cluster *models.Cluster, namespace, name st
 	upgradeAction := action.NewUpgrade(cfg)
 	upgradeAction.Namespace = namespace
 
-	return upgradeAction.Run(name, chrt, vals)
+	rel, err := upgradeAction.Run(name, chrt, vals)
+	if err != nil {
+		return nil, err
+	}
+	return toRelease(rel)
 }
 
 // RollbackRelease 回滾 Helm Release
-func (s *HelmService) RollbackRelease(cluster *models.Cluster, namespace, name string, version int) error {
+func (s *HelmService) RollbackRelease(ctx context.Context, cluster *models.Cluster, namespace, name string, version int) error {
 	cfg, err := s.newActionConfig(cluster, namespace)
 	if err != nil {
 		return err
@@ -312,7 +338,7 @@ func (s *HelmService) RollbackRelease(cluster *models.Cluster, namespace, name s
 }
 
 // UninstallRelease 解除安裝 Helm Release
-func (s *HelmService) UninstallRelease(cluster *models.Cluster, namespace, name string) error {
+func (s *HelmService) UninstallRelease(ctx context.Context, cluster *models.Cluster, namespace, name string) error {
 	cfg, err := s.newActionConfig(cluster, namespace)
 	if err != nil {
 		return err
@@ -324,31 +350,31 @@ func (s *HelmService) UninstallRelease(cluster *models.Cluster, namespace, name 
 }
 
 // ListRepos 列出所有 Helm Repository
-func (s *HelmService) ListRepos() ([]models.HelmRepository, error) {
+func (s *HelmService) ListRepos(ctx context.Context) ([]models.HelmRepository, error) {
 	var repos []models.HelmRepository
-	if err := s.db.Find(&repos).Error; err != nil {
+	if err := s.db.WithContext(ctx).Find(&repos).Error; err != nil {
 		return nil, err
 	}
 	return repos, nil
 }
 
 // AddRepo 新增 Helm Repository
-func (s *HelmService) AddRepo(name, url, username, password string) (*models.HelmRepository, error) {
+func (s *HelmService) AddRepo(ctx context.Context, name, url, username, password string) (*models.HelmRepository, error) {
 	helmRepo := &models.HelmRepository{
 		Name:     name,
 		URL:      url,
 		Username: username,
 		Password: password,
 	}
-	if err := s.db.Create(helmRepo).Error; err != nil {
+	if err := s.db.WithContext(ctx).Create(helmRepo).Error; err != nil {
 		return nil, fmt.Errorf("新增 Repository 失敗: %w", err)
 	}
 	return helmRepo, nil
 }
 
 // RemoveRepo 刪除 Helm Repository
-func (s *HelmService) RemoveRepo(name string) error {
-	result := s.db.Where("name = ?", name).Delete(&models.HelmRepository{})
+func (s *HelmService) RemoveRepo(ctx context.Context, name string) error {
+	result := s.db.WithContext(ctx).Where("name = ?", name).Delete(&models.HelmRepository{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -359,9 +385,9 @@ func (s *HelmService) RemoveRepo(name string) error {
 }
 
 // SearchCharts 搜尋 Chart（P2-10：並行 HTTP 請求，最多 5 個 Repo 同時拉取 index.yaml）
-func (s *HelmService) SearchCharts(keyword string) ([]ChartInfo, error) {
+func (s *HelmService) SearchCharts(ctx context.Context, keyword string) ([]ChartInfo, error) {
 	var repos []models.HelmRepository
-	if err := s.db.Find(&repos).Error; err != nil {
+	if err := s.db.WithContext(ctx).Find(&repos).Error; err != nil {
 		return nil, err
 	}
 	if len(repos) == 0 {
@@ -475,9 +501,9 @@ func (s *HelmService) chartExistsInRepo(r *models.HelmRepository, chartName stri
 }
 
 // downloadChart 從 repo 下載 chart 到暫存檔
-func (s *HelmService) downloadChart(repoName, chartName, version string) (string, error) {
+func (s *HelmService) downloadChart(ctx context.Context, repoName, chartName, version string) (string, error) {
 	var helmRepo models.HelmRepository
-	if err := s.db.Where("name = ?", repoName).First(&helmRepo).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("name = ?", repoName).First(&helmRepo).Error; err != nil {
 		return "", fmt.Errorf("找不到 Repository '%s': %w", repoName, err)
 	}
 
@@ -557,6 +583,28 @@ func (s *HelmService) downloadChart(repoName, chartName, version string) (string
 	}
 
 	return tmpFile, nil
+}
+
+// toRelease 將 Helm v4 Releaser 介面轉換為具體的 *v1release.Release。
+func toRelease(rel release.Releaser) (*v1release.Release, error) {
+	r, ok := rel.(*v1release.Release)
+	if !ok {
+		return nil, fmt.Errorf("unexpected release type: %T", rel)
+	}
+	return r, nil
+}
+
+// toReleases 將 Releaser slice 轉換為 []*v1release.Release。
+func toReleases(rels []release.Releaser) ([]*v1release.Release, error) {
+	result := make([]*v1release.Release, 0, len(rels))
+	for _, rel := range rels {
+		r, err := toRelease(rel)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, r)
+	}
+	return result, nil
 }
 
 // parseValues 解析 YAML 格式的 values 字串
