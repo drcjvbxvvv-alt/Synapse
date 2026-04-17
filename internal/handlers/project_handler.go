@@ -104,6 +104,18 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		defaultBranch = "main"
 	}
 
+	// Validate repo URL format before anything else
+	repoURL := strings.TrimSuffix(strings.TrimSpace(req.RepoURL), "/")
+	repoURL = strings.TrimSuffix(repoURL, ".git")
+	if strings.Contains(repoURL, "/-/") {
+		response.BadRequest(c, "invalid repo URL: contains GitLab page path (/-/tree, /-/commits, etc.). Use the repo root URL, e.g. http://localhost:8929/root/my-repo")
+		return
+	}
+	if strings.Contains(repoURL, "/blob/") || strings.Contains(repoURL, "/tree/") || strings.Contains(repoURL, "/commit/") {
+		response.BadRequest(c, "invalid repo URL: contains file/tree/commit path. Use the repo root URL, e.g. https://github.com/org/repo")
+		return
+	}
+
 	// Validate git repo is reachable via the provider's API
 	provider, err := h.gitProviderSvc.GetProvider(c.Request.Context(), uint(providerID))
 	if err != nil {
@@ -111,10 +123,7 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Normalize repo URL: strip .git, /-/tree/..., trailing slashes
-	normalizedURL := services.NormalizeRepoURL(provider.BaseURL, req.RepoURL)
-
-	if err := h.gitProviderSvc.ValidateRepoConnection(c.Request.Context(), provider, normalizedURL); err != nil {
+	if err := h.gitProviderSvc.ValidateRepoConnection(c.Request.Context(), provider, repoURL); err != nil {
 		response.BadRequest(c, "git repo validation failed: "+err.Error())
 		return
 	}
@@ -122,7 +131,7 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 	project := &models.Project{
 		GitProviderID: uint(providerID),
 		Name:          req.Name,
-		RepoURL:       normalizedURL,
+		RepoURL:       repoURL,
 		DefaultBranch: defaultBranch,
 		Description:   req.Description,
 		CreatedBy:     userID,
