@@ -39,8 +39,10 @@ import {
   CodeOutlined,
   LockOutlined,
   SafetyOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
@@ -123,6 +125,23 @@ const PipelineList: React.FC = () => {
     setSecretPipeline(pipeline);
     setSecretOpen(true);
   }, []);
+
+  const navigate = useNavigate();
+  const handleViewRuns = useCallback(async (pipeline: Pipeline) => {
+    try {
+      const runs = await pipelineService.listRuns(pipeline.id);
+      const items = runs.items ?? runs;
+      if (Array.isArray(items) && items.length > 0) {
+        // Navigate to the latest run
+        const latest = items[0];
+        navigate(`/pipelines/${pipeline.id}/runs/${latest.id}`);
+      } else {
+        message.info(t('pipeline:run.noRuns', { defaultValue: '尚無執行紀錄，請先手動觸發' }));
+      }
+    } catch {
+      message.error(t('common:messages.failed'));
+    }
+  }, [navigate, message, t]);
 
   const handleEditorClose = useCallback(() => {
     setEditorOpen(false);
@@ -261,6 +280,7 @@ const PipelineList: React.FC = () => {
                     onDelete={handleDelete}
                     onTrigger={handleTrigger}
                     onSecrets={handleSecrets}
+                    onViewRuns={handleViewRuns}
                   />
                 </Col>
               ))}
@@ -329,9 +349,10 @@ interface PipelineCardProps {
   onDelete: (p: Pipeline) => void;
   onTrigger: (p: Pipeline) => void;
   onSecrets: (p: Pipeline) => void;
+  onViewRuns: (p: Pipeline) => void;
 }
 
-const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete, onTrigger, onSecrets }) => {
+const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete, onTrigger, onSecrets, onViewRuns }) => {
   const { token } = theme.useToken();
   const { t } = useTranslation(['pipeline', 'common', 'cicd']);
 
@@ -346,7 +367,7 @@ const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete,
       }}
       styles={{ body: { padding: token.paddingMD } }}
       hoverable
-      onClick={() => onEdit(pipeline)}
+      onClick={() => onViewRuns(pipeline)}
     >
       {/* Header: name + version tag */}
       <Flex justify="space-between" align="flex-start" style={{ marginBottom: token.marginSM }}>
@@ -389,12 +410,12 @@ const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete,
               onClick={() => onTrigger(pipeline)}
             />
           </Tooltip>
-          <Tooltip title={t('cicd:secret.manageButton')}>
+          <Tooltip title={t('pipeline:run.viewRuns', { defaultValue: '執行紀錄' })}>
             <Button
               type="link"
               size="small"
-              icon={<LockOutlined />}
-              onClick={() => onSecrets(pipeline)}
+              icon={<HistoryOutlined />}
+              onClick={() => onViewRuns(pipeline)}
             />
           </Tooltip>
           <Tooltip title={t('pipeline:form.editTitle')}>
@@ -403,6 +424,14 @@ const PipelineCard: React.FC<PipelineCardProps> = ({ pipeline, onEdit, onDelete,
               size="small"
               icon={<CodeOutlined />}
               onClick={() => onEdit(pipeline)}
+            />
+          </Tooltip>
+          <Tooltip title={t('cicd:secret.manageButton')}>
+            <Button
+              type="link"
+              size="small"
+              icon={<LockOutlined />}
+              onClick={() => onSecrets(pipeline)}
             />
           </Tooltip>
           <Popconfirm
