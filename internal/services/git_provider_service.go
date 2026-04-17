@@ -273,6 +273,16 @@ func (s *GitProviderService) ValidateRepoConnection(ctx context.Context, provide
 	}
 }
 
+// NormalizeRepoURL 清理 repo URL：移除 .git 後綴、/-/tree/... 路徑、尾斜線。
+// 回傳標準化的 repo URL（baseURL + / + repoPath）。
+func NormalizeRepoURL(baseURL, repoURL string) string {
+	path, err := extractRepoPath(baseURL, repoURL)
+	if err != nil {
+		return repoURL // fallback to original if parsing fails
+	}
+	return strings.TrimSuffix(baseURL, "/") + "/" + path
+}
+
 // extractRepoPath 從 repo URL 中解析出 owner/repo 路徑。
 // 支援格式：
 //

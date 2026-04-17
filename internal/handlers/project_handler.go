@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -109,7 +110,11 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		response.NotFound(c, "git provider not found")
 		return
 	}
-	if err := h.gitProviderSvc.ValidateRepoConnection(c.Request.Context(), provider, req.RepoURL); err != nil {
+
+	// Normalize repo URL: strip .git, /-/tree/..., trailing slashes
+	normalizedURL := services.NormalizeRepoURL(provider.BaseURL, req.RepoURL)
+
+	if err := h.gitProviderSvc.ValidateRepoConnection(c.Request.Context(), provider, normalizedURL); err != nil {
 		response.BadRequest(c, "git repo validation failed: "+err.Error())
 		return
 	}
@@ -117,13 +122,17 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 	project := &models.Project{
 		GitProviderID: uint(providerID),
 		Name:          req.Name,
-		RepoURL:       req.RepoURL,
+		RepoURL:       normalizedURL,
 		DefaultBranch: defaultBranch,
 		Description:   req.Description,
 		CreatedBy:     userID,
 	}
 
 	if err := h.projectSvc.CreateProject(c.Request.Context(), project); err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "UNIQUE constraint") {
+			response.BadRequest(c, "project with this repo URL already exists")
+			return
+		}
 		response.InternalError(c, "failed to create project: "+err.Error())
 		return
 	}
