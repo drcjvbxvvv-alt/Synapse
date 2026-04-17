@@ -35,8 +35,8 @@ func NewGitProviderHandler(providerSvc *services.GitProviderService) *GitProvide
 type CreateGitProviderRequest struct {
 	Name          string `json:"name" binding:"required,max=255"`
 	Type          string `json:"type" binding:"required,oneof=github gitlab gitea"`
-	BaseURL       string `json:"base_url" binding:"required,url,max=512"`
-	AccessToken   string `json:"access_token"`   // 明文傳入，BeforeSave 加密
+	BaseURL       string `json:"base_url" binding:"required,max=512"`
+	AccessToken   string `json:"access_token" binding:"required"`
 	WebhookSecret string `json:"webhook_secret"`  // 明文傳入，BeforeSave 加密
 }
 
@@ -85,7 +85,12 @@ func (h *GitProviderHandler) Get(c *gin.Context) {
 func (h *GitProviderHandler) Create(c *gin.Context) {
 	var req CreateGitProviderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "invalid request body: "+err.Error())
+		response.BadRequest(c, translateBindingError(err, map[string]string{
+			"Name":        "名稱",
+			"Type":        "類型",
+			"BaseURL":     "Base URL",
+			"AccessToken": "Access Token",
+		}))
 		return
 	}
 

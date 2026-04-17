@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 // wsBufferSize WebSocket 讀寫緩衝區大小（位元組）
@@ -66,6 +69,36 @@ func warnLargeDataset(c *gin.Context, total int) {
 	if total > largeDatasetThreshold {
 		c.Header("X-Large-Dataset", "true")
 	}
+}
+
+// translateBindingError 將 Go validator 錯誤轉換為使用者友善的訊息。
+// fieldNames 將 struct 欄位名映射為顯示名稱。
+func translateBindingError(err error, fieldNames map[string]string) string {
+	var ve validator.ValidationErrors
+	if !errors.As(err, &ve) {
+		return "請求參數無效"
+	}
+
+	var msgs []string
+	for _, fe := range ve {
+		field := fe.Field()
+		if name, ok := fieldNames[field]; ok {
+			field = name
+		}
+		switch fe.Tag() {
+		case "required":
+			msgs = append(msgs, field+" 為必填欄位")
+		case "max":
+			msgs = append(msgs, field+" 超過最大長度 "+fe.Param())
+		case "oneof":
+			msgs = append(msgs, field+" 必須為 "+strings.ReplaceAll(fe.Param(), " ", " / "))
+		case "url":
+			msgs = append(msgs, field+" 格式不正確")
+		default:
+			msgs = append(msgs, field+" 驗證失敗")
+		}
+	}
+	return strings.Join(msgs, "；")
 }
 
 // parseFloatQuery 從 query string 解析浮點數，失敗時返回預設值
