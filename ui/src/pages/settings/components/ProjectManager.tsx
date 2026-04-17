@@ -34,7 +34,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import projectService, { type Project } from '../../../services/projectService';
-import { parseApiError } from '../../../utils/api';
+import { translateGitError } from '../../../utils/gitErrors';
 import EmptyState from '../../../components/EmptyState';
 
 const { Text } = Typography;
@@ -88,7 +88,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({
       queryClient.invalidateQueries({ queryKey });
       setFormOpen(false);
     },
-    onError: (err) => message.error(parseApiError(err) || t('cicd:project.messages.createFailed')),
+    onError: (err) => message.error(translateGitError(err, t) || t('cicd:project.messages.createFailed')),
   });
 
   const updateMutation = useMutation({
@@ -99,7 +99,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({
       queryClient.invalidateQueries({ queryKey });
       setFormOpen(false);
     },
-    onError: (err) => message.error(parseApiError(err) || t('cicd:project.messages.updateFailed')),
+    onError: (err) => message.error(translateGitError(err, t) || t('cicd:project.messages.updateFailed')),
   });
 
   const deleteMutation = useMutation({

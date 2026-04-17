@@ -190,10 +190,25 @@
       "syncStatus": "同步",
       "diffSummary": "漂移"
     },
-    "source": { "native": "原生", "argocd": "ArgoCD" },
-    "renderType": { "raw": "Raw YAML", "kustomize": "Kustomize", "helm": "Helm" },
-    "syncPolicy": { "auto": "自動", "manual": "手動" },
-    "status": { "synced": "已同步", "drifted": "已漂移", "error": "錯誤", "pending": "等待中" },
+    "source": {
+      "native": "原生",
+      "argocd": "ArgoCD"
+    },
+    "renderType": {
+      "raw": "Raw YAML",
+      "kustomize": "Kustomize",
+      "helm": "Helm"
+    },
+    "syncPolicy": {
+      "auto": "自動",
+      "manual": "手動"
+    },
+    "status": {
+      "synced": "已同步",
+      "drifted": "已漂移",
+      "error": "錯誤",
+      "pending": "等待中"
+    },
     "form": {
       "createTitle": "新增 GitOps 應用",
       "editTitle": "編輯 GitOps 應用",
@@ -215,7 +230,12 @@
     "diff": {
       "title": "Diff — {{name}}",
       "noChanges": "無漂移",
-      "action": { "added": "新增", "modified": "修改", "deleted": "刪除", "unchanged": "未變更" }
+      "action": {
+        "added": "新增",
+        "modified": "修改",
+        "deleted": "刪除",
+        "unchanged": "未變更"
+      }
     },
     "messages": {
       "createSuccess": "GitOps 應用已建立",
@@ -432,5 +452,16 @@
       "triggerSuccess": "執行已觸發（{{runId}}）",
       "triggerFailed": "觸發執行失敗"
     }
+  },
+  "connectionErrors": {
+    "unreachable": "無法連線至 {{url}}，請確認 URL 是否正確",
+    "authFailed": "認證失敗：Access Token 無效",
+    "accessDenied": "Token 權限不足，無法存取",
+    "repoNotFound": "儲存庫 「{{repo}}」不存在",
+    "invalidRepoUrl": "Repo URL 格式不正確，請使用根目錄 URL（例如 http://localhost:8929/root/my-repo）",
+    "repoUrlGitlabPath": "Repo URL 包含 GitLab 頁面路徑（/-/tree 等），請使用根目錄 URL",
+    "repoUrlFilePath": "Repo URL 包含檔案/分支路徑，請使用根目錄 URL",
+    "duplicateRepo": "此 Repo URL 已存在於其他 Project",
+    "unexpectedStatus": "遠端回應異常（HTTP {{status}}），請確認服務是否正常"
   }
 }

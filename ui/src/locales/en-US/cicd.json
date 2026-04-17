@@ -139,8 +139,17 @@
     "usageHint": "Reference in Pipeline YAML",
     "noSecrets": "No secrets created yet",
     "manageButton": "Manage Secrets",
-    "scope": { "pipeline": "Pipeline", "global": "Global" },
-    "table": { "scope": "Scope", "name": "Name", "value": "Value", "description": "Description", "updatedAt": "Updated" },
+    "scope": {
+      "pipeline": "Pipeline",
+      "global": "Global"
+    },
+    "table": {
+      "scope": "Scope",
+      "name": "Name",
+      "value": "Value",
+      "description": "Description",
+      "updatedAt": "Updated"
+    },
     "form": {
       "createTitle": "New Secret",
       "editTitle": "Edit Secret — {{name}}",
@@ -157,9 +166,12 @@
       "descriptionPlaceholder": "e.g. Harbor robot account password"
     },
     "messages": {
-      "createSuccess": "Secret created", "createFailed": "Failed to create secret",
-      "updateSuccess": "Secret updated", "updateFailed": "Failed to update secret",
-      "deleteSuccess": "Secret deleted", "deleteFailed": "Failed to delete secret"
+      "createSuccess": "Secret created",
+      "createFailed": "Failed to create secret",
+      "updateSuccess": "Secret updated",
+      "updateFailed": "Failed to update secret",
+      "deleteSuccess": "Secret deleted",
+      "deleteFailed": "Failed to delete secret"
     }
   },
   "gitops": {
@@ -178,10 +190,25 @@
       "syncStatus": "Sync",
       "diffSummary": "Drift"
     },
-    "source": { "native": "Native", "argocd": "ArgoCD" },
-    "renderType": { "raw": "Raw YAML", "kustomize": "Kustomize", "helm": "Helm" },
-    "syncPolicy": { "auto": "Auto", "manual": "Manual" },
-    "status": { "synced": "Synced", "drifted": "Drifted", "error": "Error", "pending": "Pending" },
+    "source": {
+      "native": "Native",
+      "argocd": "ArgoCD"
+    },
+    "renderType": {
+      "raw": "Raw YAML",
+      "kustomize": "Kustomize",
+      "helm": "Helm"
+    },
+    "syncPolicy": {
+      "auto": "Auto",
+      "manual": "Manual"
+    },
+    "status": {
+      "synced": "Synced",
+      "drifted": "Drifted",
+      "error": "Error",
+      "pending": "Pending"
+    },
     "form": {
       "createTitle": "Add GitOps App",
       "editTitle": "Edit GitOps App",
@@ -203,7 +230,12 @@
     "diff": {
       "title": "Diff — {{name}}",
       "noChanges": "No drift detected",
-      "action": { "added": "Added", "modified": "Modified", "deleted": "Deleted", "unchanged": "Unchanged" }
+      "action": {
+        "added": "Added",
+        "modified": "Modified",
+        "deleted": "Deleted",
+        "unchanged": "Unchanged"
+      }
     },
     "messages": {
       "createSuccess": "GitOps app created",
@@ -420,5 +452,16 @@
       "triggerSuccess": "Run triggered ({{runId}})",
       "triggerFailed": "Failed to trigger run"
     }
+  },
+  "connectionErrors": {
+    "unreachable": "Cannot reach {{url}}, please verify the URL",
+    "authFailed": "Authentication failed: invalid access token",
+    "accessDenied": "Access denied: token lacks required permissions",
+    "repoNotFound": "Repository \"{{repo}}\" not found",
+    "invalidRepoUrl": "Invalid repo URL format, use the repo root URL (e.g. http://localhost:8929/root/my-repo)",
+    "repoUrlGitlabPath": "Repo URL contains GitLab page path (/-/tree etc.), use the repo root URL",
+    "repoUrlFilePath": "Repo URL contains file/branch path, use the repo root URL",
+    "duplicateRepo": "A project with this repo URL already exists",
+    "unexpectedStatus": "Unexpected response (HTTP {{status}}), please verify the service"
   }
 }
