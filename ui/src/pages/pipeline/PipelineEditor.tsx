@@ -98,13 +98,20 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
 
   const { isLoading: versionLoading } = useQuery({
     queryKey: ['pipeline-version', pipeline?.id, pipeline?.current_version_id],
-    queryFn: () =>
-      pipelineService.getVersion(pipeline!.id, pipeline!.current_version_id!),
+    queryFn: async () => {
+      const res = await pipelineService.listVersions(pipeline!.id);
+      const versions = res.items ?? [];
+      // current_version_id is the PK; find the matching version by ID,
+      // fallback to the latest (highest version number) if not found.
+      const current =
+        versions.find((v) => v.id === pipeline!.current_version_id) ??
+        versions[versions.length - 1];
+      return current ?? null;
+    },
     enabled: isEdit && pipeline?.current_version_id != null && activeTab === 'yaml',
     staleTime: 60_000,
     select: (data) => {
-      // Use steps_json as the YAML content (stored raw by the backend)
-      setYamlContent(data.steps_json || PIPELINE_YAML_TEMPLATE);
+      setYamlContent(data?.steps_json || PIPELINE_YAML_TEMPLATE);
       return data;
     },
   });
