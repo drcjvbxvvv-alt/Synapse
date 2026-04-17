@@ -103,7 +103,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
 
   // ─── Load existing version ────────────────────────────────────────────────
 
-  const { isLoading: versionLoading } = useQuery({
+  const { data: versionData, isLoading: versionLoading } = useQuery({
     queryKey: ['pipeline-version', pipeline?.id, pipeline?.current_version_id],
     queryFn: async () => {
       const res = await pipelineService.listVersions(pipeline!.id);
@@ -115,11 +115,13 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
     },
     enabled: isEdit && pipeline?.current_version_id != null && open,
     staleTime: 60_000,
-    select: (data) => {
-      setStepsJson(data?.steps_json || STEPS_TEMPLATE);
-      return data;
-    },
   });
+
+  useEffect(() => {
+    if (versionData?.steps_json) {
+      setStepsJson(versionData.steps_json);
+    }
+  }, [versionData]);
 
   // ─── Unified save ─────────────────────────────────────────────────────────
 
