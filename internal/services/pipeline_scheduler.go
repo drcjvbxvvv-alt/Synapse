@@ -575,55 +575,61 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 	// 載入回滾來源 Run 的映像 Artifacts（rollback 用）
 	rollbackArtifacts := s.loadRollbackArtifacts(ctx, run)
 
-	// 建立 StepRun 記錄
+	// 建立 StepRun 記錄（Transaction 保證原子性：要麼全部建立成功，要麼全部回滾，
+	// 避免部分 Step 建立成功而 Run 狀態不一致的問題）
 	stepRuns := make(map[string]*models.StepRun, len(sorted))
-	for i, step := range sorted {
-		dependsOnJSON, _ := json.Marshal(step.DependsOn)
+	if txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for i, step := range sorted {
+			dependsOnJSON, _ := json.Marshal(step.DependsOn)
 
-		// rerun-from-failed: 原始 Run 中已成功的 Step 標記為 skipped（reuse）
-		initialStatus := models.StepRunStatusPending
-		if originalStepResults != nil {
-			if origStatus, ok := originalStepResults[step.Name]; ok && origStatus == models.StepRunStatusSuccess {
-				// 如果設定了 RerunFromStep，只跳過該 Step 之前已成功的
-				if run.RerunFromStep == "" || s.isBeforeStep(sorted, step.Name, run.RerunFromStep) {
+			// rerun-from-failed: 原始 Run 中已成功的 Step 標記為 skipped（reuse）
+			initialStatus := models.StepRunStatusPending
+			if originalStepResults != nil {
+				if origStatus, ok := originalStepResults[step.Name]; ok && origStatus == models.StepRunStatusSuccess {
+					// 如果設定了 RerunFromStep，只跳過該 Step 之前已成功的
+					if run.RerunFromStep == "" || s.isBeforeStep(sorted, step.Name, run.RerunFromStep) {
+						initialStatus = models.StepRunStatusSkipped
+					}
+				}
+			}
+
+			// rollback: 非 deploy Step 一律跳過（僅重新執行 deploy 類型）
+			if rollbackArtifacts != nil && initialStatus == models.StepRunStatusPending {
+				if !IsDeployStepType(step.Type) {
 					initialStatus = models.StepRunStatusSkipped
 				}
 			}
-		}
 
-		// rollback: 非 deploy Step 一律跳過（僅重新執行 deploy 類型）
-		if rollbackArtifacts != nil && initialStatus == models.StepRunStatusPending {
-			if !IsDeployStepType(step.Type) {
-				initialStatus = models.StepRunStatusSkipped
+			// rollback: 若來源 Run 有此 Step 的映像 artifact，注入到 StepRun.Image
+			// 讓 deploy 工具可透過 $ROLLBACK_IMAGE_REF 環境變數取用（由 JobBuilder 注入）
+			imageRef := step.Image
+			if rollbackArtifacts != nil {
+				if oldImage, ok := rollbackArtifacts[step.Name]; ok && oldImage != "" {
+					imageRef = oldImage
+				}
 			}
-		}
 
-		// rollback: 若來源 Run 有此 Step 的映像 artifact，注入到 StepRun.Image
-		// 讓 deploy 工具可透過 $ROLLBACK_IMAGE_REF 環境變數取用（由 JobBuilder 注入）
-		imageRef := step.Image
-		if rollbackArtifacts != nil {
-			if oldImage, ok := rollbackArtifacts[step.Name]; ok && oldImage != "" {
-				imageRef = oldImage
+			sr := &models.StepRun{
+				PipelineRunID: run.ID,
+				StepName:      step.Name,
+				StepType:      step.Type,
+				StepIndex:     i,
+				Status:        initialStatus,
+				Image:         imageRef,
+				Command:       step.Command,
+				ConfigJSON:    step.Config,
+				DependsOn:     string(dependsOnJSON),
+				MaxRetries:    step.MaxRetries,
 			}
+			if err := tx.Create(sr).Error; err != nil {
+				return fmt.Errorf("create step run %s: %w", step.Name, err)
+			}
+			stepRuns[step.Name] = sr
 		}
-
-		sr := &models.StepRun{
-			PipelineRunID: run.ID,
-			StepName:      step.Name,
-			StepType:      step.Type,
-			StepIndex:     i,
-			Status:        initialStatus,
-			Image:         imageRef,
-			Command:       step.Command,
-			ConfigJSON:    step.Config,
-			DependsOn:     string(dependsOnJSON),
-			MaxRetries:    step.MaxRetries,
-		}
-		if err := s.db.WithContext(ctx).Create(sr).Error; err != nil {
-			s.failRun(ctx, run, fmt.Sprintf("create step run %s: %v", step.Name, err))
-			return
-		}
-		stepRuns[step.Name] = sr
+		return nil
+	}); txErr != nil {
+		s.failRun(ctx, run, fmt.Sprintf("create step runs: %v", txErr))
+		return
 	}
 
 	logger.Info("pipeline run DAG initialized",

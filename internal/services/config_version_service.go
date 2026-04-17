@@ -43,24 +43,29 @@ func (s *ConfigVersionService) SaveSecretVersion(ctx context.Context, clusterID 
 }
 
 func (s *ConfigVersionService) saveVersion(ctx context.Context, clusterID uint, resourceType, namespace, name, changedBy, contentJSON string) {
-	var nextVer int
-	s.db.WithContext(ctx).Model(&models.ConfigVersion{}).
-		Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?", clusterID, resourceType, namespace, name).
-		Select("COALESCE(MAX(version),0) + 1").Scan(&nextVer)
-	if nextVer == 0 {
-		nextVer = 1
-	}
-	ver := &models.ConfigVersion{
-		ClusterID:    clusterID,
-		ResourceType: resourceType,
-		Namespace:    namespace,
-		Name:         name,
-		Version:      nextVer,
-		ContentJSON:  contentJSON,
-		ChangedBy:    changedBy,
-		ChangedAt:    time.Now(),
-	}
-	if err := s.db.WithContext(ctx).Create(ver).Error; err != nil {
+	// Transaction 保證 SELECT MAX(version) + CREATE 的原子性，
+	// 防止並發寫入時產生重複版本號。
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var nextVer int
+		tx.Model(&models.ConfigVersion{}).
+			Where("cluster_id = ? AND resource_type = ? AND namespace = ? AND name = ?",
+				clusterID, resourceType, namespace, name).
+			Select("COALESCE(MAX(version),0) + 1").Scan(&nextVer)
+		if nextVer == 0 {
+			nextVer = 1
+		}
+		ver := &models.ConfigVersion{
+			ClusterID:    clusterID,
+			ResourceType: resourceType,
+			Namespace:    namespace,
+			Name:         name,
+			Version:      nextVer,
+			ContentJSON:  contentJSON,
+			ChangedBy:    changedBy,
+			ChangedAt:    time.Now(),
+		}
+		return tx.Create(ver).Error
+	}); err != nil {
 		logger.Warn("儲存版本快照失敗", "resourceType", resourceType, "name", name, "error", err)
 	}
 }

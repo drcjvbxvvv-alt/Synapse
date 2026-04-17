@@ -390,37 +390,24 @@ Scheduler loop 死亡 → `/readyz` 回傳 503，K8s 可重啟 Pod。
 
 ## 6. 資料風險
 
-### R-07 — 多表寫入缺少 Transaction
+### R-07 — 多表寫入缺少 Transaction ✅ 已修復
 
 **嚴重度**：🟠 中  
-**統計**：`internal/services/` 中僅有 **4 處** 使用 `db.Transaction()`
+**修復日期**：2026-04-17
 
-**問題描述**：
+**調查結果**：風險評估原本列出三個場景；實際調查後確認兩個真實問題，一個誤判：
 
-已知缺少 Transaction 的多表寫入場景：
+| 場景 | 狀態 | 說明 |
+|------|------|------|
+| Pipeline Run + StepRun 建立 | ✅ 已修復 | `executeRunAsync` StepRun 建立迴圈改用 Transaction |
+| ConfigVersion MAX(version)+CREATE | ✅ 已修復 | `saveVersion` 兩個語句改用 Transaction |
+| Rollout 權重更新 | N/A | `RolloutService` 為純 K8s CRD 操作，無 DB 寫入 |
 
-| 場景 | 涉及表格 | 風險 |
-|------|----------|------|
-| Pipeline Run 建立 | `pipeline_runs` + `step_runs` | Run 建立成功但 Steps 建立失敗，Run 狀態不一致 |
-| Config Version 儲存 | `config_versions` + 對應資源表 | 版本號遞增但內容未寫入 |
-| Rollout 權重更新 | `rollout_configs` + `rollout_targets` | 部分 target 更新失敗，流量比例不正確 |
+**修復內容**：
 
-**改善建議**：
+1. **`pipeline_scheduler.go:executeRunAsync`** — StepRun 建立迴圈改用 `db.Transaction()`，確保所有 StepRun 原子性建立，失敗時不留孤立記錄。
 
-```go
-// pipeline_service.go — CreateRun 應使用 Transaction
-err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-    if err := tx.Create(&run).Error; err != nil {
-        return fmt.Errorf("create pipeline run: %w", err)
-    }
-    for _, step := range steps {
-        if err := tx.Create(&step).Error; err != nil {
-            return fmt.Errorf("create step run: %w", err)
-        }
-    }
-    return nil
-})
-```
+2. **`config_version_service.go:saveVersion`** — `SELECT COALESCE(MAX(version),0)+1` 與 `CREATE` 改在同一 Transaction 內執行，防止並發時產生重複版本號。
 
 ---
 
@@ -539,7 +526,7 @@ govulncheck ./...
 | R-03 Readiness Check 完整化 | — | 2026-04-17 | ✅ 已完成 |
 | R-02 CORS 修正 | — | 2026-04-24 | 🔲 待開始 |
 | R-03 (dep) crypto 升級 | — | 2026-04-30 | 🔲 待開始 |
-| R-07 Transaction 補齊 | — | 2026-04-30 | 🔲 待開始 |
+| R-07 Transaction 補齊 | — | 2026-04-17 | ✅ 已完成 |
 | R-09 context 替換 | — | 2026-04-30 | 🔲 待開始 |
 | CI CVE 掃描 | — | 2026-04-30 | 🔲 待開始 |
 | R-05 Scheduler 分拆 | — | 2026-05-15 | 🔲 待開始 |

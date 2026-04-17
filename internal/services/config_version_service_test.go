@@ -63,39 +63,36 @@ func configVersionRows() *sqlmock.Rows {
 // ---- SaveConfigMapVersion ----
 
 func (s *ConfigVersionServiceTestSuite) TestSaveConfigMapVersion_Success() {
-	// saveVersion: SELECT COALESCE(MAX(version),0)+1
+	// saveVersion: BEGIN → SELECT MAX → INSERT → COMMIT (atomic)
+	s.mock.ExpectBegin()
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(1))
-	// INSERT
-	s.mock.ExpectBegin()
 	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	data := map[string]string{"key": "value", "env": "prod"}
-	// Should not panic or return error (void method)
 	s.service.SaveConfigMapVersion(context.Background(), 10, "default", "my-config", "alice", data)
 }
 
 func (s *ConfigVersionServiceTestSuite) TestSaveConfigMapVersion_InsertError() {
-	// saveVersion: SELECT COALESCE(MAX(version),0)+1
+	// INSERT fails → whole transaction is rolled back
+	s.mock.ExpectBegin()
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(3))
-	// INSERT fails — service logs warning and continues (no panic)
-	s.mock.ExpectBegin()
 	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
 		WillReturnError(errors.New("disk full"))
 	s.mock.ExpectRollback()
 
-	// Should not panic
+	// Should not panic — logs Warn and continues
 	s.service.SaveConfigMapVersion(context.Background(), 10, "default", "my-config", "alice", map[string]string{"k": "v"})
 }
 
 func (s *ConfigVersionServiceTestSuite) TestSaveConfigMapVersion_ZeroVersionFallback() {
 	// SELECT returns 0 → code falls back to nextVer=1
+	s.mock.ExpectBegin()
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(0))
-	s.mock.ExpectBegin()
 	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
@@ -106,22 +103,22 @@ func (s *ConfigVersionServiceTestSuite) TestSaveConfigMapVersion_ZeroVersionFall
 // ---- SaveSecretVersion ----
 
 func (s *ConfigVersionServiceTestSuite) TestSaveSecretVersion_Success() {
+	s.mock.ExpectBegin()
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(1))
-	s.mock.ExpectBegin()
 	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	s.mock.ExpectCommit()
 
 	data := map[string][]byte{"password": []byte("s3cr3t"), "token": []byte("tok")}
-	// Should not panic; secret values must NOT be stored
+	// Secret values must NOT be stored (only key names)
 	s.service.SaveSecretVersion(context.Background(), 10, "default", "my-secret", "bob", data)
 }
 
 func (s *ConfigVersionServiceTestSuite) TestSaveSecretVersion_InsertError() {
+	s.mock.ExpectBegin()
 	s.mock.ExpectQuery("SELECT").
 		WillReturnRows(sqlmock.NewRows([]string{"COALESCE(MAX(version),0) + 1"}).AddRow(2))
-	s.mock.ExpectBegin()
 	s.mock.ExpectQuery(`INSERT INTO "config_versions"`).
 		WillReturnError(errors.New("constraint violation"))
 	s.mock.ExpectRollback()
