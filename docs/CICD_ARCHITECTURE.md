@@ -1249,6 +1249,54 @@ triggers:
     cron: "0 2 * * *"                         # 每天凌晨 2 點
 ```
 
+### 10.6 Monorepo 微服務架構（多 Pipeline + Path Filter）
+
+適用場景：一個 Git repo 包含多個微服務，推送時只觸發變動服務的 Pipeline。
+
+**架構方式：** 一個 Project（綁定整個 monorepo URL）→ 每個微服務各建一個 Pipeline，用 `path_filter` 精確限定觸發範圍。
+
+```
+monorepo/
+├── services/
+│   ├── user-service/     ← Pipeline A: path_filter: ["services/user-service/**", "shared/**"]
+│   ├── order-service/    ← Pipeline B: path_filter: ["services/order-service/**", "shared/**"]
+│   └── gateway/          ← Pipeline C: path_filter: ["services/gateway/**", "shared/**"]
+└── shared/               ← 公共程式庫，變動時觸發所有 Pipeline
+```
+
+**隔離效果：**
+
+| 推送變更 | 觸發 Pipeline |
+|---------|--------------|
+| `services/user-service/src/main.go` | 只觸發 Pipeline A |
+| `services/order-service/pom.xml` | 只觸發 Pipeline B |
+| `shared/lib/auth.go` | 觸發 Pipeline A + B + C |
+| `README.md` | 不觸發任何 Pipeline |
+
+**path_filter 匹配規則：**
+- `services/user-service/**` — 遞迴匹配子目錄所有檔案
+- `**/*.go` — 任意層級的 `.go` 檔案
+- `Dockerfile` — 完全匹配
+
+> 詳細操作指南見 [CICD_QUICKSTART.md](./CICD_QUICKSTART.md) — 「Monorepo 微服務架構」章節。
+
+### 10.7 Git Repo 連線驗證
+
+建立 Project 時，Synapse 自動透過 Git Provider API 驗證 repo URL 是否可存取：
+
+| Provider | API 端點 | 驗證方式 |
+|----------|---------|---------|
+| GitLab | `GET /api/v4/projects/{url_encoded_path}` | `PRIVATE-TOKEN` header |
+| GitHub | `GET /repos/{owner}/{repo}` | `Authorization: Bearer` header |
+| Gitea | `GET /api/v1/repos/{owner}/{repo}` | `Authorization: Bearer` header |
+
+**失敗情境：**
+- Token 無權限 → `403 access denied`
+- Repo 不存在 → `404 not found`
+- Git Provider 不可達 → `connection refused`
+
+所有失敗均在 Project 建立前回傳錯誤，阻止建立無效 Project。
+
 ---
 
 ## 11. M15 — 映像 Registry 整合
@@ -1915,6 +1963,8 @@ notify_channels ←── pipeline.notify_on_*（JSON id list）
 - ✅ `Pipeline.project_id` FK（nullable，逐步遷移）
 - ✅ Webhook trigger 精確匹配：`TriggerRule.RepoURL` + `WebhookEvent.RepoURL` 精確 URL 比對（向下相容舊 `Repo` path 匹配）
 - ✅ 前端：Project 管理 UI — `ProjectManager.tsx` Drawer，整合至 `GitProviderSettings.tsx`
+- ✅ Git Repo 連線驗證：建立 Project 時呼叫 GitLab/GitHub/Gitea API 驗證 repo URL 可存取（§10.7）— `ValidateRepoConnection` + `extractRepoPath`（7 測試）
+- ✅ Monorepo 微服務支援：一個 Project + 多個 Pipeline + `path_filter` 精確觸發（§10.6）— monorepo 隔離測試（5 cases）
 
 ### M15 — Registry 整合（3 週）
 
