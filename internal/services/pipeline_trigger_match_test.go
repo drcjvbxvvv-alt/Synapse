@@ -623,6 +623,77 @@ func TestEvaluateWebhookTriggers_RepoURLPreciseMatch(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// Monorepo: multiple Pipelines with distinct path_filter should isolate
+// ---------------------------------------------------------------------------
+
+func TestMonorepo_PathFilterIsolation(t *testing.T) {
+	userSvcRules := []TriggerRule{{
+		Type: "webhook", Repo: "root/saas-uat", Branch: "main",
+		Events: []string{"push"}, PathFilter: []string{"services/user-service/**", "shared/**"},
+	}}
+	orderSvcRules := []TriggerRule{{
+		Type: "webhook", Repo: "root/saas-uat", Branch: "main",
+		Events: []string{"push"}, PathFilter: []string{"services/order-service/**", "shared/**"},
+	}}
+
+	tests := []struct {
+		name         string
+		changedFiles []string
+		userMatch    bool
+		orderMatch   bool
+	}{
+		{
+			name:         "user-service only",
+			changedFiles: []string{"services/user-service/src/main.go"},
+			userMatch:    true,
+			orderMatch:   false,
+		},
+		{
+			name:         "order-service only",
+			changedFiles: []string{"services/order-service/pom.xml"},
+			userMatch:    false,
+			orderMatch:   true,
+		},
+		{
+			name:         "shared changes trigger both",
+			changedFiles: []string{"shared/lib/auth.go"},
+			userMatch:    true,
+			orderMatch:   true,
+		},
+		{
+			name:         "root README triggers neither",
+			changedFiles: []string{"README.md"},
+			userMatch:    false,
+			orderMatch:   false,
+		},
+		{
+			name:         "mixed changes",
+			changedFiles: []string{"services/user-service/handler.go", "docs/api.md"},
+			userMatch:    true,
+			orderMatch:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event := &WebhookEvent{
+				Repo: "root/saas-uat", Branch: "main", EventType: "push",
+				ChangedFiles: tt.changedFiles,
+			}
+			userResult := EvaluateWebhookTriggers(userSvcRules, event)
+			orderResult := EvaluateWebhookTriggers(orderSvcRules, event)
+
+			if userResult.Matched != tt.userMatch {
+				t.Errorf("user-service: expected matched=%v, got %v (%s)", tt.userMatch, userResult.Matched, userResult.Reason)
+			}
+			if orderResult.Matched != tt.orderMatch {
+				t.Errorf("order-service: expected matched=%v, got %v (%s)", tt.orderMatch, orderResult.Matched, orderResult.Reason)
+			}
+		})
+	}
+}
+
 func TestEvaluateWebhookTriggers_LegacyRepoPatchMatchStillWorks(t *testing.T) {
 	// Rules without RepoURL should still use Repo path matching
 	rules := []TriggerRule{
