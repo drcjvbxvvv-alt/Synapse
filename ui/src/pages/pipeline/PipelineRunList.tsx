@@ -107,10 +107,9 @@ const PipelineRunList: React.FC = () => {
       dataIndex: 'trigger_type',
       key: 'trigger_type',
       width: 100,
-      render: (type: string) => {
-        const map: Record<string, string> = { manual: '手動', webhook: 'Webhook', cron: 'Cron', rerun: '重跑', rollback: '回滾' };
-        return <Text type="secondary">{map[type] ?? type}</Text>;
-      },
+      render: (type: string) => (
+        <Text type="secondary">{t(`pipeline:run.triggerType.${type}`, { defaultValue: type })}</Text>
+      ),
     },
     {
       title: 'Namespace',
