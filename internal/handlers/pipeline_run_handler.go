@@ -221,7 +221,38 @@ func (h *PipelineRunHandler) ListRuns(c *gin.Context) {
 		return
 	}
 
-	response.List(c, runs, total)
+	// 附帶掃描結果摘要
+	type scanSummary struct {
+		Status   string `json:"status"`
+		Critical int    `json:"critical"`
+		High     int    `json:"high"`
+		Medium   int    `json:"medium"`
+		Low      int    `json:"low"`
+	}
+	type runWithScan struct {
+		models.PipelineRun
+		ScanResult *scanSummary `json:"scan_result,omitempty"`
+	}
+
+	results := make([]runWithScan, len(runs))
+	for i, run := range runs {
+		results[i] = runWithScan{PipelineRun: run}
+		var scan models.ImageScanResult
+		if err := h.pipelineSvc.DB().WithContext(c.Request.Context()).
+			Where("pipeline_run_id = ?", run.ID).
+			Order("id DESC").
+			First(&scan).Error; err == nil {
+			results[i].ScanResult = &scanSummary{
+				Status:   scan.Status,
+				Critical: scan.Critical,
+				High:     scan.High,
+				Medium:   scan.Medium,
+				Low:      scan.Low,
+			}
+		}
+	}
+
+	response.List(c, results, total)
 }
 
 // GetRun 取得 Pipeline Run 詳情（含 StepRun 清單）。

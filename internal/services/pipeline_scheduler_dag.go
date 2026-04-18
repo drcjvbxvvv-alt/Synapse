@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -334,7 +335,7 @@ func (s *PipelineScheduler) runAutoScan(ctx context.Context, run *models.Pipelin
 		StepIndex:     buildSR.StepIndex,
 		Status:        models.StepRunStatusPending,
 		Image:         "aquasec/trivy:0.58.0",
-		ConfigJSON:    fmt.Sprintf(`{"image":%q,"exit_code":0,"registry":%q}`, buildCfg.Destination, buildCfg.Registry),
+		ConfigJSON:    fmt.Sprintf(`{"image":%q,"exit_code":0,"registry":%q,"format":"json"}`, buildCfg.Destination, buildCfg.Registry),
 		DependsOn:     "[]",
 	}
 	if err := s.db.WithContext(ctx).Create(scanSR).Error; err != nil {
@@ -369,12 +370,126 @@ func (s *PipelineScheduler) runAutoScan(ctx context.Context, run *models.Pipelin
 	// 執行掃描（exit_code=0 → 不會因漏洞而失敗）
 	s.executeStepWithRetry(ctx, run, scanSR, scanStep)
 
+	// 等待 watcher 收集日誌後再解析掃描結果
+	for i := 0; i < 10; i++ {
+		var logCount int64
+		s.db.WithContext(ctx).Model(&models.PipelineLog{}).
+			Where("step_run_id = ?", scanSR.ID).Count(&logCount)
+		if logCount > 0 {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	s.parseScanResults(ctx, run, scanSR, buildCfg.Destination)
+
 	// 掃描完成 → 重新 finalize run（掃描結果不影響成敗）
 	now := time.Now()
 	run.FinishedAt = &now
 	run.Status = models.PipelineRunStatusSuccess
 	s.db.WithContext(ctx).Save(run)
 	logger.Info("pipeline run finalized after scan", "run_id", run.ID)
+}
+
+// parseScanResults 解析 Trivy JSON 輸出並寫入 image_scan_results 表。
+func (s *PipelineScheduler) parseScanResults(ctx context.Context, run *models.PipelineRun, scanSR *models.StepRun, image string) {
+	// 從 DB 讀取掃描日誌
+	var logs []models.PipelineLog
+	s.db.WithContext(ctx).
+		Where("step_run_id = ?", scanSR.ID).
+		Order("chunk_seq ASC").
+		Find(&logs)
+
+	if len(logs) == 0 {
+		return
+	}
+
+	// 合併所有 chunk
+	var fullLog string
+	for _, l := range logs {
+		fullLog += l.Content
+	}
+
+	// 解析 Trivy JSON 輸出
+	critical, high, medium, low, unknown := parseTrivyCounts(fullLog)
+
+	now := time.Now()
+	scanResult := &models.ImageScanResult{
+		ClusterID:     run.ClusterID,
+		Namespace:     run.Namespace,
+		Image:         image,
+		Status:        "completed",
+		Critical:      critical,
+		High:          high,
+		Medium:        medium,
+		Low:           low,
+		Unknown:       unknown,
+		ScannedAt:     &now,
+		ScanSource:    "pipeline",
+		PipelineRunID: &run.ID,
+		StepRunID:     &scanSR.ID,
+	}
+
+	if err := s.db.WithContext(ctx).Create(scanResult).Error; err != nil {
+		logger.Error("failed to save scan result", "run_id", run.ID, "error", err)
+		return
+	}
+
+	// 回寫 scan_result_id 到 step_run
+	scanSR.ScanResultID = &scanResult.ID
+	s.db.WithContext(ctx).Save(scanSR)
+
+	logger.Info("scan results saved",
+		"run_id", run.ID,
+		"scan_result_id", scanResult.ID,
+		"critical", critical, "high", high, "medium", medium, "low", low,
+	)
+}
+
+// parseTrivyCounts 從 Trivy JSON 輸出提取漏洞計數。
+func parseTrivyCounts(trivyOutput string) (critical, high, medium, low, unknown int) {
+	// Trivy JSON 格式: { "Results": [{ "Vulnerabilities": [{ "Severity": "CRITICAL" }, ...] }] }
+	var report struct {
+		Results []struct {
+			Vulnerabilities []struct {
+				Severity string `json:"Severity"`
+			} `json:"Vulnerabilities"`
+		} `json:"Results"`
+	}
+
+	// Trivy 輸出可能夾雜進度條和 INFO 日誌，提取 JSON 部分
+	jsonStart := strings.Index(trivyOutput, "{")
+	jsonEnd := strings.LastIndex(trivyOutput, "}")
+	jsonContent := trivyOutput
+	if jsonStart >= 0 && jsonEnd > jsonStart {
+		jsonContent = trivyOutput[jsonStart : jsonEnd+1]
+	}
+
+	if err := json.Unmarshal([]byte(jsonContent), &report); err != nil {
+		// 可能是 table 格式或非 JSON，嘗試從文字計數
+		critical = strings.Count(trivyOutput, "CRITICAL")
+		high = strings.Count(trivyOutput, "HIGH")
+		medium = strings.Count(trivyOutput, "MEDIUM")
+		low = strings.Count(strings.ToUpper(trivyOutput), "LOW")
+		return
+	}
+
+	for _, result := range report.Results {
+		for _, vuln := range result.Vulnerabilities {
+			switch strings.ToUpper(vuln.Severity) {
+			case "CRITICAL":
+				critical++
+			case "HIGH":
+				high++
+			case "MEDIUM":
+				medium++
+			case "LOW":
+				low++
+			default:
+				unknown++
+			}
+		}
+	}
+	return
 }
 
 // createAutoApprovalStep 為 deploy step 自動建立一個 approval StepRun。

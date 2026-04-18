@@ -31,6 +31,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  SecurityScanOutlined,
+  MinusCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -119,6 +121,24 @@ const PipelineRunList: React.FC = () => {
       render: (type: string) => (
         <Text type="secondary">{t(`pipeline:run.triggerType.${type}`, { defaultValue: type })}</Text>
       ),
+    },
+    {
+      title: t('pipeline:run.scanResult', { defaultValue: '安全掃描' }),
+      key: 'scan_result',
+      width: 140,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const scan = record.scan_result as { status: string; critical: number; high: number; medium: number; low: number } | undefined;
+        if (!scan) return <Text type="secondary"><MinusCircleOutlined /> {t('pipeline:run.scanNone', { defaultValue: '未掃描' })}</Text>;
+        const total = scan.critical + scan.high + scan.medium + scan.low;
+        if (total === 0) return <Tag color="success" icon={<SecurityScanOutlined />}>{t('pipeline:run.scanPass', { defaultValue: '通過' })}</Tag>;
+        const parts: string[] = [];
+        if (scan.critical > 0) parts.push(`${scan.critical}C`);
+        if (scan.high > 0) parts.push(`${scan.high}H`);
+        if (scan.medium > 0) parts.push(`${scan.medium}M`);
+        if (scan.low > 0) parts.push(`${scan.low}L`);
+        const color = scan.critical > 0 ? 'error' : scan.high > 0 ? 'warning' : 'default';
+        return <Tag color={color} icon={<SecurityScanOutlined />}>{parts.join(' ')}</Tag>;
+      },
     },
     {
       title: 'Namespace',

@@ -48,8 +48,8 @@ const STEPS_TEMPLATE = `[
     "config": {
       "context": ".",
       "dockerfile": "Dockerfile",
-      "destination": "harbor.example.com/project/myapp:latest",
-      "registry": "my-harbor"
+      "destination": "",
+      "registry": ""
     }
   }
 ]`;
