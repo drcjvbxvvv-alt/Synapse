@@ -60,8 +60,8 @@ function formatDuration(startedAt: string | null, finishedAt: string | null, now
   const start = new Date(startedAt).getTime();
   const end = finishedAt ? new Date(finishedAt).getTime() : (now ?? Date.now());
   const ms = end - start;
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 1000) return '0s';
+  if (ms < 60_000) return `${Math.floor(ms / 1000)}s`;
   const m = Math.floor(ms / 60_000);
   const s = Math.floor((ms % 60_000) / 1000);
   return `${m}m ${s}s`;

@@ -34,6 +34,8 @@
     "concurrencyGroupTooltip": "同一分组的 Run 会受并发策略约束",
     "concurrencyPolicy": "并发策略",
     "maxConcurrentRuns": "最大并发执行数",
+    "scanEnabled": "安全扫描",
+    "scanEnabledTip": "开启后，构建映像完成后自动执行 Trivy 安全扫描（不阻断流程）",
     "approvalEnabled": "部署审核",
     "approvalEnabledTip": "开启后，deploy 类步骤执行前需人工审核通过",
     "tabs": {
@@ -55,7 +57,7 @@
     "groupTest": "测试",
     "groupNotify": "通知",
     "buildImage": "构建映像",
-    "buildImageDesc": "使用 Kaniko 构建容器映像",
+    "buildImageDesc": "根据 Dockerfile 构建并推送容器映像",
     "buildJar": "构建 JAR",
     "buildJarDesc": "Maven / Gradle 构建 Java 制品",
     "pushImage": "推送映像",

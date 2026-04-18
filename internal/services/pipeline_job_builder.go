@@ -125,6 +125,10 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 		runAsGroup = 0
 		fsGroup = 0
 	}
+	// Trivy 需要寫入 /.cache 下載漏洞 DB
+	if input.StepRun.StepType == "trivy-scan" {
+		readOnlyRootFS = false
+	}
 	if cfg.ReadOnlyRootFS != nil {
 		readOnlyRootFS = *cfg.ReadOnlyRootFS // 使用者明確設定覆蓋預設
 	}

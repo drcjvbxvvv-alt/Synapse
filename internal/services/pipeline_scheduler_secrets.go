@@ -97,12 +97,12 @@ func (s *PipelineScheduler) lookupSecret(ctx context.Context, pipelineID uint, n
 // Registry 認證注入
 // ---------------------------------------------------------------------------
 
-// injectRegistryCredentials 為 push-image / build-image Step 自動注入 Registry 認證。
+// injectRegistryCredentials 為 push-image / build-image / trivy-scan Step 自動注入 Registry 認證。
 func (s *PipelineScheduler) injectRegistryCredentials(ctx context.Context, stepType, configJSON string, secrets map[string]string) {
 	if s.registrySvc == nil || configJSON == "" {
 		return
 	}
-	if stepType != "push-image" && stepType != "build-image" {
+	if stepType != "push-image" && stepType != "build-image" && stepType != "trivy-scan" {
 		return
 	}
 
@@ -145,6 +145,18 @@ func (s *PipelineScheduler) injectRegistryCredentials(ctx context.Context, stepT
 	}
 	if registry.InsecureTLS {
 		secrets["REGISTRY_INSECURE"] = "true"
+	}
+	// Trivy 使用不同的環境變數名稱
+	if stepType == "trivy-scan" {
+		if registry.Username != "" {
+			secrets["TRIVY_USERNAME"] = registry.Username
+		}
+		if registry.PasswordEnc != "" {
+			secrets["TRIVY_PASSWORD"] = registry.PasswordEnc
+		}
+		if registry.InsecureTLS {
+			secrets["TRIVY_INSECURE"] = "true"
+		}
 	}
 
 	logger.Debug("registry credentials injected for step",

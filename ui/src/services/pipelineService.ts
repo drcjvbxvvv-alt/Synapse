@@ -14,6 +14,8 @@ export interface Pipeline {
   concurrency_group: string;
   concurrency_policy: 'cancel_previous' | 'queue' | 'reject';
   max_concurrent_runs: number;
+  approval_enabled?: boolean;
+  scan_enabled?: boolean;
   created_by: number;
   created_at: string;
   updated_at: string;
@@ -39,7 +41,7 @@ export interface PipelineRun {
   snapshot_id: number;
   cluster_id: number;
   namespace: string;
-  status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled' | 'waiting_approval';
+  status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled' | 'cancelling' | 'waiting_approval';
   trigger_type: 'manual' | 'webhook' | 'cron' | 'rerun' | 'rollback';
   triggered_by_user: number;
   concurrency_group: string;
@@ -87,6 +89,8 @@ export interface UpdatePipelineRequest {
   concurrency_group?: string;
   concurrency_policy?: 'cancel_previous' | 'queue' | 'reject';
   max_concurrent_runs?: number;
+  approval_enabled?: boolean;
+  scan_enabled?: boolean;
 }
 
 export interface CreateVersionRequest {

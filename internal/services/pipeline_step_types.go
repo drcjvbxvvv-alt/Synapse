@@ -29,7 +29,7 @@ var stepTypeRegistry = map[string]StepTypeInfo{
 		Name:            "build-image",
 		DefaultImage:    "gcr.io/kaniko-project/executor:v1.23.2",
 		RequiresCommand: false, // command 由 BuildImageConfig 產生
-		Description:     "Build container image using Kaniko (rootless, no Docker daemon)",
+		Description:     "Build and push container image from Dockerfile",
 	},
 	"deploy": {
 		Name:            "deploy",

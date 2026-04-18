@@ -56,6 +56,8 @@ type UpdatePipelineRequest struct {
 	ConcurrencyGroup  *string `json:"concurrency_group"`
 	ConcurrencyPolicy *string `json:"concurrency_policy"`
 	MaxConcurrentRuns *int    `json:"max_concurrent_runs"`
+	ApprovalEnabled   *bool   `json:"approval_enabled"`
+	ScanEnabled       *bool   `json:"scan_enabled"`
 }
 
 // CreateVersionRequest 建立不可變版本快照請求。
@@ -205,6 +207,12 @@ func (s *PipelineService) UpdatePipeline(ctx context.Context, id uint, req *Upda
 	}
 	if req.MaxConcurrentRuns != nil {
 		pipeline.MaxConcurrentRuns = *req.MaxConcurrentRuns
+	}
+	if req.ApprovalEnabled != nil {
+		pipeline.ApprovalEnabled = *req.ApprovalEnabled
+	}
+	if req.ScanEnabled != nil {
+		pipeline.ScanEnabled = *req.ScanEnabled
 	}
 
 	if err := s.db.WithContext(ctx).Save(pipeline).Error; err != nil {

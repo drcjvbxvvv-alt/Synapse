@@ -34,6 +34,8 @@
     "concurrencyGroupTooltip": "Runs in the same group are subject to the concurrency policy",
     "concurrencyPolicy": "Concurrency Policy",
     "maxConcurrentRuns": "Max Concurrent Runs",
+    "scanEnabled": "Security Scan",
+    "scanEnabledTip": "When enabled, Trivy security scan runs automatically after image build (non-blocking)",
     "approvalEnabled": "Deploy Approval",
     "approvalEnabledTip": "When enabled, deploy steps require manual approval before execution",
     "tabs": {
@@ -55,7 +57,7 @@
     "groupTest": "Test",
     "groupNotify": "Notify",
     "buildImage": "Build Image",
-    "buildImageDesc": "Build container image using Kaniko",
+    "buildImageDesc": "Build and push container image from Dockerfile",
     "buildJar": "Build JAR",
     "buildJarDesc": "Build Java artifact with Maven / Gradle",
     "pushImage": "Push Image",

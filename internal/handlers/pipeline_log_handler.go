@@ -263,7 +263,12 @@ func (h *PipelineLogHandler) streamFromDB(c *gin.Context, ctx context.Context, s
 			}
 
 			for _, log := range logs {
-				writeSSEEvent(c.Writer, "log", log.Content)
+				// 日誌可能是多行，需逐行發送 SSE event
+				for _, line := range strings.Split(log.Content, "\n") {
+					if line != "" {
+						writeSSEEvent(c.Writer, "log", line)
+					}
+				}
 				if log.ChunkSeq > lastSeq {
 					lastSeq = log.ChunkSeq
 				}

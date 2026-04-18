@@ -139,8 +139,8 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		s.watcher.WatchRun(run)
 	}
 
-	// 檢查 Pipeline 是否啟用部署審核
-	approvalEnabled := s.isApprovalEnabled(ctx, run.PipelineID)
+	// 檢查 Pipeline 開關
+	pipelineFlags := s.getPipelineFlags(ctx, run.PipelineID)
 
 	anyFailed := false
 	for _, step := range sorted {
@@ -174,7 +174,7 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		}
 
 		// 部署審核：deploy 類 step 前自動插入 approval gate
-		if approvalEnabled && IsDeployStepType(step.Type) {
+		if pipelineFlags.ApprovalEnabled && IsDeployStepType(step.Type) {
 			approvalSR := s.createAutoApprovalStep(ctx, run, sr)
 			if approvalSR != nil {
 				if failed := s.executeApprovalStep(ctx, run, approvalSR); failed {
@@ -199,6 +199,17 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 
 		if failed := s.executeStepWithRetry(ctx, run, sr, step); failed {
 			anyFailed = true
+		}
+
+		// 安全掃描：build-image 成功後自動插入 trivy-scan（不阻斷流程）
+		if pipelineFlags.ScanEnabled && step.Type == "build-image" {
+			// 重新從 DB 載入最新狀態（waitForStep 可能已更新）
+			s.db.WithContext(ctx).First(sr, sr.ID)
+			logger.Info("scan check after build-image",
+				"step_status", sr.Status, "step_name", sr.StepName, "run_id", run.ID)
+			if sr.Status == models.StepRunStatusSuccess {
+				s.runAutoScan(ctx, run, sr, step)
+			}
 		}
 	}
 
@@ -286,26 +297,99 @@ func (s *PipelineScheduler) cancelRemainingSteps(ctx context.Context, stepRuns m
 	}
 }
 
-// isApprovalEnabled 檢查 Pipeline 是否啟用部署審核。
-func (s *PipelineScheduler) isApprovalEnabled(ctx context.Context, pipelineID uint) bool {
+// pipelineFlags 持有 Pipeline 級別的開關。
+type pipelineFlags struct {
+	ApprovalEnabled bool
+	ScanEnabled     bool
+}
+
+// getPipelineFlags 讀取 Pipeline 的開關設定。
+func (s *PipelineScheduler) getPipelineFlags(ctx context.Context, pipelineID uint) pipelineFlags {
 	var pipeline models.Pipeline
 	if err := s.db.WithContext(ctx).
-		Select("approval_enabled").
+		Select("approval_enabled, scan_enabled").
 		First(&pipeline, pipelineID).Error; err != nil {
-		return false
+		return pipelineFlags{}
 	}
-	return pipeline.ApprovalEnabled
+	return pipelineFlags{
+		ApprovalEnabled: pipeline.ApprovalEnabled,
+		ScanEnabled:     pipeline.ScanEnabled,
+	}
+}
+
+// runAutoScan 在 build-image 成功後自動執行 trivy-scan（不阻斷流程）。
+func (s *PipelineScheduler) runAutoScan(ctx context.Context, run *models.PipelineRun, buildSR *models.StepRun, buildStep StepDef) {
+	// 從 build-image config 取得 destination 作為掃描目標
+	var buildCfg BuildImageConfig
+	if err := parseJSON(buildStep.Config, &buildCfg); err != nil || buildCfg.Destination == "" {
+		logger.Warn("auto scan skipped: cannot parse build config",
+			"step_run_id", buildSR.ID)
+		return
+	}
+
+	scanSR := &models.StepRun{
+		PipelineRunID: run.ID,
+		StepName:      fmt.Sprintf("scan-%s", buildSR.StepName),
+		StepType:      "trivy-scan",
+		StepIndex:     buildSR.StepIndex,
+		Status:        models.StepRunStatusPending,
+		Image:         "aquasec/trivy:0.58.0",
+		ConfigJSON:    fmt.Sprintf(`{"image":%q,"exit_code":0,"registry":%q}`, buildCfg.Destination, buildCfg.Registry),
+		DependsOn:     "[]",
+	}
+	if err := s.db.WithContext(ctx).Create(scanSR).Error; err != nil {
+		logger.Error("failed to create auto scan step",
+			"run_id", run.ID, "error", err)
+		return
+	}
+
+	logger.Info("auto trivy scan started after build",
+		"scan_step_id", scanSR.ID,
+		"target_image", buildCfg.Destination,
+		"run_id", run.ID,
+	)
+
+	scanStep := StepDef{
+		Name:   scanSR.StepName,
+		Type:   "trivy-scan",
+		Image:  scanSR.Image,
+		Config: json.RawMessage(scanSR.ConfigJSON),
+	}
+
+	// 確保 run 狀態是 running（watcher 可能已提前 finalize）
+	run.Status = models.PipelineRunStatusRunning
+	run.FinishedAt = nil
+	s.db.WithContext(ctx).Save(run)
+
+	// 重新啟動 watcher 追蹤掃描 step 的 Job 狀態
+	if s.watcher != nil {
+		s.watcher.WatchRun(run)
+	}
+
+	// 執行掃描（exit_code=0 → 不會因漏洞而失敗）
+	s.executeStepWithRetry(ctx, run, scanSR, scanStep)
+
+	// 掃描完成 → 重新 finalize run（掃描結果不影響成敗）
+	now := time.Now()
+	run.FinishedAt = &now
+	run.Status = models.PipelineRunStatusSuccess
+	s.db.WithContext(ctx).Save(run)
+	logger.Info("pipeline run finalized after scan", "run_id", run.ID)
 }
 
 // createAutoApprovalStep 為 deploy step 自動建立一個 approval StepRun。
 func (s *PipelineScheduler) createAutoApprovalStep(ctx context.Context, run *models.PipelineRun, deploySR *models.StepRun) *models.StepRun {
+	depsOn := deploySR.DependsOn
+	if depsOn == "" {
+		depsOn = "[]"
+	}
 	approvalSR := &models.StepRun{
 		PipelineRunID: run.ID,
 		StepName:      fmt.Sprintf("approve-%s", deploySR.StepName),
 		StepType:      "approval",
 		StepIndex:     deploySR.StepIndex,
 		Status:        models.StepRunStatusPending,
-		DependsOn:     deploySR.DependsOn,
+		DependsOn:     depsOn,
 	}
 	if err := s.db.WithContext(ctx).Create(approvalSR).Error; err != nil {
 		logger.Error("failed to create auto approval step",

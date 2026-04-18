@@ -124,16 +124,14 @@ func generateTrivyScanCommand(step *StepDef) ([]string, []string) {
 		return []string{"trivy"}, []string{"--help"}
 	}
 
-	args := []string{"image"}
+	args := []string{"image", "--cache-dir", "/tmp/trivy-cache"}
 
 	if cfg.Severity != "" {
 		args = append(args, "--severity="+cfg.Severity)
 	}
-	if cfg.ExitCode > 0 {
-		args = append(args, fmt.Sprintf("--exit-code=%d", cfg.ExitCode))
-	} else {
-		args = append(args, "--exit-code=1") // 預設：發現漏洞時失敗
-	}
+	// exit_code: 0 → 掃描結果僅供參考，不阻斷流程
+	// exit_code: 1（預設）→ 發現漏洞時 step 失敗
+	args = append(args, fmt.Sprintf("--exit-code=%d", cfg.ExitCode))
 	if cfg.IgnoreFile != "" {
 		args = append(args, "--ignorefile="+cfg.IgnoreFile)
 	}
@@ -259,6 +257,9 @@ func generateMavenCommand(cfg *BuildJarConfig) []string {
 	goals := defaultString(cfg.Goals, "clean package -DskipTests")
 	cmd += " " + goals
 	cmd += " -B" // batch mode (non-interactive)
+	// Maven 本地倉庫指向可寫目錄（Pod 以非 root 運行，~/.m2 可能不存在）
+	cacheDir := defaultString(cfg.CacheDir, "/tmp/.m2")
+	cmd += " -Dmaven.repo.local=" + cacheDir
 
 	if cfg.PomFile != "" {
 		cmd += " -f " + cfg.PomFile
@@ -268,9 +269,6 @@ func generateMavenCommand(cfg *BuildJarConfig) []string {
 	}
 	for k, v := range cfg.Properties {
 		cmd += fmt.Sprintf(" -D%s=%s", k, v)
-	}
-	if cfg.CacheDir != "" {
-		cmd += " -Dmaven.repo.local=" + cfg.CacheDir
 	}
 
 	return []string{"/bin/sh", "-c", cmd}
@@ -288,9 +286,9 @@ func generateGradleCommand(cfg *BuildJarConfig) []string {
 	for k, v := range cfg.Properties {
 		cmd += fmt.Sprintf(" -D%s=%s", k, v)
 	}
-	if cfg.CacheDir != "" {
-		cmd += " --project-cache-dir " + cfg.CacheDir
-	}
+	gradleCache := defaultString(cfg.CacheDir, "/tmp/.gradle")
+	cmd += " --project-cache-dir " + gradleCache
+	cmd += " -g " + gradleCache // GRADLE_USER_HOME
 	cmd += " --no-daemon" // CI 環境不使用 daemon
 
 	return []string{"/bin/sh", "-c", cmd}
