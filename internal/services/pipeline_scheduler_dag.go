@@ -133,6 +133,12 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		return
 	}
 
+	// 啟動 Watcher：必須在第一個 Job 提交前啟動，
+	// 否則 waitForStep 等不到 DB 狀態更新
+	if s.watcher != nil {
+		s.watcher.WatchRun(run)
+	}
+
 	anyFailed := false
 	for _, step := range sorted {
 		sr := stepRuns[step.Name]
@@ -174,10 +180,6 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		if failed := s.executeStepWithRetry(ctx, run, sr, step); failed {
 			anyFailed = true
 		}
-	}
-
-	if s.watcher != nil {
-		s.watcher.WatchRun(run)
 	}
 
 	finishNow := time.Now()

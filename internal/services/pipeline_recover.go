@@ -120,16 +120,7 @@ func (r *PipelineRecover) recoverRunningRuns(ctx context.Context) error {
 			continue
 		}
 
-		// 檢查叢集 K8s client 是否可用
-		k8sClient := r.watcher.provider.GetK8sClientByID(run.ClusterID)
-		if k8sClient == nil {
-			logger.Warn("cannot reattach run: cluster client unavailable, marking failed",
-				"run_id", run.ID, "cluster_id", run.ClusterID)
-			r.markRunFailed(ctx, run, "reattach failed: cluster client unavailable after restart")
-			continue
-		}
-
-		// Re-attach Watcher
+		// Re-attach Watcher（K8s client 可能尚未初始化，watcher 內部會在 poll 時重試）
 		r.watcher.WatchRun(run)
 		logger.Info("run reattached to watcher",
 			"run_id", run.ID,

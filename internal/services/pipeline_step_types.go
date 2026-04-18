@@ -33,7 +33,7 @@ var stepTypeRegistry = map[string]StepTypeInfo{
 	},
 	"deploy": {
 		Name:            "deploy",
-		DefaultImage:    "bitnami/kubectl:1.30",
+		DefaultImage:    "bitnami/kubectl:1.32",
 		RequiresCommand: false, // command 由 DeployConfig 產生
 		Description:     "Deploy to Kubernetes via kubectl apply",
 	},
