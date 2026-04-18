@@ -6,11 +6,22 @@ import (
 	"fmt"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"gorm.io/gorm"
 
 	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/pkg/logger"
 )
+
+// deleteOptions 回傳 K8s Job 刪除選項（背景傳播，立即終止）。
+func (s *PipelineScheduler) deleteOptions() metav1.DeleteOptions {
+	propagation := metav1.DeletePropagationBackground
+	var gracePeriod int64
+	return metav1.DeleteOptions{
+		PropagationPolicy:  &propagation,
+		GracePeriodSeconds: &gracePeriod,
+	}
+}
 
 // ---------------------------------------------------------------------------
 // TriggerRunInput — EnqueueRunInEnvironment 觸發參數
@@ -164,10 +175,20 @@ func (s *PipelineScheduler) CancelRun(ctx context.Context, runID uint) error {
 		if err := s.db.WithContext(ctx).Save(&run).Error; err != nil {
 			return fmt.Errorf("cancel queued run %d: %w", runID, err)
 		}
-	case models.PipelineRunStatusRunning:
-		run.Status = models.PipelineRunStatusCancelling
-		if err := s.db.WithContext(ctx).Save(&run).Error; err != nil {
-			return fmt.Errorf("cancel running run %d: %w", runID, err)
+	case models.PipelineRunStatusRunning, models.PipelineRunStatusCancelling:
+		if s.watcher != nil && s.watcher.IsWatching(runID) {
+			// Watcher 正在追蹤 → 標記 cancelling，讓 watcher 處理清理
+			if run.Status != models.PipelineRunStatusCancelling {
+				run.Status = models.PipelineRunStatusCancelling
+				if err := s.db.WithContext(ctx).Save(&run).Error; err != nil {
+					return fmt.Errorf("cancel running run %d: %w", runID, err)
+				}
+			}
+		} else {
+			// Watcher 已不在追蹤 → 直接完成取消
+			if err := s.directCancel(ctx, &run); err != nil {
+				return fmt.Errorf("direct cancel run %d: %w", runID, err)
+			}
 		}
 	default:
 		return fmt.Errorf("cannot cancel run %d in status %s", runID, run.Status)
@@ -177,5 +198,49 @@ func (s *PipelineScheduler) CancelRun(ctx context.Context, runID uint) error {
 		"run_id", runID,
 		"previous_status", run.Status,
 	)
+	return nil
+}
+
+// directCancel 直接取消 Run，不依賴 Watcher（用於 watcher 已停止的場景）。
+func (s *PipelineScheduler) directCancel(ctx context.Context, run *models.PipelineRun) error {
+	// 更新所有活躍的 step 為 cancelled
+	now := time.Now()
+	if err := s.db.WithContext(ctx).
+		Model(&models.StepRun{}).
+		Where("pipeline_run_id = ? AND status IN ?", run.ID,
+			[]string{models.StepRunStatusRunning, models.StepRunStatusPending}).
+		Updates(map[string]interface{}{
+			"status":      models.StepRunStatusCancelled,
+			"finished_at": now,
+		}).Error; err != nil {
+		return fmt.Errorf("cancel active steps: %w", err)
+	}
+
+	// 嘗試刪除 K8s Jobs（best-effort）
+	k8sClient := s.k8sProvider.GetK8sClientByID(run.ClusterID)
+	if k8sClient != nil {
+		var stepRuns []models.StepRun
+		s.db.WithContext(ctx).
+			Where("pipeline_run_id = ? AND job_name != ''", run.ID).
+			Find(&stepRuns)
+		for _, sr := range stepRuns {
+			if sr.JobNamespace != "" && sr.JobName != "" {
+				deleteCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+				_ = k8sClient.GetClientset().BatchV1().
+					Jobs(sr.JobNamespace).
+					Delete(deleteCtx, sr.JobName, s.deleteOptions())
+				cancel()
+			}
+		}
+	}
+
+	// 標記 Run 為 cancelled
+	run.Status = models.PipelineRunStatusCancelled
+	run.FinishedAt = &now
+	if err := s.db.WithContext(ctx).Save(run).Error; err != nil {
+		return fmt.Errorf("finalize cancelled run: %w", err)
+	}
+
+	logger.Info("pipeline run directly cancelled (watcher inactive)", "run_id", run.ID)
 	return nil
 }

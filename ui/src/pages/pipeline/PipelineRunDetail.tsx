@@ -299,7 +299,7 @@ const PipelineRunDetail: React.FC = () => {
       }}>
         {/* Breadcrumb */}
         <Breadcrumb
-          style={{ marginBottom: token.marginXS }}
+          style={{ marginBottom: token.marginXS, display: 'flex', alignItems: 'center' }}
           items={[
             {
               title: (
@@ -307,13 +307,26 @@ const PipelineRunDetail: React.FC = () => {
                   type="link"
                   size="small"
                   icon={<ArrowLeftOutlined />}
-                  style={{ padding: 0 }}
+                  style={{ padding: 0, height: 'auto' }}
                   onClick={() => navigate('/pipelines')}
                 >
                   {t('pipeline:page.title')}
                 </Button>
               ),
             },
+            {
+              title: (
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0, height: 'auto' }}
+                  onClick={() => navigate(`/pipelines/${pid}/runs`)}
+                >
+                  {`Pipeline #${pid}`}
+                </Button>
+              ),
+            },
+            { title: t('pipeline:run.history', { defaultValue: '執行紀錄' }) },
             { title: t('pipeline:runDetail.title', { id: run.id }) },
           ]}
         />

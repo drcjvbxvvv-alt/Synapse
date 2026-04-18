@@ -83,6 +83,9 @@ type BuildJobInput struct {
 	GitRepoURL   string // e.g. "http://localhost:8929/root/my-repo"
 	GitBranch    string // e.g. "main"
 	GitToken     string // Git Provider access token（明文，用於 clone 認證）
+
+	// Docker registry auth（Kaniko 需要 /kaniko/.docker/config.json）
+	DockerConfigJSON string // 已建構好的 docker config JSON 字串
 }
 
 // BuildJob 將 StepRun 轉換為 K8s Job。
@@ -221,6 +224,28 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 		})
 	}
 
+	// Kaniko docker config：build-image 類型需要掛載 /kaniko/.docker/config.json
+	var extraVolumes []corev1.Volume
+	var extraVolumeMounts []corev1.VolumeMount
+	if input.StepRun.StepType == "build-image" && input.DockerConfigJSON != "" {
+		extraVolumes = append(extraVolumes, corev1.Volume{
+			Name: "docker-config",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: input.SecretName,
+					Items: []corev1.KeyToPath{
+						{Key: ".dockerconfigjson", Path: "config.json"},
+					},
+				},
+			},
+		})
+		extraVolumeMounts = append(extraVolumeMounts, corev1.VolumeMount{
+			Name:      "docker-config",
+			MountPath: "/kaniko/.docker",
+			ReadOnly:  true,
+		})
+	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        jobName,
@@ -271,16 +296,16 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 								},
 							},
 							Resources: resources,
-							VolumeMounts: []corev1.VolumeMount{
+							VolumeMounts: append([]corev1.VolumeMount{
 								{Name: "workspace", MountPath: "/workspace"},
 								{Name: "tmp", MountPath: "/tmp"},
-							},
+							}, extraVolumeMounts...),
 						},
 					},
-					Volumes: []corev1.Volume{
+					Volumes: append([]corev1.Volume{
 						{Name: "workspace", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
 						{Name: "tmp", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
-					},
+					}, extraVolumes...),
 				},
 			},
 		},
@@ -300,9 +325,9 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 // SubmitJob 建構並提交 K8s Job，回寫 JobName/JobNamespace 到 StepRun。
 // 流程：建立 K8s Secret（如有 secrets）→ 建立 Job → 設定 Secret ownerRef → Job GC 時自動清理。
 func (b *JobBuilder) SubmitJob(ctx context.Context, k8sClient *K8sClient, input *BuildJobInput) error {
-	// Step 1: 建立 K8s Secret（如有 secrets）
+	// Step 1: 建立 K8s Secret（如有 secrets 或 docker config）
 	secretName, err := b.EnsureRunSecret(ctx, k8sClient,
-		input.Run, input.StepRun, input.Namespace, input.Secrets)
+		input.Run, input.StepRun, input.Namespace, input.Secrets, input.DockerConfigJSON)
 	if err != nil {
 		return fmt.Errorf("ensure run secret for step %s: %w", input.StepRun.StepName, err)
 	}
@@ -349,7 +374,7 @@ func (b *JobBuilder) SubmitJob(ctx context.Context, k8sClient *K8sClient, input 
 
 // EnsureRunSecret 建立 K8s Secret 存放已解析的 pipeline secrets。
 // 回傳 Secret 名稱，供 BuildJobInput.SecretName 使用。
-// 若 secrets 為空，回傳空字串（不建立 Secret）。
+// 若 secrets 為空且無 dockerConfigJSON，回傳空字串（不建立 Secret）。
 func (b *JobBuilder) EnsureRunSecret(
 	ctx context.Context,
 	k8sClient *K8sClient,
@@ -357,8 +382,9 @@ func (b *JobBuilder) EnsureRunSecret(
 	stepRun *models.StepRun,
 	namespace string,
 	secrets map[string]string,
+	dockerConfigJSON string,
 ) (string, error) {
-	if len(secrets) == 0 {
+	if len(secrets) == 0 && dockerConfigJSON == "" {
 		return "", nil
 	}
 
@@ -368,9 +394,12 @@ func (b *JobBuilder) EnsureRunSecret(
 		secretName = secretName[:63]
 	}
 
-	stringData := make(map[string]string, len(secrets))
+	stringData := make(map[string]string, len(secrets)+1)
 	for k, v := range secrets {
 		stringData[k] = v
+	}
+	if dockerConfigJSON != "" {
+		stringData[".dockerconfigjson"] = dockerConfigJSON
 	}
 
 	k8sSecret := &corev1.Secret{

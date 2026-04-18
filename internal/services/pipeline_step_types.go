@@ -71,6 +71,8 @@ type BuildImageConfig struct {
 	Context     string `json:"context"`     // Build context 路徑（預設 "."）
 	Dockerfile  string `json:"dockerfile"`  // Dockerfile 路徑（預設 "Dockerfile"）
 	Destination string `json:"destination"` // 目標 image（必填）
+	Registry    string `json:"registry"`    // Registry 名稱（可選，自動注入認證）
+	Insecure    bool   `json:"insecure"`    // 使用 HTTP 而非 HTTPS（自動從 Registry InsecureTLS 注入）
 	Cache       bool   `json:"cache"`       // 是否啟用 Kaniko layer cache
 	CacheRepo   string `json:"cache_repo"`  // Cache repo（如 harbor.example.com/cache）
 	BuildArgs   map[string]string `json:"build_args"` // Docker build args

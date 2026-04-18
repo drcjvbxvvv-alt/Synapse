@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -12,6 +13,20 @@ import (
 // ---------------------------------------------------------------------------
 // Step 執行（含 retry）
 // ---------------------------------------------------------------------------
+
+// injectInsecureFlag 將 insecure: true 注入 step config JSON。
+func injectInsecureFlag(configJSON string) string {
+	var cfg map[string]interface{}
+	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
+		return configJSON
+	}
+	cfg["insecure"] = true
+	out, err := json.Marshal(cfg)
+	if err != nil {
+		return configJSON
+	}
+	return string(out)
+}
 
 // executeStepWithRetry 執行單一 Step，失敗時根據 RetryPolicy 重試。
 // 回傳 true 表示最終失敗。
@@ -55,6 +70,16 @@ func (s *PipelineScheduler) executeStepWithRetry(
 		// Resolve git repo info from Pipeline → Project → GitProvider
 		gitRepoURL, gitBranch, gitToken := s.resolveGitInfo(ctx, run.PipelineID)
 
+		// build-image: 為 Kaniko 建構 docker config.json + 自動注入 insecure flag
+		var dockerConfigJSON string
+		if step.Type == "build-image" {
+			dockerConfigJSON = s.buildDockerConfigJSON(secrets)
+			// Registry 設定 InsecureTLS → 自動在 step config 加上 insecure: true
+			if secrets["REGISTRY_INSECURE"] == "true" {
+				sr.ConfigJSON = injectInsecureFlag(sr.ConfigJSON)
+			}
+		}
+
 		input := &BuildJobInput{
 			Run:                 run,
 			StepRun:             sr,
@@ -64,6 +89,7 @@ func (s *PipelineScheduler) executeStepWithRetry(
 			GitRepoURL:          gitRepoURL,
 			GitBranch:           gitBranch,
 			GitToken:            gitToken,
+			DockerConfigJSON:    dockerConfigJSON,
 		}
 
 		submitErr := s.jobBuilder.SubmitJob(ctx, s.k8sProvider.GetK8sClientByID(run.ClusterID), input)

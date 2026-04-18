@@ -1,6 +1,9 @@
 package services
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // ---------------------------------------------------------------------------
 // Command generation — produce container command+args for each Step type.
@@ -65,6 +68,12 @@ func generateBuildImageCommand(step *StepDef) ([]string, []string) {
 		"--destination=" + cfg.Destination,
 		"--snapshot-mode=redo",
 		"--push-retry=3",
+	}
+
+	if cfg.Insecure {
+		// 從 destination 擷取 registry host 給 --insecure-registry
+		registryHost := strings.SplitN(cfg.Destination, "/", 2)[0]
+		args = append(args, "--insecure-registry="+registryHost)
 	}
 
 	if cfg.Cache {

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -137,11 +138,32 @@ func (s *PipelineScheduler) injectRegistryCredentials(ctx context.Context, stepT
 			secrets["REGISTRY_URL"] = registry.URL
 		}
 	}
+	if registry.InsecureTLS {
+		secrets["REGISTRY_INSECURE"] = "true"
+	}
 
 	logger.Debug("registry credentials injected for step",
 		"step_type", stepType,
 		"registry", cfg.Registry,
 	)
+}
+
+// buildDockerConfigJSON 從已注入的 secrets 建構 Kaniko 所需的 docker config.json。
+// Kaniko 不讀取 DOCKER_USERNAME/DOCKER_PASSWORD 環境變數，需要 /kaniko/.docker/config.json。
+func (s *PipelineScheduler) buildDockerConfigJSON(secrets map[string]string) string {
+	registryURL := secrets["REGISTRY_URL"]
+	username := secrets["DOCKER_USERNAME"]
+	password := secrets["DOCKER_PASSWORD"]
+	if registryURL == "" || username == "" {
+		return ""
+	}
+
+	auth := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+	dockerCfg := fmt.Sprintf(
+		`{"auths":{%q:{"username":%q,"password":%q,"auth":%q}}}`,
+		registryURL, username, password, auth,
+	)
+	return dockerCfg
 }
 
 // ---------------------------------------------------------------------------

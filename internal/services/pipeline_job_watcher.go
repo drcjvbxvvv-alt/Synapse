@@ -102,6 +102,14 @@ func (w *JobWatcher) WatchRun(run *models.PipelineRun) {
 	)
 }
 
+// IsWatching 回傳指定 Run 是否正在被追蹤。
+func (w *JobWatcher) IsWatching(runID uint) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	_, ok := w.watching[runID]
+	return ok
+}
+
 // StopWatchRun 停止追蹤指定 Run。
 func (w *JobWatcher) StopWatchRun(runID uint) {
 	w.mu.Lock()
