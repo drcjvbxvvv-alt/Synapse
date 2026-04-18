@@ -40,6 +40,7 @@ import dayjs from 'dayjs';
 
 import pipelineService, { type PipelineRun } from '../../services/pipelineService';
 import TriggerRunModal from './components/TriggerRunModal';
+import ScanResultDrawer from './components/ScanResultDrawer';
 
 const { Text } = Typography;
 
@@ -63,6 +64,7 @@ const PipelineRunList: React.FC = () => {
   const { message } = App.useApp();
   const { t } = useTranslation(['pipeline', 'common']);
   const queryClient = useQueryClient();
+  const [scanRunId, setScanRunId] = useState<number | null>(null);
 
   const [triggerOpen, setTriggerOpen] = useState(false);
 
@@ -130,14 +132,23 @@ const PipelineRunList: React.FC = () => {
         const scan = record.scan_result as { status: string; critical: number; high: number; medium: number; low: number } | undefined;
         if (!scan) return <Text type="secondary"><MinusCircleOutlined /> {t('pipeline:run.scanNone', { defaultValue: '未掃描' })}</Text>;
         const total = scan.critical + scan.high + scan.medium + scan.low;
-        if (total === 0) return <Tag color="success" icon={<SecurityScanOutlined />}>{t('pipeline:run.scanPass', { defaultValue: '通過' })}</Tag>;
+        const runId = (record as Record<string, unknown>).id as number;
+        if (total === 0) return (
+          <Tag color="success" icon={<SecurityScanOutlined />} style={{ cursor: 'pointer' }} onClick={() => setScanRunId(runId)}>
+            {t('pipeline:run.scanPass', { defaultValue: '通過' })}
+          </Tag>
+        );
         const parts: string[] = [];
         if (scan.critical > 0) parts.push(`${scan.critical}C`);
         if (scan.high > 0) parts.push(`${scan.high}H`);
         if (scan.medium > 0) parts.push(`${scan.medium}M`);
         if (scan.low > 0) parts.push(`${scan.low}L`);
         const color = scan.critical > 0 ? 'error' : scan.high > 0 ? 'warning' : 'default';
-        return <Tag color={color} icon={<SecurityScanOutlined />}>{parts.join(' ')}</Tag>;
+        return (
+          <Tag color={color} icon={<SecurityScanOutlined />} style={{ cursor: 'pointer' }} onClick={() => setScanRunId(runId)}>
+            {parts.join(' ')}
+          </Tag>
+        );
       },
     },
     {
@@ -228,6 +239,13 @@ const PipelineRunList: React.FC = () => {
           pipeline={pipeline}
         />
       )}
+
+      <ScanResultDrawer
+        open={scanRunId !== null}
+        onClose={() => setScanRunId(null)}
+        pipelineId={pid}
+        runId={scanRunId ?? 0}
+      />
     </div>
   );
 };

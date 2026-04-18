@@ -410,7 +410,7 @@ func (s *PipelineScheduler) parseScanResults(ctx context.Context, run *models.Pi
 	}
 
 	// 解析 Trivy JSON 輸出
-	critical, high, medium, low, unknown := parseTrivyCounts(fullLog)
+	critical, high, medium, low, unknown, resultJSON := parseTrivyCounts(fullLog)
 
 	now := time.Now()
 	scanResult := &models.ImageScanResult{
@@ -423,6 +423,7 @@ func (s *PipelineScheduler) parseScanResults(ctx context.Context, run *models.Pi
 		Medium:        medium,
 		Low:           low,
 		Unknown:       unknown,
+		ResultJSON:    resultJSON,
 		ScannedAt:     &now,
 		ScanSource:    "pipeline",
 		PipelineRunID: &run.ID,
@@ -445,8 +446,8 @@ func (s *PipelineScheduler) parseScanResults(ctx context.Context, run *models.Pi
 	)
 }
 
-// parseTrivyCounts 從 Trivy JSON 輸出提取漏洞計數。
-func parseTrivyCounts(trivyOutput string) (critical, high, medium, low, unknown int) {
+// parseTrivyCounts 從 Trivy JSON 輸出提取漏洞計數和原始 JSON。
+func parseTrivyCounts(trivyOutput string) (critical, high, medium, low, unknown int, resultJSON string) {
 	// Trivy JSON 格式: { "Results": [{ "Vulnerabilities": [{ "Severity": "CRITICAL" }, ...] }] }
 	var report struct {
 		Results []struct {
@@ -472,6 +473,8 @@ func parseTrivyCounts(trivyOutput string) (critical, high, medium, low, unknown 
 		low = strings.Count(strings.ToUpper(trivyOutput), "LOW")
 		return
 	}
+
+	resultJSON = jsonContent
 
 	for _, result := range report.Results {
 		for _, vuln := range result.Vulnerabilities {

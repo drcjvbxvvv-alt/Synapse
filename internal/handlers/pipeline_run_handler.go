@@ -729,3 +729,24 @@ func (h *PipelineRunHandler) PromoteRun(c *gin.Context) {
 		"message":   "promoted to next environment",
 	})
 }
+
+// GetScanResult 取得 Pipeline Run 的安全掃描結果。
+// GET /pipelines/:pipelineID/runs/:runID/scan-result
+func (h *PipelineRunHandler) GetScanResult(c *gin.Context) {
+	runID, err := parseUintParam(c, "runID")
+	if err != nil {
+		response.BadRequest(c, "invalid run ID")
+		return
+	}
+
+	var scan models.ImageScanResult
+	if err := h.pipelineSvc.DB().WithContext(c.Request.Context()).
+		Where("pipeline_run_id = ?", runID).
+		Order("id DESC").
+		First(&scan).Error; err != nil {
+		response.NotFound(c, "no scan result found for this run")
+		return
+	}
+
+	response.OK(c, scan)
+}

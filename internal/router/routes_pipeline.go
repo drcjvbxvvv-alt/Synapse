@@ -87,6 +87,9 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 
 					// Step Logs (SSE)
 					run.GET("/steps/:stepRunID/logs", logHandler.GetStepLogs)
+
+					// Scan Result
+					run.GET("/scan-result", runHandler.GetScanResult)
 				}
 			}
 
