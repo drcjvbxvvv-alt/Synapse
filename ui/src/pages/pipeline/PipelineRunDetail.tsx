@@ -8,7 +8,7 @@
  *  - 取消 / 重跑操作
  *  - Breadcrumb 導航回 Pipeline 列表
  */
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
@@ -158,16 +158,25 @@ const PipelineRunDetail: React.FC = () => {
   // ─── Query ──────────────────────────────────────────────────────────────────
 
   const isActive = useCallback((run?: PipelineRun) =>
-    run?.status === 'queued' || run?.status === 'running' || run?.status === 'waiting_approval',
+    run?.status === 'queued' || run?.status === 'running' || run?.status === 'waiting_approval' || run?.status === 'cancelling',
     [],
   );
 
+  const prevActiveRef = useRef(true);
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['pipeline-run', pid, rid],
     queryFn: () => pipelineService.getRun(pid, rid),
     enabled: pid > 0 && rid > 0,
-    refetchInterval: (query) =>
-      isActive(query.state.data?.run) ? 3000 : false,
+    refetchInterval: (query) => {
+      const active = isActive(query.state.data?.run);
+      if (!active && prevActiveRef.current) {
+        // Run 剛結束 → 再 poll 一次確保拿到最終狀態
+        prevActiveRef.current = false;
+        return 1000;
+      }
+      prevActiveRef.current = active;
+      return active ? 3000 : false;
+    },
     staleTime: 2000,
   });
 

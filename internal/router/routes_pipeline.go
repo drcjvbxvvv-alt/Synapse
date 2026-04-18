@@ -17,7 +17,7 @@ func registerPipelineRoutes(protected *gin.RouterGroup, d *routeDeps) {
 
 	pipelineHandler := handlers.NewPipelineHandler(d.pipelineSvc, d.auditSvc)
 	secretHandler := handlers.NewPipelineSecretHandler(secretSvc)
-	logHandler := handlers.NewPipelineLogHandler(logSvc, d.pipelineSvc)
+	logHandler := handlers.NewPipelineLogHandler(logSvc, d.pipelineSvc, d.k8sMgr)
 	envHandler := handlers.NewEnvironmentHandler(envSvc)
 
 	runHandler := handlers.NewPipelineRunHandler(d.pipelineSvc, d.pipelineScheduler, d.auditSvc)

@@ -108,6 +108,11 @@ func (s *PipelineScheduler) injectRegistryCredentials(ctx context.Context, stepT
 
 	var cfg PushImageConfig
 	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil || cfg.Registry == "" {
+		logger.Debug("registry credential injection skipped",
+			"step_type", stepType,
+			"registry_field", cfg.Registry,
+			"config", configJSON,
+		)
 		return
 	}
 

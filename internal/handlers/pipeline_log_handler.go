@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/shaia/Synapse/internal/models"
 	"github.com/shaia/Synapse/internal/response"
 	"github.com/shaia/Synapse/internal/services"
 	"github.com/shaia/Synapse/pkg/logger"
@@ -28,16 +31,19 @@ import (
 type PipelineLogHandler struct {
 	logSvc      *services.PipelineLogService
 	pipelineSvc *services.PipelineService
+	k8sMgr      services.JobsListerProvider
 }
 
 // NewPipelineLogHandler 建立 Log handler。
 func NewPipelineLogHandler(
 	logSvc *services.PipelineLogService,
 	pipelineSvc *services.PipelineService,
+	k8sMgr services.JobsListerProvider,
 ) *PipelineLogHandler {
 	return &PipelineLogHandler{
 		logSvc:      logSvc,
 		pipelineSvc: pipelineSvc,
+		k8sMgr:      k8sMgr,
 	}
 }
 
@@ -76,7 +82,7 @@ func (h *PipelineLogHandler) GetStepLogs(c *gin.Context) {
 }
 
 // streamLogsSSE 透過 SSE 串流 Log 到客戶端。
-// 輪詢 DB 直到 step 完成且無新 chunk。
+// 策略：step 運行中 → 直接串流 K8s Pod logs；step 已完成 → 從 DB 讀取歷史。
 func (h *PipelineLogHandler) streamLogsSSE(c *gin.Context, stepRunID uint) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
@@ -90,6 +96,156 @@ func (h *PipelineLogHandler) streamLogsSSE(c *gin.Context, stepRunID uint) {
 		return
 	}
 
+	// 取得 StepRun 資訊
+	sr, err := h.pipelineSvc.GetStepRun(ctx, stepRunID)
+	if err != nil {
+		writeSSEEvent(c.Writer, "error", fmt.Sprintf(`{"error":"step run not found: %s"}`, err.Error()))
+		flusher.Flush()
+		return
+	}
+
+	// Step 還在運行中且有 Job → 直接串流 K8s Pod logs
+	if (sr.Status == "running" || sr.Status == "pending") && sr.JobName != "" && h.k8sMgr != nil {
+		h.streamFromK8s(c, ctx, sr, flusher)
+		return
+	}
+
+	// Step 已完成 → 從 DB 讀取歷史 log
+	h.streamFromDB(c, ctx, stepRunID, flusher)
+}
+
+// streamFromK8s 直接從 K8s Pod 串流即時日誌。
+func (h *PipelineLogHandler) streamFromK8s(c *gin.Context, ctx context.Context, sr *models.StepRun, flusher http.Flusher) {
+	// 查詢 PipelineRun 取得 ClusterID
+	clusterID, err := h.pipelineSvc.GetRunClusterID(ctx, sr.PipelineRunID)
+	if err != nil {
+		writeSSEEvent(c.Writer, "error", fmt.Sprintf(`{"error":"run not found: %s"}`, err.Error()))
+		flusher.Flush()
+		return
+	}
+
+	k8sClient := h.k8sMgr.GetK8sClientByID(clusterID)
+	if k8sClient == nil {
+		writeSSEEvent(c.Writer, "error", `{"error":"cluster client unavailable"}`)
+		flusher.Flush()
+		return
+	}
+
+	// 串流 Pod logs（follow=true）
+	follow := true
+	logOpts := &corev1.PodLogOptions{
+		Container: "step",
+		Follow:    follow,
+	}
+
+	// 透過 Job 找到 Pod
+	pods, err := k8sClient.GetClientset().CoreV1().
+		Pods(sr.JobNamespace).
+		List(ctx, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("job-name=%s", sr.JobName),
+		})
+	if err != nil || len(pods.Items) == 0 {
+		// Pod 還沒建立，等待後重試
+		h.waitForPodAndStream(c, ctx, sr, k8sClient, flusher)
+		return
+	}
+
+	podName := pods.Items[0].Name
+	stream, err := k8sClient.GetClientset().CoreV1().
+		Pods(sr.JobNamespace).
+		GetLogs(podName, logOpts).Stream(ctx)
+	if err != nil {
+		logger.Warn("failed to stream pod logs, falling back to DB",
+			"pod", podName, "error", err)
+		h.streamFromDB(c, ctx, sr.ID, flusher)
+		return
+	}
+	defer stream.Close()
+
+	buf := make([]byte, 4096)
+	for {
+		n, readErr := stream.Read(buf)
+		if n > 0 {
+			lines := strings.Split(strings.TrimRight(string(buf[:n]), "\n"), "\n")
+			for _, line := range lines {
+				if line != "" {
+					writeSSEEvent(c.Writer, "log", line)
+				}
+			}
+			flusher.Flush()
+		}
+		if readErr != nil {
+			if readErr != io.EOF {
+				logger.Warn("pod log stream error", "error", readErr)
+			}
+			break
+		}
+	}
+
+	writeSSEEvent(c.Writer, "done", `{"status":"completed"}`)
+	flusher.Flush()
+}
+
+// waitForPodAndStream 等待 Pod 建立後開始串流。
+func (h *PipelineLogHandler) waitForPodAndStream(c *gin.Context, ctx context.Context, sr *models.StepRun, k8sClient *services.K8sClient, flusher http.Flusher) {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for i := 0; i < 30; i++ { // 最多等 60 秒
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			pods, err := k8sClient.GetClientset().CoreV1().
+				Pods(sr.JobNamespace).
+				List(ctx, metav1.ListOptions{
+					LabelSelector: fmt.Sprintf("job-name=%s", sr.JobName),
+				})
+			if err == nil && len(pods.Items) > 0 {
+				// Pod 就緒，開始串流
+				podName := pods.Items[0].Name
+				follow := true
+				stream, err := k8sClient.GetClientset().CoreV1().
+					Pods(sr.JobNamespace).
+					GetLogs(podName, &corev1.PodLogOptions{
+						Container: "step",
+						Follow:    follow,
+					}).Stream(ctx)
+				if err != nil {
+					continue // Pod 可能還沒 ready
+				}
+				defer stream.Close()
+
+				buf := make([]byte, 4096)
+				for {
+					n, readErr := stream.Read(buf)
+					if n > 0 {
+						lines := strings.Split(strings.TrimRight(string(buf[:n]), "\n"), "\n")
+						for _, line := range lines {
+							if line != "" {
+								writeSSEEvent(c.Writer, "log", line)
+							}
+						}
+						flusher.Flush()
+					}
+					if readErr != nil {
+						break
+					}
+				}
+
+				writeSSEEvent(c.Writer, "done", `{"status":"completed"}`)
+				flusher.Flush()
+				return
+			}
+		}
+	}
+
+	writeSSEEvent(c.Writer, "error", `{"error":"pod not ready within timeout"}`)
+	flusher.Flush()
+}
+
+// streamFromDB 從 DB 輪詢歷史日誌（step 已完成時使用）。
+func (h *PipelineLogHandler) streamFromDB(c *gin.Context, ctx context.Context, stepRunID uint, flusher http.Flusher) {
 	lastSeq := -1
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
@@ -117,7 +273,6 @@ func (h *PipelineLogHandler) streamLogsSSE(c *gin.Context, stepRunID uint) {
 				flusher.Flush()
 			}
 
-			// 檢查 step 是否已完成
 			if h.isStepFinished(ctx, stepRunID) && len(logs) == 0 {
 				writeSSEEvent(c.Writer, "done", `{"status":"completed"}`)
 				flusher.Flush()

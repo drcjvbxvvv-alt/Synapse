@@ -117,9 +117,13 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 	runAsNonRoot := true
 	var runAsUser, runAsGroup, fsGroup int64 = 1000, 1000, 1000
 	readOnlyRootFS := true
-	// Kaniko (build-image) 需要寫入 root filesystem → 自動設為 false
+	// Kaniko (build-image) 需要 root 權限解壓 filesystem + 寫入
 	if input.StepRun.StepType == "build-image" {
 		readOnlyRootFS = false
+		runAsNonRoot = false
+		runAsUser = 0
+		runAsGroup = 0
+		fsGroup = 0
 	}
 	if cfg.ReadOnlyRootFS != nil {
 		readOnlyRootFS = *cfg.ReadOnlyRootFS // 使用者明確設定覆蓋預設
@@ -288,13 +292,8 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 							WorkingDir:      cfg.WorkingDir,
 							Env:             envVars,
 							EnvFrom:         envFrom,
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-								ReadOnlyRootFilesystem:   &readOnlyRootFS,
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{"ALL"},
-								},
-							},
+							SecurityContext: b.containerSecurityContext(
+								input.StepRun.StepType, allowPrivilegeEscalation, readOnlyRootFS),
 							Resources: resources,
 							VolumeMounts: append([]corev1.VolumeMount{
 								{Name: "workspace", MountPath: "/workspace"},
@@ -320,6 +319,28 @@ func (b *JobBuilder) BuildJob(input *BuildJobInput) (*batchv1.Job, error) {
 	)
 
 	return job, nil
+}
+
+// containerSecurityContext 根據 step 類型回傳容器安全上下文。
+// Kaniko (build-image) 需要完整 capabilities 來解壓 base image filesystem。
+func (b *JobBuilder) containerSecurityContext(
+	stepType string, allowPrivEsc, readOnlyRootFS bool,
+) *corev1.SecurityContext {
+	if stepType == "build-image" {
+		// Kaniko 需要 CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID 等
+		// 最簡潔的做法：不 drop capabilities（Kaniko 官方建議）
+		return &corev1.SecurityContext{
+			AllowPrivilegeEscalation: &allowPrivEsc,
+			ReadOnlyRootFilesystem:   &readOnlyRootFS,
+		}
+	}
+	return &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &allowPrivEsc,
+		ReadOnlyRootFilesystem:   &readOnlyRootFS,
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
 }
 
 // SubmitJob 建構並提交 K8s Job，回寫 JobName/JobNamespace 到 StepRun。

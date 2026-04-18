@@ -190,6 +190,10 @@ func (s *PipelineScheduler) CancelRun(ctx context.Context, runID uint) error {
 				return fmt.Errorf("direct cancel run %d: %w", runID, err)
 			}
 		}
+	case models.PipelineRunStatusCancelled, models.PipelineRunStatusSuccess,
+		models.PipelineRunStatusFailed, models.PipelineRunStatusRejected:
+		// 已終止 → 冪等，直接成功
+		return nil
 	default:
 		return fmt.Errorf("cannot cancel run %d in status %s", runID, run.Status)
 	}

@@ -360,6 +360,17 @@ func (s *PipelineService) GetStepRun(ctx context.Context, stepRunID uint) (*mode
 	return &sr, nil
 }
 
+// GetRunClusterID 取得 PipelineRun 的 ClusterID。
+func (s *PipelineService) GetRunClusterID(ctx context.Context, runID uint) (uint, error) {
+	var run models.PipelineRun
+	if err := s.db.WithContext(ctx).
+		Select("cluster_id").
+		First(&run, runID).Error; err != nil {
+		return 0, fmt.Errorf("get run cluster id %d: %w", runID, err)
+	}
+	return run.ClusterID, nil
+}
+
 // ---------------------------------------------------------------------------
 // Pipeline Run 查詢
 // ---------------------------------------------------------------------------
