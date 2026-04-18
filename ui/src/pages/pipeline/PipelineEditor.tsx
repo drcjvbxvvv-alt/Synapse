@@ -19,7 +19,10 @@ import {
   Typography,
   Flex,
   Divider,
+  Switch,
+  Segmented,
 } from 'antd';
+import { CodeOutlined, FormOutlined } from '@ant-design/icons';
 import { Editor } from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -32,6 +35,8 @@ import pipelineService, {
 import { request } from '../../utils/api';
 import { parseApiError } from '../../utils/api';
 import type { Project } from '../../services/projectService';
+import { clusterService } from '../../services/clusterService';
+import StepFormEditor, { type StepFormData } from './components/StepFormEditor';
 
 const { Text } = Typography;
 
@@ -86,6 +91,8 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
 
   const [stepsJson, setStepsJson] = useState(STEPS_TEMPLATE);
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState<'form' | 'json'>('form');
+  const [formSteps, setFormSteps] = useState<StepFormData[]>([]);
 
   // Load all projects for the selector
   const { data: projectsData } = useQuery({
@@ -110,10 +117,13 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
         concurrency_group: pipeline.concurrency_group,
         concurrency_policy: pipeline.concurrency_policy,
         max_concurrent_runs: pipeline.max_concurrent_runs,
+        approval_enabled: pipeline.approval_enabled ?? false,
       });
     } else {
       form.resetFields();
       setStepsJson(STEPS_TEMPLATE);
+      syncJsonToForm(STEPS_TEMPLATE);
+      setEditMode('form');
     }
   }, [open, pipeline, form]);
 
@@ -136,8 +146,65 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
   useEffect(() => {
     if (versionData?.steps_json) {
       setStepsJson(versionData.steps_json);
+      syncJsonToForm(versionData.steps_json);
     }
   }, [versionData]);
+
+  // Load registries for step config dropdown
+  const { data: registriesData } = useQuery({
+    queryKey: ['registries-list'],
+    queryFn: () => request.get<{ items: Array<{ id: number; name: string; enabled: boolean }> }>('/registries'),
+    staleTime: 60_000,
+    enabled: open,
+  });
+  const registryOptions = (registriesData?.items ?? [])
+    .filter((r) => r.enabled)
+    .map((r) => ({ label: r.name, value: r.name }));
+
+  // ─── Form ↔ JSON sync ────────────────────────────────────────────────────
+
+  const syncJsonToForm = (json: string) => {
+    try {
+      const parsed = JSON.parse(json) as StepFormData[];
+      if (Array.isArray(parsed)) {
+        setFormSteps(parsed);
+      }
+    } catch {
+      // invalid JSON, keep form as-is
+    }
+  };
+
+  const syncFormToJson = (steps: StepFormData[]) => {
+    // Clean up empty fields before serializing
+    const cleaned = steps.map((s) => {
+      const step: Record<string, unknown> = { name: s.name, type: s.type };
+      if (s.image) step.image = s.image;
+      if (s.command) step.command = s.command;
+      if (s.depends_on && s.depends_on.length > 0) step.depends_on = s.depends_on;
+      if (s.config && Object.keys(s.config).length > 0) step.config = s.config;
+      if (s.max_retries && s.max_retries > 0) step.max_retries = s.max_retries;
+      return step;
+    });
+    return JSON.stringify(cleaned, null, 2);
+  };
+
+  const handleFormStepsChange = (steps: StepFormData[]) => {
+    setFormSteps(steps);
+    setStepsJson(syncFormToJson(steps));
+  };
+
+  const handleJsonChange = (val: string | undefined) => {
+    const json = val ?? '';
+    setStepsJson(json);
+    syncJsonToForm(json);
+  };
+
+  const handleEditModeChange = (mode: string) => {
+    if (mode === 'form') {
+      syncJsonToForm(stepsJson);
+    }
+    setEditMode(mode as 'form' | 'json');
+  };
 
   // ─── Unified save ─────────────────────────────────────────────────────────
 
@@ -254,34 +321,63 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
             <InputNumber min={1} max={50} style={{ width: '100%' }} />
           </Form.Item>
         </Flex>
+
+        <Form.Item
+          name="approval_enabled"
+          label={t('pipeline:form.approvalEnabled', { defaultValue: '部署審核' })}
+          valuePropName="checked"
+          initialValue={false}
+          tooltip={t('pipeline:form.approvalEnabledTip', { defaultValue: '開啟後，deploy 類步驟執行前需人工審核通過' })}
+        >
+          <Switch />
+        </Form.Item>
       </Form>
 
       {/* ─── Steps 定義 ──────────────────────────────────────────────── */}
       <Divider style={{ marginTop: 0 }} />
 
-      <Text strong style={{ display: 'block', marginBottom: token.marginSM }}>
-        {t('pipeline:editor.stepsTitle', { defaultValue: 'Steps 定義（JSON）' })}
-      </Text>
+      <Flex justify="space-between" align="center" style={{ marginBottom: token.marginSM }}>
+        <Text strong>
+          {t('pipeline:editor.stepsTitle', { defaultValue: '流程步驟' })}
+        </Text>
+        <Segmented
+          size="small"
+          value={editMode}
+          onChange={handleEditModeChange}
+          options={[
+            { label: t('pipeline:form.tabs.form'), value: 'form', icon: <FormOutlined /> },
+            { label: 'JSON', value: 'json', icon: <CodeOutlined /> },
+          ]}
+        />
+      </Flex>
 
       <Spin spinning={versionLoading}>
-        <Editor
-          height="380px"
-          defaultLanguage="json"
-          value={stepsJson}
-          onChange={(val) => setStepsJson(val ?? '')}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 13,
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-            insertSpaces: true,
-            wordWrap: 'on',
-            folding: true,
-            foldingStrategy: 'indentation',
-          }}
-        />
+        {editMode === 'form' ? (
+          <StepFormEditor
+            steps={formSteps}
+            onChange={handleFormStepsChange}
+            registryOptions={registryOptions}
+          />
+        ) : (
+          <Editor
+            height="380px"
+            defaultLanguage="json"
+            value={stepsJson}
+            onChange={handleJsonChange}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              insertSpaces: true,
+              wordWrap: 'on',
+              folding: true,
+              foldingStrategy: 'indentation',
+            }}
+          />
+        )}
       </Spin>
 
       {/* ─── 操作按鈕 ──────────────────────────────────────────────── */}

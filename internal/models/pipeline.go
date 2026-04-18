@@ -69,6 +69,9 @@ type Pipeline struct {
 	NotifyOnFailure   string         `json:"notify_on_failure" gorm:"type:jsonb;default:'[]'"`
 	NotifyOnScan      string         `json:"notify_on_scan" gorm:"type:jsonb;default:'[]'"`
 
+	// 部署審核開關：開啟後，deploy 類 Step 執行前自動插入 approval gate
+	ApprovalEnabled bool `json:"approval_enabled" gorm:"default:false"`
+
 	// CI engine selection (M18a, ADR-015).
 	// EngineType identifies which CIEngineAdapter executes this pipeline. A
 	// value of "native" (default) means the built-in Synapse K8s Job engine;

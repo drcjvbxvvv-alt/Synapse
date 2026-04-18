@@ -139,6 +139,9 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 		s.watcher.WatchRun(run)
 	}
 
+	// 檢查 Pipeline 是否啟用部署審核
+	approvalEnabled := s.isApprovalEnabled(ctx, run.PipelineID)
+
 	anyFailed := false
 	for _, step := range sorted {
 		sr := stepRuns[step.Name]
@@ -168,6 +171,23 @@ func (s *PipelineScheduler) executeRunAsync(run *models.PipelineRun) {
 				anyFailed = true
 			}
 			continue
+		}
+
+		// 部署審核：deploy 類 step 前自動插入 approval gate
+		if approvalEnabled && IsDeployStepType(step.Type) {
+			approvalSR := s.createAutoApprovalStep(ctx, run, sr)
+			if approvalSR != nil {
+				if failed := s.executeApprovalStep(ctx, run, approvalSR); failed {
+					anyFailed = true
+					// 審核被拒 → 跳過 deploy step
+					sr.Status = models.StepRunStatusSkipped
+					sr.Error = "deploy skipped: approval rejected"
+					now := time.Now()
+					sr.FinishedAt = &now
+					s.db.WithContext(ctx).Save(sr)
+					continue
+				}
+			}
 		}
 
 		if IsMatrixStep(step) {
@@ -264,6 +284,40 @@ func (s *PipelineScheduler) cancelRemainingSteps(ctx context.Context, stepRuns m
 			s.db.WithContext(ctx).Save(sr)
 		}
 	}
+}
+
+// isApprovalEnabled 檢查 Pipeline 是否啟用部署審核。
+func (s *PipelineScheduler) isApprovalEnabled(ctx context.Context, pipelineID uint) bool {
+	var pipeline models.Pipeline
+	if err := s.db.WithContext(ctx).
+		Select("approval_enabled").
+		First(&pipeline, pipelineID).Error; err != nil {
+		return false
+	}
+	return pipeline.ApprovalEnabled
+}
+
+// createAutoApprovalStep 為 deploy step 自動建立一個 approval StepRun。
+func (s *PipelineScheduler) createAutoApprovalStep(ctx context.Context, run *models.PipelineRun, deploySR *models.StepRun) *models.StepRun {
+	approvalSR := &models.StepRun{
+		PipelineRunID: run.ID,
+		StepName:      fmt.Sprintf("approve-%s", deploySR.StepName),
+		StepType:      "approval",
+		StepIndex:     deploySR.StepIndex,
+		Status:        models.StepRunStatusPending,
+		DependsOn:     deploySR.DependsOn,
+	}
+	if err := s.db.WithContext(ctx).Create(approvalSR).Error; err != nil {
+		logger.Error("failed to create auto approval step",
+			"run_id", run.ID, "deploy_step", deploySR.StepName, "error", err)
+		return nil
+	}
+	logger.Info("auto approval step created before deploy",
+		"approval_step_id", approvalSR.ID,
+		"deploy_step", deploySR.StepName,
+		"run_id", run.ID,
+	)
+	return approvalSR
 }
 
 // ---------------------------------------------------------------------------
