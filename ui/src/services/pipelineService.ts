@@ -14,6 +14,8 @@ export interface Pipeline {
   concurrency_group: string;
   concurrency_policy: 'cancel_previous' | 'queue' | 'reject';
   max_concurrent_runs: number;
+  build_cluster_id?: number | null;
+  build_namespace?: string;
   approval_enabled?: boolean;
   scan_enabled?: boolean;
   created_by: number;
@@ -89,6 +91,8 @@ export interface UpdatePipelineRequest {
   concurrency_group?: string;
   concurrency_policy?: 'cancel_previous' | 'queue' | 'reject';
   max_concurrent_runs?: number;
+  build_cluster_id?: number | null;
+  build_namespace?: string;
   approval_enabled?: boolean;
   scan_enabled?: boolean;
 }
@@ -102,8 +106,8 @@ export interface CreateVersionRequest {
 }
 
 export interface TriggerRunRequest {
-  cluster_id: number;
-  namespace: string;
+  cluster_id?: number;
+  namespace?: string;
   version_id?: number;
 }
 

@@ -151,12 +151,33 @@ func (h *PipelineLogHandler) streamFromK8s(c *gin.Context, ctx context.Context, 
 	}
 
 	podName := pods.Items[0].Name
-	stream, err := k8sClient.GetClientset().CoreV1().
-		Pods(sr.JobNamespace).
-		GetLogs(podName, logOpts).Stream(ctx)
-	if err != nil {
+
+	// 等待 step container ready（init container 可能還在跑）
+	var stream io.ReadCloser
+	for retries := 0; retries < 30; retries++ {
+		stream, err = k8sClient.GetClientset().CoreV1().
+			Pods(sr.JobNamespace).
+			GetLogs(podName, logOpts).Stream(ctx)
+		if err == nil {
+			break
+		}
+		if strings.Contains(err.Error(), "waiting to start") || strings.Contains(err.Error(), "PodInitializing") {
+			writeSSEEvent(c.Writer, "log", "[synapse] waiting for container to start...")
+			flusher.Flush()
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(2 * time.Second):
+			}
+			continue
+		}
+		// 非初始化錯誤，fallback 到 DB
 		logger.Warn("failed to stream pod logs, falling back to DB",
 			"pod", podName, "error", err)
+		h.streamFromDB(c, ctx, sr.ID, flusher)
+		return
+	}
+	if stream == nil {
 		h.streamFromDB(c, ctx, sr.ID, flusher)
 		return
 	}

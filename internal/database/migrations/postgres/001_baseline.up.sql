@@ -839,6 +839,10 @@ CREATE TABLE IF NOT EXISTS pipelines (
   notify_on_success  jsonb,
   notify_on_failure  jsonb,
   notify_on_scan     jsonb,
+  build_cluster_id   bigint,
+  build_namespace    varchar(253)  NOT NULL DEFAULT '',
+  approval_enabled   boolean       NOT NULL DEFAULT false,
+  scan_enabled       boolean       NOT NULL DEFAULT false,
   engine_type        varchar(20)   NOT NULL DEFAULT 'native',
   engine_config_id   bigint        REFERENCES ci_engine_configs(id) ON DELETE SET NULL,
   project_id         bigint        REFERENCES projects(id) ON DELETE SET NULL,
@@ -870,10 +874,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_version      ON pipeline_versions
 CREATE INDEX        IF NOT EXISTS idx_pipeline_versions_hash ON pipeline_versions (hash_sha256);
 
 -- Resolve circular FK: pipelines.current_version_id → pipeline_versions.id
-ALTER TABLE pipelines
-    ADD CONSTRAINT fk_pipelines_current_version
-    FOREIGN KEY (current_version_id) REFERENCES pipeline_versions(id)
-    NOT VALID;
+DO $$ BEGIN
+    ALTER TABLE pipelines
+        ADD CONSTRAINT fk_pipelines_current_version
+        FOREIGN KEY (current_version_id) REFERENCES pipeline_versions(id)
+        NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── pipeline_runs ────────────────────────────────────────────────────────────
 -- No environment_id (dropped in 011). Includes rerun_from_step from model.

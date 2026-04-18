@@ -72,10 +72,11 @@ func (h *PipelineRunHandler) logRunAudit(c *gin.Context, action, resourceRef, re
 }
 
 // TriggerRunRequest 手動觸發 Pipeline Run 的請求。
+// cluster_id 和 namespace 可選 — 若未提供，使用 Pipeline 的構建環境預設值。
 type TriggerRunRequest struct {
-	VersionID *uint  `json:"version_id"`                          // 指定版本（可選，預設用 current_version_id）
-	ClusterID uint   `json:"cluster_id" binding:"required"`       // 目標叢集（必填）
-	Namespace string `json:"namespace" binding:"required"`         // 目標 namespace（必填）
+	VersionID *uint  `json:"version_id"`  // 指定版本（可選，預設用 current_version_id）
+	ClusterID *uint  `json:"cluster_id"`  // 目標叢集（可選，預設用 Pipeline.BuildClusterID）
+	Namespace string `json:"namespace"`   // 目標 namespace（可選，預設用 Pipeline.BuildNamespace）
 }
 
 // TriggerRun 手動觸發 Pipeline Run。
@@ -113,13 +114,33 @@ func (h *PipelineRunHandler) TriggerRun(c *gin.Context) {
 		return
 	}
 
+	// 智慧填充：優先用請求值，否則用 Pipeline 構建環境預設值
+	clusterID := uint(0)
+	namespace := req.Namespace
+	if req.ClusterID != nil && *req.ClusterID > 0 {
+		clusterID = *req.ClusterID
+	} else if pipeline.BuildClusterID != nil {
+		clusterID = *pipeline.BuildClusterID
+	}
+	if namespace == "" {
+		namespace = pipeline.BuildNamespace
+	}
+	if clusterID == 0 {
+		response.BadRequest(c, "cluster_id is required: set build environment in pipeline settings or provide in request")
+		return
+	}
+	if namespace == "" {
+		response.BadRequest(c, "namespace is required: set build environment in pipeline settings or provide in request")
+		return
+	}
+
 	userID := c.GetUint("user_id")
 
 	run := &models.PipelineRun{
 		PipelineID:       pipeline.ID,
 		SnapshotID:       *snapshotID,
-		ClusterID:        req.ClusterID,
-		Namespace:        req.Namespace,
+		ClusterID:        clusterID,
+		Namespace:        namespace,
 		TriggerType:      models.TriggerTypeManual,
 		TriggeredByUser:  userID,
 		ConcurrencyGroup: pipeline.ConcurrencyGroup,

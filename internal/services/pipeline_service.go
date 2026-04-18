@@ -56,6 +56,8 @@ type UpdatePipelineRequest struct {
 	ConcurrencyGroup  *string `json:"concurrency_group"`
 	ConcurrencyPolicy *string `json:"concurrency_policy"`
 	MaxConcurrentRuns *int    `json:"max_concurrent_runs"`
+	BuildClusterID    *uint   `json:"build_cluster_id"`
+	BuildNamespace    *string `json:"build_namespace"`
 	ApprovalEnabled   *bool   `json:"approval_enabled"`
 	ScanEnabled       *bool   `json:"scan_enabled"`
 }
@@ -207,6 +209,12 @@ func (s *PipelineService) UpdatePipeline(ctx context.Context, id uint, req *Upda
 	}
 	if req.MaxConcurrentRuns != nil {
 		pipeline.MaxConcurrentRuns = *req.MaxConcurrentRuns
+	}
+	if req.BuildClusterID != nil {
+		pipeline.BuildClusterID = req.BuildClusterID
+	}
+	if req.BuildNamespace != nil {
+		pipeline.BuildNamespace = *req.BuildNamespace
 	}
 	if req.ApprovalEnabled != nil {
 		pipeline.ApprovalEnabled = *req.ApprovalEnabled

@@ -69,6 +69,10 @@ type Pipeline struct {
 	NotifyOnFailure   string         `json:"notify_on_failure" gorm:"type:jsonb;default:'[]'"`
 	NotifyOnScan      string         `json:"notify_on_scan" gorm:"type:jsonb;default:'[]'"`
 
+	// 構建環境：build Job 跑在哪個叢集 + Namespace（設一次，一鍵觸發）
+	BuildClusterID *uint  `json:"build_cluster_id" gorm:"index"`
+	BuildNamespace string `json:"build_namespace" gorm:"size:253"`
+
 	// 部署審核開關：開啟後，deploy 類 Step 執行前自動插入 approval gate
 	ApprovalEnabled bool `json:"approval_enabled" gorm:"default:false"`
 

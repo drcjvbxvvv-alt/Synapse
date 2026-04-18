@@ -20,7 +20,9 @@ import {
   Flex,
   Divider,
   Switch,
+  Segmented,
 } from 'antd';
+import { CodeOutlined, FormOutlined } from '@ant-design/icons';
 import { Editor } from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -33,6 +35,7 @@ import pipelineService, {
 import { request } from '../../utils/api';
 import { parseApiError } from '../../utils/api';
 import type { Project } from '../../services/projectService';
+import { clusterService } from '../../services/clusterService';
 
 const { Text } = Typography;
 
@@ -78,6 +81,71 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
 
   const [stepsJson, setStepsJson] = useState(STEPS_TEMPLATE);
   const [saving, setSaving] = useState(false);
+  const [stepsMode, setStepsMode] = useState<'form' | 'json'>('form');
+
+  // ─── Build-image form state ─────────────────────────────────────────────
+  const [buildForm] = Form.useForm();
+
+  // Sync JSON → form (parse build-image step from JSON)
+  const syncJsonToForm = (json: string) => {
+    try {
+      const steps = JSON.parse(json);
+      if (!Array.isArray(steps)) return;
+      const buildStep = steps.find((s: Record<string, unknown>) => s.type === 'build-image');
+      if (buildStep?.config) {
+        const cfg = buildStep.config as Record<string, unknown>;
+        const registryName = (cfg.registry as string) ?? '';
+        let dest = (cfg.destination as string) ?? '';
+        // Strip registry URL prefix from destination for form display
+        if (registryName) {
+          const regUrl = getRegistryUrl(registryName);
+          if (regUrl && dest.startsWith(regUrl + '/')) {
+            dest = dest.slice(regUrl.length + 1);
+          }
+        }
+        buildForm.setFieldsValue({
+          destination: dest,
+          registry: registryName || undefined,
+          dockerfile: (cfg.dockerfile as string) ?? 'Dockerfile',
+          context: (cfg.context as string) ?? '.',
+        });
+      }
+    } catch { /* ignore */ }
+  };
+
+  // Get registry URL by name
+  const getRegistryUrl = (name: string): string => {
+    const reg = (registriesData?.items ?? []).find((r) => r.name === name);
+    if (!reg) return '';
+    let url = (reg as Record<string, unknown>).url as string ?? '';
+    // Remove protocol prefix for docker image address
+    url = url.replace(/^https?:\/\//, '');
+    // Remove trailing slash
+    url = url.replace(/\/$/, '');
+    return url;
+  };
+
+  // Sync form → JSON
+  const syncFormToJson = () => {
+    const vals = buildForm.getFieldsValue();
+    // Auto-prepend registry URL to destination
+    let fullDest = vals.destination || '';
+    if (vals.registry) {
+      const registryUrl = getRegistryUrl(vals.registry);
+      if (registryUrl && !fullDest.includes(registryUrl)) {
+        fullDest = `${registryUrl}/${fullDest}`.replace(/\/+/g, '/').replace(/^\//, '');
+      }
+    }
+    const config: Record<string, unknown> = {
+      context: vals.context || '.',
+      dockerfile: vals.dockerfile || 'Dockerfile',
+      destination: fullDest,
+    };
+    if (vals.registry) config.registry = vals.registry;
+    const steps = [{ name: 'build', type: 'build-image', config }];
+    const json = JSON.stringify(steps, null, 2);
+    setStepsJson(json);
+  };
 
   // Load all projects for the selector
   const { data: projectsData } = useQuery({
@@ -91,6 +159,29 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
     value: p.id,
   }));
 
+  // Load clusters for build environment selector
+  const { data: clustersData } = useQuery({
+    queryKey: ['clusters-list'],
+    queryFn: () => clusterService.getClusters({ pageSize: 200 }),
+    staleTime: 60_000,
+    enabled: open,
+  });
+  const clusterOptions = (clustersData?.items ?? []).map((c) => ({
+    label: c.name,
+    value: Number(c.id),
+  }));
+
+  // Load registries for build-image form
+  const { data: registriesData } = useQuery({
+    queryKey: ['registries-list'],
+    queryFn: () => request.get<{ items: Array<{ id: number; name: string; enabled: boolean }> }>('/system/settings/registries'),
+    staleTime: 60_000,
+    enabled: open,
+  });
+  const registryOptions = (registriesData?.items ?? [])
+    .filter((r) => r.enabled)
+    .map((r) => ({ label: r.name, value: r.name }));
+
   // ─── Reset on open/close ─────────────────────────────────────────────────
 
   useEffect(() => {
@@ -102,12 +193,17 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
         concurrency_group: pipeline.concurrency_group,
         concurrency_policy: pipeline.concurrency_policy,
         max_concurrent_runs: pipeline.max_concurrent_runs,
+        build_cluster_id: pipeline.build_cluster_id ?? undefined,
+        build_namespace: pipeline.build_namespace ?? '',
         approval_enabled: pipeline.approval_enabled ?? false,
         scan_enabled: pipeline.scan_enabled ?? false,
       });
     } else {
       form.resetFields();
+      buildForm.resetFields();
       setStepsJson(STEPS_TEMPLATE);
+      syncJsonToForm(STEPS_TEMPLATE);
+      setStepsMode('form');
     }
   }, [open, pipeline, form]);
 
@@ -130,8 +226,9 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
   useEffect(() => {
     if (versionData?.steps_json) {
       setStepsJson(versionData.steps_json);
+      syncJsonToForm(versionData.steps_json);
     }
-  }, [versionData]);
+  }, [versionData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Unified save ─────────────────────────────────────────────────────────
 
@@ -249,6 +346,37 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
           </Form.Item>
         </Flex>
 
+        <Divider orientation="left" plain style={{ margin: `${token.marginSM}px 0` }}>
+          {t('pipeline:form.buildEnv', { defaultValue: '構建環境' })}
+        </Divider>
+        <Flex gap={token.marginMD}>
+          <Form.Item
+            name="build_cluster_id"
+            label={t('pipeline:form.buildCluster', { defaultValue: '構建叢集' })}
+            tooltip={t('pipeline:form.buildClusterTip', { defaultValue: '構建 Job 執行的叢集，設定後可一鍵觸發' })}
+            style={{ flex: 1 }}
+            rules={[{ required: true, message: t('common:validation.required') }]}
+          >
+            <Select
+              options={clusterOptions}
+              showSearch
+              placeholder={t('pipeline:form.buildClusterPlaceholder', { defaultValue: '選擇叢集' })}
+              filterOption={(input, opt) =>
+                String(opt?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+            />
+          </Form.Item>
+          <Form.Item
+            name="build_namespace"
+            label={t('pipeline:form.buildNamespace', { defaultValue: '構建 Namespace' })}
+            tooltip={t('pipeline:form.buildNamespaceTip', { defaultValue: '構建 Job 執行的 Namespace' })}
+            style={{ flex: 1 }}
+            rules={[{ required: true, message: t('common:validation.required') }]}
+          >
+            <Input placeholder="e.g. ci-builds" />
+          </Form.Item>
+        </Flex>
+
         <Flex gap={token.marginLG}>
           <Form.Item
             name="scan_enabled"
@@ -274,29 +402,93 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
       {/* ─── Steps 定義 ──────────────────────────────────────────────── */}
       <Divider style={{ marginTop: 0 }} />
 
-      <Text strong style={{ display: 'block', marginBottom: token.marginSM }}>
-        {t('pipeline:editor.stepsTitle', { defaultValue: 'Steps 定義（JSON）' })}
-      </Text>
+      <Flex justify="space-between" align="center" style={{ marginBottom: token.marginSM }}>
+        <Text strong>
+          {t('pipeline:editor.stepsTitle', { defaultValue: '構建步驟' })}
+        </Text>
+        <Segmented
+          size="small"
+          value={stepsMode}
+          onChange={(v) => {
+            const mode = v as 'form' | 'json';
+            if (mode === 'json') syncFormToJson();
+            if (mode === 'form') syncJsonToForm(stepsJson);
+            setStepsMode(mode);
+          }}
+          options={[
+            { label: t('pipeline:form.tabs.form'), value: 'form', icon: <FormOutlined /> },
+            { label: 'JSON', value: 'json', icon: <CodeOutlined /> },
+          ]}
+        />
+      </Flex>
 
       <Spin spinning={versionLoading}>
-        <Editor
-          height="380px"
-          defaultLanguage="json"
-          value={stepsJson}
-          onChange={(val) => setStepsJson(val ?? '')}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 13,
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-            insertSpaces: true,
-            wordWrap: 'on',
-            folding: true,
-            foldingStrategy: 'indentation',
-          }}
-        />
+        {stepsMode === 'form' ? (
+          <Form
+            form={buildForm}
+            layout="vertical"
+            disabled={saving}
+            onValuesChange={() => syncFormToJson()}
+            initialValues={{ context: '.', dockerfile: 'Dockerfile' }}
+          >
+            <Form.Item
+              name="registry"
+              label={t('pipeline:stepForm.registry', { defaultValue: '映像倉庫' })}
+              tooltip={t('pipeline:stepForm.registryTip', { defaultValue: '選擇已配置的 Harbor / Registry，自動注入位址和帳密' })}
+              rules={[{ required: true, message: t('common:validation.required') }]}
+            >
+              <Select
+                options={registryOptions}
+                placeholder={t('pipeline:stepForm.registryPlaceholder', { defaultValue: '選擇映像倉庫' })}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="destination"
+              label={t('pipeline:stepForm.destination', { defaultValue: '映像名稱' })}
+              tooltip={t('pipeline:stepForm.destinationTip', { defaultValue: '專案名/映像名:標籤（系統自動拼接 Registry 位址）' })}
+              rules={[{ required: true, message: t('common:validation.required') }]}
+            >
+              <Input placeholder="saas/myapp:latest" />
+            </Form.Item>
+
+            <Flex gap={token.marginMD}>
+              <Form.Item
+                name="dockerfile"
+                label="Dockerfile"
+                style={{ flex: 1 }}
+              >
+                <Input placeholder="Dockerfile" />
+              </Form.Item>
+              <Form.Item
+                name="context"
+                label={t('pipeline:stepForm.context', { defaultValue: 'Build Context' })}
+                style={{ flex: 1 }}
+              >
+                <Input placeholder="." />
+              </Form.Item>
+            </Flex>
+          </Form>
+        ) : (
+          <Editor
+            height="380px"
+            defaultLanguage="json"
+            value={stepsJson}
+            onChange={(val) => setStepsJson(val ?? '')}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              insertSpaces: true,
+              wordWrap: 'on',
+              folding: true,
+              foldingStrategy: 'indentation',
+            }}
+          />
+        )}
       </Spin>
 
       {/* ─── 操作按鈕 ──────────────────────────────────────────────── */}
